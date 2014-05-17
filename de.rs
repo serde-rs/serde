@@ -5,7 +5,10 @@ use collections::HashMap;
 
 #[deriving(Clone, Eq)]
 pub enum Token {
+    Null,
+    Bool(bool),
     Int(int),
+    F64(f64),
     StrBuf(StrBuf),
     CollectionStart,
     CollectionSep,
@@ -18,9 +21,41 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn syntax_error(&self) -> E;
 
     #[inline]
+    fn expect_null(&mut self) -> Result<(), E> {
+        match self.next() {
+            Some(Ok(Null)) => Ok(()),
+            Some(Ok(CollectionStart)) => self.expect_collection_end(),
+            Some(Ok(_)) => Err(self.syntax_error()),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
+    }
+
+    #[inline]
+    fn expect_bool(&mut self) -> Result<bool, E> {
+        match self.next() {
+            Some(Ok(Bool(value))) => Ok(value),
+            Some(Ok(_)) => Err(self.syntax_error()),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
+    }
+
+
+    #[inline]
     fn expect_int(&mut self) -> Result<int, E> {
         match self.next() {
             Some(Ok(Int(value))) => Ok(value),
+            Some(Ok(_)) => Err(self.syntax_error()),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
+    }
+
+    #[inline]
+    fn expect_f64(&mut self) -> Result<f64, E> {
+        match self.next() {
+            Some(Ok(F64(value))) => Ok(value),
             Some(Ok(_)) => Err(self.syntax_error()),
             Some(Err(err)) => Err(err),
             None => Err(self.end_of_stream_error()),
@@ -137,10 +172,34 @@ pub trait Deserializable<E, D: Deserializer<E>> {
 impl<
     E,
     D: Deserializer<E>
+> Deserializable<E, D> for bool {
+    #[inline]
+    fn deserialize(d: &mut D) -> Result<bool, E> {
+        d.expect_bool()
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<
+    E,
+    D: Deserializer<E>
 > Deserializable<E, D> for int {
     #[inline]
     fn deserialize(d: &mut D) -> Result<int, E> {
         d.expect_int()
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<
+    E,
+    D: Deserializer<E>
+> Deserializable<E, D> for f64 {
+    #[inline]
+    fn deserialize(d: &mut D) -> Result<f64, E> {
+        d.expect_f64()
     }
 }
 
@@ -203,10 +262,7 @@ impl<
 > Deserializable<E, D> for () {
     #[inline]
     fn deserialize(d: &mut D) -> Result<(), E> {
-        try!(d.expect_collection_start());
-        try!(d.expect_collection_end());
-
-        Ok(())
+        d.expect_null()
     }
 }
 
@@ -282,13 +338,12 @@ impl<'a, A, B, T: Iterator<A>> Iterator<B> for Batch<'a, A, B, T> {
 
 #[cfg(test)]
 mod tests {
-    extern crate collections;
     extern crate serialize;
-    extern crate test;
 
     use std::vec;
-    use self::collections::HashMap;
-    use self::test::Bencher;
+    use collections::HashMap;
+    use test::Bencher;
+
     use self::serialize::{Decoder, Decodable};
 
     use super::{Token, Int, StrBuf, CollectionStart, CollectionSep, CollectionEnd};
