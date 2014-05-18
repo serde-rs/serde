@@ -516,7 +516,7 @@ mod tests {
         fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
         fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
         fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
-        fn read_str(&mut self) -> Result<~str, Error> { Err(SyntaxError) }
+        fn read_str(&mut self) -> Result<StrBuf, Error> { Err(SyntaxError) }
 
         // Compound types:
         fn read_enum<T>(&mut self, _name: &str, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
