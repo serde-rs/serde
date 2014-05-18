@@ -1,6 +1,7 @@
 extern crate collections;
 
 use std::hash::Hash;
+use std::result;
 use collections::HashMap;
 
 #[deriving(Clone, Eq)]
@@ -79,46 +80,32 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     >(&mut self) -> Result<C, E> {
         try!(self.expect_collection_start());
 
-        let mut err = None;
+        let iter = self.by_ref().batch(|d| {
+            let d = d.iter();
 
-        let values: C = FromIterator::from_iter(
-            Batch::new(self, |d| {
-                let token = match d.next() {
-                    Some(token) => token,
-                    None => { return None; }
-                };
+            let token = match d.next() {
+                Some(token) => token,
+                None => { return None; }
+            };
 
-                match token {
-                    Ok(CollectionSep) => {
-                        let value: Result<T, E> = Deserializable::deserialize(d);
-                        match value {
-                            Ok(value) => Some(value),
-                            Err(e) => {
-                                err = Some(e);
-                                None
-                            }
-                        }
-                    }
-                    Ok(CollectionEnd) => {
-                        None
-                    }
-                    Ok(_) => {
-                        err = Some(d.syntax_error());
-                        None
-                    }
-                    Err(e) => {
-                        err = Some(e);
-                        None
-                    }
+            match token {
+                Ok(CollectionSep) => {
+                    let value: Result<T, E> = Deserializable::deserialize(d);
+                    Some(value)
                 }
+                Ok(CollectionEnd) => {
+                    None
+                }
+                Ok(_) => {
+                    Some(Err(d.syntax_error()))
+                }
+                Err(e) => {
+                    Some(Err(e))
+                }
+            }
+        });
 
-            })
-        );
-
-        match err {
-            None => Ok(values),
-            Some(err) => Err(err),
-        }
+        result::collect(iter)
     }
 
     #[inline]
@@ -307,30 +294,6 @@ impl<
         try!(d.expect_collection_end());
 
         Ok((x0, x1))
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-struct Batch<'a, A, B, T> {
-    iter: &'a mut T,
-    f: |&mut T|: 'a -> Option<B>,
-}
-
-impl<'a, A, B, T: Iterator<A>> Batch<'a, A, B, T> {
-    #[inline]
-    fn new(iter: &'a mut T, f: |&mut T|: 'a -> Option<B>) -> Batch<'a, A, B, T> {
-        Batch {
-            iter: iter,
-            f: f,
-        }
-    }
-}
-
-impl<'a, A, B, T: Iterator<A>> Iterator<B> for Batch<'a, A, B, T> {
-    #[inline]
-    fn next(&mut self) -> Option<B> {
-        (self.f)(self.iter)
     }
 }
 
