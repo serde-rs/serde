@@ -468,6 +468,7 @@ mod tests {
 
     struct IntsDeserializer {
         state: IntsDeserializerState,
+        len: uint,
         iter: vec::MoveItems<int>,
         value: Option<int>
     }
@@ -477,6 +478,7 @@ mod tests {
         fn new(values: Vec<int>) -> IntsDeserializer {
             IntsDeserializer {
                 state: Start,
+                len: values.len(),
                 iter: values.move_iter(),
                 value: None,
             }
@@ -489,8 +491,7 @@ mod tests {
             match self.state {
                 Start => {
                     self.state = Sep;
-                    let (lower, _) = self.iter.size_hint();
-                    Some(Ok(CollectionStart(lower)))
+                    Some(Ok(CollectionStart(self.len)))
                 }
                 Sep => {
                     match self.iter.next() {
