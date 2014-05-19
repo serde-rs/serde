@@ -179,7 +179,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     >(&mut self, token: Token) -> Result<Option<T>, E> {
         match token {
             Null => Ok(None),
-            _ => fail!(),
+            token => {
+                let value: T = try!(Deserializable::deserialize_token(self, token));
+                Ok(Some(value))
+            }
         }
     }
 
