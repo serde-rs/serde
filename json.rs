@@ -1172,9 +1172,9 @@ impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
         }
 
         match self.parse() {
-            ObjectStart => Some(Ok(de::CollectionStart)),
+            ObjectStart => Some(Ok(de::CollectionStart(0))),
             ObjectEnd => Some(Ok(de::CollectionEnd)),
-            ListStart => Some(Ok(de::CollectionStart)),
+            ListStart => Some(Ok(de::CollectionStart(0))),
             ListEnd => Some(Ok(de::CollectionEnd)),
             NullValue => Some(Ok(de::Null)),
             BooleanValue(value) => Some(Ok(de::Bool(value))),
