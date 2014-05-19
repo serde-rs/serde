@@ -2,6 +2,7 @@
 extern crate collections;
 
 use std::hash::Hash;
+use std::num;
 use std::result;
 use collections::HashMap;
 
@@ -46,25 +47,6 @@ macro_rules! to_result {
     }
 }
 
-macro_rules! decode_primitive_num(
-    ($method:ident) => {
-        decode_primitive! {
-            Int(x) => to_result!(x.$method(), self.syntax_error()),
-            I8(x) => to_result!(x.$method(), self.syntax_error()),
-            I16(x) => to_result!(x.$method(), self.syntax_error()),
-            I32(x) => to_result!(x.$method(), self.syntax_error()),
-            I64(x) => to_result!(x.$method(), self.syntax_error()),
-            Uint(x) => to_result!(x.$method(), self.syntax_error()),
-            U8(x) => to_result!(x.$method(), self.syntax_error()),
-            U16(x) => to_result!(x.$method(), self.syntax_error()),
-            U32(x) => to_result!(x.$method(), self.syntax_error()),
-            U64(x) => to_result!(x.$method(), self.syntax_error()),
-            F32(x) => to_result!(x.$method(), self.syntax_error()),
-            F64(x) => to_result!(x.$method(), self.syntax_error())
-        }
-    }
-)
-
 pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn end_of_stream_error(&self) -> E;
 
@@ -96,63 +78,22 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_int(&mut self, token: Token) -> Result<int, E> {
-        decode_primitive_num!(to_int)
-    }
-
-    #[inline]
-    fn expect_i8(&mut self, token: Token) -> Result<i8, E> {
-        decode_primitive_num!(to_i8)
-    }
-
-    #[inline]
-    fn expect_i16(&mut self, token: Token) -> Result<i16, E> {
-        decode_primitive_num!(to_i16)
-    }
-
-    #[inline]
-    fn expect_i32(&mut self, token: Token) -> Result<i32, E> {
-        decode_primitive_num!(to_i32)
-    }
-
-    #[inline]
-    fn expect_i64(&mut self, token: Token) -> Result<i64, E> {
-        decode_primitive_num!(to_i64)
-    }
-
-    #[inline]
-    fn expect_uint(&mut self, token: Token) -> Result<uint, E> {
-        decode_primitive_num!(to_uint)
-    }
-
-    #[inline]
-    fn expect_u8(&mut self, token: Token) -> Result<u8, E> {
-        decode_primitive_num!(to_u8)
-    }
-
-    #[inline]
-    fn expect_u16(&mut self, token: Token) -> Result<u16, E> {
-        decode_primitive_num!(to_u16)
-    }
-
-    #[inline]
-    fn expect_u32(&mut self, token: Token) -> Result<u32, E> {
-        decode_primitive_num!(to_u32)
-    }
-
-    #[inline]
-    fn expect_u64(&mut self, token: Token) -> Result<u64, E> {
-        decode_primitive_num!(to_u64)
-    }
-
-    #[inline]
-    fn expect_f32(&mut self, token: Token) -> Result<f32, E> {
-        decode_primitive_num!(to_f32)
-    }
-
-    #[inline]
-    fn expect_f64(&mut self, token: Token) -> Result<f64, E> {
-        decode_primitive_num!(to_f64)
+    fn expect_num<T: NumCast>(&mut self, token: Token) -> Result<T, E> {
+        match token {
+            Int(x) => to_result!(num::cast(x), self.syntax_error()),
+            I8(x) => to_result!(num::cast(x), self.syntax_error()),
+            I16(x) => to_result!(num::cast(x), self.syntax_error()),
+            I32(x) => to_result!(num::cast(x), self.syntax_error()),
+            I64(x) => to_result!(num::cast(x), self.syntax_error()),
+            Uint(x) => to_result!(num::cast(x), self.syntax_error()),
+            U8(x) => to_result!(num::cast(x), self.syntax_error()),
+            U16(x) => to_result!(num::cast(x), self.syntax_error()),
+            U32(x) => to_result!(num::cast(x), self.syntax_error()),
+            U64(x) => to_result!(num::cast(x), self.syntax_error()),
+            F32(x) => to_result!(num::cast(x), self.syntax_error()),
+            F64(x) => to_result!(num::cast(x), self.syntax_error()),
+            _ => Err(self.syntax_error()),
+        }
     }
 
     #[inline]
@@ -263,18 +204,18 @@ macro_rules! impl_deserializable {
 }
 
 impl_deserializable!(bool, expect_bool)
-impl_deserializable!(int, expect_int)
-impl_deserializable!(i8, expect_i8)
-impl_deserializable!(i16, expect_i16)
-impl_deserializable!(i32, expect_i32)
-impl_deserializable!(i64, expect_i64)
-impl_deserializable!(uint, expect_uint)
-impl_deserializable!(u8, expect_u8)
-impl_deserializable!(u16, expect_u16)
-impl_deserializable!(u32, expect_u32)
-impl_deserializable!(u64, expect_u64)
-impl_deserializable!(f32, expect_f32)
-impl_deserializable!(f64, expect_f64)
+impl_deserializable!(int, expect_num)
+impl_deserializable!(i8, expect_num)
+impl_deserializable!(i16, expect_num)
+impl_deserializable!(i32, expect_num)
+impl_deserializable!(i64, expect_num)
+impl_deserializable!(uint, expect_num)
+impl_deserializable!(u8, expect_num)
+impl_deserializable!(u16, expect_num)
+impl_deserializable!(u32, expect_num)
+impl_deserializable!(u64, expect_num)
+impl_deserializable!(f32, expect_num)
+impl_deserializable!(f64, expect_num)
 impl_deserializable!(char, expect_char)
 impl_deserializable!(&'static str, expect_str)
 impl_deserializable!(StrBuf, expect_strbuf)
