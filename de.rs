@@ -31,11 +31,9 @@ pub enum Token {
 
 macro_rules! decode_primitive {
     ($( $Variant:pat => $E:expr ),+) => {
-        match self.next() {
-            $( Some(Ok($Variant)) => $E ),+,
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+        match token {
+            $( $Variant => $E ),+,
+            _ => Err(self.syntax_error()),
         }
     }
 }
@@ -74,91 +72,102 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn syntax_error(&self) -> E;
 
     #[inline]
-    fn expect_null(&mut self) -> Result<(), E> {
+    fn expect_token(&mut self) -> Result<Token, E> {
+        match self.next() {
+            Some(Ok(token)) => Ok(token),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
+    }
+
+    #[inline]
+    fn expect_null(&mut self, token: Token) -> Result<(), E> {
         decode_primitive!(
             Null => Ok(()),
-            CollectionStart => self.expect_collection_end()
+            CollectionStart => {
+                let token = try!(self.expect_token());
+                self.expect_collection_end(token)
+            }
         )
     }
 
     #[inline]
-    fn expect_bool(&mut self) -> Result<bool, E> {
+    fn expect_bool(&mut self, token: Token) -> Result<bool, E> {
         decode_primitive!(Bool(value) => Ok(value))
     }
 
     #[inline]
-    fn expect_int(&mut self) -> Result<int, E> {
+    fn expect_int(&mut self, token: Token) -> Result<int, E> {
         decode_primitive_num!(to_int)
     }
 
     #[inline]
-    fn expect_i8(&mut self) -> Result<i8, E> {
+    fn expect_i8(&mut self, token: Token) -> Result<i8, E> {
         decode_primitive_num!(to_i8)
     }
 
-
     #[inline]
-    fn expect_i16(&mut self) -> Result<i16, E> {
+    fn expect_i16(&mut self, token: Token) -> Result<i16, E> {
         decode_primitive_num!(to_i16)
     }
 
     #[inline]
-    fn expect_i32(&mut self) -> Result<i32, E> {
+    fn expect_i32(&mut self, token: Token) -> Result<i32, E> {
         decode_primitive_num!(to_i32)
     }
 
     #[inline]
-    fn expect_i64(&mut self) -> Result<i64, E> {
+    fn expect_i64(&mut self, token: Token) -> Result<i64, E> {
         decode_primitive_num!(to_i64)
     }
 
     #[inline]
-    fn expect_uint(&mut self) -> Result<uint, E> {
+    fn expect_uint(&mut self, token: Token) -> Result<uint, E> {
         decode_primitive_num!(to_uint)
     }
 
     #[inline]
-    fn expect_u8(&mut self) -> Result<u8, E> {
+    fn expect_u8(&mut self, token: Token) -> Result<u8, E> {
         decode_primitive_num!(to_u8)
     }
 
     #[inline]
-    fn expect_u16(&mut self) -> Result<u16, E> {
+    fn expect_u16(&mut self, token: Token) -> Result<u16, E> {
         decode_primitive_num!(to_u16)
     }
 
     #[inline]
-    fn expect_u32(&mut self) -> Result<u32, E> {
+    fn expect_u32(&mut self, token: Token) -> Result<u32, E> {
         decode_primitive_num!(to_u32)
     }
 
     #[inline]
-    fn expect_u64(&mut self) -> Result<u64, E> {
+    fn expect_u64(&mut self, token: Token) -> Result<u64, E> {
         decode_primitive_num!(to_u64)
     }
 
     #[inline]
-    fn expect_f32(&mut self) -> Result<f32, E> {
+    fn expect_f32(&mut self, token: Token) -> Result<f32, E> {
         decode_primitive_num!(to_f32)
     }
 
     #[inline]
-    fn expect_f64(&mut self) -> Result<f64, E> {
+    fn expect_f64(&mut self, token: Token) -> Result<f64, E> {
         decode_primitive_num!(to_f64)
     }
 
     #[inline]
-    fn expect_char(&mut self) -> Result<char, E> {
+    fn expect_char(&mut self, token: Token) -> Result<char, E> {
         decode_primitive!(Char(value) => Ok(value))
     }
 
     #[inline]
-    fn expect_str(&mut self) -> Result<&'static str, E> {
+    fn expect_str(&mut self, token: Token) -> Result<&'static str, E> {
         decode_primitive!(Str(value) => Ok(value))
     }
 
     #[inline]
-    fn expect_strbuf(&mut self) -> Result<StrBuf, E> {
+    fn expect_strbuf(&mut self, token: Token) -> Result<StrBuf, E> {
         decode_primitive!(
             Str(value) => Ok(value.to_strbuf()),
             StrBuf(value) => Ok(value)
@@ -166,11 +175,21 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
+    fn expect_option<
+        T: Deserializable<E, Self>
+    >(&mut self, token: Token) -> Result<Option<T>, E> {
+        match token {
+            Null => Ok(None),
+            _ => fail!(),
+        }
+    }
+
+    #[inline]
     fn expect_collection<
         T: Deserializable<E, Self>,
         C: FromIterator<T>
-    >(&mut self) -> Result<C, E> {
-        try!(self.expect_collection_start());
+    >(&mut self, token: Token) -> Result<C, E> {
+        try!(self.expect_collection_start(token));
 
         let iter = self.by_ref().batch(|d| {
             let d = d.iter();
@@ -201,43 +220,35 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_collection_start(&mut self) -> Result<(), E> {
-        match self.next() {
-            Some(Ok(CollectionStart)) => Ok(()),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+    fn expect_collection_start(&mut self, token: Token) -> Result<(), E> {
+        match token {
+            CollectionStart => Ok(()),
+            _ => Err(self.syntax_error()),
         }
     }
 
     #[inline]
-    fn expect_collection_sep(&mut self) -> Result<(), E> {
-        match self.next() {
-            Some(Ok(CollectionSep)) => Ok(()),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+    fn expect_collection_sep(&mut self, token: Token) -> Result<(), E> {
+        match token {
+            CollectionSep => Ok(()),
+            _ => Err(self.syntax_error()),
         }
     }
 
     #[inline]
-    fn expect_collection_end(&mut self) -> Result<(), E> {
-        match self.next() {
-            Some(Ok(CollectionEnd)) => Ok(()),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+    fn expect_collection_end(&mut self, token: Token) -> Result<(), E> {
+        match token {
+            CollectionEnd => Ok(()),
+            _ => Err(self.syntax_error()),
         }
     }
 
     #[inline]
-    fn expect_collection_sep_or_end(&mut self) -> Result<bool, E> {
-        match self.next() {
-            Some(Ok(CollectionSep)) => Ok(false),
-            Some(Ok(CollectionEnd)) => Ok(true),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+    fn expect_collection_sep_or_end(&mut self, token: Token) -> Result<bool, E> {
+        match token {
+            CollectionSep => Ok(false),
+            CollectionEnd => Ok(true),
+            _ => Err(self.syntax_error()),
         }
     }
 }
@@ -245,7 +256,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 //////////////////////////////////////////////////////////////////////////////
 
 pub trait Deserializable<E, D: Deserializer<E>> {
-    fn deserialize(d: &mut D) -> Result<Self, E>;
+    fn deserialize(d: &mut D) -> Result<Self, E> {
+        let token = try!(d.expect_token());
+        Deserializable::deserialize_token(d, token)
+    }
+
+    fn deserialize_token(d: &mut D, token: Token) -> Result<Self, E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -257,8 +273,8 @@ macro_rules! impl_deserializable {
             D: Deserializer<E>
         > Deserializable<E, D> for $ty {
             #[inline]
-            fn deserialize(d: &mut D) -> Result<$ty, E> {
-                d.$method()
+            fn deserialize_token(d: &mut D, token: Token) -> Result<$ty, E> {
+                d.$method(token)
             }
         }
     }
@@ -289,9 +305,8 @@ impl<
     T: Deserializable<E, D>
 > Deserializable<E, D> for Option<T> {
     #[inline]
-    fn deserialize(_d: &mut D) -> Result<Option<T>, E> {
-        fail!()
-        //d.expect_collection()
+    fn deserialize_token(d: &mut D, token: Token) -> Result<Option<T>, E> {
+        d.expect_option(token)
     }
 }
 
@@ -303,8 +318,8 @@ impl<
     T: Deserializable<E, D>
 > Deserializable<E, D> for Vec<T> {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<Vec<T>, E> {
-        d.expect_collection()
+    fn deserialize_token(d: &mut D, token: Token) -> Result<Vec<T>, E> {
+        d.expect_collection(token)
     }
 }
 
@@ -315,8 +330,8 @@ impl<
     V: Deserializable<E, D>
 > Deserializable<E, D> for HashMap<K, V> {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<HashMap<K, V>, E> {
-        d.expect_collection()
+    fn deserialize_token(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
+        d.expect_collection(token)
     }
 }
 
@@ -327,8 +342,8 @@ impl<
     D: Deserializer<E>
 > Deserializable<E, D> for () {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<(), E> {
-        d.expect_null()
+    fn deserialize_token(d: &mut D, token: Token) -> Result<(), E> {
+        d.expect_null(token)
     }
 }
 
@@ -340,13 +355,15 @@ impl<
     T0: Deserializable<E, D>
 > Deserializable<E, D> for (T0,) {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<(T0,), E> {
-        try!(d.expect_collection_start());
+    fn deserialize_token(d: &mut D, token: Token) -> Result<(T0,), E> {
+        try!(d.expect_collection_start(token));
 
-        try!(d.expect_collection_sep());
+        let token = try!(d.expect_token());
+        try!(d.expect_collection_sep(token));
         let x0 = try!(Deserializable::deserialize(d));
 
-        try!(d.expect_collection_end());
+        let token = try!(d.expect_token());
+        try!(d.expect_collection_end(token));
 
         Ok((x0,))
     }
@@ -361,16 +378,19 @@ impl<
     T1: Deserializable<E, D>
 > Deserializable<E, D> for (T0, T1) {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<(T0, T1), E> {
-        try!(d.expect_collection_start());
+    fn deserialize_token(d: &mut D, token: Token) -> Result<(T0, T1), E> {
+        try!(d.expect_collection_start(token));
 
-        try!(d.expect_collection_sep());
+        let token = try!(d.expect_token());
+        try!(d.expect_collection_sep(token));
         let x0 = try!(Deserializable::deserialize(d));
 
-        try!(d.expect_collection_sep());
+        let token = try!(d.expect_token());
+        try!(d.expect_collection_sep(token));
         let x1 = try!(Deserializable::deserialize(d));
 
-        try!(d.expect_collection_end());
+        let token = try!(d.expect_token());
+        try!(d.expect_collection_end(token));
 
         Ok((x0, x1))
     }
@@ -509,8 +529,9 @@ mod tests {
             SyntaxError
         }
 
+        /*
         #[inline]
-        fn expect_int(&mut self) -> Result<int, Error> {
+        fn expect_int(&mut self, token: Token) -> Result<int, Error> {
             assert_eq!(self.state, Value);
 
             self.state = Sep;
@@ -520,6 +541,7 @@ mod tests {
                 None => Err(self.end_of_stream_error()),
             }
         }
+        */
     }
 
     struct IntsDecoder {
