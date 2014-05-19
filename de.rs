@@ -25,7 +25,6 @@ pub enum Token {
     Str(&'static str),
     StrBuf(StrBuf),
     CollectionStart(uint),
-    CollectionSep,
     CollectionEnd,
 }
 
@@ -200,15 +199,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             };
 
             match token {
-                Ok(CollectionSep) => {
-                    let value: Result<T, E> = Deserializable::deserialize(d);
-                    Some(value)
-                }
                 Ok(CollectionEnd) => {
                     None
                 }
-                Ok(_) => {
-                    Some(Err(d.syntax_error()))
+                Ok(token) => {
+                    let value: Result<T, E> = Deserializable::deserialize_token(d, token);
+                    Some(value)
                 }
                 Err(e) => {
                     Some(Err(e))
@@ -228,26 +224,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_collection_sep(&mut self, token: Token) -> Result<(), E> {
-        match token {
-            CollectionSep => Ok(()),
-            _ => Err(self.syntax_error()),
-        }
-    }
-
-    #[inline]
     fn expect_collection_end(&mut self, token: Token) -> Result<(), E> {
         match token {
             CollectionEnd => Ok(()),
-            _ => Err(self.syntax_error()),
-        }
-    }
-
-    #[inline]
-    fn expect_collection_sep_or_end(&mut self, token: Token) -> Result<bool, E> {
-        match token {
-            CollectionSep => Ok(false),
-            CollectionEnd => Ok(true),
             _ => Err(self.syntax_error()),
         }
     }
@@ -358,8 +337,6 @@ impl<
     fn deserialize_token(d: &mut D, token: Token) -> Result<(T0,), E> {
         try!(d.expect_collection_start(token));
 
-        let token = try!(d.expect_token());
-        try!(d.expect_collection_sep(token));
         let x0 = try!(Deserializable::deserialize(d));
 
         let token = try!(d.expect_token());
@@ -381,12 +358,7 @@ impl<
     fn deserialize_token(d: &mut D, token: Token) -> Result<(T0, T1), E> {
         try!(d.expect_collection_start(token));
 
-        let token = try!(d.expect_token());
-        try!(d.expect_collection_sep(token));
         let x0 = try!(Deserializable::deserialize(d));
-
-        let token = try!(d.expect_token());
-        try!(d.expect_collection_sep(token));
         let x1 = try!(Deserializable::deserialize(d));
 
         let token = try!(d.expect_token());
@@ -408,7 +380,7 @@ mod tests {
 
     use self::serialize::{Decoder, Decodable};
 
-    use super::{Token, Int, StrBuf, CollectionStart, CollectionSep, CollectionEnd};
+    use super::{Token, Int, StrBuf, CollectionStart, CollectionEnd};
     use super::{Deserializer, Deserializable};
 
     //////////////////////////////////////////////////////////////////////////////
@@ -462,7 +434,7 @@ mod tests {
     enum IntsDeserializerState {
         Start,
         Sep,
-        Value,
+        //Value,
         End,
     }
 
@@ -496,9 +468,9 @@ mod tests {
                 Sep => {
                     match self.iter.next() {
                         Some(value) => {
-                            self.state = Value;
+                            self.state = Sep;
                             self.value = Some(value);
-                            Some(Ok(CollectionSep))
+                            Some(Ok(Int(value)))
                         }
                         None => {
                             self.state = End;
@@ -506,6 +478,7 @@ mod tests {
                         }
                     }
                 }
+                /*
                 Value => {
                     self.state = Sep;
                     match self.value.take() {
@@ -513,6 +486,7 @@ mod tests {
                         None => Some(Err(self.end_of_stream_error())),
                     }
                 }
+                */
                 End => {
                     None
                 }
@@ -685,10 +659,8 @@ mod tests {
     fn test_tokens_tuple() {
         let tokens = vec!(
             CollectionStart(2),
-                CollectionSep,
                 Int(5),
 
-                CollectionSep,
                 StrBuf("a".to_strbuf()),
             CollectionEnd,
         );
@@ -703,15 +675,11 @@ mod tests {
     fn test_tokens_tuple_compound() {
         let tokens = vec!(
             CollectionStart(2),
-                CollectionSep,
                 CollectionStart(0),
                 CollectionEnd,
 
-                CollectionSep,
                 CollectionStart(2),
-                    CollectionSep,
                     Int(5),
-                    CollectionSep,
                     StrBuf("a".to_strbuf()),
                 CollectionEnd,
             CollectionEnd,
@@ -740,13 +708,10 @@ mod tests {
     fn test_tokens_vec() {
         let tokens = vec!(
             CollectionStart(3),
-                CollectionSep,
                 Int(5),
 
-                CollectionSep,
                 Int(6),
 
-                CollectionSep,
                 Int(7),
             CollectionEnd,
         );
@@ -761,30 +726,21 @@ mod tests {
     fn test_tokens_vec_compound() {
         let tokens = vec!(
             CollectionStart(0),
-                CollectionSep,
                 CollectionStart(1),
-                    CollectionSep,
                     Int(1),
                 CollectionEnd,
 
-                CollectionSep,
                 CollectionStart(2),
-                    CollectionSep,
                     Int(2),
 
-                    CollectionSep,
                     Int(3),
                 CollectionEnd,
 
-                CollectionSep,
                 CollectionStart(3),
-                    CollectionSep,
                     Int(4),
 
-                    CollectionSep,
                     Int(5),
 
-                    CollectionSep,
                     Int(6),
                 CollectionEnd,
             CollectionEnd,
@@ -800,21 +756,15 @@ mod tests {
     fn test_tokens_hashmap() {
         let tokens = vec!(
             CollectionStart(2),
-                CollectionSep,
                 CollectionStart(2),
-                    CollectionSep,
                     Int(5),
 
-                    CollectionSep,
                     StrBuf("a".to_strbuf()),
                 CollectionEnd,
 
-                CollectionSep,
                 CollectionStart(2),
-                    CollectionSep,
                     Int(6),
 
-                    CollectionSep,
                     StrBuf("b".to_strbuf()),
                 CollectionEnd,
             CollectionEnd,
@@ -835,13 +785,10 @@ mod tests {
         b.iter(|| {
             let tokens = vec!(
                 CollectionStart(3),
-                    CollectionSep,
                     Int(5),
 
-                    CollectionSep,
                     Int(6),
 
-                    CollectionSep,
                     Int(7),
                 CollectionEnd,
             );
