@@ -1,3 +1,4 @@
+#![feature(macro_rules)]
 extern crate collections;
 
 use std::hash::Hash;
@@ -9,12 +10,63 @@ pub enum Token {
     Null,
     Bool(bool),
     Int(int),
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
+    Uint(uint),
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    F32(f32),
     F64(f64),
+    Char(char),
+    Str(&'static str),
     StrBuf(StrBuf),
     CollectionStart,
     CollectionSep,
     CollectionEnd,
 }
+
+macro_rules! decode_primitive {
+    ($( $Variant:pat => $E:expr ),+) => {
+        match self.next() {
+            $( Some(Ok($Variant)) => $E ),+,
+            Some(Ok(_)) => Err(self.syntax_error()),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
+    }
+}
+
+macro_rules! to_result {
+    ($expr:expr, $err:expr) => {
+        match $expr {
+            Some(value) => Ok(value),
+            None => Err($err),
+        }
+    }
+}
+
+macro_rules! decode_primitive_num(
+    ($method:ident) => {
+        decode_primitive! {
+            Int(x) => to_result!(x.$method(), self.syntax_error()),
+            I8(x) => to_result!(x.$method(), self.syntax_error()),
+            I16(x) => to_result!(x.$method(), self.syntax_error()),
+            I32(x) => to_result!(x.$method(), self.syntax_error()),
+            I64(x) => to_result!(x.$method(), self.syntax_error()),
+            Uint(x) => to_result!(x.$method(), self.syntax_error()),
+            U8(x) => to_result!(x.$method(), self.syntax_error()),
+            U16(x) => to_result!(x.$method(), self.syntax_error()),
+            U32(x) => to_result!(x.$method(), self.syntax_error()),
+            U64(x) => to_result!(x.$method(), self.syntax_error()),
+            F32(x) => to_result!(x.$method(), self.syntax_error()),
+            F64(x) => to_result!(x.$method(), self.syntax_error())
+        }
+    }
+)
 
 pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn end_of_stream_error(&self) -> E;
@@ -23,54 +75,94 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_null(&mut self) -> Result<(), E> {
-        match self.next() {
-            Some(Ok(Null)) => Ok(()),
-            Some(Ok(CollectionStart)) => self.expect_collection_end(),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
-        }
+        decode_primitive!(
+            Null => Ok(()),
+            CollectionStart => self.expect_collection_end()
+        )
     }
 
     #[inline]
     fn expect_bool(&mut self) -> Result<bool, E> {
-        match self.next() {
-            Some(Ok(Bool(value))) => Ok(value),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
-        }
+        decode_primitive!(Bool(value) => Ok(value))
+    }
+
+    #[inline]
+    fn expect_int(&mut self) -> Result<int, E> {
+        decode_primitive_num!(to_int)
+    }
+
+    #[inline]
+    fn expect_i8(&mut self) -> Result<i8, E> {
+        decode_primitive_num!(to_i8)
     }
 
 
     #[inline]
-    fn expect_int(&mut self) -> Result<int, E> {
-        match self.next() {
-            Some(Ok(Int(value))) => Ok(value),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
-        }
+    fn expect_i16(&mut self) -> Result<i16, E> {
+        decode_primitive_num!(to_i16)
+    }
+
+    #[inline]
+    fn expect_i32(&mut self) -> Result<i32, E> {
+        decode_primitive_num!(to_i32)
+    }
+
+    #[inline]
+    fn expect_i64(&mut self) -> Result<i64, E> {
+        decode_primitive_num!(to_i64)
+    }
+
+    #[inline]
+    fn expect_uint(&mut self) -> Result<uint, E> {
+        decode_primitive_num!(to_uint)
+    }
+
+    #[inline]
+    fn expect_u8(&mut self) -> Result<u8, E> {
+        decode_primitive_num!(to_u8)
+    }
+
+    #[inline]
+    fn expect_u16(&mut self) -> Result<u16, E> {
+        decode_primitive_num!(to_u16)
+    }
+
+    #[inline]
+    fn expect_u32(&mut self) -> Result<u32, E> {
+        decode_primitive_num!(to_u32)
+    }
+
+    #[inline]
+    fn expect_u64(&mut self) -> Result<u64, E> {
+        decode_primitive_num!(to_u64)
+    }
+
+    #[inline]
+    fn expect_f32(&mut self) -> Result<f32, E> {
+        decode_primitive_num!(to_f32)
     }
 
     #[inline]
     fn expect_f64(&mut self) -> Result<f64, E> {
-        match self.next() {
-            Some(Ok(F64(value))) => Ok(value),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
-        }
+        decode_primitive_num!(to_f64)
     }
 
     #[inline]
-    fn expect_str(&mut self) -> Result<StrBuf, E> {
-        match self.next() {
-            Some(Ok(StrBuf(value))) => Ok(value),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
-        }
+    fn expect_char(&mut self) -> Result<char, E> {
+        decode_primitive!(Char(value) => Ok(value))
+    }
+
+    #[inline]
+    fn expect_str(&mut self) -> Result<&'static str, E> {
+        decode_primitive!(Str(value) => Ok(value))
+    }
+
+    #[inline]
+    fn expect_strbuf(&mut self) -> Result<StrBuf, E> {
+        decode_primitive!(
+            Str(value) => Ok(value.to_strbuf()),
+            StrBuf(value) => Ok(value)
+        )
     }
 
     #[inline]
@@ -150,57 +242,44 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 pub trait Deserializable<E, D: Deserializer<E>> {
     fn deserialize(d: &mut D) -> Result<Self, E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-impl<
-    E,
-    D: Deserializer<E>
-> Deserializable<E, D> for bool {
-    #[inline]
-    fn deserialize(d: &mut D) -> Result<bool, E> {
-        d.expect_bool()
+macro_rules! impl_deserializable {
+    ($ty:ty, $method:ident) => {
+        impl<
+            E,
+            D: Deserializer<E>
+        > Deserializable<E, D> for $ty {
+            #[inline]
+            fn deserialize(d: &mut D) -> Result<$ty, E> {
+                d.$method()
+            }
+        }
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-impl<
-    E,
-    D: Deserializer<E>
-> Deserializable<E, D> for int {
-    #[inline]
-    fn deserialize(d: &mut D) -> Result<int, E> {
-        d.expect_int()
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-impl<
-    E,
-    D: Deserializer<E>
-> Deserializable<E, D> for f64 {
-    #[inline]
-    fn deserialize(d: &mut D) -> Result<f64, E> {
-        d.expect_f64()
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-impl<
-    E,
-    D: Deserializer<E>
-> Deserializable<E, D> for StrBuf {
-    #[inline]
-    fn deserialize(d: &mut D) -> Result<StrBuf, E> {
-        d.expect_str()
-    }
-}
+impl_deserializable!(bool, expect_bool)
+impl_deserializable!(int, expect_int)
+impl_deserializable!(i8, expect_i8)
+impl_deserializable!(i16, expect_i16)
+impl_deserializable!(i32, expect_i32)
+impl_deserializable!(i64, expect_i64)
+impl_deserializable!(uint, expect_uint)
+impl_deserializable!(u8, expect_u8)
+impl_deserializable!(u16, expect_u16)
+impl_deserializable!(u32, expect_u32)
+impl_deserializable!(u64, expect_u64)
+impl_deserializable!(f32, expect_f32)
+impl_deserializable!(f64, expect_f64)
+impl_deserializable!(char, expect_char)
+impl_deserializable!(&'static str, expect_str)
+impl_deserializable!(StrBuf, expect_strbuf)
 
 //////////////////////////////////////////////////////////////////////////////
 
