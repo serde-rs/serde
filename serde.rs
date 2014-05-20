@@ -9,4 +9,4 @@ extern crate test;
 extern crate log;
 
 pub mod de;
-pub mod json;
+//pub mod json;
