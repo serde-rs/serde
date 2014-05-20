@@ -62,23 +62,40 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_null(&mut self, token: Token) -> Result<(), E> {
+    fn expect_null(&mut self) -> Result<(), E> {
+        let token = try!(self.expect_token());
+        self.expect_null_token(token)
+    }
+
+    #[inline]
+    fn expect_null_token(&mut self, token: Token) -> Result<(), E> {
         decode_primitive!(
             Null => Ok(()),
             CollectionStart(_) => {
-                let token = try!(self.expect_token());
-                self.expect_collection_end(token)
+                self.expect_collection_end()
             }
         )
     }
 
     #[inline]
-    fn expect_bool(&mut self, token: Token) -> Result<bool, E> {
+    fn expect_bool(&mut self) -> Result<bool, E> {
+        let token = try!(self.expect_token());
+        self.expect_bool_token(token)
+    }
+
+    #[inline]
+    fn expect_bool_token(&mut self, token: Token) -> Result<bool, E> {
         decode_primitive!(Bool(value) => Ok(value))
     }
 
     #[inline]
-    fn expect_num<T: NumCast>(&mut self, token: Token) -> Result<T, E> {
+    fn expect_num<T: NumCast>(&mut self) -> Result<T, E> {
+        let token = try!(self.expect_token());
+        self.expect_num_token(token)
+    }
+
+    #[inline]
+    fn expect_num_token<T: NumCast>(&mut self, token: Token) -> Result<T, E> {
         match token {
             Int(x) => to_result!(num::cast(x), self.syntax_error()),
             I8(x) => to_result!(num::cast(x), self.syntax_error()),
@@ -97,17 +114,35 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_char(&mut self, token: Token) -> Result<char, E> {
+    fn expect_char(&mut self) -> Result<char, E> {
+        let token = try!(self.expect_token());
+        self.expect_char_token(token)
+    }
+
+    #[inline]
+    fn expect_char_token(&mut self, token: Token) -> Result<char, E> {
         decode_primitive!(Char(value) => Ok(value))
     }
 
     #[inline]
-    fn expect_str(&mut self, token: Token) -> Result<&'static str, E> {
+    fn expect_str(&mut self) -> Result<&'static str, E> {
+        let token = try!(self.expect_token());
+        self.expect_str_token(token)
+    }
+
+    #[inline]
+    fn expect_str_token(&mut self, token: Token) -> Result<&'static str, E> {
         decode_primitive!(Str(value) => Ok(value))
     }
 
     #[inline]
-    fn expect_strbuf(&mut self, token: Token) -> Result<StrBuf, E> {
+    fn expect_strbuf(&mut self) -> Result<StrBuf, E> {
+        let token = try!(self.expect_token());
+        self.expect_strbuf_token(token)
+    }
+
+    #[inline]
+    fn expect_strbuf_token(&mut self, token: Token) -> Result<StrBuf, E> {
         decode_primitive!(
             Str(value) => Ok(value.to_strbuf()),
             StrBuf(value) => Ok(value)
@@ -116,6 +151,14 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_option<
+        T: Deserializable<E, Self>
+    >(&mut self) -> Result<Option<T>, E> {
+        let token = try!(self.expect_token());
+        self.expect_option_token(token)
+    }
+
+    #[inline]
+    fn expect_option_token<
         T: Deserializable<E, Self>
     >(&mut self, token: Token) -> Result<Option<T>, E> {
         match token {
@@ -131,8 +174,17 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_collection<
         T: Deserializable<E, Self>,
         C: FromIterator<T>
+    >(&mut self) -> Result<C, E> {
+        let token = try!(self.expect_token());
+        self.expect_collection_token(token)
+    }
+
+    #[inline]
+    fn expect_collection_token<
+        T: Deserializable<E, Self>,
+        C: FromIterator<T>
     >(&mut self, token: Token) -> Result<C, E> {
-        let len = try!(self.expect_collection_start(token));
+        let len = try!(self.expect_collection_start_token(token));
 
         let iter = self.by_ref().batch(|d| {
             let d = d.iter();
@@ -160,7 +212,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_collection_start(&mut self, token: Token) -> Result<uint, E> {
+    fn expect_collection_start(&mut self) -> Result<uint, E> {
+        let token = try!(self.expect_token());
+        self.expect_collection_start_token(token)
+    }
+
+    #[inline]
+    fn expect_collection_start_token(&mut self, token: Token) -> Result<uint, E> {
         match token {
             CollectionStart(len) => Ok(len),
             _ => Err(self.syntax_error()),
@@ -168,7 +226,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_collection_end(&mut self, token: Token) -> Result<(), E> {
+    fn expect_collection_end(&mut self) -> Result<(), E> {
+        let token = try!(self.expect_token());
+        self.expect_collection_end_token(token)
+    }
+
+    #[inline]
+    fn expect_collection_end_token(&mut self, token: Token) -> Result<(), E> {
         match token {
             CollectionEnd => Ok(()),
             _ => Err(self.syntax_error()),
@@ -179,10 +243,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 //////////////////////////////////////////////////////////////////////////////
 
 pub trait Deserializable<E, D: Deserializer<E>> {
-    fn deserialize(d: &mut D) -> Result<Self, E> {
-        let token = try!(d.expect_token());
-        Deserializable::deserialize_token(d, token)
-    }
+    fn deserialize(d: &mut D) -> Result<Self, E>;
 
     fn deserialize_token(d: &mut D, token: Token) -> Result<Self, E>;
 }
@@ -190,35 +251,40 @@ pub trait Deserializable<E, D: Deserializer<E>> {
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserializable {
-    ($ty:ty, $method:ident) => {
+    ($ty:ty, $method:ident, $method_token:ident) => {
         impl<
             E,
             D: Deserializer<E>
         > Deserializable<E, D> for $ty {
             #[inline]
+            fn deserialize(d: &mut D) -> Result<$ty, E> {
+                d.$method()
+            }
+
+            #[inline]
             fn deserialize_token(d: &mut D, token: Token) -> Result<$ty, E> {
-                d.$method(token)
+                d.$method_token(token)
             }
         }
     }
 }
 
-impl_deserializable!(bool, expect_bool)
-impl_deserializable!(int, expect_num)
-impl_deserializable!(i8, expect_num)
-impl_deserializable!(i16, expect_num)
-impl_deserializable!(i32, expect_num)
-impl_deserializable!(i64, expect_num)
-impl_deserializable!(uint, expect_num)
-impl_deserializable!(u8, expect_num)
-impl_deserializable!(u16, expect_num)
-impl_deserializable!(u32, expect_num)
-impl_deserializable!(u64, expect_num)
-impl_deserializable!(f32, expect_num)
-impl_deserializable!(f64, expect_num)
-impl_deserializable!(char, expect_char)
-impl_deserializable!(&'static str, expect_str)
-impl_deserializable!(StrBuf, expect_strbuf)
+impl_deserializable!(bool, expect_bool, expect_bool_token)
+impl_deserializable!(int, expect_num, expect_num_token)
+impl_deserializable!(i8, expect_num, expect_num_token)
+impl_deserializable!(i16, expect_num, expect_num_token)
+impl_deserializable!(i32, expect_num, expect_num_token)
+impl_deserializable!(i64, expect_num, expect_num_token)
+impl_deserializable!(uint, expect_num, expect_num_token)
+impl_deserializable!(u8, expect_num, expect_num_token)
+impl_deserializable!(u16, expect_num, expect_num_token)
+impl_deserializable!(u32, expect_num, expect_num_token)
+impl_deserializable!(u64, expect_num, expect_num_token)
+impl_deserializable!(f32, expect_num, expect_num_token)
+impl_deserializable!(f64, expect_num, expect_num_token)
+impl_deserializable!(char, expect_char, expect_char_token)
+impl_deserializable!(&'static str, expect_str, expect_str_token)
+impl_deserializable!(StrBuf, expect_strbuf, expect_strbuf_token)
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -228,8 +294,13 @@ impl<
     T: Deserializable<E, D>
 > Deserializable<E, D> for Option<T> {
     #[inline]
+    fn deserialize(d: &mut D) -> Result<Option<T>, E> {
+        d.expect_option()
+    }
+
+    #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Option<T>, E> {
-        d.expect_option(token)
+        d.expect_option_token(token)
     }
 }
 
@@ -241,8 +312,13 @@ impl<
     T: Deserializable<E, D>
 > Deserializable<E, D> for Vec<T> {
     #[inline]
+    fn deserialize(d: &mut D) -> Result<Vec<T>, E> {
+        d.expect_collection()
+    }
+
+    #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Vec<T>, E> {
-        d.expect_collection(token)
+        d.expect_collection_token(token)
     }
 }
 
@@ -253,8 +329,13 @@ impl<
     V: Deserializable<E, D>
 > Deserializable<E, D> for HashMap<K, V> {
     #[inline]
+    fn deserialize(d: &mut D) -> Result<HashMap<K, V>, E> {
+        d.expect_collection()
+    }
+
+    #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
-        d.expect_collection(token)
+        d.expect_collection_token(token)
     }
 }
 
@@ -265,8 +346,13 @@ impl<
     D: Deserializer<E>
 > Deserializable<E, D> for () {
     #[inline]
+    fn deserialize(d: &mut D) -> Result<(), E> {
+        d.expect_null()
+    }
+
+    #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<(), E> {
-        d.expect_null(token)
+        d.expect_null_token(token)
     }
 }
 
@@ -280,11 +366,12 @@ macro_rules! deserialize_tuple (
         impl<
             E,
             D: Deserializer<E>,
-            $($name:Deserializable<E, D>),*> Deserializable<E, D> for ($($name,)*) {
+            $($name:Deserializable<E, D>),*
+        > Deserializable<E, D> for ($($name,)*) {
             #[inline]
             #[allow(uppercase_variables)]
-            fn deserialize_token(d: &mut D, token: Token) -> Result<($($name,)*), E> {
-                try!(d.expect_collection_start(token));
+            fn deserialize(d: &mut D) -> Result<($($name,)*), E> {
+                try!(d.expect_collection_start());
 
                 let result = ($(
                     {
@@ -293,8 +380,24 @@ macro_rules! deserialize_tuple (
                     }
                     ,)*);
 
-                let token = try!(d.expect_token());
-                try!(d.expect_collection_end(token));
+                try!(d.expect_collection_end());
+
+                Ok(result)
+            }
+
+            #[inline]
+            #[allow(uppercase_variables)]
+            fn deserialize_token(d: &mut D, token: Token) -> Result<($($name,)*), E> {
+                try!(d.expect_collection_start_token(token));
+
+                let result = ($(
+                    {
+                        let $name = try!(Deserializable::deserialize(d));
+                        $name
+                    }
+                    ,)*);
+
+                try!(d.expect_collection_end());
 
                 Ok(result)
             }
