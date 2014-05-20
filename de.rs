@@ -272,45 +272,38 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
-impl<
-    E,
-    D: Deserializer<E>,
-    T0: Deserializable<E, D>
-> Deserializable<E, D> for (T0,) {
-    #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<(T0,), E> {
-        try!(d.expect_collection_start(token));
+macro_rules! peel(($name:ident, $($other:ident,)*) => (deserialize_tuple!($($other,)*)))
 
-        let x0 = try!(Deserializable::deserialize(d));
+macro_rules! deserialize_tuple (
+    () => ();
+    ( $($name:ident,)+ ) => (
+        impl<
+            E,
+            D: Deserializer<E>,
+            $($name:Deserializable<E, D>),*> Deserializable<E, D> for ($($name,)*) {
+            #[inline]
+            #[allow(uppercase_variables)]
+            fn deserialize_token(d: &mut D, token: Token) -> Result<($($name,)*), E> {
+                try!(d.expect_collection_start(token));
 
-        let token = try!(d.expect_token());
-        try!(d.expect_collection_end(token));
+                let result = ($(
+                    {
+                        let $name = try!(Deserializable::deserialize(d));
+                        $name
+                    }
+                    ,)*);
 
-        Ok((x0,))
-    }
-}
+                let token = try!(d.expect_token());
+                try!(d.expect_collection_end(token));
 
-//////////////////////////////////////////////////////////////////////////////
+                Ok(result)
+            }
+        }
+        peel!($($name,)*)
+    )
+)
 
-impl<
-    E,
-    D: Deserializer<E>,
-    T0: Deserializable<E, D>,
-    T1: Deserializable<E, D>
-> Deserializable<E, D> for (T0, T1) {
-    #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<(T0, T1), E> {
-        try!(d.expect_collection_start(token));
-
-        let x0 = try!(Deserializable::deserialize(d));
-        let x1 = try!(Deserializable::deserialize(d));
-
-        let token = try!(d.expect_token());
-        try!(d.expect_collection_end(token));
-
-        Ok((x0, x1))
-    }
-}
+deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 //////////////////////////////////////////////////////////////////////////////
 
