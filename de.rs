@@ -24,12 +24,16 @@ pub enum Token {
     Char(char),
     Str(&'static str),
     StrBuf(StrBuf),
-
     Option(bool),
 
     TupleStart(uint),
+
     StructStart(&'static str),
     StructField(&'static str),
+
+    EnumStart(&'static str),
+    EnumVariant(&'static str),
+
     SeqStart(uint),
     MapStart(uint),
 
@@ -183,6 +187,26 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             StructField(n) => {
                 if name == n {
                     Deserializable::deserialize(self)
+                } else {
+                    Err(self.syntax_error())
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn expect_enum_start<'a>(&mut self, name: &str, variants: &[&str]) -> Result<uint, E> {
+        match_token! {
+            EnumStart(n) => {
+                if name == n {
+                    match_token! {
+                        EnumVariant(n) => {
+                            match variants.iter().position(|variant| *variant == n) {
+                                Some(position) => Ok(position),
+                                None => Err(self.syntax_error()),
+                            }
+                        }
+                    }
                 } else {
                     Err(self.syntax_error())
                 }
@@ -410,7 +434,8 @@ mod tests {
     use self::serialize::{Decoder, Decodable};
 
     use super::{Token, Null, Int, Uint, Str, StrBuf, Char, Option};
-    use super::{TupleStart, StructStart, StructField, SeqStart, MapStart, Sep, End};
+    use super::{TupleStart, StructStart, StructField, EnumStart, EnumVariant};
+    use super::{SeqStart, MapStart, Sep, End};
     use super::{Deserializer, Deserializable};
 
     //////////////////////////////////////////////////////////////////////////////
@@ -448,6 +473,33 @@ mod tests {
             let inner = try!(d.expect_struct_field("inner"));
             try!(d.expect_end());
             Ok(Outer { inner: inner })
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+
+    #[deriving(Eq, Show)]
+    enum Animal {
+        Dog,
+        Frog(StrBuf, int)
+    }
+
+    impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
+        #[inline]
+        fn deserialize(d: &mut D) -> Result<Animal, E> {
+            match try!(d.expect_enum_start("Animal", ["Dog", "Frog"])) {
+                0 => {
+                    try!(d.expect_end());
+                    Ok(Dog)
+                }
+                1 => {
+                    let x0 = try!(Deserializable::deserialize(d));
+                    let x1 = try!(Deserializable::deserialize(d));
+                    try!(d.expect_end());
+                    Ok(Frog(x0, x1))
+                }
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -884,6 +936,33 @@ mod tests {
                     },
                 )
             });
+    }
+
+    #[test]
+    fn test_tokens_enum() {
+        let tokens = vec!(
+            EnumStart("Animal"),
+                EnumVariant("Dog"),
+            End,
+        );
+ 
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        assert_eq!(value, Dog);
+
+        let tokens = vec!(
+            EnumStart("Animal"),
+                EnumVariant("Frog"),
+                StrBuf("Henry".to_strbuf()),
+                Int(349),
+            End,
+        );
+ 
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        assert_eq!(value, Frog("Henry".to_strbuf(), 349));
     }
 
     #[test]
