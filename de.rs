@@ -161,7 +161,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_seq<
+    fn expect_collection<
         T: Deserializable<E, Self>,
         C: FromIterator<T>
     >(&mut self) -> Result<C, E> {
@@ -174,26 +174,19 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             MapStart(len) => len
         };
 
-        let iter = self.by_ref().batch(|d| {
-            let d = d.iter();
+        expect_rest_of_collection(self, len)
+    }
 
-            let token = match d.next() {
-                Some(token) => token,
-                None => { return None; }
-            };
+    #[inline]
+    fn expect_seq<
+        T: Deserializable<E, Self>,
+        C: FromIterator<T>
+    >(&mut self) -> Result<C, E> {
+        let len = match_token! {
+            SeqStart(len) => len
+        };
 
-            match token {
-                Ok(Sep) => {
-                    let value: Result<T, E> = Deserializable::deserialize(d);
-                    Some(value)
-                }
-                Ok(End) => None,
-                Ok(_) => Some(Err(d.syntax_error())),
-                Err(e) => Some(Err(e)),
-            }
-        });
-
-        result::collect_with_capacity(iter, len)
+        expect_rest_of_collection(self, len)
     }
 
     #[inline]
@@ -202,36 +195,11 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         V: Deserializable<E, Self>,
         C: FromIterator<(K, V)>
     >(&mut self) -> Result<C, E> {
-        // By default we don't care what our source input was. We can take
-        // anything that's a Collection<(K, V)>.We'll error out later if the types
-        // are wrong.
-
         let len = match_token! {
-            TupleStart(len) => len,
-            VecStart(len) => len,
             MapStart(len) => len
         };
 
-        let iter = self.by_ref().batch(|d| {
-            let d = d.iter();
-
-            let token = match d.next() {
-                Some(token) => token,
-                None => { return None; }
-            };
-
-            match token {
-                Ok(Sep) => {
-                    let kv: Result<(K, V), E> = Deserializable::deserialize(d);
-                    Some(kv)
-                }
-                Ok(End) => None,
-                Ok(_) => Some(Err(d.syntax_error())),
-                Err(e) => Some(Err(e)),
-            }
-        });
-
-        result::collect_with_capacity(iter, len)
+        expect_rest_of_collection(self, len)
     }
 
     #[inline]
@@ -240,6 +208,36 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             End => Ok(())
         }
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+fn expect_rest_of_collection<
+    E,
+    D: Deserializer<E>,
+    T: Deserializable<E, D>,
+    C: FromIterator<T>
+>(d: &mut D, len: uint) -> Result<C, E> {
+    let iter = d.by_ref().batch(|d| {
+        let d = d.iter();
+
+        let token = match d.next() {
+            Some(token) => token,
+            None => { return None; }
+        };
+
+        match token {
+            Ok(Sep) => {
+                let value: Result<T, E> = Deserializable::deserialize(d);
+                Some(value)
+            }
+            Ok(End) => None,
+            Ok(_) => Some(Err(d.syntax_error())),
+            Err(e) => Some(Err(e)),
+        }
+    });
+
+    result::collect_with_capacity(iter, len)
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -352,12 +350,10 @@ macro_rules! deserialize_tuple (
 
                 try!(d.expect_tuple_start(len));
 
-                let result = ($(
-                    {
-                        let $name = try!(d.expect_tuple_elt());
-                        $name
-                    }
-                    ,)*);
+                let result = ($({
+                    let $name = try!(d.expect_tuple_elt());
+                    $name
+                },)*);
 
                 try!(d.expect_end());
 
