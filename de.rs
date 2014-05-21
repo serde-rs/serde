@@ -24,10 +24,15 @@ pub enum Token {
     Char(char),
     Str(&'static str),
     StrBuf(StrBuf),
+
     Option(bool),
-    CollectionStart(uint),
-    CollectionSep,
-    CollectionEnd,
+
+    TupleStart(uint),
+    SeqStart(uint),
+    MapStart(uint),
+
+    Sep,
+    End,
 }
 
 macro_rules! expect_token {
@@ -40,9 +45,9 @@ macro_rules! expect_token {
 }
 
 macro_rules! match_token {
-    ($( $Variant:pat => $E:expr ),+) => {
+    ($( $variant:pat => $expr:expr ),+) => {
         match expect_token!() {
-            $( Ok($Variant) => $E ),+,
+            $( Ok($variant) => $expr ),+,
             Ok(_) => { return Err(self.syntax_error()); }
             Err(err) => { return Err(err); }
         }
@@ -67,7 +72,11 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_null(&mut self) -> Result<(), E> {
         match_token! {
             Null => Ok(()),
-            CollectionStart(_) => self.expect_collection_end()
+            TupleStart(_) => {
+                match_token! {
+                    End => Ok(())
+                }
+            }
         }
     }
 
@@ -132,11 +141,33 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_collection<
+    fn expect_tuple_start(&mut self, len: uint) -> Result<(), E> {
+        match_token! {
+            TupleStart(l) => {
+                if len == l {
+                    Ok(())
+                } else {
+                    Err(self.syntax_error())
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn expect_tuple_elt<T: Deserializable<E, Self>>(&mut self) -> Result<T, E> {
+        match_token! {
+            Sep => Deserializable::deserialize(self)
+        }
+    }
+
+    #[inline]
+    fn expect_seq<
         T: Deserializable<E, Self>,
         C: FromIterator<T>
     >(&mut self) -> Result<C, E> {
-        let len = try!(self.expect_collection_start());
+        let len = match_token! {
+            SeqStart(len) => len
+        };
 
         let iter = self.by_ref().batch(|d| {
             let d = d.iter();
@@ -147,11 +178,11 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             };
 
             match token {
-                Ok(CollectionEnd) => None,
-                Ok(CollectionSep) => {
+                Ok(Sep) => {
                     let value: Result<T, E> = Deserializable::deserialize(d);
                     Some(value)
                 }
+                Ok(End) => None,
                 Ok(_) => Some(Err(d.syntax_error())),
                 Err(e) => Some(Err(e)),
             }
@@ -161,23 +192,41 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_collection_start(&mut self) -> Result<uint, E> {
-        match_token! {
-            CollectionStart(len) => Ok(len)
-        }
+    fn expect_map<
+        K: Deserializable<E, Self>,
+        V: Deserializable<E, Self>,
+        C: FromIterator<(K, V)>
+    >(&mut self) -> Result<C, E> {
+        let len = match_token! {
+            MapStart(len) => len
+        };
+
+        let iter = self.by_ref().batch(|d| {
+            let d = d.iter();
+
+            let token = match d.next() {
+                Some(token) => token,
+                None => { return None; }
+            };
+
+            match token {
+                Ok(Sep) => {
+                    let kv: Result<(K, V), E> = Deserializable::deserialize(d);
+                    Some(kv)
+                }
+                Ok(End) => None,
+                Ok(_) => Some(Err(d.syntax_error())),
+                Err(e) => Some(Err(e)),
+            }
+        });
+
+        result::collect_with_capacity(iter, len)
     }
 
     #[inline]
-    fn expect_collection_sep(&mut self) -> Result<(), E> {
+    fn expect_end(&mut self) -> Result<(), E> {
         match_token! {
-            CollectionSep => Ok(())
-        }
-    }
-
-    #[inline]
-    fn expect_collection_end(&mut self) -> Result<(), E> {
-        match_token! {
-            CollectionEnd => Ok(())
+            End => Ok(())
         }
     }
 }
@@ -243,7 +292,7 @@ impl<
 > Deserializable<E, D> for Vec<T> {
     #[inline]
     fn deserialize(d: &mut D) -> Result<Vec<T>, E> {
-        d.expect_collection()
+        d.expect_seq()
     }
 }
 
@@ -255,7 +304,7 @@ impl<
 > Deserializable<E, D> for HashMap<K, V> {
     #[inline]
     fn deserialize(d: &mut D) -> Result<HashMap<K, V>, E> {
-        d.expect_collection()
+        d.expect_map()
     }
 }
 
@@ -286,17 +335,20 @@ macro_rules! deserialize_tuple (
             #[inline]
             #[allow(uppercase_variables)]
             fn deserialize(d: &mut D) -> Result<($($name,)*), E> {
-                try!(d.expect_collection_start());
+                // FIXME: how can we count macro args?
+                let mut len = 0;
+                $({ let $name = 1; len += $name; })*;
+
+                try!(d.expect_tuple_start(len));
 
                 let result = ($(
                     {
-                        try!(d.expect_collection_sep());
-                        let $name = try!(Deserializable::deserialize(d));
+                        let $name = try!(d.expect_tuple_elt());
                         $name
                     }
                     ,)*);
 
-                try!(d.expect_collection_end());
+                try!(d.expect_end());
 
                 Ok(result)
             }
@@ -320,7 +372,8 @@ mod tests {
 
     use self::serialize::{Decoder, Decodable};
 
-    use super::{Token, Int, StrBuf, CollectionStart, CollectionSep, CollectionEnd};
+    use super::{Token, Null, Int, StrBuf};
+    use super::{TupleStart, SeqStart, MapStart, Sep, End};
     use super::{Deserializer, Deserializable};
 
     //////////////////////////////////////////////////////////////////////////////
@@ -372,10 +425,10 @@ mod tests {
 
     #[deriving(Eq, Show)]
     enum IntsDeserializerState {
-        Start,
-        SepOrEnd,
-        Value,
-        End,
+        StartState,
+        SepOrEndState,
+        ValueState,
+        EndState,
     }
 
     struct IntsDeserializer {
@@ -389,7 +442,7 @@ mod tests {
         #[inline]
         fn new(values: Vec<int>) -> IntsDeserializer {
             IntsDeserializer {
-                state: Start,
+                state: StartState,
                 len: values.len(),
                 iter: values.move_iter(),
                 value: None,
@@ -401,31 +454,31 @@ mod tests {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
             match self.state {
-                Start => {
-                    self.state = SepOrEnd;
-                    Some(Ok(CollectionStart(self.len)))
+                StartState => {
+                    self.state = SepOrEndState;
+                    Some(Ok(SeqStart(self.len)))
                 }
-                SepOrEnd => {
+                SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            self.state = Value;
+                            self.state = ValueState;
                             self.value = Some(value);
-                            Some(Ok(CollectionSep))
+                            Some(Ok(Sep))
                         }
                         None => {
-                            self.state = End;
-                            Some(Ok(CollectionEnd))
+                            self.state = EndState;
+                            Some(Ok(End))
                         }
                     }
                 }
-                Value => {
-                    self.state = SepOrEnd;
+                ValueState => {
+                    self.state = SepOrEndState;
                     match self.value.take() {
                         Some(value) => Some(Ok(Int(value))),
                         None => Some(Err(self.end_of_stream_error())),
                     }
                 }
-                End => {
+                EndState => {
                     None
                 }
             }
@@ -445,9 +498,9 @@ mod tests {
 
         #[inline]
         fn expect_num<T: NumCast>(&mut self) -> Result<T, Error> {
-            assert_eq!(self.state, Value);
+            assert_eq!(self.state, ValueState);
 
-            self.state = SepOrEnd;
+            self.state = SepOrEndState;
 
             match self.value.take() {
                 Some(value) => {
@@ -584,10 +637,22 @@ mod tests {
 
 
     #[test]
+    fn test_tokens_null() {
+        let tokens = vec!(
+            Null,
+        );
+
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Result<(), Error> = Deserializable::deserialize(&mut deserializer);
+
+        assert_eq!(value.unwrap(), ());
+    }
+
+    #[test]
     fn test_tokens_tuple_empty() {
         let tokens = vec!(
-            CollectionStart(0),
-            CollectionEnd,
+            TupleStart(0),
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
@@ -599,13 +664,13 @@ mod tests {
     #[test]
     fn test_tokens_tuple() {
         let tokens = vec!(
-            CollectionStart(2),
-                CollectionSep,
+            TupleStart(2),
+                Sep,
                 Int(5),
 
-                CollectionSep,
+                Sep,
                 StrBuf("a".to_strbuf()),
-            CollectionEnd,
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
@@ -617,33 +682,36 @@ mod tests {
     #[test]
     fn test_tokens_tuple_compound() {
         let tokens = vec!(
-            CollectionStart(2),
-                CollectionSep,
-                CollectionStart(0),
-                CollectionEnd,
+            TupleStart(3),
+                Sep,
+                Null,
+                
+                Sep,
+                TupleStart(0),
+                End,
 
-                CollectionSep,
-                CollectionStart(2),
-                    CollectionSep,
+                Sep,
+                TupleStart(2),
+                    Sep,
                     Int(5),
 
-                    CollectionSep,
+                    Sep,
                     StrBuf("a".to_strbuf()),
-                CollectionEnd,
-            CollectionEnd,
+                End,
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<((), (int, StrBuf)), Error> = Deserializable::deserialize(&mut deserializer);
+        let value: Result<((), (), (int, StrBuf)), Error> = Deserializable::deserialize(&mut deserializer);
 
-        assert_eq!(value.unwrap(), ((), (5, "a".to_strbuf())));
+        assert_eq!(value.unwrap(), ((), (), (5, "a".to_strbuf())));
     }
 
     #[test]
     fn test_tokens_vec_empty() {
         let tokens = vec!(
-            CollectionStart(0),
-            CollectionEnd,
+            SeqStart(0),
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
@@ -655,16 +723,16 @@ mod tests {
     #[test]
     fn test_tokens_vec() {
         let tokens = vec!(
-            CollectionStart(3),
-                CollectionSep,
+            SeqStart(3),
+                Sep,
                 Int(5),
 
-                CollectionSep,
+                Sep,
                 Int(6),
 
-                CollectionSep,
+                Sep,
                 Int(7),
-            CollectionEnd,
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
@@ -676,34 +744,34 @@ mod tests {
     #[test]
     fn test_tokens_vec_compound() {
         let tokens = vec!(
-            CollectionStart(0),
-                CollectionSep,
-                CollectionStart(1),
-                    CollectionSep,
+            SeqStart(0),
+                Sep,
+                SeqStart(1),
+                    Sep,
                     Int(1),
-                CollectionEnd,
+                End,
 
-                CollectionSep,
-                CollectionStart(2),
-                    CollectionSep,
+                Sep,
+                SeqStart(2),
+                    Sep,
                     Int(2),
 
-                    CollectionSep,
+                    Sep,
                     Int(3),
-                CollectionEnd,
+                End,
 
-                CollectionSep,
-                CollectionStart(3),
-                    CollectionSep,
+                Sep,
+                SeqStart(3),
+                    Sep,
                     Int(4),
 
-                    CollectionSep,
+                    Sep,
                     Int(5),
 
-                    CollectionSep,
+                    Sep,
                     Int(6),
-                CollectionEnd,
-            CollectionEnd,
+                End,
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
@@ -715,25 +783,25 @@ mod tests {
     #[test]
     fn test_tokens_hashmap() {
         let tokens = vec!(
-            CollectionStart(2),
-                CollectionSep,
-                CollectionStart(2),
-                    CollectionSep,
+            MapStart(2),
+                Sep,
+                TupleStart(2),
+                    Sep,
                     Int(5),
 
-                    CollectionSep,
+                    Sep,
                     StrBuf("a".to_strbuf()),
-                CollectionEnd,
+                End,
 
-                CollectionSep,
-                CollectionStart(2),
-                    CollectionSep,
+                Sep,
+                TupleStart(2),
+                    Sep,
                     Int(6),
 
-                    CollectionSep,
+                    Sep,
                     StrBuf("b".to_strbuf()),
-                CollectionEnd,
-            CollectionEnd,
+                End,
+            End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
@@ -750,16 +818,16 @@ mod tests {
     fn bench_dummy_deserializer(b: &mut Bencher) {
         b.iter(|| {
             let tokens = vec!(
-                CollectionStart(3),
-                    CollectionSep,
+                SeqStart(3),
+                    Sep,
                     Int(5),
 
-                    CollectionSep,
+                    Sep,
                     Int(6),
 
-                    CollectionSep,
+                    Sep,
                     Int(7),
-                CollectionEnd,
+                End,
             );
 
             let mut d = TokenDeserializer::new(tokens);
