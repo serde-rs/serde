@@ -165,8 +165,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         T: Deserializable<E, Self>,
         C: FromIterator<T>
     >(&mut self) -> Result<C, E> {
+        // By default we don't care what our source input was. We can take
+        // anything that's a Collection<T>. We'll error out later if the types
+        // are wrong.
         let len = match_token! {
-            SeqStart(len) => len
+            TupleStart(len) => len,
+            SeqStart(len) => len,
+            MapStart(len) => len
         };
 
         let iter = self.by_ref().batch(|d| {
@@ -197,7 +202,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         V: Deserializable<E, Self>,
         C: FromIterator<(K, V)>
     >(&mut self) -> Result<C, E> {
+        // By default we don't care what our source input was. We can take
+        // anything that's a Collection<(K, V)>.We'll error out later if the types
+        // are wrong.
+
         let len = match_token! {
+            TupleStart(len) => len,
+            VecStart(len) => len,
             MapStart(len) => len
         };
 
@@ -685,7 +696,7 @@ mod tests {
             TupleStart(3),
                 Sep,
                 Null,
-                
+
                 Sep,
                 TupleStart(0),
                 End,
