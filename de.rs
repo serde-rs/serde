@@ -28,6 +28,8 @@ pub enum Token {
     Option(bool),
 
     TupleStart(uint),
+    StructStart(&'static str),
+    StructField(&'static str),
     SeqStart(uint),
     MapStart(uint),
 
@@ -157,6 +159,34 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_tuple_elt<T: Deserializable<E, Self>>(&mut self) -> Result<T, E> {
         match_token! {
             Sep => Deserializable::deserialize(self)
+        }
+    }
+
+    #[inline]
+    fn expect_struct_start(&mut self, name: &str) -> Result<(), E> {
+        match_token! {
+            StructStart(n) => {
+                if name == n {
+                    Ok(())
+                } else {
+                    Err(self.syntax_error())
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn expect_struct_field<
+        T: Deserializable<E, Self>
+    >(&mut self, name: &str) -> Result<T, E> {
+        match_token! {
+            StructField(n) => {
+                if name == n {
+                    Deserializable::deserialize(self)
+                } else {
+                    Err(self.syntax_error())
+                }
+            }
         }
     }
 
@@ -379,9 +409,47 @@ mod tests {
 
     use self::serialize::{Decoder, Decodable};
 
-    use super::{Token, Null, Int, StrBuf};
-    use super::{TupleStart, SeqStart, MapStart, Sep, End};
+    use super::{Token, Null, Int, Uint, Str, StrBuf, Char, Option};
+    use super::{TupleStart, StructStart, StructField, SeqStart, MapStart, Sep, End};
     use super::{Deserializer, Deserializable};
+
+    //////////////////////////////////////////////////////////////////////////////
+
+    #[deriving(Eq, Show)]
+    struct Inner {
+        a: (),
+        b: uint,
+        c: HashMap<StrBuf, Option<char>>,
+    }
+
+    impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
+        #[inline]
+        fn deserialize(d: &mut D) -> Result<Inner, E> {
+            try!(d.expect_struct_start("Inner"));
+            let a = try!(d.expect_struct_field("a"));
+            let b = try!(d.expect_struct_field("b"));
+            let c = try!(d.expect_struct_field("c"));
+            try!(d.expect_end());
+            Ok(Inner { a: a, b: b, c: c })
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+
+    #[deriving(Eq, Show)]
+    struct Outer {
+        inner: Vec<Inner>,
+    }
+
+    impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
+        #[inline]
+        fn deserialize(d: &mut D) -> Result<Outer, E> {
+            try!(d.expect_struct_start("Outer"));
+            let inner = try!(d.expect_struct_field("inner"));
+            try!(d.expect_end());
+            Ok(Outer { inner: inner })
+        }
+    }
 
     //////////////////////////////////////////////////////////////////////////////
 
@@ -534,6 +602,8 @@ mod tests {
         }
     }
 
+    //////////////////////////////////////////////////////////////////////////////
+
     impl Decoder<Error> for IntsDecoder {
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
@@ -625,9 +695,21 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<int, Error> = Deserializable::deserialize(&mut deserializer);
+        let value: int = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), 5);
+        assert_eq!(value, 5);
+    }
+
+    #[test]
+    fn test_tokens_str() {
+        let tokens = vec!(
+            Str("a"),
+        );
+
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: &'static str = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        assert_eq!(value, "a");
     }
 
     #[test]
@@ -637,11 +719,10 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<StrBuf, Error> = Deserializable::deserialize(&mut deserializer);
+        let value: StrBuf = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), "a".to_strbuf());
+        assert_eq!(value, "a".to_strbuf());
     }
-
 
     #[test]
     fn test_tokens_null() {
@@ -650,9 +731,9 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<(), Error> = Deserializable::deserialize(&mut deserializer);
+        let value: () = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), ());
+        assert_eq!(value, ());
     }
 
     #[test]
@@ -663,9 +744,34 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<(), Error> = Deserializable::deserialize(&mut deserializer);
+        let value: () = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), ());
+        assert_eq!(value, ());
+    }
+
+    #[test]
+    fn test_tokens_option_none() {
+        let tokens = vec!(
+            Option(false),
+        );
+
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Option<int> = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        assert_eq!(value, None);
+    }
+
+    #[test]
+    fn test_tokens_option_some() {
+        let tokens = vec!(
+            Option(true),
+            Int(5),
+        );
+
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Option<int> = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        assert_eq!(value, Some(5));
     }
 
     #[test]
@@ -681,9 +787,9 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<(int, StrBuf), Error> = Deserializable::deserialize(&mut deserializer);
+        let value: (int, StrBuf) = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), (5, "a".to_strbuf()));
+        assert_eq!(value, (5, "a".to_strbuf()));
     }
 
     #[test]
@@ -709,9 +815,75 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<((), (), (int, StrBuf)), Error> = Deserializable::deserialize(&mut deserializer);
+        let value: ((), (), (int, StrBuf)) = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), ((), (), (5, "a".to_strbuf())));
+        assert_eq!(value, ((), (), (5, "a".to_strbuf())));
+    }
+
+    #[test]
+    fn test_tokens_struct_empty() {
+        let tokens = vec!(
+            StructStart("Outer"),
+                StructField("inner"),
+                SeqStart(0),
+                End,
+            End,
+        );
+ 
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        assert_eq!(value, Outer { inner: vec!() });
+    }
+
+    #[test]
+    fn test_tokens_struct() {
+        let tokens = vec!(
+            StructStart("Outer"),
+                StructField("inner"),
+                SeqStart(1),
+                    Sep,
+                    StructStart("Inner"),
+                        StructField("a"),
+                        Null,
+
+                        StructField("b"),
+                        Uint(5),
+
+                        StructField("c"),
+                        MapStart(1),
+                            Sep,
+                            TupleStart(2),
+                                Sep,
+                                StrBuf("abc".to_strbuf()),
+
+                                Sep,
+                                Option(true),
+                                Char('c'),
+                            End,
+                        End,
+                    End,
+                End,
+            End,
+        );
+ 
+        let mut deserializer = TokenDeserializer::new(tokens);
+        let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
+
+        let mut map = HashMap::new();
+        map.insert("abc".to_strbuf(), Some('c'));
+
+        assert_eq!(
+            value,
+            Outer {
+                inner: vec!(
+                    Inner {
+                        a: (),
+                        b: 5,
+                        c: map,
+                    },
+                )
+            });
     }
 
     #[test]
@@ -722,9 +894,9 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<Vec<int>, Error> = Deserializable::deserialize(&mut deserializer);
+        let value: Vec<int> = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), vec!());
+        assert_eq!(value, vec!());
     }
 
     #[test]
@@ -743,9 +915,9 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<Vec<int>, Error> = Deserializable::deserialize(&mut deserializer);
+        let value: Vec<int> = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), vec!(5, 6, 7));
+        assert_eq!(value, vec!(5, 6, 7));
     }
 
     #[test]
@@ -782,9 +954,9 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<Vec<Vec<int>>, Error> = Deserializable::deserialize(&mut deserializer);
+        let value: Vec<Vec<int>> = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value.unwrap(), vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)));
+        assert_eq!(value, vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)));
     }
 
     #[test]
@@ -812,13 +984,13 @@ mod tests {
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Result<HashMap<int, StrBuf>, Error> = Deserializable::deserialize(&mut deserializer);
+        let value: HashMap<int, StrBuf> = Deserializable::deserialize(&mut deserializer).unwrap();
 
         let mut map = HashMap::new();
         map.insert(5, "a".to_strbuf());
         map.insert(6, "b".to_strbuf());
 
-        assert_eq!(value.unwrap(), map);
+        assert_eq!(value, map);
     }
 
     #[bench]
@@ -838,9 +1010,9 @@ mod tests {
             );
 
             let mut d = TokenDeserializer::new(tokens);
-            let value: Result<Vec<int>, Error> = Deserializable::deserialize(&mut d);
+            let value: Vec<int> = Deserializable::deserialize(&mut d).unwrap();
 
-            assert_eq!(value.unwrap(), vec!(5, 6, 7));
+            assert_eq!(value, vec!(5, 6, 7));
         })
     }
 
@@ -850,9 +1022,9 @@ mod tests {
             let ints = vec!(5, 6, 7);
 
             let mut d = IntsDeserializer::new(ints);
-            let value: Result<Vec<int>, Error> = Deserializable::deserialize(&mut d);
+            let value: Vec<int> = Deserializable::deserialize(&mut d).unwrap();
 
-            assert_eq!(value.unwrap(), vec!(5, 6, 7));
+            assert_eq!(value, vec!(5, 6, 7));
         })
     }
 
@@ -862,9 +1034,9 @@ mod tests {
             let ints = vec!(5, 6, 7);
 
             let mut d = IntsDecoder::new(ints);
-            let value: Result<Vec<int>, Error> = Decodable::decode(&mut d);
+            let value: Vec<int> = Decodable::decode(&mut d).unwrap();
 
-            assert_eq!(value.unwrap(), vec!(5, 6, 7));
+            assert_eq!(value, vec!(5, 6, 7));
         })
     }
 }
