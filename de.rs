@@ -550,10 +550,10 @@ mod tests {
 
     #[deriving(Eq, Show)]
     enum IntsDeserializerState {
-        StartState,
-        SepOrEndState,
-        ValueState,
-        EndState,
+        IntsDeserializserStartState,
+        IntsDeserializserSepOrEndState,
+        IntsDeserializserValueState,
+        IntsDeserializserEndState,
     }
 
     struct IntsDeserializer {
@@ -567,7 +567,7 @@ mod tests {
         #[inline]
         fn new(values: Vec<int>) -> IntsDeserializer {
             IntsDeserializer {
-                state: StartState,
+                state: IntsDeserializserStartState,
                 len: values.len(),
                 iter: values.move_iter(),
                 value: None,
@@ -579,31 +579,31 @@ mod tests {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
             match self.state {
-                StartState => {
-                    self.state = SepOrEndState;
+                IntsDeserializserStartState => {
+                    self.state = IntsDeserializserSepOrEndState;
                     Some(Ok(SeqStart(self.len)))
                 }
-                SepOrEndState => {
+                IntsDeserializserSepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            self.state = ValueState;
+                            self.state = IntsDeserializserValueState;
                             self.value = Some(value);
                             Some(Ok(Sep))
                         }
                         None => {
-                            self.state = EndState;
+                            self.state = IntsDeserializserEndState;
                             Some(Ok(End))
                         }
                     }
                 }
-                ValueState => {
-                    self.state = SepOrEndState;
+                IntsDeserializserValueState => {
+                    self.state = IntsDeserializserSepOrEndState;
                     match self.value.take() {
                         Some(value) => Some(Ok(Int(value))),
                         None => Some(Err(self.end_of_stream_error())),
                     }
                 }
-                EndState => {
+                IntsDeserializserEndState => {
                     None
                 }
             }
@@ -623,9 +623,9 @@ mod tests {
 
         #[inline]
         fn expect_num<T: NumCast>(&mut self) -> Result<T, Error> {
-            assert_eq!(self.state, ValueState);
+            assert_eq!(self.state, IntsDeserializserValueState);
 
-            self.state = SepOrEndState;
+            self.state = IntsDeserializserSepOrEndState;
 
             match self.value.take() {
                 Some(value) => {
@@ -741,11 +741,11 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////////
 
     enum AnimalDecoderState {
-        AnimalState(Animal),
-        DogState,
-        FrogState,
-        IntState(int),
-        StrState(StrBuf),
+        AnimalDecoderAnimalState(Animal),
+        AnimalDecoderDogState,
+        AnimalDecoderFrogState,
+        AnimalDecoderIntState(int),
+        AnimalDecoderStrState(StrBuf),
     }
 
     struct AnimalDecoder {
@@ -757,7 +757,7 @@ mod tests {
         #[inline]
         fn new(animal: Animal) -> AnimalDecoder {
             AnimalDecoder {
-                stack: vec!(AnimalState(animal)),
+                stack: vec!(AnimalDecoderAnimalState(animal)),
             }
         }
     }
@@ -773,7 +773,7 @@ mod tests {
         #[inline]
         fn read_int(&mut self) -> Result<int, Error> {
             match self.stack.pop() {
-                Some(IntState(x)) => Ok(x),
+                Some(AnimalDecoderIntState(x)) => Ok(x),
                 _ => Err(SyntaxError),
             }
         }
@@ -787,7 +787,7 @@ mod tests {
         fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
         fn read_str(&mut self) -> Result<StrBuf, Error> {
             match self.stack.pop() {
-                Some(StrState(x)) => Ok(x),
+                Some(AnimalDecoderStrState(x)) => Ok(x),
                 _ => Err(SyntaxError),
             }
         }
@@ -795,8 +795,8 @@ mod tests {
         // Compound types:
         fn read_enum<T>(&mut self, name: &str, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
             match self.stack.pop() {
-                Some(AnimalState(animal)) => {
-                    self.stack.push(AnimalState(animal));
+                Some(AnimalDecoderAnimalState(animal)) => {
+                    self.stack.push(AnimalDecoderAnimalState(animal));
                     if name == "Animal" {
                         f(self)
                     } else {
@@ -809,10 +809,10 @@ mod tests {
 
         fn read_enum_variant<T>(&mut self, names: &[&str], f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
             let name = match self.stack.pop() {
-                Some(AnimalState(Dog)) => "Dog",
-                Some(AnimalState(Frog(x0, x1))) => {
-                    self.stack.push(IntState(x1));
-                    self.stack.push(StrState(x0));
+                Some(AnimalDecoderAnimalState(Dog)) => "Dog",
+                Some(AnimalDecoderAnimalState(Frog(x0, x1))) => {
+                    self.stack.push(AnimalDecoderIntState(x1));
+                    self.stack.push(AnimalDecoderStrState(x0));
                     "Frog"
                 }
                 _ => { return Err(SyntaxError); }
@@ -877,34 +877,25 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
+    enum AnimalDeserializerState {
+        AnimalDeserializerAnimalState(Animal),
+        AnimalDeserializerDogState,
+        AnimalDeserializerFrogState,
+        AnimalDeserializerIntState(int),
+        AnimalDeserializerStrState(StrBuf),
+        AnimalDeserializerEndState,
+
+    }
+
     struct AnimalDeserializer {
-        tokens: Vec<Token>,
+        stack: Vec<AnimalDeserializerState>,
     }
 
     impl AnimalDeserializer {
         #[inline]
         fn new(animal: Animal) -> AnimalDeserializer {
-            let tokens = match animal {
-                Dog => {
-                    vec!(
-                        End,
-                            EnumVariant("Dog"),
-                        EnumStart("Animal"),
-                    )
-                }
-                Frog(x0, x1) => {
-                    vec!(
-                        End,
-                            Int(x1),
-                            StrBuf(x0),
-                            EnumVariant("Frog"),
-                        EnumStart("Animal"),
-                    )
-                }
-            };
-
             AnimalDeserializer {
-                tokens: tokens,
+                stack: vec!(AnimalDeserializerAnimalState(animal)),
             }
         }
     }
@@ -912,10 +903,35 @@ mod tests {
     impl Iterator<Result<Token, Error>> for AnimalDeserializer {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
-            match self.tokens.pop() {
-                Some(token) => Some(Ok(token)),
+            match self.stack.pop() {
+                Some(AnimalDeserializerAnimalState(Dog)) => {
+                    self.stack.push(AnimalDeserializerEndState);
+                    self.stack.push(AnimalDeserializerDogState);
+                    Some(Ok(EnumStart("Animal")))
+                }
+                Some(AnimalDeserializerAnimalState(Frog(x0, x1))) => {
+                    self.stack.push(AnimalDeserializerEndState);
+                    self.stack.push(AnimalDeserializerIntState(x1));
+                    self.stack.push(AnimalDeserializerStrState(x0));
+                    self.stack.push(AnimalDeserializerFrogState);
+                    Some(Ok(EnumStart("Animal")))
+                }
+                Some(AnimalDeserializerDogState) => {
+                    Some(Ok(EnumVariant("Dog")))
+                }
+                Some(AnimalDeserializerFrogState) => {
+                    Some(Ok(EnumVariant("Frog")))
+                }
+                Some(AnimalDeserializerIntState(x)) => {
+                    Some(Ok(Int(x)))
+                }
+                Some(AnimalDeserializerStrState(x)) => {
+                    Some(Ok(StrBuf(x)))
+                }
+                Some(AnimalDeserializerEndState) => {
+                    Some(Ok(End))
+                }
                 None => None,
-
             }
         }
     }
