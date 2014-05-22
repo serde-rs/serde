@@ -785,6 +785,7 @@ mod tests {
         fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
         fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
         fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
+        #[inline]
         fn read_str(&mut self) -> Result<StrBuf, Error> {
             match self.stack.pop() {
                 Some(AnimalDecoderStrState(x)) => Ok(x),
@@ -793,6 +794,7 @@ mod tests {
         }
 
         // Compound types:
+        #[inline]
         fn read_enum<T>(&mut self, name: &str, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
             match self.stack.pop() {
                 Some(AnimalDecoderAnimalState(animal)) => {
@@ -807,6 +809,7 @@ mod tests {
             }
         }
 
+        #[inline]
         fn read_enum_variant<T>(&mut self, names: &[&str], f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
             let name = match self.stack.pop() {
                 Some(AnimalDecoderAnimalState(Dog)) => "Dog",
@@ -825,6 +828,7 @@ mod tests {
 
             f(self, idx)
         }
+        #[inline]
         fn read_enum_variant_arg<T>(&mut self, _a_idx: uint, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
             f(self)
         }
