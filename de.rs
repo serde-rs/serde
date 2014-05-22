@@ -438,7 +438,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Eq, Show)]
+    #[deriving(Clone, Eq, Show, Decodable)]
     struct Inner {
         a: (),
         b: uint,
@@ -459,7 +459,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Eq, Show)]
+    #[deriving(Clone, Eq, Show, Decodable)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -954,6 +954,216 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
+    #[deriving(Show)]
+    enum OuterDecoderState {
+        OuterDecoderOuterState(Outer),
+        OuterDecoderInnerState(Inner),
+        OuterDecoderNullState,
+        OuterDecoderUintState(uint),
+        OuterDecoderCharState(char),
+        OuterDecoderStrState(StrBuf),
+        OuterDecoderFieldState(&'static str),
+        OuterDecoderVecState(Vec<Inner>),
+        OuterDecoderMapState(HashMap<StrBuf, Option<char>>),
+        OuterDecoderOptionState(bool),
+    }
+
+    struct OuterDecoder {
+        stack: Vec<OuterDecoderState>,
+
+    }
+
+    impl OuterDecoder {
+        #[inline]
+        fn new(animal: Outer) -> OuterDecoder {
+            OuterDecoder {
+                stack: vec!(OuterDecoderOuterState(animal)),
+            }
+        }
+    }
+
+    impl Decoder<Error> for OuterDecoder {
+        // Primitive types:
+        #[inline]
+        fn read_nil(&mut self) -> Result<(), Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderNullState) => Ok(()),
+                _ => Err(SyntaxError),
+            }
+        }
+        #[inline]
+        fn read_uint(&mut self) -> Result<uint, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderUintState(value)) => Ok(value),
+                _ => Err(SyntaxError),
+            }
+        }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError) }
+        fn read_int(&mut self) -> Result<int, Error> { Err(SyntaxError) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(SyntaxError) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(SyntaxError) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
+        #[inline]
+        fn read_char(&mut self) -> Result<char, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderCharState(c)) => Ok(c),
+                _ => Err(SyntaxError),
+            }
+        }
+        #[inline]
+        fn read_str(&mut self) -> Result<StrBuf, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderStrState(value)) => Ok(value),
+                _ => Err(SyntaxError),
+            }
+        }
+
+        // Compound types:
+        fn read_enum<T>(&mut self, _name: &str, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+
+        fn read_enum_variant<T>(&mut self,
+                                _names: &[&str],
+                                _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
+                                -> Result<T, Error> { Err(SyntaxError) }
+        fn read_enum_variant_arg<T>(&mut self,
+                                    _a_idx: uint,
+                                    _f: |&mut OuterDecoder| -> Result<T, Error>)
+                                    -> Result<T, Error> { Err(SyntaxError) }
+
+        fn read_enum_struct_variant<T>(&mut self,
+                                       _names: &[&str],
+                                       _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
+                                       -> Result<T, Error> { Err(SyntaxError) }
+        fn read_enum_struct_variant_field<T>(&mut self,
+                                             _f_name: &str,
+                                             _f_idx: uint,
+                                             _f: |&mut OuterDecoder| -> Result<T, Error>)
+                                             -> Result<T, Error> { Err(SyntaxError) }
+
+        #[inline]
+        fn read_struct<T>(&mut self, s_name: &str, _len: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderOuterState(Outer { inner: inner })) => {
+                    if s_name == "Outer" {
+                        self.stack.push(OuterDecoderVecState(inner));
+                        self.stack.push(OuterDecoderFieldState("inner"));
+                        f(self)
+                    } else {
+                        Err(SyntaxError)
+                    }
+                }
+                Some(OuterDecoderInnerState(Inner { a: (), b: b, c: c })) => {
+                    if s_name == "Inner" {
+                        self.stack.push(OuterDecoderMapState(c));
+                        self.stack.push(OuterDecoderFieldState("c"));
+
+                        self.stack.push(OuterDecoderUintState(b));
+                        self.stack.push(OuterDecoderFieldState("b"));
+
+                        self.stack.push(OuterDecoderNullState);
+                        self.stack.push(OuterDecoderFieldState("a"));
+                        f(self)
+                    } else {
+                        Err(SyntaxError)
+                    }
+                }
+                _ => Err(SyntaxError),
+            }
+        }
+        #[inline]
+        fn read_struct_field<T>(&mut self, f_name: &str, _f_idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderFieldState(name)) => {
+                    if f_name == name {
+                        f(self)
+                    } else {
+                        Err(SyntaxError)
+                    }
+                }
+                _ => Err(SyntaxError)
+            }
+        }
+
+        fn read_tuple<T>(&mut self, _f: |&mut OuterDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+
+        fn read_tuple_struct<T>(&mut self,
+                                _s_name: &str,
+                                _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
+                                -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple_struct_arg<T>(&mut self,
+                                    _a_idx: uint,
+                                    _f: |&mut OuterDecoder| -> Result<T, Error>)
+                                    -> Result<T, Error> { Err(SyntaxError) }
+
+        // Specialized types:
+        #[inline]
+        fn read_option<T>(&mut self, f: |&mut OuterDecoder, bool| -> Result<T, Error>) -> Result<T, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderOptionState(b)) => f(self, b),
+                _ => Err(SyntaxError),
+            }
+        }
+
+        #[inline]
+        fn read_seq<T>(&mut self, f: |&mut OuterDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderVecState(value)) => {
+                    let len = value.len();
+                    for inner in value.move_iter().rev() {
+                        self.stack.push(OuterDecoderInnerState(inner));
+                    }
+                    f(self, len)
+                }
+                _ => Err(SyntaxError)
+            }
+        }
+        #[inline]
+        fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            f(self)
+        }
+
+        #[inline]
+        fn read_map<T>(&mut self, f: |&mut OuterDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+            match self.stack.pop() {
+                Some(OuterDecoderMapState(map)) => {
+                    let len = map.len();
+                    for (key, value) in map.move_iter() {
+                        match value {
+                            Some(c) => {
+                                self.stack.push(OuterDecoderCharState(c));
+                                self.stack.push(OuterDecoderOptionState(true));
+                            }
+                            None => {
+                                self.stack.push(OuterDecoderOptionState(false));
+                            }
+                        }
+                        self.stack.push(OuterDecoderStrState(key));
+                    }
+                    f(self, len)
+                }
+                _ => Err(SyntaxError),
+            }
+        }
+        #[inline]
+        fn read_map_elt_key<T>(&mut self, _idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            f(self)
+        }
+        #[inline]
+        fn read_map_elt_val<T>(&mut self, _idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            f(self)
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+
     #[test]
     fn test_tokens_int() {
         let tokens = vec!(
@@ -1338,10 +1548,10 @@ mod tests {
         b.iter(|| {
             let animal = Frog("Henry".to_strbuf(), 349);
 
-            let mut d = AnimalDecoder::new(animal);
+            let mut d = AnimalDecoder::new(animal.clone());
             let value: Animal = Decodable::decode(&mut d).unwrap();
 
-            assert_eq!(value, Frog("Henry".to_strbuf(), 349));
+            assert_eq!(value, animal);
         })
     }
 
@@ -1350,10 +1560,33 @@ mod tests {
         b.iter(|| {
             let animal = Frog("Henry".to_strbuf(), 349);
 
-            let mut d = AnimalDeserializer::new(animal);
+            let mut d = AnimalDeserializer::new(animal.clone());
             let value: Animal = Deserializable::deserialize(&mut d).unwrap();
 
-            assert_eq!(value, Frog("Henry".to_strbuf(), 349));
+            assert_eq!(value, animal);
+        })
+    }
+
+    #[bench]
+    fn bench_struct_decoder(b: &mut Bencher) {
+        b.iter(|| {
+            let mut map = HashMap::new();
+            map.insert("abc".to_strbuf(), Some('c'));
+
+            let outer = Outer {
+                inner: vec!(
+                    Inner {
+                        a: (),
+                        b: 5,
+                        c: map,
+                    },
+                )
+            };
+
+            let mut d = OuterDecoder::new(outer.clone());
+            let value: Outer = Decodable::decode(&mut d).unwrap();
+
+            assert_eq!(value, outer);
         })
     }
 }
