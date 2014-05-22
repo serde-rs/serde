@@ -1182,14 +1182,22 @@ mod tests {
     }
 
     struct OuterDeserializer {
-        stack: Vec<OuterDeserializerState>,
+        //stack: Vec<OuterDeserializerState>,
+        tokens: Vec<Token>,
     }
 
     impl OuterDeserializer {
         #[inline]
         fn new(outer: Outer) -> OuterDeserializer {
             OuterDeserializer {
-                stack: vec!(OuterDeserializerOuterState(outer)),
+                //stack: vec!(OuterDeserializerOuterState(outer)),
+                tokens: vec!(
+                    End,
+                        End,
+                        SeqStart(0),
+                        StructField("inner"),
+                    StructStart("Outer")
+                )
             }
         }
     }
@@ -1197,6 +1205,12 @@ mod tests {
     impl Iterator<Result<Token, Error>> for OuterDeserializer {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
+            match self.tokens.pop() {
+                Some(token) => Some(Ok(token)),
+                None => None,
+            }
+
+            /*
             match self.stack.pop() {
                 Some(OuterDeserializerOuterState(Outer { inner })) => {
                     self.stack.push(OuterDeserializerEndState);
@@ -1282,6 +1296,7 @@ mod tests {
                 }
                 None => None,
             }
+        */
         }
     }
 
@@ -1710,11 +1725,13 @@ mod tests {
 
             let outer = Outer {
                 inner: vec!(
+                           /*
                     Inner {
                         a: (),
                         b: 5,
                         c: map,
                     },
+                    */
                 )
             };
 
@@ -1733,11 +1750,13 @@ mod tests {
 
             let outer = Outer {
                 inner: vec!(
+                           /*
                     Inner {
                         a: (),
                         b: 5,
                         c: map,
                     },
+                    */
                 )
             };
 
