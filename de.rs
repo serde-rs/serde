@@ -1164,6 +1164,141 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
+    enum OuterDeserializerState {
+        OuterDeserializerOuterState(Outer),
+        OuterDeserializerInnerState(Inner),
+        OuterDeserializerFieldState(&'static str),
+        OuterDeserializerNullState,
+        OuterDeserializerUintState(uint),
+        OuterDeserializerCharState(char),
+        OuterDeserializerStrState(StrBuf),
+        OuterDeserializerOptionState(bool),
+        OuterDeserializerTupleState(uint),
+        OuterDeserializerVecState(uint),
+        OuterDeserializerMapState(uint),
+        OuterDeserializerSepState,
+        OuterDeserializerEndState,
+
+    }
+
+    struct OuterDeserializer {
+        stack: Vec<OuterDeserializerState>,
+    }
+
+    impl OuterDeserializer {
+        #[inline]
+        fn new(outer: Outer) -> OuterDeserializer {
+            OuterDeserializer {
+                stack: vec!(OuterDeserializerOuterState(outer)),
+            }
+        }
+    }
+
+    impl Iterator<Result<Token, Error>> for OuterDeserializer {
+        #[inline]
+        fn next(&mut self) -> Option<Result<Token, Error>> {
+            match self.stack.pop() {
+                Some(OuterDeserializerOuterState(Outer { inner })) => {
+                    self.stack.push(OuterDeserializerEndState);
+
+                    self.stack.push(OuterDeserializerEndState);
+                    let len = inner.len();
+                    for v in inner.move_iter().rev() {
+                        self.stack.push(OuterDeserializerInnerState(v));
+                        self.stack.push(OuterDeserializerSepState);
+                    }
+                    self.stack.push(OuterDeserializerVecState(len));
+
+                    self.stack.push(OuterDeserializerFieldState("inner"));
+                    Some(Ok(StructStart("Outer")))
+                }
+                Some(OuterDeserializerInnerState(Inner { a: (), b: b, c: c })) => {
+                    self.stack.push(OuterDeserializerEndState);
+
+                    self.stack.push(OuterDeserializerEndState);
+                    let len = c.len();
+                    for (k, v) in c.move_iter() {
+                        self.stack.push(OuterDeserializerEndState);
+                        match v {
+                            Some(c) => {
+                                self.stack.push(OuterDeserializerCharState(c));
+                                self.stack.push(OuterDeserializerOptionState(true));
+                            }
+                            None => {
+                                self.stack.push(OuterDeserializerOptionState(false));
+                            }
+                        }
+                        self.stack.push(OuterDeserializerSepState);
+
+                        self.stack.push(OuterDeserializerStrState(k));
+                        self.stack.push(OuterDeserializerSepState);
+                        self.stack.push(OuterDeserializerTupleState(2));
+
+                        self.stack.push(OuterDeserializerSepState);
+                    }
+                    self.stack.push(OuterDeserializerMapState(len));
+
+                    self.stack.push(OuterDeserializerFieldState("c"));
+
+                    self.stack.push(OuterDeserializerUintState(b));
+                    self.stack.push(OuterDeserializerFieldState("b"));
+
+                    self.stack.push(OuterDeserializerNullState);
+                    self.stack.push(OuterDeserializerFieldState("a"));
+                    Some(Ok(StructStart("Inner")))
+                }
+                Some(OuterDeserializerFieldState(name)) => {
+                    Some(Ok(StructField(name)))
+                }
+                Some(OuterDeserializerVecState(len)) => {
+                    Some(Ok(SeqStart(len)))
+                }
+                Some(OuterDeserializerMapState(len)) => {
+                    Some(Ok(MapStart(len)))
+                }
+                Some(OuterDeserializerTupleState(len)) => {
+                    Some(Ok(TupleStart(len)))
+                }
+                Some(OuterDeserializerSepState) => {
+                    Some(Ok(Sep))
+                }
+                Some(OuterDeserializerNullState) => {
+                    Some(Ok(Null))
+                }
+                Some(OuterDeserializerUintState(x)) => {
+                    Some(Ok(Uint(x)))
+                }
+                Some(OuterDeserializerCharState(x)) => {
+                    Some(Ok(Char(x)))
+                }
+                Some(OuterDeserializerStrState(x)) => {
+                    Some(Ok(StrBuf(x)))
+                }
+                Some(OuterDeserializerOptionState(x)) => {
+                    Some(Ok(Option(x)))
+                }
+                Some(OuterDeserializerEndState) => {
+                    Some(Ok(End))
+                }
+                None => None,
+            }
+        }
+    }
+
+    impl Deserializer<Error> for OuterDeserializer {
+        #[inline]
+        fn end_of_stream_error(&self) -> Error {
+            EndOfStream
+        }
+
+        #[inline]
+        fn syntax_error(&self) -> Error {
+            SyntaxError
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+
     #[test]
     fn test_tokens_int() {
         let tokens = vec!(
@@ -1585,6 +1720,29 @@ mod tests {
 
             let mut d = OuterDecoder::new(outer.clone());
             let value: Outer = Decodable::decode(&mut d).unwrap();
+
+            assert_eq!(value, outer);
+        })
+    }
+
+    #[bench]
+    fn bench_struct_deserializer(b: &mut Bencher) {
+        b.iter(|| {
+            let mut map = HashMap::new();
+            map.insert("abc".to_strbuf(), Some('c'));
+
+            let outer = Outer {
+                inner: vec!(
+                    Inner {
+                        a: (),
+                        b: 5,
+                        c: map,
+                    },
+                )
+            };
+
+            let mut d = OuterDeserializer::new(outer.clone());
+            let value: Outer = Deserializable::deserialize(&mut d).unwrap();
 
             assert_eq!(value, outer);
         })
