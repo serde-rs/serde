@@ -1632,7 +1632,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_dummy_deserializer(b: &mut Bencher) {
+    fn bench_token_deserializer(b: &mut Bencher) {
         b.iter(|| {
             let tokens = vec!(
                 SeqStart(3),
