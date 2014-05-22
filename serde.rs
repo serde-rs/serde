@@ -8,5 +8,8 @@ extern crate test;
 #[phase(syntax, link)]
 extern crate log;
 
+#[cfg(test)]
+extern crate serialize;
+
 pub mod de;
 //pub mod json;

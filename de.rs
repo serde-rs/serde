@@ -424,14 +424,12 @@ deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 #[cfg(test)]
 mod tests {
-    extern crate serialize;
-
     use std::num;
     use std::vec;
     use collections::HashMap;
     use test::Bencher;
 
-    use self::serialize::{Decoder, Decodable};
+    use serialize::{Decoder, Decodable};
 
     use super::{Token, Null, Int, Uint, Str, StrBuf, Char, Option};
     use super::{TupleStart, StructStart, StructField, EnumStart, EnumVariant};
@@ -478,7 +476,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Eq, Show)]
+    #[deriving(Clone, Eq, Show, Decodable)]
     enum Animal {
         Dog,
         Frog(StrBuf, int)
@@ -641,6 +639,8 @@ mod tests {
         }
     }
 
+    //////////////////////////////////////////////////////////////////////////////
+
     struct IntsDecoder {
         iter: vec::MoveItems<int>,
     }
@@ -653,8 +653,6 @@ mod tests {
             }
         }
     }
-
-    //////////////////////////////////////////////////////////////////////////////
 
     impl Decoder<Error> for IntsDecoder {
         // Primitive types:
@@ -739,6 +737,202 @@ mod tests {
         fn read_map_elt_key<T>(&mut self, _idx: uint, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
         fn read_map_elt_val<T>(&mut self, _idx: uint, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
     }
+
+    //////////////////////////////////////////////////////////////////////////////
+
+    enum AnimalDecoderState {
+        AnimalState(Animal),
+        DogState,
+        FrogState,
+        IntState(int),
+        StrState(StrBuf),
+    }
+
+    struct AnimalDecoder {
+        stack: Vec<AnimalDecoderState>,
+
+    }
+
+    impl AnimalDecoder {
+        #[inline]
+        fn new(animal: Animal) -> AnimalDecoder {
+            AnimalDecoder {
+                stack: vec!(AnimalState(animal)),
+            }
+        }
+    }
+
+    impl Decoder<Error> for AnimalDecoder {
+        // Primitive types:
+        fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
+        fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError) }
+        #[inline]
+        fn read_int(&mut self) -> Result<int, Error> {
+            match self.stack.pop() {
+                Some(IntState(x)) => Ok(x),
+                _ => Err(SyntaxError),
+            }
+        }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(SyntaxError) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(SyntaxError) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
+        fn read_str(&mut self) -> Result<StrBuf, Error> {
+            match self.stack.pop() {
+                Some(StrState(x)) => Ok(x),
+                _ => Err(SyntaxError),
+            }
+        }
+
+        // Compound types:
+        fn read_enum<T>(&mut self, name: &str, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            match self.stack.pop() {
+                Some(AnimalState(animal)) => {
+                    self.stack.push(AnimalState(animal));
+                    if name == "Animal" {
+                        f(self)
+                    } else {
+                        Err(SyntaxError)
+                    }
+                }
+                _ => Err(SyntaxError)
+            }
+        }
+
+        fn read_enum_variant<T>(&mut self, names: &[&str], f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+            let name = match self.stack.pop() {
+                Some(AnimalState(Dog)) => "Dog",
+                Some(AnimalState(Frog(x0, x1))) => {
+                    self.stack.push(IntState(x1));
+                    self.stack.push(StrState(x0));
+                    "Frog"
+                }
+                _ => { return Err(SyntaxError); }
+            };
+
+            let idx = match names.iter().position(|n| *n == name) {
+                Some(idx) => idx,
+                None => { return Err(SyntaxError); }
+            };
+
+            f(self, idx)
+        }
+        fn read_enum_variant_arg<T>(&mut self, _a_idx: uint, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            f(self)
+        }
+        fn read_enum_struct_variant<T>(&mut self,
+                                       _names: &[&str],
+                                       _f: |&mut AnimalDecoder, uint| -> Result<T, Error>)
+                                       -> Result<T, Error> { Err(SyntaxError) }
+        fn read_enum_struct_variant_field<T>(&mut self,
+                                             _f_name: &str,
+                                             _f_idx: uint,
+                                             _f: |&mut AnimalDecoder| -> Result<T, Error>)
+                                             -> Result<T, Error> { Err(SyntaxError) }
+
+        fn read_struct<T>(&mut self, _s_name: &str, _len: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>)
+                          -> Result<T, Error> { Err(SyntaxError) }
+        fn read_struct_field<T>(&mut self,
+                                _f_name: &str,
+                                _f_idx: uint,
+                                _f: |&mut AnimalDecoder| -> Result<T, Error>)
+                                -> Result<T, Error> { Err(SyntaxError) }
+
+        fn read_tuple<T>(&mut self, _f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+
+        fn read_tuple_struct<T>(&mut self,
+                                _s_name: &str,
+                                _f: |&mut AnimalDecoder, uint| -> Result<T, Error>)
+                                -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple_struct_arg<T>(&mut self,
+                                    _a_idx: uint,
+                                    _f: |&mut AnimalDecoder| -> Result<T, Error>)
+                                    -> Result<T, Error> { Err(SyntaxError) }
+
+        // Specialized types:
+        fn read_option<T>(&mut self, _f: |&mut AnimalDecoder, bool| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+
+        #[inline]
+        fn read_seq<T>(&mut self, f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+            f(self, 3)
+        }
+        #[inline]
+        fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
+            f(self)
+        }
+
+        fn read_map<T>(&mut self, _f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_map_elt_key<T>(&mut self, _idx: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_map_elt_val<T>(&mut self, _idx: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+
+    struct AnimalDeserializer {
+        tokens: Vec<Token>,
+    }
+
+    impl AnimalDeserializer {
+        #[inline]
+        fn new(animal: Animal) -> AnimalDeserializer {
+            let tokens = match animal {
+                Dog => {
+                    vec!(
+                        End,
+                            EnumVariant("Dog"),
+                        EnumStart("Animal"),
+                    )
+                }
+                Frog(x0, x1) => {
+                    vec!(
+                        End,
+                            Int(x1),
+                            StrBuf(x0),
+                            EnumVariant("Frog"),
+                        EnumStart("Animal"),
+                    )
+                }
+            };
+
+            AnimalDeserializer {
+                tokens: tokens,
+            }
+        }
+    }
+
+    impl Iterator<Result<Token, Error>> for AnimalDeserializer {
+        #[inline]
+        fn next(&mut self) -> Option<Result<Token, Error>> {
+            match self.tokens.pop() {
+                Some(token) => Some(Ok(token)),
+                None => None,
+
+            }
+        }
+    }
+
+    impl Deserializer<Error> for AnimalDeserializer {
+        #[inline]
+        fn end_of_stream_error(&self) -> Error {
+            EndOfStream
+        }
+
+        #[inline]
+        fn syntax_error(&self) -> Error {
+            SyntaxError
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
 
     #[test]
     fn test_tokens_int() {
@@ -881,7 +1075,7 @@ mod tests {
                 End,
             End,
         );
- 
+
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
 
@@ -918,7 +1112,7 @@ mod tests {
                 End,
             End,
         );
- 
+
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
 
@@ -945,7 +1139,7 @@ mod tests {
                 EnumVariant("Dog"),
             End,
         );
- 
+
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
 
@@ -958,7 +1152,7 @@ mod tests {
                 Int(349),
             End,
         );
- 
+
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
 
@@ -1116,6 +1310,30 @@ mod tests {
             let value: Vec<int> = Decodable::decode(&mut d).unwrap();
 
             assert_eq!(value, vec!(5, 6, 7));
+        })
+    }
+
+    #[bench]
+    fn bench_enum_decoder(b: &mut Bencher) {
+        b.iter(|| {
+            let animal = Frog("Henry".to_strbuf(), 349);
+
+            let mut d = AnimalDecoder::new(animal);
+            let value: Animal = Decodable::decode(&mut d).unwrap();
+
+            assert_eq!(value, Frog("Henry".to_strbuf(), 349));
+        })
+    }
+
+    #[bench]
+    fn bench_enum_deserializer(b: &mut Bencher) {
+        b.iter(|| {
+            let animal = Frog("Henry".to_strbuf(), 349);
+
+            let mut d = AnimalDeserializer::new(animal);
+            let value: Animal = Deserializable::deserialize(&mut d).unwrap();
+
+            assert_eq!(value, Frog("Henry".to_strbuf(), 349));
         })
     }
 }
