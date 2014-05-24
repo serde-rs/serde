@@ -291,15 +291,16 @@ fn expect_rest_of_collection<
 >(d: &mut D, len: uint) -> Result<C, E> {
     let iter = d.by_ref().batch(|d| {
         let d = d.iter();
-            match d.next() {
-                Some(Ok(End)) => None,
-                Some(Ok(token)) => {
-                    let value: Result<T, E> = Deserializable::deserialize_token(d, token);
-                    Some(value)
-                }
-                Some(Err(e)) => Some(Err(e)),
-                None => Some(Err(d.end_of_stream_error())),
+
+        match d.next() {
+            Some(Ok(End)) => None,
+            Some(Ok(token)) => {
+                let value: Result<T, E> = Deserializable::deserialize_token(d, token);
+                Some(value)
             }
+            Some(Err(e)) => Some(Err(e)),
+            None => Some(Err(d.end_of_stream_error())),
+        }
     });
 
     result::collect_with_capacity(iter, len)

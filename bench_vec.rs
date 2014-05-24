@@ -1,8 +1,9 @@
+use std::fmt::Show;
 use test::Bencher;
 
-use serialize::Decodable;
+use serialize::{Decoder, Decodable};
 
-use de::{Deserializable};
+use de::{Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -21,6 +22,7 @@ mod decoder {
     use super::{Error, EndOfStream, SyntaxError};
 
     pub struct IntsDecoder {
+        len: uint,
         iter: vec::MoveItems<int>,
     }
 
@@ -28,7 +30,8 @@ mod decoder {
         #[inline]
         pub fn new(values: Vec<int>) -> IntsDecoder {
             IntsDecoder {
-                iter: values.move_iter()
+                len: values.len(),
+                iter: values.move_iter(),
             }
         }
     }
@@ -105,7 +108,7 @@ mod decoder {
 
         #[inline]
         fn read_seq<T>(&mut self, f: |&mut IntsDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
-            f(self, 3)
+            f(self, self.len)
         }
         #[inline]
         fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> {
@@ -194,26 +197,70 @@ mod deserializer {
 
 //////////////////////////////////////////////////////////////////////////////
 
+fn run_decoder<
+    E: Show,
+    D: Decoder<E>,
+    T: Clone + Eq + Show + Decodable<D, E>
+>(mut d: D, value: T) {
+    let v: T = Decodable::decode(&mut d).unwrap();
+
+    assert_eq!(value, v);
+}
+
+fn run_deserializer<
+    E: Show,
+    D: Deserializer<E>,
+    T: Clone + Eq + Show + Deserializable<E, D>
+>(mut d: D, value: T) {
+    let v: T = Deserializable::deserialize(&mut d).unwrap();
+
+    assert_eq!(value, v);
+}
+
 #[bench]
-fn bench_ints_decoder(b: &mut Bencher) {
+fn bench_decoder_vec_int_000(b: &mut Bencher) {
     b.iter(|| {
-        let ints = vec!(5, 6, 7);
-
-        let mut d = decoder::IntsDecoder::new(ints);
-        let value: Vec<int> = Decodable::decode(&mut d).unwrap();
-
-        assert_eq!(value, vec!(5, 6, 7));
+        let v: Vec<int> = vec!();
+        run_decoder(decoder::IntsDecoder::new(v.clone()), v)
     })
 }
 
 #[bench]
-fn bench_ints_deserializer(b: &mut Bencher) {
+fn bench_deserializer_vec_int_000(b: &mut Bencher) {
     b.iter(|| {
-        let ints = vec!(5, 6, 7);
+        let v: Vec<int> = vec!();
+        run_deserializer(deserializer::IntsDeserializer::new(v.clone()), v)
+    })
+}
 
-        let mut d = deserializer::IntsDeserializer::new(ints);
-        let value: Vec<int> = Deserializable::deserialize(&mut d).unwrap();
+#[bench]
+fn bench_decoder_vec_int_003(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = vec!(1, 2, 3);
+        run_decoder(decoder::IntsDecoder::new(v.clone()), v)
+    })
+}
 
-        assert_eq!(value, vec!(5, 6, 7));
+#[bench]
+fn bench_deserializer_vec_int_003(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = vec!(1, 2, 3);
+        run_deserializer(deserializer::IntsDeserializer::new(v.clone()), v)
+    })
+}
+
+#[bench]
+fn bench_decoder_vec_int_100(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = range(0, 100).collect();
+        run_decoder(decoder::IntsDecoder::new(v.clone()), v)
+    })
+}
+
+#[bench]
+fn bench_deserializer_vec_int_100(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = range(0, 100).collect();
+        run_deserializer(deserializer::IntsDeserializer::new(v.clone()), v)
     })
 }
