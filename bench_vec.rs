@@ -17,26 +17,26 @@ enum Error {
 
 mod decoder {
     use std::vec;
-    use serialize::Decoder;
+    use serialize;
 
     use super::{Error, EndOfStream, SyntaxError};
 
-    pub struct IntsDecoder {
+    pub struct Decoder {
         len: uint,
         iter: vec::MoveItems<int>,
     }
 
-    impl IntsDecoder {
+    impl Decoder {
         #[inline]
-        pub fn new(values: Vec<int>) -> IntsDecoder {
-            IntsDecoder {
+        pub fn new(values: Vec<int>) -> Decoder {
+            Decoder {
                 len: values.len(),
                 iter: values.move_iter(),
             }
         }
     }
 
-    impl Decoder<Error> for IntsDecoder {
+    impl serialize::Decoder<Error> for Decoder {
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
         fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
@@ -62,75 +62,74 @@ mod decoder {
         fn read_str(&mut self) -> Result<StrBuf, Error> { Err(SyntaxError) }
 
         // Compound types:
-        fn read_enum<T>(&mut self, _name: &str, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_enum<T>(&mut self, _name: &str, _f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
 
         fn read_enum_variant<T>(&mut self,
                                 _names: &[&str],
-                                _f: |&mut IntsDecoder, uint| -> Result<T, Error>)
+                                _f: |&mut Decoder, uint| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
         fn read_enum_variant_arg<T>(&mut self,
                                     _a_idx: uint,
-                                    _f: |&mut IntsDecoder| -> Result<T, Error>)
+                                    _f: |&mut Decoder| -> Result<T, Error>)
                                     -> Result<T, Error> { Err(SyntaxError) }
 
         fn read_enum_struct_variant<T>(&mut self,
                                        _names: &[&str],
-                                       _f: |&mut IntsDecoder, uint| -> Result<T, Error>)
+                                       _f: |&mut Decoder, uint| -> Result<T, Error>)
                                        -> Result<T, Error> { Err(SyntaxError) }
         fn read_enum_struct_variant_field<T>(&mut self,
                                              _f_name: &str,
                                              _f_idx: uint,
-                                             _f: |&mut IntsDecoder| -> Result<T, Error>)
+                                             _f: |&mut Decoder| -> Result<T, Error>)
                                              -> Result<T, Error> { Err(SyntaxError) }
 
-        fn read_struct<T>(&mut self, _s_name: &str, _len: uint, _f: |&mut IntsDecoder| -> Result<T, Error>)
+        fn read_struct<T>(&mut self, _s_name: &str, _len: uint, _f: |&mut Decoder| -> Result<T, Error>)
                           -> Result<T, Error> { Err(SyntaxError) }
         fn read_struct_field<T>(&mut self,
                                 _f_name: &str,
                                 _f_idx: uint,
-                                _f: |&mut IntsDecoder| -> Result<T, Error>)
+                                _f: |&mut Decoder| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
 
-        fn read_tuple<T>(&mut self, _f: |&mut IntsDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
-        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple<T>(&mut self, _f: |&mut Decoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
 
         fn read_tuple_struct<T>(&mut self,
                                 _s_name: &str,
-                                _f: |&mut IntsDecoder, uint| -> Result<T, Error>)
+                                _f: |&mut Decoder, uint| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
         fn read_tuple_struct_arg<T>(&mut self,
                                     _a_idx: uint,
-                                    _f: |&mut IntsDecoder| -> Result<T, Error>)
+                                    _f: |&mut Decoder| -> Result<T, Error>)
                                     -> Result<T, Error> { Err(SyntaxError) }
 
         // Specialized types:
-        fn read_option<T>(&mut self, _f: |&mut IntsDecoder, bool| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_option<T>(&mut self, _f: |&mut Decoder, bool| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
 
         #[inline]
-        fn read_seq<T>(&mut self, f: |&mut IntsDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_seq<T>(&mut self, f: |&mut Decoder, uint| -> Result<T, Error>) -> Result<T, Error> {
             f(self, self.len)
         }
         #[inline]
-        fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
             f(self)
         }
 
-        fn read_map<T>(&mut self, _f: |&mut IntsDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
-        fn read_map_elt_key<T>(&mut self, _idx: uint, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
-        fn read_map_elt_val<T>(&mut self, _idx: uint, _f: |&mut IntsDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_map<T>(&mut self, _f: |&mut Decoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_map_elt_key<T>(&mut self, _idx: uint, _f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_map_elt_val<T>(&mut self, _idx: uint, _f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 mod deserializer {
-    use std::num;
+    //use std::num;
     use std::vec;
 
     use super::{Error, EndOfStream, SyntaxError};
 
-    use de::Deserializer;
-    use de::{Token, Int, SeqStart, Sep, End};
+    use de;
 
     #[deriving(Eq, Show)]
     enum State {
@@ -139,16 +138,16 @@ mod deserializer {
         EndState,
     }
 
-    pub struct IntsDeserializer {
+    pub struct Deserializer {
         state: State,
         len: uint,
         iter: vec::MoveItems<int>,
     }
 
-    impl IntsDeserializer {
+    impl Deserializer {
         #[inline]
-        pub fn new(values: Vec<int>) -> IntsDeserializer {
-            IntsDeserializer {
+        pub fn new(values: Vec<int>) -> Deserializer {
+            Deserializer {
                 state: StartState,
                 len: values.len(),
                 iter: values.move_iter(),
@@ -156,22 +155,22 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<Token, Error>> for IntsDeserializer {
+    impl Iterator<Result<de::Token, Error>> for Deserializer {
         #[inline]
-        fn next(&mut self) -> Option<Result<Token, Error>> {
+        fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.state {
                 StartState => {
                     self.state = SepOrEndState;
-                    Some(Ok(SeqStart(self.len)))
+                    Some(Ok(de::SeqStart(self.len)))
                 }
                 SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            Some(Ok(Int(value)))
+                            Some(Ok(de::Int(value)))
                         }
                         None => {
                             self.state = EndState;
-                            Some(Ok(End))
+                            Some(Ok(de::End))
                         }
                     }
                 }
@@ -182,7 +181,7 @@ mod deserializer {
         }
     }
 
-    impl Deserializer<Error> for IntsDeserializer {
+    impl de::Deserializer<Error> for Deserializer {
         #[inline]
         fn end_of_stream_error(&self) -> Error {
             EndOfStream
@@ -221,7 +220,7 @@ fn run_deserializer<
 fn bench_decoder_vec_int_000(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = vec!();
-        run_decoder(decoder::IntsDecoder::new(v.clone()), v)
+        run_decoder(decoder::Decoder::new(v.clone()), v)
     })
 }
 
@@ -229,7 +228,7 @@ fn bench_decoder_vec_int_000(b: &mut Bencher) {
 fn bench_deserializer_vec_int_000(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = vec!();
-        run_deserializer(deserializer::IntsDeserializer::new(v.clone()), v)
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
@@ -237,7 +236,7 @@ fn bench_deserializer_vec_int_000(b: &mut Bencher) {
 fn bench_decoder_vec_int_003(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = vec!(1, 2, 3);
-        run_decoder(decoder::IntsDecoder::new(v.clone()), v)
+        run_decoder(decoder::Decoder::new(v.clone()), v)
     })
 }
 
@@ -245,7 +244,7 @@ fn bench_decoder_vec_int_003(b: &mut Bencher) {
 fn bench_deserializer_vec_int_003(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = vec!(1, 2, 3);
-        run_deserializer(deserializer::IntsDeserializer::new(v.clone()), v)
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
@@ -253,7 +252,7 @@ fn bench_deserializer_vec_int_003(b: &mut Bencher) {
 fn bench_decoder_vec_int_100(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = range(0, 100).collect();
-        run_decoder(decoder::IntsDecoder::new(v.clone()), v)
+        run_decoder(decoder::Decoder::new(v.clone()), v)
     })
 }
 
@@ -261,6 +260,6 @@ fn bench_decoder_vec_int_100(b: &mut Bencher) {
 fn bench_deserializer_vec_int_100(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = range(0, 100).collect();
-        run_deserializer(deserializer::IntsDeserializer::new(v.clone()), v)
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
