@@ -133,7 +133,6 @@ mod deserializer {
     enum State {
         StartState,
         SepOrEndState,
-        //ValueState,
         EndState,
     }
 
@@ -141,7 +140,6 @@ mod deserializer {
         state: State,
         len: uint,
         iter: vec::MoveItems<int>,
-        value: Option<int>
     }
 
     impl IntsDeserializer {
@@ -151,7 +149,6 @@ mod deserializer {
                 state: StartState,
                 len: values.len(),
                 iter: values.move_iter(),
-                value: None,
             }
         }
     }
@@ -167,9 +164,6 @@ mod deserializer {
                 SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            //self.state = ValueState;
-                            //self.value = Some(value);
-                            //Some(Ok(Sep))
                             Some(Ok(Int(value)))
                         }
                         None => {
@@ -178,15 +172,6 @@ mod deserializer {
                         }
                     }
                 }
-                /*
-                ValueState => {
-                    self.state = SepOrEndState;
-                    match self.value.take() {
-                        Some(value) => Some(Ok(Int(value))),
-                        None => Some(Err(self.end_of_stream_error())),
-                    }
-                }
-                */
                 EndState => {
                     None
                 }
@@ -203,21 +188,6 @@ mod deserializer {
         #[inline]
         fn syntax_error(&self) -> Error {
             SyntaxError
-        }
-
-        #[inline]
-        fn expect_num<T: NumCast>(&mut self) -> Result<T, Error> {
-            assert_eq!(self.state, SepOrEndState);
-
-            match self.iter.next() {
-                Some(value) => {
-                    match num::cast(value) {
-                        Some(value) => Ok(value),
-                        None => Err(self.syntax_error()),
-                    }
-                }
-                None => Err(self.end_of_stream_error()),
-            }
         }
     }
 }
