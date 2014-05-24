@@ -13,3 +13,12 @@ extern crate serialize;
 
 pub mod de;
 //pub mod json;
+
+#[cfg(test)]
+pub mod bench_enum;
+
+#[cfg(test)]
+pub mod bench_struct;
+
+#[cfg(test)]
+pub mod bench_vec;
