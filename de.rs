@@ -132,15 +132,18 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             Str(value) => Ok(value)
         }
     }
+    */
 
     #[inline]
-    fn expect_strbuf(&mut self) -> Result<StrBuf, E> {
-        match_token! {
+    fn expect_strbuf(&mut self, token: Token) -> Result<StrBuf, E> {
+        match token {
             Str(value) => Ok(value.to_strbuf()),
-            StrBuf(value) => Ok(value)
+            StrBuf(value) => Ok(value),
+            _ => Err(self.syntax_error()),
         }
     }
 
+    /*
     #[inline]
     fn expect_option<
         T: Deserializable<E, Self>
@@ -204,10 +207,11 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             }
         }
     }
+    */
 
     #[inline]
-    fn expect_enum_start<'a>(&mut self, name: &str, variants: &[&str]) -> Result<uint, E> {
-        match_token! {
+    fn expect_enum_start<'a>(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
+        match token {
             EnumStart(n) => {
                 if name == n {
                     match_token! {
@@ -222,9 +226,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                     Err(self.syntax_error())
                 }
             }
+            _ => Err(self.syntax_error()),
         }
     }
-    */
 
     #[inline]
     fn expect_collection<
@@ -269,6 +273,16 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         };
 
         expect_rest_of_collection(self, len)
+    }
+
+    #[inline]
+    fn expect_end(&mut self) -> Result<(), E> {
+        match self.next() {
+            Some(Ok(End)) => Ok(()),
+            Some(Ok(_)) => Err(self.syntax_error()),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
     }
 }
 
@@ -343,8 +357,10 @@ impl_deserializable!(f64, expect_num)
     /*
 impl_deserializable!(char, expect_char)
 impl_deserializable!(&'static str, expect_str)
+*/
 impl_deserializable!(StrBuf, expect_strbuf)
 
+/*
 
 //////////////////////////////////////////////////////////////////////////////
 
