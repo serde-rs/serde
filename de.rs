@@ -272,14 +272,25 @@ fn expect_rest_of_collection<
     T: Deserializable<E, D>,
     C: FromIterator<T>
 >(d: &mut D, len: uint) -> Result<C, E> {
+    let mut idx = 0;
+
     let iter = d.by_ref().batch(|d| {
         let d = d.iter();
 
-        let token = match d.next() {
-            Some(token) => token,
-            None => { return None; }
-        };
+        if idx < len {
+            idx += 1;
+            let value: Result<T, E> = Deserializable::deserialize(d);
+            Some(value)
+        } else {
+            match d.next() {
+                Some(Ok(End)) => None,
+                Some(Ok(_)) => Some(Err(d.syntax_error())),
+                Some(Err(e)) => Some(Err(e)),
+                None => Some(Err(d.end_of_stream_error())),
+            }
+        }
 
+        /*
         match token {
             Ok(Sep) => {
                 let value: Result<T, E> = Deserializable::deserialize(d);
@@ -289,6 +300,7 @@ fn expect_rest_of_collection<
             Ok(_) => Some(Err(d.syntax_error())),
             Err(e) => Some(Err(e)),
         }
+        */
     });
 
     result::collect_with_capacity(iter, len)
@@ -422,6 +434,7 @@ deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 //////////////////////////////////////////////////////////////////////////////
 
+/*
 #[cfg(test)]
 mod tests {
     use collections::HashMap;
@@ -901,3 +914,4 @@ mod tests {
         })
     }
 }
+*/

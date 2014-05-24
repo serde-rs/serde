@@ -130,15 +130,15 @@ mod deserializer {
     use de::{Token, Int, SeqStart, Sep, End};
 
     #[deriving(Eq, Show)]
-    enum IntsDeserializerState {
-        IntsDeserializserStartState,
-        IntsDeserializserSepOrEndState,
-        IntsDeserializserValueState,
-        IntsDeserializserEndState,
+    enum State {
+        StartState,
+        SepOrEndState,
+        //ValueState,
+        EndState,
     }
 
     pub struct IntsDeserializer {
-        state: IntsDeserializerState,
+        state: State,
         len: uint,
         iter: vec::MoveItems<int>,
         value: Option<int>
@@ -148,7 +148,7 @@ mod deserializer {
         #[inline]
         pub fn new(values: Vec<int>) -> IntsDeserializer {
             IntsDeserializer {
-                state: IntsDeserializserStartState,
+                state: StartState,
                 len: values.len(),
                 iter: values.move_iter(),
                 value: None,
@@ -160,31 +160,34 @@ mod deserializer {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
             match self.state {
-                IntsDeserializserStartState => {
-                    self.state = IntsDeserializserSepOrEndState;
+                StartState => {
+                    self.state = SepOrEndState;
                     Some(Ok(SeqStart(self.len)))
                 }
-                IntsDeserializserSepOrEndState => {
+                SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            self.state = IntsDeserializserValueState;
-                            self.value = Some(value);
-                            Some(Ok(Sep))
+                            //self.state = ValueState;
+                            //self.value = Some(value);
+                            //Some(Ok(Sep))
+                            Some(Ok(Int(value)))
                         }
                         None => {
-                            self.state = IntsDeserializserEndState;
+                            self.state = EndState;
                             Some(Ok(End))
                         }
                     }
                 }
-                IntsDeserializserValueState => {
-                    self.state = IntsDeserializserSepOrEndState;
+                /*
+                ValueState => {
+                    self.state = SepOrEndState;
                     match self.value.take() {
                         Some(value) => Some(Ok(Int(value))),
                         None => Some(Err(self.end_of_stream_error())),
                     }
                 }
-                IntsDeserializserEndState => {
+                */
+                EndState => {
                     None
                 }
             }
@@ -204,11 +207,9 @@ mod deserializer {
 
         #[inline]
         fn expect_num<T: NumCast>(&mut self) -> Result<T, Error> {
-            assert_eq!(self.state, IntsDeserializserValueState);
+            assert_eq!(self.state, SepOrEndState);
 
-            self.state = IntsDeserializserSepOrEndState;
-
-            match self.value.take() {
+            match self.iter.next() {
                 Some(value) => {
                     match num::cast(value) {
                         Some(value) => Ok(value),
