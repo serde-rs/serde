@@ -2,7 +2,7 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use de::{Deserializer, Deserializable, Token, End};
+use de::{Deserializer, Deserializable, Token};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -194,12 +194,10 @@ mod deserializer {
     use super::{Animal, Dog, Frog, Error, EndOfStream, SyntaxError};
 
     use de::Deserializer;
-    use de::{Token, Int, StrBuf, EnumStart, EnumVariant, End};
+    use de::{Token, Int, StrBuf, EnumStart, End};
 
     enum State {
         AnimalState(Animal),
-        DogState,
-        FrogState,
         IntState(int),
         StrState(StrBuf),
         EndState,
@@ -225,21 +223,13 @@ mod deserializer {
             match self.stack.pop() {
                 Some(AnimalState(Dog)) => {
                     self.stack.push(EndState);
-                    self.stack.push(DogState);
-                    Some(Ok(EnumStart("Animal")))
+                    Some(Ok(EnumStart("Animal", "Dog")))
                 }
                 Some(AnimalState(Frog(x0, x1))) => {
                     self.stack.push(EndState);
                     self.stack.push(IntState(x1));
                     self.stack.push(StrState(x0));
-                    self.stack.push(FrogState);
-                    Some(Ok(EnumStart("Animal")))
-                }
-                Some(DogState) => {
-                    Some(Ok(EnumVariant("Dog")))
-                }
-                Some(FrogState) => {
-                    Some(Ok(EnumVariant("Frog")))
+                    Some(Ok(EnumStart("Animal", "Frog")))
                 }
                 Some(IntState(x)) => {
                     Some(Ok(Int(x)))

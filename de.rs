@@ -31,8 +31,7 @@ pub enum Token {
     StructStart(&'static str),
     StructField(&'static str),
 
-    EnumStart(&'static str),
-    EnumVariant(&'static str),
+    EnumStart(&'static str, &'static str),
 
     SeqStart(uint),
     MapStart(uint),
@@ -212,15 +211,11 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_enum_start<'a>(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
         match token {
-            EnumStart(n) => {
+            EnumStart(n, v) => {
                 if name == n {
-                    match_token! {
-                        EnumVariant(n) => {
-                            match variants.iter().position(|variant| *variant == n) {
-                                Some(position) => Ok(position),
-                                None => Err(self.syntax_error()),
-                            }
-                        }
+                    match variants.iter().position(|variant| *variant == v) {
+                        Some(position) => Ok(position),
+                        None => Err(self.syntax_error()),
                     }
                 } else {
                     Err(self.syntax_error())
@@ -466,7 +461,7 @@ mod tests {
     use serialize::Decoder;
 
     use super::{Token, Null, Int, Uint, Str, StrBuf, Char, Option};
-    use super::{TupleStart, StructStart, StructField, EnumStart, EnumVariant};
+    use super::{TupleStart, StructStart, StructField, EnumStart};
     use super::{SeqStart, MapStart, Sep, End};
     use super::{Deserializer, Deserializable};
 
@@ -783,8 +778,7 @@ mod tests {
     #[test]
     fn test_tokens_enum() {
         let tokens = vec!(
-            EnumStart("Animal"),
-                EnumVariant("Dog"),
+            EnumStart("Animal", "Dog"),
             End,
         );
 
@@ -794,8 +788,7 @@ mod tests {
         assert_eq!(value, Dog);
 
         let tokens = vec!(
-            EnumStart("Animal"),
-                EnumVariant("Frog"),
+            EnumStart("Animal", "Frog"),
                 StrBuf("Henry".to_strbuf()),
                 Int(349),
             End,
