@@ -36,7 +36,6 @@ pub enum Token {
     SeqStart(uint),
     MapStart(uint),
 
-    Sep,
     End,
 }
 
