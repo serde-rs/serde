@@ -2,7 +2,7 @@ extern crate collections;
 
 use std::hash::Hash;
 use std::num;
-use collections::HashMap;
+use collections::{HashMap, TreeMap};
 
 #[deriving(Clone, Eq)]
 pub enum Token {
@@ -408,6 +408,21 @@ impl<
     fn deserialize_token(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
         let len = try!(d.expect_map_start(token));
         let mut value = HashMap::with_capacity(len);
+
+        deserialize_map!(value)
+    }
+}
+
+impl<
+    E,
+    D: Deserializer<E>,
+    K: Deserializable<E, D> + Eq + TotalOrd,
+    V: Deserializable<E, D>
+> Deserializable<E, D> for TreeMap<K, V> {
+    #[inline]
+    fn deserialize_token(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
+        let _len = try!(d.expect_map_start(token));
+        let mut value = TreeMap::new();
 
         deserialize_map!(value)
     }
