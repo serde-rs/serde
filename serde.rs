@@ -25,3 +25,6 @@ pub mod bench_struct;
 
 //#[cfg(test)]
 //pub mod bench_vec;
+
+#[cfg(test)]
+pub mod bench_map;
