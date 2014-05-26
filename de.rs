@@ -26,11 +26,8 @@ pub enum Token {
     Option(bool),
 
     TupleStart(uint),
-
     StructStart(&'static str),
-
     EnumStart(&'static str, &'static str),
-
     SeqStart(uint),
     MapStart(uint),
 
