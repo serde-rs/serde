@@ -398,8 +398,6 @@ impl<
             }
         }
 
-        try!(d.expect_end());
-
         Ok(value)
     }
 }

@@ -381,26 +381,10 @@ fn bench_decoder_vec_int_000(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_deserializer_vec_int_000(b: &mut Bencher) {
-    b.iter(|| {
-        let v: Vec<int> = vec!();
-        run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
-    })
-}
-
-#[bench]
 fn bench_decoder_vec_int_003(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<int> = vec!(1, 2, 3);
         run_decoder(decoder::IntDecoder::new(v.clone()), v)
-    })
-}
-
-#[bench]
-fn bench_deserializer_vec_int_003(b: &mut Bencher) {
-    b.iter(|| {
-        let v: Vec<int> = vec!(1, 2, 3);
-        run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
     })
 }
 
@@ -413,26 +397,10 @@ fn bench_decoder_vec_int_100(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_deserializer_vec_int_100(b: &mut Bencher) {
-    b.iter(|| {
-        let v: Vec<int> = range(0, 100).collect();
-        run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
-    })
-}
-
-#[bench]
 fn bench_decoder_vec_u8_000(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<u8> = vec!();
         run_decoder(decoder::U8Decoder::new(v.clone()), v)
-    })
-}
-
-#[bench]
-fn bench_deserializer_vec_u8_000(b: &mut Bencher) {
-    b.iter(|| {
-        let v: Vec<u8> = vec!();
-        run_deserializer(deserializer::U8Deserializer::new(v.clone()), v)
     })
 }
 
@@ -445,18 +413,50 @@ fn bench_decoder_vec_u8_003(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_deserializer_vec_u8_003(b: &mut Bencher) {
+fn bench_decoder_vec_u8_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<u8> = vec!(1, 2, 3);
+        let v: Vec<u8> = range(0u8, 100).collect();
+        run_decoder(decoder::U8Decoder::new(v.clone()), v)
+    })
+}
+
+#[bench]
+fn bench_deserializer_vec_int_000(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = vec!();
+        run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
+    })
+}
+
+#[bench]
+fn bench_deserializer_vec_int_003(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = vec!(1, 2, 3);
+        run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
+    })
+}
+
+#[bench]
+fn bench_deserializer_vec_int_100(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<int> = range(0, 100).collect();
+        run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
+    })
+}
+
+#[bench]
+fn bench_deserializer_vec_u8_000(b: &mut Bencher) {
+    b.iter(|| {
+        let v: Vec<u8> = vec!();
         run_deserializer(deserializer::U8Deserializer::new(v.clone()), v)
     })
 }
 
 #[bench]
-fn bench_decoder_vec_u8_100(b: &mut Bencher) {
+fn bench_deserializer_vec_u8_003(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<u8> = range(0u8, 100).collect();
-        run_decoder(decoder::U8Decoder::new(v.clone()), v)
+        let v: Vec<u8> = vec!(1, 2, 3);
+        run_deserializer(deserializer::U8Deserializer::new(v.clone()), v)
     })
 }
 
