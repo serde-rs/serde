@@ -11,7 +11,7 @@ use de::{Token, Deserializer, Deserializable};
 struct Inner {
     a: (),
     b: uint,
-    c: HashMap<StrBuf, Option<char>>,
+    c: HashMap<String, Option<char>>,
 }
 
 impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
@@ -64,10 +64,10 @@ mod decoder {
         NullState,
         UintState(uint),
         CharState(char),
-        StrState(StrBuf),
+        StringState(String),
         FieldState(&'static str),
         VecState(Vec<Inner>),
-        MapState(HashMap<StrBuf, Option<char>>),
+        MapState(HashMap<String, Option<char>>),
         OptionState(bool),
     }
 
@@ -121,9 +121,9 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_str(&mut self) -> Result<StrBuf, Error> {
+        fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
-                Some(StrState(value)) => Ok(value),
+                Some(StringState(value)) => Ok(value),
                 _ => Err(SyntaxError),
             }
         }
@@ -248,7 +248,7 @@ mod decoder {
                                 self.stack.push(OptionState(false));
                             }
                         }
-                        self.stack.push(StrState(key));
+                        self.stack.push(StringState(key));
                     }
                     f(self, len)
                 }
@@ -271,7 +271,7 @@ mod decoder {
 mod deserializer {
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
     use de::Deserializer;
-    use de::{Token, Uint, Char, StrBuf, Null, TupleStart, StructStart, StructField, SeqStart, MapStart, End, Option};
+    use de::{Token, Uint, Char, String, Null, TupleStart, StructStart, StructField, SeqStart, MapStart, End, Option};
 
     enum State {
         OuterState(Outer),
@@ -280,7 +280,7 @@ mod deserializer {
         NullState,
         UintState(uint),
         CharState(char),
-        StrState(StrBuf),
+        StringState(String),
         OptionState(bool),
         TupleState(uint),
         VecState(uint),
@@ -346,7 +346,7 @@ mod deserializer {
                             }
                         }
 
-                        self.stack.push(StrState(k));
+                        self.stack.push(StringState(k));
                         self.stack.push(TupleState(2));
                     }
                     self.stack.push(MapState(len));
@@ -402,9 +402,9 @@ mod deserializer {
                         _ => Some(Err(self.syntax_error())),
                     }
                 }
-                Some(&StrState(_)) => {
+                Some(&StringState(_)) => {
                     match self.stack.pop() {
-                        Some(StrState(x)) => Some(Ok(StrBuf(x))),
+                        Some(StringState(x)) => Some(Ok(String(x))),
                         _ => Some(Err(self.syntax_error())),
                     }
                 }

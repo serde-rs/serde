@@ -22,7 +22,7 @@ pub enum Token {
     F64(f64),
     Char(char),
     Str(&'static str),
-    StrBuf(StrBuf),
+    String(String),
     Option(bool),
 
     TupleStart(uint),
@@ -131,10 +131,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_strbuf(&mut self, token: Token) -> Result<StrBuf, E> {
+    fn expect_strbuf(&mut self, token: Token) -> Result<String, E> {
         match token {
             Str(value) => Ok(value.to_strbuf()),
-            StrBuf(value) => Ok(value),
+            String(value) => Ok(value),
             _ => Err(self.syntax_error()),
         }
     }
@@ -342,7 +342,7 @@ impl_deserializable!(f32, expect_num)
 impl_deserializable!(f64, expect_num)
 impl_deserializable!(char, expect_char)
 impl_deserializable!(&'static str, expect_str)
-impl_deserializable!(StrBuf, expect_strbuf)
+impl_deserializable!(String, expect_strbuf)
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -491,7 +491,7 @@ mod tests {
 
     use serialize::Decoder;
 
-    use super::{Token, Null, Int, Uint, Str, StrBuf, Char, Option};
+    use super::{Token, Null, Int, Uint, Str, String, Char, Option};
     use super::{TupleStart, StructStart, StructField, EnumStart};
     use super::{SeqStart, MapStart, End};
     use super::{Deserializer, Deserializable};
@@ -502,7 +502,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: HashMap<StrBuf, Option<char>>,
+        c: HashMap<String, Option<char>>,
     }
 
     impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
@@ -539,7 +539,7 @@ mod tests {
     #[deriving(Clone, Eq, Show, Decodable)]
     enum Animal {
         Dog,
-        Frog(StrBuf, int)
+        Frog(String, int)
     }
 
     impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
@@ -635,11 +635,11 @@ mod tests {
     #[test]
     fn test_tokens_strbuf() {
         let tokens = vec!(
-            StrBuf("a".to_strbuf()),
+            String("a".to_strbuf()),
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: StrBuf = Deserializable::deserialize(&mut deserializer).unwrap();
+        let value: String = Deserializable::deserialize(&mut deserializer).unwrap();
 
         assert_eq!(value, "a".to_strbuf());
     }
@@ -700,12 +700,12 @@ mod tests {
             TupleStart(2),
                 Int(5),
 
-                StrBuf("a".to_strbuf()),
+                String("a".to_strbuf()),
             End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: (int, StrBuf) = Deserializable::deserialize(&mut deserializer).unwrap();
+        let value: (int, String) = Deserializable::deserialize(&mut deserializer).unwrap();
 
         assert_eq!(value, (5, "a".to_strbuf()));
     }
@@ -722,13 +722,13 @@ mod tests {
                 TupleStart(2),
                     Int(5),
 
-                    StrBuf("a".to_strbuf()),
+                    String("a".to_strbuf()),
                 End,
             End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: ((), (), (int, StrBuf)) = Deserializable::deserialize(&mut deserializer).unwrap();
+        let value: ((), (), (int, String)) = Deserializable::deserialize(&mut deserializer).unwrap();
 
         assert_eq!(value, ((), (), (5, "a".to_strbuf())));
     }
@@ -765,7 +765,7 @@ mod tests {
                         StructField("c"),
                         MapStart(1),
                             TupleStart(2),
-                                StrBuf("abc".to_strbuf()),
+                                String("abc".to_strbuf()),
 
                                 Option(true),
                                 Char('c'),
@@ -809,7 +809,7 @@ mod tests {
 
         let tokens = vec!(
             EnumStart("Animal", "Frog"),
-                StrBuf("Henry".to_strbuf()),
+                String("Henry".to_strbuf()),
                 Int(349),
             End,
         );
@@ -888,19 +888,19 @@ mod tests {
                 TupleStart(2),
                     Int(5),
 
-                    StrBuf("a".to_strbuf()),
+                    String("a".to_strbuf()),
                 End,
 
                 TupleStart(2),
                     Int(6),
 
-                    StrBuf("b".to_strbuf()),
+                    String("b".to_strbuf()),
                 End,
             End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
-        let value: HashMap<int, StrBuf> = Deserializable::deserialize(&mut deserializer).unwrap();
+        let value: HashMap<int, String> = Deserializable::deserialize(&mut deserializer).unwrap();
 
         let mut map = HashMap::new();
         map.insert(5, "a".to_strbuf());

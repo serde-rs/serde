@@ -9,7 +9,7 @@ use de::{Deserializer, Deserializable, Token};
 #[deriving(Clone, Eq, Show, Decodable)]
 enum Animal {
     Dog,
-    Frog(StrBuf, int)
+    Frog(String, int)
 }
 
 impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
@@ -53,7 +53,7 @@ mod decoder {
         DogState,
         FrogState,
         IntState(int),
-        StrState(StrBuf),
+        StringState(String),
     }
 
     pub struct AnimalDecoder {
@@ -94,9 +94,9 @@ mod decoder {
         fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
         fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
         #[inline]
-        fn read_str(&mut self) -> Result<StrBuf, Error> {
+        fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
-                Some(StrState(x)) => Ok(x),
+                Some(StringState(x)) => Ok(x),
                 _ => Err(SyntaxError),
             }
         }
@@ -123,7 +123,7 @@ mod decoder {
                 Some(AnimalState(Dog)) => "Dog",
                 Some(AnimalState(Frog(x0, x1))) => {
                     self.stack.push(IntState(x1));
-                    self.stack.push(StrState(x0));
+                    self.stack.push(StringState(x0));
                     "Frog"
                 }
                 _ => { return Err(SyntaxError); }
@@ -194,12 +194,12 @@ mod deserializer {
     use super::{Animal, Dog, Frog, Error, EndOfStream, SyntaxError};
 
     use de::Deserializer;
-    use de::{Token, Int, StrBuf, EnumStart, End};
+    use de::{Token, Int, String, EnumStart, End};
 
     enum State {
         AnimalState(Animal),
         IntState(int),
-        StrState(StrBuf),
+        StringState(String),
         EndState,
 
     }
@@ -228,14 +228,14 @@ mod deserializer {
                 Some(AnimalState(Frog(x0, x1))) => {
                     self.stack.push(EndState);
                     self.stack.push(IntState(x1));
-                    self.stack.push(StrState(x0));
+                    self.stack.push(StringState(x0));
                     Some(Ok(EnumStart("Animal", "Frog")))
                 }
                 Some(IntState(x)) => {
                     Some(Ok(Int(x)))
                 }
-                Some(StrState(x)) => {
-                    Some(Ok(StrBuf(x)))
+                Some(StringState(x)) => {
+                    Some(Ok(String(x)))
                 }
                 Some(EndState) => {
                     Some(Ok(End))
