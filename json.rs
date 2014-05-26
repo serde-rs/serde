@@ -1181,7 +1181,9 @@ impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
             }
         }
 
-        match self.parse() {
+        let event = self.parse();
+
+        match event {
             ObjectStart => Some(Ok(de::MapStart(0))),
             ObjectEnd => Some(Ok(de::End)),
             ListStart => Some(Ok(de::SeqStart(0))),
@@ -1483,7 +1485,6 @@ impl<T: Iterator<char>> Parser<T> {
                 ParseStart => {
                     return self.parse_start();
                 }
-                /*
                 ParseList(first) => {
                     return self.parse_list(first);
                 }
@@ -1493,7 +1494,6 @@ impl<T: Iterator<char>> Parser<T> {
                         None => {}
                     }
                 }
-                */
                 /*
                 ParseObject(first) => {
                     return self.parse_object(first);
@@ -1519,14 +1519,13 @@ impl<T: Iterator<char>> Parser<T> {
         let val = self.parse_value();
         self.state = match val {
             Error(_) => { ParseFinished }
-            //ListStart => { ParseList(true) }
+            ListStart => { ParseList(true) }
             //ObjectStart => { ParseObject(true) }
             _ => { ParseBeforeFinish }
         };
         return val;
     }
 
-    /*
     fn parse_list(&mut self, first: bool) -> JsonEvent {
         if self.ch_is(']') {
             if !first {
@@ -1585,6 +1584,7 @@ impl<T: Iterator<char>> Parser<T> {
         }
     }
 
+    /*
     fn parse_object(&mut self, first: bool) -> JsonEvent {
         if self.ch_is('}') {
             if !first {
@@ -1671,11 +1671,11 @@ impl<T: Iterator<char>> Parser<T> {
                 Ok(s) => StringValue(s),
                 Err(e) => Error(e),
             },
-            /*
             '[' => {
                 self.bump();
                 return ListStart;
             }
+            /*
             '{' => {
                 self.bump();
                 return ObjectStart;
@@ -2646,38 +2646,40 @@ mod tests {
         assert_eq!(from_str("0.4e-01"), Ok(Number(0.4e-01)));
         assert_eq!(from_str(" 3 "), Ok(Number(3.0)));
     }
+    */
 
     #[test]
     fn test_decode_numbers() {
-        let mut decoder = Decoder::new(from_str("3").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("3".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, 3.0);
 
-        let mut decoder = Decoder::new(from_str("3.1").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("3.1".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, 3.1);
 
-        let mut decoder = Decoder::new(from_str("-1.2").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("-1.2".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, -1.2);
 
-        let mut decoder = Decoder::new(from_str("0.4").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("0.4".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, 0.4);
 
-        let mut decoder = Decoder::new(from_str("0.4e5").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("0.4e5".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, 0.4e5);
 
-        let mut decoder = Decoder::new(from_str("0.4e15").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("0.4e15".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, 0.4e15);
 
-        let mut decoder = Decoder::new(from_str("0.4e-01").unwrap());
-        let v: f64 = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("0.4e-01".chars());
+        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, 0.4e-01);
     }
 
+    /*
     #[test]
     fn test_read_str() {
         assert_eq!(from_str("\""),    Err(SyntaxError(EOFWhileParsingString, 1, 2)));
@@ -2694,6 +2696,7 @@ mod tests {
         assert_eq!(from_str("\"\\u12ab\""), Ok(String("\u12ab".to_strbuf())));
         assert_eq!(from_str("\"\\uAB12\""), Ok(String("\uAB12".to_strbuf())));
     }
+    */
 
     #[test]
     fn test_decode_str() {
@@ -2708,16 +2711,13 @@ mod tests {
                  ("\"\\uAB12\"", "\uAB12")];
 
         for &(i, o) in s.iter() {
-            let mut decoder = Decoder::new(from_str(i).unwrap());
-            let v: String = Decodable::decode(&mut decoder).unwrap();
+            let mut parser = Parser::new(i.chars());
+            let v: String = de::Deserializable::deserialize(&mut parser).unwrap();
             assert_eq!(v.as_slice(), o);
-
-            let mut decoder = Decoder::new(from_str(i).unwrap());
-            let v: String = Decodable::decode(&mut decoder).unwrap();
-            assert_eq!(v, o.to_strbuf());
         }
     }
 
+    /*
     #[test]
     fn test_read_list() {
         assert_eq!(from_str("["),     Err(SyntaxError(EOFWhileParsingValue, 1, 2)));
@@ -2738,34 +2738,36 @@ mod tests {
         assert_eq!(from_str("[2, [4, 1]]"),
                Ok(List(vec![Number(2.0), List(vec![Number(4.0), Number(1.0)])])));
     }
+    */
 
     #[test]
     fn test_decode_list() {
-        let mut decoder = Decoder::new(from_str("[]").unwrap());
-        let v: Vec<()> = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("[]".chars());
+        let v: Vec<()> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![]);
 
-        let mut decoder = Decoder::new(from_str("[null]").unwrap());
-        let v: Vec<()> = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("[null]".chars());
+        let v: Vec<()> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![()]);
 
-        let mut decoder = Decoder::new(from_str("[true]").unwrap());
-        let v: Vec<bool> = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("[true]".chars());
+        let v: Vec<bool> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![true]);
 
-        let mut decoder = Decoder::new(from_str("[true]").unwrap());
-        let v: Vec<bool> = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("[true]".chars());
+        let v: Vec<bool> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![true]);
 
-        let mut decoder = Decoder::new(from_str("[3, 1]").unwrap());
-        let v: Vec<int> = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("[3, 1]".chars());
+        let v: Vec<int> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![3, 1]);
 
-        let mut decoder = Decoder::new(from_str("[[3], [1, 2]]").unwrap());
-        let v: Vec<Vec<uint>> = Decodable::decode(&mut decoder).unwrap();
+        let mut parser = Parser::new("[[3], [1, 2]]".chars());
+        let v: Vec<Vec<uint>> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![vec![3], vec![1, 2]]);
     }
 
+    /*
     #[test]
     fn test_read_object() {
         assert_eq!(from_str("{"),       Err(SyntaxError(EOFWhileParsingObject, 1, 2)));
