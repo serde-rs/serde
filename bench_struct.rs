@@ -423,7 +423,11 @@ fn bench_struct_decoder_inner_empty(b: &mut Bencher) {
 fn bench_struct_decoder(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-        map.insert("abc".to_strbuf(), Some('c'));
+        map.insert("1".to_strbuf(), Some('a'));
+        map.insert("2".to_strbuf(), None);
+        map.insert("3".to_strbuf(), Some('b'));
+        map.insert("4".to_strbuf(), None);
+        map.insert("5".to_strbuf(), Some('c'));
 
         let outer = Outer {
             inner: vec!(
@@ -485,7 +489,11 @@ fn bench_struct_deserializer_inner_empty(b: &mut Bencher) {
 fn bench_struct_deserializer(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-        map.insert("abc".to_strbuf(), Some('c'));
+        map.insert("1".to_strbuf(), Some('a'));
+        map.insert("2".to_strbuf(), None);
+        map.insert("3".to_strbuf(), Some('b'));
+        map.insert("4".to_strbuf(), None);
+        map.insert("5".to_strbuf(), Some('c'));
 
         let outer = Outer {
             inner: vec!(
