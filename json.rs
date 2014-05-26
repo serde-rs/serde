@@ -976,6 +976,7 @@ impl Json {
 }
 */
 
+/*
 /// The output of the streaming parser.
 #[deriving(Eq, Clone, Show)]
 pub enum JsonEvent {
@@ -989,19 +990,24 @@ pub enum JsonEvent {
     NullValue,
     Error(ParserError),
 }
+*/
 
 #[deriving(Eq, Show)]
 enum ParserState {
-    // Parse a value in a list, true means first element.
-    ParseList(bool),
+    // Parse a value.
+    ParseValue,
+    // Parse a value or ']'.
+    ParseListStart,
     // Parse ',' or ']' after an element in a list.
-    ParseListComma,
-    // Parse a key:value in an object, true means first element.
-    ParseObject(bool),
+    ParseListCommaOrEnd,
+    // Parse a key:value or an ']'.
+    ParseObjectStart,
     // Parse ',' or ']' after an element in an object.
-    ParseObjectComma,
-    // Initialial state.
-    ParseStart,
+    ParseObjectCommaOrEnd,
+    // Parse a key in an object.
+    ParseObjectKey,
+    // Parse a value in an object.
+    ParseObjectValue,
     // Expecting the stream to end.
     ParseBeforeFinish,
     // Parsing can't continue.
@@ -1157,42 +1163,36 @@ pub struct Parser<T> {
     ch: Option<char>,
     line: uint,
     col: uint,
-    // We maintain a stack representing where we are in the logical structure
-    // of the JSON stream.
-    stack: Stack,
     // A state machine is kept to make it possible to interupt and resume parsing.
-    state: ParserState,
+    state: Vec<ParserState>,
 }
 
 impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
-        if self.state == ParseFinished {
-            return None;
-        }
+        let state = match self.state.pop() {
+            Some(state) => state,
+            None => { return None; }
+        };
 
-        if self.state == ParseBeforeFinish {
-            self.parse_whitespace();
-            // Make sure there is no trailing characters.
-            if self.eof() {
-                self.state = ParseFinished;
-                return None;
-            } else {
-                return Some(self.error(TrailingCharacters));
+        match state {
+            ParseFinished => None,
+            ParseBeforeFinish => {
+                self.parse_whitespace();
+                // Make sure there is no trailing characters.
+                if self.eof() {
+                    self.state.push(ParseFinished);
+                    None
+                } else {
+                    Some(self.error(TrailingCharacters))
+                }
             }
-        }
-
-        let event = self.parse();
-
-        match event {
-            ObjectStart => Some(Ok(de::MapStart(0))),
-            ObjectEnd => Some(Ok(de::End)),
-            ListStart => Some(Ok(de::SeqStart(0))),
-            ListEnd => Some(Ok(de::End)),
-            NullValue => Some(Ok(de::Null)),
-            BooleanValue(value) => Some(Ok(de::Bool(value))),
-            NumberValue(value) => Some(Ok(de::F64(value))),
-            StringValue(value) => Some(Ok(de::String(value.to_strbuf()))),
-            Error(err) => Some(Err(err)),
+            ParseValue => Some(self.parse_value()),
+            ParseListStart => Some(self.parse_list_start()),
+            ParseListCommaOrEnd => Some(self.parse_list_comma_or_end()),
+            ParseObjectStart => Some(self.parse_object_start()),
+            ParseObjectCommaOrEnd => Some(self.parse_object_comma_or_end()),
+            ParseObjectKey => Some(self.parse_object_key()),
+            ParseObjectValue => Some(self.parse_object_value()),
         }
     }
 }
@@ -1205,17 +1205,10 @@ impl<T: Iterator<char>> Parser<T> {
             ch: Some('\x00'),
             line: 1,
             col: 0,
-            stack: Stack::new(),
-            state: ParseStart,
+            state: vec!(ParseValue),
         };
         p.bump();
         return p;
-    }
-
-    /// Provides access to the current position in the logical structure of the
-    /// JSON stream.
-    pub fn stack<'l>(&'l self) -> &'l Stack {
-        return &'l self.stack;
     }
 
     fn eof(&self) -> bool { self.ch.is_none() }
@@ -1465,238 +1458,121 @@ impl<T: Iterator<char>> Parser<T> {
         }
     }
 
-    // Invoked at each iteration, consumes the stream until it has enough
-    // information to return a JsonEvent.
-    // Manages an internal state so that parsing can be interrupted and resumed.
-    // Also keeps track of the position in the logical structure of the json
-    // stream int the form of a stack that can be queried by the user usng the
-    // stack() method.
-    fn parse(&mut self) -> JsonEvent {
-        loop {
-            // The only paths where the loop can spin a new iteration
-            // are in the cases ParseListComma and ParseObjectComma if ','
-            // is parsed. In these cases the state is set to (respectively)
-            // ParseList(false) and ParseObject(false), which always return,
-            // so there is no risk of getting stuck in an infinite loop.
-            // All other paths return before the end of the loop's iteration.
-            self.parse_whitespace();
-
-            match self.state {
-                ParseStart => {
-                    return self.parse_start();
-                }
-                ParseList(first) => {
-                    return self.parse_list(first);
-                }
-                ParseListComma => {
-                    match self.parse_list_comma_or_end() {
-                        Some(evt) => { return evt; }
-                        None => {}
-                    }
-                }
-                /*
-                ParseObject(first) => {
-                    return self.parse_object(first);
-                }
-                ParseObjectComma => {
-                    self.stack.pop();
-                    if self.ch_is(',') {
-                        self.state = ParseObject(false);
-                        self.bump();
-                    } else {
-                        return self.parse_object_end();
-                    }
-                }
-                */
-                _ => {
-                    return self.error_event(InvalidSyntax);
-                }
-            }
-        }
-    }
-
-    fn parse_start(&mut self) -> JsonEvent {
-        let val = self.parse_value();
-        self.state = match val {
-            Error(_) => { ParseFinished }
-            ListStart => { ParseList(true) }
-            //ObjectStart => { ParseObject(true) }
-            _ => { ParseBeforeFinish }
-        };
-        return val;
-    }
-
-    fn parse_list(&mut self, first: bool) -> JsonEvent {
+    fn parse_list_start(&mut self) -> Result<de::Token, ParserError> {
         if self.ch_is(']') {
-            if !first {
-                return self.error_event(InvalidSyntax);
-            }
-            if self.stack.is_empty() {
-                self.state = ParseBeforeFinish;
-            } else {
-                self.state = if self.stack.last_is_index() {
-                    ParseListComma
-                } else {
-                    ParseObjectComma
-                }
-            }
             self.bump();
-            return ListEnd;
+            Ok(de::End)
+        } else {
+            self.state.push(ParseListCommaOrEnd);
+            self.parse_value()
         }
-        if first {
-            self.stack.push_index(0);
-        }
-
-        let val = self.parse_value();
-
-        self.state = match val {
-            Error(_) => { ParseFinished }
-            ListStart => { ParseList(true) }
-            ObjectStart => { ParseObject(true) }
-            _ => { ParseListComma }
-        };
-        return val;
     }
 
-    fn parse_list_comma_or_end(&mut self) -> Option<JsonEvent> {
+    fn parse_list_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
         if self.ch_is(',') {
-            self.stack.bump_index();
-            self.state = ParseList(false);
             self.bump();
-            return None;
+            self.state.push(ParseListCommaOrEnd);
+            self.parse_value()
         } else if self.ch_is(']') {
-            self.stack.pop();
-            if self.stack.is_empty() {
-                self.state = ParseBeforeFinish;
-            } else {
-                self.state = if self.stack.last_is_index() {
-                    ParseListComma
-                } else {
-                    ParseObjectComma
-                }
-            }
             self.bump();
-            return Some(ListEnd);
+            Ok(de::End)
         } else if self.eof() {
-            return Some(self.error_event(EOFWhileParsingList));
+            self.error_event(EOFWhileParsingList)
         } else {
-            return Some(self.error_event(InvalidSyntax));
+            self.error_event(InvalidSyntax)
         }
     }
 
-    /*
-    fn parse_object(&mut self, first: bool) -> JsonEvent {
-        if self.ch_is('}') {
-            if !first {
-                self.stack.pop();
-            }
-            if self.stack.is_empty() {
-                self.state = ParseBeforeFinish;
-            } else {
-                self.state = if self.stack.last_is_index() {
-                    ParseListComma
-                } else {
-                    ParseObjectComma
-                }
-            }
-            self.bump();
-            return ObjectEnd;
-        }
-        if self.eof() {
-            return self.error_event(EOFWhileParsingObject);
-        }
-        if !self.ch_is('"') {
-            return self.error_event(KeyMustBeAString);
-        }
-        let s = match self.parse_str() {
-            Ok(s) => { s }
-            Err(e) => {
-                self.state = ParseFinished;
-                return Error(e);
-            }
-        };
+    fn parse_object_start(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
-        if self.eof() {
-            return self.error_event(EOFWhileParsingObject);
-        } else if self.ch_or_null() != ':' {
-            return self.error_event(ExpectedColon);
+        if self.ch_is('}') {
+            self.bump();
+            Ok(de::End)
+        } else {
+            self.parse_object_key()
         }
-        self.stack.push_key(s);
-        self.bump();
+    }
+
+    fn parse_object_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
+        self.parse_whitespace();
+        if self.ch_is(',') {
+            self.bump();
+            self.parse_object_key()
+        } else if self.ch_is('}') {
+            self.bump();
+            Ok(de::End)
+        } else if self.eof() {
+            self.error_event(EOFWhileParsingList)
+        } else {
+            self.error_event(InvalidSyntax)
+        }
+    }
+
+    fn parse_object_key(&mut self) -> Result<de::Token, ParserError> {
+        self.parse_whitespace();
+        self.state.push(ParseObjectValue);
+        let key = try!(self.parse_str());
+        Ok(de::String(key))
+    }
+
+    fn parse_object_value(&mut self) -> Result<de::Token, ParserError> {
+        self.parse_whitespace();
+        if self.ch_is(':') {
+            self.bump();
+            self.state.push(ParseObjectCommaOrEnd);
+            self.parse_value()
+        } else if self.eof() {
+            self.error_event(EOFWhileParsingList)
+        } else {
+            self.error_event(InvalidSyntax)
+        }
+    }
+
+    fn parse_value(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
 
-        let val = self.parse_value();
-
-        self.state = match val {
-            Error(_) => { ParseFinished }
-            ListStart => { ParseList(true) }
-            ObjectStart => { ParseObject(true) }
-            _ => { ParseObjectComma }
-        };
-        return val;
-    }
-
-    fn parse_object_end(&mut self) -> JsonEvent {
-        if self.ch_is('}') {
-            if self.stack.is_empty() {
-                self.state = ParseBeforeFinish;
-            } else {
-                self.state = if self.stack.last_is_index() {
-                    ParseListComma
-                } else {
-                    ParseObjectComma
-                }
-            }
-            self.bump();
-            return ObjectEnd;
-        } else if self.eof() {
-            return self.error_event(EOFWhileParsingObject);
-        } else {
-            return self.error_event(InvalidSyntax);
+        if self.eof() {
+            return self.error_event(EOFWhileParsingValue);
         }
-    }
-    */
 
-    fn parse_value(&mut self) -> JsonEvent {
-        if self.eof() { return self.error_event(EOFWhileParsingValue); }
         match self.ch_or_null() {
-            'n' => { return self.parse_ident("ull", NullValue); }
-            't' => { return self.parse_ident("rue", BooleanValue(true)); }
-            'f' => { return self.parse_ident("alse", BooleanValue(false)); }
-            '0' .. '9' | '-' => return match self.parse_number() {
-                Ok(f) => NumberValue(f),
-                Err(e) => Error(e),
-            },
-            '"' => return match self.parse_str() {
-                Ok(s) => StringValue(s),
-                Err(e) => Error(e),
-            },
+            'n' => self.parse_ident("ull", de::Null),
+            't' => self.parse_ident("rue", de::Bool(true)),
+            'f' => self.parse_ident("alse", de::Bool(false)),
+            '0' .. '9' | '-' => {
+                let number = try!(self.parse_number());
+                Ok(de::F64(number))
+            }
+            '"' => {
+                let s = try!(self.parse_str());
+                Ok(de::String(s))
+            }
             '[' => {
                 self.bump();
-                return ListStart;
+                self.state.push(ParseListStart);
+                Ok(de::SeqStart(0))
             }
-            /*
             '{' => {
                 self.bump();
-                return ObjectStart;
+                self.state.push(ParseObjectStart);
+                Ok(de::MapStart(0))
             }
-            */
-            _ => { return self.error_event(InvalidSyntax); }
+            _ => self.error_event(InvalidSyntax),
         }
     }
 
-    fn parse_ident(&mut self, ident: &str, value: JsonEvent) -> JsonEvent {
+    fn parse_ident(&mut self, ident: &str, value: de::Token) -> Result<de::Token, ParserError> {
         if ident.chars().all(|c| Some(c) == self.next_char()) {
             self.bump();
-            value
+            Ok(value)
         } else {
-            Error(SyntaxError(InvalidSyntax, self.line, self.col))
+            Err(SyntaxError(InvalidSyntax, self.line, self.col))
         }
     }
 
-    fn error_event(&mut self, reason: ErrorCode) -> JsonEvent {
-        self.state = ParseFinished;
-        Error(SyntaxError(reason, self.line, self.col))
+    fn error_event(&mut self, reason: ErrorCode) -> Result<de::Token, ParserError> {
+        self.state.clear();
+        Err(SyntaxError(reason, self.line, self.col))
     }
 }
 
@@ -2754,10 +2630,6 @@ mod tests {
         let v: Vec<bool> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![true]);
 
-        let mut parser = Parser::new("[true]".chars());
-        let v: Vec<bool> = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, vec![true]);
-
         let mut parser = Parser::new("[3, 1]".chars());
         let v: Vec<int> = de::Deserializable::deserialize(&mut parser).unwrap();
         assert_eq!(v, vec![3, 1]);
@@ -2822,7 +2694,63 @@ mod tests {
                       ]))
                   ]));
     }
+    */
 
+    #[test]
+    fn test_decode_object() {
+        let mut parser = Parser::new("{}".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let m = TreeMap::new();
+        assert!(v == m);
+
+        let mut parser = Parser::new("{ }".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let m = TreeMap::new();
+        assert!(v == m);
+
+        let mut parser = Parser::new("{\"a\":3}".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let mut m = TreeMap::new();
+        m.insert("a".to_str(), 3);
+        assert!(v == m);
+
+        let mut parser = Parser::new("{\"a\" :3}".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let mut m = TreeMap::new();
+        m.insert("a".to_str(), 3);
+        assert!(v == m);
+
+        let mut parser = Parser::new("{\"a\" : 3}".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let mut m = TreeMap::new();
+        m.insert("a".to_str(), 3);
+        assert!(v == m);
+
+        let mut parser = Parser::new("{\"a\": 3, \"b\": 4}".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let mut m = TreeMap::new();
+        m.insert("a".to_str(), 3);
+        m.insert("b".to_str(), 4);
+        assert!(v == m);
+
+        let mut parser = Parser::new("{ \"a\": 3, \"b\": 4 }".chars());
+        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let mut m = TreeMap::new();
+        m.insert("a".to_str(), 3);
+        m.insert("b".to_str(), 4);
+        assert!(v == m);
+
+        let mut parser = Parser::new("{\"a\": {\"b\": 3, \"c\": 4}}".chars());
+        let v: TreeMap<String, TreeMap<String, int>> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let mut mm = TreeMap::new();
+        mm.insert("b".to_str(), 3);
+        mm.insert("c".to_str(), 4);
+        let mut m = TreeMap::new();
+        m.insert("a".to_str(), mm);
+        assert!(v == m);
+    }
+
+    /*
     #[test]
     fn test_decode_struct() {
         let s = "{
