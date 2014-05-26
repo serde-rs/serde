@@ -3,7 +3,7 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use de::{Deserializer, Deserializable};
+use de::{Token, Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,8 +16,8 @@ struct Inner {
 
 impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<Inner, E> {
-        try!(d.expect_struct_start("Inner"));
+    fn deserialize_token(d: &mut D, token: Token) -> Result<Inner, E> {
+        try!(d.expect_struct_start(token, "Inner"));
         let a = try!(d.expect_struct_field("a"));
         let b = try!(d.expect_struct_field("b"));
         let c = try!(d.expect_struct_field("c"));
@@ -35,8 +35,8 @@ struct Outer {
 
 impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<Outer, E> {
-        try!(d.expect_struct_start("Outer"));
+    fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
+        try!(d.expect_struct_start(token, "Outer"));
         let inner = try!(d.expect_struct_field("inner"));
         try!(d.expect_end());
         Ok(Outer { inner: inner })
@@ -271,7 +271,7 @@ mod decoder {
 mod deserializer {
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
     use de::Deserializer;
-    use de::{Token, Uint, Char, StrBuf, Null, TupleStart, StructStart, StructField, SeqStart, MapStart, Sep, End, Option};
+    use de::{Token, Uint, Char, StrBuf, Null, TupleStart, StructStart, StructField, SeqStart, MapStart, End, Option};
 
     enum State {
         OuterState(Outer),
@@ -285,7 +285,6 @@ mod deserializer {
         TupleState(uint),
         VecState(uint),
         MapState(uint),
-        SepState,
         EndState,
 
     }
@@ -308,43 +307,118 @@ mod deserializer {
         fn next(&mut self) -> Option<Result<Token, Error>> {
             match self.stack.last() {
                 Some(&OuterState(_)) => {
-                    outer_state(self)
+                    let inner = match self.stack.pop() {
+                        Some(OuterState(Outer { inner })) => inner,
+                        _ => { return Some(Err(self.syntax_error())); }
+                    };
+
+                    self.stack.push(EndState);
+
+                    self.stack.push(EndState);
+                    let len = inner.len();
+                    for v in inner.move_iter().rev() {
+                        self.stack.push(InnerState(v));
+                    }
+                    self.stack.push(VecState(len));
+
+                    self.stack.push(FieldState("inner"));
+                    Some(Ok(StructStart("Outer")))
                 }
                 Some(&InnerState(_)) => {
-                    inner_state(self)
+                    let ((), b, c) = match self.stack.pop() {
+                        Some(InnerState(Inner { a, b, c })) => (a, b, c),
+                        _ => { return Some(Err(self.syntax_error())); }
+                    };
+
+                    self.stack.push(EndState);
+
+                    self.stack.push(EndState);
+                    let len = c.len();
+                    for (k, v) in c.move_iter() {
+                        self.stack.push(EndState);
+                        match v {
+                            Some(c) => {
+                                self.stack.push(CharState(c));
+                                self.stack.push(OptionState(true));
+                            }
+                            None => {
+                                self.stack.push(OptionState(false));
+                            }
+                        }
+
+                        self.stack.push(StrState(k));
+                        self.stack.push(TupleState(2));
+                    }
+                    self.stack.push(MapState(len));
+
+                    self.stack.push(FieldState("c"));
+
+                    self.stack.push(UintState(b));
+                    self.stack.push(FieldState("b"));
+
+                    self.stack.push(NullState);
+                    self.stack.push(FieldState("a"));
+                    Some(Ok(StructStart("Inner")))
                 }
                 Some(&FieldState(_)) => {
-                    field_state(self)
+                    match self.stack.pop() {
+                        Some(FieldState(name)) => Some(Ok(StructField(name))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&VecState(_)) => {
-                    vec_state(self)
+                    match self.stack.pop() {
+                        Some(VecState(len)) => Some(Ok(SeqStart(len))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&MapState(_)) => {
-                    map_state(self)
+                    match self.stack.pop() {
+                        Some(MapState(len)) => Some(Ok(MapStart(len))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&TupleState(_)) => {
-                    tuple_state(self)
-                }
-                Some(&SepState) => {
-                    sep_state(self)
+                    match self.stack.pop() {
+                        Some(TupleState(len)) => Some(Ok(TupleStart(len))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&NullState) => {
-                    null_state(self)
+                    match self.stack.pop() {
+                        Some(NullState) => Some(Ok(Null)),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&UintState(_)) => {
-                    uint_state(self)
+                    match self.stack.pop() {
+                        Some(UintState(x)) => Some(Ok(Uint(x))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&CharState(_)) => {
-                    char_state(self)
+                    match self.stack.pop() {
+                        Some(CharState(x)) => Some(Ok(Char(x))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&StrState(_)) => {
-                    strbuf_state(self)
+                    match self.stack.pop() {
+                        Some(StrState(x)) => Some(Ok(StrBuf(x))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&OptionState(_)) => {
-                    option_state(self)
+                    match self.stack.pop() {
+                        Some(OptionState(x)) => Some(Ok(Option(x))),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 Some(&EndState) => {
-                    end_state(self)
+                    match self.stack.pop() {
+                        Some(EndState) => Some(Ok(End)),
+                        _ => Some(Err(self.syntax_error())),
+                    }
                 }
                 None => None,
             }
@@ -360,144 +434,6 @@ mod deserializer {
         #[inline]
         fn syntax_error(&self) -> Error {
             SyntaxError
-        }
-    }
-
-    fn outer_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        let inner = match d.stack.pop() {
-            Some(OuterState(Outer { inner })) => inner,
-            _ => { return Some(Err(d.syntax_error())); }
-        };
-
-        d.stack.push(EndState);
-
-        d.stack.push(EndState);
-        let len = inner.len();
-        for v in inner.move_iter().rev() {
-            d.stack.push(InnerState(v));
-            d.stack.push(SepState);
-        }
-        d.stack.push(VecState(len));
-
-        d.stack.push(FieldState("inner"));
-        Some(Ok(StructStart("Outer")))
-    }
-
-    fn inner_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        let ((), b, c) = match d.stack.pop() {
-            Some(InnerState(Inner { a, b, c })) => (a, b, c),
-            _ => { return Some(Err(d.syntax_error())); }
-        };
-
-        d.stack.push(EndState);
-
-        d.stack.push(EndState);
-        let len = c.len();
-        for (k, v) in c.move_iter() {
-            d.stack.push(EndState);
-            match v {
-                Some(c) => {
-                    d.stack.push(CharState(c));
-                    d.stack.push(OptionState(true));
-                }
-                None => {
-                    d.stack.push(OptionState(false));
-                }
-            }
-            d.stack.push(SepState);
-
-            d.stack.push(StrState(k));
-            d.stack.push(SepState);
-            d.stack.push(TupleState(2));
-
-            d.stack.push(SepState);
-        }
-        d.stack.push(MapState(len));
-
-        d.stack.push(FieldState("c"));
-
-        d.stack.push(UintState(b));
-        d.stack.push(FieldState("b"));
-
-        d.stack.push(NullState);
-        d.stack.push(FieldState("a"));
-        Some(Ok(StructStart("Inner")))
-    }
-
-    fn field_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(FieldState(name)) => Some(Ok(StructField(name))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn vec_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(VecState(len)) => Some(Ok(SeqStart(len))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn map_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(MapState(len)) => Some(Ok(MapStart(len))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn tuple_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(TupleState(len)) => Some(Ok(TupleStart(len))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn sep_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(SepState) => Some(Ok(Sep)),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn null_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(NullState) => Some(Ok(Null)),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn uint_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(UintState(x)) => Some(Ok(Uint(x))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn char_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(CharState(x)) => Some(Ok(Char(x))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn strbuf_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(StrState(x)) => Some(Ok(StrBuf(x))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn option_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(OptionState(x)) => Some(Ok(Option(x))),
-            _ => Some(Err(d.syntax_error())),
-        }
-    }
-
-    fn end_state(d: &mut OuterDeserializer) -> Option<Result<Token, Error>> {
-        match d.stack.pop() {
-            Some(EndState) => Some(Ok(End)),
-            _ => Some(Err(d.syntax_error())),
         }
     }
 }
