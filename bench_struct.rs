@@ -379,7 +379,7 @@ mod deserializer {
 }
 
 #[bench]
-fn bench_struct_decoder_outer_empty(b: &mut Bencher) {
+fn bench_decoder_0_0(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
         map.insert("abc".to_strbuf(), Some('c'));
@@ -396,7 +396,7 @@ fn bench_struct_decoder_outer_empty(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_decoder_inner_empty(b: &mut Bencher) {
+fn bench_decoder_1_0(b: &mut Bencher) {
     b.iter(|| {
         let map = HashMap::new();
 
@@ -418,7 +418,7 @@ fn bench_struct_decoder_inner_empty(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_decoder(b: &mut Bencher) {
+fn bench_decoder_1_5(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
         map.insert("1".to_strbuf(), Some('a'));
@@ -445,7 +445,7 @@ fn bench_struct_decoder(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_deserializer_outer_empty(b: &mut Bencher) {
+fn bench_deserializer_0_0(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
         map.insert("abc".to_strbuf(), Some('c'));
@@ -462,7 +462,7 @@ fn bench_struct_deserializer_outer_empty(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_deserializer_inner_empty(b: &mut Bencher) {
+fn bench_deserializer_1_0(b: &mut Bencher) {
     b.iter(|| {
         let map = HashMap::new();
 
@@ -484,7 +484,7 @@ fn bench_struct_deserializer_inner_empty(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_deserializer(b: &mut Bencher) {
+fn bench_deserializer_1_5(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
         map.insert("1".to_strbuf(), Some('a'));

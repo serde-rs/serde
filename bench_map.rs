@@ -245,7 +245,7 @@ fn run_decoder<
 }
 
 #[bench]
-fn bench_decoder_map_000(b: &mut Bencher) {
+fn bench_decoder_000(b: &mut Bencher) {
     b.iter(|| {
         let m: HashMap<String, int> = HashMap::new();
         run_decoder(decoder::IntDecoder::new(m.clone()), m)
@@ -253,7 +253,7 @@ fn bench_decoder_map_000(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_decoder_map_003(b: &mut Bencher) {
+fn bench_decoder_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, int> = HashMap::new();
         for i in range(0, 3) {
@@ -264,7 +264,7 @@ fn bench_decoder_map_003(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_decoder_map_100(b: &mut Bencher) {
+fn bench_decoder_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, int> = HashMap::new();
         for i in range(0, 100) {
@@ -285,7 +285,7 @@ fn run_deserializer<
 }
 
 #[bench]
-fn bench_deserializer_map_000(b: &mut Bencher) {
+fn bench_deserializer_000(b: &mut Bencher) {
     b.iter(|| {
         let m: HashMap<String, int> = HashMap::new();
         run_deserializer(deserializer::IntDeserializer::new(m.clone()), m)
@@ -293,7 +293,7 @@ fn bench_deserializer_map_000(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_deserializer_map_003(b: &mut Bencher) {
+fn bench_deserializer_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, int> = HashMap::new();
         for i in range(0, 3) {
@@ -304,7 +304,7 @@ fn bench_deserializer_map_003(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_deserializer_map_100(b: &mut Bencher) {
+fn bench_deserializer_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, int> = HashMap::new();
         for i in range(0, 100) {

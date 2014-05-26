@@ -473,7 +473,6 @@ deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 #[cfg(test)]
 mod tests {
     use collections::HashMap;
-    use test::Bencher;
 
     use serialize::Decoder;
 
@@ -887,25 +886,5 @@ mod tests {
         map.insert(6, "b".to_strbuf());
 
         assert_eq!(value, map);
-    }
-
-    #[bench]
-    fn bench_token_deserializer(b: &mut Bencher) {
-        b.iter(|| {
-            let tokens = vec!(
-                SeqStart(3),
-                    Int(5),
-
-                    Int(6),
-
-                    Int(7),
-                End,
-            );
-
-            let mut d = TokenDeserializer::new(tokens);
-            let value: Vec<int> = Deserializable::deserialize(&mut d).unwrap();
-
-            assert_eq!(value, vec!(5, 6, 7));
-        })
     }
 }

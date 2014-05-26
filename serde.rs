@@ -17,8 +17,8 @@ pub mod de;
 //#[cfg(test)]
 //pub mod bench_bytes;
 
-//#[cfg(test)]
-//pub mod bench_enum;
+#[cfg(test)]
+pub mod bench_enum;
 
 #[cfg(test)]
 pub mod bench_struct;

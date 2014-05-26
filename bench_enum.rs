@@ -261,7 +261,19 @@ mod deserializer {
 //////////////////////////////////////////////////////////////////////////////
 
 #[bench]
-fn bench_enum_decoder(b: &mut Bencher) {
+fn bench_decoder_dog(b: &mut Bencher) {
+    b.iter(|| {
+        let animal = Dog;
+
+        let mut d = decoder::AnimalDecoder::new(animal.clone());
+        let value: Animal = Decodable::decode(&mut d).unwrap();
+
+        assert_eq!(value, animal);
+    })
+}
+
+#[bench]
+fn bench_decoder_frog(b: &mut Bencher) {
     b.iter(|| {
         let animal = Frog("Henry".to_strbuf(), 349);
 
@@ -273,7 +285,19 @@ fn bench_enum_decoder(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_enum_deserializer(b: &mut Bencher) {
+fn bench_deserializer_dog(b: &mut Bencher) {
+    b.iter(|| {
+        let animal = Dog;
+
+        let mut d = deserializer::AnimalDeserializer::new(animal.clone());
+        let value: Animal = Deserializable::deserialize(&mut d).unwrap();
+
+        assert_eq!(value, animal);
+    })
+}
+
+#[bench]
+fn bench_deserializer_frog(b: &mut Bencher) {
     b.iter(|| {
         let animal = Frog("Henry".to_strbuf(), 349);
 
