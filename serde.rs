@@ -12,7 +12,7 @@ extern crate log;
 extern crate serialize;
 
 pub mod de;
-//pub mod json;
+pub mod json;
 
 //#[cfg(test)]
 //pub mod bench_bytes;
