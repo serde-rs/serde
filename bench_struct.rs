@@ -439,6 +439,40 @@ mod deserializer {
 }
 
 #[bench]
+fn bench_struct_decoder_outer_empty(b: &mut Bencher) {
+    b.iter(|| {
+        let mut map = HashMap::new();
+        map.insert("abc".to_strbuf(), Some('c'));
+
+        let outer = Outer {
+            inner: vec!(),
+        };
+
+        let mut d = decoder::OuterDecoder::new(outer.clone());
+        let value: Outer = Decodable::decode(&mut d).unwrap();
+
+        assert_eq!(value, outer);
+    })
+}
+
+#[bench]
+fn bench_struct_deserializer_outer_empty(b: &mut Bencher) {
+    b.iter(|| {
+        let mut map = HashMap::new();
+        map.insert("abc".to_strbuf(), Some('c'));
+
+        let outer = Outer {
+            inner: vec!(),
+        };
+
+        let mut d = deserializer::OuterDeserializer::new(outer.clone());
+        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+
+        assert_eq!(value, outer);
+    })
+}
+
+#[bench]
 fn bench_struct_decoder(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
@@ -466,6 +500,50 @@ fn bench_struct_deserializer(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
         map.insert("abc".to_strbuf(), Some('c'));
+
+        let outer = Outer {
+            inner: vec!(
+                Inner {
+                    a: (),
+                    b: 5,
+                    c: map,
+                },
+            )
+        };
+
+        let mut d = deserializer::OuterDeserializer::new(outer.clone());
+        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+
+        assert_eq!(value, outer);
+    })
+}
+
+#[bench]
+fn bench_struct_decoder_inner_empty(b: &mut Bencher) {
+    b.iter(|| {
+        let mut map = HashMap::new();
+
+        let outer = Outer {
+            inner: vec!(
+                Inner {
+                    a: (),
+                    b: 5,
+                    c: map,
+                },
+            )
+        };
+
+        let mut d = decoder::OuterDecoder::new(outer.clone());
+        let value: Outer = Decodable::decode(&mut d).unwrap();
+
+        assert_eq!(value, outer);
+    })
+}
+
+#[bench]
+fn bench_struct_deserializerinner_empty(b: &mut Bencher) {
+    b.iter(|| {
+        let mut map = HashMap::new();
 
         let outer = Outer {
             inner: vec!(
