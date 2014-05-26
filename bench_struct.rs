@@ -269,6 +269,7 @@ mod decoder {
 //////////////////////////////////////////////////////////////////////////////
 
 mod deserializer {
+    use collections::HashMap;
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
     use de::Deserializer;
     use de::{Token, Uint, Char, String, Null, TupleStart, StructStart, StructField, SeqStart, MapStart, End, Option};
@@ -283,8 +284,8 @@ mod deserializer {
         StringState(String),
         OptionState(bool),
         TupleState(uint),
-        VecState(uint),
-        MapState(uint),
+        VecState(Vec<Inner>),
+        MapState(HashMap<String, Option<char>>),
         EndState,
 
     }
@@ -305,52 +306,16 @@ mod deserializer {
     impl Iterator<Result<Token, Error>> for OuterDeserializer {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
-            match self.stack.last() {
-                Some(&OuterState(_)) => {
-                    let inner = match self.stack.pop() {
-                        Some(OuterState(Outer { inner })) => inner,
-                        _ => { return Some(Err(self.syntax_error())); }
-                    };
-
+            match self.stack.pop() {
+                Some(OuterState(Outer { inner })) => {
                     self.stack.push(EndState);
-
-                    self.stack.push(EndState);
-                    let len = inner.len();
-                    for v in inner.move_iter().rev() {
-                        self.stack.push(InnerState(v));
-                    }
-                    self.stack.push(VecState(len));
-
+                    self.stack.push(VecState(inner));
                     self.stack.push(FieldState("inner"));
                     Some(Ok(StructStart("Outer")))
                 }
-                Some(&InnerState(_)) => {
-                    let ((), b, c) = match self.stack.pop() {
-                        Some(InnerState(Inner { a, b, c })) => (a, b, c),
-                        _ => { return Some(Err(self.syntax_error())); }
-                    };
-
+                Some(InnerState(Inner { a: (), b, c })) => {
                     self.stack.push(EndState);
-
-                    self.stack.push(EndState);
-                    let len = c.len();
-                    for (k, v) in c.move_iter() {
-                        self.stack.push(EndState);
-                        match v {
-                            Some(c) => {
-                                self.stack.push(CharState(c));
-                                self.stack.push(OptionState(true));
-                            }
-                            None => {
-                                self.stack.push(OptionState(false));
-                            }
-                        }
-
-                        self.stack.push(StringState(k));
-                        self.stack.push(TupleState(2));
-                    }
-                    self.stack.push(MapState(len));
-
+                    self.stack.push(MapState(c));
                     self.stack.push(FieldState("c"));
 
                     self.stack.push(UintState(b));
@@ -360,65 +325,42 @@ mod deserializer {
                     self.stack.push(FieldState("a"));
                     Some(Ok(StructStart("Inner")))
                 }
-                Some(&FieldState(_)) => {
-                    match self.stack.pop() {
-                        Some(FieldState(name)) => Some(Ok(StructField(name))),
-                        _ => Some(Err(self.syntax_error())),
+                Some(FieldState(name)) => Some(Ok(StructField(name))),
+                Some(VecState(value)) => {
+                    self.stack.push(EndState);
+                    let len = value.len();
+                    for inner in value.move_iter().rev() {
+                        self.stack.push(InnerState(inner));
                     }
+                    Some(Ok(SeqStart(len)))
                 }
-                Some(&VecState(_)) => {
-                    match self.stack.pop() {
-                        Some(VecState(len)) => Some(Ok(SeqStart(len))),
-                        _ => Some(Err(self.syntax_error())),
+                Some(MapState(value)) => {
+                    self.stack.push(EndState);
+                    let len = value.len();
+                    for (key, value) in value.move_iter() {
+                        self.stack.push(EndState);
+                        match value {
+                            Some(c) => {
+                                self.stack.push(CharState(c));
+                                self.stack.push(OptionState(true));
+                            }
+                            None => {
+                                self.stack.push(OptionState(false));
+                            }
+                        }
+                        self.stack.push(StringState(key));
+                        self.stack.push(TupleState(2));
                     }
+                    Some(Ok(MapStart(len)))
                 }
-                Some(&MapState(_)) => {
-                    match self.stack.pop() {
-                        Some(MapState(len)) => Some(Ok(MapStart(len))),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&TupleState(_)) => {
-                    match self.stack.pop() {
-                        Some(TupleState(len)) => Some(Ok(TupleStart(len))),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&NullState) => {
-                    match self.stack.pop() {
-                        Some(NullState) => Some(Ok(Null)),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&UintState(_)) => {
-                    match self.stack.pop() {
-                        Some(UintState(x)) => Some(Ok(Uint(x))),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&CharState(_)) => {
-                    match self.stack.pop() {
-                        Some(CharState(x)) => Some(Ok(Char(x))),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&StringState(_)) => {
-                    match self.stack.pop() {
-                        Some(StringState(x)) => Some(Ok(String(x))),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&OptionState(_)) => {
-                    match self.stack.pop() {
-                        Some(OptionState(x)) => Some(Ok(Option(x))),
-                        _ => Some(Err(self.syntax_error())),
-                    }
-                }
-                Some(&EndState) => {
-                    match self.stack.pop() {
-                        Some(EndState) => Some(Ok(End)),
-                        _ => Some(Err(self.syntax_error())),
-                    }
+                Some(TupleState(len)) => Some(Ok(TupleStart(len))),
+                Some(NullState) => Some(Ok(Null)),
+                Some(UintState(x)) => Some(Ok(Uint(x))),
+                Some(CharState(x)) => Some(Ok(Char(x))),
+                Some(StringState(x)) => Some(Ok(String(x))),
+                Some(OptionState(x)) => Some(Ok(Option(x))),
+                Some(EndState) => {
+                    Some(Ok(End))
                 }
                 None => None,
             }
@@ -456,17 +398,22 @@ fn bench_struct_decoder_outer_empty(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_deserializer_outer_empty(b: &mut Bencher) {
+fn bench_struct_decoder_inner_empty(b: &mut Bencher) {
     b.iter(|| {
-        let mut map = HashMap::new();
-        map.insert("abc".to_strbuf(), Some('c'));
+        let map = HashMap::new();
 
         let outer = Outer {
-            inner: vec!(),
+            inner: vec!(
+                Inner {
+                    a: (),
+                    b: 5,
+                    c: map,
+                },
+            )
         };
 
-        let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+        let mut d = decoder::OuterDecoder::new(outer.clone());
+        let value: Outer = Decodable::decode(&mut d).unwrap();
 
         assert_eq!(value, outer);
     })
@@ -496,10 +443,26 @@ fn bench_struct_decoder(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_deserializer(b: &mut Bencher) {
+fn bench_struct_deserializer_outer_empty(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
         map.insert("abc".to_strbuf(), Some('c'));
+
+        let outer = Outer {
+            inner: vec!(),
+        };
+
+        let mut d = deserializer::OuterDeserializer::new(outer.clone());
+        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+
+        assert_eq!(value, outer);
+    })
+}
+
+#[bench]
+fn bench_struct_deserializer_inner_empty(b: &mut Bencher) {
+    b.iter(|| {
+        let map = HashMap::new();
 
         let outer = Outer {
             inner: vec!(
@@ -519,31 +482,10 @@ fn bench_struct_deserializer(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_struct_decoder_inner_empty(b: &mut Bencher) {
+fn bench_struct_deserializer(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-
-        let outer = Outer {
-            inner: vec!(
-                Inner {
-                    a: (),
-                    b: 5,
-                    c: map,
-                },
-            )
-        };
-
-        let mut d = decoder::OuterDecoder::new(outer.clone());
-        let value: Outer = Decodable::decode(&mut d).unwrap();
-
-        assert_eq!(value, outer);
-    })
-}
-
-#[bench]
-fn bench_struct_deserializerinner_empty(b: &mut Bencher) {
-    b.iter(|| {
-        let mut map = HashMap::new();
+        map.insert("abc".to_strbuf(), Some('c'));
 
         let outer = Outer {
             inner: vec!(
