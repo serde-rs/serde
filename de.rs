@@ -224,6 +224,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         }
     }
 
+    /*
     #[inline]
     fn expect_collection<
         T: Deserializable<E, Self>,
@@ -241,20 +242,17 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
         expect_rest_of_collection(self, len)
     }
+    */
 
     #[inline]
-    fn expect_seq<
-        T: Deserializable<E, Self>,
-        C: FromIterator<T>
-    >(&mut self, token: Token) -> Result<C, E> {
-        let len = match token {
-            SeqStart(len) => len,
-            _ => { return Err(self.syntax_error()); }
-        };
-
-        expect_rest_of_collection(self, len)
+    fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
+        match token {
+            SeqStart(len) => Ok(len),
+            _ => Err(self.syntax_error()),
+        }
     }
 
+    /*
     #[inline]
     fn expect_map<
         K: Deserializable<E, Self>,
@@ -268,6 +266,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
         expect_rest_of_collection(self, len)
     }
+    */
 
     #[inline]
     fn expect_end(&mut self) -> Result<(), E> {
@@ -282,6 +281,8 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
 //////////////////////////////////////////////////////////////////////////////
 
+/*
+// FIXME: https://github.com/mozilla/rust/issues/11751
 #[inline]
 fn expect_rest_of_collection<
     E,
@@ -305,6 +306,7 @@ fn expect_rest_of_collection<
 
     result::collect_with_capacity(iter, len)
 }
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -381,7 +383,24 @@ impl<
 > Deserializable<E, D> for Vec<T> {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Vec<T>, E> {
-        d.expect_collection(token)
+        let len = try!(d.expect_seq_start(token));
+        let mut value = Vec::with_capacity(len);
+
+        loop {
+            match d.next() {
+                Some(Ok(End)) => { break; }
+                Some(Ok(token)) => {
+                    let v = try!(Deserializable::deserialize_token(d, token));
+                    value.push(v)
+                }
+                Some(Err(err)) => { return Err(err); }
+                None => { return Err(d.end_of_stream_error()); }
+            }
+        }
+
+        try!(d.expect_end());
+
+        Ok(value)
     }
 }
 
