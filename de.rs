@@ -37,25 +37,6 @@ pub enum Token {
     End,
 }
 
-macro_rules! expect_token {
-    () => {
-        match self.next() {
-            Some(token) => token,
-            None => { return Err(self.end_of_stream_error()); }
-        }
-    }
-}
-
-macro_rules! match_token {
-    ($( $variant:pat => $expr:expr ),+) => {
-        match expect_token!() {
-            $( Ok($variant) => $expr ),+,
-            Ok(_) => { return Err(self.syntax_error()); }
-            Err(err) => { return Err(err); }
-        }
-    }
-}
-
 macro_rules! to_result {
     ($expr:expr, $err:expr) => {
         match $expr {
