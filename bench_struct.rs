@@ -338,7 +338,6 @@ mod deserializer {
                     self.stack.push(EndState);
                     let len = value.len();
                     for (key, value) in value.move_iter() {
-                        self.stack.push(EndState);
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));
@@ -349,7 +348,6 @@ mod deserializer {
                             }
                         }
                         self.stack.push(StringState(key));
-                        self.stack.push(TupleState(2));
                     }
                     Some(Ok(MapStart(len)))
                 }

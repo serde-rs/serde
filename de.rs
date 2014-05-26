@@ -406,7 +406,8 @@ macro_rules! deserialize_map {
                 match d.next() {
                     Some(Ok(End)) => { break; }
                     Some(Ok(token)) => {
-                        let (k, v): (K, V) = try!(Deserializable::deserialize_token(d, token));
+                        let k = try!(Deserializable::deserialize_token(d, token));
+                        let v = try!(Deserializable::deserialize(d));
                         $seq.insert(k, v);
                     }
                     Some(Err(err)) => { return Err(err); }
@@ -768,12 +769,10 @@ mod tests {
 
                         Str("c"),
                         MapStart(1),
-                            TupleStart(2),
-                                String("abc".to_strbuf()),
+                            String("abc".to_strbuf()),
 
-                                Option(true),
-                                Char('c'),
-                            End,
+                            Option(true),
+                            Char('c'),
                         End,
                     End,
                 End,
@@ -889,17 +888,13 @@ mod tests {
     fn test_tokens_hashmap() {
         let tokens = vec!(
             MapStart(2),
-                TupleStart(2),
-                    Int(5),
+                Int(5),
 
-                    String("a".to_strbuf()),
-                End,
+                String("a".to_strbuf()),
 
-                TupleStart(2),
-                    Int(6),
+                Int(6),
 
-                    String("b".to_strbuf()),
-                End,
+                String("b".to_strbuf()),
             End,
         );
 
