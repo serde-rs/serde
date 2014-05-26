@@ -2,7 +2,6 @@ extern crate collections;
 
 use std::hash::Hash;
 use std::num;
-use std::result;
 use collections::HashMap;
 
 #[deriving(Clone, Eq)]
@@ -221,6 +220,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         }
     }
 
+    /*
     #[inline]
     fn expect_collection<
         T: Deserializable<E, Self>,
@@ -238,6 +238,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
         expect_rest_of_collection(self, len)
     }
+    */
 
     #[inline]
     fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
@@ -248,17 +249,11 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_map<
-        K: Deserializable<E, Self>,
-        V: Deserializable<E, Self>,
-        C: FromIterator<(K, V)>
-    >(&mut self, token: Token) -> Result<C, E> {
-        let len = match token {
-            MapStart(len) => len,
-            _ => { return Err(self.syntax_error()); }
-        };
-
-        expect_rest_of_collection(self, len)
+    fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
+        match token {
+            MapStart(len) => Ok(len),
+            _ => Err(self.syntax_error()),
+        }
     }
 
     #[inline]
@@ -274,6 +269,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
 //////////////////////////////////////////////////////////////////////////////
 
+/*
 // FIXME: https://github.com/mozilla/rust/issues/11751
 #[inline]
 fn expect_rest_of_collection<
@@ -298,6 +294,7 @@ fn expect_rest_of_collection<
 
     result::collect_with_capacity(iter, len)
 }
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -362,6 +359,26 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
+macro_rules! deserialize_seq {
+    ($seq:expr) => {
+        {
+            loop {
+                match d.next() {
+                    Some(Ok(End)) => { break; }
+                    Some(Ok(token)) => {
+                        let v = try!(Deserializable::deserialize_token(d, token));
+                        $seq.push(v)
+                    }
+                    Some(Err(err)) => { return Err(err); }
+                    None => { return Err(d.end_of_stream_error()); }
+                }
+            }
+
+            Ok($seq)
+        }
+    }
+}
+
 impl<
     E,
     D: Deserializer<E>,
@@ -372,19 +389,29 @@ impl<
         let len = try!(d.expect_seq_start(token));
         let mut value = Vec::with_capacity(len);
 
-        loop {
-            match d.next() {
-                Some(Ok(End)) => { break; }
-                Some(Ok(token)) => {
-                    let v = try!(Deserializable::deserialize_token(d, token));
-                    value.push(v)
-                }
-                Some(Err(err)) => { return Err(err); }
-                None => { return Err(d.end_of_stream_error()); }
-            }
-        }
+        deserialize_seq!(value)
+    }
+}
 
-        Ok(value)
+//////////////////////////////////////////////////////////////////////////////
+
+macro_rules! deserialize_map {
+    ($seq:expr) => {
+        {
+            loop {
+                match d.next() {
+                    Some(Ok(End)) => { break; }
+                    Some(Ok(token)) => {
+                        let (k, v): (K, V) = try!(Deserializable::deserialize_token(d, token));
+                        $seq.insert(k, v);
+                    }
+                    Some(Err(err)) => { return Err(err); }
+                    None => { return Err(d.end_of_stream_error()); }
+                }
+            }
+
+            Ok($seq)
+        }
     }
 }
 
@@ -396,7 +423,10 @@ impl<
 > Deserializable<E, D> for HashMap<K, V> {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
-        d.expect_map(token)
+        let len = try!(d.expect_map_start(token));
+        let mut value = HashMap::with_capacity(len);
+
+        deserialize_map!(value)
     }
 }
 
