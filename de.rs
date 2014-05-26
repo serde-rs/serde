@@ -282,6 +282,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
 //////////////////////////////////////////////////////////////////////////////
 
+#[inline]
 fn expect_rest_of_collection<
     E,
     D: Deserializer<E>,
