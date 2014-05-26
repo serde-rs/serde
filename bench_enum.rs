@@ -28,7 +28,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
 
                 Ok(Frog(x0, x1))
             }
-            _ => unreachable!(),
+            _ => Err(d.syntax_error()),
         }
     }
 }
