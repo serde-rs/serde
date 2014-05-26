@@ -28,7 +28,6 @@ pub enum Token {
     TupleStart(uint),
 
     StructStart(&'static str),
-    StructField(&'static str),
 
     EnumStart(&'static str, &'static str),
 
@@ -192,15 +191,20 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         };
 
         match token {
-            StructField(n) => {
-                if name == n {
-                    Deserializable::deserialize(self)
-                } else {
-                    Err(self.syntax_error())
+            Str(n) => {
+                if name != n {
+                    return Err(self.syntax_error());
                 }
             }
-            _ => Err(self.syntax_error()),
+            String(n) => {
+                if name != n.as_slice() {
+                    return Err(self.syntax_error());
+                }
+            }
+            _ => { return Err(self.syntax_error()); }
         }
+
+        Deserializable::deserialize(self)
     }
 
     #[inline]
@@ -492,7 +496,7 @@ mod tests {
     use serialize::Decoder;
 
     use super::{Token, Null, Int, Uint, Str, String, Char, Option};
-    use super::{TupleStart, StructStart, StructField, EnumStart};
+    use super::{TupleStart, StructStart, EnumStart};
     use super::{SeqStart, MapStart, End};
     use super::{Deserializer, Deserializable};
 
@@ -737,7 +741,7 @@ mod tests {
     fn test_tokens_struct_empty() {
         let tokens = vec!(
             StructStart("Outer"),
-                StructField("inner"),
+                Str("inner"),
                 SeqStart(0),
                 End,
             End,
@@ -753,16 +757,16 @@ mod tests {
     fn test_tokens_struct() {
         let tokens = vec!(
             StructStart("Outer"),
-                StructField("inner"),
+                Str("inner"),
                 SeqStart(1),
                     StructStart("Inner"),
-                        StructField("a"),
+                        Str("a"),
                         Null,
 
-                        StructField("b"),
+                        Str("b"),
                         Uint(5),
 
-                        StructField("c"),
+                        Str("c"),
                         MapStart(1),
                             TupleStart(2),
                                 String("abc".to_strbuf()),

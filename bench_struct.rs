@@ -272,7 +272,7 @@ mod deserializer {
     use collections::HashMap;
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
     use de::Deserializer;
-    use de::{Token, Uint, Char, String, Null, TupleStart, StructStart, StructField, SeqStart, MapStart, End, Option};
+    use de::{Token, Uint, Char, String, Null, TupleStart, StructStart, Str, SeqStart, MapStart, End, Option};
 
     enum State {
         OuterState(Outer),
@@ -325,7 +325,7 @@ mod deserializer {
                     self.stack.push(FieldState("a"));
                     Some(Ok(StructStart("Inner")))
                 }
-                Some(FieldState(name)) => Some(Ok(StructField(name))),
+                Some(FieldState(name)) => Some(Ok(Str(name))),
                 Some(VecState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
