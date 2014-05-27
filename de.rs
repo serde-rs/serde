@@ -49,15 +49,22 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn syntax_error(&self) -> E;
 
     #[inline]
+    fn expect_token(&mut self) -> Result<Token, E> {
+        match self.next() {
+            Some(Ok(token)) => Ok(token),
+            Some(Err(err)) => Err(err),
+            None => Err(self.end_of_stream_error()),
+        }
+    }
+
+    #[inline]
     fn expect_null(&mut self, token: Token) -> Result<(), E> {
         match token {
             Null => Ok(()),
             TupleStart(_) => {
-                match self.next() {
-                    Some(Ok(End)) => Ok(()),
-                    Some(Ok(_)) => Err(self.syntax_error()),
-                    Some(Err(err)) => Err(err),
-                    None => Err(self.end_of_stream_error()),
+                match try!(self.expect_token()) {
+                    End => Ok(()),
+                    _ => Err(self.syntax_error()),
                 }
             }
             _ => Err(self.syntax_error()),
@@ -162,13 +169,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_struct_field<
         T: Deserializable<E, Self>
     >(&mut self, name: &str) -> Result<T, E> {
-        let token = match self.next() {
-            Some(Ok(token)) => token,
-            Some(Err(err)) => { return Err(err); }
-            None => { return Err(self.end_of_stream_error()); }
-        };
-
-        match token {
+        match try!(self.expect_token()) {
             Str(n) => {
                 if name != n {
                     return Err(self.syntax_error());
@@ -240,11 +241,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_end(&mut self) -> Result<(), E> {
-        match self.next() {
-            Some(Ok(End)) => Ok(()),
-            Some(Ok(_)) => Err(self.syntax_error()),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+        match try!(self.expect_token()) {
+            End => Ok(()),
+            _ => Err(self.syntax_error()),
         }
     }
 }
@@ -263,14 +262,12 @@ fn expect_rest_of_collection<
     let iter = d.by_ref().batch(|d| {
         let d = d.iter();
 
-        match d.next() {
-            Some(Ok(End)) => None,
-            Some(Ok(token)) => {
+        match try!(d.expect_token()) {
+            End => None,
+            token => {
                 let value: Result<T, E> = Deserializable::deserialize_token(d, token);
                 Some(value)
             }
-            Some(Err(e)) => Some(Err(e)),
-            None => Some(Err(d.end_of_stream_error())),
         }
     });
 
