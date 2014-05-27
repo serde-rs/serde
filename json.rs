@@ -1460,6 +1460,7 @@ impl<T: Iterator<char>> Parser<T> {
 
     fn parse_list_start(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
+
         if self.ch_is(']') {
             self.bump();
             Ok(de::End)
@@ -1471,6 +1472,7 @@ impl<T: Iterator<char>> Parser<T> {
 
     fn parse_list_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
+
         if self.ch_is(',') {
             self.bump();
             self.state.push(ParseListCommaOrEnd);
@@ -1487,6 +1489,7 @@ impl<T: Iterator<char>> Parser<T> {
 
     fn parse_object_start(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
+
         if self.ch_is('}') {
             self.bump();
             Ok(de::End)
@@ -1497,6 +1500,7 @@ impl<T: Iterator<char>> Parser<T> {
 
     fn parse_object_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
+
         if self.ch_is(',') {
             self.bump();
             self.parse_object_key()
@@ -1512,6 +1516,7 @@ impl<T: Iterator<char>> Parser<T> {
 
     fn parse_object_key(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
+
         self.state.push(ParseObjectValue);
 
         if self.eof() {
@@ -1529,6 +1534,7 @@ impl<T: Iterator<char>> Parser<T> {
 
     fn parse_object_value(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
+
         if self.ch_is(':') {
             self.bump();
             self.state.push(ParseObjectCommaOrEnd);
@@ -2244,11 +2250,31 @@ mod tests {
     use std::io;
     use collections::TreeMap;
 
-    /*
     #[deriving(Eq, Show)]
     enum Animal {
         Dog,
         Frog(String, int)
+    }
+
+    impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Animal {
+        #[inline]
+        fn deserialize_token(d: &mut D, token: de::Token) -> Result<Animal, E> {
+            match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
+                0 => {
+                    try!(d.expect_end());
+                    Ok(Dog)
+                }
+                1 => {
+                    let x0 = try!(de::Deserializable::deserialize(d));
+                    let x1 = try!(de::Deserializable::deserialize(d));
+
+                    try!(d.expect_end());
+
+                    Ok(Frog(x0, x1))
+                }
+                _ => Err(d.syntax_error()),
+            }
+        }
     }
 
     #[deriving(Eq, Show)]
@@ -2258,11 +2284,130 @@ mod tests {
         c: Vec<String>,
     }
 
+    impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Inner {
+        #[inline]
+        fn deserialize_token(d: &mut D, token: de::Token) -> Result<Inner, E> {
+            match token {
+                de::StructStart(name) => {
+                    if name != "Inner" {
+                        return Err(d.syntax_error());
+                    }
+
+                    let a = try!(d.expect_struct_field("a"));
+                    let b = try!(d.expect_struct_field("b"));
+                    let c = try!(d.expect_struct_field("c"));
+                    try!(d.expect_end());
+                    Ok(Inner { a: a, b: b, c: c })
+                }
+                de::MapStart(_) => {
+                    let mut a = None;
+                    let mut b = None;
+                    let mut c = None;
+
+                    loop {
+                        match try!(d.expect_token()) {
+                            de::End => { break; }
+                            de::Str(name) => {
+                                match name {
+                                    "a" => {
+                                        a = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    "b" => {
+                                        b = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    "c" => {
+                                        c = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    _ => { }
+                                }
+                            }
+                            de::String(ref name) => {
+                                match name.as_slice() {
+                                    "a" => {
+                                        a = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    "b" => {
+                                        b = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    "c" => {
+                                        c = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    _ => { }
+                                }
+                            }
+                            _ => { return Err(d.syntax_error()); }
+                        }
+                    }
+
+                    match (a, b, c) {
+                        (Some(a), Some(b), Some(c)) => {
+                            Ok(Inner { a: a, b: b, c: c })
+                        }
+                        _ => Err(d.syntax_error()),
+                    }
+                }
+                _ => Err(d.syntax_error()),
+            }
+        }
+    }
+
     #[deriving(Eq, Show)]
     struct Outer {
         inner: Vec<Inner>,
     }
 
+    impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Outer {
+        #[inline]
+        fn deserialize_token(d: &mut D, token: de::Token) -> Result<Outer, E> {
+            match token {
+                de::StructStart(name) => {
+                    if name != "Outer" {
+                        return Err(d.syntax_error());
+                    }
+
+                    let inner = try!(d.expect_struct_field("inner"));
+                    try!(d.expect_end());
+                    Ok(Outer { inner: inner })
+                }
+                de::MapStart(_) => {
+                    let mut inner = None;
+
+                    loop {
+                        match try!(d.expect_token()) {
+                            de::End => { break; }
+                            de::Str(name) => {
+                                match name {
+                                    "inner" => {
+                                        inner = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    _ => { }
+                                }
+                            }
+                            de::String(ref name) => {
+                                match name.as_slice() {
+                                    "inner" => {
+                                        inner = Some(try!(de::Deserializable::deserialize(d)));
+                                    }
+                                    _ => { }
+                                }
+                            }
+                            _ => { return Err(d.syntax_error()); }
+                        }
+                    }
+
+                    match inner {
+                        Some(inner) => {
+                            Ok(Outer { inner: inner })
+                        }
+                        _ => Err(d.syntax_error()),
+                    }
+                }
+                _ => Err(d.syntax_error()),
+            }
+        }
+    }
+
+    /*
     fn mk_object(items: &[(String, Json)]) -> Json {
         let mut d = box TreeMap::new();
 
@@ -2840,26 +2985,25 @@ mod tests {
         assert!(v == m);
     }
 
-    /*
     #[test]
     fn test_decode_struct() {
         let s = "{
             \"inner\": [
-                { \"a\": null, \"b\": 2, \"c\": [\"abc\", \"xyz\"] }
             ]
         }";
-        let mut decoder = Decoder::new(from_str(s).unwrap());
-        let v: Outer = Decodable::decode(&mut decoder).unwrap();
+                //{ \"a\": null, \"b\": 2, \"c\": [\"abc\", \"xyz\"] }
+        let v: Outer = from_iter(s.chars()).unwrap();
         assert_eq!(
             v,
             Outer {
                 inner: vec![
-                    Inner { a: (), b: 2, c: vec!["abc".to_strbuf(), "xyz".to_strbuf()] }
+                    //Inner { a: (), b: 2, c: vec!["abc".to_strbuf(), "xyz".to_strbuf()] }
                 ]
             }
         );
     }
 
+    /*
     #[test]
     fn test_decode_option() {
         let mut decoder = Decoder::new(from_str("null").unwrap());
