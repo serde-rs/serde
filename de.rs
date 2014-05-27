@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::num;
 use collections::{HashMap, TreeMap};
 
-#[deriving(Clone, Eq)]
+#[deriving(Clone, Eq, Show)]
 pub enum Token {
     Null,
     Bool(bool),

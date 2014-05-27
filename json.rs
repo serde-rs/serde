@@ -1217,10 +1217,10 @@ impl<T: Iterator<char>> Parser<T> {
         self.ch = self.rdr.next();
 
         if self.ch_is('\n') {
-            self.line += 1u;
-            self.col = 1u;
+            self.line += 1;
+            self.col = 1;
         } else {
-            self.col += 1u;
+            self.col += 1;
         }
     }
 
@@ -1459,6 +1459,7 @@ impl<T: Iterator<char>> Parser<T> {
     }
 
     fn parse_list_start(&mut self) -> Result<de::Token, ParserError> {
+        self.parse_whitespace();
         if self.ch_is(']') {
             self.bump();
             Ok(de::End)
@@ -1469,6 +1470,7 @@ impl<T: Iterator<char>> Parser<T> {
     }
 
     fn parse_list_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
+        self.parse_whitespace();
         if self.ch_is(',') {
             self.bump();
             self.state.push(ParseListCommaOrEnd);
@@ -1502,7 +1504,7 @@ impl<T: Iterator<char>> Parser<T> {
             self.bump();
             Ok(de::End)
         } else if self.eof() {
-            self.error_event(EOFWhileParsingList)
+            self.error_event(EOFWhileParsingObject)
         } else {
             self.error_event(InvalidSyntax)
         }
@@ -1511,8 +1513,18 @@ impl<T: Iterator<char>> Parser<T> {
     fn parse_object_key(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
         self.state.push(ParseObjectValue);
-        let key = try!(self.parse_str());
-        Ok(de::String(key))
+
+        if self.eof() {
+            return self.error_event(EOFWhileParsingString);
+        }
+
+        match self.ch_or_null() {
+            '"' => {
+                let s = try!(self.parse_str());
+                Ok(de::String(s))
+            }
+            _ => self.error_event(KeyMustBeAString),
+        }
     }
 
     fn parse_object_value(&mut self) -> Result<de::Token, ParserError> {
@@ -1522,9 +1534,9 @@ impl<T: Iterator<char>> Parser<T> {
             self.state.push(ParseObjectCommaOrEnd);
             self.parse_value()
         } else if self.eof() {
-            self.error_event(EOFWhileParsingList)
+            self.error_event(EOFWhileParsingObject)
         } else {
-            self.error_event(InvalidSyntax)
+            self.error_event(ExpectedColon)
         }
     }
 
@@ -1557,7 +1569,9 @@ impl<T: Iterator<char>> Parser<T> {
                 self.state.push(ParseObjectStart);
                 Ok(de::MapStart(0))
             }
-            _ => self.error_event(InvalidSyntax),
+            _ => {
+                self.error_event(InvalidSyntax)
+            }
         }
     }
 
@@ -1679,10 +1693,21 @@ impl<T: Iterator<char>> Builder<T> {
         return self.parser.error(EOFWhileParsingObject);
     }
 }
+*/
+
+/// Decodes a json value from an `Iterator<Char>`.
+pub fn from_iter<
+    Iter: Iterator<char>,
+    T: de::Deserializable<ParserError, Parser<Iter>>
+>(iter: Iter) -> Result<T, ParserError> {
+    let mut parser = Parser::new(iter);
+    de::Deserializable::deserialize(&mut parser)
+}
 
 
-/// Decodes a json value from an `&mut io::Reader`
-pub fn from_reader(rdr: &mut io::Reader) -> Result<Json, BuilderError> {
+
+
+    /*
     let contents = match rdr.read_to_end() {
         Ok(c) => c,
         Err(e) => return Err(io_error_to_error(e))
@@ -1693,8 +1718,10 @@ pub fn from_reader(rdr: &mut io::Reader) -> Result<Json, BuilderError> {
     };
     let mut builder = Builder::new(s.as_slice().chars());
     builder.build()
-}
+    */
+//}
 
+/*
 /// Decodes a json value from a string
 pub fn from_str(s: &str) -> Result<Json, BuilderError> {
     let mut builder = Builder::new(s.chars());
@@ -2200,7 +2227,18 @@ mod tests {
                 TrailingCharacters};
     */
 
-    use super::Parser;
+    use super::{Parser, ParserError, from_iter};
+    use super::{
+        EOFWhileParsingList,
+        EOFWhileParsingObject,
+        EOFWhileParsingString,
+        EOFWhileParsingValue,
+        ExpectedColon,
+        InvalidNumber,
+        InvalidSyntax,
+        KeyMustBeAString, 
+        SyntaxError,
+    };
     use de;
 
     use std::io;
@@ -2489,16 +2527,27 @@ mod tests {
 
     #[test]
     fn test_decode_identifiers() {
-        let mut parser = Parser::new("null".chars());
-        let v: () = de::Deserializable::deserialize(&mut parser).unwrap();
+        let errors = [
+            ("n", SyntaxError(InvalidSyntax, 1, 2)),
+            ("nul", SyntaxError(InvalidSyntax, 1, 4)),
+            ("t", SyntaxError(InvalidSyntax, 1, 2)),
+            ("truz", SyntaxError(InvalidSyntax, 1, 4)),
+            ("f", SyntaxError(InvalidSyntax, 1, 2)),
+            ("faz", SyntaxError(InvalidSyntax, 1, 3)),
+        ];
+
+        for &(s, err) in errors.iter() {
+            let v: Result<(), ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
+
+        let v: () = from_iter("null".chars()).unwrap();
         assert_eq!(v, ());
 
-        let mut parser = Parser::new("true".chars());
-        let v: bool = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: bool = from_iter("true".chars()).unwrap();
         assert_eq!(v, true);
 
-        let mut parser = Parser::new("false".chars());
-        let v: bool = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: bool = from_iter("false".chars()).unwrap();
         assert_eq!(v, false);
     }
 
@@ -2526,33 +2575,35 @@ mod tests {
 
     #[test]
     fn test_decode_numbers() {
-        let mut parser = Parser::new("3".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, 3.0);
+        let errors = [
+            ("+",   SyntaxError(InvalidSyntax, 1, 1)),
+            (".",   SyntaxError(InvalidSyntax, 1, 1)),
+            ("-",   SyntaxError(InvalidNumber, 1, 2)),
+            ("00",  SyntaxError(InvalidNumber, 1, 2)),
+            ("1.",  SyntaxError(InvalidNumber, 1, 3)),
+            ("1e",  SyntaxError(InvalidNumber, 1, 3)),
+            ("1e+", SyntaxError(InvalidNumber, 1, 4)),
+        ];
 
-        let mut parser = Parser::new("3.1".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, 3.1);
+        for &(s, err) in errors.iter() {
+            let v: Result<f64, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
 
-        let mut parser = Parser::new("-1.2".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, -1.2);
+        let values = [
+            ("3", 3.0),
+            ("3.1", 3.1),
+            ("-1.2", -1.2),
+            ("0.4", 0.4),
+            ("0.4e5", 0.4e5),
+            ("0.4e15", 0.4e15),
+            ("0.4e-01", 0.4e-01),
+        ];
 
-        let mut parser = Parser::new("0.4".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, 0.4);
-
-        let mut parser = Parser::new("0.4e5".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, 0.4e5);
-
-        let mut parser = Parser::new("0.4e15".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, 0.4e15);
-
-        let mut parser = Parser::new("0.4e-01".chars());
-        let v: f64 = de::Deserializable::deserialize(&mut parser).unwrap();
-        assert_eq!(v, 0.4e-01);
+        for &(s, value) in values.iter() {
+            let v: Result<f64, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Ok(value));
+        }
     }
 
     /*
@@ -2576,6 +2627,16 @@ mod tests {
 
     #[test]
     fn test_decode_str() {
+        let errors = [
+            ("\"",    SyntaxError(EOFWhileParsingString, 1, 2)),
+            ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
+        ];
+
+        for &(s, err) in errors.iter() {
+            let v: Result<String, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
+
         let s = [("\"\"", ""),
                  ("\"foo\"", "foo"),
                  ("\"\\\"\"", "\""),
@@ -2618,24 +2679,41 @@ mod tests {
 
     #[test]
     fn test_decode_list() {
-        let mut parser = Parser::new("[]".chars());
-        let v: Vec<()> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let errors = [
+            ("[",     SyntaxError(EOFWhileParsingValue, 1, 2)),
+            ("[ ",    SyntaxError(EOFWhileParsingValue, 1, 3)),
+            ("[1",    SyntaxError(EOFWhileParsingList,  1, 3)),
+            ("[1,",   SyntaxError(EOFWhileParsingValue, 1, 4)),
+            ("[1,]",  SyntaxError(InvalidSyntax,        1, 4)),
+            ("[1 2]", SyntaxError(InvalidSyntax,        1, 4)),
+        ];
+        for &(s, err) in errors.iter() {
+            let v: Result<Vec<f64>, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
+
+        let v: Vec<()> = from_iter("[]".chars()).unwrap();
         assert_eq!(v, vec![]);
 
-        let mut parser = Parser::new("[null]".chars());
-        let v: Vec<()> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: Vec<()> = from_iter("[ ]".chars()).unwrap();
+        assert_eq!(v, vec![]);
+
+        let v: Vec<()> = from_iter("[null]".chars()).unwrap();
         assert_eq!(v, vec![()]);
 
-        let mut parser = Parser::new("[true]".chars());
-        let v: Vec<bool> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: Vec<()> = from_iter("[ null ]".chars()).unwrap();
+        assert_eq!(v, vec![()]);
+
+        let v: Vec<bool> = from_iter("[true]".chars()).unwrap();
         assert_eq!(v, vec![true]);
 
-        let mut parser = Parser::new("[3, 1]".chars());
-        let v: Vec<int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: Vec<int> = from_iter("[3,1]".chars()).unwrap();
         assert_eq!(v, vec![3, 1]);
 
-        let mut parser = Parser::new("[[3], [1, 2]]".chars());
-        let v: Vec<Vec<uint>> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: Vec<int> = from_iter("[ 3 , 1 ]".chars()).unwrap();
+        assert_eq!(v, vec![3, 1]);
+
+        let v: Vec<Vec<uint>> = from_iter("[[3], [1, 2]]".chars()).unwrap();
         assert_eq!(v, vec![vec![3], vec![1, 2]]);
     }
 
@@ -2698,50 +2776,62 @@ mod tests {
 
     #[test]
     fn test_decode_object() {
-        let mut parser = Parser::new("{}".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let errors = [
+            ("{",       SyntaxError(EOFWhileParsingString, 1, 2)),
+            ("{ ",      SyntaxError(EOFWhileParsingString, 1, 3)),
+            ("{1",      SyntaxError(KeyMustBeAString,      1, 2)),
+            ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
+            ("{\"a\"",  SyntaxError(EOFWhileParsingObject, 1, 5)),
+            ("{\"a\" ", SyntaxError(EOFWhileParsingObject, 1, 6)),
+
+            ("{\"a\" 1",   SyntaxError(ExpectedColon,         1, 6)),
+            ("{\"a\":",    SyntaxError(EOFWhileParsingValue,  1, 6)),
+            ("{\"a\":1",   SyntaxError(EOFWhileParsingObject, 1, 7)),
+            ("{\"a\":1 1", SyntaxError(InvalidSyntax,         1, 8)),
+            ("{\"a\":1,",  SyntaxError(EOFWhileParsingString, 1, 8)),
+        ];
+
+        for &(s, err) in errors.iter() {
+            let v: Result<TreeMap<String, int>, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
+
+        let v: TreeMap<String, int> = from_iter("{}".chars()).unwrap();
         let m = TreeMap::new();
         assert!(v == m);
 
-        let mut parser = Parser::new("{ }".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, int> = from_iter("{ }".chars()).unwrap();
         let m = TreeMap::new();
         assert!(v == m);
 
-        let mut parser = Parser::new("{\"a\":3}".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, int> = from_iter("{\"a\":3}".chars()).unwrap();
         let mut m = TreeMap::new();
         m.insert("a".to_str(), 3);
         assert!(v == m);
 
-        let mut parser = Parser::new("{\"a\" :3}".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, int> = from_iter("{\"a\" :3}".chars()).unwrap();
         let mut m = TreeMap::new();
         m.insert("a".to_str(), 3);
         assert!(v == m);
 
-        let mut parser = Parser::new("{\"a\" : 3}".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, int> = from_iter("{\"a\" : 3}".chars()).unwrap();
         let mut m = TreeMap::new();
         m.insert("a".to_str(), 3);
         assert!(v == m);
 
-        let mut parser = Parser::new("{\"a\": 3, \"b\": 4}".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, int> = from_iter("{\"a\": 3, \"b\": 4}".chars()).unwrap();
         let mut m = TreeMap::new();
         m.insert("a".to_str(), 3);
         m.insert("b".to_str(), 4);
         assert!(v == m);
 
-        let mut parser = Parser::new("{ \"a\": 3, \"b\": 4 }".chars());
-        let v: TreeMap<String, int> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, int> = from_iter("{ \"a\": 3, \"b\": 4 }".chars()).unwrap();
         let mut m = TreeMap::new();
         m.insert("a".to_str(), 3);
         m.insert("b".to_str(), 4);
         assert!(v == m);
 
-        let mut parser = Parser::new("{\"a\": {\"b\": 3, \"c\": 4}}".chars());
-        let v: TreeMap<String, TreeMap<String, int>> = de::Deserializable::deserialize(&mut parser).unwrap();
+        let v: TreeMap<String, TreeMap<String, int>> = from_iter("{\"a\": {\"b\": 3, \"c\": 4}}".chars()).unwrap();
         let mut mm = TreeMap::new();
         mm.insert("b".to_str(), 3);
         mm.insert("c".to_str(), 4);
