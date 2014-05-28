@@ -2288,17 +2288,7 @@ mod tests {
         #[inline]
         fn deserialize_token(d: &mut D, token: de::Token) -> Result<Inner, E> {
             match token {
-                de::StructStart(name) => {
-                    if name != "Inner" {
-                        return Err(d.syntax_error());
-                    }
-
-                    let a = try!(d.expect_struct_field("a"));
-                    let b = try!(d.expect_struct_field("b"));
-                    let c = try!(d.expect_struct_field("c"));
-                    try!(d.expect_end());
-                    Ok(Inner { a: a, b: b, c: c })
-                }
+                de::StructStart("Inner") |
                 de::MapStart(_) => {
                     let mut a = None;
                     let mut b = None;
@@ -2360,15 +2350,7 @@ mod tests {
         #[inline]
         fn deserialize_token(d: &mut D, token: de::Token) -> Result<Outer, E> {
             match token {
-                de::StructStart(name) => {
-                    if name != "Outer" {
-                        return Err(d.syntax_error());
-                    }
-
-                    let inner = try!(d.expect_struct_field("inner"));
-                    try!(d.expect_end());
-                    Ok(Outer { inner: inner })
-                }
+                de::StructStart("Outer") |
                 de::MapStart(_) => {
                     let mut inner = None;
 

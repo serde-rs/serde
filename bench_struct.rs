@@ -3,6 +3,7 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
+use de;
 use de::{Token, Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
@@ -17,12 +18,57 @@ struct Inner {
 impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Inner, E> {
-        try!(d.expect_struct_start(token, "Inner"));
-        let a = try!(d.expect_struct_field("a"));
-        let b = try!(d.expect_struct_field("b"));
-        let c = try!(d.expect_struct_field("c"));
-        try!(d.expect_end());
-        Ok(Inner { a: a, b: b, c: c })
+        match token {
+            de::StructStart("Inner") |
+            de::MapStart(_) => {
+                let mut a = None;
+                let mut b = None;
+                let mut c = None;
+
+                loop {
+                    match try!(d.expect_token()) {
+                        de::End => { break; }
+                        de::Str(name) => {
+                            match name {
+                                "a" => {
+                                    a = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                "b" => {
+                                    b = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                "c" => {
+                                    c = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                _ => { }
+                            }
+                        }
+                        de::String(ref name) => {
+                            match name.as_slice() {
+                                "a" => {
+                                    a = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                "b" => {
+                                    b = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                "c" => {
+                                    c = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                _ => { }
+                            }
+                        }
+                        _ => { return Err(d.syntax_error()); }
+                    }
+                }
+
+                match (a, b, c) {
+                    (Some(a), Some(b), Some(c)) => {
+                        Ok(Inner { a: a, b: b, c: c })
+                    }
+                    _ => Err(d.syntax_error()),
+                }
+            }
+            _ => Err(d.syntax_error()),
+        }
     }
 }
 
@@ -36,10 +82,43 @@ struct Outer {
 impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
-        try!(d.expect_struct_start(token, "Outer"));
-        let inner = try!(d.expect_struct_field("inner"));
-        try!(d.expect_end());
-        Ok(Outer { inner: inner })
+        match token {
+            de::StructStart("Outer") |
+            de::MapStart(_) => {
+                let mut inner = None;
+
+                loop {
+                    match try!(d.expect_token()) {
+                        de::End => { break; }
+                        de::Str(name) => {
+                            match name {
+                                "inner" => {
+                                    inner = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                _ => { }
+                            }
+                        }
+                        de::String(ref name) => {
+                            match name.as_slice() {
+                                "inner" => {
+                                    inner = Some(try!(de::Deserializable::deserialize(d)));
+                                }
+                                _ => { }
+                            }
+                        }
+                        _ => { return Err(d.syntax_error()); }
+                    }
+                }
+
+                match inner {
+                    Some(inner) => {
+                        Ok(Outer { inner: inner })
+                    }
+                    _ => Err(d.syntax_error()),
+                }
+            }
+            _ => Err(d.syntax_error()),
+        }
     }
 }
 
