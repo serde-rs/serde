@@ -244,23 +244,157 @@ use std::str::ScalarValue;
 use std::str;
 use std::string::String;
 use std::vec::Vec;
+use std::vec;
 
 use de;
 use collections::{HashMap, TreeMap};
+use collections::treemap;
 
 /// Represents a json value
-#[deriving(Clone, Eq)]
+#[deriving(Clone, Eq, Show)]
 pub enum Json {
+    Null,
+    Boolean(bool),
     Number(f64),
     String(String),
-    Boolean(bool),
     List(List),
-    Object(Box<Object>),
-    Null,
+    Object(Object),
 }
 
 pub type List = Vec<Json>;
 pub type Object = TreeMap<String, Json>;
+
+impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Json {
+    #[inline]
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<Json, E> {
+        match token {
+            de::Null => Ok(Null),
+            de::Bool(x) => Ok(Boolean(x)),
+            de::Int(x) => Ok(Number(x as f64)),
+            de::I8(x) => Ok(Number(x as f64)),
+            de::I16(x) => Ok(Number(x as f64)),
+            de::I32(x) => Ok(Number(x as f64)),
+            de::I64(x) => Ok(Number(x as f64)),
+            de::Uint(x) => Ok(Number(x as f64)),
+            de::U8(x) => Ok(Number(x as f64)),
+            de::U16(x) => Ok(Number(x as f64)),
+            de::U32(x) => Ok(Number(x as f64)),
+            de::U64(x) => Ok(Number(x as f64)),
+            de::F32(x) => Ok(Number(x as f64)),
+            de::F64(x) => Ok(Number(x)),
+            de::Char(x) => Ok(String(x.to_str())),
+            de::Str(x) => Ok(String(x.to_str())),
+            de::String(x) => Ok(String(x)),
+            de::Option(false) => Ok(Null),
+            de::Option(true) => de::Deserializable::deserialize(d),
+            de::TupleStart(_) | de::SeqStart(_) => {
+                let list = try!(de::Deserializable::deserialize_token(d, token));
+                Ok(List(list))
+            }
+            de::StructStart(_, _) | de::MapStart(_) => {
+                let object = try!(de::Deserializable::deserialize_token(d, token));
+                Ok(Object(object))
+            }
+            de::EnumStart(_, name, len) => {
+                let token = de::SeqStart(len);
+                let fields: Vec<Json> = try!(de::Deserializable::deserialize_token(d, token));
+                if fields.is_empty() {
+                    Ok(String(name.to_strbuf()))
+                } else {
+                    let mut object = TreeMap::new();
+                    object.insert("variant".to_strbuf(), String(name.to_strbuf()));
+                    object.insert("fields".to_strbuf(), List(fields));
+                    Ok(Object(object))
+                }
+            }
+            de::End => Err(d.syntax_error()),
+        }
+    }
+}
+
+enum JsonDeserializerState {
+    JsonDeserializerValueState(Json),
+    JsonDeserializerListState(vec::MoveItems<Json>),
+    JsonDeserializerObjectState(treemap::MoveEntries<String, Json>),
+}
+
+struct JsonDeserializer {
+    stack: Vec<JsonDeserializerState>,
+}
+
+impl JsonDeserializer {
+    /// Creates a new decoder instance for decoding the specified JSON value.
+    pub fn new(json: Json) -> JsonDeserializer {
+        JsonDeserializer {
+            stack: vec!(JsonDeserializerValueState(json)),
+        }
+    }
+}
+
+impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
+    #[inline]
+    fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
+        loop {
+            match self.stack.pop() {
+                Some(JsonDeserializerValueState(value)) => {
+                    let token = match value {
+                        Null => de::Null,
+                        Boolean(x) => de::Bool(x),
+                        Number(x) => de::F64(x),
+                        String(x) => de::String(x),
+                        List(x) => {
+                            let len = x.len();
+                            self.stack.push(JsonDeserializerListState(x.move_iter()));
+                            de::SeqStart(len)
+                        }
+                        Object(x) => {
+                            let len = x.len();
+                            self.stack.push(JsonDeserializerObjectState(x.move_iter()));
+                            de::MapStart(len)
+                        }
+                    };
+
+                    return Some(Ok(token));
+                }
+                Some(JsonDeserializerListState(mut iter)) => {
+                    match iter.next() {
+                        Some(value) => {
+                            self.stack.push(JsonDeserializerListState(iter));
+                            self.stack.push(JsonDeserializerValueState(value));
+                            // loop around.
+                        }
+                        None => {
+                            return Some(Ok(de::End));
+                        }
+                    }
+                }
+                Some(JsonDeserializerObjectState(mut iter)) => {
+                    match iter.next() {
+                        Some((key, value)) => {
+                            self.stack.push(JsonDeserializerObjectState(iter));
+                            self.stack.push(JsonDeserializerValueState(value));
+                            return Some(Ok(de::String(key)));
+                        }
+                        None => {
+                            return Some(Ok(de::End));
+                        }
+                    }
+                }
+                None => { return None; }
+            }
+        }
+    }
+}
+
+impl de::Deserializer<ParserError> for JsonDeserializer {
+    fn end_of_stream_error(&self) -> ParserError {
+        SyntaxError(EOFWhileParsingValue, 0, 0)
+    }
+
+    fn syntax_error(&self) -> ParserError {
+        SyntaxError(InvalidSyntax, 0, 0)
+    }
+}
 
 /// The errors that can arise while parsing a JSON stream.
 #[deriving(Clone, Eq)]
@@ -1615,6 +1749,60 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
             }
         }
     }
+
+    /*
+    #[inline]
+    fn expect_enum_start(&mut self, token: de::Token, _name: &str, variants: &[&str]) -> Result<uint, ParserError> {
+        match token {
+            Str(name) => 
+
+        }
+
+        let name = match self.pop() {
+            String(s) => s,
+            Object(mut o) => {
+                let n = match o.pop(&"variant".to_strbuf()) {
+                    Some(String(s)) => s,
+                    Some(val) => {
+                        return Err(ExpectedError("String".to_strbuf(),
+                                                 format_strbuf!("{}", val)))
+                    }
+                    None => {
+                        return Err(MissingFieldError("variant".to_strbuf()))
+                    }
+                };
+                match o.pop(&"fields".to_strbuf()) {
+                    Some(List(l)) => {
+                        for field in l.move_iter().rev() {
+                            self.stack.push(field.clone());
+                        }
+                    },
+                    Some(val) => {
+                        return Err(ExpectedError("List".to_strbuf(),
+                                                 format_strbuf!("{}", val)))
+                    }
+                    None => {
+                        return Err(MissingFieldError("fields".to_strbuf()))
+                    }
+                }
+                n
+            }
+            json => {
+                return Err(ExpectedError("String or Object".to_strbuf(),
+                                         format_strbuf!("{}", json)))
+            }
+        };
+        let idx = match names.iter()
+                             .position(|n| {
+                                 str::eq_slice(*n, name.as_slice())
+                             }) {
+            Some(idx) => idx,
+            None => return Err(UnknownVariantError(name))
+        };
+        f(self, idx)
+
+    }
+    */
 }
 
 /*
@@ -1733,6 +1921,15 @@ pub fn from_iter<
 }
 
 
+/// Decodes a json value from a `Json`.
+pub fn from_json<
+    T: de::Deserializable<ParserError, JsonDeserializer>
+>(json: Json) -> Result<T, ParserError> {
+    let mut d = JsonDeserializer::new(json);
+    de::Deserializable::deserialize(&mut d)
+}
+
+
 
 
     /*
@@ -1757,7 +1954,6 @@ pub fn from_str(s: &str) -> Result<Json, BuilderError> {
 }
     */
 
-    /*
 /// A structure to decode JSON to values in rust.
 pub struct Decoder {
     stack: Vec<Json>,
@@ -1797,7 +1993,9 @@ macro_rules! expect(
     })
 )
 
+    /*
 impl ::Decoder<DecoderError> for Decoder {
+
     fn read_nil(&mut self) -> DecodeResult<()> {
         debug!("read_nil");
         try!(expect!(self.pop(), Null));
@@ -2206,7 +2404,7 @@ impl<A:ToJson> ToJson for TreeMap<String, A> {
         for (key, value) in self.iter() {
             d.insert((*key).clone(), value.to_json());
         }
-        Object(box d)
+        Object(d)
     }
 }
 
@@ -2216,7 +2414,7 @@ impl<A:ToJson> ToJson for HashMap<String, A> {
         for (key, value) in self.iter() {
             d.insert((*key).clone(), value.to_json());
         }
-        Object(box d)
+        Object(d)
     }
 }
 
@@ -2255,7 +2453,17 @@ mod tests {
                 TrailingCharacters};
     */
 
+    use super::{
+        Json,
+        Null,
+        Boolean,
+        Number,
+        String,
+        List,
+        Object,
+    };
     use super::{Parser, ParserError, from_iter};
+    use super::{JsonDeserializer, from_json};
     use super::{
         EOFWhileParsingList,
         EOFWhileParsingObject,
@@ -2270,7 +2478,9 @@ mod tests {
     };
     use de;
 
+    use std::fmt::Show;
     use std::io;
+    use std::str;
     use collections::TreeMap;
 
     #[deriving(Eq, Show)]
@@ -2311,7 +2521,7 @@ mod tests {
         #[inline]
         fn deserialize_token(d: &mut D, token: de::Token) -> Result<Inner, E> {
             match token {
-                de::StructStart("Inner") |
+                de::StructStart("Inner", _) |
                 de::MapStart(_) => {
                     let mut a = None;
                     let mut b = None;
@@ -2373,7 +2583,7 @@ mod tests {
         #[inline]
         fn deserialize_token(d: &mut D, token: de::Token) -> Result<Outer, E> {
             match token {
-                de::StructStart("Outer") |
+                de::StructStart("Outer", _) |
                 de::MapStart(_) => {
                     let mut inner = None;
 
@@ -2664,44 +2874,82 @@ mod tests {
     }
     */
 
+    fn test_parser_err<
+        'a,
+        T: Eq + Show + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
+    >(errors: &[(&'a str, ParserError)]) {
+        for &(s, err) in errors.iter() {
+            let v: Result<T, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
+    }
+
+    fn test_parser_ok<
+        'a,
+        T: Eq + Show + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
+    >(errors: &[(&'a str, T)]) {
+        for &(s, ref value) in errors.iter() {
+            let v: T = from_iter(s.chars()).unwrap();
+            assert_eq!(v, *value);
+        }
+    }
+
+    fn test_json_deserializer_ok<
+        T: Eq + Show + de::Deserializable<ParserError, JsonDeserializer>
+    >(errors: &[(Json, T)]) {
+        for &(ref json, ref value) in errors.iter() {
+            let v: T = from_json(json.clone()).unwrap();
+            assert_eq!(v, *value);
+        }
+    }
+
     #[test]
     fn test_decode_null() {
-        let errors = [
+        test_parser_err::<()>([
             ("n", SyntaxError(InvalidSyntax, 1, 2)),
             ("nul", SyntaxError(InvalidSyntax, 1, 4)),
             ("nulla", SyntaxError(TrailingCharacters, 1, 5)),
-        ];
+        ]);
 
-        for &(s, err) in errors.iter() {
-            let v: Result<(), ParserError> = from_iter(s.chars());
-            assert_eq!(v, Err(err));
-        }
+        test_parser_ok([
+            ("null", ()),
+        ]);
 
-        let v: () = from_iter("null".chars()).unwrap();
-        assert_eq!(v, ());
+        test_parser_ok([
+            ("null", Null),
+        ]);
+
+        test_json_deserializer_ok([
+            (Null, ()),
+        ]);
     }
 
     #[test]
     fn test_decode_bool() {
-        let errors = [
+        test_parser_err::<bool>([
             ("t", SyntaxError(InvalidSyntax, 1, 2)),
             ("truz", SyntaxError(InvalidSyntax, 1, 4)),
             ("f", SyntaxError(InvalidSyntax, 1, 2)),
             ("faz", SyntaxError(InvalidSyntax, 1, 3)),
             ("truea", SyntaxError(TrailingCharacters, 1, 5)),
             ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
-        ];
+        ]);
 
-        for &(s, err) in errors.iter() {
-            let v: Result<bool, ParserError> = from_iter(s.chars());
-            assert_eq!(v, Err(err));
-        }
+        test_parser_ok([
+            ("true", true),
+            ("false", false),
+        ]);
 
-        let v: bool = from_iter("true".chars()).unwrap();
-        assert_eq!(v, true);
+        test_parser_ok([
+            ("true", Boolean(true)),
+            ("false", Boolean(false)),
+        ]);
 
-        let v: bool = from_iter("false".chars()).unwrap();
-        assert_eq!(v, false);
+
+        test_json_deserializer_ok([
+            (Boolean(true), true),
+            (Boolean(false), false),
+        ]);
     }
 
     /*
@@ -3023,9 +3271,16 @@ mod tests {
         assert_eq!(value, Ok(Some("jodhpurs".to_strbuf())));
     }
 
-    /*
+        /*
     #[test]
     fn test_decode_enum() {
+        let value: Result<Animal, ParserError> = from_iter("\"Dog\"".chars());
+        assert_eq!(value, Ok(Dog));
+
+        let s = "{\"variant\":\"Frog\",\"fields\":[\"Henry\",349]}";
+        let value: Result<Animal, ParserError> = from_iter(s.chars());
+        assert_eq!(value, Ok(Frog("Henry".to_strbuf(), 349)));
+
         let mut decoder = Decoder::new(from_str("\"Dog\"").unwrap());
         let value: Animal = Decodable::decode(&mut decoder).unwrap();
         assert_eq!(value, Dog);
@@ -3034,8 +3289,11 @@ mod tests {
         let mut decoder = Decoder::new(from_str(s).unwrap());
         let value: Animal = Decodable::decode(&mut decoder).unwrap();
         assert_eq!(value, Frog("Henry".to_strbuf(), 349));
+        assert_eq!(value, Dog);
     }
+        */
 
+    /*
     #[test]
     fn test_decode_map() {
         let s = "{\"a\": \"Dog\", \"b\": {\"variant\":\"Frog\",\

@@ -19,7 +19,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Inner, E> {
         match token {
-            de::StructStart("Inner") |
+            de::StructStart("Inner", _) |
             de::MapStart(_) => {
                 let mut a = None;
                 let mut b = None;
@@ -83,7 +83,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
         match token {
-            de::StructStart("Outer") |
+            de::StructStart("Outer", _) |
             de::MapStart(_) => {
                 let mut inner = None;
 
@@ -390,7 +390,7 @@ mod deserializer {
                     self.stack.push(EndState);
                     self.stack.push(VecState(inner));
                     self.stack.push(FieldState("inner"));
-                    Some(Ok(StructStart("Outer")))
+                    Some(Ok(StructStart("Outer", 1)))
                 }
                 Some(InnerState(Inner { a: (), b, c })) => {
                     self.stack.push(EndState);
@@ -402,7 +402,7 @@ mod deserializer {
 
                     self.stack.push(NullState);
                     self.stack.push(FieldState("a"));
-                    Some(Ok(StructStart("Inner")))
+                    Some(Ok(StructStart("Inner", 3)))
                 }
                 Some(FieldState(name)) => Some(Ok(Str(name))),
                 Some(VecState(value)) => {

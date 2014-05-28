@@ -26,8 +26,8 @@ pub enum Token {
     Option(bool),
 
     TupleStart(uint),
-    StructStart(&'static str),
-    EnumStart(&'static str, &'static str),
+    StructStart(&'static str, uint),
+    EnumStart(&'static str, &'static str, uint),
     SeqStart(uint),
     MapStart(uint),
 
@@ -154,7 +154,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_struct_start(&mut self, token: Token, name: &str) -> Result<(), E> {
         match token {
-            StructStart(n) => {
+            StructStart(n, _) => {
                 if name == n {
                     Ok(())
                 } else {
@@ -187,9 +187,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_enum_start<'a>(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
+    fn expect_enum_start(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
         match token {
-            EnumStart(n, v) => {
+            EnumStart(n, v, _) => {
                 if name == n {
                     match variants.iter().position(|variant| *variant == v) {
                         Some(position) => Ok(position),
@@ -511,7 +511,7 @@ pub fn ignore_token<E, D: Deserializer<E>>(d: &mut D, token: Token) -> Result<()
         Option(true) => { ignore(d) }
         Option(false) => { Ok(()) }
 
-        EnumStart(_, _) => {
+        EnumStart(_, _, _) => {
             loop {
                 match try!(d.expect_token()) {
                     End => { return Ok(()); }
@@ -520,7 +520,7 @@ pub fn ignore_token<E, D: Deserializer<E>>(d: &mut D, token: Token) -> Result<()
             }
         }
 
-        StructStart(_) => {
+        StructStart(_, _) => {
             loop {
                 match try!(d.expect_token()) {
                     End => { return Ok(()); }
@@ -817,7 +817,7 @@ mod tests {
     #[test]
     fn test_tokens_struct_empty() {
         let tokens = vec!(
-            StructStart("Outer"),
+            StructStart("Outer", 1),
                 Str("inner"),
                 SeqStart(0),
                 End,
@@ -833,10 +833,10 @@ mod tests {
     #[test]
     fn test_tokens_struct() {
         let tokens = vec!(
-            StructStart("Outer"),
+            StructStart("Outer", 1),
                 Str("inner"),
                 SeqStart(1),
-                    StructStart("Inner"),
+                    StructStart("Inner", 3),
                         Str("a"),
                         Null,
 
@@ -877,7 +877,7 @@ mod tests {
     #[test]
     fn test_tokens_enum() {
         let tokens = vec!(
-            EnumStart("Animal", "Dog"),
+            EnumStart("Animal", "Dog", 0),
             End,
         );
 
@@ -887,7 +887,7 @@ mod tests {
         assert_eq!(value, Dog);
 
         let tokens = vec!(
-            EnumStart("Animal", "Frog"),
+            EnumStart("Animal", "Frog", 2),
                 String("Henry".to_strbuf()),
                 Int(349),
             End,
