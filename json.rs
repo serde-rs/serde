@@ -3000,15 +3000,15 @@ mod tests {
     fn test_decode_struct() {
         let s = "{
             \"inner\": [
+                { \"a\": null, \"b\": 2, \"c\": [\"abc\", \"xyz\"] }
             ]
         }";
-                //{ \"a\": null, \"b\": 2, \"c\": [\"abc\", \"xyz\"] }
         let v: Outer = from_iter(s.chars()).unwrap();
         assert_eq!(
             v,
             Outer {
                 inner: vec![
-                    //Inner { a: (), b: 2, c: vec!["abc".to_strbuf(), "xyz".to_strbuf()] }
+                    Inner { a: (), b: 2, c: vec!["abc".to_strbuf(), "xyz".to_strbuf()] }
                 ]
             }
         );
