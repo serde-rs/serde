@@ -1164,6 +1164,7 @@ pub struct Parser<T> {
 }
 
 impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
+    #[inline]
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
         let state = match self.state.pop() {
             Some(state) => state,
@@ -1599,6 +1600,20 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
 
     fn syntax_error(&self) -> ParserError {
         SyntaxError(InvalidSyntax, self.line, self.col)
+    }
+
+    // Special case treating options as a nullable value.
+    #[inline]
+    fn expect_option<
+        U: de::Deserializable<ParserError, Parser<T>>
+    >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
+        match token {
+            de::Null => Ok(None),
+            token => {
+                let value: U = try!(de::Deserializable::deserialize_token(self, token));
+                Ok(Some(value))
+            }
+        }
     }
 }
 
@@ -2999,18 +3014,16 @@ mod tests {
         );
     }
 
-    /*
     #[test]
     fn test_decode_option() {
-        let mut decoder = Decoder::new(from_str("null").unwrap());
-        let value: Option<String> = Decodable::decode(&mut decoder).unwrap();
-        assert_eq!(value, None);
+        let value: Result<Option<String>, ParserError> = from_iter("null".chars());
+        assert_eq!(value, Ok(None));
 
-        let mut decoder = Decoder::new(from_str("\"jodhpurs\"").unwrap());
-        let value: Option<String> = Decodable::decode(&mut decoder).unwrap();
-        assert_eq!(value, Some("jodhpurs".to_strbuf()));
+        let value: Result<Option<String>, ParserError> = from_iter("\"jodhpurs\"".chars());
+        assert_eq!(value, Ok(Some("jodhpurs".to_strbuf())));
     }
 
+    /*
     #[test]
     fn test_decode_enum() {
         let mut decoder = Decoder::new(from_str("\"Dog\"").unwrap());
