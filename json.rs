@@ -1008,10 +1008,6 @@ enum ParserState {
     ParseObjectKey,
     // Parse a value in an object.
     ParseObjectValue,
-    // Expecting the stream to end.
-    ParseBeforeFinish,
-    // Parsing can't continue.
-    ParseFinished,
 }
 
 /// A Stack represents the current position of the parser in the logical
@@ -1171,21 +1167,21 @@ impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
         let state = match self.state.pop() {
             Some(state) => state,
-            None => { return None; }
+            None => {
+                // If we have no state left, then we're expecting the structure
+                // to be done, so make sure there are no trailing characters.
+
+                self.parse_whitespace();
+
+                if self.eof() {
+                    return None;
+                } else {
+                    return Some(self.error(TrailingCharacters));
+                }
+            }
         };
 
         match state {
-            ParseFinished => None,
-            ParseBeforeFinish => {
-                self.parse_whitespace();
-                // Make sure there is no trailing characters.
-                if self.eof() {
-                    self.state.push(ParseFinished);
-                    None
-                } else {
-                    Some(self.error(TrailingCharacters))
-                }
-            }
             ParseValue => Some(self.parse_value()),
             ParseListStart => Some(self.parse_list_start()),
             ParseListCommaOrEnd => Some(self.parse_list_comma_or_end()),
@@ -1205,7 +1201,7 @@ impl<T: Iterator<char>> Parser<T> {
             ch: Some('\x00'),
             line: 1,
             col: 0,
-            state: vec!(ParseBeforeFinish, ParseValue),
+            state: vec!(ParseValue),
         };
         p.bump();
         return p;
