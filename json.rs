@@ -1205,7 +1205,7 @@ impl<T: Iterator<char>> Parser<T> {
             ch: Some('\x00'),
             line: 1,
             col: 0,
-            state: vec!(ParseValue),
+            state: vec!(ParseBeforeFinish, ParseValue),
         };
         p.bump();
         return p;
@@ -1707,7 +1707,18 @@ pub fn from_iter<
     T: de::Deserializable<ParserError, Parser<Iter>>
 >(iter: Iter) -> Result<T, ParserError> {
     let mut parser = Parser::new(iter);
-    de::Deserializable::deserialize(&mut parser)
+    let value = try!(de::Deserializable::deserialize(&mut parser));
+
+    // Make sure the whole stream has been consumed.
+    match parser.next() {
+        Some(Ok(token)) => {
+            fail!("internal json error, there should have not have been any tokens left");
+        }
+        Some(Err(err)) => { return Err(err); }
+        None => { }
+    }
+
+    Ok(value)
 }
 
 
@@ -2243,6 +2254,7 @@ mod tests {
         InvalidNumber,
         InvalidSyntax,
         KeyMustBeAString, 
+        TrailingCharacters,
         SyntaxError,
     };
     use de;
@@ -2623,25 +2635,14 @@ mod tests {
         });
         assert_eq!(s, "null".to_strbuf());
     }
-
-    #[test]
-    fn test_trailing_characters() {
-        assert_eq!(from_str("nulla"),  Err(SyntaxError(TrailingCharacters, 1, 5)));
-        assert_eq!(from_str("truea"),  Err(SyntaxError(TrailingCharacters, 1, 5)));
-        assert_eq!(from_str("falsea"), Err(SyntaxError(TrailingCharacters, 1, 6)));
-        assert_eq!(from_str("1a"),     Err(SyntaxError(TrailingCharacters, 1, 2)));
-        assert_eq!(from_str("[]a"),    Err(SyntaxError(TrailingCharacters, 1, 3)));
-        assert_eq!(from_str("{}a"),    Err(SyntaxError(TrailingCharacters, 1, 3)));
-    }
-
     #[test]
     fn test_read_identifiers() {
-        assert_eq!(from_str("n"),    Err(SyntaxError(InvalidSyntax, 1, 2)));
-        assert_eq!(from_str("nul"),  Err(SyntaxError(InvalidSyntax, 1, 4)));
-        assert_eq!(from_str("t"),    Err(SyntaxError(InvalidSyntax, 1, 2)));
-        assert_eq!(from_str("truz"), Err(SyntaxError(InvalidSyntax, 1, 4)));
-        assert_eq!(from_str("f"),    Err(SyntaxError(InvalidSyntax, 1, 2)));
-        assert_eq!(from_str("faz"),  Err(SyntaxError(InvalidSyntax, 1, 3)));
+        ("n", SyntaxError(InvalidSyntax, 1, 2)),
+        ("nul", SyntaxError(InvalidSyntax, 1, 4)),
+        ("t", SyntaxError(InvalidSyntax, 1, 2)),
+        ("truz", SyntaxError(InvalidSyntax, 1, 4)),
+        ("f", SyntaxError(InvalidSyntax, 1, 2)),
+        ("faz", SyntaxError(InvalidSyntax, 1, 3)),
 
         assert_eq!(from_str("null"), Ok(Null));
         assert_eq!(from_str("true"), Ok(Boolean(true)));
@@ -2653,14 +2654,11 @@ mod tests {
     */
 
     #[test]
-    fn test_decode_identifiers() {
+    fn test_decode_null() {
         let errors = [
             ("n", SyntaxError(InvalidSyntax, 1, 2)),
             ("nul", SyntaxError(InvalidSyntax, 1, 4)),
-            ("t", SyntaxError(InvalidSyntax, 1, 2)),
-            ("truz", SyntaxError(InvalidSyntax, 1, 4)),
-            ("f", SyntaxError(InvalidSyntax, 1, 2)),
-            ("faz", SyntaxError(InvalidSyntax, 1, 3)),
+            ("nulla", SyntaxError(TrailingCharacters, 1, 5)),
         ];
 
         for &(s, err) in errors.iter() {
@@ -2670,6 +2668,23 @@ mod tests {
 
         let v: () = from_iter("null".chars()).unwrap();
         assert_eq!(v, ());
+    }
+
+    #[test]
+    fn test_decode_bool() {
+        let errors = [
+            ("t", SyntaxError(InvalidSyntax, 1, 2)),
+            ("truz", SyntaxError(InvalidSyntax, 1, 4)),
+            ("f", SyntaxError(InvalidSyntax, 1, 2)),
+            ("faz", SyntaxError(InvalidSyntax, 1, 3)),
+            ("truea", SyntaxError(TrailingCharacters, 1, 5)),
+            ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
+        ];
+
+        for &(s, err) in errors.iter() {
+            let v: Result<bool, ParserError> = from_iter(s.chars());
+            assert_eq!(v, Err(err));
+        }
 
         let v: bool = from_iter("true".chars()).unwrap();
         assert_eq!(v, true);
@@ -2703,13 +2718,14 @@ mod tests {
     #[test]
     fn test_decode_numbers() {
         let errors = [
-            ("+",   SyntaxError(InvalidSyntax, 1, 1)),
-            (".",   SyntaxError(InvalidSyntax, 1, 1)),
-            ("-",   SyntaxError(InvalidNumber, 1, 2)),
-            ("00",  SyntaxError(InvalidNumber, 1, 2)),
-            ("1.",  SyntaxError(InvalidNumber, 1, 3)),
-            ("1e",  SyntaxError(InvalidNumber, 1, 3)),
+            ("+", SyntaxError(InvalidSyntax, 1, 1)),
+            (".", SyntaxError(InvalidSyntax, 1, 1)),
+            ("-", SyntaxError(InvalidNumber, 1, 2)),
+            ("00", SyntaxError(InvalidNumber, 1, 2)),
+            ("1.", SyntaxError(InvalidNumber, 1, 3)),
+            ("1e", SyntaxError(InvalidNumber, 1, 3)),
             ("1e+", SyntaxError(InvalidNumber, 1, 4)),
+            ("1a", SyntaxError(TrailingCharacters, 1, 2)),
         ];
 
         for &(s, err) in errors.iter() {
@@ -2755,8 +2771,9 @@ mod tests {
     #[test]
     fn test_decode_str() {
         let errors = [
-            ("\"",    SyntaxError(EOFWhileParsingString, 1, 2)),
+            ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
+            ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
         ];
 
         for &(s, err) in errors.iter() {
@@ -2813,6 +2830,7 @@ mod tests {
             ("[1,",   SyntaxError(EOFWhileParsingValue, 1, 4)),
             ("[1,]",  SyntaxError(InvalidSyntax,        1, 4)),
             ("[1 2]", SyntaxError(InvalidSyntax,        1, 4)),
+            ("[]a", SyntaxError(TrailingCharacters, 1, 3)),
         ];
         for &(s, err) in errors.iter() {
             let v: Result<Vec<f64>, ParserError> = from_iter(s.chars());
@@ -2904,18 +2922,18 @@ mod tests {
     #[test]
     fn test_decode_object() {
         let errors = [
-            ("{",       SyntaxError(EOFWhileParsingString, 1, 2)),
-            ("{ ",      SyntaxError(EOFWhileParsingString, 1, 3)),
-            ("{1",      SyntaxError(KeyMustBeAString,      1, 2)),
+            ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
+            ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
+            ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
             ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
-            ("{\"a\"",  SyntaxError(EOFWhileParsingObject, 1, 5)),
+            ("{\"a\"", SyntaxError(EOFWhileParsingObject, 1, 5)),
             ("{\"a\" ", SyntaxError(EOFWhileParsingObject, 1, 6)),
-
-            ("{\"a\" 1",   SyntaxError(ExpectedColon,         1, 6)),
-            ("{\"a\":",    SyntaxError(EOFWhileParsingValue,  1, 6)),
-            ("{\"a\":1",   SyntaxError(EOFWhileParsingObject, 1, 7)),
-            ("{\"a\":1 1", SyntaxError(InvalidSyntax,         1, 8)),
-            ("{\"a\":1,",  SyntaxError(EOFWhileParsingString, 1, 8)),
+            ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
+            ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
+            ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
+            ("{\"a\":1 1", SyntaxError(InvalidSyntax, 1, 8)),
+            ("{\"a\":1,", SyntaxError(EOFWhileParsingString, 1, 8)),
+            ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
         ];
 
         for &(s, err) in errors.iter() {
