@@ -2500,6 +2500,10 @@ impl ToJson for bool {
     fn to_json(&self) -> Json { Boolean(*self) }
 }
 
+impl<'a> ToJson for &'a str {
+    fn to_json(&self) -> Json { String(self.to_string()) }
+}
+
 impl ToJson for String {
     fn to_json(&self) -> Json { String((*self).clone()) }
 }
@@ -2648,6 +2652,22 @@ mod tests {
                     Ok(Frog(x0, x1))
                 }
                 _ => Err(d.syntax_error()),
+            }
+        }
+    }
+
+    impl ToJson for Animal {
+        fn to_json(&self) -> Json {
+            match *self {
+                Dog => String("Dog".to_string()),
+                Frog(ref x0, x1) => {
+                    Object(
+                        treemap!(
+                            "variant".to_string() => "Frog".to_json(),
+                            "fields".to_string() => List(vec!(x0.to_json(), x1.to_json()))
+                        )
+                    )
+                }
             }
         }
     }
@@ -3038,6 +3058,7 @@ mod tests {
     }
     */
 
+    // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
         T: Eq + Show + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
@@ -3067,6 +3088,10 @@ mod tests {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();
             assert_eq!(v, *value);
+
+            // Make sure we can round trip back to `Json`.
+            let v: Json = from_json(value.to_json()).unwrap();
+            assert_eq!(v, value.to_json());
         }
     }
 
@@ -3474,27 +3499,26 @@ mod tests {
         ]);
     }
 
-        /*
+    /*
     #[test]
-    fn test_decode_enum() {
-        let value: Result<Animal, ParserError> = from_iter("\"Dog\"".chars());
-        assert_eq!(value, Ok(Dog));
-
-        let s = "{\"variant\":\"Frog\",\"fields\":[\"Henry\",349]}";
-        let value: Result<Animal, ParserError> = from_iter(s.chars());
-        assert_eq!(value, Ok(Frog("Henry".to_string(), 349)));
-
-        let mut decoder = Decoder::new(from_str("\"Dog\"").unwrap());
-        let value: Animal = Decodable::decode(&mut decoder).unwrap();
-        assert_eq!(value, Dog);
-
-        let s = "{\"variant\":\"Frog\",\"fields\":[\"Henry\",349]}";
-        let mut decoder = Decoder::new(from_str(s).unwrap());
-        let value: Animal = Decodable::decode(&mut decoder).unwrap();
-        assert_eq!(value, Frog("Henry".to_string(), 349));
-        assert_eq!(value, Dog);
+    fn test_parse_enum() {
+        test_parse_ok([
+            ("\"Dog\"", Dog),
+            (
+                "{\"variant\": \"Frog\", \"fields\": [\"Henry\", 349}",
+                Frog("Henry".to_string(), 349),
+            )
+        ]);
     }
-        */
+    */
+
+    #[test]
+    fn test_json_deserialize_enum() {
+        test_json_deserialize_ok([
+            Dog,
+            Frog("Henry".to_string(), 349),
+        ]);
+    }
 
     /*
     #[test]
