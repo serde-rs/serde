@@ -117,7 +117,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_strbuf(&mut self, token: Token) -> Result<String, E> {
         match token {
-            Str(value) => Ok(value.to_strbuf()),
+            Str(value) => Ok(value.to_string()),
             String(value) => Ok(value),
             _ => Err(self.syntax_error()),
         }
@@ -716,13 +716,13 @@ mod tests {
     #[test]
     fn test_tokens_strbuf() {
         let tokens = vec!(
-            String("a".to_strbuf()),
+            String("a".to_string()),
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: String = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value, "a".to_strbuf());
+        assert_eq!(value, "a".to_string());
     }
 
     #[test]
@@ -781,14 +781,14 @@ mod tests {
             TupleStart(2),
                 Int(5),
 
-                String("a".to_strbuf()),
+                String("a".to_string()),
             End,
         );
 
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: (int, String) = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value, (5, "a".to_strbuf()));
+        assert_eq!(value, (5, "a".to_string()));
     }
 
     #[test]
@@ -803,7 +803,7 @@ mod tests {
                 TupleStart(2),
                     Int(5),
 
-                    String("a".to_strbuf()),
+                    String("a".to_string()),
                 End,
             End,
         );
@@ -811,7 +811,7 @@ mod tests {
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: ((), (), (int, String)) = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value, ((), (), (5, "a".to_strbuf())));
+        assert_eq!(value, ((), (), (5, "a".to_string())));
     }
 
     #[test]
@@ -845,7 +845,7 @@ mod tests {
 
                         Str("c"),
                         MapStart(1),
-                            String("abc".to_strbuf()),
+                            String("abc".to_string()),
 
                             Option(true),
                             Char('c'),
@@ -859,7 +859,7 @@ mod tests {
         let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
 
         let mut map = HashMap::new();
-        map.insert("abc".to_strbuf(), Some('c'));
+        map.insert("abc".to_string(), Some('c'));
 
         assert_eq!(
             value,
@@ -888,7 +888,7 @@ mod tests {
 
         let tokens = vec!(
             EnumStart("Animal", "Frog", 2),
-                String("Henry".to_strbuf()),
+                String("Henry".to_string()),
                 Int(349),
             End,
         );
@@ -896,7 +896,7 @@ mod tests {
         let mut deserializer = TokenDeserializer::new(tokens);
         let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value, Frog("Henry".to_strbuf(), 349));
+        assert_eq!(value, Frog("Henry".to_string(), 349));
     }
 
     #[test]
@@ -966,11 +966,11 @@ mod tests {
             MapStart(2),
                 Int(5),
 
-                String("a".to_strbuf()),
+                String("a".to_string()),
 
                 Int(6),
 
-                String("b".to_strbuf()),
+                String("b".to_string()),
             End,
         );
 
@@ -978,8 +978,8 @@ mod tests {
         let value: HashMap<int, String> = Deserializable::deserialize(&mut deserializer).unwrap();
 
         let mut map = HashMap::new();
-        map.insert(5, "a".to_strbuf());
-        map.insert(6, "b".to_strbuf());
+        map.insert(5, "a".to_string());
+        map.insert(6, "b".to_string());
 
         assert_eq!(value, map);
     }

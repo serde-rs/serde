@@ -275,7 +275,7 @@ fn bench_decoder_dog(b: &mut Bencher) {
 #[bench]
 fn bench_decoder_frog(b: &mut Bencher) {
     b.iter(|| {
-        let animal = Frog("Henry".to_strbuf(), 349);
+        let animal = Frog("Henry".to_string(), 349);
 
         let mut d = decoder::AnimalDecoder::new(animal.clone());
         let value: Animal = Decodable::decode(&mut d).unwrap();
@@ -299,7 +299,7 @@ fn bench_deserializer_dog(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_frog(b: &mut Bencher) {
     b.iter(|| {
-        let animal = Frog("Henry".to_strbuf(), 349);
+        let animal = Frog("Henry".to_string(), 349);
 
         let mut d = deserializer::AnimalDeserializer::new(animal.clone());
         let value: Animal = Deserializable::deserialize(&mut d).unwrap();

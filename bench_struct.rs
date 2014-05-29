@@ -461,7 +461,7 @@ mod deserializer {
 fn bench_decoder_0_0(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-        map.insert("abc".to_strbuf(), Some('c'));
+        map.insert("abc".to_string(), Some('c'));
 
         let outer = Outer {
             inner: vec!(),
@@ -500,11 +500,11 @@ fn bench_decoder_1_0(b: &mut Bencher) {
 fn bench_decoder_1_5(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-        map.insert("1".to_strbuf(), Some('a'));
-        map.insert("2".to_strbuf(), None);
-        map.insert("3".to_strbuf(), Some('b'));
-        map.insert("4".to_strbuf(), None);
-        map.insert("5".to_strbuf(), Some('c'));
+        map.insert("1".to_string(), Some('a'));
+        map.insert("2".to_string(), None);
+        map.insert("3".to_string(), Some('b'));
+        map.insert("4".to_string(), None);
+        map.insert("5".to_string(), Some('c'));
 
         let outer = Outer {
             inner: vec!(
@@ -527,7 +527,7 @@ fn bench_decoder_1_5(b: &mut Bencher) {
 fn bench_deserializer_0_0(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-        map.insert("abc".to_strbuf(), Some('c'));
+        map.insert("abc".to_string(), Some('c'));
 
         let outer = Outer {
             inner: vec!(),
@@ -566,11 +566,11 @@ fn bench_deserializer_1_0(b: &mut Bencher) {
 fn bench_deserializer_1_5(b: &mut Bencher) {
     b.iter(|| {
         let mut map = HashMap::new();
-        map.insert("1".to_strbuf(), Some('a'));
-        map.insert("2".to_strbuf(), None);
-        map.insert("3".to_strbuf(), Some('b'));
-        map.insert("4".to_strbuf(), None);
-        map.insert("5".to_strbuf(), Some('c'));
+        map.insert("1".to_string(), Some('a'));
+        map.insert("2".to_string(), None);
+        map.insert("3".to_string(), Some('b'));
+        map.insert("4".to_string(), None);
+        map.insert("5".to_string(), Some('c'));
 
         let outer = Outer {
             inner: vec!(
