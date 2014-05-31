@@ -3087,28 +3087,6 @@ mod tests {
         ]);
     }
 
-    /*
-    #[test]
-    fn test_read_number() {
-        assert_eq!(from_str("+"),   Err(SyntaxError(InvalidSyntax, 1, 1)));
-        assert_eq!(from_str("."),   Err(SyntaxError(InvalidSyntax, 1, 1)));
-        assert_eq!(from_str("-"),   Err(SyntaxError(InvalidNumber, 1, 2)));
-        assert_eq!(from_str("00"),  Err(SyntaxError(InvalidNumber, 1, 2)));
-        assert_eq!(from_str("1."),  Err(SyntaxError(InvalidNumber, 1, 3)));
-        assert_eq!(from_str("1e"),  Err(SyntaxError(InvalidNumber, 1, 3)));
-        assert_eq!(from_str("1e+"), Err(SyntaxError(InvalidNumber, 1, 4)));
-
-        assert_eq!(from_str("3"), Ok(Number(3.0)));
-        assert_eq!(from_str("3.1"), Ok(Number(3.1)));
-        assert_eq!(from_str("-1.2"), Ok(Number(-1.2)));
-        assert_eq!(from_str("0.4"), Ok(Number(0.4)));
-        assert_eq!(from_str("0.4e5"), Ok(Number(0.4e5)));
-        assert_eq!(from_str("0.4e+15"), Ok(Number(0.4e15)));
-        assert_eq!(from_str("0.4e-01"), Ok(Number(0.4e-01)));
-        assert_eq!(from_str(" 3 "), Ok(Number(3.0)));
-    }
-    */
-
     #[test]
     fn test_parse_numbers() {
         test_parse_err::<f64>([
@@ -3146,25 +3124,6 @@ mod tests {
         ]);
     }
 
-    /*
-    #[test]
-    fn test_read_str() {
-        assert_eq!(from_str("\""),    Err(SyntaxError(EOFWhileParsingString, 1, 2)));
-        assert_eq!(from_str("\"lol"), Err(SyntaxError(EOFWhileParsingString, 1, 5)));
-
-        assert_eq!(from_str("\"\""), Ok(String("".to_string())));
-        assert_eq!(from_str("\"foo\""), Ok(String("foo".to_string())));
-        assert_eq!(from_str("\"\\\"\""), Ok(String("\"".to_string())));
-        assert_eq!(from_str("\"\\b\""), Ok(String("\x08".to_string())));
-        assert_eq!(from_str("\"\\n\""), Ok(String("\n".to_string())));
-        assert_eq!(from_str("\"\\r\""), Ok(String("\r".to_string())));
-        assert_eq!(from_str("\"\\t\""), Ok(String("\t".to_string())));
-        assert_eq!(from_str(" \"foo\" "), Ok(String("foo".to_string())));
-        assert_eq!(from_str("\"\\u12ab\""), Ok(String("\u12ab".to_string())));
-        assert_eq!(from_str("\"\\uAB12\""), Ok(String("\uAB12".to_string())));
-    }
-    */
-
     #[test]
     fn test_parse_str() {
         test_parse_err::<String>([
@@ -3200,29 +3159,6 @@ mod tests {
             "\uAB12".to_string(),
         ]);
     }
-
-    /*
-    #[test]
-    fn test_read_list() {
-        assert_eq!(from_str("["),     Err(SyntaxError(EOFWhileParsingValue, 1, 2)));
-        assert_eq!(from_str("[1"),    Err(SyntaxError(EOFWhileParsingList,  1, 3)));
-        assert_eq!(from_str("[1,"),   Err(SyntaxError(EOFWhileParsingValue, 1, 4)));
-        assert_eq!(from_str("[1,]"),  Err(SyntaxError(InvalidSyntax,        1, 4)));
-        assert_eq!(from_str("[6 7]"), Err(SyntaxError(InvalidSyntax,        1, 4)));
-
-        assert_eq!(from_str("[]"), Ok(List(vec![])));
-        assert_eq!(from_str("[ ]"), Ok(List(vec![])));
-        assert_eq!(from_str("[true]"), Ok(List(vec![Boolean(true)])));
-        assert_eq!(from_str("[ false ]"), Ok(List(vec![Boolean(false)])));
-        assert_eq!(from_str("[null]"), Ok(List(vec![Null])));
-        assert_eq!(from_str("[3, 1]"),
-                     Ok(List(vec![Number(3.0), Number(1.0)])));
-        assert_eq!(from_str("\n[3, 2]\n"),
-                     Ok(List(vec![Number(3.0), Number(2.0)])));
-        assert_eq!(from_str("[2, [4, 1]]"),
-               Ok(List(vec![Number(2.0), List(vec![Number(4.0), Number(1.0)])])));
-    }
-    */
 
     #[test]
     fn test_parse_list() {
@@ -3276,63 +3212,6 @@ mod tests {
             vec!(vec!(3), vec!(1, 2)),
         ]);
     }
-
-    /*
-    #[test]
-    fn test_read_object() {
-        assert_eq!(from_str("{"),       Err(SyntaxError(EOFWhileParsingObject, 1, 2)));
-        assert_eq!(from_str("{ "),      Err(SyntaxError(EOFWhileParsingObject, 1, 3)));
-        assert_eq!(from_str("{1"),      Err(SyntaxError(KeyMustBeAString,      1, 2)));
-        assert_eq!(from_str("{ \"a\""), Err(SyntaxError(EOFWhileParsingObject, 1, 6)));
-        assert_eq!(from_str("{\"a\""),  Err(SyntaxError(EOFWhileParsingObject, 1, 5)));
-        assert_eq!(from_str("{\"a\" "), Err(SyntaxError(EOFWhileParsingObject, 1, 6)));
-
-        assert_eq!(from_str("{\"a\" 1"),   Err(SyntaxError(ExpectedColon,         1, 6)));
-        assert_eq!(from_str("{\"a\":"),    Err(SyntaxError(EOFWhileParsingValue,  1, 6)));
-        assert_eq!(from_str("{\"a\":1"),   Err(SyntaxError(EOFWhileParsingObject, 1, 7)));
-        assert_eq!(from_str("{\"a\":1 1"), Err(SyntaxError(InvalidSyntax,         1, 8)));
-        assert_eq!(from_str("{\"a\":1,"),  Err(SyntaxError(EOFWhileParsingObject, 1, 8)));
-
-        assert_eq!(from_str("{}").unwrap(), mk_object([]));
-        assert_eq!(from_str("{\"a\": 3}").unwrap(),
-                  mk_object([("a".to_string(), Number(3.0))]));
-
-        assert_eq!(from_str(
-                      "{ \"a\": null, \"b\" : true }").unwrap(),
-                  mk_object([
-                      ("a".to_string(), Null),
-                      ("b".to_string(), Boolean(true))]));
-        assert_eq!(from_str("\n{ \"a\": null, \"b\" : true }\n").unwrap(),
-                  mk_object([
-                      ("a".to_string(), Null),
-                      ("b".to_string(), Boolean(true))]));
-        assert_eq!(from_str(
-                      "{\"a\" : 1.0 ,\"b\": [ true ]}").unwrap(),
-                  mk_object([
-                      ("a".to_string(), Number(1.0)),
-                      ("b".to_string(), List(vec![Boolean(true)]))
-                  ]));
-        assert_eq!(from_str(
-                      "{\
-                          \"a\": 1.0, \
-                          \"b\": [\
-                              true,\
-                              \"foo\\nbar\", \
-                              { \"c\": {\"d\": null} } \
-                          ]\
-                      }").unwrap(),
-                  mk_object([
-                      ("a".to_string(), Number(1.0)),
-                      ("b".to_string(), List(vec![
-                          Boolean(true),
-                          String("foo\nbar".to_string()),
-                          mk_object([
-                              ("c".to_string(), mk_object([("d".to_string(), Null)]))
-                          ])
-                      ]))
-                  ]));
-    }
-    */
 
     #[test]
     fn test_parse_object() {
@@ -3453,7 +3332,17 @@ mod tests {
             (
                 "{\"variant\": \"Frog\", \"fields\": [\"Henry\", 349]}",
                 Frog("Henry".to_string(), 349),
-            )
+            ),
+        ]);
+
+        test_parse_ok([
+            (
+                "{\"a\": \"Dog\", \"b\": {\"variant\":\"Frog\",\"fields\":[\"Henry\", 349]}}",
+                treemap!(
+                    "a".to_string() => Dog,
+                    "b".to_string() => Frog("Henry".to_string(), 349)
+                )
+            ),
         ]);
     }
 
@@ -3465,24 +3354,14 @@ mod tests {
         ]);
     }
 
-    /*
-    #[test]
-    fn test_decode_map() {
-        let s = "{\"a\": \"Dog\", \"b\": {\"variant\":\"Frog\",\
-                  \"fields\":[\"Henry\", 349]}}";
-        let mut decoder = Decoder::new(from_str(s).unwrap());
-        let mut map: TreeMap<String, Animal> = Decodable::decode(&mut decoder).unwrap();
-
-        assert_eq!(map.pop(&"a".to_string()), Some(Dog));
-        assert_eq!(map.pop(&"b".to_string()), Some(Frog("Henry".to_string(), 349)));
-    }
-
     #[test]
     fn test_multiline_errors() {
-        assert_eq!(from_str("{\n  \"foo\":\n \"bar\""),
-            Err(SyntaxError(EOFWhileParsingObject, 3u, 8u)));
+        test_parse_err::<TreeMap<String, String>>([
+            ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3u, 8u)),
+        ]);
     }
 
+    /*
     #[deriving(Decodable)]
     struct DecodeStruct {
         x: f64,
