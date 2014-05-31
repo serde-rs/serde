@@ -234,11 +234,8 @@ fn main() {
 */
 
 use std::char;
-use std::f64;
 use std::fmt;
-use std::io::MemWriter;
 use std::io;
-use std::mem::swap;
 use std::num;
 use std::str::ScalarValue;
 use std::str;
@@ -568,7 +565,6 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 }
 
 pub type EncodeResult = io::IoResult<()>;
-//pub type DecodeResult<T> = Result<T, DecoderError>;
 
 fn escape_str(s: &str) -> String {
     let mut escaped = String::from_str("\"");
@@ -2033,14 +2029,10 @@ pub fn from_iter<
 
     // Make sure the whole stream has been consumed.
     match parser.next() {
-        Some(Ok(token)) => {
-            fail!("internal json error, there should have not have been any tokens left");
-        }
-        Some(Err(err)) => { return Err(err); }
-        None => { }
+        Some(Ok(token)) => parser.error(TrailingCharacters),
+        Some(Err(err)) => Err(err),
+        None => Ok(value),
     }
-
-    Ok(value)
 }
 
 
@@ -2051,31 +2043,6 @@ pub fn from_json<
     let mut d = JsonDeserializer::new(json);
     de::Deserializable::deserialize(&mut d)
 }
-
-
-
-
-    /*
-    let contents = match rdr.read_to_end() {
-        Ok(c) => c,
-        Err(e) => return Err(io_error_to_error(e))
-    };
-    let s = match str::from_utf8(contents.as_slice()) {
-        Some(s) => s.to_string(),
-        None => return Err(SyntaxError(NotUtf8, 0, 0))
-    };
-    let mut builder = Builder::new(s.as_slice().chars());
-    builder.build()
-    */
-//}
-
-/*
-/// Decodes a json value from a string
-pub fn from_str(s: &str) -> Result<Json, BuilderError> {
-    let mut builder = Builder::new(s.chars());
-    return builder.build();
-}
-    */
 
 /// A structure to decode JSON to values in rust.
 pub struct Decoder {
@@ -2567,28 +2534,8 @@ impl fmt::Show for Json {
 mod tests {
     extern crate test;
     use self::test::Bencher;
-    /*
-    //use {Encodable, Decodable};
-    use super::{Encoder, Decoder, Error, Boolean, Number, List, String, Null,
-                PrettyEncoder, Object, Json, from_str, ParseError, ExpectedError,
-                MissingFieldError, UnknownVariantError, DecodeResult, DecoderError,
-                JsonEvent, Parser, StackElement,
-                ObjectStart, ObjectEnd, ListStart, ListEnd, BooleanValue, NumberValue, StringValue,
-                NullValue, SyntaxError, Key, Index, Stack,
-                InvalidSyntax, InvalidNumber, EOFWhileParsingObject, EOFWhileParsingList,
-                EOFWhileParsingValue, EOFWhileParsingString, KeyMustBeAString, ExpectedColon,
-                TrailingCharacters};
-    */
 
-    use super::{
-        Json,
-        Null,
-        Boolean,
-        Number,
-        String,
-        List,
-        Object,
-    };
+    use super::{Json, String, List, Object};
     use super::{Parser, ParserError, from_iter};
     use super::{JsonDeserializer, from_json, ToJson};
     use super::{
@@ -2606,7 +2553,6 @@ mod tests {
     use de;
 
     use std::fmt::Show;
-    use std::io;
     use std::str;
     use collections::TreeMap;
 

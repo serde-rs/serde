@@ -509,7 +509,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for IgnoreTokens {
                         Str(_) | String(_) => {
                             let _: IgnoreTokens = try!(Deserializable::deserialize(d));
                         }
-                        token => { return Err(d.syntax_error()); }
+                        _token => { return Err(d.syntax_error()); }
                     }
                 }
             }
@@ -590,7 +590,7 @@ impl GatherTokens {
             StructStart(name, len) => {
                 self.tokens.reserve_additional(len + 1);
                 self.tokens.push(StructStart(name, len));
-                self.gather_map(d)
+                self.gather_struct(d)
             }
             TupleStart(len) => {
                 self.tokens.reserve_additional(len + 1);
@@ -644,7 +644,7 @@ impl GatherTokens {
                     self.tokens.push(token);
                     try!(self.gather(d))
                 }
-                token => { return Err(d.syntax_error()); }
+                _token => { return Err(d.syntax_error()); }
             }
         }
     }
