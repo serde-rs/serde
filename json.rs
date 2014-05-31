@@ -234,7 +234,9 @@ fn main() {
 */
 
 use std::char;
+use std::f64;
 use std::fmt;
+use std::io::MemWriter;
 use std::io;
 use std::num;
 use std::str::ScalarValue;
@@ -246,6 +248,8 @@ use std::vec;
 use de;
 use collections::{Deque, HashMap, RingBuf, TreeMap};
 use collections::treemap;
+use serialize;
+use serialize::{Encoder, Encodable};
 
 /// Represents a json value
 #[deriving(Clone, Eq, Show)]
@@ -412,7 +416,10 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 
     // Special case treating enums as a String or a `{"variant": "...", "fields": [...]}`.
     #[inline]
-    fn expect_enum_start(&mut self, token: de::Token, _name: &str, variants: &[&str]) -> Result<uint, ParserError> {
+    fn expect_enum_start(&mut self,
+                         token: de::Token,
+                         _name: &str,
+                         variants: &[&str]) -> Result<uint, ParserError> {
         let variant = match token {
             de::String(variant) => {
                 self.stack.push(JsonDeserializerEndState);
@@ -592,7 +599,6 @@ fn spaces(n: uint) -> String {
     return ss
 }
 
-/*
 /// A structure for implementing serialization to JSON.
 pub struct Encoder<'a> {
     wr: &'a mut io::Writer,
@@ -606,7 +612,10 @@ impl<'a> Encoder<'a> {
     }
 
     /// Encode the specified struct into a json [u8]
-    pub fn buffer_encode<T:Encodable<Encoder<'a>, io::IoError>>(to_encode_object: &T) -> Vec<u8>  {
+    pub fn buffer_encode<
+        T: serialize::Encodable<Encoder<'a>,
+        io::IoError>
+    >(to_encode_object: &T) -> Vec<u8> {
        //Serialize the object in a string using a writer
         let mut m = MemWriter::new();
         {
@@ -618,16 +627,16 @@ impl<'a> Encoder<'a> {
     }
 
     /// Encode the specified struct into a json str
-    pub fn str_encode<T:Encodable<Encoder<'a>,
-                        io::IoError>>(
-                      to_encode_object: &T)
-                      -> String {
+    pub fn str_encode<
+        T: serialize::Encodable<Encoder<'a>,
+        io::IoError>
+    >(to_encode_object: &T) -> String {
         let buff = Encoder::buffer_encode(to_encode_object);
         str::from_utf8(buff.as_slice()).unwrap().to_string()
     }
 }
 
-impl<'a> ::Encoder<io::IoError> for Encoder<'a> {
+impl<'a> serialize::Encoder<io::IoError> for Encoder<'a> {
     fn emit_nil(&mut self) -> EncodeResult { write!(self.wr, "null") }
 
     fn emit_uint(&mut self, v: uint) -> EncodeResult { self.emit_f64(v as f64) }
@@ -820,7 +829,7 @@ impl<'a> PrettyEncoder<'a> {
     }
 }
 
-impl<'a> ::Encoder<io::IoError> for PrettyEncoder<'a> {
+impl<'a> serialize::Encoder<io::IoError> for PrettyEncoder<'a> {
     fn emit_nil(&mut self) -> EncodeResult { write!(self.wr, "null") }
 
     fn emit_uint(&mut self, v: uint) -> EncodeResult { self.emit_f64(v as f64) }
@@ -1038,7 +1047,7 @@ impl<'a> ::Encoder<io::IoError> for PrettyEncoder<'a> {
     }
 }
 
-impl<E: ::Encoder<S>, S> Encodable<E, S> for Json {
+impl<E: serialize::Encoder<S>, S> serialize::Encodable<E, S> for Json {
     fn encode(&self, e: &mut E) -> Result<(), S> {
         match *self {
             Number(v) => v.encode(e),
@@ -1127,8 +1136,8 @@ impl Json {
     /// If the Json value is an Object, returns the associated TreeMap.
     /// Returns None otherwise.
     pub fn as_object<'a>(&'a self) -> Option<&'a Object> {
-        match self {
-            &Object(ref map) => Some(&**map),
+        match *self {
+            Object(ref map) => Some(map),
             _ => None
         }
     }
@@ -1141,8 +1150,8 @@ impl Json {
     /// If the Json value is a List, returns the associated vector.
     /// Returns None otherwise.
     pub fn as_list<'a>(&'a self) -> Option<&'a List> {
-        match self {
-            &List(ref list) => Some(&*list),
+        match *self {
+            List(ref list) => Some(list),
             _ => None
         }
     }
@@ -1169,8 +1178,8 @@ impl Json {
     /// If the Json value is a Number, returns the associated f64.
     /// Returns None otherwise.
     pub fn as_number(&self) -> Option<f64> {
-        match self {
-            &Number(n) => Some(n),
+        match *self {
+            Number(n) => Some(n),
             _ => None
         }
     }
@@ -1183,8 +1192,8 @@ impl Json {
     /// If the Json value is a Boolean, returns the associated bool.
     /// Returns None otherwise.
     pub fn as_boolean(&self) -> Option<bool> {
-        match self {
-            &Boolean(b) => Some(b),
+        match *self {
+            Boolean(b) => Some(b),
             _ => None
         }
     }
@@ -1197,13 +1206,12 @@ impl Json {
     /// If the Json value is a Null, returns ().
     /// Returns None otherwise.
     pub fn as_null(&self) -> Option<()> {
-        match self {
-            &Null => Some(()),
+        match *self {
+            Null => Some(()),
             _ => None
         }
     }
 }
-*/
 
 /*
 /// The output of the streaming parser.
@@ -1239,6 +1247,7 @@ enum ParserState {
     ParseObjectValue,
 }
 
+/*
 /// A Stack represents the current position of the parser in the logical
 /// structure of the JSON stream.
 /// For example foo.bar[3].x
@@ -1380,6 +1389,7 @@ impl Stack {
         *self.stack.get_mut(len - 1) = InternalIndex(idx);
     }
 }
+*/
 
 /// A streaming JSON parser implemented as an iterator of JsonEvent, consuming
 /// an iterator of char.
@@ -1857,7 +1867,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
     #[inline]
     fn expect_enum_start(&mut self,
                          token: de::Token,
-                         name: &str,
+                         _name: &str,
                          variants: &[&str]) -> Result<uint, ParserError> {
         // It's a little tricky to deserialize enums. Strings are simple to
         // parse, but objects require us to preparse the entire object because
@@ -1870,7 +1880,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
 
                 variant
             }
-            de::MapStart(len) => {
+            de::MapStart(_len) => {
                 let mut variant = None;
                 let mut fields = None;
 
@@ -2029,7 +2039,7 @@ pub fn from_iter<
 
     // Make sure the whole stream has been consumed.
     match parser.next() {
-        Some(Ok(token)) => parser.error(TrailingCharacters),
+        Some(Ok(_token)) => parser.error(TrailingCharacters),
         Some(Err(err)) => Err(err),
         None => Ok(value),
     }
@@ -2055,12 +2065,6 @@ impl Decoder {
         Decoder {
             stack: vec!(json),
         }
-    }
-}
-
-impl Decoder {
-    fn pop(&mut self) -> Json {
-        self.stack.pop().unwrap()
     }
 }
 
