@@ -2547,6 +2547,9 @@ mod tests {
     extern crate test;
     use self::test::Bencher;
 
+    use serialize::Encodable;
+
+    use super::{Encoder, PrettyEncoder};
     use super::{Json, String, List, Object};
     use super::{Parser, ParserError, from_iter, from_str};
     use super::{JsonDeserializer, from_json, ToJson};
@@ -3525,7 +3528,6 @@ mod tests {
         assert!(json_null.is_some() && json_null.unwrap() == expected_null);
     }
 
-    /*
     #[test]
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
@@ -3536,15 +3538,12 @@ mod tests {
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
         {
-            let mut encoder = Encoder::new(&mut mem_buf as &mut io::Writer);
+            let mut encoder = Encoder::new(&mut mem_buf as &mut Writer);
             hm.encode(&mut encoder).unwrap();
         }
         let bytes = mem_buf.unwrap();
         let json_str = from_utf8(bytes.as_slice()).unwrap();
-        match from_str(json_str) {
-            Err(_) => fail!("Unable to parse json_str: {:?}", json_str),
-            _ => {} // it parsed and we are good to go
-        }
+        let _json_value: Json = from_str(json_str).unwrap();
     }
     #[test]
     fn test_prettyencode_hashmap_with_numeric_key() {
@@ -3556,29 +3555,27 @@ mod tests {
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
         {
-            let mut encoder = PrettyEncoder::new(&mut mem_buf as &mut io::Writer);
+            let mut encoder = PrettyEncoder::new(&mut mem_buf as &mut Writer);
             hm.encode(&mut encoder).unwrap()
         }
         let bytes = mem_buf.unwrap();
         let json_str = from_utf8(bytes.as_slice()).unwrap();
-        match from_str(json_str) {
-            Err(_) => fail!("Unable to parse json_str: {:?}", json_str),
-            _ => {} // it parsed and we are good to go
-        }
+        let _json_value: Json = from_str(json_str).unwrap();
     }
+
+    /*
     #[test]
     fn test_hashmap_with_numeric_key_can_handle_double_quote_delimited_key() {
         use collections::HashMap;
-        use Decodable;
         let json_str = "{\"1\":true}";
-        let json_obj = match from_str(json_str) {
-            Err(_) => fail!("Unable to parse json_str: {:?}", json_str),
-            Ok(o) => o
-        };
-        let mut decoder = Decoder::new(json_obj);
-        let _hm: HashMap<uint, bool> = Decodable::decode(&mut decoder).unwrap();
+        let map: HashMap<uint, bool> = from_str(json_str).unwrap();
+        let mut m = HashMap::new();
+        m.insert(1u, true);
+        assert_eq!(map, m);
     }
+    */
 
+    /*
     fn assert_stream_equal(src: &str, expected: ~[(JsonEvent, ~[StackElement])]) {
         let mut parser = Parser::new(src.chars());
         let mut i = 0;
