@@ -38,22 +38,22 @@ macro_rules! to_result {
     ($expr:expr, $err:expr) => {
         match $expr {
             Some(value) => Ok(value),
-            None => Err($err),
+            None => $err,
         }
     }
 }
 
 pub trait Deserializer<E>: Iterator<Result<Token, E>> {
-    fn end_of_stream_error(&self) -> E;
+    fn end_of_stream_error<T>(&self) -> Result<T, E>;
 
-    fn syntax_error(&self) -> E;
+    fn syntax_error<T>(&self) -> Result<T, E>;
 
     #[inline]
     fn expect_token(&mut self) -> Result<Token, E> {
         match self.next() {
             Some(Ok(token)) => Ok(token),
             Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
+            None => self.end_of_stream_error(),
         }
     }
 
@@ -64,10 +64,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             TupleStart(_) => {
                 match try!(self.expect_token()) {
                     End => Ok(()),
-                    _ => Err(self.syntax_error()),
+                    _ => self.syntax_error(),
                 }
             }
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -75,7 +75,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_bool(&mut self, token: Token) -> Result<bool, E> {
         match token {
             Bool(value) => Ok(value),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -94,7 +94,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             U64(x) => to_result!(num::cast(x), self.syntax_error()),
             F32(x) => to_result!(num::cast(x), self.syntax_error()),
             F64(x) => to_result!(num::cast(x), self.syntax_error()),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -102,7 +102,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_char(&mut self, token: Token) -> Result<char, E> {
         match token {
             Char(value) => Ok(value),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -110,7 +110,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_str(&mut self, token: Token) -> Result<&'static str, E> {
         match token {
             Str(value) => Ok(value),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -119,7 +119,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match token {
             Str(value) => Ok(value.to_string()),
             String(value) => Ok(value),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -133,7 +133,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 let value: T = try!(Deserializable::deserialize(self));
                 Ok(Some(value))
             }
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -144,10 +144,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 if len == l {
                     Ok(())
                 } else {
-                    Err(self.syntax_error())
+                    self.syntax_error()
                 }
             }
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -158,10 +158,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 if name == n {
                     Ok(())
                 } else {
-                    Err(self.syntax_error())
+                    self.syntax_error()
                 }
             }
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -172,15 +172,15 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match try!(self.expect_token()) {
             Str(n) => {
                 if name != n {
-                    return Err(self.syntax_error());
+                    return self.syntax_error();
                 }
             }
             String(n) => {
                 if name != n.as_slice() {
-                    return Err(self.syntax_error());
+                    return self.syntax_error();
                 }
             }
-            _ => { return Err(self.syntax_error()); }
+            _ => { return self.syntax_error(); }
         }
 
         Deserializable::deserialize(self)
@@ -193,13 +193,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 if name == n {
                     match variants.iter().position(|variant| *variant == v) {
                         Some(position) => Ok(position),
-                        None => Err(self.syntax_error()),
+                        None => self.syntax_error(),
                     }
                 } else {
-                    Err(self.syntax_error())
+                    self.syntax_error()
                 }
             }
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -216,7 +216,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             TupleStart(len) => len,
             SeqStart(len) => len,
             MapStart(len) => len,
-            _ => { return Err(self.syntax_error()); }
+            _ => { return self.syntax_error(); }
         };
 
         expect_rest_of_collection(self, len)
@@ -227,7 +227,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             SeqStart(len) => Ok(len),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -235,7 +235,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             MapStart(len) => Ok(len),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 
@@ -243,7 +243,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            _ => Err(self.syntax_error()),
+            _ => self.syntax_error(),
         }
     }
 }
@@ -283,7 +283,7 @@ pub trait Deserializable<E, D: Deserializer<E>> {
         match d.next() {
             Some(Ok(token)) => Deserializable::deserialize_token(d, token),
             Some(Err(err)) => Err(err),
-            None => Err(d.end_of_stream_error()),
+            None => d.end_of_stream_error(),
         }
     }
 
@@ -349,7 +349,7 @@ macro_rules! deserialize_seq {
                         $seq.push(v)
                     }
                     Some(Err(err)) => { return Err(err); }
-                    None => { return Err(d.end_of_stream_error()); }
+                    None => { return d.end_of_stream_error(); }
                 }
             }
 
@@ -386,7 +386,7 @@ macro_rules! deserialize_map {
                         $seq.insert(k, v);
                     }
                     Some(Err(err)) => { return Err(err); }
-                    None => { return Err(d.end_of_stream_error()); }
+                    None => { return d.end_of_stream_error(); }
                 }
             }
 
@@ -463,11 +463,9 @@ macro_rules! deserialize_tuple (
                     $name
                 },)*);
 
-                match d.next() {
-                    Some(Ok(End)) => Ok(result),
-                    Some(Ok(_)) => Err(d.syntax_error()),
-                    Some(Err(err)) => Err(err),
-                    None => Err(d.end_of_stream_error()),
+                match try!(d.expect_token()) {
+                    End => Ok(result),
+                    _ => d.syntax_error(),
                 }
             }
         }
@@ -509,7 +507,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for IgnoreTokens {
                         Str(_) | String(_) => {
                             let _: IgnoreTokens = try!(Deserializable::deserialize(d));
                         }
-                        _token => { return Err(d.syntax_error()); }
+                        _token => { return d.syntax_error(); }
                     }
                 }
             }
@@ -548,7 +546,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for IgnoreTokens {
                 }
             }
 
-            End => Err(d.syntax_error()),
+            End => d.syntax_error(),
 
             _ => Ok(IgnoreTokens),
         }
@@ -608,7 +606,7 @@ impl GatherTokens {
                 self.gather_map(d)
             }
             End => {
-                Err(d.syntax_error())
+                d.syntax_error()
             }
             token => {
                 self.tokens.push(token);
@@ -644,7 +642,7 @@ impl GatherTokens {
                     self.tokens.push(token);
                     try!(self.gather(d))
                 }
-                _token => { return Err(d.syntax_error()); }
+                _token => { return d.syntax_error(); }
             }
         }
     }
@@ -789,14 +787,12 @@ mod tests {
     }
 
     impl Deserializer<Error> for TokenDeserializer {
-        #[inline]
-        fn end_of_stream_error(&self) -> Error {
-            EndOfStream
+        fn end_of_stream_error<T>(&self) -> Result<T, Error> {
+            Err(EndOfStream)
         }
 
-        #[inline]
-        fn syntax_error(&self) -> Error {
-            SyntaxError
+        fn syntax_error<T>(&self) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 

@@ -28,7 +28,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
 
                 Ok(Frog(x0, x1))
             }
-            _ => Err(d.syntax_error()),
+            _ => d.syntax_error(),
         }
     }
 }
@@ -247,13 +247,13 @@ mod deserializer {
 
     impl Deserializer<Error> for AnimalDeserializer {
         #[inline]
-        fn end_of_stream_error(&self) -> Error {
-            EndOfStream
+        fn end_of_stream_error<T>(&self) -> Result<T, Error> {
+            Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error(&self) -> Error {
-            SyntaxError
+        fn syntax_error<T>(&self) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 }

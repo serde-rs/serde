@@ -56,7 +56,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
                                 _ => { }
                             }
                         }
-                        _ => { return Err(d.syntax_error()); }
+                        _ => { return d.syntax_error(); }
                     }
                 }
 
@@ -64,10 +64,10 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
                     (Some(a), Some(b), Some(c)) => {
                         Ok(Inner { a: a, b: b, c: c })
                     }
-                    _ => Err(d.syntax_error()),
+                    _ => d.syntax_error(),
                 }
             }
-            _ => Err(d.syntax_error()),
+            _ => d.syntax_error(),
         }
     }
 }
@@ -106,7 +106,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
                                 _ => { }
                             }
                         }
-                        _ => { return Err(d.syntax_error()); }
+                        _ => { return d.syntax_error(); }
                     }
                 }
 
@@ -114,10 +114,10 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
                     Some(inner) => {
                         Ok(Outer { inner: inner })
                     }
-                    _ => Err(d.syntax_error()),
+                    _ => d.syntax_error(),
                 }
             }
-            _ => Err(d.syntax_error()),
+            _ => d.syntax_error(),
         }
     }
 }
@@ -446,13 +446,13 @@ mod deserializer {
 
     impl Deserializer<Error> for OuterDeserializer {
         #[inline]
-        fn end_of_stream_error(&self) -> Error {
-            EndOfStream
+        fn end_of_stream_error<T>(&self) -> Result<T, Error> {
+            Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error(&self) -> Error {
-            SyntaxError
+        fn syntax_error<T>(&self) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 }

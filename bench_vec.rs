@@ -284,13 +284,13 @@ mod deserializer {
 
     impl de::Deserializer<Error> for IntDeserializer {
         #[inline]
-        fn end_of_stream_error(&self) -> Error {
-            EndOfStream
+        fn end_of_stream_error<T>(&self) -> Result<T, Error> {
+            Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error(&self) -> Error {
-            SyntaxError
+        fn syntax_error<T>(&self) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 
@@ -339,13 +339,13 @@ mod deserializer {
 
     impl de::Deserializer<Error> for U8Deserializer {
         #[inline]
-        fn end_of_stream_error(&self) -> Error {
-            EndOfStream
+        fn end_of_stream_error<T>(&self) -> Result<T, Error> {
+            Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error(&self) -> Error {
-            SyntaxError
+        fn syntax_error<T>(&self) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 }

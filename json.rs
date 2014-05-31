@@ -308,7 +308,7 @@ impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Json {
                     Ok(Object(object))
                 }
             }
-            de::End => Err(d.syntax_error()),
+            de::End => d.syntax_error(),
         }
     }
 }
@@ -392,12 +392,12 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
 }
 
 impl de::Deserializer<ParserError> for JsonDeserializer {
-    fn end_of_stream_error(&self) -> ParserError {
-        SyntaxError(EOFWhileParsingValue, 0, 0)
+    fn end_of_stream_error<T>(&self) -> Result<T, ParserError> {
+        Err(SyntaxError(EOFWhileParsingValue, 0, 0))
     }
 
-    fn syntax_error(&self) -> ParserError {
-        SyntaxError(InvalidSyntax, 0, 0)
+    fn syntax_error<T>(&self) -> Result<T, ParserError> {
+        Err(SyntaxError(InvalidSyntax, 0, 0))
     }
 
     // Special case treating options as a nullable value.
@@ -1842,12 +1842,12 @@ impl<T: Iterator<char>> Parser<T> {
 }
 
 impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
-    fn end_of_stream_error(&self) -> ParserError {
-        SyntaxError(EOFWhileParsingValue, self.line, self.col)
+    fn end_of_stream_error<U>(&self) -> Result<U, ParserError> {
+        Err(SyntaxError(EOFWhileParsingValue, self.line, self.col))
     }
 
-    fn syntax_error(&self) -> ParserError {
-        SyntaxError(InvalidSyntax, self.line, self.col)
+    fn syntax_error<U>(&self) -> Result<U, ParserError> {
+        Err(SyntaxError(InvalidSyntax, self.line, self.col))
     }
 
     // Special case treating options as a nullable value.
@@ -2599,7 +2599,7 @@ mod tests {
 
                     Ok(Frog(x0, x1))
                 }
-                _ => Err(d.syntax_error()),
+                _ => d.syntax_error(),
             }
         }
     }
@@ -2668,7 +2668,7 @@ mod tests {
                                     _ => { }
                                 }
                             }
-                            _ => { return Err(d.syntax_error()); }
+                            _ => { return d.syntax_error(); }
                         }
                     }
 
@@ -2676,10 +2676,10 @@ mod tests {
                         (Some(a), Some(b), Some(c)) => {
                             Ok(Inner { a: a, b: b, c: c })
                         }
-                        _ => Err(d.syntax_error()),
+                        _ => d.syntax_error(),
                     }
                 }
-                _ => Err(d.syntax_error()),
+                _ => d.syntax_error(),
             }
         }
     }
@@ -2728,7 +2728,7 @@ mod tests {
                                     _ => { }
                                 }
                             }
-                            _ => { return Err(d.syntax_error()); }
+                            _ => { return d.syntax_error(); }
                         }
                     }
 
@@ -2736,10 +2736,10 @@ mod tests {
                         Some(inner) => {
                             Ok(Outer { inner: inner })
                         }
-                        _ => Err(d.syntax_error()),
+                        _ => d.syntax_error(),
                     }
                 }
-                _ => Err(d.syntax_error()),
+                _ => d.syntax_error(),
             }
         }
     }
