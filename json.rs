@@ -566,10 +566,11 @@ impl fmt::Show for ErrorCode {
     }
 }
 
-
+/*
 fn io_error_to_error(io: io::IoError) -> ParserError {
     IoError(io.kind, io.desc)
 }
+*/
 
 pub type EncodeResult = io::IoResult<()>;
 
@@ -2045,6 +2046,13 @@ pub fn from_iter<
     }
 }
 
+/// Decodes a json value from a string
+pub fn from_str<
+    'a,
+    T: de::Deserializable<ParserError, Parser<str::Chars<'a>>>
+>(s: &'a str) -> Result<T, BuilderError> {
+    from_iter(s.chars())
+}
 
 /// Decodes a json value from a `Json`.
 pub fn from_json<
@@ -2540,7 +2548,7 @@ mod tests {
     use self::test::Bencher;
 
     use super::{Json, String, List, Object};
-    use super::{Parser, ParserError, from_iter};
+    use super::{Parser, ParserError, from_iter, from_str};
     use super::{JsonDeserializer, from_json, ToJson};
     use super::{
         EOFWhileParsingList,
@@ -3973,6 +3981,7 @@ mod tests {
         assert!(stack.get(0) == Index(1));
         assert!(stack.get(1) == Key("foo"));
     }
+*/
 
     #[bench]
     fn bench_streaming_small(b: &mut Bencher) {
@@ -3998,21 +4007,21 @@ mod tests {
     #[bench]
     fn bench_small(b: &mut Bencher) {
         b.iter( || {
-            let _ = from_str(r#"{
+            let _: Json = from_str(r#"{
                 "a": 1.0,
                 "b": [
                     true,
                     "foo\nbar",
                     { "c": {"d": null} }
                 ]
-            }"#);
+            }"#).unwrap();
         });
     }
 
     fn big_json() -> String {
         let mut src = "[\n".to_string();
         for _ in range(0, 500) {
-            src.push_str(r#"{ "a": true, "b": null, "c":3.1415, "d": "Hello world", "e": \
+            src.push_str(r#"{ "a": true, "b": null, "c":3.1415, "d": "Hello world", "e":
                             [1,2,3]},"#);
         }
         src.push_str("{}]");
@@ -4035,7 +4044,6 @@ mod tests {
     #[bench]
     fn bench_large(b: &mut Bencher) {
         let src = big_json();
-        b.iter( || { let _ = from_str(src.as_slice()); });
+        b.iter( || { let _: Json = from_str(src.as_slice()).unwrap(); });
     }
-*/
 }
