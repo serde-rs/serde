@@ -479,88 +479,80 @@ deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 //////////////////////////////////////////////////////////////////////////////
 
-pub fn ignore<E, D: Deserializer<E>>(d: &mut D) -> Result<(), E> {
-    let token = match d.next() {
-        Some(Ok(token)) => token,
-        Some(Err(err)) => { return Err(err); }
-        None => { return Err(d.end_of_stream_error()); }
-    };
+/// Helper struct that will ignore tokens while taking in consideration
+/// recursive structures.
+pub struct IgnoreTokens;
 
-    ignore_token(d, token)
-}
-
-pub fn ignore_token<E, D: Deserializer<E>>(d: &mut D, token: Token) -> Result<(), E> {
-    match token {
-        Null => Ok(()),
-        Bool(_) => Ok(()),
-        Uint(_) => Ok(()),
-        U8(_) => Ok(()),
-        U16(_) => Ok(()),
-        U32(_) => Ok(()),
-        U64(_) => Ok(()),
-        Int(_) => Ok(()),
-        I8(_) => Ok(()),
-        I16(_) => Ok(()),
-        I32(_) => Ok(()),
-        I64(_) => Ok(()),
-        F32(_) => Ok(()),
-        F64(_) => Ok(()),
-        Char(_) => Ok(()),
-        Str(_) => Ok(()),
-        String(_) => Ok(()),
-        Option(true) => { ignore(d) }
-        Option(false) => { Ok(()) }
-
-        EnumStart(_, _, _) => {
-            loop {
-                match try!(d.expect_token()) {
-                    End => { return Ok(()); }
-                    token => { try!(ignore_token(d, token)); }
-                }
+impl<E, D: Deserializer<E>> Deserializable<E, D> for IgnoreTokens {
+    #[inline]
+    fn deserialize_token(d: &mut D, token: Token) -> Result<IgnoreTokens, E> {
+        match token {
+            Option(true) => {
+                Deserializable::deserialize(d)
             }
-        }
 
-        StructStart(_, _) => {
-            loop {
-                match try!(d.expect_token()) {
-                    End => { return Ok(()); }
-                    Str(_) | String(_) => { try!(ignore(d)); }
-                    token => { return Err(d.syntax_error()); }
-                }
-            }
-        }
-
-        TupleStart(_) => {
-            loop {
-                match try!(d.expect_token()) {
-                    End => { return Ok(()); }
-                    token => { try!(ignore_token(d, token)); }
-                }
-            }
-        }
-
-        SeqStart(_) => {
-            loop {
-                match try!(d.expect_token()) {
-                    End => { return Ok(()); }
-                    token => { try!(ignore_token(d, token)); }
-                }
-            }
-        }
-
-        MapStart(_) => {
-            loop {
-                match try!(d.expect_token()) {
-                    End => { return Ok(()); }
-                    token => {
-                        try!(ignore_token(d, token));
-                        try!(ignore(d));
+            EnumStart(_, _, _) => {
+                loop {
+                    match try!(d.expect_token()) {
+                        End => { return Ok(IgnoreTokens); }
+                        token => {
+                            let _: IgnoreTokens = try!(Deserializable::deserialize_token(d, token));
+                        }
                     }
                 }
             }
-        }
 
-        End => Err(d.syntax_error()),
+            StructStart(_, _) => {
+                loop {
+                    match try!(d.expect_token()) {
+                        End => { return Ok(IgnoreTokens); }
+                        Str(_) | String(_) => {
+                            let _: IgnoreTokens = try!(Deserializable::deserialize(d));
+                        }
+                        token => { return Err(d.syntax_error()); }
+                    }
+                }
+            }
+
+            TupleStart(_) => {
+                loop {
+                    match try!(d.expect_token()) {
+                        End => { return Ok(IgnoreTokens); }
+                        token => {
+                            let _: IgnoreTokens = try!(Deserializable::deserialize_token(d, token));
+                        }
+                    }
+                }
+            }
+
+            SeqStart(_) => {
+                loop {
+                    match try!(d.expect_token()) {
+                        End => { return Ok(IgnoreTokens); }
+                        token => {
+                            let _: IgnoreTokens = try!(Deserializable::deserialize_token(d, token));
+                        }
+                    }
+                }
+            }
+
+            MapStart(_) => {
+                loop {
+                    match try!(d.expect_token()) {
+                        End => { return Ok(IgnoreTokens); }
+                        token => {
+                            let _: IgnoreTokens = try!(Deserializable::deserialize_token(d, token));
+                            let _: IgnoreTokens = try!(Deserializable::deserialize(d));
+                        }
+                    }
+                }
+            }
+
+            End => Err(d.syntax_error()),
+
+            _ => Ok(IgnoreTokens),
+
+        }
     }
 }
 
