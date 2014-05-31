@@ -252,7 +252,7 @@ use serialize;
 use serialize::{Encoder, Encodable};
 
 /// Represents a json value
-#[deriving(Clone, Eq, Show)]
+#[deriving(Clone, Eq)]
 pub enum Json {
     Null,
     Boolean(bool),
@@ -2533,14 +2533,12 @@ impl<A:ToJson> ToJson for Option<A> {
     }
 }
 
-/*
 impl fmt::Show for Json {
     /// Encodes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.to_writer(f).map_err(|_| fmt::WriteError)
     }
 }
-*/
 
 #[cfg(test)]
 mod tests {
