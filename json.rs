@@ -1867,21 +1867,18 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
         // parse, but objects require us to preparse the entire object because
         // we can't guarantee the order of the map.
 
-        match token {
+        let variant = match token {
             de::String(variant) => {
-                match variants.iter().position(|v| *v == variant.as_slice()) {
-                    Some(idx) => {
-                        // Make sure to terminate the enum.
-                        self.tokens.push_front(de::End);
-                        Ok(idx)
-                    }
-                    None => self.error(UnknownVariant),
-                }
+                // Make sure to terminate the enum.
+                self.tokens.push_front(de::End);
+
+                variant
             }
             de::MapStart(len) => {
                 let mut variant = None;
                 let mut fields = None;
 
+                // Extract all the fields.
                 loop {
                     let field = match try!(self.expect_token()) {
                         de::End => { break; }
@@ -1907,6 +1904,9 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
                     _ => { return self.error(MissingField); }
                 };
 
+                // Add all the field's tokens to our buffer. We need to skip
+                // over the `SeqStart` because we're pretending we're an
+                // `EnumStart`.
                 let mut iter = fields.move_iter();
                 match iter.next() {
                     Some(de::SeqStart(_)) => { }
@@ -1914,12 +1914,16 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
                 }
                 self.tokens.extend(iter);
 
-                match variants.iter().position(|v| *v == variant.as_slice()) {
-                    Some(idx) => Ok(idx),
-                    None => self.error(UnknownVariant),
-                }
+                variant
             }
-            _ => self.error(InvalidSyntax),
+            _ => { return self.error(InvalidSyntax); }
+        };
+
+        match variants.iter().position(|v| *v == variant.as_slice()) {
+            Some(idx) => {
+                Ok(idx)
+            }
+            None => self.error(UnknownVariant),
         }
     }
 }
