@@ -551,8 +551,129 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for IgnoreTokens {
             End => Err(d.syntax_error()),
 
             _ => Ok(IgnoreTokens),
-
         }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/// Helper struct that will gather tokens while taking in consideration
+/// recursive structures.
+pub struct GatherTokens {
+    tokens: Vec<Token>,
+}
+
+impl GatherTokens {
+    #[inline]
+    pub fn unwrap(self) -> Vec<Token> {
+        self.tokens
+    }
+
+    #[inline]
+    fn gather<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+        let token = try!(d.expect_token());
+        self.gather_token(d, token)
+    }
+
+    #[inline]
+    fn gather_token<E, D: Deserializer<E>>(&mut self, d: &mut D, token: Token) -> Result<(), E> {
+        match token {
+            token @ Option(true) => {
+                self.tokens.push(token);
+                self.gather(d)
+            }
+            EnumStart(name, variant, len) => {
+                self.tokens.reserve_additional(len + 1);
+                self.tokens.push(EnumStart(name, variant, len));
+                self.gather_seq(d)
+            }
+            StructStart(name, len) => {
+                self.tokens.reserve_additional(len + 1);
+                self.tokens.push(StructStart(name, len));
+                self.gather_map(d)
+            }
+            TupleStart(len) => {
+                self.tokens.reserve_additional(len + 1);
+                self.tokens.push(TupleStart(len));
+                self.gather_seq(d)
+            }
+            SeqStart(len) => {
+                self.tokens.reserve_additional(len + 1);
+                self.tokens.push(SeqStart(len));
+                self.gather_seq(d)
+            }
+            MapStart(len) => {
+                self.tokens.reserve_additional(len + 1);
+                self.tokens.push(MapStart(len));
+                self.gather_map(d)
+            }
+            End => {
+                Err(d.syntax_error())
+            }
+            token => {
+                self.tokens.push(token);
+                Ok(())
+            }
+        }
+    }
+
+    #[inline]
+    fn gather_seq<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+        loop {
+            match try!(d.expect_token()) {
+                token @ End => {
+                    self.tokens.push(token);
+                    return Ok(());
+                }
+                token => {
+                    try!(self.gather_token(d, token));
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn gather_struct<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+        loop {
+            match try!(d.expect_token()) {
+                token @ End => {
+                    self.tokens.push(token);
+                    return Ok(());
+                }
+                token @ Str(_) | token @ String(_) => {
+                    self.tokens.push(token);
+                    try!(self.gather(d))
+                }
+                token => { return Err(d.syntax_error()); }
+            }
+        }
+    }
+
+    #[inline]
+    fn gather_map<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+        loop {
+            match try!(d.expect_token()) {
+                End => {
+                    self.tokens.push(End);
+                    return Ok(());
+                }
+                token => {
+                    try!(self.gather_token(d, token));
+                    try!(self.gather(d))
+                }
+            }
+        }
+    }
+}
+
+impl<E, D: Deserializer<E>> Deserializable<E, D> for GatherTokens {
+    #[inline]
+    fn deserialize_token(d: &mut D, token: Token) -> Result<GatherTokens, E> {
+        let mut tokens = GatherTokens {
+            tokens: vec!(),
+        };
+        try!(tokens.gather_token(d, token));
+        Ok(tokens)
     }
 }
 
