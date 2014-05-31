@@ -3417,17 +3417,18 @@ mod tests {
         check_err::<DecodeEnum>("{\"variant\": \"C\", \"fields\": []}",
                                 UnknownVariantError("C".to_string()));
     }
+    */
 
     #[test]
     fn test_find(){
-        let json_value = from_str("{\"dog\" : \"cat\"}").unwrap();
+        let json_value: Json = from_str("{\"dog\" : \"cat\"}").unwrap();
         let found_str = json_value.find(&"dog".to_string());
         assert!(found_str.is_some() && found_str.unwrap().as_string().unwrap() == "cat");
     }
 
     #[test]
     fn test_find_path(){
-        let json_value = from_str("{\"dog\":{\"cat\": {\"mouse\" : \"cheese\"}}}").unwrap();
+        let json_value: Json = from_str("{\"dog\":{\"cat\": {\"mouse\" : \"cheese\"}}}").unwrap();
         let found_str = json_value.find_path(&[&"dog".to_string(),
                                              &"cat".to_string(), &"mouse".to_string()]);
         assert!(found_str.is_some() && found_str.unwrap().as_string().unwrap() == "cheese");
@@ -3435,7 +3436,7 @@ mod tests {
 
     #[test]
     fn test_search(){
-        let json_value = from_str("{\"dog\":{\"cat\": {\"mouse\" : \"cheese\"}}}").unwrap();
+        let json_value: Json = from_str("{\"dog\":{\"cat\": {\"mouse\" : \"cheese\"}}}").unwrap();
         let found_str = json_value.search(&"mouse".to_string()).and_then(|j| j.as_string());
         assert!(found_str.is_some());
         assert!(found_str.unwrap() == "cheese");
@@ -3443,26 +3444,26 @@ mod tests {
 
     #[test]
     fn test_is_object(){
-        let json_value = from_str("{}").unwrap();
+        let json_value: Json = from_str("{}").unwrap();
         assert!(json_value.is_object());
     }
 
     #[test]
     fn test_as_object(){
-        let json_value = from_str("{}").unwrap();
+        let json_value: Json = from_str("{}").unwrap();
         let json_object = json_value.as_object();
         assert!(json_object.is_some());
     }
 
     #[test]
     fn test_is_list(){
-        let json_value = from_str("[1, 2, 3]").unwrap();
+        let json_value: Json = from_str("[1, 2, 3]").unwrap();
         assert!(json_value.is_list());
     }
 
     #[test]
     fn test_as_list(){
-        let json_value = from_str("[1, 2, 3]").unwrap();
+        let json_value: Json = from_str("[1, 2, 3]").unwrap();
         let json_list = json_value.as_list();
         let expected_length = 3;
         assert!(json_list.is_some() && json_list.unwrap().len() == expected_length);
@@ -3470,13 +3471,13 @@ mod tests {
 
     #[test]
     fn test_is_string(){
-        let json_value = from_str("\"dog\"").unwrap();
+        let json_value: Json = from_str("\"dog\"").unwrap();
         assert!(json_value.is_string());
     }
 
     #[test]
     fn test_as_string(){
-        let json_value = from_str("\"dog\"").unwrap();
+        let json_value: Json = from_str("\"dog\"").unwrap();
         let json_str = json_value.as_string();
         let expected_str = "dog";
         assert_eq!(json_str, Some(expected_str));
@@ -3484,13 +3485,13 @@ mod tests {
 
     #[test]
     fn test_is_number(){
-        let json_value = from_str("12").unwrap();
+        let json_value: Json = from_str("12").unwrap();
         assert!(json_value.is_number());
     }
 
     #[test]
     fn test_as_number(){
-        let json_value = from_str("12").unwrap();
+        let json_value: Json = from_str("12").unwrap();
         let json_num = json_value.as_number();
         let expected_num = 12f64;
         assert!(json_num.is_some() && json_num.unwrap() == expected_num);
@@ -3498,13 +3499,13 @@ mod tests {
 
     #[test]
     fn test_is_boolean(){
-        let json_value = from_str("false").unwrap();
+        let json_value: Json = from_str("false").unwrap();
         assert!(json_value.is_boolean());
     }
 
     #[test]
     fn test_as_boolean(){
-        let json_value = from_str("false").unwrap();
+        let json_value: Json = from_str("false").unwrap();
         let json_bool = json_value.as_boolean();
         let expected_bool = false;
         assert!(json_bool.is_some() && json_bool.unwrap() == expected_bool);
@@ -3512,18 +3513,19 @@ mod tests {
 
     #[test]
     fn test_is_null(){
-        let json_value = from_str("null").unwrap();
+        let json_value: Json = from_str("null").unwrap();
         assert!(json_value.is_null());
     }
 
     #[test]
     fn test_as_null(){
-        let json_value = from_str("null").unwrap();
+        let json_value: Json = from_str("null").unwrap();
         let json_null = json_value.as_null();
         let expected_null = ();
         assert!(json_null.is_some() && json_null.unwrap() == expected_null);
     }
 
+    /*
     #[test]
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
