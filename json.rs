@@ -252,7 +252,7 @@ use serialize;
 use serialize::{Encoder, Encodable};
 
 /// Represents a json value
-#[deriving(Clone, Eq)]
+#[deriving(Clone, PartialEq)]
 pub enum Json {
     Null,
     Boolean(bool),
@@ -491,7 +491,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 }
 
 /// The errors that can arise while parsing a JSON stream.
-#[deriving(Clone, Eq)]
+#[deriving(Clone, PartialEq)]
 pub enum ErrorCode {
     EOFWhileParsingList,
     EOFWhileParsingObject,
@@ -513,7 +513,7 @@ pub enum ErrorCode {
     UnrecognizedHex,
 }
 
-#[deriving(Clone, Eq, Show)]
+#[deriving(Clone, PartialEq, Show)]
 pub enum ParserError {
     /// msg, line, col
     SyntaxError(ErrorCode, uint, uint),
@@ -1230,7 +1230,7 @@ pub enum JsonEvent {
 }
 */
 
-#[deriving(Eq, Show)]
+#[deriving(PartialEq, Show)]
 enum ParserState {
     // Parse a value.
     ParseValue,
@@ -2347,7 +2347,7 @@ impl ::Decoder<DecoderError> for Decoder {
     */
 
 /// Test if two json values are less than one another
-impl Ord for Json {
+impl PartialOrd for Json {
     fn lt(&self, other: &Json) -> bool {
         match *self {
             Number(f0) => {
@@ -2577,7 +2577,7 @@ mod tests {
         })
     }
 
-    #[deriving(Eq, Show)]
+    #[deriving(PartialEq, Show)]
     enum Animal {
         Dog,
         Frog(String, int)
@@ -2620,7 +2620,7 @@ mod tests {
         }
     }
 
-    #[deriving(Eq, Show)]
+    #[deriving(PartialEq, Show)]
     struct Inner {
         a: (),
         b: uint,
@@ -2696,7 +2696,7 @@ mod tests {
         }
     }
 
-    #[deriving(Eq, Show)]
+    #[deriving(PartialEq, Show)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -3009,7 +3009,7 @@ mod tests {
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
-        T: Eq + Show + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
+        T: Show + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
     >(errors: &[(&'a str, ParserError)]) {
         for &(s, ref err) in errors.iter() {
             let v: Result<T, ParserError> = from_iter(s.chars());
@@ -3019,7 +3019,7 @@ mod tests {
 
     fn test_parse_ok<
         'a,
-        T: Eq + Show + ToJson + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
+        T: PartialEq + Show + ToJson + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
     >(errors: &[(&'a str, T)]) {
         for &(s, ref value) in errors.iter() {
             let v: T = from_iter(s.chars()).unwrap();
@@ -3031,7 +3031,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: Eq + Show + ToJson + de::Deserializable<ParserError, JsonDeserializer>
+        T: PartialEq + Show + ToJson + de::Deserializable<ParserError, JsonDeserializer>
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();

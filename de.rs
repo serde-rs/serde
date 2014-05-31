@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::num;
 use collections::{HashMap, TreeMap};
 
-#[deriving(Clone, Eq, Show)]
+#[deriving(Clone, PartialEq, Show)]
 pub enum Token {
     Null,
     Bool(bool),
@@ -413,7 +413,7 @@ impl<
 impl<
     E,
     D: Deserializer<E>,
-    K: Deserializable<E, D> + Eq + TotalOrd,
+    K: Deserializable<E, D> + TotalOrd,
     V: Deserializable<E, D>
 > Deserializable<E, D> for TreeMap<K, V> {
     #[inline]
@@ -690,7 +690,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, Eq, Show, Decodable)]
+    #[deriving(Clone, PartialEq, Show, Decodable)]
     struct Inner {
         a: (),
         b: uint,
@@ -711,7 +711,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, Eq, Show, Decodable)]
+    #[deriving(Clone, PartialEq, Show, Decodable)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -728,7 +728,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, Eq, Show, Decodable)]
+    #[deriving(Clone, PartialEq, Show, Decodable)]
     enum Animal {
         Dog,
         Frog(String, int)

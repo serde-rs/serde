@@ -6,7 +6,7 @@ use de::{Deserializer, Deserializable, Token};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Clone, Eq, Show, Decodable)]
+#[deriving(Clone, PartialEq, Show, Decodable)]
 enum Animal {
     Dog,
     Frog(String, int)

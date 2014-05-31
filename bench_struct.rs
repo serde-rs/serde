@@ -8,7 +8,7 @@ use de::{Token, Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Clone, Eq, Show, Decodable)]
+#[deriving(Clone, PartialEq, Show, Decodable)]
 struct Inner {
     a: (),
     b: uint,
@@ -74,7 +74,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Clone, Eq, Show, Decodable)]
+#[deriving(Clone, PartialEq, Show, Decodable)]
 struct Outer {
     inner: Vec<Inner>,
 }

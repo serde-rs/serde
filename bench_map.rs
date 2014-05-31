@@ -160,7 +160,7 @@ mod deserializer {
 
     use de;
 
-    #[deriving(Eq, Show)]
+    #[deriving(PartialEq, Show)]
     enum State {
         StartState,
         KeyOrEndState,
@@ -237,7 +237,7 @@ mod deserializer {
 fn run_decoder<
     E: Show,
     D: Decoder<E>,
-    T: Clone + Eq + Show + Decodable<D, E>
+    T: Clone + PartialEq + Show + Decodable<D, E>
 >(mut d: D, value: T) {
     let v: T = Decodable::decode(&mut d).unwrap();
 
@@ -277,7 +277,7 @@ fn bench_decoder_100(b: &mut Bencher) {
 fn run_deserializer<
     E: Show,
     D: Deserializer<E>,
-    T: Clone + Eq + Show + Deserializable<E, D>
+    T: Clone + PartialEq + Show + Deserializable<E, D>
 >(mut d: D, value: T) {
     let v: T = Deserializable::deserialize(&mut d).unwrap();
 
