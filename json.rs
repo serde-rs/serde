@@ -247,7 +247,7 @@ use std::vec::Vec;
 use std::vec;
 
 use de;
-use collections::{HashMap, TreeMap};
+use collections::{Deque, HashMap, RingBuf, TreeMap};
 use collections::treemap;
 
 /// Represents a json value
@@ -413,6 +413,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
         }
     }
 
+    // Special case treating enums as a String or a `{"variant": "...", "fields": [...]}`.
     #[inline]
     fn expect_enum_start(&mut self, token: de::Token, _name: &str, variants: &[&str]) -> Result<uint, ParserError> {
         let variant = match token {
@@ -478,46 +479,6 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
             }
         };
 
-
-        /*
-
-
-        let name = match self.stack.pop() {
-            String(s) => s,
-            Object(mut object) => {
-                let n = match object.pop_equiv(&"variant") {
-                    Some(String(s)) => s,
-                    Some(value) => {
-                        return Err(ExpectedError("String".to_string(),
-                                                 format!("{}", value)))
-                    }
-                    None => {
-                        return Err(MissingFieldError("variant".to_string()))
-                    }
-                };
-                match object.pop_equiv(&"fields") {
-                    Some(List(list)) => {
-                        for field in list.move_iter().rev() {
-                            self.stack.push(JsonDeserializerValueState(field));
-                        }
-                    },
-                    Some(value) => {
-                        return Err(ExpectedError("List".to_string(),
-                                                 format!("{}", value)))
-                    }
-                    None => {
-                        return Err(MissingFieldError("fields".to_string()))
-                    }
-                }
-                n
-            }
-            json => {
-                return Err(ExpectedError("String or Object".to_string(),
-                                         format!("{}", json)))
-            }
-        };
-        */
-
         match variants.iter().position(|v| *v == variant.as_slice()) {
             Some(idx) => Ok(idx),
             None => Err(UnknownVariantError(variant)),
@@ -528,22 +489,24 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 /// The errors that can arise while parsing a JSON stream.
 #[deriving(Clone, Eq)]
 pub enum ErrorCode {
-    InvalidSyntax,
-    InvalidNumber,
-    EOFWhileParsingObject,
     EOFWhileParsingList,
-    EOFWhileParsingValue,
+    EOFWhileParsingObject,
     EOFWhileParsingString,
-    KeyMustBeAString,
+    EOFWhileParsingValue,
     ExpectedColon,
-    TrailingCharacters,
     InvalidEscape,
+    InvalidNumber,
+    InvalidSyntax,
     InvalidUnicodeCodePoint,
+    KeyMustBeAString,
     LoneLeadingSurrogateInHexEscape,
-    UnexpectedEndOfHexEscape,
-    UnrecognizedHex,
+    MissingField,
     NotFourDigit,
     NotUtf8,
+    TrailingCharacters,
+    UnexpectedEndOfHexEscape,
+    UnknownVariant,
+    UnrecognizedHex,
 }
 
 #[deriving(Clone, Eq, Show)]
@@ -572,22 +535,24 @@ pub enum DecoderError {
 /// Returns a readable error string for a given error code.
 pub fn error_str(error: ErrorCode) -> &'static str {
     return match error {
-        InvalidSyntax => "invalid syntax",
-        InvalidNumber => "invalid number",
-        EOFWhileParsingObject => "EOF While parsing object",
         EOFWhileParsingList => "EOF While parsing list",
-        EOFWhileParsingValue => "EOF While parsing value",
+        EOFWhileParsingObject => "EOF While parsing object",
         EOFWhileParsingString => "EOF While parsing string",
-        KeyMustBeAString => "key must be a string",
+        EOFWhileParsingValue => "EOF While parsing value",
         ExpectedColon => "expected `:`",
-        TrailingCharacters => "trailing characters",
         InvalidEscape => "invalid escape",
-        UnrecognizedHex => "invalid \\u escape (unrecognized hex)",
+        InvalidNumber => "invalid number",
+        InvalidSyntax => "invalid syntax",
+        InvalidUnicodeCodePoint => "invalid unicode code point",
+        KeyMustBeAString => "key must be a string",
+        LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape",
+        MissingField => "missing variant",
         NotFourDigit => "invalid \\u escape (not four digits)",
         NotUtf8 => "contents not utf-8",
-        InvalidUnicodeCodePoint => "invalid unicode code point",
-        LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape",
+        TrailingCharacters => "trailing characters",
         UnexpectedEndOfHexEscape => "unexpected end of hex escape",
+        UnknownVariant => "unknown variant",
+        UnrecognizedHex => "invalid \\u escape (unrecognized hex)",
     }
 }
 
@@ -1429,11 +1394,18 @@ pub struct Parser<T> {
     col: uint,
     // A state machine is kept to make it possible to interupt and resume parsing.
     state: Vec<ParserState>,
+    tokens: RingBuf<de::Token>,
 }
 
 impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
     #[inline]
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
+        // If we've cached any tokens return them now.
+        match self.tokens.pop_front() {
+            Some(token) => { return Some(Ok(token)); }
+            None => { }
+        }
+
         let state = match self.state.pop() {
             Some(state) => state,
             None => {
@@ -1471,6 +1443,7 @@ impl<T: Iterator<char>> Parser<T> {
             line: 1,
             col: 0,
             state: vec!(ParseValue),
+            tokens: RingBuf::new(),
         };
         p.bump();
         return p;
@@ -1884,59 +1857,71 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
         }
     }
 
-    /*
+    // Special case treating enums as a String or a `{"variant": "...", "fields": [...]}`.
     #[inline]
-    fn expect_enum_start(&mut self, token: de::Token, _name: &str, variants: &[&str]) -> Result<uint, ParserError> {
+    fn expect_enum_start(&mut self,
+                         token: de::Token,
+                         name: &str,
+                         variants: &[&str]) -> Result<uint, ParserError> {
+        // It's a little tricky to deserialize enums. Strings are simple to
+        // parse, but objects require us to preparse the entire object because
+        // we can't guarantee the order of the map.
+
         match token {
-            Str(name) =>
-
-        }
-
-        let name = match self.pop() {
-            String(s) => s,
-            Object(mut o) => {
-                let n = match o.pop(&"variant".to_string()) {
-                    Some(String(s)) => s,
-                    Some(val) => {
-                        return Err(ExpectedError("String".to_string(),
-                                                 format!("{}", val)))
+            de::String(variant) => {
+                match variants.iter().position(|v| *v == variant.as_slice()) {
+                    Some(idx) => {
+                        // Make sure to terminate the enum.
+                        self.tokens.push_front(de::End);
+                        Ok(idx)
                     }
-                    None => {
-                        return Err(MissingFieldError("variant".to_string()))
-                    }
-                };
-                match o.pop(&"fields".to_string()) {
-                    Some(List(l)) => {
-                        for field in l.move_iter().rev() {
-                            self.stack.push(field.clone());
+                    None => self.error(UnknownVariant),
+                }
+            }
+            de::MapStart(len) => {
+                let mut variant = None;
+                let mut fields = None;
+
+                loop {
+                    let field = match try!(self.expect_token()) {
+                        de::End => { break; }
+                        de::String(field) => field,
+                        _ => { return self.error(InvalidSyntax); }
+                    };
+
+                    match field.as_slice() {
+                        "variant" => {
+                            let v: String = try!(de::Deserializable::deserialize(self));
+                            variant = Some(v);
                         }
-                    },
-                    Some(val) => {
-                        return Err(ExpectedError("List".to_string(),
-                                                 format!("{}", val)))
-                    }
-                    None => {
-                        return Err(MissingFieldError("fields".to_string()))
+                        "fields" => {
+                            let f: de::GatherTokens = try!(de::Deserializable::deserialize(self));
+                            fields = Some(f.unwrap());
+                        }
+                        _ => { }
                     }
                 }
-                n
-            }
-            json => {
-                return Err(ExpectedError("String or Object".to_string(),
-                                         format!("{}", json)))
-            }
-        };
-        let idx = match names.iter()
-                             .position(|n| {
-                                 str::eq_slice(*n, name.as_slice())
-                             }) {
-            Some(idx) => idx,
-            None => return Err(UnknownVariantError(name))
-        };
-        f(self, idx)
 
+                let (variant, fields) = match (variant, fields) {
+                    (Some(variant), Some(fields)) => (variant, fields),
+                    _ => { return self.error(MissingField); }
+                };
+
+                let mut iter = fields.move_iter();
+                match iter.next() {
+                    Some(de::SeqStart(_)) => { }
+                    _ => { return self.error(InvalidSyntax); }
+                }
+                self.tokens.extend(iter);
+
+                match variants.iter().position(|v| *v == variant.as_slice()) {
+                    Some(idx) => Ok(idx),
+                    None => self.error(UnknownVariant),
+                }
+            }
+            _ => self.error(InvalidSyntax),
+        }
     }
-    */
 }
 
 /*
@@ -3499,18 +3484,16 @@ mod tests {
         ]);
     }
 
-    /*
     #[test]
     fn test_parse_enum() {
         test_parse_ok([
             ("\"Dog\"", Dog),
             (
-                "{\"variant\": \"Frog\", \"fields\": [\"Henry\", 349}",
+                "{\"variant\": \"Frog\", \"fields\": [\"Henry\", 349]}",
                 Frog("Henry".to_string(), 349),
             )
         ]);
     }
-    */
 
     #[test]
     fn test_json_deserialize_enum() {
