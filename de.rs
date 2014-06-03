@@ -115,7 +115,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_strbuf(&mut self, token: Token) -> Result<String, E> {
+    fn expect_string(&mut self, token: Token) -> Result<String, E> {
         match token {
             Str(value) => Ok(value.to_string()),
             String(value) => Ok(value),
@@ -321,7 +321,7 @@ impl_deserializable!(f32, expect_num)
 impl_deserializable!(f64, expect_num)
 impl_deserializable!(char, expect_char)
 impl_deserializable!(&'static str, expect_str)
-impl_deserializable!(String, expect_strbuf)
+impl_deserializable!(String, expect_string)
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -398,7 +398,7 @@ macro_rules! deserialize_map {
 impl<
     E,
     D: Deserializer<E>,
-    K: Deserializable<E, D> + TotalEq + Hash,
+    K: Deserializable<E, D> + Eq + Hash,
     V: Deserializable<E, D>
 > Deserializable<E, D> for HashMap<K, V> {
     #[inline]
@@ -413,7 +413,7 @@ impl<
 impl<
     E,
     D: Deserializer<E>,
-    K: Deserializable<E, D> + TotalOrd,
+    K: Deserializable<E, D> + Ord,
     V: Deserializable<E, D>
 > Deserializable<E, D> for TreeMap<K, V> {
     #[inline]
