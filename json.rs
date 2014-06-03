@@ -2548,7 +2548,7 @@ mod tests {
     use serialize::Encodable;
 
     use super::{Encoder, PrettyEncoder};
-    use super::{Json, String, List, Object};
+    use super::{Json, Null, Boolean, Number, String, List, Object};
     use super::{Parser, ParserError, from_iter, from_str};
     use super::{JsonDeserializer, from_json, ToJson};
     use super::{
@@ -3859,44 +3859,118 @@ mod tests {
     }
 */
 
-    #[bench]
-    fn bench_streaming_small(b: &mut Bencher) {
-        b.iter( || {
-            let mut parser = Parser::new(
-                r#"{
-                    "a": 1.0,
-                    "b": [
-                        true,
-                        "foo\nbar",
-                        { "c": {"d": null} }
-                    ]
-                }"#.chars()
-            );
-            loop {
-                match parser.next() {
-                    None => return,
-                    _ => {}
-                }
-            }
-        });
+    fn small_json() -> String {
+        r#"{
+            "a": 1.0,
+            "b": [
+                true,
+                "foo\nbar",
+                { "c": {"d": null} }
+            ]
+        }"#.to_string()
     }
+
     #[bench]
-    fn bench_small(b: &mut Bencher) {
+    fn bench_decoder_streaming_small(b: &mut Bencher) {
+        use serialize::json;
+        let src = small_json();
         b.iter( || {
-            let _: Json = from_str(r#"{
-                "a": 1.0,
-                "b": [
-                    true,
-                    "foo\nbar",
-                    { "c": {"d": null} }
-                ]
-            }"#).unwrap();
+            let mut parser = json::Parser::new(src.as_slice().chars());
+            assert_eq!(parser.next(), Some(json::ObjectStart));
+            assert_eq!(parser.next(), Some(json::NumberValue(1.0)));
+            assert_eq!(parser.stack().top(), Some(json::Key("a")));
+            assert_eq!(parser.next(), Some(json::ListStart));
+            assert_eq!(parser.stack().top(), Some(json::Key("b")));
+            assert_eq!(parser.next(), Some(json::BooleanValue(true)));
+            assert_eq!(parser.next(), Some(json::StringValue("foo\nbar".to_string())));
+            assert_eq!(parser.next(), Some(json::ObjectStart));
+            assert_eq!(parser.next(), Some(json::ObjectStart));
+            assert_eq!(parser.stack().top(), Some(json::Key("c")));
+            assert_eq!(parser.next(), Some(json::NullValue));
+            assert_eq!(parser.stack().top(), Some(json::Key("d")));
+            assert_eq!(parser.next(), Some(json::ObjectEnd));
+            assert_eq!(parser.next(), Some(json::ObjectEnd));
+            assert_eq!(parser.next(), Some(json::ListEnd));
+            assert_eq!(parser.next(), Some(json::ObjectEnd));
+            assert_eq!(parser.next(), None);
         });
     }
 
-    fn big_json() -> String {
+    #[bench]
+    fn bench_deserializer_streaming_small(b: &mut Bencher) {
+        let src = small_json();
+        b.iter( || {
+            let mut parser = Parser::new(src.as_slice().chars());
+            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
+            assert_eq!(parser.next(), Some(Ok(de::String("a".to_string()))));
+            assert_eq!(parser.next(), Some(Ok(de::F64(1.0))));
+            assert_eq!(parser.next(), Some(Ok(de::String("b".to_string()))));
+            assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
+            assert_eq!(parser.next(), Some(Ok(de::Bool(true))));
+            assert_eq!(parser.next(), Some(Ok(de::String("foo\nbar".to_string()))));
+            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
+            assert_eq!(parser.next(), Some(Ok(de::String("c".to_string()))));
+            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
+            assert_eq!(parser.next(), Some(Ok(de::String("d".to_string()))));
+            assert_eq!(parser.next(), Some(Ok(de::Null)));
+            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), None);
+        });
+    }
+
+    #[bench]
+    fn bench_decoder_small(b: &mut Bencher) {
+        use serialize::json;
+        let src = small_json();
+        b.iter( || {
+            let json: json::Json = json::from_str(src.as_slice()).unwrap();
+            assert_eq!(
+                json,
+                json::Object(box treemap!(
+                    "a".to_string() => json::Number(1.0),
+                    "b".to_string() => json::List(vec!(
+                        json::Boolean(true),
+                        json::String("foo\nbar".to_string()),
+                        json::Object(box treemap!(
+                            "c".to_string() => json::Object(box treemap!(
+                                "d".to_string() => json::Null
+                            ))
+                        ))
+                    ))
+                ))
+            );
+        });
+    }
+
+    #[bench]
+    fn bench_deserializer_small(b: &mut Bencher) {
+        let src = small_json();
+        b.iter( || {
+            let json: Json = from_str(src.as_slice()).unwrap();
+            assert_eq!(
+                json,
+                Object(treemap!(
+                    "a".to_string() => Number(1.0),
+                    "b".to_string() => List(vec!(
+                        Boolean(true),
+                        String("foo\nbar".to_string()),
+                        Object(treemap!(
+                            "c".to_string() => Object(treemap!(
+                                "d".to_string() => Null
+                            ))
+                        ))
+                    ))
+                ))
+            );
+        });
+    }
+
+    fn big_json(count: uint) -> String {
         let mut src = "[\n".to_string();
-        for _ in range(0, 500) {
+        for _ in range(0, count) {
             src.push_str(r#"{ "a": true, "b": null, "c":3.1415, "d": "Hello world", "e":
                             [1,2,3]},"#);
         }
@@ -3905,21 +3979,150 @@ mod tests {
     }
 
     #[bench]
-    fn bench_streaming_large(b: &mut Bencher) {
-        let src = big_json();
+    fn bench_decoder_streaming_large(b: &mut Bencher) {
+        use serialize::json;
+
+        let count = 500;
+        let src = big_json(count);
+
+        b.iter( || {
+            let mut parser = json::Parser::new(src.as_slice().chars());
+            assert_eq!(parser.next(), Some(json::ListStart));
+            for _ in range(0, count) {
+                assert_eq!(parser.next(), Some(json::ObjectStart));
+
+                assert_eq!(parser.next(), Some(json::BooleanValue(true)));
+                assert_eq!(parser.stack().top(), Some(json::Key("a")));
+
+                assert_eq!(parser.next(), Some(json::NullValue));
+                assert_eq!(parser.stack().top(), Some(json::Key("b")));
+
+                assert_eq!(parser.next(), Some(json::NumberValue(3.1415)));
+                assert_eq!(parser.stack().top(), Some(json::Key("c")));
+
+                assert_eq!(parser.next(), Some(json::StringValue("Hello world".to_string())));
+                assert_eq!(parser.stack().top(), Some(json::Key("d")));
+
+                assert_eq!(parser.next(), Some(json::ListStart));
+                assert_eq!(parser.stack().top(), Some(json::Key("e")));
+                assert_eq!(parser.next(), Some(json::NumberValue(1.0)));
+                assert_eq!(parser.next(), Some(json::NumberValue(2.0)));
+                assert_eq!(parser.next(), Some(json::NumberValue(3.0)));
+                assert_eq!(parser.next(), Some(json::ListEnd));
+
+                assert_eq!(parser.next(), Some(json::ObjectEnd));
+            }
+            assert_eq!(parser.next(), Some(json::ObjectStart));
+            assert_eq!(parser.next(), Some(json::ObjectEnd));
+            assert_eq!(parser.next(), Some(json::ListEnd));
+            assert_eq!(parser.next(), None);
+        });
+    }
+
+    #[bench]
+    fn bench_decoder_large(b: &mut Bencher) {
+        use serialize::json;
+
+        let count = 500;
+        let src = big_json(count);
+
+        let mut list = vec!();
+        for _ in range(0, count) {
+            list.push(json::Object(box treemap!(
+                "a".to_string() => json::Boolean(true),
+                "b".to_string() => json::Null,
+                "c".to_string() => json::Number(3.1415),
+                "d".to_string() => json::String("Hello world".to_string()),
+                "e".to_string() => json::List(vec!(
+                    json::Number(1.0),
+                    json::Number(2.0),
+                    json::Number(3.0)
+                ))
+            )));
+        }
+        list.push(json::Object(box TreeMap::new()));
+        let list = json::List(list);
+
+        b.iter( || {
+            let json: json::Json = json::from_str(src.as_slice()).unwrap();
+            assert_eq!(json, list);
+        });
+    }
+
+    #[bench]
+    fn bench_deserializer_streaming_large(b: &mut Bencher) {
+        let count = 500;
+        let src = big_json(count);
+
         b.iter( || {
             let mut parser = Parser::new(src.as_slice().chars());
+
+            assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
+            for _ in range(0, count) {
+                assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
+
+                assert_eq!(parser.next(), Some(Ok(de::String("a".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(de::Bool(true))));
+
+                assert_eq!(parser.next(), Some(Ok(de::String("b".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(de::Null)));
+
+                assert_eq!(parser.next(), Some(Ok(de::String("c".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(de::F64(3.1415))));
+
+                assert_eq!(parser.next(), Some(Ok(de::String("d".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(de::String("Hello world".to_string()))));
+
+                assert_eq!(parser.next(), Some(Ok(de::String("e".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
+                assert_eq!(parser.next(), Some(Ok(de::F64(1.0))));
+                assert_eq!(parser.next(), Some(Ok(de::F64(2.0))));
+                assert_eq!(parser.next(), Some(Ok(de::F64(3.0))));
+                assert_eq!(parser.next(), Some(Ok(de::End)));
+
+                assert_eq!(parser.next(), Some(Ok(de::End)));
+            }
+            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
+            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), None);
+
+
             loop {
                 match parser.next() {
                     None => return,
-                    _ => {}
+                    Some(Ok(_)) => { }
+                    Some(Err(err)) => { fail!("error: {}", err); }
                 }
             }
         });
     }
+
     #[bench]
-    fn bench_large(b: &mut Bencher) {
-        let src = big_json();
-        b.iter( || { let _: Json = from_str(src.as_slice()).unwrap(); });
+    fn bench_deserializer_large(b: &mut Bencher) {
+        let count = 500;
+        let src = big_json(count);
+
+        let mut list = vec!();
+        for _ in range(0, count) {
+            list.push(Object(treemap!(
+                "a".to_string() => Boolean(true),
+                "b".to_string() => Null,
+                "c".to_string() => Number(3.1415),
+                "d".to_string() => String("Hello world".to_string()),
+                "e".to_string() => List(vec!(
+                    Number(1.0),
+                    Number(2.0),
+                    Number(3.0)
+                ))
+            )));
+        }
+        list.push(Object(TreeMap::new()));
+        let list = List(list);
+
+        b.iter( || {
+            let json: Json = from_str(src.as_slice()).unwrap();
+            assert_eq!(json, list);
+        });
     }
 }
