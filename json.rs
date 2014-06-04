@@ -71,7 +71,7 @@ fn main() {
     let to_encode_object = TestStruct{data_str:"example of string to encode".to_string()};
     let mut m = io::MemWriter::new();
     {
-        let mut encoder = json::Encoder::new(&mut m as &mut std::io::Writer);
+        let mut encoder = json::Encoder::new(&mut m as &mut Writer);
         match to_encode_object.encode(&mut encoder) {
             Ok(()) => (),
             Err(e) => fail!("json encoding error: {}", e)
@@ -602,13 +602,13 @@ fn spaces(n: uint) -> String {
 
 /// A structure for implementing serialization to JSON.
 pub struct Encoder<'a> {
-    wr: &'a mut io::Writer,
+    wr: &'a mut Writer,
 }
 
 impl<'a> Encoder<'a> {
     /// Creates a new JSON encoder whose output will be written to the writer
     /// specified.
-    pub fn new<'a>(wr: &'a mut io::Writer) -> Encoder<'a> {
+    pub fn new<'a>(wr: &'a mut Writer) -> Encoder<'a> {
         Encoder { wr: wr }
     }
 
@@ -620,7 +620,7 @@ impl<'a> Encoder<'a> {
        //Serialize the object in a string using a writer
         let mut m = MemWriter::new();
         {
-            let mut encoder = Encoder::new(&mut m as &mut io::Writer);
+            let mut encoder = Encoder::new(&mut m as &mut Writer);
             // MemWriter never Errs
             let _ = to_encode_object.encode(&mut encoder);
         }
@@ -816,13 +816,13 @@ impl<'a> serialize::Encoder<io::IoError> for Encoder<'a> {
 /// Another encoder for JSON, but prints out human-readable JSON instead of
 /// compact data
 pub struct PrettyEncoder<'a> {
-    wr: &'a mut io::Writer,
+    wr: &'a mut Writer,
     indent: uint,
 }
 
 impl<'a> PrettyEncoder<'a> {
     /// Creates a new encoder whose output will be written to the specified writer
-    pub fn new<'a>(wr: &'a mut io::Writer) -> PrettyEncoder<'a> {
+    pub fn new<'a>(wr: &'a mut Writer) -> PrettyEncoder<'a> {
         PrettyEncoder {
             wr: wr,
             indent: 0,
@@ -1063,14 +1063,14 @@ impl<E: serialize::Encoder<S>, S> serialize::Encodable<E, S> for Json {
 
 impl Json {
     /// Encodes a json value into an io::writer.  Uses a single line.
-    pub fn to_writer(&self, wr: &mut io::Writer) -> EncodeResult {
+    pub fn to_writer(&self, wr: &mut Writer) -> EncodeResult {
         let mut encoder = Encoder::new(wr);
         self.encode(&mut encoder)
     }
 
     /// Encodes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
-    pub fn to_pretty_writer(&self, wr: &mut io::Writer) -> EncodeResult {
+    pub fn to_pretty_writer(&self, wr: &mut Writer) -> EncodeResult {
         let mut encoder = PrettyEncoder::new(wr);
         self.encode(&mut encoder)
     }
@@ -1078,7 +1078,7 @@ impl Json {
     /// Encodes a json value into a string
     pub fn to_pretty_str(&self) -> String {
         let mut s = MemWriter::new();
-        self.to_pretty_writer(&mut s as &mut io::Writer).unwrap();
+        self.to_pretty_writer(&mut s as &mut Writer).unwrap();
         str::from_utf8(s.unwrap().as_slice()).unwrap().to_string()
     }
 
@@ -2577,7 +2577,7 @@ mod tests {
         })
     }
 
-    #[deriving(PartialEq, Show)]
+    #[deriving(PartialEq, Show, Encodable, Decodable)]
     enum Animal {
         Dog,
         Frog(String, int)
@@ -2620,7 +2620,7 @@ mod tests {
         }
     }
 
-    #[deriving(PartialEq, Show)]
+    #[deriving(PartialEq, Show, Encodable, Decodable)]
     struct Inner {
         a: (),
         b: uint,
@@ -2696,7 +2696,7 @@ mod tests {
         }
     }
 
-    #[deriving(PartialEq, Show)]
+    #[deriving(PartialEq, Show, Encodable, Decodable)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -2752,19 +2752,6 @@ mod tests {
                 )
             )
         }
-    }
-
-    /*
-    fn mk_object(items: &[(String, Json)]) -> Json {
-        let mut d = box TreeMap::new();
-
-        for item in items.iter() {
-            match *item {
-                (ref key, ref value) => { d.insert((*key).clone(), (*value).clone()); },
-            }
-        };
-
-        Object(d)
     }
 
     #[test]
@@ -2844,29 +2831,29 @@ mod tests {
 
     #[test]
     fn test_write_object() {
-        assert_eq!(mk_object([]).to_str().into_string(), "{}".to_string());
-        assert_eq!(mk_object([]).to_pretty_str().into_string(), "{}".to_string());
+        assert_eq!(Object(treemap!()).to_str().into_string(), "{}".to_string());
+        assert_eq!(Object(treemap!()).to_pretty_str().into_string(), "{}".to_string());
 
         assert_eq!(
-            mk_object([
-                ("a".to_string(), Boolean(true))
-            ]).to_str().into_string(),
+            Object(treemap!(
+                "a".to_string() => Boolean(true)
+            )).to_str().into_string(),
             "{\"a\":true}".to_string()
         );
         assert_eq!(
-            mk_object([("a".to_string(), Boolean(true))]).to_pretty_str(),
+            Object(treemap!("a".to_string() => Boolean(true))).to_pretty_str(),
             "\
             {\n  \
                 \"a\": true\n\
             }".to_string()
         );
 
-        let complex_obj = mk_object([
-                ("b".to_string(), List(vec![
-                    mk_object([("c".to_string(), String("\x0c\r".to_string()))]),
-                    mk_object([("d".to_string(), String("".to_string()))])
-                ]))
-            ]);
+        let complex_obj = Object(treemap!(
+            "b".to_string() => List(vec!(
+                Object(treemap!("c".to_string() => String("\x0c\r".to_string()))),
+                Object(treemap!("d".to_string() => String("".to_string())))
+            ))
+        ));
 
         assert_eq!(
             complex_obj.to_str().into_string(),
@@ -2892,13 +2879,13 @@ mod tests {
             }".to_string()
         );
 
-        let a = mk_object([
-            ("a".to_string(), Boolean(true)),
-            ("b".to_string(), List(vec![
-                mk_object([("c".to_string(), String("\x0c\r".to_string()))]),
-                mk_object([("d".to_string(), String("".to_string()))])
-            ]))
-        ]);
+        let a = Object(treemap!(
+            "a".to_string() => Boolean(true),
+            "b".to_string() => List(vec!(
+                Object(treemap!("c".to_string() => String("\x0c\r".to_string()))),
+                Object(treemap!("d".to_string() => String("".to_string())))
+            ))
+        ));
 
         // We can't compare the strings directly because the object fields be
         // printed in a different order.
@@ -2907,12 +2894,12 @@ mod tests {
                    from_str(a.to_pretty_str().as_slice()).unwrap());
     }
 
-    fn with_str_writer(f: |&mut io::Writer|) -> String {
+    fn with_str_writer(f: |&mut Writer|) -> String {
         use std::io::MemWriter;
         use std::str;
 
         let mut m = MemWriter::new();
-        f(&mut m as &mut io::Writer);
+        f(&mut m as &mut Writer);
         str::from_utf8(m.unwrap().as_slice()).unwrap().to_string()
     }
 
@@ -2988,23 +2975,6 @@ mod tests {
         });
         assert_eq!(s, "null".to_string());
     }
-    #[test]
-    fn test_read_identifiers() {
-        ("n", SyntaxError(InvalidSyntax, 1, 2)),
-        ("nul", SyntaxError(InvalidSyntax, 1, 4)),
-        ("t", SyntaxError(InvalidSyntax, 1, 2)),
-        ("truz", SyntaxError(InvalidSyntax, 1, 4)),
-        ("f", SyntaxError(InvalidSyntax, 1, 2)),
-        ("faz", SyntaxError(InvalidSyntax, 1, 3)),
-
-        assert_eq!(from_str("null"), Ok(Null));
-        assert_eq!(from_str("true"), Ok(Boolean(true)));
-        assert_eq!(from_str("false"), Ok(Boolean(false)));
-        assert_eq!(from_str(" null "), Ok(Null));
-        assert_eq!(from_str(" true "), Ok(Boolean(true)));
-        assert_eq!(from_str(" false "), Ok(Boolean(false)));
-    }
-    */
 
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
@@ -3529,7 +3499,6 @@ mod tests {
     #[test]
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
-        use std::io::Writer;
         use std::io::MemWriter;
         use collections::HashMap;
         let mut hm: HashMap<uint, bool> = HashMap::new();
@@ -3546,7 +3515,6 @@ mod tests {
     #[test]
     fn test_prettyencode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
-        use std::io::Writer;
         use std::io::MemWriter;
         use collections::HashMap;
         let mut hm: HashMap<uint, bool> = HashMap::new();
