@@ -1,5 +1,5 @@
 use std::fmt::Show;
-use collections::HashMap;
+use std::collections::HashMap;
 use test::Bencher;
 
 use serialize::{Decoder, Decodable};
@@ -17,8 +17,8 @@ enum Error {
 //////////////////////////////////////////////////////////////////////////////
 
 mod decoder {
-    use collections::HashMap;
-    use collections::hashmap::MoveEntries;
+    use std::collections::HashMap;
+    use std::collections::hashmap::MoveEntries;
     use serialize;
 
     use super::{Error, EndOfStream, SyntaxError};
@@ -153,8 +153,8 @@ mod decoder {
 //////////////////////////////////////////////////////////////////////////////
 
 mod deserializer {
-    use collections::HashMap;
-    use collections::hashmap::MoveEntries;
+    use std::collections::HashMap;
+    use std::collections::hashmap::MoveEntries;
 
     use super::{Error, EndOfStream, SyntaxError};
 

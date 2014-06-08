@@ -99,12 +99,9 @@ A basic `ToJson` example using a TreeMap of attribute name / attribute value:
 
 
 ```rust
-extern crate collections;
-extern crate serialize;
-
+use std::collections::TreeMap;
 use serialize::json;
 use serialize::json::ToJson;
-use collections::TreeMap;
 
 pub struct MyStruct  {
     attr1: u8,
@@ -190,12 +187,9 @@ This example use the ToJson impl to deserialize the JSON string.
 Example of `ToJson` trait implementation for TestStruct1.
 
 ```rust
-extern crate serialize;
-extern crate collections;
-
+use std::collections::TreeMap;
 use serialize::json::ToJson;
 use serialize::{json, Encodable, Decodable};
-use collections::TreeMap;
 
 #[deriving(Decodable, Encodable)] // generate Decodable, Encodable impl.
 pub struct TestStruct1  {
@@ -234,6 +228,8 @@ fn main() {
 */
 
 use std::char;
+use std::collections::{Deque, HashMap, RingBuf, TreeMap};
+use std::collections::treemap;
 use std::f64;
 use std::fmt;
 use std::io::MemWriter;
@@ -246,8 +242,6 @@ use std::vec::Vec;
 use std::vec;
 
 use de;
-use collections::{Deque, HashMap, RingBuf, TreeMap};
-use collections::treemap;
 use serialize;
 use serialize::{Encoder, Encodable};
 
@@ -2567,11 +2561,11 @@ mod tests {
 
     use std::fmt::Show;
     use std::str;
-    use collections::TreeMap;
+    use std::collections::TreeMap;
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
-            let mut _m = ::collections::TreeMap::new();
+            let mut _m = ::std::collections::TreeMap::new();
             $(_m.insert($k, $v);)*
             _m
         })
@@ -3500,7 +3494,7 @@ mod tests {
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
         use std::io::MemWriter;
-        use collections::HashMap;
+        use std::collections::HashMap;
         let mut hm: HashMap<uint, bool> = HashMap::new();
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
@@ -3516,7 +3510,7 @@ mod tests {
     fn test_prettyencode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
         use std::io::MemWriter;
-        use collections::HashMap;
+        use std::collections::HashMap;
         let mut hm: HashMap<uint, bool> = HashMap::new();
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
@@ -3532,7 +3526,7 @@ mod tests {
     /*
     #[test]
     fn test_hashmap_with_numeric_key_can_handle_double_quote_delimited_key() {
-        use collections::HashMap;
+        use std::collections::HashMap;
         let json_str = "{\"1\":true}";
         let map: HashMap<uint, bool> = from_str(json_str).unwrap();
         let mut m = HashMap::new();

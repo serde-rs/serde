@@ -10,7 +10,7 @@
 
 use std::hash::Hash;
 use std::num;
-use collections::{HashMap, TreeMap};
+use std::collections::{HashMap, TreeMap};
 
 #[deriving(Clone, PartialEq, Show)]
 pub enum Token {
@@ -689,7 +689,7 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for GatherTokens {
 
 #[cfg(test)]
 mod tests {
-    use collections::HashMap;
+    use std::collections::HashMap;
 
     use serialize::Decoder;
 

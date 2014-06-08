@@ -1,4 +1,4 @@
-use collections::HashMap;
+use std::collections::HashMap;
 use test::Bencher;
 
 use serialize::{Decoder, Decodable};
@@ -131,7 +131,7 @@ enum Error {
 }
 
 mod decoder {
-    use collections::HashMap;
+    use std::collections::HashMap;
     use serialize::Decoder;
 
     use super::{Outer, Inner, Error, SyntaxError};
@@ -348,7 +348,7 @@ mod decoder {
 //////////////////////////////////////////////////////////////////////////////
 
 mod deserializer {
-    use collections::HashMap;
+    use std::collections::HashMap;
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
     use de::Deserializer;
     use de::{Token, Uint, Char, String, Null, TupleStart, StructStart, Str, SeqStart, MapStart, End, Option};

@@ -1,7 +1,5 @@
 #![feature(macro_rules, phase)]
 
-extern crate collections;
-
 // test harness access
 #[cfg(test)]
 extern crate test;
