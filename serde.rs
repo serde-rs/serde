@@ -14,6 +14,7 @@ extern crate debug;
 extern crate serialize;
 
 pub mod de;
+pub mod ser;
 pub mod json;
 
 //#[cfg(test)]
