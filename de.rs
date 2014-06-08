@@ -1,4 +1,12 @@
-extern crate collections;
+// Copyright 2012-2014 The Rust Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// http://rust-lang.org/COPYRIGHT.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 
 use std::hash::Hash;
 use std::num;
@@ -439,11 +447,13 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
-macro_rules! peel(($name:ident, $($other:ident,)*) => (deserialize_tuple!($($other,)*)))
+macro_rules! peel {
+    ($name:ident, $($other:ident,)*) => (impl_deserialize_tuple!($($other,)*))
+}
 
-macro_rules! deserialize_tuple (
+macro_rules! impl_deserialize_tuple {
     () => ();
-    ( $($name:ident,)+ ) => (
+    ( $($name:ident,)+ ) => {
         impl<
             E,
             D: Deserializer<E>,
@@ -470,10 +480,10 @@ macro_rules! deserialize_tuple (
             }
         }
         peel!($($name,)*)
-    )
-)
+    }
+}
 
-deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
+impl_deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -823,7 +833,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tokens_strbuf() {
+    fn test_tokens_string() {
         let tokens = vec!(
             String("a".to_string()),
         );
