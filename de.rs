@@ -160,6 +160,14 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
+    fn expect_tuple_end(&mut self) -> Result<(), E> {
+        match try!(self.expect_token()) {
+            End => Ok(()),
+            _ => self.syntax_error(),
+        }
+    }
+
+    #[inline]
     fn expect_struct_start(&mut self, token: Token, name: &str) -> Result<(), E> {
         match token {
             StructStart(n, _) => {
@@ -195,6 +203,14 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
+    fn expect_struct_end(&mut self) -> Result<(), E> {
+        match try!(self.expect_token()) {
+            End => Ok(()),
+            _ => self.syntax_error(),
+        }
+    }
+
+    #[inline]
     fn expect_enum_start(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
         match token {
             EnumStart(n, v, _) => {
@@ -207,6 +223,14 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                     self.syntax_error()
                 }
             }
+            _ => self.syntax_error(),
+        }
+    }
+
+    #[inline]
+    fn expect_enum_end(&mut self) -> Result<(), E> {
+        match try!(self.expect_token()) {
+            End => Ok(()),
             _ => self.syntax_error(),
         }
     }
@@ -243,14 +267,6 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             MapStart(len) => Ok(len),
-            _ => self.syntax_error(),
-        }
-    }
-
-    #[inline]
-    fn expect_end(&mut self) -> Result<(), E> {
-        match try!(self.expect_token()) {
-            End => Ok(()),
             _ => self.syntax_error(),
         }
     }
@@ -473,10 +489,9 @@ macro_rules! impl_deserialize_tuple {
                     $name
                 },)*);
 
-                match try!(d.expect_token()) {
-                    End => Ok(result),
-                    _ => d.syntax_error(),
-                }
+                try!(d.expect_tuple_end());
+
+                Ok(result)
             }
         }
         peel!($($name,)*)
@@ -714,7 +729,7 @@ mod tests {
             let a = try!(d.expect_struct_field("a"));
             let b = try!(d.expect_struct_field("b"));
             let c = try!(d.expect_struct_field("c"));
-            try!(d.expect_end());
+            try!(d.expect_struct_end());
             Ok(Inner { a: a, b: b, c: c })
         }
     }
@@ -731,7 +746,7 @@ mod tests {
         fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
             try!(d.expect_struct_start(token, "Outer"));
             let inner = try!(d.expect_struct_field("inner"));
-            try!(d.expect_end());
+            try!(d.expect_struct_end());
             Ok(Outer { inner: inner })
         }
     }
@@ -749,13 +764,13 @@ mod tests {
         fn deserialize_token(d: &mut D, token: Token) -> Result<Animal, E> {
             match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
                 0 => {
-                    try!(d.expect_end());
+                    try!(d.expect_enum_end());
                     Ok(Dog)
                 }
                 1 => {
                     let x0 = try!(Deserializable::deserialize(d));
                     let x1 = try!(Deserializable::deserialize(d));
-                    try!(d.expect_end());
+                    try!(d.expect_enum_end());
                     Ok(Frog(x0, x1))
                 }
                 _ => unreachable!(),

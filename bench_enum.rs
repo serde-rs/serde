@@ -17,14 +17,14 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
     fn deserialize_token(d: &mut D, token: Token) -> Result<Animal, E> {
         match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
             0 => {
-                try!(d.expect_end());
+                try!(d.expect_enum_end());
                 Ok(Dog)
             }
             1 => {
                 let x0 = try!(Deserializable::deserialize(d));
                 let x1 = try!(Deserializable::deserialize(d));
 
-                try!(d.expect_end());
+                try!(d.expect_enum_end());
 
                 Ok(Frog(x0, x1))
             }

@@ -228,7 +228,7 @@ fn main() {
 */
 
 use std::char;
-use std::collections::{Deque, HashMap, RingBuf, TreeMap};
+use std::collections::{HashMap, TreeMap};
 use std::collections::treemap;
 use std::f64;
 use std::fmt;
@@ -293,14 +293,9 @@ impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Json {
             de::EnumStart(_, name, len) => {
                 let token = de::SeqStart(len);
                 let fields: Vec<Json> = try!(de::Deserializable::deserialize_token(d, token));
-                if fields.is_empty() {
-                    Ok(String(name.to_string()))
-                } else {
-                    let mut object = TreeMap::new();
-                    object.insert("variant".to_string(), String(name.to_string()));
-                    object.insert("fields".to_string(), List(fields));
-                    Ok(Object(object))
-                }
+                let mut object = TreeMap::new();
+                object.insert(name.to_string(), List(fields));
+                Ok(Object(object))
             }
             de::End => d.syntax_error(),
         }
@@ -415,10 +410,6 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
                          _name: &str,
                          variants: &[&str]) -> Result<uint, ParserError> {
         let variant = match token {
-            de::String(variant) => {
-                self.stack.push(JsonDeserializerEndState);
-                variant
-            }
             de::MapStart(_) => {
                 let state = match self.stack.pop() {
                     Some(state) => state,
@@ -430,38 +421,21 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
                     _ => { fail!("state machine error, expected an object"); }
                 };
 
-                let mut variant = None;
-                let mut fields = None;
-
-                for (key, value) in iter {
-                    if key.equiv(&"variant") {
-                        match value {
-                            String(v) => { variant = Some(v); }
-                            value => {
-                                return Err(ExpectedError("String".to_string(),
-                                                         format!("{}", value)))
-                            }
-                        }
-                    } else if key.equiv(&"fields") {
-                        match value {
-                            List(v) => { fields = Some(v); }
-                            value => {
-                                return Err(ExpectedError("List".to_string(),
-                                                         format!("{}", value)))
-                            }
-                        }
+                let (variant, fields) = match iter.next() {
+                    Some((variant, List(fields))) => (variant, fields),
+                    Some((key, value)) => {
+                        return Err(ExpectedError("List".to_string(), format!("{} => {}", key, value)));
                     }
-                }
-
-                let (variant, fields) = match (variant, fields) {
-                    (Some(variant), Some(fields)) => (variant, fields),
-                    (None, _) => {
-                        return Err(MissingFieldError("variant".to_string()))
-                    }
-                    (_, None) => {
-                        return Err(MissingFieldError("fields".to_string()))
-                    }
+                    None => { return Err(MissingFieldError("<variant-name>".to_string())); }
                 };
+
+                // Error out if there are other fields in the enum.
+                match iter.next() {
+                    Some((key, value)) => {
+                        return Err(ExpectedError("None".to_string(), format!("{} => {}", key, value)));
+                    }
+                    None => { }
+                }
 
                 self.stack.push(JsonDeserializerEndState);
 
@@ -673,20 +647,15 @@ impl<'a> serialize::Encoder<io::IoError> for Encoder<'a> {
     fn emit_enum_variant(&mut self,
                          name: &str,
                          _id: uint,
-                         cnt: uint,
+                         _cnt: uint,
                          f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        // enums are encoded as strings or objects
-        // Bunny => "Bunny"
-        // Kangaroo(34,"William") => {"variant": "Kangaroo", "fields": [34,"William"]}
-        if cnt == 0 {
-            write!(self.wr, "{}", escape_str(name))
-        } else {
-            try!(write!(self.wr, "\\{\"variant\":"));
-            try!(write!(self.wr, "{}", escape_str(name)));
-            try!(write!(self.wr, ",\"fields\":["));
-            try!(f(self));
-            write!(self.wr, "]\\}")
-        }
+        // enums are encoded as objects
+        // Kangaroo(34,"William") => {"Kangaroo": [34,"William"]}
+        try!(write!(self.wr, "\\{"));
+        try!(write!(self.wr, "{}", escape_str(name)));
+        try!(write!(self.wr, ":["));
+        try!(f(self));
+        write!(self.wr, "]\\}")
     }
 
     fn emit_enum_variant_arg(&mut self,
@@ -872,15 +841,20 @@ impl<'a> serialize::Encoder<io::IoError> for PrettyEncoder<'a> {
                          _: uint,
                          cnt: uint,
                          f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
+        // enums are encoded as objects
+        // Kangaroo(34,"William") => {"Kangaroo": [34,"William"]}
         if cnt == 0 {
-            write!(self.wr, "{}", escape_str(name))
+            write!(self.wr, "\\{{}: []\\}", escape_str(name))
         } else {
             self.indent += 2;
-            try!(write!(self.wr, "[\n{}{},\n", spaces(self.indent),
+            try!(write!(self.wr, "\\{\n{}{}: [\n", spaces(self.indent),
                           escape_str(name)));
+            self.indent += 2;
             try!(f(self));
             self.indent -= 2;
-            write!(self.wr, "\n{}]", spaces(self.indent))
+            try!(write!(self.wr, "\n{}]", spaces(self.indent)));
+            self.indent -= 2;
+            write!(self.wr, "\n{}\\}", spaces(self.indent))
         }
     }
 
@@ -1394,20 +1368,13 @@ pub struct Parser<T> {
     line: uint,
     col: uint,
     // A state machine is kept to make it possible to interupt and resume parsing.
-    state: Vec<ParserState>,
-    tokens: RingBuf<de::Token>,
+    state_stack: Vec<ParserState>,
 }
 
 impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
     #[inline]
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
-        // If we've cached any tokens return them now.
-        match self.tokens.pop_front() {
-            Some(token) => { return Some(Ok(token)); }
-            None => { }
-        }
-
-        let state = match self.state.pop() {
+        let state = match self.state_stack.pop() {
             Some(state) => state,
             None => {
                 // If we have no state left, then we're expecting the structure
@@ -1443,8 +1410,7 @@ impl<T: Iterator<char>> Parser<T> {
             ch: Some('\x00'),
             line: 1,
             col: 0,
-            state: vec!(ParseValue),
-            tokens: RingBuf::new(),
+            state_stack: vec!(ParseValue),
         };
         p.bump();
         return p;
@@ -1704,7 +1670,7 @@ impl<T: Iterator<char>> Parser<T> {
             self.bump();
             Ok(de::End)
         } else {
-            self.state.push(ParseListCommaOrEnd);
+            self.state_stack.push(ParseListCommaOrEnd);
             self.parse_value()
         }
     }
@@ -1714,7 +1680,7 @@ impl<T: Iterator<char>> Parser<T> {
 
         if self.ch_is(',') {
             self.bump();
-            self.state.push(ParseListCommaOrEnd);
+            self.state_stack.push(ParseListCommaOrEnd);
             self.parse_value()
         } else if self.ch_is(']') {
             self.bump();
@@ -1756,7 +1722,7 @@ impl<T: Iterator<char>> Parser<T> {
     fn parse_object_key(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
 
-        self.state.push(ParseObjectValue);
+        self.state_stack.push(ParseObjectValue);
 
         if self.eof() {
             return self.error_event(EOFWhileParsingString);
@@ -1776,7 +1742,7 @@ impl<T: Iterator<char>> Parser<T> {
 
         if self.ch_is(':') {
             self.bump();
-            self.state.push(ParseObjectCommaOrEnd);
+            self.state_stack.push(ParseObjectCommaOrEnd);
             self.parse_value()
         } else if self.eof() {
             self.error_event(EOFWhileParsingObject)
@@ -1806,12 +1772,12 @@ impl<T: Iterator<char>> Parser<T> {
             }
             '[' => {
                 self.bump();
-                self.state.push(ParseListStart);
+                self.state_stack.push(ParseListStart);
                 Ok(de::SeqStart(0))
             }
             '{' => {
                 self.bump();
-                self.state.push(ParseObjectStart);
+                self.state_stack.push(ParseObjectStart);
                 Ok(de::MapStart(0))
             }
             _ => {
@@ -1820,17 +1786,17 @@ impl<T: Iterator<char>> Parser<T> {
         }
     }
 
-    fn parse_ident(&mut self, ident: &str, value: de::Token) -> Result<de::Token, ParserError> {
+    fn parse_ident(&mut self, ident: &str, token: de::Token) -> Result<de::Token, ParserError> {
         if ident.chars().all(|c| Some(c) == self.next_char()) {
             self.bump();
-            Ok(value)
+            Ok(token)
         } else {
-            Err(SyntaxError(InvalidSyntax, self.line, self.col))
+            self.error_event(InvalidSyntax)
         }
     }
 
     fn error_event(&mut self, reason: ErrorCode) -> Result<de::Token, ParserError> {
-        self.state.clear();
+        self.state_stack.clear();
         Err(SyntaxError(reason, self.line, self.col))
     }
 }
@@ -1858,73 +1824,45 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
         }
     }
 
-    // Special case treating enums as a String or a `{"variant": "...", "fields": [...]}`.
+    // Special case treating enums as a `{"<variant-name>": [<fields>]}`.
     #[inline]
     fn expect_enum_start(&mut self,
                          token: de::Token,
                          _name: &str,
                          variants: &[&str]) -> Result<uint, ParserError> {
-        // It's a little tricky to deserialize enums. Strings are simple to
-        // parse, but objects require us to preparse the entire object because
-        // we can't guarantee the order of the map.
-
-        let variant = match token {
-            de::String(variant) => {
-                // Make sure to terminate the enum.
-                self.tokens.push_front(de::End);
-
-                variant
-            }
-            de::MapStart(_len) => {
-                let mut variant = None;
-                let mut fields = None;
-
-                // Extract all the fields.
-                loop {
-                    let field = match try!(self.expect_token()) {
-                        de::End => { break; }
-                        de::String(field) => field,
-                        _ => { return self.error(InvalidSyntax); }
-                    };
-
-                    match field.as_slice() {
-                        "variant" => {
-                            let v: String = try!(de::Deserializable::deserialize(self));
-                            variant = Some(v);
-                        }
-                        "fields" => {
-                            let f: de::GatherTokens = try!(de::Deserializable::deserialize(self));
-                            fields = Some(f.unwrap());
-                        }
-                        _ => { }
-                    }
-                }
-
-                let (variant, fields) = match (variant, fields) {
-                    (Some(variant), Some(fields)) => (variant, fields),
-                    _ => { return self.error(MissingField); }
-                };
-
-                // Add all the field's tokens to our buffer. We need to skip
-                // over the `SeqStart` because we're pretending we're an
-                // `EnumStart`.
-                let mut iter = fields.move_iter();
-                match iter.next() {
-                    Some(de::SeqStart(_)) => { }
-                    _ => { return self.error(InvalidSyntax); }
-                }
-                self.tokens.extend(iter);
-
-                variant
-            }
+        match token {
+            de::MapStart(_) => { }
             _ => { return self.error(InvalidSyntax); }
         };
 
+        // Enums only have one field in them, which is the variant name.
+        let variant = match try!(self.expect_token()) {
+            de::String(variant) => variant,
+            _ => { return self.error(InvalidSyntax); }
+        };
+
+        // The variant's field is a list of the values.
+        match try!(self.expect_token()) {
+            de::SeqStart(_) => { }
+            _ => { return self.error(InvalidSyntax); }
+        }
+
         match variants.iter().position(|v| *v == variant.as_slice()) {
-            Some(idx) => {
-                Ok(idx)
-            }
+            Some(idx) => Ok(idx),
             None => self.error(UnknownVariant),
+        }
+    }
+
+    fn expect_enum_end(&mut self) -> Result<(), ParserError> {
+        // There will be one `End` for the list, and one for the object.
+        match try!(self.expect_token()) {
+            de::End => {
+                match try!(self.expect_token()) {
+                    de::End => Ok(()),
+                    _ => self.error(InvalidSyntax),
+                }
+            }
+            _ => self.error(InvalidSyntax),
         }
     }
 }
@@ -2582,14 +2520,14 @@ mod tests {
         fn deserialize_token(d: &mut D, token: de::Token) -> Result<Animal, E> {
             match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
                 0 => {
-                    try!(d.expect_end());
+                    try!(d.expect_enum_end());
                     Ok(Dog)
                 }
                 1 => {
                     let x0 = try!(de::Deserializable::deserialize(d));
                     let x1 = try!(de::Deserializable::deserialize(d));
 
-                    try!(d.expect_end());
+                    try!(d.expect_enum_end());
 
                     Ok(Frog(x0, x1))
                 }
@@ -2601,12 +2539,17 @@ mod tests {
     impl ToJson for Animal {
         fn to_json(&self) -> Json {
             match *self {
-                Dog => String("Dog".to_string()),
+                Dog => {
+                    Object(
+                        treemap!(
+                            "Dog".to_string() => List(vec!())
+                        )
+                    )
+                }
                 Frog(ref x0, x1) => {
                     Object(
                         treemap!(
-                            "variant".to_string() => "Frog".to_json(),
-                            "fields".to_string() => List(vec!(x0.to_json(), x1.to_json()))
+                            "Frog".to_string() => List(vec!(x0.to_json(), x1.to_json()))
                         )
                     )
                 }
@@ -2905,14 +2848,14 @@ mod tests {
                 let mut encoder = Encoder::new(wr);
                 animal.encode(&mut encoder).unwrap();
             }),
-            "\"Dog\"".to_string()
+            "{\"Dog\":[]}".to_string()
         );
         assert_eq!(
             with_str_writer(|wr| {
                 let mut encoder = PrettyEncoder::new(wr);
                 animal.encode(&mut encoder).unwrap();
             }),
-            "\"Dog\"".to_string()
+            "{\"Dog\": []}".to_string()
         );
 
         let animal = Frog("Henry".to_string(), 349);
@@ -2921,7 +2864,7 @@ mod tests {
                 let mut encoder = Encoder::new(wr);
                 animal.encode(&mut encoder).unwrap();
             }),
-            "{\"variant\":\"Frog\",\"fields\":[\"Henry\",349]}".to_string()
+            "{\"Frog\":[\"Henry\",349]}".to_string()
         );
         assert_eq!(
             with_str_writer(|wr| {
@@ -2929,11 +2872,12 @@ mod tests {
                 animal.encode(&mut encoder).unwrap();
             }),
             "\
-            [\n  \
-                \"Frog\",\n  \
-                \"Henry\",\n  \
-                349\n\
-            ]".to_string()
+            {\n  \
+                \"Frog\": [\n    \
+                    \"Henry\",\n    \
+                    349\n  \
+                ]\n\
+            }".to_string()
         );
     }
 
@@ -3293,16 +3237,16 @@ mod tests {
     #[test]
     fn test_parse_enum() {
         test_parse_ok([
-            ("\"Dog\"", Dog),
+            ("{\"Dog\": []}", Dog),
             (
-                "{\"variant\": \"Frog\", \"fields\": [\"Henry\", 349]}",
+                "{\"Frog\": [\"Henry\", 349]}",
                 Frog("Henry".to_string(), 349),
             ),
         ]);
 
         test_parse_ok([
             (
-                "{\"a\": \"Dog\", \"b\": {\"variant\":\"Frog\",\"fields\":[\"Henry\", 349]}}",
+                "{\"a\": {\"Dog\": []}, \"b\": {\"Frog\":[\"Henry\", 349]}}",
                 treemap!(
                     "a".to_string() => Dog,
                     "b".to_string() => Frog("Henry".to_string(), 349)
