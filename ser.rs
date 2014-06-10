@@ -206,7 +206,7 @@ impl_serialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, TreeMap};
 
     use serialize::Decoder;
 
@@ -551,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tokens_hashmap() {
+    fn test_tokens_treemap() {
         let tokens = vec!(
             MapStart(2),
                 Int(5),
@@ -564,7 +564,7 @@ mod tests {
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
 
-        let mut map = HashMap::new();
+        let mut map = TreeMap::new();
         map.insert(5, "a".to_string());
         map.insert(6, "b".to_string());
 
