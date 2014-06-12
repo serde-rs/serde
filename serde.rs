@@ -4,7 +4,7 @@
 #[cfg(test)]
 extern crate test;
 
-#[phase(syntax, link)]
+#[phase(plugin, link)]
 extern crate log;
 
 #[cfg(test)]
