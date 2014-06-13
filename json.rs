@@ -242,8 +242,8 @@ use std::vec::Vec;
 use std::vec;
 
 use de;
-use serialize;
-use serialize::{Encoder, Encodable};
+use ser::Serializable;
+use ser;
 
 /// Represents a json value
 #[deriving(Clone, PartialEq)]
@@ -258,6 +258,185 @@ pub enum Json {
 
 pub type List = Vec<Json>;
 pub type Object = TreeMap<String, Json>;
+
+impl Json {
+    /// Encodes a json value into an io::writer.  Uses a single line.
+    pub fn to_writer(&self, wr: &mut Writer) -> EncodeResult {
+        let mut encoder = Encoder::new(wr);
+        self.serialize(&mut encoder)
+    }
+
+    /// Encodes a json value into an io::writer.
+    /// Pretty-prints in a more readable format.
+    pub fn to_pretty_writer(&self, wr: &mut Writer) -> EncodeResult {
+        let mut encoder = PrettyEncoder::new(wr);
+        self.serialize(&mut encoder)
+    }
+
+    /// Encodes a json value into a string
+    pub fn to_pretty_str(&self) -> String {
+        let mut s = MemWriter::new();
+        self.to_pretty_writer(&mut s as &mut Writer).unwrap();
+        str::from_utf8(s.unwrap().as_slice()).unwrap().to_string()
+    }
+
+     /// If the Json value is an Object, returns the value associated with the provided key.
+    /// Otherwise, returns None.
+    pub fn find<'a>(&'a self, key: &String) -> Option<&'a Json>{
+        match self {
+            &Object(ref map) => map.find(key),
+            _ => None
+        }
+    }
+
+    /// Attempts to get a nested Json Object for each key in `keys`.
+    /// If any key is found not to exist, find_path will return None.
+    /// Otherwise, it will return the Json value associated with the final key.
+    pub fn find_path<'a>(&'a self, keys: &[&String]) -> Option<&'a Json>{
+        let mut target = self;
+        for key in keys.iter() {
+            match target.find(*key) {
+                Some(t) => { target = t; },
+                None => return None
+            }
+        }
+        Some(target)
+    }
+
+    /// If the Json value is an Object, performs a depth-first search until
+    /// a value associated with the provided key is found. If no value is found
+    /// or the Json value is not an Object, returns None.
+    pub fn search<'a>(&'a self, key: &String) -> Option<&'a Json> {
+        match self {
+            &Object(ref map) => {
+                match map.find(key) {
+                    Some(json_value) => Some(json_value),
+                    None => {
+                        let mut value : Option<&'a Json> = None;
+                        for (_, v) in map.iter() {
+                            value = v.search(key);
+                            if value.is_some() {
+                                break;
+                            }
+                        }
+                        value
+                    }
+                }
+            },
+            _ => None
+        }
+    }
+
+    /// Returns true if the Json value is an Object. Returns false otherwise.
+    pub fn is_object<'a>(&'a self) -> bool {
+        self.as_object().is_some()
+    }
+
+    /// If the Json value is an Object, returns the associated TreeMap.
+    /// Returns None otherwise.
+    pub fn as_object<'a>(&'a self) -> Option<&'a Object> {
+        match *self {
+            Object(ref map) => Some(map),
+            _ => None
+        }
+    }
+
+    /// Returns true if the Json value is a List. Returns false otherwise.
+    pub fn is_list<'a>(&'a self) -> bool {
+        self.as_list().is_some()
+    }
+
+    /// If the Json value is a List, returns the associated vector.
+    /// Returns None otherwise.
+    pub fn as_list<'a>(&'a self) -> Option<&'a List> {
+        match *self {
+            List(ref list) => Some(list),
+            _ => None
+        }
+    }
+
+    /// Returns true if the Json value is a String. Returns false otherwise.
+    pub fn is_string<'a>(&'a self) -> bool {
+        self.as_string().is_some()
+    }
+
+    /// If the Json value is a String, returns the associated str.
+    /// Returns None otherwise.
+    pub fn as_string<'a>(&'a self) -> Option<&'a str> {
+        match *self {
+            String(ref s) => Some(s.as_slice()),
+            _ => None
+        }
+    }
+
+    /// Returns true if the Json value is a Number. Returns false otherwise.
+    pub fn is_number(&self) -> bool {
+        self.as_number().is_some()
+    }
+
+    /// If the Json value is a Number, returns the associated f64.
+    /// Returns None otherwise.
+    pub fn as_number(&self) -> Option<f64> {
+        match *self {
+            Number(n) => Some(n),
+            _ => None
+        }
+    }
+
+    /// Returns true if the Json value is a Boolean. Returns false otherwise.
+    pub fn is_boolean(&self) -> bool {
+        self.as_boolean().is_some()
+    }
+
+    /// If the Json value is a Boolean, returns the associated bool.
+    /// Returns None otherwise.
+    pub fn as_boolean(&self) -> Option<bool> {
+        match *self {
+            Boolean(b) => Some(b),
+            _ => None
+        }
+    }
+
+    /// Returns true if the Json value is a Null. Returns false otherwise.
+    pub fn is_null(&self) -> bool {
+        self.as_null().is_some()
+    }
+
+    /// If the Json value is a Null, returns ().
+    /// Returns None otherwise.
+    pub fn as_null(&self) -> Option<()> {
+        match *self {
+            Null => Some(()),
+            _ => None
+        }
+    }
+}
+
+impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Json {
+    #[inline]
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
+        match *self {
+            Null => {
+                s.serialize(ser::Null)
+            }
+            Boolean(v) => {
+                v.serialize(s)
+            }
+            Number(v) => {
+                v.serialize(s)
+            }
+            String(ref v) => {
+                v.serialize(s)
+            }
+            List(ref v) => {
+                v.serialize(s)
+            }
+            Object(ref v) => {
+                v.serialize(s)
+            }
+        }
+    }
+}
 
 impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Json {
     #[inline]
@@ -568,211 +747,155 @@ fn spaces(n: uint) -> String {
     return ss
 }
 
+#[deriving(Show)]
+enum EncoderState {
+    ValueState,
+    SeqState(bool),
+    MapState(bool),
+    EnumState(bool),
+}
+
 /// A structure for implementing serialization to JSON.
 pub struct Encoder<'a> {
     wr: &'a mut Writer,
+    state_stack: Vec<EncoderState>,
 }
 
 impl<'a> Encoder<'a> {
     /// Creates a new JSON encoder whose output will be written to the writer
     /// specified.
-    pub fn new<'a>(wr: &'a mut Writer) -> Encoder<'a> {
-        Encoder { wr: wr }
+    pub fn new(wr: &'a mut Writer) -> Encoder<'a> {
+        Encoder {
+            wr: wr,
+            state_stack: vec!(ValueState),
+        }
     }
 
     /// Encode the specified struct into a json [u8]
-    pub fn buffer_encode<
-        T: serialize::Encodable<Encoder<'a>,
-        io::IoError>
-    >(to_encode_object: &T) -> Vec<u8> {
-       //Serialize the object in a string using a writer
-        let mut m = MemWriter::new();
+    pub fn buf_encode<
+        'a,
+        T: ser::Serializable<io::IoError, Encoder<'a>>
+    >(value: &T) -> Vec<u8> {
+        let mut wr = MemWriter::new();
         {
-            let mut encoder = Encoder::new(&mut m as &mut Writer);
-            // MemWriter never Errs
-            let _ = to_encode_object.encode(&mut encoder);
+            let mut encoder = Encoder::new(&mut wr);
+            value.serialize(&mut encoder).unwrap();
         }
-        m.unwrap()
+        wr.unwrap()
     }
 
     /// Encode the specified struct into a json str
     pub fn str_encode<
-        T: serialize::Encodable<Encoder<'a>,
-        io::IoError>
-    >(to_encode_object: &T) -> String {
-        let buff = Encoder::buffer_encode(to_encode_object);
-        str::from_utf8(buff.as_slice()).unwrap().to_string()
+        'a,
+        T: ser::Serializable<io::IoError, Encoder<'a>>
+    >(value: &T) -> Result<String, Vec<u8>> {
+        let buf = Encoder::buf_encode(value);
+        String::from_utf8(buf)
+    }
+
+    fn serialize_value<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
+        match token {
+            ser::Null => { write!(self.wr, "null") }
+            ser::Bool(true) => { write!(self.wr, "true") }
+            ser::Bool(false) => { write!(self.wr, "false") }
+            ser::Int(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I8(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I16(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I64(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::Uint(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U8(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U16(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U64(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::F32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::F64(v) => { write!(self.wr, "{}", f64::to_str_digits(v, 6)) }
+            ser::Char(v) => { write!(self.wr, "{}", escape_str(str::from_char(v).as_slice())) }
+            ser::Str(v) => { write!(self.wr, "{}", escape_str(v)) }
+            ser::Option(false) => { write!(self.wr, "null") }
+            ser::Option(true) => {
+                self.state_stack.push(ValueState);
+                Ok(())
+            }
+            ser::TupleStart(_)
+            | ser::SeqStart(_) => {
+                self.state_stack.push(SeqState(true));
+                write!(self.wr, "[")
+            }
+            ser::StructStart(_, _)
+            | ser::MapStart(_) => {
+                self.state_stack.push(MapState(true));
+                write!(self.wr, "\\{")
+            }
+            ser::EnumStart(_, variant, _) => {
+                self.state_stack.push(EnumState(true));
+                write!(self.wr, "\\{{}:[", escape_str(variant))
+            }
+            ser::End => { fail!("not implemented") }
+        }
+    }
+
+    fn serialize_seq<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
+        match token {
+            ser::End => {
+                write!(self.wr, "]")
+            }
+            token => {
+                self.state_stack.push(SeqState(false));
+
+                if !first {
+                    try!(write!(self.wr, ","));
+                }
+                self.serialize_value(token)
+            }
+        }
+    }
+
+    fn serialize_map<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
+        match token {
+            ser::End => {
+                write!(self.wr, "\\}")
+            }
+            ser::Str(v) => {
+                self.state_stack.push(MapState(false));
+                self.state_stack.push(ValueState);
+
+                if !first {
+                    try!(write!(self.wr, ","));
+                }
+
+                write!(self.wr, "{}:", escape_str(v))
+            }
+            _token => fail!()
+        }
+    }
+
+    fn serialize_enum<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
+        match token {
+            ser::End => {
+                write!(self.wr, "]\\}")
+            }
+            _ => {
+                self.state_stack.push(EnumState(false));
+
+                if !first {
+                    try!(write!(self.wr, ","));
+                }
+                self.serialize_value(token)
+            }
+        }
     }
 }
 
-impl<'a> serialize::Encoder<io::IoError> for Encoder<'a> {
-    fn emit_nil(&mut self) -> EncodeResult { write!(self.wr, "null") }
-
-    fn emit_uint(&mut self, v: uint) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u64(&mut self, v: u64) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u32(&mut self, v: u32) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u16(&mut self, v: u16) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u8(&mut self, v: u8) -> EncodeResult  { self.emit_f64(v as f64) }
-
-    fn emit_int(&mut self, v: int) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i64(&mut self, v: i64) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i32(&mut self, v: i32) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i16(&mut self, v: i16) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i8(&mut self, v: i8) -> EncodeResult  { self.emit_f64(v as f64) }
-
-    fn emit_bool(&mut self, v: bool) -> EncodeResult {
-        if v {
-            write!(self.wr, "true")
-        } else {
-            write!(self.wr, "false")
+impl<'a> ser::Serializer<io::IoError> for Encoder<'a> {
+    fn serialize<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
+        match self.state_stack.pop() {
+            Some(ValueState) => self.serialize_value(token),
+            Some(SeqState(v)) => self.serialize_seq(token, v),
+            Some(MapState(v)) => self.serialize_map(token, v),
+            Some(EnumState(v)) => self.serialize_enum(token, v),
+            None => { fail!("internal state machine error") }
         }
-    }
-
-    fn emit_f64(&mut self, v: f64) -> EncodeResult {
-        write!(self.wr, "{}", f64::to_str_digits(v, 6u))
-    }
-    fn emit_f32(&mut self, v: f32) -> EncodeResult { self.emit_f64(v as f64) }
-
-    fn emit_char(&mut self, v: char) -> EncodeResult {
-        self.emit_str(str::from_char(v).as_slice())
-    }
-    fn emit_str(&mut self, v: &str) -> EncodeResult {
-        write!(self.wr, "{}", escape_str(v))
-    }
-
-    fn emit_enum(&mut self,
-                 _name: &str,
-                 f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult { f(self) }
-
-    fn emit_enum_variant(&mut self,
-                         name: &str,
-                         _id: uint,
-                         _cnt: uint,
-                         f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        // enums are encoded as objects
-        // Kangaroo(34,"William") => {"Kangaroo": [34,"William"]}
-        try!(write!(self.wr, "\\{"));
-        try!(write!(self.wr, "{}", escape_str(name)));
-        try!(write!(self.wr, ":["));
-        try!(f(self));
-        write!(self.wr, "]\\}")
-    }
-
-    fn emit_enum_variant_arg(&mut self,
-                             idx: uint,
-                             f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        if idx != 0 {
-            try!(write!(self.wr, ","));
-        }
-        f(self)
-    }
-
-    fn emit_enum_struct_variant(&mut self,
-                                name: &str,
-                                id: uint,
-                                cnt: uint,
-                                f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_enum_variant(name, id, cnt, f)
-    }
-
-    fn emit_enum_struct_variant_field(&mut self,
-                                      _: &str,
-                                      idx: uint,
-                                      f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_enum_variant_arg(idx, f)
-    }
-
-    fn emit_struct(&mut self,
-                   _: &str,
-                   _: uint,
-                   f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        try!(write!(self.wr, r"\{"));
-        try!(f(self));
-        write!(self.wr, r"\}")
-    }
-
-    fn emit_struct_field(&mut self,
-                         name: &str,
-                         idx: uint,
-                         f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        if idx != 0 { try!(write!(self.wr, ",")); }
-        try!(write!(self.wr, "{}:", escape_str(name)));
-        f(self)
-    }
-
-    fn emit_tuple(&mut self, len: uint, f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq(len, f)
-    }
-    fn emit_tuple_arg(&mut self,
-                      idx: uint,
-                      f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq_elt(idx, f)
-    }
-
-    fn emit_tuple_struct(&mut self,
-                         _name: &str,
-                         len: uint,
-                         f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq(len, f)
-    }
-    fn emit_tuple_struct_arg(&mut self,
-                             idx: uint,
-                             f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq_elt(idx, f)
-    }
-
-    fn emit_option(&mut self, f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        f(self)
-    }
-    fn emit_option_none(&mut self) -> EncodeResult { self.emit_nil() }
-    fn emit_option_some(&mut self, f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        f(self)
-    }
-
-    fn emit_seq(&mut self, _len: uint, f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        try!(write!(self.wr, "["));
-        try!(f(self));
-        write!(self.wr, "]")
-    }
-
-    fn emit_seq_elt(&mut self, idx: uint, f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        if idx != 0 {
-            try!(write!(self.wr, ","));
-        }
-        f(self)
-    }
-
-    fn emit_map(&mut self, _len: uint, f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        try!(write!(self.wr, r"\{"));
-        try!(f(self));
-        write!(self.wr, r"\}")
-    }
-
-    fn emit_map_elt_key(&mut self,
-                        idx: uint,
-                        f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        use std::str::from_utf8;
-        if idx != 0 { try!(write!(self.wr, ",")) }
-        // ref #12967, make sure to wrap a key in double quotes,
-        // in the event that its of a type that omits them (eg numbers)
-        let mut buf = MemWriter::new();
-        let mut check_encoder = Encoder::new(&mut buf);
-        try!(f(&mut check_encoder));
-        let buf = buf.unwrap();
-        let out = from_utf8(buf.as_slice()).unwrap();
-        let needs_wrapping = out.char_at(0) != '"' &&
-            out.char_at_reverse(out.len()) != '"';
-        if needs_wrapping { try!(write!(self.wr, "\"")); }
-        try!(f(self));
-        if needs_wrapping { try!(write!(self.wr, "\"")); }
-        Ok(())
-    }
-
-    fn emit_map_elt_val(&mut self,
-                        _idx: uint,
-                        f: |&mut Encoder<'a>| -> EncodeResult) -> EncodeResult {
-        try!(write!(self.wr, ":"));
-        f(self)
     }
 }
 
@@ -781,406 +904,179 @@ impl<'a> serialize::Encoder<io::IoError> for Encoder<'a> {
 pub struct PrettyEncoder<'a> {
     wr: &'a mut Writer,
     indent: uint,
+    state_stack: Vec<EncoderState>,
 }
 
 impl<'a> PrettyEncoder<'a> {
     /// Creates a new encoder whose output will be written to the specified writer
-    pub fn new<'a>(wr: &'a mut Writer) -> PrettyEncoder<'a> {
+    pub fn new(wr: &'a mut Writer) -> PrettyEncoder<'a> {
         PrettyEncoder {
             wr: wr,
             indent: 0,
-        }
-    }
-}
-
-impl<'a> serialize::Encoder<io::IoError> for PrettyEncoder<'a> {
-    fn emit_nil(&mut self) -> EncodeResult { write!(self.wr, "null") }
-
-    fn emit_uint(&mut self, v: uint) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u64(&mut self, v: u64) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u32(&mut self, v: u32) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u16(&mut self, v: u16) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_u8(&mut self, v: u8) -> EncodeResult { self.emit_f64(v as f64) }
-
-    fn emit_int(&mut self, v: int) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i64(&mut self, v: i64) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i32(&mut self, v: i32) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i16(&mut self, v: i16) -> EncodeResult { self.emit_f64(v as f64) }
-    fn emit_i8(&mut self, v: i8) -> EncodeResult { self.emit_f64(v as f64) }
-
-    fn emit_bool(&mut self, v: bool) -> EncodeResult {
-        if v {
-            write!(self.wr, "true")
-        } else {
-            write!(self.wr, "false")
+            state_stack: vec!(ValueState),
         }
     }
 
-    fn emit_f64(&mut self, v: f64) -> EncodeResult {
-        write!(self.wr, "{}", f64::to_str_digits(v, 6u))
-    }
-    fn emit_f32(&mut self, v: f32) -> EncodeResult {
-        self.emit_f64(v as f64)
-    }
-
-    fn emit_char(&mut self, v: char) -> EncodeResult {
-        self.emit_str(str::from_char(v).as_slice())
-    }
-    fn emit_str(&mut self, v: &str) -> EncodeResult {
-        write!(self.wr, "{}", escape_str(v))
-    }
-
-    fn emit_enum(&mut self,
-                 _name: &str,
-                 f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        f(self)
+    /// Encode the specified struct into a json [u8]
+    pub fn buf_encode<
+        'a,
+        T: ser::Serializable<io::IoError, PrettyEncoder<'a>>
+    >(value: &T) -> Vec<u8> {
+        let mut wr = MemWriter::new();
+        {
+            let mut encoder = PrettyEncoder::new(&mut wr);
+            value.serialize(&mut encoder).unwrap();
+        }
+        wr.unwrap()
     }
 
-    fn emit_enum_variant(&mut self,
-                         name: &str,
-                         _: uint,
-                         cnt: uint,
-                         f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        // enums are encoded as objects
-        // Kangaroo(34,"William") => {"Kangaroo": [34,"William"]}
-        if cnt == 0 {
-            write!(self.wr, "\\{{}: []\\}", escape_str(name))
-        } else {
-            self.indent += 2;
-            try!(write!(self.wr, "\\{\n{}{}: [\n", spaces(self.indent),
-                          escape_str(name)));
-            self.indent += 2;
-            try!(f(self));
-            self.indent -= 2;
-            try!(write!(self.wr, "\n{}]", spaces(self.indent)));
-            self.indent -= 2;
-            write!(self.wr, "\n{}\\}", spaces(self.indent))
+    /// Encode the specified struct into a json str
+    pub fn str_encode<
+        'a,
+        T: ser::Serializable<io::IoError, PrettyEncoder<'a>>
+    >(value: &T) -> Result<String, Vec<u8>> {
+        let buf = PrettyEncoder::buf_encode(value);
+        String::from_utf8(buf)
+    }
+
+    fn serialize_value<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
+        match token {
+            ser::Null => { write!(self.wr, "null") }
+            ser::Bool(true) => { write!(self.wr, "true") }
+            ser::Bool(false) => { write!(self.wr, "false") }
+            ser::Int(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I8(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I16(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::I64(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::Uint(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U8(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U16(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::U64(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::F32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
+            ser::F64(v) => { write!(self.wr, "{}", f64::to_str_digits(v, 6)) }
+            ser::Char(v) => { write!(self.wr, "{}", escape_str(str::from_char(v).as_slice())) }
+            ser::Str(v) => { write!(self.wr, "{}", escape_str(v)) }
+            ser::Option(false) => { write!(self.wr, "null") }
+            ser::Option(true) => {
+                self.state_stack.push(ValueState);
+                Ok(())
+            }
+            ser::TupleStart(_)
+            | ser::SeqStart(_) => {
+                self.state_stack.push(SeqState(true));
+                self.indent += 2;
+                write!(self.wr, "[")
+            }
+            ser::StructStart(_, _)
+            | ser::MapStart(_) => {
+                self.state_stack.push(MapState(true));
+                self.indent += 2;
+                write!(self.wr, "\\{")
+            }
+            ser::EnumStart(_, variant, _) => {
+                self.state_stack.push(EnumState(true));
+                self.indent += 2;
+                try!(write!(self.wr, "\\{\n{}{}: [", spaces(self.indent), escape_str(variant)));
+                self.indent += 2;
+                Ok(())
+            }
+            ser::End => { fail!("not implemented") }
         }
     }
 
-    fn emit_enum_variant_arg(&mut self,
-                             idx: uint,
-                             f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        if idx != 0 {
-            try!(write!(self.wr, ",\n"));
-        }
-        try!(write!(self.wr, "{}", spaces(self.indent)));
-        f(self)
-    }
+    fn serialize_seq<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
+        match token {
+            ser::End => {
+                self.indent -= 2;
+                if first {
+                    write!(self.wr, "]")
+                } else {
+                    write!(self.wr, "\n{}]", spaces(self.indent))
+                }
+            }
+            token => {
+                self.state_stack.push(SeqState(false));
 
-    fn emit_enum_struct_variant(&mut self,
-                                name: &str,
-                                id: uint,
-                                cnt: uint,
-                                f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_enum_variant(name, id, cnt, f)
-    }
+                if first {
+                    try!(write!(self.wr, "\n"));
+                } else {
+                    try!(write!(self.wr, ",\n"));
+                }
 
-    fn emit_enum_struct_variant_field(&mut self,
-                                      _: &str,
-                                      idx: uint,
-                                      f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_enum_variant_arg(idx, f)
-    }
-
-
-    fn emit_struct(&mut self,
-                   _: &str,
-                   len: uint,
-                   f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        if len == 0 {
-            write!(self.wr, "\\{\\}")
-        } else {
-            try!(write!(self.wr, "\\{"));
-            self.indent += 2;
-            try!(f(self));
-            self.indent -= 2;
-            write!(self.wr, "\n{}\\}", spaces(self.indent))
-        }
-    }
-
-    fn emit_struct_field(&mut self,
-                         name: &str,
-                         idx: uint,
-                         f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        if idx == 0 {
-            try!(write!(self.wr, "\n"));
-        } else {
-            try!(write!(self.wr, ",\n"));
-        }
-        try!(write!(self.wr, "{}{}: ", spaces(self.indent), escape_str(name)));
-        f(self)
-    }
-
-    fn emit_tuple(&mut self,
-                  len: uint,
-                  f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq(len, f)
-    }
-    fn emit_tuple_arg(&mut self,
-                      idx: uint,
-                      f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq_elt(idx, f)
-    }
-
-    fn emit_tuple_struct(&mut self,
-                         _: &str,
-                         len: uint,
-                         f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq(len, f)
-    }
-    fn emit_tuple_struct_arg(&mut self,
-                             idx: uint,
-                             f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        self.emit_seq_elt(idx, f)
-    }
-
-    fn emit_option(&mut self, f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        f(self)
-    }
-    fn emit_option_none(&mut self) -> EncodeResult { self.emit_nil() }
-    fn emit_option_some(&mut self, f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        f(self)
-    }
-
-    fn emit_seq(&mut self,
-                len: uint,
-                f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        if len == 0 {
-            write!(self.wr, "[]")
-        } else {
-            try!(write!(self.wr, "["));
-            self.indent += 2;
-            try!(f(self));
-            self.indent -= 2;
-            write!(self.wr, "\n{}]", spaces(self.indent))
-        }
-    }
-
-    fn emit_seq_elt(&mut self,
-                    idx: uint,
-                    f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        if idx == 0 {
-            try!(write!(self.wr, "\n"));
-        } else {
-            try!(write!(self.wr, ",\n"));
-        }
-        try!(write!(self.wr, "{}", spaces(self.indent)));
-        f(self)
-    }
-
-    fn emit_map(&mut self,
-                len: uint,
-                f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        if len == 0 {
-            write!(self.wr, "\\{\\}")
-        } else {
-            try!(write!(self.wr, "\\{"));
-            self.indent += 2;
-            try!(f(self));
-            self.indent -= 2;
-            write!(self.wr, "\n{}\\}", spaces(self.indent))
-        }
-    }
-
-    fn emit_map_elt_key(&mut self,
-                        idx: uint,
-                        f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        use std::str::from_utf8;
-        if idx == 0 {
-            try!(write!(self.wr, "\n"));
-        } else {
-            try!(write!(self.wr, ",\n"));
-        }
-        try!(write!(self.wr, "{}", spaces(self.indent)));
-        // ref #12967, make sure to wrap a key in double quotes,
-        // in the event that its of a type that omits them (eg numbers)
-        let mut buf = MemWriter::new();
-        let mut check_encoder = PrettyEncoder::new(&mut buf);
-        try!(f(&mut check_encoder));
-        let buf = buf.unwrap();
-        let out = from_utf8(buf.as_slice()).unwrap();
-        let needs_wrapping = out.char_at(0) != '"' &&
-            out.char_at_reverse(out.len()) != '"';
-        if needs_wrapping { try!(write!(self.wr, "\"")); }
-        try!(f(self));
-        if needs_wrapping { try!(write!(self.wr, "\"")); }
-        Ok(())
-    }
-
-    fn emit_map_elt_val(&mut self,
-                        _idx: uint,
-                        f: |&mut PrettyEncoder<'a>| -> EncodeResult) -> EncodeResult {
-        try!(write!(self.wr, ": "));
-        f(self)
-    }
-}
-
-impl<E: serialize::Encoder<S>, S> serialize::Encodable<E, S> for Json {
-    fn encode(&self, e: &mut E) -> Result<(), S> {
-        match *self {
-            Number(v) => v.encode(e),
-            String(ref v) => v.encode(e),
-            Boolean(v) => v.encode(e),
-            List(ref v) => v.encode(e),
-            Object(ref v) => v.encode(e),
-            Null => e.emit_nil(),
-        }
-    }
-}
-
-impl Json {
-    /// Encodes a json value into an io::writer.  Uses a single line.
-    pub fn to_writer(&self, wr: &mut Writer) -> EncodeResult {
-        let mut encoder = Encoder::new(wr);
-        self.encode(&mut encoder)
-    }
-
-    /// Encodes a json value into an io::writer.
-    /// Pretty-prints in a more readable format.
-    pub fn to_pretty_writer(&self, wr: &mut Writer) -> EncodeResult {
-        let mut encoder = PrettyEncoder::new(wr);
-        self.encode(&mut encoder)
-    }
-
-    /// Encodes a json value into a string
-    pub fn to_pretty_str(&self) -> String {
-        let mut s = MemWriter::new();
-        self.to_pretty_writer(&mut s as &mut Writer).unwrap();
-        str::from_utf8(s.unwrap().as_slice()).unwrap().to_string()
-    }
-
-     /// If the Json value is an Object, returns the value associated with the provided key.
-    /// Otherwise, returns None.
-    pub fn find<'a>(&'a self, key: &String) -> Option<&'a Json>{
-        match self {
-            &Object(ref map) => map.find(key),
-            _ => None
-        }
-    }
-
-    /// Attempts to get a nested Json Object for each key in `keys`.
-    /// If any key is found not to exist, find_path will return None.
-    /// Otherwise, it will return the Json value associated with the final key.
-    pub fn find_path<'a>(&'a self, keys: &[&String]) -> Option<&'a Json>{
-        let mut target = self;
-        for key in keys.iter() {
-            match target.find(*key) {
-                Some(t) => { target = t; },
-                None => return None
+                try!(write!(self.wr, "{}", spaces(self.indent)));
+                self.serialize_value(token)
             }
         }
-        Some(target)
     }
 
-    /// If the Json value is an Object, performs a depth-first search until
-    /// a value associated with the provided key is found. If no value is found
-    /// or the Json value is not an Object, returns None.
-    pub fn search<'a>(&'a self, key: &String) -> Option<&'a Json> {
-        match self {
-            &Object(ref map) => {
-                match map.find(key) {
-                    Some(json_value) => Some(json_value),
-                    None => {
-                        let mut value : Option<&'a Json> = None;
-                        for (_, v) in map.iter() {
-                            value = v.search(key);
-                            if value.is_some() {
-                                break;
-                            }
-                        }
-                        value
-                    }
+    fn serialize_map<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
+        match token {
+            ser::End => {
+                self.indent -= 2;
+                if first {
+                    write!(self.wr, "\\}")
+                } else {
+                    write!(self.wr, "\n{}\\}", spaces(self.indent))
                 }
-            },
-            _ => None
+            }
+            ser::Str(v) => {
+                self.state_stack.push(MapState(false));
+                self.state_stack.push(ValueState);
+
+                if first {
+                    try!(write!(self.wr, "\n"));
+                } else {
+                    try!(write!(self.wr, ",\n"));
+                }
+
+                write!(self.wr, "{}{}: ", spaces(self.indent), escape_str(v))
+            }
+            token => fail!("bad token: {}", token)
         }
     }
 
-    /// Returns true if the Json value is an Object. Returns false otherwise.
-    pub fn is_object<'a>(&'a self) -> bool {
-        self.as_object().is_some()
-    }
+    fn serialize_enum<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
+        match token {
+            ser::End => {
+                self.indent -= 2;
+                if first {
+                    try!(write!(self.wr, "]"));
+                } else {
+                    try!(write!(self.wr, "\n{}]", spaces(self.indent)));
+                }
+                self.indent -= 2;
+                write!(self.wr, "\n{}\\}", spaces(self.indent))
+            }
+            _ => {
+                self.state_stack.push(EnumState(false));
 
-    /// If the Json value is an Object, returns the associated TreeMap.
-    /// Returns None otherwise.
-    pub fn as_object<'a>(&'a self) -> Option<&'a Object> {
-        match *self {
-            Object(ref map) => Some(map),
-            _ => None
-        }
-    }
+                if first {
+                    try!(write!(self.wr, "\n"));
+                } else {
+                    try!(write!(self.wr, ",\n"));
+                }
 
-    /// Returns true if the Json value is a List. Returns false otherwise.
-    pub fn is_list<'a>(&'a self) -> bool {
-        self.as_list().is_some()
-    }
-
-    /// If the Json value is a List, returns the associated vector.
-    /// Returns None otherwise.
-    pub fn as_list<'a>(&'a self) -> Option<&'a List> {
-        match *self {
-            List(ref list) => Some(list),
-            _ => None
-        }
-    }
-
-    /// Returns true if the Json value is a String. Returns false otherwise.
-    pub fn is_string<'a>(&'a self) -> bool {
-        self.as_string().is_some()
-    }
-
-    /// If the Json value is a String, returns the associated str.
-    /// Returns None otherwise.
-    pub fn as_string<'a>(&'a self) -> Option<&'a str> {
-        match *self {
-            String(ref s) => Some(s.as_slice()),
-            _ => None
-        }
-    }
-
-    /// Returns true if the Json value is a Number. Returns false otherwise.
-    pub fn is_number(&self) -> bool {
-        self.as_number().is_some()
-    }
-
-    /// If the Json value is a Number, returns the associated f64.
-    /// Returns None otherwise.
-    pub fn as_number(&self) -> Option<f64> {
-        match *self {
-            Number(n) => Some(n),
-            _ => None
-        }
-    }
-
-    /// Returns true if the Json value is a Boolean. Returns false otherwise.
-    pub fn is_boolean(&self) -> bool {
-        self.as_boolean().is_some()
-    }
-
-    /// If the Json value is a Boolean, returns the associated bool.
-    /// Returns None otherwise.
-    pub fn as_boolean(&self) -> Option<bool> {
-        match *self {
-            Boolean(b) => Some(b),
-            _ => None
-        }
-    }
-
-    /// Returns true if the Json value is a Null. Returns false otherwise.
-    pub fn is_null(&self) -> bool {
-        self.as_null().is_some()
-    }
-
-    /// If the Json value is a Null, returns ().
-    /// Returns None otherwise.
-    pub fn as_null(&self) -> Option<()> {
-        match *self {
-            Null => Some(()),
-            _ => None
+                try!(write!(self.wr, "{}", spaces(self.indent)));
+                self.serialize_value(token)
+            }
         }
     }
 }
+
+impl<'a> ser::Serializer<io::IoError> for PrettyEncoder<'a> {
+    fn serialize<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
+        match self.state_stack.pop() {
+            Some(ValueState) => self.serialize_value(token),
+            Some(SeqState(v)) => self.serialize_seq(token, v),
+            Some(MapState(v)) => self.serialize_map(token, v),
+            Some(EnumState(v)) => self.serialize_enum(token, v),
+            None => { fail!("internal state machine error") }
+        }
+    }
+}
+
 
 /*
 /// The output of the streaming parser.
@@ -2227,7 +2123,10 @@ mod tests {
         SyntaxError,
     };
     use de;
+    use ser::Serializable;
+    use ser;
 
+    use std::io;
     use std::fmt::Show;
     use std::str;
     use std::collections::TreeMap;
@@ -2244,6 +2143,24 @@ mod tests {
     enum Animal {
         Dog,
         Frog(String, int)
+    }
+
+    impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Animal {
+        #[inline]
+        fn serialize(&self, s: &mut S) -> Result<(), E> {
+            match *self {
+                Dog => {
+                    try!(s.serialize(ser::EnumStart("Animal", "Dog", 0)));
+                    s.serialize(ser::End)
+                }
+                Frog(ref x0, x1) => {
+                    try!(s.serialize(ser::EnumStart("Animal", "Frog", 2)));
+                    try!(x0.serialize(s));
+                    try!(x1.serialize(s));
+                    s.serialize(ser::End)
+                }
+            }
+        }
     }
 
     impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Animal {
@@ -2293,6 +2210,17 @@ mod tests {
         a: (),
         b: uint,
         c: Vec<String>,
+    }
+
+    impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Inner {
+        #[inline]
+        fn serialize(&self, s: &mut S) -> Result<(), E> {
+            try!(s.serialize(ser::StructStart("Inner", 3)));
+            try!(self.a.serialize(s));
+            try!(self.b.serialize(s));
+            try!(self.c.serialize(s));
+            s.serialize(ser::End)
+        }
     }
 
     impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Inner {
@@ -2369,6 +2297,15 @@ mod tests {
         inner: Vec<Inner>,
     }
 
+    impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Outer {
+        #[inline]
+        fn serialize(&self, s: &mut S) -> Result<(), E> {
+            try!(s.serialize(ser::StructStart("Outer", 1)));
+            try!(self.inner.serialize(s));
+            s.serialize(ser::End)
+        }
+    }
+
     impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Outer {
         #[inline]
         fn deserialize_token(d: &mut D, token: de::Token) -> Result<Outer, E> {
@@ -2422,99 +2359,143 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_write_null() {
-        assert_eq!(Null.to_str().into_string(), "null".to_string());
-        assert_eq!(Null.to_pretty_str().into_string(), "null".to_string());
+    fn test_encode_ok<
+        'a,
+        T: PartialEq + Show + ToJson + ser::Serializable<io::IoError, Encoder<'a>>
+    >(errors: &[(T, &str)]) {
+        for &(ref value, out) in errors.iter() {
+            let out = out.to_string();
+
+            let s = Encoder::str_encode(value).unwrap();
+            assert_eq!(s, out);
+
+            let s = Encoder::str_encode(&value.to_json()).unwrap();
+            assert_eq!(s, out);
+        }
     }
 
+    fn test_pretty_encode_ok<
+        'a,
+        T: PartialEq + Show + ToJson + ser::Serializable<io::IoError, PrettyEncoder<'a>>
+    >(errors: &[(T, &str)]) {
+        for &(ref value, out) in errors.iter() {
+            let out = out.to_string();
+
+            let s = PrettyEncoder::str_encode(value).unwrap();
+            assert_eq!(s, out);
+
+            let s = PrettyEncoder::str_encode(&value.to_json()).unwrap();
+            assert_eq!(s, out);
+        }
+    }
+
+    #[test]
+    fn test_write_null() {
+        let tests = [
+            ((), "null"),
+        ];
+        test_encode_ok(tests);
+        test_pretty_encode_ok(tests);
+    }
 
     #[test]
     fn test_write_number() {
-        assert_eq!(Number(3.0).to_str().into_string(), "3".to_string());
-        assert_eq!(Number(3.0).to_pretty_str().into_string(), "3".to_string());
-
-        assert_eq!(Number(3.1).to_str().into_string(), "3.1".to_string());
-        assert_eq!(Number(3.1).to_pretty_str().into_string(), "3.1".to_string());
-
-        assert_eq!(Number(-1.5).to_str().into_string(), "-1.5".to_string());
-        assert_eq!(Number(-1.5).to_pretty_str().into_string(), "-1.5".to_string());
-
-        assert_eq!(Number(0.5).to_str().into_string(), "0.5".to_string());
-        assert_eq!(Number(0.5).to_pretty_str().into_string(), "0.5".to_string());
+        let tests = [
+            (3.0, "3"),
+            (3.1, "3.1"),
+            (-1.5, "-1.5"),
+            (0.5, "0.5"),
+        ];
+        test_encode_ok(tests);
+        test_pretty_encode_ok(tests);
     }
 
     #[test]
     fn test_write_str() {
-        assert_eq!(String("".to_string()).to_str().into_string(), "\"\"".to_string());
-        assert_eq!(String("".to_string()).to_pretty_str().into_string(), "\"\"".to_string());
-
-        assert_eq!(String("foo".to_string()).to_str().into_string(), "\"foo\"".to_string());
-        assert_eq!(String("foo".to_string()).to_pretty_str().into_string(), "\"foo\"".to_string());
+        let tests = [
+            ("", "\"\""),
+            ("foo", "\"foo\""),
+        ];
+        test_encode_ok(tests);
+        test_pretty_encode_ok(tests);
     }
 
     #[test]
     fn test_write_bool() {
-        assert_eq!(Boolean(true).to_str().into_string(), "true".to_string());
-        assert_eq!(Boolean(true).to_pretty_str().into_string(), "true".to_string());
-
-        assert_eq!(Boolean(false).to_str().into_string(), "false".to_string());
-        assert_eq!(Boolean(false).to_pretty_str().into_string(), "false".to_string());
+        let tests = [
+            (true, "true"),
+            (false, "false"),
+        ];
+        test_encode_ok(tests);
+        test_pretty_encode_ok(tests);
     }
 
     #[test]
     fn test_write_list() {
-        assert_eq!(List(vec![]).to_str().into_string(), "[]".to_string());
-        assert_eq!(List(vec![]).to_pretty_str().into_string(), "[]".to_string());
+        test_encode_ok([
+            (vec!(), "[]"),
+            (vec!(true), "[true]"),
+            (vec!(true, false), "[true,false]"),
+        ]);
 
-        assert_eq!(List(vec![Boolean(true)]).to_str().into_string(), "[true]".to_string());
-        assert_eq!(
-            List(vec![Boolean(true)]).to_pretty_str().into_string(),
-            "\
-            [\n  \
-                true\n\
-            ]".to_string()
-        );
+        test_pretty_encode_ok([
+            (vec!(), "[]"),
+            (vec!(true), "[\n  true\n]"),
+            (vec!(true, false), "[\n  true,\n  false\n]"),
+        ]);
 
         let long_test_list = List(vec![
             Boolean(false),
             Null,
             List(vec![String("foo\nbar".to_string()), Number(3.5)])]);
 
-        assert_eq!(long_test_list.to_str().into_string(),
-            "[false,null,[\"foo\\nbar\",3.5]]".to_string());
-        assert_eq!(
-            long_test_list.to_pretty_str().into_string(),
-            "\
-            [\n  \
-                false,\n  \
-                null,\n  \
-                [\n    \
-                    \"foo\\nbar\",\n    \
-                    3.5\n  \
-                ]\n\
-            ]".to_string()
-        );
+        test_encode_ok([
+            (long_test_list, "[false,null,[\"foo\\nbar\",3.5]]"),
+        ]);
+
+        let long_test_list = List(vec![
+            Boolean(false),
+            Null,
+            List(vec![String("foo\nbar".to_string()), Number(3.5)])]);
+
+        test_pretty_encode_ok([
+            (
+                long_test_list,
+                "[\n  \
+                    false,\n  \
+                    null,\n  \
+                    [\n    \
+                        \"foo\\nbar\",\n    \
+                        3.5\n  \
+                    ]\n\
+                ]"
+            )
+        ]);
     }
 
     #[test]
     fn test_write_object() {
-        assert_eq!(Object(treemap!()).to_str().into_string(), "{}".to_string());
-        assert_eq!(Object(treemap!()).to_pretty_str().into_string(), "{}".to_string());
+        test_encode_ok([
+            (treemap!(), "{}"),
+            (treemap!("a".to_string() => true), "{\"a\":true}"),
+            (
+                treemap!(
+                    "a".to_string() => true,
+                    "b".to_string() => false
+                ),
+                "{\"a\":true,\"b\":false}"),
+        ]);
 
-        assert_eq!(
-            Object(treemap!(
-                "a".to_string() => Boolean(true)
-            )).to_str().into_string(),
-            "{\"a\":true}".to_string()
-        );
-        assert_eq!(
-            Object(treemap!("a".to_string() => Boolean(true))).to_pretty_str(),
-            "\
-            {\n  \
-                \"a\": true\n\
-            }".to_string()
-        );
+        test_pretty_encode_ok([
+            (treemap!(), "{}"),
+            (treemap!("a".to_string() => true), "{\n  \"a\": true\n}"),
+            (
+                treemap!(
+                    "a".to_string() => true,
+                    "b".to_string() => false
+                ),
+                "{\n  \"a\": true,\n  \"b\": false\n}"),
+        ]);
 
         let complex_obj = Object(treemap!(
             "b".to_string() => List(vec!(
@@ -2523,126 +2504,72 @@ mod tests {
             ))
         ));
 
-        assert_eq!(
-            complex_obj.to_str().into_string(),
-            "{\
-                \"b\":[\
-                    {\"c\":\"\\f\\r\"},\
-                    {\"d\":\"\"}\
-                ]\
-            }".to_string()
-        );
-        assert_eq!(
-            complex_obj.to_pretty_str().into_string(),
-            "\
-            {\n  \
-                \"b\": [\n    \
-                    {\n      \
-                        \"c\": \"\\f\\r\"\n    \
-                    },\n    \
-                    {\n      \
-                        \"d\": \"\"\n    \
-                    }\n  \
-                ]\n\
-            }".to_string()
-        );
+        test_encode_ok([
+            (
+                complex_obj.clone(),
+                "{\
+                    \"b\":[\
+                        {\"c\":\"\\f\\r\"},\
+                        {\"d\":\"\"}\
+                    ]\
+                }"
+            ),
+        ]);
 
-        let a = Object(treemap!(
-            "a".to_string() => Boolean(true),
-            "b".to_string() => List(vec!(
-                Object(treemap!("c".to_string() => String("\x0c\r".to_string()))),
-                Object(treemap!("d".to_string() => String("".to_string())))
-            ))
-        ));
-
-        // We can't compare the strings directly because the object fields be
-        // printed in a different order.
-        assert_eq!(a.clone(), from_str(a.to_str().as_slice()).unwrap());
-        assert_eq!(a.clone(),
-                   from_str(a.to_pretty_str().as_slice()).unwrap());
-    }
-
-    fn with_str_writer(f: |&mut Writer|) -> String {
-        use std::io::MemWriter;
-        use std::str;
-
-        let mut m = MemWriter::new();
-        f(&mut m as &mut Writer);
-        str::from_utf8(m.unwrap().as_slice()).unwrap().to_string()
+        test_pretty_encode_ok([
+            (
+                complex_obj.clone(),
+                "{\n  \
+                    \"b\": [\n    \
+                        {\n      \
+                            \"c\": \"\\f\\r\"\n    \
+                        },\n    \
+                        {\n      \
+                            \"d\": \"\"\n    \
+                        }\n  \
+                    ]\n\
+                }"
+            )
+        ]);
     }
 
     #[test]
     fn test_write_enum() {
-        let animal = Dog;
-        assert_eq!(
-            with_str_writer(|wr| {
-                let mut encoder = Encoder::new(wr);
-                animal.encode(&mut encoder).unwrap();
-            }),
-            "{\"Dog\":[]}".to_string()
-        );
-        assert_eq!(
-            with_str_writer(|wr| {
-                let mut encoder = PrettyEncoder::new(wr);
-                animal.encode(&mut encoder).unwrap();
-            }),
-            "{\"Dog\": []}".to_string()
-        );
+        test_encode_ok([
+            (Dog, "{\"Dog\":[]}"),
+            (Frog("Henry".to_string(), 349), "{\"Frog\":[\"Henry\",349]}"),
+        ]);
 
-        let animal = Frog("Henry".to_string(), 349);
-        assert_eq!(
-            with_str_writer(|wr| {
-                let mut encoder = Encoder::new(wr);
-                animal.encode(&mut encoder).unwrap();
-            }),
-            "{\"Frog\":[\"Henry\",349]}".to_string()
-        );
-        assert_eq!(
-            with_str_writer(|wr| {
-                let mut encoder = PrettyEncoder::new(wr);
-                animal.encode(&mut encoder).unwrap();
-            }),
-            "\
-            {\n  \
-                \"Frog\": [\n    \
-                    \"Henry\",\n    \
-                    349\n  \
-                ]\n\
-            }".to_string()
-        );
+        test_pretty_encode_ok([
+            (Dog, "{\n  \"Dog\": []\n}"),
+            (
+                Frog("Henry".to_string(), 349),
+                "{\n  \"Frog\": [\n    \"Henry\",\n    349\n  ]\n}"),
+        ]);
     }
 
     #[test]
-    fn test_write_some() {
-        let value = Some("jodhpurs".to_string());
-        let s = with_str_writer(|wr| {
-            let mut encoder = Encoder::new(wr);
-            value.encode(&mut encoder).unwrap();
-        });
-        assert_eq!(s, "\"jodhpurs\"".to_string());
+    fn test_write_option() {
+        test_encode_ok([
+            (None, "null"),
+            (Some("jodhpurs"), "\"jodhpurs\""),
+        ]);
 
-        let value = Some("jodhpurs".to_string());
-        let s = with_str_writer(|wr| {
-            let mut encoder = PrettyEncoder::new(wr);
-            value.encode(&mut encoder).unwrap();
-        });
-        assert_eq!(s, "\"jodhpurs\"".to_string());
-    }
+        test_encode_ok([
+            (None, "null"),
+            (Some(vec!("foo", "bar")), "[\"foo\",\"bar\"]"),
+        ]);
 
-    #[test]
-    fn test_write_none() {
-        let value: Option<String> = None;
-        let s = with_str_writer(|wr| {
-            let mut encoder = Encoder::new(wr);
-            value.encode(&mut encoder).unwrap();
-        });
-        assert_eq!(s, "null".to_string());
+        test_pretty_encode_ok([
+            (None, "null"),
+            (Some("jodhpurs"), "\"jodhpurs\""),
+        ]);
 
-        let s = with_str_writer(|wr| {
-            let mut encoder = Encoder::new(wr);
-            value.encode(&mut encoder).unwrap();
-        });
-        assert_eq!(s, "null".to_string());
+        test_pretty_encode_ok([
+            (None, "null"),
+            (Some(vec!("foo", "bar")), "[\n  \"foo\",\n  \"bar\"\n]"),
+        ]);
+
     }
 
     // FIXME (#5527): these could be merged once UFCS is finished.
@@ -3165,6 +3092,7 @@ mod tests {
         assert!(json_null.is_some() && json_null.unwrap() == expected_null);
     }
 
+    /*
     #[test]
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
@@ -3175,7 +3103,7 @@ mod tests {
         let mut mem_buf = MemWriter::new();
         {
             let mut encoder = Encoder::new(&mut mem_buf as &mut Writer);
-            hm.encode(&mut encoder).unwrap();
+            hm.serialize(&mut encoder).unwrap();
         }
         let bytes = mem_buf.unwrap();
         let json_str = from_utf8(bytes.as_slice()).unwrap();
@@ -3191,14 +3119,13 @@ mod tests {
         let mut mem_buf = MemWriter::new();
         {
             let mut encoder = PrettyEncoder::new(&mut mem_buf as &mut Writer);
-            hm.encode(&mut encoder).unwrap()
+            hm.serialize(&mut encoder).unwrap()
         }
         let bytes = mem_buf.unwrap();
         let json_str = from_utf8(bytes.as_slice()).unwrap();
         let _json_value: Json = from_str(json_str).unwrap();
     }
 
-    /*
     #[test]
     fn test_hashmap_with_numeric_key_can_handle_double_quote_delimited_key() {
         use std::collections::HashMap;

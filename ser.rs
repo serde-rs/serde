@@ -13,6 +13,7 @@ use std::hash::Hash;
 
 #[deriving(Clone, PartialEq, Show)]
 pub enum Token<'a> {
+    Null,
     Bool(bool),
     Int(int),
     I8(i8),
@@ -43,8 +44,6 @@ pub enum Token<'a> {
 
 pub trait Serializer<E> {
     fn serialize<'a>(&mut self, token: Token<'a>) -> Result<(), E>;
-
-    fn syntax_error<T>(&self) -> Result<T, E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -171,8 +170,7 @@ macro_rules! impl_serialize_tuple {
         > Serializable<E, S> for () {
             #[inline]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
-                try!(s.serialize(TupleStart(0)));
-                s.serialize(End)
+                s.serialize(Null)
             }
         }
     };
@@ -314,10 +312,6 @@ mod tests {
             assert_eq!(t, token);
 
             Ok(())
-        }
-
-        fn syntax_error<T>(&self) -> Result<T, Error> {
-            Err(SyntaxError)
         }
     }
 
