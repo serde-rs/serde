@@ -825,11 +825,11 @@ impl<'a> Encoder<'a> {
             ser::StructStart(_, _)
             | ser::MapStart(_) => {
                 self.state_stack.push(MapState(true));
-                write!(self.wr, "\\{")
+                write!(self.wr, "{{")
             }
             ser::EnumStart(_, variant, _) => {
                 self.state_stack.push(EnumState(true));
-                write!(self.wr, "\\{{}:[", escape_str(variant))
+                write!(self.wr, "{{{}:[", escape_str(variant))
             }
             ser::End => { fail!("not implemented") }
         }
@@ -854,7 +854,7 @@ impl<'a> Encoder<'a> {
     fn serialize_map<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
         match token {
             ser::End => {
-                write!(self.wr, "\\}")
+                write!(self.wr, "}}")
             }
             ser::Str(v) => {
                 self.state_stack.push(MapState(false));
@@ -873,7 +873,7 @@ impl<'a> Encoder<'a> {
     fn serialize_enum<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
         match token {
             ser::End => {
-                write!(self.wr, "]\\}")
+                write!(self.wr, "]}}")
             }
             _ => {
                 self.state_stack.push(EnumState(false));
@@ -973,12 +973,12 @@ impl<'a> PrettyEncoder<'a> {
             | ser::MapStart(_) => {
                 self.state_stack.push(MapState(true));
                 self.indent += 2;
-                write!(self.wr, "\\{")
+                write!(self.wr, "{{")
             }
             ser::EnumStart(_, variant, _) => {
                 self.state_stack.push(EnumState(true));
                 self.indent += 2;
-                try!(write!(self.wr, "\\{\n{}{}: [", spaces(self.indent), escape_str(variant)));
+                try!(write!(self.wr, "{{\n{}{}: [", spaces(self.indent), escape_str(variant)));
                 self.indent += 2;
                 Ok(())
             }
@@ -1016,9 +1016,9 @@ impl<'a> PrettyEncoder<'a> {
             ser::End => {
                 self.indent -= 2;
                 if first {
-                    write!(self.wr, "\\}")
+                    write!(self.wr, "}}")
                 } else {
-                    write!(self.wr, "\n{}\\}", spaces(self.indent))
+                    write!(self.wr, "\n{}}}", spaces(self.indent))
                 }
             }
             ser::Str(v) => {
@@ -1047,7 +1047,7 @@ impl<'a> PrettyEncoder<'a> {
                     try!(write!(self.wr, "\n{}]", spaces(self.indent)));
                 }
                 self.indent -= 2;
-                write!(self.wr, "\n{}\\}", spaces(self.indent))
+                write!(self.wr, "\n{}}}", spaces(self.indent))
             }
             _ => {
                 self.state_stack.push(EnumState(false));
