@@ -71,8 +71,8 @@ fn main() {
     let to_encode_object = TestStruct{data_str:"example of string to encode".to_string()};
     let mut m = io::MemWriter::new();
     {
-        let mut encoder = json::Encoder::new(&mut m as &mut Writer);
-        match to_encode_object.encode(&mut encoder) {
+        let mut serializer = json::Serializer::new(&mut m as &mut Writer);
+        match to_encode_object.encode(&mut serializer) {
             Ok(()) => (),
             Err(e) => fail!("json encoding error: {}", e)
         };
@@ -86,7 +86,7 @@ into a string (String) or buffer (~[u8]): `str_encode(&m)` and `buffer_encode(&m
 ```rust
 use serialize::json;
 let to_encode_object = "example of string to encode".to_string();
-let encoded_str: String = json::Encoder::str_encode(&to_encode_object);
+let encoded_str: String = json::Serializer::str_encode(&to_encode_object);
 ```
 
 JSON API provide an enum `json::Json` and a trait `ToJson` to encode object.
@@ -171,7 +171,7 @@ use serialize::{json, Encodable, Decodable};
 fn main() {
     let to_encode_object = TestStruct1
          {data_int: 1, data_str:"toto".to_string(), data_vector:vec![2,3,4,5]};
-    let encoded_str: String = json::Encoder::str_encode(&to_encode_object);
+    let encoded_str: String = json::Serializer::str_encode(&to_encode_object);
 
     // To deserialize use the `json::from_str` and `json::Decoder`
 
@@ -262,15 +262,15 @@ pub type Object = TreeMap<String, Json>;
 impl Json {
     /// Encodes a json value into an io::writer.  Uses a single line.
     pub fn to_writer(&self, wr: &mut Writer) -> EncodeResult {
-        let mut encoder = Encoder::new(wr);
-        self.serialize(&mut encoder)
+        let mut serializer = Serializer::new(wr);
+        self.serialize(&mut serializer)
     }
 
     /// Encodes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
     pub fn to_pretty_writer(&self, wr: &mut Writer) -> EncodeResult {
-        let mut encoder = PrettyEncoder::new(wr);
-        self.serialize(&mut encoder)
+        let mut serializer = PrettySerializer::new(wr);
+        self.serialize(&mut serializer)
     }
 
     /// Encodes a json value into a string
@@ -748,7 +748,7 @@ fn spaces(n: uint) -> String {
 }
 
 #[deriving(Show)]
-enum EncoderState {
+enum SerializerState {
     ValueState,
     SeqState(bool),
     MapState(bool),
@@ -756,16 +756,16 @@ enum EncoderState {
 }
 
 /// A structure for implementing serialization to JSON.
-pub struct Encoder<'a> {
+pub struct Serializer<'a> {
     wr: &'a mut Writer,
-    state_stack: Vec<EncoderState>,
+    state_stack: Vec<SerializerState>,
 }
 
-impl<'a> Encoder<'a> {
-    /// Creates a new JSON encoder whose output will be written to the writer
+impl<'a> Serializer<'a> {
+    /// Creates a new JSON serializer whose output will be written to the writer
     /// specified.
-    pub fn new(wr: &'a mut Writer) -> Encoder<'a> {
-        Encoder {
+    pub fn new(wr: &'a mut Writer) -> Serializer<'a> {
+        Serializer {
             wr: wr,
             state_stack: vec!(ValueState),
         }
@@ -774,12 +774,12 @@ impl<'a> Encoder<'a> {
     /// Encode the specified struct into a json [u8]
     pub fn buf_encode<
         'a,
-        T: ser::Serializable<io::IoError, Encoder<'a>>
+        T: ser::Serializable<io::IoError, Serializer<'a>>
     >(value: &T) -> Vec<u8> {
         let mut wr = MemWriter::new();
         {
-            let mut encoder = Encoder::new(&mut wr);
-            value.serialize(&mut encoder).unwrap();
+            let mut serializer = Serializer::new(&mut wr);
+            value.serialize(&mut serializer).unwrap();
         }
         wr.unwrap()
     }
@@ -787,9 +787,9 @@ impl<'a> Encoder<'a> {
     /// Encode the specified struct into a json str
     pub fn str_encode<
         'a,
-        T: ser::Serializable<io::IoError, Encoder<'a>>
+        T: ser::Serializable<io::IoError, Serializer<'a>>
     >(value: &T) -> Result<String, Vec<u8>> {
-        let buf = Encoder::buf_encode(value);
+        let buf = Serializer::buf_encode(value);
         String::from_utf8(buf)
     }
 
@@ -887,7 +887,7 @@ impl<'a> Encoder<'a> {
     }
 }
 
-impl<'a> ser::Serializer<io::IoError> for Encoder<'a> {
+impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
     fn serialize<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
         match self.state_stack.pop() {
             Some(ValueState) => self.serialize_value(token),
@@ -899,18 +899,18 @@ impl<'a> ser::Serializer<io::IoError> for Encoder<'a> {
     }
 }
 
-/// Another encoder for JSON, but prints out human-readable JSON instead of
+/// Another serializer for JSON, but prints out human-readable JSON instead of
 /// compact data
-pub struct PrettyEncoder<'a> {
+pub struct PrettySerializer<'a> {
     wr: &'a mut Writer,
     indent: uint,
-    state_stack: Vec<EncoderState>,
+    state_stack: Vec<SerializerState>,
 }
 
-impl<'a> PrettyEncoder<'a> {
-    /// Creates a new encoder whose output will be written to the specified writer
-    pub fn new(wr: &'a mut Writer) -> PrettyEncoder<'a> {
-        PrettyEncoder {
+impl<'a> PrettySerializer<'a> {
+    /// Creates a new serializer whose output will be written to the specified writer
+    pub fn new(wr: &'a mut Writer) -> PrettySerializer<'a> {
+        PrettySerializer {
             wr: wr,
             indent: 0,
             state_stack: vec!(ValueState),
@@ -920,12 +920,12 @@ impl<'a> PrettyEncoder<'a> {
     /// Encode the specified struct into a json [u8]
     pub fn buf_encode<
         'a,
-        T: ser::Serializable<io::IoError, PrettyEncoder<'a>>
+        T: ser::Serializable<io::IoError, PrettySerializer<'a>>
     >(value: &T) -> Vec<u8> {
         let mut wr = MemWriter::new();
         {
-            let mut encoder = PrettyEncoder::new(&mut wr);
-            value.serialize(&mut encoder).unwrap();
+            let mut serializer = PrettySerializer::new(&mut wr);
+            value.serialize(&mut serializer).unwrap();
         }
         wr.unwrap()
     }
@@ -933,9 +933,9 @@ impl<'a> PrettyEncoder<'a> {
     /// Encode the specified struct into a json str
     pub fn str_encode<
         'a,
-        T: ser::Serializable<io::IoError, PrettyEncoder<'a>>
+        T: ser::Serializable<io::IoError, PrettySerializer<'a>>
     >(value: &T) -> Result<String, Vec<u8>> {
-        let buf = PrettyEncoder::buf_encode(value);
+        let buf = PrettySerializer::buf_encode(value);
         String::from_utf8(buf)
     }
 
@@ -1065,7 +1065,7 @@ impl<'a> PrettyEncoder<'a> {
     }
 }
 
-impl<'a> ser::Serializer<io::IoError> for PrettyEncoder<'a> {
+impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
     fn serialize<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
         match self.state_stack.pop() {
             Some(ValueState) => self.serialize_value(token),
@@ -1763,101 +1763,6 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
     }
 }
 
-/*
-/// A Builder consumes a json::Parser to create a generic Json structure.
-pub struct Builder<T> {
-    parser: Parser<T>,
-    token: Option<JsonEvent>,
-}
-
-impl<T: Iterator<char>> Builder<T> {
-    /// Create a JSON Builder.
-    pub fn new(src: T) -> Builder<T> {
-        Builder {
-            parser: Parser::new(src),
-            token: None,
-        }
-    }
-
-    // Decode a Json value from a Parser.
-    pub fn build(&mut self) -> Result<Json, BuilderError> {
-        self.bump();
-        let result = self.build_value();
-        self.bump();
-        match self.token {
-            None => {}
-            Some(Error(e)) => { return Err(e); }
-            ref tok => { fail!("unexpected token {}", tok.clone()); }
-        }
-        return result;
-    }
-
-    fn bump(&mut self) {
-        self.token = self.parser.next();
-    }
-
-    fn build_value(&mut self) -> Result<Json, BuilderError> {
-        return match self.token {
-            Some(NullValue) => { Ok(Null) }
-            Some(NumberValue(n)) => { Ok(Number(n)) }
-            Some(BooleanValue(b)) => { Ok(Boolean(b)) }
-            Some(StringValue(ref mut s)) => {
-                let mut temp = String::new();
-                swap(s, &mut temp);
-                Ok(String(temp))
-            }
-            Some(Error(e)) => { Err(e) }
-            Some(ListStart) => { self.build_list() }
-            Some(ObjectStart) => { self.build_object() }
-            Some(ObjectEnd) => { self.parser.error(InvalidSyntax) }
-            Some(ListEnd) => { self.parser.error(InvalidSyntax) }
-            None => { self.parser.error(EOFWhileParsingValue) }
-        }
-    }
-
-    fn build_list(&mut self) -> Result<Json, BuilderError> {
-        self.bump();
-        let mut values = Vec::new();
-
-        loop {
-            if self.token == Some(ListEnd) {
-                return Ok(List(values.move_iter().collect()));
-            }
-            match self.build_value() {
-                Ok(v) => values.push(v),
-                Err(e) => { return Err(e) }
-            }
-            self.bump();
-        }
-    }
-
-    fn build_object(&mut self) -> Result<Json, BuilderError> {
-        self.bump();
-
-        let mut values = box TreeMap::new();
-
-        while self.token != None {
-            match self.token {
-                Some(ObjectEnd) => { return Ok(Object(values)); }
-                Some(Error(e)) => { return Err(e); }
-                None => { break; }
-                _ => {}
-            }
-            let key = match self.parser.stack().top() {
-                Some(Key(k)) => { k.to_string() }
-                _ => { fail!("invalid state"); }
-            };
-            match self.build_value() {
-                Ok(value) => { values.insert(key, value); }
-                Err(e) => { return Err(e); }
-            }
-            self.bump();
-        }
-        return self.parser.error(EOFWhileParsingObject);
-    }
-}
-*/
-
 /// Decodes a json value from an `Iterator<Char>`.
 pub fn from_iter<
     Iter: Iterator<char>,
@@ -2101,12 +2006,12 @@ impl fmt::Show for Json {
 
 #[cfg(test)]
 mod tests {
-    extern crate test;
-    use self::test::Bencher;
+    use std::io;
+    use std::fmt::Show;
+    use std::str;
+    use std::collections::TreeMap;
 
-    use serialize::Encodable;
-
-    use super::{Encoder, PrettyEncoder};
+    use super::{Serializer, PrettySerializer};
     use super::{Json, Null, Boolean, Number, String, List, Object};
     use super::{Parser, ParserError, from_iter, from_str};
     use super::{JsonDeserializer, from_json, ToJson};
@@ -2126,11 +2031,6 @@ mod tests {
     use ser::Serializable;
     use ser;
 
-    use std::io;
-    use std::fmt::Show;
-    use std::str;
-    use std::collections::TreeMap;
-
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
             let mut _m = ::std::collections::TreeMap::new();
@@ -2139,7 +2039,7 @@ mod tests {
         })
     }
 
-    #[deriving(PartialEq, Show, Encodable, Decodable)]
+    #[deriving(PartialEq, Show)]
     enum Animal {
         Dog,
         Frog(String, int)
@@ -2205,7 +2105,7 @@ mod tests {
         }
     }
 
-    #[deriving(PartialEq, Show, Encodable, Decodable)]
+    #[deriving(PartialEq, Show)]
     struct Inner {
         a: (),
         b: uint,
@@ -2292,7 +2192,7 @@ mod tests {
         }
     }
 
-    #[deriving(PartialEq, Show, Encodable, Decodable)]
+    #[deriving(PartialEq, Show)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -2361,30 +2261,30 @@ mod tests {
 
     fn test_encode_ok<
         'a,
-        T: PartialEq + Show + ToJson + ser::Serializable<io::IoError, Encoder<'a>>
+        T: PartialEq + Show + ToJson + ser::Serializable<io::IoError, Serializer<'a>>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
 
-            let s = Encoder::str_encode(value).unwrap();
+            let s = Serializer::str_encode(value).unwrap();
             assert_eq!(s, out);
 
-            let s = Encoder::str_encode(&value.to_json()).unwrap();
+            let s = Serializer::str_encode(&value.to_json()).unwrap();
             assert_eq!(s, out);
         }
     }
 
     fn test_pretty_encode_ok<
         'a,
-        T: PartialEq + Show + ToJson + ser::Serializable<io::IoError, PrettyEncoder<'a>>
+        T: PartialEq + Show + ToJson + ser::Serializable<io::IoError, PrettySerializer<'a>>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
 
-            let s = PrettyEncoder::str_encode(value).unwrap();
+            let s = PrettySerializer::str_encode(value).unwrap();
             assert_eq!(s, out);
 
-            let s = PrettyEncoder::str_encode(&value.to_json()).unwrap();
+            let s = PrettySerializer::str_encode(&value.to_json()).unwrap();
             assert_eq!(s, out);
         }
     }
@@ -2440,8 +2340,23 @@ mod tests {
 
         test_pretty_encode_ok([
             (vec!(), "[]"),
-            (vec!(true), "[\n  true\n]"),
-            (vec!(true, false), "[\n  true,\n  false\n]"),
+            (
+                vec!(true),
+                concat!(
+                    "[\n",
+                    "  true\n",
+                    "]"
+                ),
+            ),
+            (
+                vec!(true, false),
+                concat!(
+                    "[\n",
+                    "  true,\n",
+                    "  false\n",
+                    "]"
+                ),
+            ),
         ]);
 
         let long_test_list = List(vec![
@@ -2461,14 +2376,16 @@ mod tests {
         test_pretty_encode_ok([
             (
                 long_test_list,
-                "[\n  \
-                    false,\n  \
-                    null,\n  \
-                    [\n    \
-                        \"foo\\nbar\",\n    \
-                        3.5\n  \
-                    ]\n\
-                ]"
+                concat!(
+                    "[\n",
+                    "  false,\n",
+                    "  null,\n",
+                    "  [\n",
+                    "    \"foo\\nbar\",\n",
+                    "    3.5\n",
+                    "  ]\n",
+                    "]"
+                )
             )
         ]);
     }
@@ -2488,13 +2405,26 @@ mod tests {
 
         test_pretty_encode_ok([
             (treemap!(), "{}"),
-            (treemap!("a".to_string() => true), "{\n  \"a\": true\n}"),
+            (
+                treemap!("a".to_string() => true),
+                concat!(
+                    "{\n",
+                    "  \"a\": true\n",
+                    "}"
+                ),
+            ),
             (
                 treemap!(
                     "a".to_string() => true,
                     "b".to_string() => false
                 ),
-                "{\n  \"a\": true,\n  \"b\": false\n}"),
+                concat!(
+                    "{\n",
+                    "  \"a\": true,\n",
+                    "  \"b\": false\n",
+                    "}"
+                ),
+            ),
         ]);
 
         let complex_obj = Object(treemap!(
@@ -2519,16 +2449,18 @@ mod tests {
         test_pretty_encode_ok([
             (
                 complex_obj.clone(),
-                "{\n  \
-                    \"b\": [\n    \
-                        {\n      \
-                            \"c\": \"\\f\\r\"\n    \
-                        },\n    \
-                        {\n      \
-                            \"d\": \"\"\n    \
-                        }\n  \
-                    ]\n\
-                }"
+                concat!(
+                    "{\n",
+                    "  \"b\": [\n",
+                    "    {\n",
+                    "      \"c\": \"\\f\\r\"\n",
+                    "    },\n",
+                    "    {\n",
+                    "      \"d\": \"\"\n",
+                    "    }\n",
+                    "  ]\n",
+                    "}"
+                ),
             )
         ]);
     }
@@ -2541,10 +2473,25 @@ mod tests {
         ]);
 
         test_pretty_encode_ok([
-            (Dog, "{\n  \"Dog\": []\n}"),
+            (
+                Dog,
+                concat!(
+                    "{\n",
+                    "  \"Dog\": []\n",
+                    "}"
+                ),
+            ),
             (
                 Frog("Henry".to_string(), 349),
-                "{\n  \"Frog\": [\n    \"Henry\",\n    349\n  ]\n}"),
+                concat!(
+                    "{\n",
+                    "  \"Frog\": [\n",
+                    "    \"Henry\",\n",
+                    "    349\n",
+                    "  ]\n",
+                    "}"
+                ),
+            ),
         ]);
     }
 
@@ -2567,7 +2514,15 @@ mod tests {
 
         test_pretty_encode_ok([
             (None, "null"),
-            (Some(vec!("foo", "bar")), "[\n  \"foo\",\n  \"bar\"\n]"),
+            (
+                Some(vec!("foo", "bar")),
+                concat!(
+                    "[\n",
+                    "  \"foo\",\n",
+                    "  \"bar\"\n",
+                    "]"
+                ),
+            ),
         ]);
 
     }
@@ -3102,8 +3057,8 @@ mod tests {
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
         {
-            let mut encoder = Encoder::new(&mut mem_buf as &mut Writer);
-            hm.serialize(&mut encoder).unwrap();
+            let mut serializer = Serializer::new(&mut mem_buf as &mut Writer);
+            hm.serialize(&mut serializer).unwrap();
         }
         let bytes = mem_buf.unwrap();
         let json_str = from_utf8(bytes.as_slice()).unwrap();
@@ -3118,8 +3073,8 @@ mod tests {
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
         {
-            let mut encoder = PrettyEncoder::new(&mut mem_buf as &mut Writer);
-            hm.serialize(&mut encoder).unwrap()
+            let mut serializer = PrettySerializer::new(&mut mem_buf as &mut Writer);
+            hm.serialize(&mut serializer).unwrap()
         }
         let bytes = mem_buf.unwrap();
         let json_str = from_utf8(bytes.as_slice()).unwrap();
@@ -3422,132 +3377,154 @@ mod tests {
         assert!(stack.get(1) == Key("foo"));
     }
 */
+}
 
-    fn small_json() -> String {
-        r#"{
-            "a": 1.0,
-            "b": [
-                true,
-                "foo\nbar",
-                { "c": {"d": null} }
-            ]
-        }"#.to_string()
+#[cfg(test)]
+mod bench {
+    use std::collections::TreeMap;
+    use serialize;
+    use test::Bencher;
+
+    use super::{Json, Null, Boolean, Number, String, List, Object};
+    use super::{Parser, from_str};
+    use de;
+
+    macro_rules! treemap {
+        ($($k:expr => $v:expr),*) => ({
+            let mut _m = ::std::collections::TreeMap::new();
+            $(_m.insert($k, $v);)*
+            _m
+        })
     }
 
-    #[bench]
-    fn bench_decoder_streaming_small(b: &mut Bencher) {
-        use serialize::json;
-        let src = small_json();
-        b.iter( || {
-            let mut parser = json::Parser::new(src.as_slice().chars());
-            assert_eq!(parser.next(), Some(json::ObjectStart));
-            assert_eq!(parser.next(), Some(json::NumberValue(1.0)));
-            assert_eq!(parser.stack().top(), Some(json::Key("a")));
-            assert_eq!(parser.next(), Some(json::ListStart));
-            assert_eq!(parser.stack().top(), Some(json::Key("b")));
-            assert_eq!(parser.next(), Some(json::BooleanValue(true)));
-            assert_eq!(parser.next(), Some(json::StringValue("foo\nbar".to_string())));
-            assert_eq!(parser.next(), Some(json::ObjectStart));
-            assert_eq!(parser.next(), Some(json::ObjectStart));
-            assert_eq!(parser.stack().top(), Some(json::Key("c")));
-            assert_eq!(parser.next(), Some(json::NullValue));
-            assert_eq!(parser.stack().top(), Some(json::Key("d")));
-            assert_eq!(parser.next(), Some(json::ObjectEnd));
-            assert_eq!(parser.next(), Some(json::ObjectEnd));
-            assert_eq!(parser.next(), Some(json::ListEnd));
-            assert_eq!(parser.next(), Some(json::ObjectEnd));
-            assert_eq!(parser.next(), None);
-        });
-    }
-
-    #[bench]
-    fn bench_deserializer_streaming_small(b: &mut Bencher) {
-        let src = small_json();
-        b.iter( || {
-            let mut parser = Parser::new(src.as_slice().chars());
-            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
-            assert_eq!(parser.next(), Some(Ok(de::String("a".to_string()))));
-            assert_eq!(parser.next(), Some(Ok(de::F64(1.0))));
-            assert_eq!(parser.next(), Some(Ok(de::String("b".to_string()))));
-            assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
-            assert_eq!(parser.next(), Some(Ok(de::Bool(true))));
-            assert_eq!(parser.next(), Some(Ok(de::String("foo\nbar".to_string()))));
-            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
-            assert_eq!(parser.next(), Some(Ok(de::String("c".to_string()))));
-            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
-            assert_eq!(parser.next(), Some(Ok(de::String("d".to_string()))));
-            assert_eq!(parser.next(), Some(Ok(de::Null)));
-            assert_eq!(parser.next(), Some(Ok(de::End)));
-            assert_eq!(parser.next(), Some(Ok(de::End)));
-            assert_eq!(parser.next(), Some(Ok(de::End)));
-            assert_eq!(parser.next(), Some(Ok(de::End)));
-            assert_eq!(parser.next(), None);
-        });
-    }
-
-    #[bench]
-    fn bench_decoder_small(b: &mut Bencher) {
-        use serialize::json;
-        let src = small_json();
-        b.iter( || {
-            let json: json::Json = json::from_str(src.as_slice()).unwrap();
-            assert_eq!(
-                json,
-                json::Object(box treemap!(
-                    "a".to_string() => json::Number(1.0),
-                    "b".to_string() => json::List(vec!(
-                        json::Boolean(true),
-                        json::String("foo\nbar".to_string()),
-                        json::Object(box treemap!(
-                            "c".to_string() => json::Object(box treemap!(
-                                "d".to_string() => json::Null
-                            ))
-                        ))
-                    ))
-                ))
-            );
-        });
-    }
-
-    #[bench]
-    fn bench_deserializer_small(b: &mut Bencher) {
-        let src = small_json();
-        b.iter( || {
-            let json: Json = from_str(src.as_slice()).unwrap();
-            assert_eq!(
-                json,
-                Object(treemap!(
-                    "a".to_string() => Number(1.0),
-                    "b".to_string() => List(vec!(
-                        Boolean(true),
-                        String("foo\nbar".to_string()),
-                        Object(treemap!(
-                            "c".to_string() => Object(treemap!(
-                                "d".to_string() => Null
-                            ))
-                        ))
-                    ))
-                ))
-            );
-        });
-    }
-
-    fn big_json(count: uint) -> String {
-        let mut src = "[\n".to_string();
+    fn json_str(count: uint) -> String {
+        let mut src = "[".to_string();
         for _ in range(0, count) {
-            src.push_str(r#"{ "a": true, "b": null, "c":3.1415, "d": "Hello world", "e":
-                            [1,2,3]},"#);
+            src.push_str(r#"{"a":true,"b":null,"c":3.1415,"d":"Hello world","e":[1,2,3]},"#);
         }
         src.push_str("{}]");
-        return src;
+        src
     }
 
-    #[bench]
-    fn bench_decoder_streaming_large(b: &mut Bencher) {
+    fn pretty_json_str(count: uint) -> String {
+        let mut src = "[\n".to_string();
+        for _ in range(0, count) {
+            src.push_str(
+                concat!(
+                    "  {\n",
+                    "    \"a\": true,\n",
+                    "    \"b\": null,\n",
+                    "    \"c\": 3.1415,\n",
+                    "    \"d\": \"Hello world\",\n",
+                    "    \"e\": [\n",
+                    "      1,\n",
+                    "      2,\n",
+                    "      3\n",
+                    "    ]\n",
+                    "  },\n"
+                )
+            );
+        }
+        src.push_str("  {}\n]");
+        src
+    }
+
+    fn encoder_json(count: uint) -> serialize::json::Json {
         use serialize::json;
 
-        let count = 500;
-        let src = big_json(count);
+        let mut list = vec!();
+        for _ in range(0, count) {
+            list.push(json::Object(box treemap!(
+                "a".to_string() => json::Boolean(true),
+                "b".to_string() => json::Null,
+                "c".to_string() => json::Number(3.1415),
+                "d".to_string() => json::String("Hello world".to_string()),
+                "e".to_string() => json::List(vec!(
+                    json::Number(1.0),
+                    json::Number(2.0),
+                    json::Number(3.0)
+                ))
+            )));
+        }
+        list.push(json::Object(box TreeMap::new()));
+        json::List(list)
+    }
+
+    fn serializer_json(count: uint) -> Json {
+        let mut list = vec!();
+        for _ in range(0, count) {
+            list.push(Object(treemap!(
+                "a".to_string() => Boolean(true),
+                "b".to_string() => Null,
+                "c".to_string() => Number(3.1415),
+                "d".to_string() => String("Hello world".to_string()),
+                "e".to_string() => List(vec!(
+                    Number(1.0),
+                    Number(2.0),
+                    Number(3.0)
+                ))
+            )));
+        }
+        list.push(Object(TreeMap::new()));
+        List(list)
+    }
+
+    fn bench_encoder(b: &mut Bencher, count: uint) {
+        let src = json_str(count);
+        let json = encoder_json(count);
+
+        b.iter(|| {
+            assert_eq!(json.to_str(), src);
+        });
+    }
+
+    fn bench_encoder_pretty(b: &mut Bencher, count: uint) {
+        let src = pretty_json_str(count);
+        let json = encoder_json(count);
+
+        b.iter(|| {
+            assert_eq!(json.to_pretty_str(), src);
+        });
+    }
+
+    fn bench_serializer(b: &mut Bencher, count: uint) {
+        let src = json_str(count);
+        let json = serializer_json(count);
+
+        b.iter(|| {
+            assert_eq!(json.to_str(), src);
+        });
+    }
+
+    fn bench_serializer_pretty(b: &mut Bencher, count: uint) {
+        let src = pretty_json_str(count);
+        let json = serializer_json(count);
+
+        b.iter(|| {
+            assert_eq!(json.to_pretty_str(), src);
+        });
+    }
+
+    fn bench_decoder(b: &mut Bencher, count: uint) {
+        let src = json_str(count);
+        let json = encoder_json(count);
+        b.iter(|| {
+            assert_eq!(json, serialize::json::from_str(src.as_slice()).unwrap());
+        });
+    }
+
+    fn bench_deserializer(b: &mut Bencher, count: uint) {
+        let src = json_str(count);
+        let json = encoder_json(count);
+        b.iter(|| {
+            assert_eq!(json, serialize::json::from_str(src.as_slice()).unwrap());
+        });
+    }
+
+    fn bench_decoder_streaming(b: &mut Bencher, count: uint) {
+        use serialize::json;
+
+        let src = json_str(count);
 
         b.iter( || {
             let mut parser = json::Parser::new(src.as_slice().chars());
@@ -3583,40 +3560,8 @@ mod tests {
         });
     }
 
-    #[bench]
-    fn bench_decoder_large(b: &mut Bencher) {
-        use serialize::json;
-
-        let count = 500;
-        let src = big_json(count);
-
-        let mut list = vec!();
-        for _ in range(0, count) {
-            list.push(json::Object(box treemap!(
-                "a".to_string() => json::Boolean(true),
-                "b".to_string() => json::Null,
-                "c".to_string() => json::Number(3.1415),
-                "d".to_string() => json::String("Hello world".to_string()),
-                "e".to_string() => json::List(vec!(
-                    json::Number(1.0),
-                    json::Number(2.0),
-                    json::Number(3.0)
-                ))
-            )));
-        }
-        list.push(json::Object(box TreeMap::new()));
-        let list = json::List(list);
-
-        b.iter( || {
-            let json: json::Json = json::from_str(src.as_slice()).unwrap();
-            assert_eq!(json, list);
-        });
-    }
-
-    #[bench]
-    fn bench_deserializer_streaming_large(b: &mut Bencher) {
-        let count = 500;
-        let src = big_json(count);
+    fn bench_deserializer_streaming(b: &mut Bencher, count: uint) {
+        let src = json_str(count);
 
         b.iter( || {
             let mut parser = Parser::new(src.as_slice().chars());
@@ -3651,7 +3596,6 @@ mod tests {
             assert_eq!(parser.next(), Some(Ok(de::End)));
             assert_eq!(parser.next(), None);
 
-
             loop {
                 match parser.next() {
                     None => return,
@@ -3663,30 +3607,81 @@ mod tests {
     }
 
     #[bench]
-    fn bench_deserializer_large(b: &mut Bencher) {
-        let count = 500;
-        let src = big_json(count);
+    fn bench_encoder_001(b: &mut Bencher) {
+        bench_encoder(b, 1)
+    }
 
-        let mut list = vec!();
-        for _ in range(0, count) {
-            list.push(Object(treemap!(
-                "a".to_string() => Boolean(true),
-                "b".to_string() => Null,
-                "c".to_string() => Number(3.1415),
-                "d".to_string() => String("Hello world".to_string()),
-                "e".to_string() => List(vec!(
-                    Number(1.0),
-                    Number(2.0),
-                    Number(3.0)
-                ))
-            )));
-        }
-        list.push(Object(TreeMap::new()));
-        let list = List(list);
+    #[bench]
+    fn bench_encoder_500(b: &mut Bencher) {
+        bench_encoder(b, 500)
+    }
 
-        b.iter( || {
-            let json: Json = from_str(src.as_slice()).unwrap();
-            assert_eq!(json, list);
-        });
+    #[bench]
+    fn bench_encoder_001_pretty(b: &mut Bencher) {
+        bench_encoder_pretty(b, 1)
+    }
+
+    #[bench]
+    fn bench_encoder_500_pretty(b: &mut Bencher) {
+        bench_encoder_pretty(b, 500)
+    }
+
+    #[bench]
+    fn bench_serializer_001(b: &mut Bencher) {
+        bench_serializer(b, 1)
+    }
+
+    #[bench]
+    fn bench_serializer_500(b: &mut Bencher) {
+        bench_serializer(b, 500)
+    }
+    #[bench]
+    fn bench_serializer_001_pretty(b: &mut Bencher) {
+        bench_serializer_pretty(b, 1)
+    }
+
+    #[bench]
+    fn bench_serializer_500_pretty(b: &mut Bencher) {
+        bench_serializer_pretty(b, 500)
+    }
+
+    #[bench]
+    fn bench_decoder_001(b: &mut Bencher) {
+        bench_decoder(b, 1)
+    }
+
+    #[bench]
+    fn bench_decoder_500(b: &mut Bencher) {
+        bench_decoder(b, 500)
+    }
+
+    #[bench]
+    fn bench_deserializer_001(b: &mut Bencher) {
+        bench_deserializer(b, 1)
+    }
+
+    #[bench]
+    fn bench_deserializer_500(b: &mut Bencher) {
+        bench_deserializer(b, 500)
+    }
+
+    #[bench]
+    fn bench_decoder_001_streaming(b: &mut Bencher) {
+        bench_decoder_streaming(b, 1)
+    }
+
+    #[bench]
+    fn bench_decoder_500_streaming(b: &mut Bencher) {
+        bench_decoder_streaming(b, 500)
+    }
+
+    #[bench]
+    fn bench_deserializer_001_streaming(b: &mut Bencher) {
+        bench_deserializer_streaming(b, 1)
+    }
+
+    #[bench]
+    fn bench_deserializer_500_streaming(b: &mut Bencher) {
+        bench_deserializer_streaming(b, 500)
     }
 }

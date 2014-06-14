@@ -208,7 +208,7 @@ mod tests {
 
     use serialize::Decoder;
 
-    use super::{Token, Int, Uint, Str, Char, Option};
+    use super::{Token, Null, Int, Uint, Str, Char, Option};
     use super::{TupleStart, StructStart, EnumStart};
     use super::{SeqStart, MapStart, End};
     use super::{Serializer, Serializable};
@@ -341,8 +341,7 @@ mod tests {
     #[test]
     fn test_tokens_null() {
         let tokens = vec!(
-            TupleStart(0),
-            End,
+            Null,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -391,11 +390,8 @@ mod tests {
     fn test_tokens_tuple_compound() {
         let tokens = vec!(
             TupleStart(3),
-                TupleStart(0),
-                End,
-
-                TupleStart(0),
-                End,
+                Null,
+                Null,
 
                 TupleStart(2),
                     Int(5),
@@ -432,8 +428,7 @@ mod tests {
                 SeqStart(1),
                     StructStart("Inner", 3),
                         Str("a"),
-                        TupleStart(0),
-                        End,
+                        Null,
 
                         Str("b"),
                         Uint(5),
