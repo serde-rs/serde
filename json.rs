@@ -234,6 +234,7 @@ use std::f64;
 use std::fmt;
 use std::io::MemWriter;
 use std::io;
+use std::mem::transmute;
 use std::num;
 use std::str::ScalarValue;
 use std::str;
@@ -266,6 +267,7 @@ impl Json {
         self.serialize(&mut serializer)
     }
 
+    /*
     /// Encodes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
     pub fn to_pretty_writer(&self, wr: &mut Writer) -> EncodeResult {
@@ -279,6 +281,7 @@ impl Json {
         self.to_pretty_writer(&mut s as &mut Writer).unwrap();
         str::from_utf8(s.unwrap().as_slice()).unwrap().to_string()
     }
+    */
 
      /// If the Json value is an Object, returns the value associated with the provided key.
     /// Otherwise, returns None.
@@ -412,12 +415,12 @@ impl Json {
     }
 }
 
-impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Json {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Json {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         match *self {
             Null => {
-                s.serialize(ser::Null)
+                ().serialize(s)
             }
             Boolean(v) => {
                 v.serialize(s)
@@ -750,15 +753,15 @@ fn spaces(n: uint) -> String {
 #[deriving(Show)]
 enum SerializerState {
     ValueState,
-    SeqState(bool),
-    MapState(bool),
-    EnumState(bool),
+    TupleState,
+    StructState,
+    EnumState,
 }
 
 /// A structure for implementing serialization to JSON.
 pub struct Serializer<'a> {
     wr: &'a mut Writer,
-    state_stack: Vec<SerializerState>,
+    first: bool,
 }
 
 impl<'a> Serializer<'a> {
@@ -767,19 +770,22 @@ impl<'a> Serializer<'a> {
     pub fn new(wr: &'a mut Writer) -> Serializer<'a> {
         Serializer {
             wr: wr,
-            state_stack: vec!(ValueState),
+            first: true,
         }
     }
 
     /// Encode the specified struct into a json [u8]
     pub fn buf_encode<
         'a,
-        T: ser::Serializable<io::IoError, Serializer<'a>>
+        T: ser::Serializable<Serializer<'a>, io::IoError>
     >(value: &T) -> Vec<u8> {
+       //Serialize the object in a string using a writer
         let mut wr = MemWriter::new();
-        {
+        // FIXME(14302) remove the transmute and unsafe block.
+        unsafe {
             let mut serializer = Serializer::new(&mut wr);
-            value.serialize(&mut serializer).unwrap();
+            // MemWriter never Errs
+            let _ = value.serialize(transmute(&mut serializer));
         }
         wr.unwrap()
     }
@@ -787,54 +793,13 @@ impl<'a> Serializer<'a> {
     /// Encode the specified struct into a json str
     pub fn str_encode<
         'a,
-        T: ser::Serializable<io::IoError, Serializer<'a>>
+        T: ser::Serializable<Serializer<'a>, io::IoError>
     >(value: &T) -> Result<String, Vec<u8>> {
         let buf = Serializer::buf_encode(value);
         String::from_utf8(buf)
     }
 
-    fn serialize_value<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
-        match token {
-            ser::Null => { write!(self.wr, "null") }
-            ser::Bool(true) => { write!(self.wr, "true") }
-            ser::Bool(false) => { write!(self.wr, "false") }
-            ser::Int(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::I8(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::I16(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::I32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::I64(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::Uint(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::U8(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::U16(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::U32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::U64(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::F32(v) => { write!(self.wr, "{}", f64::to_str_digits(v as f64, 6)) }
-            ser::F64(v) => { write!(self.wr, "{}", f64::to_str_digits(v, 6)) }
-            ser::Char(v) => { write!(self.wr, "{}", escape_str(str::from_char(v).as_slice())) }
-            ser::Str(v) => { write!(self.wr, "{}", escape_str(v)) }
-            ser::Option(false) => { write!(self.wr, "null") }
-            ser::Option(true) => {
-                self.state_stack.push(ValueState);
-                Ok(())
-            }
-            ser::TupleStart(_)
-            | ser::SeqStart(_) => {
-                self.state_stack.push(SeqState(true));
-                write!(self.wr, "[")
-            }
-            ser::StructStart(_, _)
-            | ser::MapStart(_) => {
-                self.state_stack.push(MapState(true));
-                write!(self.wr, "{{")
-            }
-            ser::EnumStart(_, variant, _) => {
-                self.state_stack.push(EnumState(true));
-                write!(self.wr, "{{{}:[", escape_str(variant))
-            }
-            ser::End => { fail!("not implemented") }
-        }
-    }
-
+    /*
     fn serialize_seq<'a>(&mut self, token: ser::Token<'a>, first: bool) -> Result<(), io::IoError> {
         match token {
             ser::End => {
@@ -885,20 +850,250 @@ impl<'a> Serializer<'a> {
             }
         }
     }
+    */
 }
 
 impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
-    fn serialize<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
-        match self.state_stack.pop() {
-            Some(ValueState) => self.serialize_value(token),
-            Some(SeqState(v)) => self.serialize_seq(token, v),
-            Some(MapState(v)) => self.serialize_map(token, v),
-            Some(EnumState(v)) => self.serialize_enum(token, v),
-            None => { fail!("internal state machine error") }
+    #[inline]
+    fn serialize_null(&mut self) -> Result<(), io::IoError> {
+        write!(self.wr, "null")
+    }
+
+    #[inline]
+    fn serialize_bool(&mut self, v: bool) -> Result<(), io::IoError> {
+        if v {
+            write!(self.wr, "true")
+        } else {
+            write!(self.wr, "false")
         }
+    }
+
+    #[inline]
+    fn serialize_int(&mut self, v: int) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i8(&mut self, v: i8) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i16(&mut self, v: i16) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i32(&mut self, v: i32) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i64(&mut self, v: i64) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_uint(&mut self, v: uint) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u8(&mut self, v: u8) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u16(&mut self, v: u16) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u32(&mut self, v: u32) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u64(&mut self, v: u64) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_f32(&mut self, v: f32) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_f64(&mut self, v: f64) -> Result<(), io::IoError> {
+        write!(self.wr, "{}", f64::to_str_digits(v as f64, 6))
+    }
+
+    #[inline]
+    fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
+        write!(self.wr, "{}", escape_str(str::from_char(v).as_slice()))
+    }
+
+    #[inline]
+    fn serialize_str(&mut self, v: &str) -> Result<(), io::IoError> {
+        write!(self.wr, "{}", escape_str(v))
+    }
+
+    #[inline]
+    fn serialize_tuple_start(&mut self, _len: uint) -> Result<(), io::IoError> {
+        //self.state_stack.push(TupleState);
+        self.first = true;
+        write!(self.wr, "[")
+    }
+
+    #[inline]
+    fn serialize_tuple_sep(&mut self) -> Result<(), io::IoError> {
+        if self.first {
+            self.first = false;
+            Ok(())
+        } else {
+            write!(self.wr, ",")
+        }
+    }
+
+    #[inline]
+    fn serialize_tuple_end(&mut self) -> Result<(), io::IoError> {
+        write!(self.wr, "]")
+    }
+
+    #[inline]
+    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> Result<(), io::IoError> {
+        self.first = true;
+        write!(self.wr, "{{")
+    }
+
+    #[inline]
+    fn serialize_struct_sep(&mut self, name: &str) -> Result<(), io::IoError> {
+        if self.first {
+            self.first = false;
+        } else {
+            try!(write!(self.wr, ","));
+        }
+        try!(name.serialize(self));
+        write!(self.wr, ":")
+    }
+
+    #[inline]
+    fn serialize_struct_end(&mut self) -> Result<(), io::IoError> {
+        write!(self.wr, "}}")
+    }
+
+    #[inline]
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> Result<(), io::IoError> {
+        self.first = true;
+        write!(self.wr, "{{{}:[", escape_str(variant))
+    }
+
+    #[inline]
+    fn serialize_enum_sep(&mut self) -> Result<(), io::IoError> {
+        if self.first {
+            self.first = false;
+            Ok(())
+        } else {
+            write!(self.wr, ",")
+        }
+    }
+
+    #[inline]
+    fn serialize_enum_end(&mut self) -> Result<(), io::IoError> {
+        write!(self.wr, "]}}")
+    }
+
+    /*
+    #[inline]
+    fn serialize_sep(&mut self) -> Result<(), io::IoError> {
+        match self.state_stack.last() {
+            Some(&TupleState) | Some(&StructState) | Some(&EnumState) => {
+                write!(self.wr, ",")
+            }
+            Some(&ValueState) | None => {
+                fail!()
+                //Err(SyntaxError)
+            }
+        }
+    }
+
+    #[inline]
+    fn serialize_tuple_end(&mut self) -> Result<(), io::IoError> {
+        match self.state_stack.pop() {
+            Some(TupleState) => {
+                write!(self.wr, "]")
+            }
+            Some(StructState) => {
+                write!(self.wr, "}}")
+            }
+            Some(EnumState) => {
+                write!(self.wr, "]}}")
+            }
+            Some(ValueState) | None => {
+                fail!()
+                //Err(SyntaxError)
+            }
+        }
+    }
+    */
+
+    #[inline]
+    fn serialize_option<
+        T: Serializable<Serializer<'a>, io::IoError>
+    >(&mut self, v: &Option<T>) -> Result<(), io::IoError> {
+        match *v {
+            Some(ref v) => {
+                v.serialize(self)
+            }
+            None => {
+                self.serialize_null()
+            }
+        }
+    }
+
+    #[inline]
+    fn serialize_seq<
+        T: Serializable<Serializer<'a>, io::IoError>,
+        Iter: Iterator<T>
+    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+        try!(write!(self.wr, "["));
+        let mut first = true;
+        for elt in iter {
+            if first {
+                first = false;
+            } else {
+                try!(write!(self.wr, ","));
+            }
+            try!(elt.serialize(self));
+
+        }
+        write!(self.wr, "]")
+    }
+
+    #[inline]
+    fn serialize_map<
+        K: Serializable<Serializer<'a>, io::IoError>,
+        V: Serializable<Serializer<'a>, io::IoError>,
+        Iter: Iterator<(K, V)>
+    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+        try!(write!(self.wr, "{{"));
+        let mut first = true;
+        for (key, value) in iter {
+            if first {
+                first = false;
+            } else {
+                try!(write!(self.wr, ","));
+            }
+            try!(key.serialize(self));
+            try!(write!(self.wr, ":"));
+            try!(value.serialize(self));
+
+        }
+        write!(self.wr, "}}")
     }
 }
 
+/*
 /// Another serializer for JSON, but prints out human-readable JSON instead of
 /// compact data
 pub struct PrettySerializer<'a> {
@@ -917,10 +1112,10 @@ impl<'a> PrettySerializer<'a> {
         }
     }
 
+    /*
     /// Encode the specified struct into a json [u8]
     pub fn buf_encode<
-        'a,
-        T: ser::Serializable<io::IoError, PrettySerializer<'a>>
+        T: ser::Serializable<PrettySerializer<'a>, io::IoError>
     >(value: &T) -> Vec<u8> {
         let mut wr = MemWriter::new();
         {
@@ -932,13 +1127,14 @@ impl<'a> PrettySerializer<'a> {
 
     /// Encode the specified struct into a json str
     pub fn str_encode<
-        'a,
-        T: ser::Serializable<io::IoError, PrettySerializer<'a>>
+        T: ser::Serializable<PrettySerializer<'a>, io::IoError>
     >(value: &T) -> Result<String, Vec<u8>> {
         let buf = PrettySerializer::buf_encode(value);
         String::from_utf8(buf)
     }
+    */
 
+    /*
     fn serialize_value<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
         match token {
             ser::Null => { write!(self.wr, "null") }
@@ -1063,20 +1259,200 @@ impl<'a> PrettySerializer<'a> {
             }
         }
     }
+    */
 }
 
 impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
-    fn serialize<'a>(&mut self, token: ser::Token<'a>) -> Result<(), io::IoError> {
-        match self.state_stack.pop() {
-            Some(ValueState) => self.serialize_value(token),
-            Some(SeqState(v)) => self.serialize_seq(token, v),
-            Some(MapState(v)) => self.serialize_map(token, v),
-            Some(EnumState(v)) => self.serialize_enum(token, v),
-            None => { fail!("internal state machine error") }
+    #[inline]
+    fn serialize_null(&mut self) -> Result<(), io::IoError> {
+        write!(self.wr, "null")
+    }
+
+    #[inline]
+    fn serialize_bool(&mut self, v: bool) -> Result<(), io::IoError> {
+        if v {
+            write!(self.wr, "true")
+        } else {
+            write!(self.wr, "false")
         }
     }
-}
 
+    #[inline]
+    fn serialize_int(&mut self, v: int) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i8(&mut self, v: i8) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i16(&mut self, v: i16) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i32(&mut self, v: i32) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_i64(&mut self, v: i64) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_uint(&mut self, v: uint) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u8(&mut self, v: u8) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u16(&mut self, v: u16) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u32(&mut self, v: u32) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_u64(&mut self, v: u64) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_f32(&mut self, v: f32) -> Result<(), io::IoError> {
+        self.serialize_f64(v as f64)
+    }
+
+    #[inline]
+    fn serialize_f64(&mut self, v: f64) -> Result<(), io::IoError> {
+        write!(self.wr, "{}", f64::to_str_digits(v as f64, 6))
+    }
+
+    #[inline]
+    fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
+        write!(self.wr, "{}", escape_str(str::from_char(v).as_slice()))
+    }
+
+    #[inline]
+    fn serialize_str(&mut self, v: &str) -> Result<(), io::IoError> {
+        write!(self.wr, "{}", escape_str(v))
+    }
+
+    #[inline]
+    fn serialize_tuple_start(&mut self, _len: uint) -> Result<(), io::IoError> {
+        self.state_stack.push(TupleState);
+        write!(self.wr, "[")
+    }
+
+    #[inline]
+    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> Result<(), io::IoError> {
+        self.state_stack.push(StructState);
+        write!(self.wr, "{{")
+    }
+
+    #[inline]
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> Result<(), io::IoError> {
+        self.state_stack.push(EnumState);
+        write!(self.wr, "{{{}:[", escape_str(variant))
+    }
+
+    #[inline]
+    fn serialize_sep(&mut self) -> Result<(), io::IoError> {
+        match self.state_stack.last() {
+            Some(&TupleState) | Some(&StructState) | Some(&EnumState) => {
+                write!(self.wr, ",")
+            }
+            Some(&ValueState) | None => {
+                fail!()
+                //Err(SyntaxError)
+            }
+        }
+    }
+
+    #[inline]
+    fn serialize_end(&mut self) -> Result<(), io::IoError> {
+        match self.state_stack.pop() {
+            Some(TupleState) => {
+                write!(self.wr, "]")
+            }
+            Some(StructState) => {
+                write!(self.wr, "}}")
+            }
+            Some(EnumState) => {
+                write!(self.wr, "]}}")
+            }
+            Some(ValueState) | None => {
+                fail!()
+                //Err(SyntaxError)
+            }
+        }
+    }
+
+    #[inline]
+    fn serialize_option<
+        T: Serializable<PrettySerializer<'a>, io::IoError>
+    >(&mut self, v: &Option<T>) -> Result<(), io::IoError> {
+        match *v {
+            Some(ref v) => {
+                v.serialize(self)
+            }
+            None => {
+                self.serialize_null()
+            }
+        }
+    }
+
+    #[inline]
+    fn serialize_seq<
+        T: Serializable<PrettySerializer<'a>, io::IoError>,
+        Iter: Iterator<T>
+    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+        try!(write!(self.wr, "["));
+        let mut first = true;
+        for elt in iter {
+            if first {
+                first = false;
+            } else {
+                try!(write!(self.wr, ","));
+            }
+            try!(elt.serialize(self));
+
+        }
+        write!(self.wr, "]")
+    }
+
+    #[inline]
+    fn serialize_map<
+        K: Serializable<PrettySerializer<'a>, io::IoError>,
+        V: Serializable<PrettySerializer<'a>, io::IoError>,
+        Iter: Iterator<(K, V)>
+    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+        try!(write!(self.wr, "{{"));
+        let mut first = true;
+        for (key, value) in iter {
+            if first {
+                first = false;
+            } else {
+                try!(write!(self.wr, ","));
+            }
+            try!(key.serialize(self));
+            try!(write!(self.wr, ":"));
+            try!(value.serialize(self));
+
+        }
+        write!(self.wr, "}}")
+    }
+}
+*/
 
 /*
 /// The output of the streaming parser.
@@ -2004,6 +2380,7 @@ impl fmt::Show for Json {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use std::io;
@@ -2045,19 +2422,19 @@ mod tests {
         Frog(String, int)
     }
 
-    impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Animal {
+    impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Animal {
         #[inline]
         fn serialize(&self, s: &mut S) -> Result<(), E> {
             match *self {
                 Dog => {
-                    try!(s.serialize(ser::EnumStart("Animal", "Dog", 0)));
-                    s.serialize(ser::End)
+                    try!(s.serialize_enum_start("Animal", "Dog", 0));
+                    s.serialize_end()
                 }
                 Frog(ref x0, x1) => {
-                    try!(s.serialize(ser::EnumStart("Animal", "Frog", 2)));
+                    try!(s.serialize_enum_start("Animal", "Frog", 2));
                     try!(x0.serialize(s));
                     try!(x1.serialize(s));
-                    s.serialize(ser::End)
+                    s.serialize_end()
                 }
             }
         }
@@ -2112,14 +2489,14 @@ mod tests {
         c: Vec<String>,
     }
 
-    impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Inner {
+    impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Inner {
         #[inline]
         fn serialize(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize(ser::StructStart("Inner", 3)));
+            try!(s.serialize_struct_start("Inner", 3));
             try!(self.a.serialize(s));
             try!(self.b.serialize(s));
             try!(self.c.serialize(s));
-            s.serialize(ser::End)
+            s.serialize_end()
         }
     }
 
@@ -2197,12 +2574,12 @@ mod tests {
         inner: Vec<Inner>,
     }
 
-    impl<E, S: ser::Serializer<E>> ser::Serializable<E, S> for Outer {
+    impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Outer {
         #[inline]
         fn serialize(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize(ser::StructStart("Outer", 1)));
+            try!(s.serialize_struct_start("Outer", 1));
             try!(self.inner.serialize(s));
-            s.serialize(ser::End)
+            s.serialize_end()
         }
     }
 
@@ -3685,3 +4062,4 @@ mod bench {
         bench_deserializer_streaming(b, 500)
     }
 }
+*/

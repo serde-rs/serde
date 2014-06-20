@@ -11,95 +11,143 @@
 use std::collections::{HashMap, TreeMap};
 use std::hash::Hash;
 
-#[deriving(Clone, PartialEq, Show)]
-pub enum Token<'a> {
-    Null,
-    Bool(bool),
-    Int(int),
-    I8(i8),
-    I16(i16),
-    I32(i32),
-    I64(i64),
-    Uint(uint),
-    U8(u8),
-    U16(u16),
-    U32(u32),
-    U64(u64),
-    F32(f32),
-    F64(f64),
-    Char(char),
-    Str(&'a str),
-    Option(bool),
-
-    TupleStart(uint),
-    StructStart(&'a str, uint),
-    EnumStart(&'a str, &'a str, uint),
-    SeqStart(uint),
-    MapStart(uint),
-
-    End,
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 pub trait Serializer<E> {
-    fn serialize<'a>(&mut self, token: Token<'a>) -> Result<(), E>;
+    fn serialize_null(&mut self) -> Result<(), E>;
+
+    fn serialize_bool(&mut self, v: bool) -> Result<(), E>;
+
+    #[inline]
+    fn serialize_int(&mut self, v: int) -> Result<(), E> {
+        self.serialize_i64(v as i64)
+    }
+
+    #[inline]
+    fn serialize_i8(&mut self, v: i8) -> Result<(), E> {
+        self.serialize_i64(v as i64)
+    }
+
+    #[inline]
+    fn serialize_i16(&mut self, v: i16) -> Result<(), E> {
+        self.serialize_i64(v as i64)
+    }
+
+    #[inline]
+    fn serialize_i32(&mut self, v: i32) -> Result<(), E> {
+        self.serialize_i64(v as i64)
+    }
+
+    #[inline]
+    fn serialize_i64(&mut self, v: i64) -> Result<(), E>;
+
+    #[inline]
+    fn serialize_uint(&mut self, v: uint) -> Result<(), E> {
+        self.serialize_u64(v as u64)
+    }
+
+    #[inline]
+    fn serialize_u8(&mut self, v: u8) -> Result<(), E> {
+        self.serialize_u64(v as u64)
+    }
+
+    #[inline]
+    fn serialize_u16(&mut self, v: u16) -> Result<(), E> {
+        self.serialize_u64(v as u64)
+    }
+
+    #[inline]
+    fn serialize_u32(&mut self, v: u32) -> Result<(), E> {
+        self.serialize_u64(v as u64)
+    }
+
+    #[inline]
+    fn serialize_u64(&mut self, v: u64) -> Result<(), E>;
+
+    #[inline]
+    fn serialize_f32(&mut self, v: f32) -> Result<(), E> {
+        self.serialize_f64(v as f64)
+    }
+
+    fn serialize_f64(&mut self, v: f64) -> Result<(), E>;
+
+    fn serialize_char(&mut self, v: char) -> Result<(), E>;
+
+    fn serialize_str(&mut self, v: &str) -> Result<(), E>;
+
+    fn serialize_tuple_start(&mut self, len: uint) -> Result<(), E>;
+    fn serialize_tuple_sep(&mut self) -> Result<(), E>;
+    fn serialize_tuple_end(&mut self) -> Result<(), E>;
+
+    fn serialize_struct_start(&mut self, name: &str, len: uint) -> Result<(), E>;
+    fn serialize_struct_sep(&mut self, name: &str) -> Result<(), E>;
+    fn serialize_struct_end(&mut self) -> Result<(), E>;
+
+    fn serialize_enum_start(&mut self, name: &str, variant: &str, len: uint) -> Result<(), E>;
+    fn serialize_enum_sep(&mut self) -> Result<(), E>;
+    fn serialize_enum_end(&mut self) -> Result<(), E>;
+
+    fn serialize_option<
+        T: Serializable<Self, E>
+    >(&mut self, v: &Option<T>) -> Result<(), E>;
+
+    fn serialize_seq<
+        T: Serializable<Self, E>,
+        Iter: Iterator<T>
+    >(&mut self, iter: Iter) -> Result<(), E>;
+
+    fn serialize_map<
+        K: Serializable<Self, E>,
+        V: Serializable<Self, E>,
+        Iter: Iterator<(K, V)>
+    >(&mut self, iter: Iter) -> Result<(), E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-pub trait Serializable<E, S: Serializer<E>> {
+pub trait Serializable<S: Serializer<E>, E> {
     fn serialize(&self, s: &mut S) -> Result<(), E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_serializable {
-    ($ty:ty, $variant:expr) => {
-        impl<'a, E, S: Serializer<E>> Serializable<E, S> for $ty {
+    ($ty:ty, $method:ident, $variant:expr) => {
+        impl<'a, S: Serializer<E>, E> Serializable<S, E> for $ty {
             #[inline]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
-                s.serialize($variant)
+                s.$method($variant)
             }
         }
     }
 }
 
-impl_serializable!(bool, Bool(*self))
-impl_serializable!(int, Int(*self))
-impl_serializable!(i8, I8(*self))
-impl_serializable!(i16, I16(*self))
-impl_serializable!(i32, I32(*self))
-impl_serializable!(i64, I64(*self))
-impl_serializable!(uint, Uint(*self))
-impl_serializable!(u8, U8(*self))
-impl_serializable!(u16, U16(*self))
-impl_serializable!(u32, U32(*self))
-impl_serializable!(u64, U64(*self))
-impl_serializable!(f32, F32(*self))
-impl_serializable!(f64, F64(*self))
-impl_serializable!(char, Char(*self))
-impl_serializable!(&'a str, Str(*self))
-impl_serializable!(String, Str(self.as_slice()))
-
-//////////////////////////////////////////////////////////////////////////////
+impl_serializable!(bool, serialize_bool, *self)
+impl_serializable!(int, serialize_int, *self)
+impl_serializable!(i8, serialize_i8, *self)
+impl_serializable!(i16, serialize_i16, *self)
+impl_serializable!(i32, serialize_i32, *self)
+impl_serializable!(i64, serialize_i64, *self)
+impl_serializable!(uint, serialize_uint, *self)
+impl_serializable!(u8, serialize_u8, *self)
+impl_serializable!(u16, serialize_u16, *self)
+impl_serializable!(u32, serialize_u32, *self)
+impl_serializable!(u64, serialize_u64, *self)
+impl_serializable!(f32, serialize_f32, *self)
+impl_serializable!(f64, serialize_f64, *self)
+impl_serializable!(char, serialize_char, *self)
+impl_serializable!(&'a str, serialize_str, *self)
+impl_serializable!(String, serialize_str, self.as_slice())
 
 impl<
+    'a,
     E,
     S: Serializer<E>,
-    T: Serializable<E, S>
-> Serializable<E, S> for Option<T> {
+    T: Serializable<S, E>
+> Serializable<S, E> for &'a T {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        match *self {
-            Some(ref value) => {
-                try!(s.serialize(Option(true)));
-                value.serialize(s)
-            }
-            None => {
-                s.serialize(Option(false))
-            }
-        }
+        (*self).serialize(s)
     }
 }
 
@@ -108,15 +156,11 @@ impl<
 impl<
     E,
     S: Serializer<E>,
-    T: Serializable<E, S>
-> Serializable<E, S> for Vec<T> {
+    T: Serializable<S, E>
+> Serializable<S, E> for Option<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        try!(s.serialize(SeqStart(self.len())));
-        for elt in self.iter() {
-            try!(elt.serialize(s));
-        }
-        s.serialize(End)
+        s.serialize_option(self)
     }
 }
 
@@ -125,34 +169,37 @@ impl<
 impl<
     E,
     S: Serializer<E>,
-    K: Serializable<E, S> + Eq + Hash,
-    V: Serializable<E, S>
-> Serializable<E, S> for HashMap<K, V> {
+    T: Serializable<S, E>
+> Serializable<S, E> for Vec<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        try!(s.serialize(MapStart(self.len())));
-        for (key, value) in self.iter() {
-            try!(key.serialize(s));
-            try!(value.serialize(s));
-        }
-        s.serialize(End)
+        s.serialize_seq(self.iter())
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<
+    E,
+    S: Serializer<E>,
+    K: Serializable<S, E> + Eq + Hash,
+    V: Serializable<S, E>
+> Serializable<S, E> for HashMap<K, V> {
+    #[inline]
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
+        s.serialize_map(self.iter())
     }
 }
 
 impl<
     E,
     S: Serializer<E>,
-    K: Serializable<E, S> + Ord,
-    V: Serializable<E, S>
-> Serializable<E, S> for TreeMap<K, V> {
+    K: Serializable<S, E> + Ord,
+    V: Serializable<S, E>
+> Serializable<S, E> for TreeMap<K, V> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        try!(s.serialize(MapStart(self.len())));
-        for (key, value) in self.iter() {
-            try!(key.serialize(s));
-            try!(value.serialize(s));
-        }
-        s.serialize(End)
+        s.serialize_map(self.iter())
     }
 }
 
@@ -167,10 +214,10 @@ macro_rules! impl_serialize_tuple {
         impl<
             E,
             S: Serializer<E>
-        > Serializable<E, S> for () {
+        > Serializable<S, E> for () {
             #[inline]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
-                s.serialize(Null)
+                s.serialize_null()
             }
         }
     };
@@ -178,8 +225,8 @@ macro_rules! impl_serialize_tuple {
         impl<
             E,
             S: Serializer<E>,
-            $($name:Serializable<E, S>),*
-        > Serializable<E, S> for ($($name,)*) {
+            $($name:Serializable<S, E>),*
+        > Serializable<S, E> for ($($name,)*) {
             #[inline]
             #[allow(uppercase_variables)]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
@@ -189,9 +236,9 @@ macro_rules! impl_serialize_tuple {
 
                 let ($(ref $name,)*) = *self;
 
-                try!(s.serialize(TupleStart(len)));
+                try!(s.serialize_tuple_start(len));
                 $(try!($name.serialize(s));)*
-                s.serialize(End)
+                s.serialize_tuple_end()
             }
         }
         peel!($($name,)*)
@@ -208,9 +255,6 @@ mod tests {
 
     use serialize::Decoder;
 
-    use super::{Token, Null, Int, Uint, Str, Char, Option};
-    use super::{TupleStart, StructStart, EnumStart};
-    use super::{SeqStart, MapStart, End};
     use super::{Serializer, Serializable};
 
     //////////////////////////////////////////////////////////////////////////////
@@ -222,17 +266,21 @@ mod tests {
         c: HashMap<String, Option<char>>,
     }
 
-    impl<E, S: Serializer<E>> Serializable<E, S> for Inner {
+    impl<S: Serializer<E>, E> Serializable<S, E> for Inner {
         #[inline]
         fn serialize(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize(StructStart("Inner", 3)));
-            try!(s.serialize(Str("a")));
+            try!(s.serialize_struct_start("Inner", 3));
+
+            try!(s.serialize_struct_sep("a"));
             try!(self.a.serialize(s));
-            try!(s.serialize(Str("b")));
+
+            try!(s.serialize_struct_sep("b"));
             try!(self.b.serialize(s));
-            try!(s.serialize(Str("c")));
+
+            try!(s.serialize_struct_sep("c"));
             try!(self.c.serialize(s));
-            s.serialize(End)
+
+            s.serialize_struct_end()
         }
     }
 
@@ -243,13 +291,15 @@ mod tests {
         inner: Vec<Inner>,
     }
 
-    impl<E, S: Serializer<E>> Serializable<E, S> for Outer {
+    impl<S: Serializer<E>, E> Serializable<S, E> for Outer {
         #[inline]
         fn serialize(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize(StructStart("Outer", 1)));
-            try!(s.serialize(Str("inner")));
+            try!(s.serialize_struct_start("Outer", 1));
+
+            try!(s.serialize_struct_sep("inner"));
             try!(self.inner.serialize(s));
-            s.serialize(End)
+
+            s.serialize_enum_end()
         }
     }
 
@@ -261,24 +311,68 @@ mod tests {
         Frog(String, int)
     }
 
-    impl<E, S: Serializer<E>> Serializable<E, S> for Animal {
+    impl<S: Serializer<E>, E> Serializable<S, E> for Animal {
         #[inline]
         fn serialize(&self, s: &mut S) -> Result<(), E> {
             match *self {
                 Dog => {
-                    try!(s.serialize(EnumStart("Animal", "Dog", 0)));
+                    try!(s.serialize_enum_start("Animal", "Dog", 0));
                 }
                 Frog(ref x, y) => {
-                    try!(s.serialize(EnumStart("Animal", "Frog", 2)));
+                    try!(s.serialize_enum_start("Animal", "Frog", 2));
+
+                    try!(s.serialize_enum_sep());
                     try!(x.serialize(s));
+
+                    try!(s.serialize_enum_sep());
                     try!(y.serialize(s));
                 }
             }
-            s.serialize(End)
+            s.serialize_enum_end()
         }
     }
 
     //////////////////////////////////////////////////////////////////////////////
+
+    #[deriving(Clone, PartialEq, Show)]
+    pub enum Token<'a> {
+        Null,
+        Bool(bool),
+        Int(int),
+        I8(i8),
+        I16(i16),
+        I32(i32),
+        I64(i64),
+        Uint(uint),
+        U8(u8),
+        U16(u16),
+        U32(u32),
+        U64(u64),
+        F32(f32),
+        F64(f64),
+        Char(char),
+        Str(&'a str),
+
+        TupleStart(uint),
+        TupleSep,
+        TupleEnd,
+
+        StructStart(&'a str, uint),
+        StructSep(&'a str),
+        StructEnd,
+
+        EnumStart(&'a str, &'a str, uint),
+        EnumSep,
+        EnumEnd,
+
+        Option(bool),
+
+        SeqStart(uint),
+        SeqEnd,
+
+        MapStart(uint),
+        MapEnd,
+    }
 
     #[deriving(Show)]
     enum Error {
@@ -293,16 +387,12 @@ mod tests {
     }
 
     impl<'a, Iter: Iterator<Token<'a>>> AssertSerializer<Iter> {
-        #[inline]
         fn new(iter: Iter) -> AssertSerializer<Iter> {
             AssertSerializer {
                 iter: iter,
             }
         }
-    }
 
-    impl<'a, Iter: Iterator<Token<'a>>> Serializer<Error> for AssertSerializer<Iter> {
-        #[inline]
         fn serialize<'b>(&mut self, token: Token<'b>) -> Result<(), Error> {
             let t = match self.iter.next() {
                 Some(t) => t,
@@ -312,6 +402,146 @@ mod tests {
             assert_eq!(t, token);
 
             Ok(())
+        }
+    }
+
+    impl<'a, Iter: Iterator<Token<'a>>> Serializer<Error> for AssertSerializer<Iter> {
+        fn serialize_null(&mut self) -> Result<(), Error> {
+            self.serialize(Null)
+        }
+        fn serialize_bool(&mut self, v: bool) -> Result<(), Error> {
+            self.serialize(Bool(v))
+        }
+        fn serialize_int(&mut self, v: int) -> Result<(), Error> {
+            self.serialize(Int(v))
+        }
+
+        fn serialize_i8(&mut self, v: i8) -> Result<(), Error> {
+            self.serialize(I8(v))
+        }
+
+        fn serialize_i16(&mut self, v: i16) -> Result<(), Error> {
+            self.serialize(I16(v))
+        }
+
+        fn serialize_i32(&mut self, v: i32) -> Result<(), Error> {
+            self.serialize(I32(v))
+        }
+
+        fn serialize_i64(&mut self, v: i64) -> Result<(), Error> {
+            self.serialize(I64(v))
+        }
+
+        fn serialize_uint(&mut self, v: uint) -> Result<(), Error> {
+            self.serialize(Uint(v))
+        }
+
+        fn serialize_u8(&mut self, v: u8) -> Result<(), Error> {
+            self.serialize(U8(v))
+        }
+
+        fn serialize_u16(&mut self, v: u16) -> Result<(), Error> {
+            self.serialize(U16(v))
+        }
+
+        fn serialize_u32(&mut self, v: u32) -> Result<(), Error> {
+            self.serialize(U32(v))
+        }
+
+        fn serialize_u64(&mut self, v: u64) -> Result<(), Error> {
+            self.serialize(U64(v))
+        }
+
+        fn serialize_f32(&mut self, v: f32) -> Result<(), Error> {
+            self.serialize(F32(v))
+        }
+
+        fn serialize_f64(&mut self, v: f64) -> Result<(), Error> {
+            self.serialize(F64(v))
+        }
+
+        fn serialize_char(&mut self, v: char) -> Result<(), Error> {
+            self.serialize(Char(v))
+        }
+
+        fn serialize_str(&mut self, v: &str) -> Result<(), Error> {
+            self.serialize(Str(v))
+        }
+
+        fn serialize_tuple_start(&mut self, len: uint) -> Result<(), Error> {
+            self.serialize(TupleStart(len))
+        }
+
+        fn serialize_tuple_sep(&mut self) -> Result<(), Error> {
+            self.serialize(TupleSep)
+        }
+
+        fn serialize_tuple_end(&mut self) -> Result<(), Error> {
+            self.serialize(TupleEnd)
+        }
+
+        fn serialize_struct_start(&mut self, name: &str, len: uint) -> Result<(), Error> {
+            self.serialize(StructStart(name, len))
+        }
+
+        fn serialize_struct_sep(&mut self, name: &str) -> Result<(), Error> {
+            self.serialize(StructSep(name))
+        }
+
+        fn serialize_struct_end(&mut self) -> Result<(), Error> {
+            self.serialize(StructEnd)
+        }
+
+        fn serialize_enum_start(&mut self, name: &str, variant: &str, len: uint) -> Result<(), Error> {
+            self.serialize(EnumStart(name, variant, len))
+        }
+
+        fn serialize_enum_sep(&mut self) -> Result<(), Error> {
+            self.serialize(EnumSep)
+        }
+
+        fn serialize_enum_end(&mut self) -> Result<(), Error> {
+            self.serialize(EnumEnd)
+        }
+
+        fn serialize_option<
+            T: Serializable<AssertSerializer<Iter>, Error>
+        >(&mut self, v: &Option<T>) -> Result<(), Error> {
+            match *v {
+                Some(ref v) => {
+                    try!(self.serialize(Option(true)));
+                    v.serialize(self)
+                }
+                None => {
+                    self.serialize(Option(false))
+                }
+            }
+        }
+
+        fn serialize_seq<
+            T: Serializable<AssertSerializer<Iter>, Error>,
+            SeqIter: Iterator<T>
+        >(&mut self, mut iter: SeqIter) -> Result<(), Error> {
+            let (len, _) = iter.size_hint();
+            try!(self.serialize(SeqStart(len)));
+            for elt in iter {
+                elt.serialize(self).unwrap();
+            }
+            self.serialize(SeqEnd)
+        }
+
+        fn serialize_map<
+            K: Serializable<AssertSerializer<Iter>, Error>,
+            V: Serializable<AssertSerializer<Iter>, Error>,
+            MapIter: Iterator<(K, V)>
+        >(&mut self, mut iter: MapIter) -> Result<(), Error> {
+            let (len, _) = iter.size_hint();
+            try!(self.serialize(MapStart(len)));
+            for (key, value) in iter {
+                try!(key.serialize(self));
+                try!(value.serialize(self));
+            }
+            self.serialize(MapEnd)
         }
     }
 
@@ -376,9 +606,12 @@ mod tests {
     fn test_tokens_tuple() {
         let tokens = vec!(
             TupleStart(2),
+                TupleSep,
                 Int(5),
+
+                TupleSep,
                 Str("a"),
-            End,
+            TupleEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -390,14 +623,21 @@ mod tests {
     fn test_tokens_tuple_compound() {
         let tokens = vec!(
             TupleStart(3),
-                Null,
+                TupleSep,
                 Null,
 
+                TupleSep,
+                Null,
+
+                TupleSep,
                 TupleStart(2),
+                    TupleSep,
                     Int(5),
+
+                    TupleSep,
                     Str("a"),
-                End,
-            End,
+                TupleEnd,
+            TupleEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -409,10 +649,10 @@ mod tests {
     fn test_tokens_struct_empty() {
         let tokens = vec!(
             StructStart("Outer", 1),
-                Str("inner"),
+                StructSep("inner"),
                 SeqStart(0),
-                End,
-            End,
+                SeqEnd,
+            StructEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -424,25 +664,24 @@ mod tests {
     fn test_tokens_struct() {
         let tokens = vec!(
             StructStart("Outer", 1),
-                Str("inner"),
+                StructSep("inner"),
                 SeqStart(1),
                     StructStart("Inner", 3),
-                        Str("a"),
+                        StructSep("a"),
                         Null,
 
-                        Str("b"),
+                        StructSep("b"),
                         Uint(5),
 
-                        Str("c"),
+                        StructSep("c"),
                         MapStart(1),
                             Str("abc"),
-
                             Option(true),
                             Char('c'),
-                        End,
-                    End,
-                End,
-            End,
+                        MapEnd,
+                    StructEnd,
+                StructEnd,
+            StructEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -466,7 +705,7 @@ mod tests {
     fn test_tokens_enum() {
         let tokens = vec!(
             EnumStart("Animal", "Dog", 0),
-            End,
+            EnumEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -475,9 +714,12 @@ mod tests {
 
         let tokens = vec!(
             EnumStart("Animal", "Frog", 2),
+                EnumSep,
                 Str("Henry"),
+
+                EnumSep,
                 Int(349),
-            End,
+            EnumEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -489,7 +731,7 @@ mod tests {
     fn test_tokens_vec_empty() {
         let tokens = vec!(
             SeqStart(0),
-            End,
+            SeqEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -505,7 +747,7 @@ mod tests {
                 Int(5),
                 Int(6),
                 Int(7),
-            End,
+            SeqEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -519,19 +761,19 @@ mod tests {
             SeqStart(3),
                 SeqStart(1),
                     Int(1),
-                End,
+                SeqEnd,
 
                 SeqStart(2),
                     Int(2),
                     Int(3),
-                End,
+                SeqEnd,
 
                 SeqStart(3),
                     Int(4),
                     Int(5),
                     Int(6),
-                End,
-            End,
+                SeqEnd,
+            SeqEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
@@ -548,7 +790,7 @@ mod tests {
 
                 Int(6),
                 Str("b"),
-            End,
+            MapEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
