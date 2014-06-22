@@ -128,7 +128,8 @@ mod decoder {
 
         #[inline]
         fn read_map<T>(&mut self, f: |&mut IntDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
-            f(self, self.len)
+            let len = self.len;
+            f(self, len)
         }
         #[inline]
         fn read_map_elt_key<T>(&mut self, _idx: uint, f: |&mut IntDecoder| -> Result<T, Error>) -> Result<T, Error> {
@@ -277,7 +278,7 @@ fn bench_decoder_100(b: &mut Bencher) {
 fn run_deserializer<
     E: Show,
     D: Deserializer<E>,
-    T: Clone + PartialEq + Show + Deserializable<E, D>
+    T: Clone + PartialEq + Show + Deserializable
 >(mut d: D, value: T) {
     let v: T = Deserializable::deserialize(&mut d).unwrap();
 

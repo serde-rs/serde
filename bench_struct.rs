@@ -15,9 +15,12 @@ struct Inner {
     c: HashMap<String, Option<char>>,
 }
 
-impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
+impl Deserializable for Inner {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Inner, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Inner, E> {
         match token {
             de::StructStart("Inner", _) |
             de::MapStart(_) => {
@@ -79,9 +82,12 @@ struct Outer {
     inner: Vec<Inner>,
 }
 
-impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
+impl Deserializable for Outer {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Outer, E> {
         match token {
             de::StructStart("Outer", _) |
             de::MapStart(_) => {

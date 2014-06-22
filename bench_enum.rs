@@ -12,9 +12,11 @@ enum Animal {
     Frog(String, int)
 }
 
-impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
+impl Deserializable for Animal {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Animal, E> {
+    fn deserialize_token<
+        D: Deserializer<E>, E
+    >(d: &mut D, token: Token) -> Result<Animal, E> {
         match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
             0 => {
                 try!(d.expect_enum_end());

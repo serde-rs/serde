@@ -17,7 +17,6 @@ pub mod de;
 pub mod ser;
 pub mod json;
 
-/*
 //#[cfg(test)]
 //pub mod bench_bytes;
 
@@ -32,7 +31,6 @@ pub mod bench_vec;
 
 #[cfg(test)]
 pub mod bench_map;
-*/
 
 #[cfg(test)]
 pub mod bench_log;

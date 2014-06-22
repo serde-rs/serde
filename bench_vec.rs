@@ -108,7 +108,8 @@ mod decoder {
 
         #[inline]
         fn read_seq<T>(&mut self, f: |&mut IntDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
-            f(self, self.len)
+            let len = self.len;
+            f(self, len)
         }
         #[inline]
         fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut IntDecoder| -> Result<T, Error>) -> Result<T, Error> {
@@ -209,7 +210,8 @@ mod decoder {
 
         #[inline]
         fn read_seq<T>(&mut self, f: |&mut U8Decoder, uint| -> Result<T, Error>) -> Result<T, Error> {
-            f(self, self.len)
+            let len = self.len;
+            f(self, len)
         }
         #[inline]
         fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut U8Decoder| -> Result<T, Error>) -> Result<T, Error> {
@@ -365,7 +367,7 @@ fn run_decoder<
 fn run_deserializer<
     E: Show,
     D: Deserializer<E>,
-    T: Clone + PartialEq + Show + Deserializable<E, D>
+    T: Clone + PartialEq + Show + Deserializable
 >(mut d: D, value: T) {
     let v: T = Deserializable::deserialize(&mut d).unwrap();
 

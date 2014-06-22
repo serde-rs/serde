@@ -445,9 +445,12 @@ impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Json {
     }
 }
 
-impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Json {
+impl de::Deserializable for Json {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<Json, E> {
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<Json, E> {
         match token {
             de::Null => Ok(Null),
             de::Bool(x) => Ok(Boolean(x)),
@@ -578,7 +581,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserializable<ParserError, JsonDeserializer>
+        U: de::Deserializable
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
@@ -1894,7 +1897,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserializable<ParserError, Parser<T>>
+        U: de::Deserializable
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
@@ -1951,7 +1954,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
 /// Decodes a json value from an `Iterator<Char>`.
 pub fn from_iter<
     Iter: Iterator<char>,
-    T: de::Deserializable<ParserError, Parser<Iter>>
+    T: de::Deserializable
 >(iter: Iter) -> Result<T, ParserError> {
     let mut parser = Parser::new(iter);
     let value = try!(de::Deserializable::deserialize(&mut parser));
@@ -1966,15 +1969,14 @@ pub fn from_iter<
 
 /// Decodes a json value from a string
 pub fn from_str<
-    'a,
-    T: de::Deserializable<ParserError, Parser<str::Chars<'a>>>
->(s: &'a str) -> Result<T, BuilderError> {
+    T: de::Deserializable
+>(s: &str) -> Result<T, BuilderError> {
     from_iter(s.chars())
 }
 
 /// Decodes a json value from a `Json`.
 pub fn from_json<
-    T: de::Deserializable<ParserError, JsonDeserializer>
+    T: de::Deserializable
 >(json: Json) -> Result<T, ParserError> {
     let mut d = JsonDeserializer::new(json);
     de::Deserializable::deserialize(&mut d)
@@ -2200,13 +2202,12 @@ impl<A:ToJson> ToJson for Option<A> {
 mod tests {
     use std::io;
     use std::fmt::Show;
-    use std::str;
     use std::collections::TreeMap;
 
     use super::{Serializer, PrettySerializer};
     use super::{Json, Null, Boolean, Number, String, List, Object};
-    use super::{Parser, ParserError, from_iter, from_str};
-    use super::{JsonDeserializer, from_json, ToJson};
+    use super::{ParserError, from_iter, from_str};
+    use super::{from_json, ToJson};
     use super::{
         EOFWhileParsingList,
         EOFWhileParsingObject,
@@ -2260,9 +2261,12 @@ mod tests {
         }
     }
 
-    impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Animal {
+    impl de::Deserializable for Animal {
         #[inline]
-        fn deserialize_token(d: &mut D, token: de::Token) -> Result<Animal, E> {
+        fn deserialize_token<
+            D: de::Deserializer<E>,
+            E
+        >(d: &mut D, token: de::Token) -> Result<Animal, E> {
             match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
                 0 => {
                     try!(d.expect_enum_end());
@@ -2327,9 +2331,11 @@ mod tests {
         }
     }
 
-    impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Inner {
+    impl de::Deserializable for Inner {
         #[inline]
-        fn deserialize_token(d: &mut D, token: de::Token) -> Result<Inner, E> {
+        fn deserialize_token<
+            D: de::Deserializer<E>, E
+        >(d: &mut D, token: de::Token) -> Result<Inner, E> {
             match token {
                 de::StructStart("Inner", _) |
                 de::MapStart(_) => {
@@ -2413,9 +2419,12 @@ mod tests {
         }
     }
 
-    impl<E, D: de::Deserializer<E>> de::Deserializable<E, D> for Outer {
+    impl de::Deserializable for Outer {
         #[inline]
-        fn deserialize_token(d: &mut D, token: de::Token) -> Result<Outer, E> {
+        fn deserialize_token<
+            D: de::Deserializer<E>,
+            E
+        >(d: &mut D, token: de::Token) -> Result<Outer, E> {
             match token {
                 de::StructStart("Outer", _) |
                 de::MapStart(_) => {
@@ -2808,9 +2817,8 @@ mod tests {
 
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
-        'a,
-        T: Show + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
-    >(errors: &[(&'a str, ParserError)]) {
+        T: Show + de::Deserializable
+    >(errors: &[(&str, ParserError)]) {
         for &(s, ref err) in errors.iter() {
             let v: Result<T, ParserError> = from_iter(s.chars());
             assert_eq!(v.unwrap_err(), *err);
@@ -2818,9 +2826,8 @@ mod tests {
     }
 
     fn test_parse_ok<
-        'a,
-        T: PartialEq + Show + ToJson + de::Deserializable<ParserError, Parser<str::Chars<'a>>>
-    >(errors: &[(&'a str, T)]) {
+        T: PartialEq + Show + ToJson + de::Deserializable
+    >(errors: &[(&str, T)]) {
         for &(s, ref value) in errors.iter() {
             let v: T = from_iter(s.chars()).unwrap();
             assert_eq!(v, *value);
@@ -2831,7 +2838,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserializable<ParserError, JsonDeserializer>
+        T: PartialEq + Show + ToJson + de::Deserializable
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();

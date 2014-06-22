@@ -133,7 +133,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_option<
-        T: Deserializable<E, Self>
+        T: Deserializable
     >(&mut self, token: Token) -> Result<Option<T>, E> {
         match token {
             Option(false) => Ok(None),
@@ -146,15 +146,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_tuple_start(&mut self, token: Token, len: uint) -> Result<(), E> {
+    fn expect_tuple_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
-            TupleStart(l) => {
-                if len == l {
-                    Ok(())
-                } else {
-                    self.syntax_error()
-                }
-            }
+            TupleStart(len) => Ok(len),
             _ => self.syntax_error(),
         }
     }
@@ -183,7 +177,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_struct_field<
-        T: Deserializable<E, Self>
+        T: Deserializable
     >(&mut self, name: &str) -> Result<T, E> {
         match try!(self.expect_token()) {
             Str(n) => {
@@ -280,7 +274,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 fn expect_rest_of_collection<
     E,
     D: Deserializer<E>,
-    T: Deserializable<E, D>,
+    T: Deserializable<D, E>,
     C: FromIterator<T>
 >(d: &mut D, len: uint) -> Result<C, E> {
     let iter = d.by_ref().batch(|d| {
@@ -301,9 +295,12 @@ fn expect_rest_of_collection<
 
 //////////////////////////////////////////////////////////////////////////////
 
-pub trait Deserializable<E, D: Deserializer<E>> {
+pub trait Deserializable {
     #[inline]
-    fn deserialize(d: &mut D) -> Result<Self, E> {
+    fn deserialize<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D) -> Result<Self, E> {
         match d.next() {
             Some(Ok(token)) => Deserializable::deserialize_token(d, token),
             Some(Err(err)) => Err(err),
@@ -311,19 +308,22 @@ pub trait Deserializable<E, D: Deserializer<E>> {
         }
     }
 
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Self, E>;
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Self, E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserializable {
     ($ty:ty, $method:ident) => {
-        impl<
-            E,
-            D: Deserializer<E>
-        > Deserializable<E, D> for $ty {
+        impl Deserializable for $ty {
             #[inline]
-            fn deserialize_token(d: &mut D, token: Token) -> Result<$ty, E> {
+            fn deserialize_token<
+                D: Deserializer<E>,
+                E
+            >(d: &mut D, token: Token) -> Result<$ty, E> {
                 d.$method(token)
             }
         }
@@ -349,13 +349,12 @@ impl_deserializable!(String, expect_string)
 
 //////////////////////////////////////////////////////////////////////////////
 
-impl<
-    E,
-    D: Deserializer<E>,
-    T: Deserializable<E, D>
-> Deserializable<E, D> for Option<T> {
+impl<T: Deserializable> Deserializable for Option<T> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Option<T>, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Option<T>, E> {
         d.expect_option(token)
     }
 }
@@ -382,13 +381,12 @@ macro_rules! deserialize_seq {
     }
 }
 
-impl<
-    E,
-    D: Deserializer<E>,
-    T: Deserializable<E, D>
-> Deserializable<E, D> for Vec<T> {
+impl<T: Deserializable> Deserializable for Vec<T> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Vec<T>, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Vec<T>, E> {
         let len = try!(d.expect_seq_start(token));
         let mut value = Vec::with_capacity(len);
 
@@ -420,13 +418,14 @@ macro_rules! deserialize_map {
 }
 
 impl<
-    E,
-    D: Deserializer<E>,
-    K: Deserializable<E, D> + Eq + Hash,
-    V: Deserializable<E, D>
-> Deserializable<E, D> for HashMap<K, V> {
+    K: Deserializable + Eq + Hash,
+    V: Deserializable
+> Deserializable for HashMap<K, V> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
         let len = try!(d.expect_map_start(token));
         let mut value = HashMap::with_capacity(len);
 
@@ -435,29 +434,18 @@ impl<
 }
 
 impl<
-    E,
-    D: Deserializer<E>,
-    K: Deserializable<E, D> + Ord,
-    V: Deserializable<E, D>
-> Deserializable<E, D> for TreeMap<K, V> {
+    K: Deserializable + Ord,
+    V: Deserializable
+> Deserializable for TreeMap<K, V> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
         let _len = try!(d.expect_map_start(token));
         let mut value = TreeMap::new();
 
         deserialize_map!(value)
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-impl<
-    E,
-    D: Deserializer<E>
-> Deserializable<E, D> for () {
-    #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<(), E> {
-        d.expect_null(token)
     }
 }
 
@@ -468,21 +456,28 @@ macro_rules! peel {
 }
 
 macro_rules! impl_deserialize_tuple {
-    () => ();
+    () => {
+        impl Deserializable for () {
+            #[inline]
+            fn deserialize_token<
+                D: Deserializer<E>,
+                E
+            >(d: &mut D, token: Token) -> Result<(), E> {
+                d.expect_null(token)
+            }
+        }
+    };
     ( $($name:ident,)+ ) => {
         impl<
-            E,
-            D: Deserializer<E>,
-            $($name:Deserializable<E, D>),*
-        > Deserializable<E, D> for ($($name,)*) {
+            $($name: Deserializable),*
+        > Deserializable for ($($name,)*) {
             #[inline]
             #[allow(uppercase_variables)]
-            fn deserialize_token(d: &mut D, token: Token) -> Result<($($name,)*), E> {
-                // FIXME: how can we count macro args?
-                let mut len = 0;
-                $({ let $name = 1; len += $name; })*;
-
-                try!(d.expect_tuple_start(token, len));
+            fn deserialize_token<
+                D: Deserializer<E>,
+                E
+            >(d: &mut D, token: Token) -> Result<($($name,)*), E> {
+                try!(d.expect_tuple_start(token));
 
                 let result = ($({
                     let $name = try!(Deserializable::deserialize(d));
@@ -506,9 +501,12 @@ impl_deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 /// recursive structures.
 pub struct IgnoreTokens;
 
-impl<E, D: Deserializer<E>> Deserializable<E, D> for IgnoreTokens {
+impl Deserializable for IgnoreTokens {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<IgnoreTokens, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<IgnoreTokens, E> {
         match token {
             Option(true) => {
                 Deserializable::deserialize(d)
@@ -593,13 +591,13 @@ impl GatherTokens {
     }
 
     #[inline]
-    fn gather<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+    fn gather<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         let token = try!(d.expect_token());
         self.gather_token(d, token)
     }
 
     #[inline]
-    fn gather_token<E, D: Deserializer<E>>(&mut self, d: &mut D, token: Token) -> Result<(), E> {
+    fn gather_token<D: Deserializer<E>, E>(&mut self, d: &mut D, token: Token) -> Result<(), E> {
         match token {
             token @ Option(true) => {
                 self.tokens.push(token);
@@ -641,7 +639,7 @@ impl GatherTokens {
     }
 
     #[inline]
-    fn gather_seq<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+    fn gather_seq<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         loop {
             match try!(d.expect_token()) {
                 token @ End => {
@@ -656,7 +654,7 @@ impl GatherTokens {
     }
 
     #[inline]
-    fn gather_struct<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+    fn gather_struct<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         loop {
             match try!(d.expect_token()) {
                 token @ End => {
@@ -673,7 +671,7 @@ impl GatherTokens {
     }
 
     #[inline]
-    fn gather_map<E, D: Deserializer<E>>(&mut self, d: &mut D) -> Result<(), E> {
+    fn gather_map<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         loop {
             match try!(d.expect_token()) {
                 End => {
@@ -689,9 +687,12 @@ impl GatherTokens {
     }
 }
 
-impl<E, D: Deserializer<E>> Deserializable<E, D> for GatherTokens {
+impl Deserializable for GatherTokens {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<GatherTokens, E> {
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<GatherTokens, E> {
         let mut tokens = GatherTokens {
             tokens: vec!(),
         };
@@ -704,14 +705,44 @@ impl<E, D: Deserializer<E>> Deserializable<E, D> for GatherTokens {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
+    use std::collections::TreeMap;
     use serialize::Decoder;
 
-    use super::{Token, Null, Int, Uint, Str, String, Char, Option};
-    use super::{TupleStart, StructStart, EnumStart};
-    use super::{SeqStart, MapStart, End};
-    use super::{Deserializer, Deserializable};
+    use super::{Deserializer, Deserializable, Token};
+    use super::{
+        Null,
+        Bool,
+        Int,
+        I8,
+        I16,
+        I32,
+        I64,
+        Uint,
+        U8,
+        U16,
+        U32,
+        U64,
+        F32,
+        F64,
+        Char,
+        Str,
+        String,
+        Option,
+        TupleStart,
+        StructStart,
+        EnumStart,
+        SeqStart,
+        MapStart,
+        End,
+    };
+
+    macro_rules! treemap {
+        ($($k:expr => $v:expr),*) => ({
+            let mut _m = ::std::collections::TreeMap::new();
+            $(_m.insert($k, $v);)*
+            _m
+        })
+    }
 
     //////////////////////////////////////////////////////////////////////////////
 
@@ -719,12 +750,14 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: HashMap<String, Option<char>>,
+        c: TreeMap<String, Option<char>>,
     }
 
-    impl<E, D: Deserializer<E>> Deserializable<E, D> for Inner {
+    impl Deserializable for Inner {
         #[inline]
-        fn deserialize_token(d: &mut D, token: Token) -> Result<Inner, E> {
+        fn deserialize_token<
+            D: Deserializer<E>, E
+        >(d: &mut D, token: Token) -> Result<Inner, E> {
             try!(d.expect_struct_start(token, "Inner"));
             let a = try!(d.expect_struct_field("a"));
             let b = try!(d.expect_struct_field("b"));
@@ -741,9 +774,11 @@ mod tests {
         inner: Vec<Inner>,
     }
 
-    impl<E, D: Deserializer<E>> Deserializable<E, D> for Outer {
+    impl Deserializable for Outer {
         #[inline]
-        fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
+        fn deserialize_token<
+            D: Deserializer<E>, E
+        >(d: &mut D, token: Token) -> Result<Outer, E> {
             try!(d.expect_struct_start(token, "Outer"));
             let inner = try!(d.expect_struct_field("inner"));
             try!(d.expect_struct_end());
@@ -759,9 +794,11 @@ mod tests {
         Frog(String, int)
     }
 
-    impl<E, D: Deserializer<E>> Deserializable<E, D> for Animal {
+    impl Deserializable for Animal {
         #[inline]
-        fn deserialize_token(d: &mut D, token: Token) -> Result<Animal, E> {
+        fn deserialize_token<
+            D: Deserializer<E>, E
+        >(d: &mut D, token: Token) -> Result<Animal, E> {
             match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
                 0 => {
                     try!(d.expect_enum_end());
@@ -788,30 +825,30 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    struct TokenDeserializer {
-        tokens: Vec<Token>,
+    struct TokenDeserializer<Iter> {
+        tokens: Iter,
     }
 
-    impl TokenDeserializer {
+    impl<Iter: Iterator<Token>> TokenDeserializer<Iter> {
         #[inline]
-        fn new(tokens: Vec<Token>) -> TokenDeserializer {
+        fn new(tokens: Iter) -> TokenDeserializer<Iter> {
             TokenDeserializer {
                 tokens: tokens,
             }
         }
     }
 
-    impl Iterator<Result<Token, Error>> for TokenDeserializer {
+    impl<Iter: Iterator<Token>> Iterator<Result<Token, Error>> for TokenDeserializer<Iter> {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
-            match self.tokens.shift() {
+            match self.tokens.next() {
                 None => None,
                 Some(token) => Some(Ok(token)),
             }
         }
     }
 
-    impl Deserializer<Error> for TokenDeserializer {
+    impl<Iter: Iterator<Token>> Deserializer<Error> for TokenDeserializer<Iter> {
         fn end_of_stream_error<T>(&self) -> Result<T, Error> {
             Err(EndOfStream)
         }
@@ -823,111 +860,56 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[test]
-    fn test_tokens_int() {
-        let tokens = vec!(
-            Int(5),
-        );
+    macro_rules! test_value {
+        ($name:ident, [$($tokens:expr => $value:expr: $ty:ty),*]) => {
+            #[test]
+            fn $name() {
+                $(
+                    let mut deserializer = TokenDeserializer::new($tokens.move_iter());
+                    let value: $ty = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: int = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, 5);
+                    assert_eq!(value, $value);
+                )+
+            }
+        }
     }
 
-    #[test]
-    fn test_tokens_str() {
-        let tokens = vec!(
-            Str("a"),
-        );
+    test_value!(test_primitives, [
+        vec!(Null) => (): (),
+        vec!(Bool(true)) => true: bool,
+        vec!(Bool(false)) => false: bool,
+        vec!(Int(5)) => 5: int,
+        vec!(I8(5)) => 5: i8,
+        vec!(I16(5)) => 5: i16,
+        vec!(I32(5)) => 5: i32,
+        vec!(I64(5)) => 5: i64,
+        vec!(Uint(5)) => 5: uint,
+        vec!(U8(5)) => 5: u8,
+        vec!(U16(5)) => 5: u16,
+        vec!(U32(5)) => 5: u32,
+        vec!(U64(5)) => 5: u64,
+        vec!(F32(5.0)) => 5.0: f32,
+        vec!(F64(5.0)) => 5.0: f64,
+        vec!(Char('c')) => 'c': char,
+        vec!(Str("abc")) => "abc": &str,
+        vec!(String("abc".to_string())) => "abc".to_string(): String
+    ])
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: &'static str = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, "a");
-    }
-
-    #[test]
-    fn test_tokens_string() {
-        let tokens = vec!(
-            String("a".to_string()),
-        );
-
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: String = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, "a".to_string());
-    }
-
-    #[test]
-    fn test_tokens_null() {
-        let tokens = vec!(
-            Null,
-        );
-
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: () = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, ());
-    }
-
-    #[test]
-    fn test_tokens_tuple_empty() {
-        let tokens = vec!(
+    test_value!(test_tuples, [
+        vec!(
             TupleStart(0),
             End,
-        );
+        ) => (): (),
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: () = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, ());
-    }
-
-    #[test]
-    fn test_tokens_option_none() {
-        let tokens = vec!(
-            Option(false),
-        );
-
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Option<int> = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, None);
-    }
-
-    #[test]
-    fn test_tokens_option_some() {
-        let tokens = vec!(
-            Option(true),
-            Int(5),
-        );
-
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Option<int> = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, Some(5));
-    }
-
-    #[test]
-    fn test_tokens_tuple() {
-        let tokens = vec!(
+        vec!(
             TupleStart(2),
                 Int(5),
 
-                String("a".to_string()),
+                Str("a"),
             End,
-        );
+        ) => (5, "a"): (int, &'static str),
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: (int, String) = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, (5, "a".to_string()));
-    }
-
-    #[test]
-    fn test_tokens_tuple_compound() {
-        let tokens = vec!(
+        vec!(
             TupleStart(3),
                 Null,
 
@@ -937,36 +919,31 @@ mod tests {
                 TupleStart(2),
                     Int(5),
 
-                    String("a".to_string()),
+                    Str("a"),
                 End,
             End,
-        );
+        ) => ((), (), (5, "a")): ((), (), (int, &'static str))
+    ])
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: ((), (), (int, String)) = Deserializable::deserialize(&mut deserializer).unwrap();
+    test_value!(test_options, [
+        vec!(Option(false)) => None: Option<int>,
 
-        assert_eq!(value, ((), (), (5, "a".to_string())));
-    }
+        vec!(
+            Option(true),
+            Int(5),
+        ) => Some(5): Option<int>
+    ])
 
-    #[test]
-    fn test_tokens_struct_empty() {
-        let tokens = vec!(
+    test_value!(test_structs, [
+        vec!(
             StructStart("Outer", 1),
                 Str("inner"),
                 SeqStart(0),
                 End,
             End,
-        );
+        ) => Outer { inner: vec!() }: Outer,
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, Outer { inner: vec!() });
-    }
-
-    #[test]
-    fn test_tokens_struct() {
-        let tokens = vec!(
+        vec!(
             StructStart("Outer", 1),
                 Str("inner"),
                 SeqStart(1),
@@ -987,68 +964,38 @@ mod tests {
                     End,
                 End,
             End,
-        );
+        ) => Outer {
+            inner: vec!(
+                Inner {
+                    a: (),
+                    b: 5,
+                    c: treemap!("abc".to_string() => Some('c')),
+                },
+            ),
+        }: Outer
+    ])
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Outer = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        let mut map = HashMap::new();
-        map.insert("abc".to_string(), Some('c'));
-
-        assert_eq!(
-            value,
-            Outer {
-                inner: vec!(
-                    Inner {
-                        a: (),
-                        b: 5,
-                        c: map,
-                    },
-                )
-            });
-    }
-
-    #[test]
-    fn test_tokens_enum() {
-        let tokens = vec!(
+    test_value!(test_enums, [
+        vec!(
             EnumStart("Animal", "Dog", 0),
             End,
-        );
+        ) => Dog: Animal,
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, Dog);
-
-        let tokens = vec!(
+        vec!(
             EnumStart("Animal", "Frog", 2),
                 String("Henry".to_string()),
                 Int(349),
             End,
-        );
+        ) => Frog("Henry".to_string(), 349): Animal
+    ])
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Animal = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, Frog("Henry".to_string(), 349));
-    }
-
-    #[test]
-    fn test_tokens_vec_empty() {
-        let tokens = vec!(
+    test_value!(test_vecs, [
+        vec!(
             SeqStart(0),
             End,
-        );
+        ) => vec!(): Vec<int>,
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Vec<int> = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        assert_eq!(value, vec!());
-    }
-
-    #[test]
-    fn test_tokens_vec() {
-        let tokens = vec!(
+        vec!(
             SeqStart(3),
                 Int(5),
 
@@ -1056,18 +1003,11 @@ mod tests {
 
                 Int(7),
             End,
-        );
+        ) => vec!(5, 6, 7): Vec<int>,
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Vec<int> = Deserializable::deserialize(&mut deserializer).unwrap();
 
-        assert_eq!(value, vec!(5, 6, 7));
-    }
-
-    #[test]
-    fn test_tokens_vec_compound() {
-        let tokens = vec!(
-            SeqStart(0),
+        vec!(
+            SeqStart(3),
                 SeqStart(1),
                     Int(1),
                 End,
@@ -1086,35 +1026,23 @@ mod tests {
                     Int(6),
                 End,
             End,
-        );
+        ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)): Vec<Vec<int>>
+    ])
 
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: Vec<Vec<int>> = Deserializable::deserialize(&mut deserializer).unwrap();
+    test_value!(test_treemaps, [
+        vec!(
+            MapStart(0),
+            End,
+        ) => treemap!(): TreeMap<int, String>,
 
-        assert_eq!(value, vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)));
-    }
-
-    #[test]
-    fn test_tokens_hashmap() {
-        let tokens = vec!(
+        vec!(
             MapStart(2),
                 Int(5),
-
                 String("a".to_string()),
 
                 Int(6),
-
                 String("b".to_string()),
             End,
-        );
-
-        let mut deserializer = TokenDeserializer::new(tokens);
-        let value: HashMap<int, String> = Deserializable::deserialize(&mut deserializer).unwrap();
-
-        let mut map = HashMap::new();
-        map.insert(5, "a".to_string());
-        map.insert(6, "b".to_string());
-
-        assert_eq!(value, map);
-    }
+        ) => treemap!(5 => "a".to_string(), 6 => "b".to_string()): TreeMap<int, String>
+    ])
 }
