@@ -237,7 +237,10 @@ macro_rules! impl_serialize_tuple {
                 let ($(ref $name,)*) = *self;
 
                 try!(s.serialize_tuple_start(len));
-                $(try!($name.serialize(s));)*
+                $(
+                    try!(s.serialize_tuple_sep());
+                    try!($name.serialize(s));
+                 )*
                 s.serialize_tuple_end()
             }
         }
@@ -299,7 +302,7 @@ mod tests {
             try!(s.serialize_struct_sep("inner"));
             try!(self.inner.serialize(s));
 
-            s.serialize_enum_end()
+            s.serialize_struct_end()
         }
     }
 
@@ -680,7 +683,7 @@ mod tests {
                             Char('c'),
                         MapEnd,
                     StructEnd,
-                StructEnd,
+                SeqEnd,
             StructEnd,
         );
 
