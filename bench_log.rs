@@ -24,9 +24,12 @@ struct Http {
     request_uri: String,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Http {
+impl ser::Serializable for Http {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         try!(s.serialize_struct_start("Http", 9));
 
         try!(s.serialize_struct_sep("protocol"));
@@ -67,9 +70,12 @@ enum HttpProtocol {
     HTTP11,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for HttpProtocol {
+impl ser::Serializable for HttpProtocol {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -89,9 +95,12 @@ enum HttpMethod {
     PATCH,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for HttpMethod {
+impl ser::Serializable for HttpMethod {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -104,9 +113,12 @@ enum CacheStatus {
     Hit,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for CacheStatus {
+impl ser::Serializable for CacheStatus {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -119,9 +131,12 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Origin {
+impl ser::Serializable for Origin {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         try!(s.serialize_struct_start("Http", 4));
 
         try!(s.serialize_struct_sep("ip"));
@@ -147,9 +162,12 @@ enum OriginProtocol {
     HTTPS,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for OriginProtocol {
+impl ser::Serializable for OriginProtocol {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -163,9 +181,12 @@ enum ZonePlan {
     ENT,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for ZonePlan {
+impl ser::Serializable for ZonePlan {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -430,9 +451,12 @@ enum Country {
 	ZW,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Country {
+impl ser::Serializable for Country {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -453,9 +477,12 @@ struct Log {
     ray_id: String,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Log {
+impl ser::Serializable for Log {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         try!(s.serialize_struct_start("Log", 12));
 
         try!(s.serialize_struct_sep("timestamp"));

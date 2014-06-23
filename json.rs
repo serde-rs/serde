@@ -233,7 +233,6 @@ use std::collections::treemap;
 use std::fmt;
 use std::io::MemWriter;
 use std::io;
-use std::mem::transmute;
 use std::num;
 use std::str::ScalarValue;
 use std::str;
@@ -419,9 +418,12 @@ impl fmt::Show for Json {
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Json {
+impl ser::Serializable for Json {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
+    fn serialize<
+        S: ser::Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
         match *self {
             Null => {
                 ().serialize(s)
@@ -780,26 +782,17 @@ impl<'a> Serializer<'a> {
     }
 
     /// Encode the specified struct into a json [u8]
-    pub fn buf_encode<
-        'a,
-        T: ser::Serializable<Serializer<'a>, io::IoError>
-    >(value: &T) -> Vec<u8> {
-       //Serialize the object in a string using a writer
+    pub fn buf_encode<T: ser::Serializable>(value: &T) -> Vec<u8> {
         let mut wr = MemWriter::new();
-        // FIXME(14302) remove the transmute and unsafe block.
-        unsafe {
+        {
             let mut serializer = Serializer::new(&mut wr);
-            // MemWriter never Errs
-            let _ = value.serialize(transmute(&mut serializer));
+            value.serialize(&mut serializer).unwrap();
         }
         wr.unwrap()
     }
 
     /// Encode the specified struct into a json str
-    pub fn str_encode<
-        'a,
-        T: ser::Serializable<Serializer<'a>, io::IoError>
-    >(value: &T) -> Result<String, Vec<u8>> {
+    pub fn str_encode<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
         let buf = Serializer::buf_encode(value);
         String::from_utf8(buf)
     }
@@ -958,7 +951,7 @@ impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
 
     #[inline]
     fn serialize_option<
-        T: Serializable<Serializer<'a>, io::IoError>
+        T: Serializable
     >(&mut self, v: &Option<T>) -> Result<(), io::IoError> {
         match *v {
             Some(ref v) => {
@@ -972,7 +965,7 @@ impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
 
     #[inline]
     fn serialize_seq<
-        T: Serializable<Serializer<'a>, io::IoError>,
+        T: Serializable,
         Iter: Iterator<T>
     >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
         try!(self.wr.write_str("["));
@@ -991,8 +984,8 @@ impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
 
     #[inline]
     fn serialize_map<
-        K: Serializable<Serializer<'a>, io::IoError>,
-        V: Serializable<Serializer<'a>, io::IoError>,
+        K: Serializable,
+        V: Serializable,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
         try!(self.wr.write_str("{"));
@@ -1031,23 +1024,17 @@ impl<'a> PrettySerializer<'a> {
     }
 
     /// Encode the specified struct into a json [u8]
-    pub fn buf_encode<
-        T: ser::Serializable<PrettySerializer<'a>, io::IoError>
-    >(value: &T) -> Vec<u8> {
+    pub fn buf_encode<T: ser::Serializable>(value: &T) -> Vec<u8> {
         let mut wr = MemWriter::new();
-        // FIXME(14302) remove the transmute and unsafe block.
-        unsafe {
+        {
             let mut serializer = PrettySerializer::new(&mut wr);
-            // MemWriter never Errs
-            let _ = value.serialize(transmute(&mut serializer));
+            value.serialize(&mut serializer).unwrap();
         }
         wr.unwrap()
     }
 
     /// Encode the specified struct into a json str
-    pub fn str_encode<
-        T: ser::Serializable<PrettySerializer<'a>, io::IoError>
-    >(value: &T) -> Result<String, Vec<u8>> {
+    pub fn str_encode<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
         let buf = PrettySerializer::buf_encode(value);
         String::from_utf8(buf)
     }
@@ -1218,7 +1205,7 @@ impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
 
     #[inline]
     fn serialize_option<
-        T: Serializable<PrettySerializer<'a>, io::IoError>
+        T: Serializable
     >(&mut self, v: &Option<T>) -> Result<(), io::IoError> {
         match *v {
             Some(ref v) => {
@@ -1232,7 +1219,7 @@ impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
 
     #[inline]
     fn serialize_seq<
-        T: Serializable<PrettySerializer<'a>, io::IoError>,
+        T: Serializable,
         Iter: Iterator<T>
     >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
         try!(self.wr.write_str("["));
@@ -1248,8 +1235,8 @@ impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
 
     #[inline]
     fn serialize_map<
-        K: Serializable<PrettySerializer<'a>, io::IoError>,
-        V: Serializable<PrettySerializer<'a>, io::IoError>,
+        K: Serializable,
+        V: Serializable,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
         try!(self.wr.write_str("{"));
@@ -2200,7 +2187,6 @@ impl<A:ToJson> ToJson for Option<A> {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
     use std::fmt::Show;
     use std::collections::TreeMap;
 
@@ -2238,9 +2224,12 @@ mod tests {
         Frog(String, Vec<int>)
     }
 
-    impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Animal {
+    impl ser::Serializable for Animal {
         #[inline]
-        fn serialize(&self, s: &mut S) -> Result<(), E> {
+        fn serialize<
+            S: ser::Serializer<E>,
+            E
+        >(&self, s: &mut S) -> Result<(), E> {
             match *self {
                 Dog => {
                     try!(s.serialize_enum_start("Animal", "Dog", 0));
@@ -2313,9 +2302,12 @@ mod tests {
         c: Vec<String>,
     }
 
-    impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Inner {
+    impl ser::Serializable for Inner {
         #[inline]
-        fn serialize(&self, s: &mut S) -> Result<(), E> {
+        fn serialize<
+            S: ser::Serializer<E>,
+            E
+        >(&self, s: &mut S) -> Result<(), E> {
             try!(s.serialize_struct_start("Inner", 3));
 
             try!(s.serialize_struct_sep("a"));
@@ -2407,9 +2399,12 @@ mod tests {
         inner: Vec<Inner>,
     }
 
-    impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Outer {
+    impl ser::Serializable for Outer {
         #[inline]
-        fn serialize(&self, s: &mut S) -> Result<(), E> {
+        fn serialize<
+            S: ser::Serializer<E>,
+            E
+        >(&self, s: &mut S) -> Result<(), E> {
             try!(s.serialize_struct_start("Outer", 1));
 
             try!(s.serialize_struct_sep("inner"));
@@ -2476,8 +2471,7 @@ mod tests {
     }
 
     fn test_encode_ok<
-        'a,
-        T: PartialEq + Show + ToJson + ser::Serializable<Serializer<'a>, io::IoError>
+        T: PartialEq + Show + ToJson + ser::Serializable
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -2491,8 +2485,7 @@ mod tests {
     }
 
     fn test_pretty_encode_ok<
-        'a,
-        T: PartialEq + Show + ToJson + ser::Serializable<PrettySerializer<'a>, io::IoError>
+        T: PartialEq + Show + ToJson + ser::Serializable
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
