@@ -22,53 +22,43 @@ impl Deserializable for Inner {
         E
     >(d: &mut D, token: Token) -> Result<Inner, E> {
         match token {
-            de::StructStart("Inner", _) |
-            de::MapStart(_) => {
-                let mut a = None;
-                let mut b = None;
-                let mut c = None;
+            de::StructStart("Inner", _) | de::MapStart(_) => { }
+            _ => { return d.syntax_error(); }
+        }
 
-                loop {
-                    match try!(d.expect_token()) {
-                        de::End => { break; }
-                        de::Str(name) => {
-                            match name {
-                                "a" => {
-                                    a = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                "b" => {
-                                    b = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                "c" => {
-                                    c = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                _ => { }
-                            }
-                        }
-                        de::String(ref name) => {
-                            match name.as_slice() {
-                                "a" => {
-                                    a = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                "b" => {
-                                    b = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                "c" => {
-                                    c = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                _ => { }
-                            }
-                        }
-                        _ => { return d.syntax_error(); }
-                    }
-                }
+        let mut a = None;
+        let mut b = None;
+        let mut c = None;
 
-                match (a, b, c) {
-                    (Some(a), Some(b), Some(c)) => {
-                        Ok(Inner { a: a, b: b, c: c })
-                    }
-                    _ => d.syntax_error(),
+        loop {
+            let token = match try!(d.expect_token()) {
+                de::End => { break; }
+                token => token,
+            };
+
+            let name = match token {
+                de::Str(name) => name,
+                de::String(ref name) => name.as_slice(),
+                _ => { return d.syntax_error(); }
+            };
+
+            match name {
+                "a" => {
+                    a = Some(try!(de::Deserializable::deserialize(d)));
                 }
+                "b" => {
+                    b = Some(try!(de::Deserializable::deserialize(d)));
+                }
+                "c" => {
+                    c = Some(try!(de::Deserializable::deserialize(d)));
+                }
+                _ => { }
+            }
+        }
+
+        match (a, b, c) {
+            (Some(a), Some(b), Some(c)) => {
+                Ok(Inner { a: a, b: b, c: c })
             }
             _ => d.syntax_error(),
         }
@@ -89,39 +79,35 @@ impl Deserializable for Outer {
         E
     >(d: &mut D, token: Token) -> Result<Outer, E> {
         match token {
-            de::StructStart("Outer", _) |
-            de::MapStart(_) => {
-                let mut inner = None;
+            de::StructStart("Outer", _) | de::MapStart(_) => { }
+            _ => { return d.syntax_error(); }
+        }
 
-                loop {
-                    match try!(d.expect_token()) {
-                        de::End => { break; }
-                        de::Str(name) => {
-                            match name {
-                                "inner" => {
-                                    inner = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                _ => { }
-                            }
-                        }
-                        de::String(ref name) => {
-                            match name.as_slice() {
-                                "inner" => {
-                                    inner = Some(try!(de::Deserializable::deserialize(d)));
-                                }
-                                _ => { }
-                            }
-                        }
-                        _ => { return d.syntax_error(); }
-                    }
-                }
+        let mut inner = None;
 
-                match inner {
-                    Some(inner) => {
-                        Ok(Outer { inner: inner })
-                    }
-                    _ => d.syntax_error(),
+        loop {
+            let token = match try!(d.expect_token()) {
+                de::End => { break; }
+                token => token,
+            };
+
+            let name = match token {
+                de::Str(name) => name,
+                de::String(ref name) => name.as_slice(),
+                _ => { return d.syntax_error(); }
+            };
+
+            match name {
+                "inner" => {
+                    inner = Some(try!(de::Deserializable::deserialize(d)));
                 }
+                _ => { }
+            }
+        }
+
+        match inner {
+            Some(inner) => {
+                Ok(Outer { inner: inner })
             }
             _ => d.syntax_error(),
         }
