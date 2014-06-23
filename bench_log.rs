@@ -4,7 +4,6 @@ extern crate serialize;
 extern crate test;
 extern crate time;
 
-use std::io::MemWriter;
 use test::Bencher;
 
 use json;
@@ -573,22 +572,10 @@ fn bench_encoder(b: &mut Bencher) {
 #[bench]
 fn bench_serializer(b: &mut Bencher) {
     let log = Log::new();
-
-    let mut wr = MemWriter::with_capacity(700);
-    {
-        let mut serializer = json::Serializer::new(&mut wr);
-        log.serialize(&mut serializer).unwrap();
-    }
-    let json = String::from_utf8(wr.unwrap()).unwrap();
-    let _len = json.len();
+    let _json = json::to_str(&log).unwrap();
 
     b.iter(|| {
-        let mut wr = MemWriter::with_capacity(700);
-        {
-            let mut serializer = json::Serializer::new(&mut wr);
-            log.serialize(&mut serializer).unwrap();
-        }
-        let _ = String::from_utf8(wr.unwrap());
+        let _json = json::to_str(&log).unwrap();
     });
 }
 

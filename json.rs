@@ -71,7 +71,7 @@ fn main() {
     let to_encode_object = TestStruct{data_str:"example of string to encode".to_string()};
     let mut m = io::MemWriter::new();
     {
-        let mut serializer = json::Serializer::new(&mut m as &mut Writer);
+        let mut serializer = json::Serializer::new(m.by_ref());
         match to_encode_object.encode(&mut serializer) {
             Ok(()) => (),
             Err(e) => fail!("json encoding error: {}", e)
@@ -260,23 +260,23 @@ pub type Object = TreeMap<String, Json>;
 
 impl Json {
     /// Encodes a json value into an io::writer.  Uses a single line.
-    pub fn to_writer(&self, wr: &mut Writer) -> EncodeResult {
+    pub fn to_writer<W: Writer>(&self, wr: W) -> EncodeResult {
         let mut serializer = Serializer::new(wr);
         self.serialize(&mut serializer)
     }
 
     /// Encodes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
-    pub fn to_pretty_writer(&self, wr: &mut Writer) -> EncodeResult {
+    pub fn to_pretty_writer<W: Writer>(&self, wr: W) -> EncodeResult {
         let mut serializer = PrettySerializer::new(wr);
         self.serialize(&mut serializer)
     }
 
     /// Encodes a json value into a string
     pub fn to_pretty_str(&self) -> String {
-        let mut s = MemWriter::new();
-        self.to_pretty_writer(&mut s as &mut Writer).unwrap();
-        str::from_utf8(s.unwrap().as_slice()).unwrap().to_string()
+        let mut wr = MemWriter::new();
+        self.to_pretty_writer(wr.by_ref()).unwrap();
+        str::from_utf8(wr.unwrap().as_slice()).unwrap().to_string()
     }
 
      /// If the Json value is an Object, returns the value associated with the provided key.
@@ -414,7 +414,7 @@ impl Json {
 impl fmt::Show for Json {
     /// Encodes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.to_writer(f).map_err(|_| fmt::WriteError)
+        self.to_writer(f as &mut Writer).map_err(|_| fmt::WriteError)
     }
 }
 
@@ -733,7 +733,7 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 
 pub type EncodeResult = io::IoResult<()>;
 
-fn escape_str(wr: &mut Writer, s: &str) -> Result<(), io::IoError> {
+fn escape_str<W: Writer>(wr: &mut W, s: &str) -> Result<(), io::IoError> {
     try!(wr.write_str("\""));
     for byte in s.bytes() {
         match byte {
@@ -750,7 +750,7 @@ fn escape_str(wr: &mut Writer, s: &str) -> Result<(), io::IoError> {
     wr.write_str("\"")
 }
 
-fn spaces(wr: &mut Writer, n: uint) -> Result<(), io::IoError> {
+fn spaces<W: Writer>(wr: &mut W, n: uint) -> Result<(), io::IoError> {
     for _ in range(0, n) {
         try!(wr.write_str(" "));
     }
@@ -766,39 +766,23 @@ enum SerializerState {
 }
 
 /// A structure for implementing serialization to JSON.
-pub struct Serializer<'a> {
-    wr: &'a mut Writer,
+pub struct Serializer<W> {
+    wr: W,
     first: bool,
 }
 
-impl<'a> Serializer<'a> {
+impl<W: Writer> Serializer<W> {
     /// Creates a new JSON serializer whose output will be written to the writer
     /// specified.
-    pub fn new(wr: &'a mut Writer) -> Serializer<'a> {
+    pub fn new(wr: W) -> Serializer<W> {
         Serializer {
             wr: wr,
             first: true,
         }
     }
-
-    /// Encode the specified struct into a json [u8]
-    pub fn buf_encode<T: ser::Serializable>(value: &T) -> Vec<u8> {
-        let mut wr = MemWriter::new();
-        {
-            let mut serializer = Serializer::new(&mut wr);
-            value.serialize(&mut serializer).unwrap();
-        }
-        wr.unwrap()
-    }
-
-    /// Encode the specified struct into a json str
-    pub fn str_encode<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
-        let buf = Serializer::buf_encode(value);
-        String::from_utf8(buf)
-    }
 }
 
-impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
+impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     #[inline]
     fn serialize_null(&mut self) -> Result<(), io::IoError> {
         self.wr.write_str("null")
@@ -875,12 +859,12 @@ impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
 
     #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
-        escape_str(self.wr, str::from_char(v).as_slice())
+        self.serialize_str(str::from_char(v).as_slice())
     }
 
     #[inline]
     fn serialize_str(&mut self, v: &str) -> Result<(), io::IoError> {
-        escape_str(self.wr, v)
+        escape_str(&mut self.wr, v)
     }
 
     #[inline]
@@ -1007,36 +991,20 @@ impl<'a> ser::Serializer<io::IoError> for Serializer<'a> {
 
 /// Another serializer for JSON, but prints out human-readable JSON instead of
 /// compact data
-pub struct PrettySerializer<'a> {
-    wr: &'a mut Writer,
+pub struct PrettySerializer<W> {
+    wr: W,
     indent: uint,
     first: bool,
 }
 
-impl<'a> PrettySerializer<'a> {
+impl<W: Writer> PrettySerializer<W> {
     /// Creates a new serializer whose output will be written to the specified writer
-    pub fn new(wr: &'a mut Writer) -> PrettySerializer<'a> {
+    pub fn new(wr: W) -> PrettySerializer<W> {
         PrettySerializer {
             wr: wr,
             indent: 0,
             first: true,
         }
-    }
-
-    /// Encode the specified struct into a json [u8]
-    pub fn buf_encode<T: ser::Serializable>(value: &T) -> Vec<u8> {
-        let mut wr = MemWriter::new();
-        {
-            let mut serializer = PrettySerializer::new(&mut wr);
-            value.serialize(&mut serializer).unwrap();
-        }
-        wr.unwrap()
-    }
-
-    /// Encode the specified struct into a json str
-    pub fn str_encode<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
-        let buf = PrettySerializer::buf_encode(value);
-        String::from_utf8(buf)
     }
 
     #[inline]
@@ -1049,7 +1017,7 @@ impl<'a> PrettySerializer<'a> {
             try!(self.wr.write_str(",\n"));
         }
 
-        spaces(self.wr, self.indent)
+        spaces(&mut self.wr, self.indent)
     }
 
     #[inline]
@@ -1057,7 +1025,7 @@ impl<'a> PrettySerializer<'a> {
         if !self.first {
             try!(self.wr.write_str("\n"));
             self.indent -= 2;
-            try!(spaces(self.wr, self.indent));
+            try!(spaces(&mut self.wr, self.indent));
         }
 
         self.first = false;
@@ -1066,7 +1034,7 @@ impl<'a> PrettySerializer<'a> {
     }
 }
 
-impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
+impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     #[inline]
     fn serialize_null(&mut self) -> Result<(), io::IoError> {
         self.wr.write_str("null")
@@ -1143,12 +1111,12 @@ impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
 
     #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
-        escape_str(self.wr, str::from_char(v).as_slice())
+        self.serialize_str(str::from_char(v).as_slice())
     }
 
     #[inline]
     fn serialize_str(&mut self, v: &str) -> Result<(), io::IoError> {
-        escape_str(self.wr, v)
+        escape_str(&mut self.wr, v)
     }
 
     #[inline]
@@ -1251,6 +1219,38 @@ impl<'a> ser::Serializer<io::IoError> for PrettySerializer<'a> {
 
         self.serialize_end("}")
     }
+}
+
+/// Encode the specified struct into a json `[u8]` buffer.
+pub fn to_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
+    let mut wr = MemWriter::new();
+    {
+        let mut serializer = Serializer::new(wr.by_ref());
+        value.serialize(&mut serializer).unwrap();
+    }
+    wr.unwrap()
+}
+
+/// Encode the specified struct into a json `String` buffer.
+pub fn to_str<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
+    let buf = to_vec(value);
+    String::from_utf8(buf)
+}
+
+/// Encode the specified struct into a json `[u8]` buffer.
+pub fn to_pretty_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
+    let mut wr = MemWriter::new();
+    {
+        let mut serializer = PrettySerializer::new(wr.by_ref());
+        value.serialize(&mut serializer).unwrap();
+    }
+    wr.unwrap()
+}
+
+/// Encode the specified struct into a json `String` buffer.
+pub fn to_pretty_str<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
+    let buf = to_pretty_vec(value);
+    String::from_utf8(buf)
 }
 
 /*
@@ -2190,7 +2190,6 @@ mod tests {
     use std::fmt::Show;
     use std::collections::TreeMap;
 
-    use super::{Serializer, PrettySerializer};
     use super::{Json, Null, Boolean, Number, String, List, Object};
     use super::{ParserError, from_iter, from_str};
     use super::{from_json, ToJson};
@@ -2476,10 +2475,10 @@ mod tests {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
 
-            let s = Serializer::str_encode(value).unwrap();
+            let s = super::to_str(value).unwrap();
             assert_eq!(s, out);
 
-            let s = Serializer::str_encode(&value.to_json()).unwrap();
+            let s = super::to_str(&value.to_json()).unwrap();
             assert_eq!(s, out);
         }
     }
@@ -2490,10 +2489,10 @@ mod tests {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
 
-            let s = PrettySerializer::str_encode(value).unwrap();
+            let s = super::to_pretty_str(value).unwrap();
             assert_eq!(s, out);
 
-            let s = PrettySerializer::str_encode(&value.to_json()).unwrap();
+            let s = super::to_pretty_str(&value.to_json()).unwrap();
             assert_eq!(s, out);
         }
     }
