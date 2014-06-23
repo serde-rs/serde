@@ -301,11 +301,8 @@ pub trait Deserializable {
         D: Deserializer<E>,
         E
     >(d: &mut D) -> Result<Self, E> {
-        match d.next() {
-            Some(Ok(token)) => Deserializable::deserialize_token(d, token),
-            Some(Err(err)) => Err(err),
-            None => d.end_of_stream_error(),
-        }
+        let token = try!(d.expect_token());
+        Deserializable::deserialize_token(d, token)
     }
 
     fn deserialize_token<
