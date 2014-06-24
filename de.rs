@@ -8,9 +8,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use std::collections::{HashMap, TreeMap};
 use std::hash::Hash;
 use std::num;
-use std::collections::{HashMap, TreeMap};
 
 #[deriving(Clone, PartialEq, Show)]
 pub enum Token {
@@ -229,69 +229,148 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         }
     }
 
-    /*
     #[inline]
-    fn expect_collection<
-        T: Deserializable<E, Self>,
+    fn expect_seq<
+        'a,
+        T: Deserializable,
         C: FromIterator<T>
-    >(&mut self, token: Token) -> Result<C, E> {
-        // By default we don't care what our source input was. We can take
-        // anything that's a Collection<T>. We'll error out later if the types
-        // are wrong.
+    >(&'a mut self, token: Token) -> Result<C, E> {
         let len = match token {
             TupleStart(len) => len,
             SeqStart(len) => len,
-            MapStart(len) => len,
             _ => { return self.syntax_error(); }
         };
 
-        expect_rest_of_collection(self, len)
-    }
-    */
+        let mut d: SeqDeserializer<'a, Self, E> = SeqDeserializer {
+            d: self,
+            len: len,
+            err: None,
+        };
 
-    #[inline]
-    fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
-        match token {
-            SeqStart(len) => Ok(len),
-            _ => self.syntax_error(),
+        let collection: C = d.collect();
+
+        match d.err {
+            Some(err) => Err(err),
+            None => Ok(collection),
         }
     }
 
     #[inline]
-    fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
-        match token {
-            MapStart(len) => Ok(len),
-            _ => self.syntax_error(),
+    fn expect_map<
+        'a,
+        K: Deserializable,
+        V: Deserializable,
+        C: FromIterator<(K, V)>
+    >(&'a mut self, token: Token) -> Result<C, E> {
+        let len = match token {
+            MapStart(len) => len,
+            _ => { return self.syntax_error(); }
+        };
+
+        let mut d: MapDeserializer<'a, Self, E> = MapDeserializer {
+            d: self,
+            len: len,
+            err: None,
+        };
+
+        let collection: C = d.collect();
+
+        match d.err {
+            Some(err) => Err(err),
+            None => Ok(collection),
         }
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-/*
-// FIXME: https://github.com/mozilla/rust/issues/11751
-#[inline]
-fn expect_rest_of_collection<
-    E,
-    D: Deserializer<E>,
-    T: Deserializable<D, E>,
-    C: FromIterator<T>
->(d: &mut D, len: uint) -> Result<C, E> {
-    let iter = d.by_ref().batch(|d| {
-        let d = d.iter();
+struct SeqDeserializer<'a, D, E> {
+    d: &'a mut D,
+    len: uint,
+    err: Option<E>,
+}
 
-        match try!(d.expect_token()) {
-            End => None,
-            token => {
-                let value: Result<T, E> = Deserializable::deserialize_token(d, token);
-                Some(value)
+impl<
+    'a,
+    T: Deserializable,
+    D: Deserializer<E>,
+    E
+> Iterator<T> for SeqDeserializer<'a, D, E> {
+    #[inline]
+    fn next(&mut self) -> Option<T> {
+        match self.d.expect_token() {
+            Ok(End) => None,
+            Ok(token) => {
+                match Deserializable::deserialize_token(self.d, token) {
+                    Ok(value) => Some(value),
+                    Err(err) => {
+                        self.err = Some(err);
+                        None
+                    }
+                }
+            }
+            Err(err) => {
+                self.err = Some(err);
+                None
             }
         }
-    });
+    }
 
-    result::collect_with_capacity(iter, len)
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        (self.len, Some(self.len))
+    }
 }
-*/
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct MapDeserializer<'a, D, E> {
+    d: &'a mut D,
+    len: uint,
+    err: Option<E>,
+}
+
+impl<
+    'a,
+    K: Deserializable,
+    V: Deserializable,
+    D: Deserializer<E>,
+    E
+> Iterator<(K, V)> for MapDeserializer<'a, D, E> {
+    #[inline]
+    fn next(&mut self) -> Option<(K, V)> {
+        match self.d.expect_token() {
+            Ok(End) => None,
+            Ok(token) => {
+                match Deserializable::deserialize_token(self.d, token) {
+                    Ok(key) => {
+                        match Deserializable::deserialize(self.d) {
+                            Ok(value) => Some((key, value)),
+                            Err(err) => {
+                                self.err = Some(err);
+                                None
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        self.err = Some(err);
+                        None
+                    }
+                }
+            }
+            Err(err) => {
+                self.err = Some(err);
+                None
+
+            }
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        (self.len, Some(self.len))
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -384,35 +463,11 @@ impl<T: Deserializable> Deserializable for Vec<T> {
         D: Deserializer<E>,
         E
     >(d: &mut D, token: Token) -> Result<Vec<T>, E> {
-        let len = try!(d.expect_seq_start(token));
-        let mut value = Vec::with_capacity(len);
-
-        deserialize_seq!(value)
+        d.expect_seq(token)
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-macro_rules! deserialize_map {
-    ($seq:expr) => {
-        {
-            loop {
-                match d.next() {
-                    Some(Ok(End)) => { break; }
-                    Some(Ok(token)) => {
-                        let k = try!(Deserializable::deserialize_token(d, token));
-                        let v = try!(Deserializable::deserialize(d));
-                        $seq.insert(k, v);
-                    }
-                    Some(Err(err)) => { return Err(err); }
-                    None => { return d.end_of_stream_error(); }
-                }
-            }
-
-            Ok($seq)
-        }
-    }
-}
 
 impl<
     K: Deserializable + Eq + Hash,
@@ -423,10 +478,7 @@ impl<
         D: Deserializer<E>,
         E
     >(d: &mut D, token: Token) -> Result<HashMap<K, V>, E> {
-        let len = try!(d.expect_map_start(token));
-        let mut value = HashMap::with_capacity(len);
-
-        deserialize_map!(value)
+        d.expect_map(token)
     }
 }
 
@@ -439,10 +491,7 @@ impl<
         D: Deserializer<E>,
         E
     >(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
-        let _len = try!(d.expect_map_start(token));
-        let mut value = TreeMap::new();
-
-        deserialize_map!(value)
+        d.expect_map(token)
     }
 }
 
