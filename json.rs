@@ -874,13 +874,15 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_sep(&mut self) -> Result<(), io::IoError> {
+    fn serialize_tuple_sep<
+        T: Serializable
+    >(&mut self, value: &T) -> Result<(), io::IoError> {
         if self.first {
             self.first = false;
-            Ok(())
         } else {
-            self.wr.write_str(",")
+            try!(self.wr.write_str(","));
         }
+        value.serialize(self)
     }
 
     #[inline]
@@ -895,14 +897,17 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_sep(&mut self, name: &str) -> Result<(), io::IoError> {
+    fn serialize_struct_sep<
+        T: Serializable
+    >(&mut self, name: &str, value: &T) -> Result<(), io::IoError> {
         if self.first {
             self.first = false;
         } else {
             try!(self.wr.write_str(","));
         }
         try!(name.serialize(self));
-        self.wr.write_str(":")
+        try!(self.wr.write_str(":"));
+        value.serialize(self)
     }
 
     #[inline]
@@ -919,13 +924,15 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_sep(&mut self) -> Result<(), io::IoError> {
+    fn serialize_enum_sep<
+        T: Serializable
+    >(&mut self, value: &T) -> Result<(), io::IoError> {
         if self.first {
             self.first = false;
-            Ok(())
         } else {
-            self.wr.write_str(",")
+            try!(self.wr.write_str(","));
         }
+        value.serialize(self)
     }
 
     #[inline]
@@ -1126,8 +1133,11 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_sep(&mut self) -> Result<(), io::IoError> {
-        self.serialize_sep()
+    fn serialize_tuple_sep<
+        T: Serializable
+    >(&mut self, value: &T) -> Result<(), io::IoError> {
+        try!(self.serialize_sep());
+        value.serialize(self)
     }
 
     #[inline]
@@ -1142,10 +1152,13 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_sep(&mut self, name: &str) -> Result<(), io::IoError> {
+    fn serialize_struct_sep<
+        T: Serializable
+    >(&mut self, name: &str, value: &T) -> Result<(), io::IoError> {
         try!(self.serialize_sep());
         try!(self.serialize_str(name));
-        self.wr.write_str(": ")
+        try!(self.wr.write_str(": "));
+        value.serialize(self)
     }
 
     #[inline]
@@ -1154,15 +1167,21 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_start(&mut self, _name: &str, variant: &str, len: uint) -> Result<(), io::IoError> {
-        try!(self.serialize_struct_start("", 1));
-        try!(self.serialize_struct_sep(variant));
-        self.serialize_tuple_start(len)
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> Result<(), io::IoError> {
+        self.first = true;
+        try!(self.wr.write_str("{"));
+        try!(self.serialize_sep());
+        try!(self.serialize_str(variant));
+        self.first = true;
+        self.wr.write_str(": [")
     }
 
     #[inline]
-    fn serialize_enum_sep(&mut self) -> Result<(), io::IoError> {
-        self.serialize_tuple_sep()
+    fn serialize_enum_sep<
+        T: Serializable
+    >(&mut self, value: &T) -> Result<(), io::IoError> {
+        try!(self.serialize_sep());
+        value.serialize(self)
     }
 
     #[inline]
@@ -2237,11 +2256,8 @@ mod tests {
                 Frog(ref x0, ref x1) => {
                     try!(s.serialize_enum_start("Animal", "Frog", 2));
 
-                    try!(s.serialize_enum_sep());
-                    try!(x0.serialize(s));
-
-                    try!(s.serialize_enum_sep());
-                    try!(x1.serialize(s));
+                    try!(s.serialize_enum_sep(x0));
+                    try!(s.serialize_enum_sep(x1));
 
                     s.serialize_enum_end()
                 }
@@ -2309,14 +2325,9 @@ mod tests {
         >(&self, s: &mut S) -> Result<(), E> {
             try!(s.serialize_struct_start("Inner", 3));
 
-            try!(s.serialize_struct_sep("a"));
-            try!(self.a.serialize(s));
-
-            try!(s.serialize_struct_sep("b"));
-            try!(self.b.serialize(s));
-
-            try!(s.serialize_struct_sep("c"));
-            try!(self.c.serialize(s));
+            try!(s.serialize_struct_sep("a", &self.a));
+            try!(s.serialize_struct_sep("b", &self.b));
+            try!(s.serialize_struct_sep("c", &self.c));
 
             s.serialize_struct_end()
         }
@@ -2406,8 +2417,7 @@ mod tests {
         >(&self, s: &mut S) -> Result<(), E> {
             try!(s.serialize_struct_start("Outer", 1));
 
-            try!(s.serialize_struct_sep("inner"));
-            try!(self.inner.serialize(s));
+            try!(s.serialize_struct_sep("inner", &self.inner));
 
             s.serialize_struct_end()
         }

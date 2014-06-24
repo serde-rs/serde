@@ -31,32 +31,15 @@ impl ser::Serializable for Http {
     >(&self, s: &mut S) -> Result<(), E> {
         try!(s.serialize_struct_start("Http", 9));
 
-        try!(s.serialize_struct_sep("protocol"));
-        try!(self.protocol.serialize(s));
-
-        try!(s.serialize_struct_sep("status"));
-        try!(self.status.serialize(s));
-
-        try!(s.serialize_struct_sep("host_status"));
-        try!(self.host_status.serialize(s));
-
-        try!(s.serialize_struct_sep("up_status"));
-        try!(self.up_status.serialize(s));
-
-        try!(s.serialize_struct_sep("method"));
-        try!(self.method.serialize(s));
-
-        try!(s.serialize_struct_sep("content_type"));
-        try!(self.content_type.serialize(s));
-
-        try!(s.serialize_struct_sep("user_agent"));
-        try!(self.user_agent.serialize(s));
-
-        try!(s.serialize_struct_sep("referer"));
-        try!(self.referer.serialize(s));
-
-        try!(s.serialize_struct_sep("request_uri"));
-        try!(self.request_uri.serialize(s));
+        try!(s.serialize_struct_sep("protocol", &self.protocol));
+        try!(s.serialize_struct_sep("status", &self.status));
+        try!(s.serialize_struct_sep("host_status", &self.host_status));
+        try!(s.serialize_struct_sep("up_status", &self.up_status));
+        try!(s.serialize_struct_sep("method", &self.method));
+        try!(s.serialize_struct_sep("content_type", &self.content_type));
+        try!(s.serialize_struct_sep("user_agent", &self.user_agent));
+        try!(s.serialize_struct_sep("referer", &self.referer));
+        try!(s.serialize_struct_sep("request_uri", &self.request_uri));
 
         s.serialize_struct_end()
     }
@@ -138,17 +121,10 @@ impl ser::Serializable for Origin {
     >(&self, s: &mut S) -> Result<(), E> {
         try!(s.serialize_struct_start("Http", 4));
 
-        try!(s.serialize_struct_sep("ip"));
-        try!(self.ip.serialize(s));
-
-        try!(s.serialize_struct_sep("port"));
-        try!(self.port.serialize(s));
-
-        try!(s.serialize_struct_sep("hostname"));
-        try!(self.hostname.serialize(s));
-
-        try!(s.serialize_struct_sep("protocol"));
-        try!(self.protocol.serialize(s));
+        try!(s.serialize_struct_sep("ip", &self.ip));
+        try!(s.serialize_struct_sep("port", &self.port));
+        try!(s.serialize_struct_sep("hostname", &self.hostname));
+        try!(s.serialize_struct_sep("protocol", &self.protocol));
 
         s.serialize_struct_end()
     }
@@ -484,41 +460,18 @@ impl ser::Serializable for Log {
     >(&self, s: &mut S) -> Result<(), E> {
         try!(s.serialize_struct_start("Log", 12));
 
-        try!(s.serialize_struct_sep("timestamp"));
-        try!(self.timestamp.serialize(s));
-
-        try!(s.serialize_struct_sep("zone_id"));
-        try!(self.zone_id.serialize(s));
-
-        try!(s.serialize_struct_sep("zone_plan"));
-        try!(self.zone_plan.serialize(s));
-
-        try!(s.serialize_struct_sep("http"));
-        try!(self.http.serialize(s));
-
-        try!(s.serialize_struct_sep("origin"));
-        try!(self.origin.serialize(s));
-
-        try!(s.serialize_struct_sep("country"));
-        try!(self.country.serialize(s));
-
-        try!(s.serialize_struct_sep("cache_status"));
-        try!(self.cache_status.serialize(s));
-
-        try!(s.serialize_struct_sep("server_ip"));
-        try!(self.server_ip.serialize(s));
-
-        try!(s.serialize_struct_sep("server_name"));
-        try!(self.server_name.serialize(s));
-
-        try!(s.serialize_struct_sep("remote_ip"));
-        try!(self.remote_ip.serialize(s));
-
-        try!(s.serialize_struct_sep("bytes_dlv"));
-        try!(self.bytes_dlv.serialize(s));
-
-        try!(s.serialize_struct_sep("ray_id"));
-        try!(self.ray_id.serialize(s));
+        try!(s.serialize_struct_sep("timestamp", &self.timestamp));
+        try!(s.serialize_struct_sep("zone_id", &self.zone_id));
+        try!(s.serialize_struct_sep("zone_plan", &self.zone_plan));
+        try!(s.serialize_struct_sep("http", &self.http));
+        try!(s.serialize_struct_sep("origin", &self.origin));
+        try!(s.serialize_struct_sep("country", &self.country));
+        try!(s.serialize_struct_sep("cache_status", &self.cache_status));
+        try!(s.serialize_struct_sep("server_ip", &self.server_ip));
+        try!(s.serialize_struct_sep("server_name", &self.server_name));
+        try!(s.serialize_struct_sep("remote_ip", &self.remote_ip));
+        try!(s.serialize_struct_sep("bytes_dlv", &self.bytes_dlv));
+        try!(s.serialize_struct_sep("ray_id", &self.ray_id));
 
         s.serialize_struct_end()
     }
