@@ -1089,6 +1089,6 @@ mod tests {
                 Int(6),
                 String("b".to_string()),
             End,
-        ) => treemap!(5 => "a".to_string(), 6 => "b".to_string()): TreeMap<int, String>
+        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, String>
     ])
 }

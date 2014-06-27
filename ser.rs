@@ -619,7 +619,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
-        Some(5).serialize(&mut serializer).unwrap();
+        Some(5i).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -636,7 +636,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
-        (5, "a").serialize(&mut serializer).unwrap();
+        (5i, "a").serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -662,7 +662,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
-        ((), (), (5, "a")).serialize(&mut serializer).unwrap();
+        ((), (), (5i, "a")).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -772,7 +772,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
-        (vec!(5, 6, 7)).serialize(&mut serializer).unwrap();
+        (vec!(5i, 6, 7)).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -798,7 +798,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.move_iter());
-        (vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6))).serialize(&mut serializer).unwrap();
+        (vec!(vec!(1i), vec!(2, 3), vec!(4, 5, 6))).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -817,8 +817,8 @@ mod tests {
         let mut serializer = AssertSerializer::new(tokens.move_iter());
 
         let mut map = TreeMap::new();
-        map.insert(5, "a".to_string());
-        map.insert(6, "b".to_string());
+        map.insert(5i, "a".to_string());
+        map.insert(6i, "b".to_string());
 
         map.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);

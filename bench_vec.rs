@@ -393,7 +393,7 @@ fn bench_decoder_int_003(b: &mut Bencher) {
 #[bench]
 fn bench_decoder_int_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<int> = range(0, 100).collect();
+        let v: Vec<int> = range(0i, 100).collect();
         run_decoder(decoder::IntDecoder::new(v.clone()), v)
     })
 }
@@ -441,7 +441,7 @@ fn bench_deserializer_int_003(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_int_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<int> = range(0, 100).collect();
+        let v: Vec<int> = range(0i, 100).collect();
         run_deserializer(deserializer::IntDeserializer::new(v.clone()), v)
     })
 }

@@ -2519,7 +2519,7 @@ mod tests {
     #[test]
     fn test_write_number() {
         let tests = [
-            (3.0, "3"),
+            (3.0f64, "3"),
             (3.1, "3.1"),
             (-1.5, "-1.5"),
             (0.5, "0.5"),
@@ -2687,14 +2687,14 @@ mod tests {
     fn test_write_tuple() {
         test_encode_ok([
             (
-                (5,),
+                (5i,),
                 "[5]",
             ),
         ]);
 
         test_pretty_encode_ok([
             (
-                (5,),
+                (5i,),
                 concat!(
                     "[\n",
                     "  5\n",
@@ -2705,14 +2705,14 @@ mod tests {
 
         test_encode_ok([
             (
-                (5, (6, "abc")),
+                (5i, (6i, "abc")),
                 "[5,[6,\"abc\"]]",
             ),
         ]);
 
         test_pretty_encode_ok([
             (
-                (5, (6, "abc")),
+                (5i, (6i, "abc")),
                 concat!(
                     "[\n",
                     "  5,\n",
@@ -2911,7 +2911,7 @@ mod tests {
         ]);
 
         test_parse_ok([
-            ("3", 3.0),
+            ("3", 3.0f64),
             ("3.1", 3.1),
             ("-1.2", -1.2),
             ("0.4", 0.4),
@@ -2924,7 +2924,7 @@ mod tests {
     #[test]
     fn test_json_deserialize_numbers() {
         test_json_deserialize_ok([
-            3.0,
+            3.0f64,
             3.1,
             -1.2,
             0.4,
@@ -2994,12 +2994,12 @@ mod tests {
         ]);
 
         test_parse_ok([
-            ("[3,1]", vec!(3, 1)),
-            ("[ 3 , 1 ]", vec!(3, 1)),
+            ("[3,1]", vec!(3i, 1)),
+            ("[ 3 , 1 ]", vec!(3i, 1)),
         ]);
 
         test_parse_ok([
-            ("[[3], [1, 2]]", vec!(vec!(3), vec!(1, 2))),
+            ("[[3], [1, 2]]", vec!(vec!(3i), vec!(1, 2))),
         ]);
     }
 
@@ -3015,11 +3015,11 @@ mod tests {
         ]);
 
         test_json_deserialize_ok([
-            vec!(3, 1),
+            vec!(3i, 1),
         ]);
 
         test_json_deserialize_ok([
-            vec!(vec!(3), vec!(1, 2)),
+            vec!(vec!(3i), vec!(1, 2)),
         ]);
     }
 
@@ -3045,26 +3045,26 @@ mod tests {
             ("{ }", treemap!()),
             (
                 "{\"a\":3}",
-                treemap!("a".to_string() => 3)
+                treemap!("a".to_string() => 3i)
             ),
             (
                 "{ \"a\" : 3 }",
-                treemap!("a".to_string() => 3)
+                treemap!("a".to_string() => 3i)
             ),
             (
                 "{\"a\":3,\"b\":4}",
-                treemap!("a".to_string() => 3, "b".to_string() => 4)
+                treemap!("a".to_string() => 3i, "b".to_string() => 4)
             ),
             (
                 "{ \"a\" : 3 , \"b\" : 4 }",
-                treemap!("a".to_string() => 3, "b".to_string() => 4),
+                treemap!("a".to_string() => 3i, "b".to_string() => 4),
             ),
         ]);
 
         test_parse_ok([
             (
                 "{\"a\": {\"b\": 3, \"c\": 4}}",
-                treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
+                treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4i)),
             ),
         ]);
     }
@@ -3073,12 +3073,12 @@ mod tests {
     fn test_json_deserialize_object() {
         test_json_deserialize_ok([
             treemap!(),
-            treemap!("a".to_string() => 3),
-            treemap!("a".to_string() => 3, "b".to_string() => 4),
+            treemap!("a".to_string() => 3i),
+            treemap!("a".to_string() => 3i, "b".to_string() => 4),
         ]);
 
         test_json_deserialize_ok([
-            treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
+            treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4)),
         ]);
     }
 
