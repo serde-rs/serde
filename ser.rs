@@ -272,76 +272,28 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////////
 
     #[deriving(Clone, PartialEq, Show, Decodable)]
+    #[deriving_serializable]
     struct Inner {
         a: (),
         b: uint,
         c: HashMap<String, Option<char>>,
     }
 
-    impl Serializable for Inner {
-        #[inline]
-        fn serialize<
-            S: Serializer<E>,
-            E
-        >(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize_struct_start("Inner", 3));
-
-            try!(s.serialize_struct_sep("a", &self.a));
-            try!(s.serialize_struct_sep("b", &self.b));
-            try!(s.serialize_struct_sep("c", &self.c));
-
-            s.serialize_struct_end()
-        }
-    }
-
     //////////////////////////////////////////////////////////////////////////////
 
     #[deriving(Clone, PartialEq, Show, Decodable)]
+    #[deriving_serializable]
     struct Outer {
         inner: Vec<Inner>,
     }
 
-    impl Serializable for Outer {
-        #[inline]
-        fn serialize<
-            S: Serializer<E>,
-            E
-        >(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize_struct_start("Outer", 1));
-
-            try!(s.serialize_struct_sep("inner", &self.inner));
-
-            s.serialize_struct_end()
-        }
-    }
-
     //////////////////////////////////////////////////////////////////////////////
 
     #[deriving(Clone, PartialEq, Show, Decodable)]
+    #[deriving_serializable]
     enum Animal {
         Dog,
         Frog(String, int)
-    }
-
-    impl Serializable for Animal {
-        #[inline]
-        fn serialize<
-            S: Serializer<E>,
-            E
-        >(&self, s: &mut S) -> Result<(), E> {
-            match *self {
-                Dog => {
-                    try!(s.serialize_enum_start("Animal", "Dog", 0));
-                }
-                Frog(ref x0, ref x1) => {
-                    try!(s.serialize_enum_start("Animal", "Frog", 2));
-
-                    try!(s.serialize_enum_sep(x0));
-                    try!(s.serialize_enum_sep(x1));
-                }
-            }
-            s.serialize_enum_end()
-        }
     }
 
     //////////////////////////////////////////////////////////////////////////////

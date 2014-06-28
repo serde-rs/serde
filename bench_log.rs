@@ -11,6 +11,7 @@ use ser::Serializable;
 use ser;
 
 #[deriving(Encodable, Decodable)]
+#[deriving_serializable]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -21,28 +22,6 @@ struct Http {
     user_agent: String,
     referer: String,
     request_uri: String,
-}
-
-impl ser::Serializable for Http {
-    #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
-        try!(s.serialize_struct_start("Http", 9));
-
-        try!(s.serialize_struct_sep("protocol", &self.protocol));
-        try!(s.serialize_struct_sep("status", &self.status));
-        try!(s.serialize_struct_sep("host_status", &self.host_status));
-        try!(s.serialize_struct_sep("up_status", &self.up_status));
-        try!(s.serialize_struct_sep("method", &self.method));
-        try!(s.serialize_struct_sep("content_type", &self.content_type));
-        try!(s.serialize_struct_sep("user_agent", &self.user_agent));
-        try!(s.serialize_struct_sep("referer", &self.referer));
-        try!(s.serialize_struct_sep("request_uri", &self.request_uri));
-
-        s.serialize_struct_end()
-    }
 }
 
 #[deriving(Encodable, Decodable)]
@@ -106,28 +85,12 @@ impl ser::Serializable for CacheStatus {
 }
 
 #[deriving(Encodable, Decodable)]
+#[deriving_serializable]
 struct Origin {
     ip: String,
     port: u32,
     hostname: String,
     protocol: OriginProtocol,
-}
-
-impl ser::Serializable for Origin {
-    #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
-        try!(s.serialize_struct_start("Http", 4));
-
-        try!(s.serialize_struct_sep("ip", &self.ip));
-        try!(s.serialize_struct_sep("port", &self.port));
-        try!(s.serialize_struct_sep("hostname", &self.hostname));
-        try!(s.serialize_struct_sep("protocol", &self.protocol));
-
-        s.serialize_struct_end()
-    }
 }
 
 #[deriving(Encodable, Decodable)]
@@ -437,6 +400,7 @@ impl ser::Serializable for Country {
 }
 
 #[deriving(Encodable, Decodable)]
+#[deriving_serializable]
 struct Log {
     timestamp: i64,
     zone_id: u32,
@@ -450,31 +414,6 @@ struct Log {
     remote_ip: String,
     bytes_dlv: u64,
     ray_id: String,
-}
-
-impl ser::Serializable for Log {
-    #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
-        try!(s.serialize_struct_start("Log", 12));
-
-        try!(s.serialize_struct_sep("timestamp", &self.timestamp));
-        try!(s.serialize_struct_sep("zone_id", &self.zone_id));
-        try!(s.serialize_struct_sep("zone_plan", &self.zone_plan));
-        try!(s.serialize_struct_sep("http", &self.http));
-        try!(s.serialize_struct_sep("origin", &self.origin));
-        try!(s.serialize_struct_sep("country", &self.country));
-        try!(s.serialize_struct_sep("cache_status", &self.cache_status));
-        try!(s.serialize_struct_sep("server_ip", &self.server_ip));
-        try!(s.serialize_struct_sep("server_name", &self.server_name));
-        try!(s.serialize_struct_sep("remote_ip", &self.remote_ip));
-        try!(s.serialize_struct_sep("bytes_dlv", &self.bytes_dlv));
-        try!(s.serialize_struct_sep("ray_id", &self.ray_id));
-
-        s.serialize_struct_end()
-    }
 }
 
 impl Log {
