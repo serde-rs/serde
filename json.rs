@@ -733,10 +733,10 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 
 pub type EncodeResult = io::IoResult<()>;
 
-fn escape_str<W: Writer>(wr: &mut W, s: &str) -> Result<(), io::IoError> {
+fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> Result<(), io::IoError> {
     try!(wr.write_str("\""));
-    for byte in s.bytes() {
-        match byte {
+    for byte in s.iter() {
+        match *byte {
             b'"' => try!(wr.write_str("\\\"")),
             b'\\' => try!(wr.write_str("\\\\")),
             b'\x08' => try!(wr.write_str("\\b")),
@@ -744,10 +744,20 @@ fn escape_str<W: Writer>(wr: &mut W, s: &str) -> Result<(), io::IoError> {
             b'\n' => try!(wr.write_str("\\n")),
             b'\r' => try!(wr.write_str("\\r")),
             b'\t' => try!(wr.write_str("\\t")),
-            _ => try!(wr.write_u8(byte)),
+            _ => try!(wr.write_u8(*byte)),
         }
     }
     wr.write_str("\"")
+}
+
+fn escape_str<W: Writer>(wr: &mut W, v: &str) -> Result<(), io::IoError> {
+    escape_bytes(wr, v.as_bytes())
+}
+
+fn escape_char<W: Writer>(wr: &mut W, v: char) -> Result<(), io::IoError> {
+    let mut buf = [0, .. 4];
+    v.encode_utf8(buf);
+    escape_bytes(wr, buf)
 }
 
 fn spaces<W: Writer>(wr: &mut W, n: uint) -> Result<(), io::IoError> {
@@ -799,57 +809,57 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_int(&mut self, v: int) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i8(&mut self, v: i8) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i16(&mut self, v: i16) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i32(&mut self, v: i32) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i64(&mut self, v: i64) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_uint(&mut self, v: uint) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u8(&mut self, v: u8) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u16(&mut self, v: u16) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u32(&mut self, v: u32) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u64(&mut self, v: u64) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_f32(&mut self, v: f32) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
@@ -859,7 +869,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
-        self.serialize_str(str::from_char(v).as_slice())
+        escape_char(&mut self.wr, v)
     }
 
     #[inline]
@@ -1058,57 +1068,57 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_int(&mut self, v: int) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i8(&mut self, v: i8) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i16(&mut self, v: i16) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i32(&mut self, v: i32) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i64(&mut self, v: i64) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_uint(&mut self, v: uint) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u8(&mut self, v: u8) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u16(&mut self, v: u16) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u32(&mut self, v: u32) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u64(&mut self, v: u64) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_f32(&mut self, v: f32) -> Result<(), io::IoError> {
-        self.serialize_f64(v as f64)
+        write!(self.wr, "{}", v)
     }
 
     #[inline]
@@ -1118,7 +1128,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
-        self.serialize_str(str::from_char(v).as_slice())
+        escape_char(&mut self.wr, v)
     }
 
     #[inline]
