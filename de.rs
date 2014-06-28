@@ -154,6 +154,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
+    fn expect_tuple_sep<
+        T: Deserializable
+    >(&mut self) -> Result<T, E> {
+        Deserializable::deserialize(self)
+    }
+
+    #[inline]
     fn expect_tuple_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
@@ -219,6 +226,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             }
             _ => self.syntax_error(),
         }
+    }
+
+    #[inline]
+    fn expect_enum_sep<
+        T: Deserializable
+    >(&mut self) -> Result<T, E> {
+        Deserializable::deserialize(self)
     }
 
     #[inline]
