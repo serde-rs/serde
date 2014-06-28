@@ -244,16 +244,34 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
+    fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
+        match token {
+            TupleStart(len) => Ok(len),
+            SeqStart(len) => Ok(len),
+            _ => self.syntax_error(),
+        }
+    }
+
+    #[inline]
+    fn expect_seq_elt_or_end<
+        T: Deserializable
+    >(&mut self) -> Result<Option<T>, E> {
+        match try!(self.expect_token()) {
+            End => Ok(None),
+            token => {
+                let value = try!(Deserializable::deserialize_token(self, token));
+                Ok(Some(value))
+            }
+        }
+    }
+
+    #[inline]
     fn expect_seq<
         'a,
         T: Deserializable,
         C: FromIterator<T>
     >(&'a mut self, token: Token) -> Result<C, E> {
-        let len = match token {
-            TupleStart(len) => len,
-            SeqStart(len) => len,
-            _ => { return self.syntax_error(); }
-        };
+        let len = try!(self.expect_seq_start(token));
 
         let mut d: SeqDeserializer<'a, Self, E> = SeqDeserializer {
             d: self,
@@ -270,16 +288,36 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
+    fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
+        match token {
+            MapStart(len) => Ok(len),
+            _ => self.syntax_error(),
+        }
+    }
+
+    #[inline]
+    fn expect_map_elt_or_end<
+        K: Deserializable,
+        V: Deserializable
+    >(&mut self) -> Result<Option<(K, V)>, E> {
+        match try!(self.expect_token()) {
+            End => Ok(None),
+            token => {
+                let key = try!(Deserializable::deserialize_token(self, token));
+                let value = try!(Deserializable::deserialize(self));
+                Ok(Some((key, value)))
+            }
+        }
+    }
+
+    #[inline]
     fn expect_map<
         'a,
         K: Deserializable,
         V: Deserializable,
         C: FromIterator<(K, V)>
     >(&'a mut self, token: Token) -> Result<C, E> {
-        let len = match token {
-            MapStart(len) => len,
-            _ => { return self.syntax_error(); }
-        };
+        let len = try!(self.expect_map_start(token));
 
         let mut d: MapDeserializer<'a, Self, E> = MapDeserializer {
             d: self,
@@ -312,17 +350,8 @@ impl<
 > Iterator<T> for SeqDeserializer<'a, D, E> {
     #[inline]
     fn next(&mut self) -> Option<T> {
-        match self.d.expect_token() {
-            Ok(End) => None,
-            Ok(token) => {
-                match Deserializable::deserialize_token(self.d, token) {
-                    Ok(value) => Some(value),
-                    Err(err) => {
-                        self.err = Some(err);
-                        None
-                    }
-                }
-            }
+        match self.d.expect_seq_elt_or_end() {
+            Ok(next) => next,
             Err(err) => {
                 self.err = Some(err);
                 None
@@ -353,29 +382,11 @@ impl<
 > Iterator<(K, V)> for MapDeserializer<'a, D, E> {
     #[inline]
     fn next(&mut self) -> Option<(K, V)> {
-        match self.d.expect_token() {
-            Ok(End) => None,
-            Ok(token) => {
-                match Deserializable::deserialize_token(self.d, token) {
-                    Ok(key) => {
-                        match Deserializable::deserialize(self.d) {
-                            Ok(value) => Some((key, value)),
-                            Err(err) => {
-                                self.err = Some(err);
-                                None
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        self.err = Some(err);
-                        None
-                    }
-                }
-            }
+        match self.d.expect_map_elt_or_end() {
+            Ok(next) => next,
             Err(err) => {
                 self.err = Some(err);
                 None
-
             }
         }
     }
