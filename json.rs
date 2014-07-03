@@ -733,7 +733,7 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 
 pub type EncodeResult = io::IoResult<()>;
 
-fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> Result<(), io::IoError> {
+pub fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> Result<(), io::IoError> {
     try!(wr.write_str("\""));
     for byte in s.iter() {
         match *byte {
@@ -750,11 +750,11 @@ fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> Result<(), io::IoError> {
     wr.write_str("\"")
 }
 
-fn escape_str<W: Writer>(wr: &mut W, v: &str) -> Result<(), io::IoError> {
+pub fn escape_str<W: Writer>(wr: &mut W, v: &str) -> Result<(), io::IoError> {
     escape_bytes(wr, v.as_bytes())
 }
 
-fn escape_char<W: Writer>(wr: &mut W, v: char) -> Result<(), io::IoError> {
+pub fn escape_char<W: Writer>(wr: &mut W, v: char) -> Result<(), io::IoError> {
     let mut buf = [0, .. 4];
     v.encode_utf8(buf);
     escape_bytes(wr, buf)
@@ -1252,7 +1252,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
 /// Encode the specified struct into a json `[u8]` buffer.
 pub fn to_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
-    let mut wr = MemWriter::new();
+    let mut wr = MemWriter::with_capacity(700);
     {
         let mut serializer = Serializer::new(wr.by_ref());
         value.serialize(&mut serializer).unwrap();

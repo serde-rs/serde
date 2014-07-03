@@ -4,6 +4,7 @@ extern crate serialize;
 extern crate test;
 extern crate time;
 
+use std::io::MemWriter;
 use test::Bencher;
 
 use json;
@@ -24,7 +25,7 @@ struct Http {
     request_uri: String,
 }
 
-#[deriving(Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -41,7 +42,7 @@ impl ser::Serializable for HttpProtocol {
     }
 }
 
-#[deriving(Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -66,7 +67,7 @@ impl ser::Serializable for HttpMethod {
     }
 }
 
-#[deriving(Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -93,7 +94,7 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-#[deriving(Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -110,7 +111,7 @@ impl ser::Serializable for OriginProtocol {
     }
 }
 
-#[deriving(Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -129,7 +130,7 @@ impl ser::Serializable for ZonePlan {
     }
 }
 
-#[deriving(Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -472,6 +473,79 @@ fn bench_serializer(b: &mut Bencher) {
 }
 
 #[bench]
+fn bench_copy(b: &mut Bencher) {
+    let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    b.iter(|| {
+        let _json = s.to_str();
+    });
+}
+
+#[bench]
+fn bench_manual(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    b.iter(|| {
+        let mut wr = MemWriter::new();
+        wr.write_str("{\"timestamp\":").unwrap();
+        (write!(wr, "{}", log.timestamp)).unwrap();
+        wr.write_str(",\"zone_id\":").unwrap();
+        (write!(wr, "{}", log.zone_id)).unwrap();
+        wr.write_str(",\"zone_plan\":").unwrap();
+        (write!(wr, "{}", log.zone_plan as int)).unwrap();
+
+        wr.write_str(",\"http\":{\"protocol\":").unwrap();
+        (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+        wr.write_str(",\"status\":").unwrap();
+        (write!(wr, "{}", log.http.status)).unwrap();
+        wr.write_str(",\"host_status\":").unwrap();
+        (write!(wr, "{}", log.http.host_status)).unwrap();
+        wr.write_str(",\"up_status\":").unwrap();
+        (write!(wr, "{}", log.http.up_status)).unwrap();
+        wr.write_str(",\"method\":").unwrap();
+        (write!(wr, "{}", log.http.method as uint)).unwrap();
+        wr.write_str(",\"content_type\":").unwrap();
+        json::escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
+        wr.write_str(",\"user_agent\":").unwrap();
+        json::escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
+        wr.write_str(",\"referer\":").unwrap();
+        json::escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
+        wr.write_str(",\"request_uri\":").unwrap();
+        json::escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
+
+        wr.write_str("},\"origin\":{\"port\":").unwrap();
+        (write!(wr, "{}", log.origin.port)).unwrap();
+        wr.write_str(",\"hostname\":").unwrap();
+        json::escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
+        wr.write_str(",\"protocol\":").unwrap();
+        (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+
+        wr.write_str("},\"country\":").unwrap();
+        (write!(wr, "{}", log.country as uint)).unwrap();
+        wr.write_str(",\"cache_status\":").unwrap();
+        (write!(wr, "{}", log.cache_status as uint)).unwrap();
+        wr.write_str(",\"server_ip\":").unwrap();
+        json::escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
+        wr.write_str(",\"server_name\":").unwrap();
+        json::escape_str(&mut wr, log.server_name.as_slice()).unwrap();
+        wr.write_str(",\"remote_ip\":").unwrap();
+        json::escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
+        wr.write_str(",\"bytes_dlv\":").unwrap();
+        (write!(wr, "{}", log.bytes_dlv)).unwrap();
+
+        wr.write_str(",\"ray_id\":").unwrap();
+        json::escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
+        wr.write_str("}").unwrap();
+
+        /*
+        let _json = ::std::str::from_utf8_owned(wr.unwrap()).unwrap();
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
 fn bench_decoder(b: &mut Bencher) {
     let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
@@ -480,5 +554,4 @@ fn bench_decoder(b: &mut Bencher) {
         let mut decoder = serialize::json::Decoder::new(json);
         let _log: Log = serialize::Decodable::decode(&mut decoder).unwrap();
     });
-
 }
