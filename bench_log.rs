@@ -487,7 +487,7 @@ fn bench_manual(b: &mut Bencher) {
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
     b.iter(|| {
-        let mut wr = MemWriter::new();
+        let mut wr = MemWriter::with_capacity(1000);
         wr.write_str("{\"timestamp\":").unwrap();
         (write!(wr, "{}", log.timestamp)).unwrap();
         wr.write_str(",\"zone_id\":").unwrap();
