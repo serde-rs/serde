@@ -3691,7 +3691,7 @@ mod bench {
 
         let mut list = vec!();
         for _ in range(0, count) {
-            list.push(json::Object(box treemap!(
+            list.push(json::Object(treemap!(
                 "a".to_string() => json::Boolean(true),
                 "b".to_string() => json::Null,
                 "c".to_string() => json::Number(3.1415),
@@ -3703,7 +3703,7 @@ mod bench {
                 ))
             )));
         }
-        list.push(json::Object(box TreeMap::new()));
+        list.push(json::Object(TreeMap::new()));
         json::List(list)
     }
 

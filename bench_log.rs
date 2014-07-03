@@ -453,11 +453,11 @@ impl Log {
 #[bench]
 fn bench_encoder(b: &mut Bencher) {
     let log = Log::new();
-    let json = serialize::json::Encoder::str_encode(&log);
+    let json = serialize::json::encode(&log);
     let _len = json.len();
 
     b.iter(|| {
-        let _ = serialize::json::Encoder::str_encode(&log);
+        let _ = serialize::json::encode(&log);
     });
 }
 
