@@ -735,20 +735,36 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 
 pub type EncodeResult = io::IoResult<()>;
 
-pub fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> IoResult<()> {
+pub fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> IoResult<()> {
     try!(wr.write_str("\""));
-    for byte in s.iter() {
-        match *byte {
-            b'"' => try!(wr.write_str("\\\"")),
-            b'\\' => try!(wr.write_str("\\\\")),
-            b'\x08' => try!(wr.write_str("\\b")),
-            b'\x0c' => try!(wr.write_str("\\f")),
-            b'\n' => try!(wr.write_str("\\n")),
-            b'\r' => try!(wr.write_str("\\r")),
-            b'\t' => try!(wr.write_str("\\t")),
-            _ => try!(wr.write_u8(*byte)),
+
+    let mut start = 0;
+
+    for (i, byte) in bytes.iter().enumerate() {
+        let escaped = match *byte {
+            b'"' => "\\\"",
+            b'\\' => "\\\\",
+            b'\x08' => "\\b",
+            b'\x0c' => "\\f",
+            b'\n' => "\\n",
+            b'\r' => "\\r",
+            b'\t' => "\\t",
+            _ => { continue; }
+        };
+
+        if start < i {
+            try!(wr.write(bytes.slice(start, i)));
         }
+
+        try!(wr.write_str(escaped));
+
+        start = i + 1;
     }
+
+    if start != bytes.len() {
+        try!(wr.write(bytes.slice_from(start)));
+    }
+
     wr.write_str("\"")
 }
 
