@@ -792,11 +792,20 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
     }
 }
 
-fn spaces<W: Writer>(wr: &mut W, n: uint) -> IoResult<()> {
-    for _ in range(0, n) {
-        try!(wr.write_str(" "));
+fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
+    static len: uint = 16;
+    static buf: [u8, ..len] = [b' ', ..len];
+
+    while n >= buf.len() {
+        try!(wr.write(buf));
+        n -= buf.len();
     }
-    Ok(())
+
+    if n > 0 {
+        wr.write(buf.slice_to(n))
+    } else {
+        Ok(())
+    }
 }
 
 #[deriving(Show)]
