@@ -228,11 +228,13 @@ fn main() {
 */
 
 use std::char;
-use std::collections::{HashMap, TreeMap};
-use std::collections::treemap;
+use std::collections::{HashMap, TreeMap, treemap};
+use std::f32;
+use std::f64;
 use std::fmt;
-use std::io::MemWriter;
+use std::io::{IoResult, MemWriter};
 use std::io;
+use std::num::{FPNaN, FPInfinite};
 use std::num;
 use std::str::ScalarValue;
 use std::str;
@@ -733,7 +735,7 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 
 pub type EncodeResult = io::IoResult<()>;
 
-pub fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> Result<(), io::IoError> {
+pub fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> IoResult<()> {
     try!(wr.write_str("\""));
     for byte in s.iter() {
         match *byte {
@@ -750,17 +752,31 @@ pub fn escape_bytes<W: Writer>(wr: &mut W, s: &[u8]) -> Result<(), io::IoError> 
     wr.write_str("\"")
 }
 
-pub fn escape_str<W: Writer>(wr: &mut W, v: &str) -> Result<(), io::IoError> {
+pub fn escape_str<W: Writer>(wr: &mut W, v: &str) -> IoResult<()> {
     escape_bytes(wr, v.as_bytes())
 }
 
-pub fn escape_char<W: Writer>(wr: &mut W, v: char) -> Result<(), io::IoError> {
+pub fn escape_char<W: Writer>(wr: &mut W, v: char) -> IoResult<()> {
     let mut buf = [0, .. 4];
     v.encode_utf8(buf);
     escape_bytes(wr, buf)
 }
 
-fn spaces<W: Writer>(wr: &mut W, n: uint) -> Result<(), io::IoError> {
+fn fmt_f32_or_null<W: Writer>(wr: &mut W, v: f32) -> IoResult<()> {
+    match v.classify() {
+        FPNaN | FPInfinite => wr.write_str("null"),
+        _ => wr.write_str(f32::to_str_digits(v, 6).as_slice()),
+    }
+}
+
+fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
+    match v.classify() {
+        FPNaN | FPInfinite => wr.write_str("null"),
+        _ => wr.write_str(f64::to_str_digits(v, 6).as_slice()),
+    }
+}
+
+fn spaces<W: Writer>(wr: &mut W, n: uint) -> IoResult<()> {
     for _ in range(0, n) {
         try!(wr.write_str(" "));
     }
@@ -794,12 +810,12 @@ impl<W: Writer> Serializer<W> {
 
 impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     #[inline]
-    fn serialize_null(&mut self) -> Result<(), io::IoError> {
+    fn serialize_null(&mut self) -> IoResult<()> {
         self.wr.write_str("null")
     }
 
     #[inline]
-    fn serialize_bool(&mut self, v: bool) -> Result<(), io::IoError> {
+    fn serialize_bool(&mut self, v: bool) -> IoResult<()> {
         if v {
             self.wr.write_str("true")
         } else {
@@ -808,77 +824,77 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_int(&mut self, v: int) -> Result<(), io::IoError> {
+    fn serialize_int(&mut self, v: int) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i8(&mut self, v: i8) -> Result<(), io::IoError> {
+    fn serialize_i8(&mut self, v: i8) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i16(&mut self, v: i16) -> Result<(), io::IoError> {
+    fn serialize_i16(&mut self, v: i16) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i32(&mut self, v: i32) -> Result<(), io::IoError> {
+    fn serialize_i32(&mut self, v: i32) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i64(&mut self, v: i64) -> Result<(), io::IoError> {
+    fn serialize_i64(&mut self, v: i64) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_uint(&mut self, v: uint) -> Result<(), io::IoError> {
+    fn serialize_uint(&mut self, v: uint) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u8(&mut self, v: u8) -> Result<(), io::IoError> {
+    fn serialize_u8(&mut self, v: u8) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u16(&mut self, v: u16) -> Result<(), io::IoError> {
+    fn serialize_u16(&mut self, v: u16) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u32(&mut self, v: u32) -> Result<(), io::IoError> {
+    fn serialize_u32(&mut self, v: u32) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u64(&mut self, v: u64) -> Result<(), io::IoError> {
+    fn serialize_u64(&mut self, v: u64) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_f32(&mut self, v: f32) -> Result<(), io::IoError> {
-        write!(self.wr, "{}", v)
+    fn serialize_f32(&mut self, v: f32) -> IoResult<()> {
+        fmt_f32_or_null(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_f64(&mut self, v: f64) -> Result<(), io::IoError> {
-        write!(self.wr, "{}", v)
+    fn serialize_f64(&mut self, v: f64) -> IoResult<()> {
+        fmt_f64_or_null(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
+    fn serialize_char(&mut self, v: char) -> IoResult<()> {
         escape_char(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_str(&mut self, v: &str) -> Result<(), io::IoError> {
+    fn serialize_str(&mut self, v: &str) -> IoResult<()> {
         escape_str(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_tuple_start(&mut self, _len: uint) -> Result<(), io::IoError> {
+    fn serialize_tuple_start(&mut self, _len: uint) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("[")
     }
@@ -886,7 +902,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     #[inline]
     fn serialize_tuple_sep<
         T: Serializable
-    >(&mut self, value: &T) -> Result<(), io::IoError> {
+    >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
         } else {
@@ -896,12 +912,12 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_end(&mut self) -> Result<(), io::IoError> {
+    fn serialize_tuple_end(&mut self) -> IoResult<()> {
         self.wr.write_str("]")
     }
 
     #[inline]
-    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> Result<(), io::IoError> {
+    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("{")
     }
@@ -909,7 +925,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     #[inline]
     fn serialize_struct_sep<
         T: Serializable
-    >(&mut self, name: &str, value: &T) -> Result<(), io::IoError> {
+    >(&mut self, name: &str, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
         } else {
@@ -921,12 +937,12 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_end(&mut self) -> Result<(), io::IoError> {
+    fn serialize_struct_end(&mut self) -> IoResult<()> {
         self.wr.write_str("}")
     }
 
     #[inline]
-    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> Result<(), io::IoError> {
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> IoResult<()> {
         self.first = true;
         try!(self.wr.write_str("{"));
         try!(self.serialize_str(variant));
@@ -936,7 +952,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     #[inline]
     fn serialize_enum_sep<
         T: Serializable
-    >(&mut self, value: &T) -> Result<(), io::IoError> {
+    >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
         } else {
@@ -946,14 +962,14 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_end(&mut self) -> Result<(), io::IoError> {
+    fn serialize_enum_end(&mut self) -> IoResult<()> {
         self.wr.write_str("]}")
     }
 
     #[inline]
     fn serialize_option<
         T: Serializable
-    >(&mut self, v: &Option<T>) -> Result<(), io::IoError> {
+    >(&mut self, v: &Option<T>) -> IoResult<()> {
         match *v {
             Some(ref v) => {
                 v.serialize(self)
@@ -968,7 +984,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     fn serialize_seq<
         T: Serializable,
         Iter: Iterator<T>
-    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+    >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
         let mut first = true;
         for elt in iter {
@@ -988,7 +1004,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
         K: Serializable,
         V: Serializable,
         Iter: Iterator<(K, V)>
-    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+    >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
         let mut first = true;
         for (key, value) in iter {
@@ -1025,7 +1041,7 @@ impl<W: Writer> PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_sep(&mut self) -> Result<(), io::IoError> {
+    fn serialize_sep(&mut self) -> IoResult<()> {
         if self.first {
             self.first = false;
             self.indent += 2;
@@ -1038,7 +1054,7 @@ impl<W: Writer> PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_end(&mut self, s: &str) -> Result<(), io::IoError> {
+    fn serialize_end(&mut self, s: &str) -> IoResult<()> {
         if !self.first {
             try!(self.wr.write_str("\n"));
             self.indent -= 2;
@@ -1053,12 +1069,12 @@ impl<W: Writer> PrettySerializer<W> {
 
 impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     #[inline]
-    fn serialize_null(&mut self) -> Result<(), io::IoError> {
+    fn serialize_null(&mut self) -> IoResult<()> {
         self.wr.write_str("null")
     }
 
     #[inline]
-    fn serialize_bool(&mut self, v: bool) -> Result<(), io::IoError> {
+    fn serialize_bool(&mut self, v: bool) -> IoResult<()> {
         if v {
             self.wr.write_str("true")
         } else {
@@ -1067,77 +1083,77 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_int(&mut self, v: int) -> Result<(), io::IoError> {
+    fn serialize_int(&mut self, v: int) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i8(&mut self, v: i8) -> Result<(), io::IoError> {
+    fn serialize_i8(&mut self, v: i8) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i16(&mut self, v: i16) -> Result<(), io::IoError> {
+    fn serialize_i16(&mut self, v: i16) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i32(&mut self, v: i32) -> Result<(), io::IoError> {
+    fn serialize_i32(&mut self, v: i32) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_i64(&mut self, v: i64) -> Result<(), io::IoError> {
+    fn serialize_i64(&mut self, v: i64) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_uint(&mut self, v: uint) -> Result<(), io::IoError> {
+    fn serialize_uint(&mut self, v: uint) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u8(&mut self, v: u8) -> Result<(), io::IoError> {
+    fn serialize_u8(&mut self, v: u8) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u16(&mut self, v: u16) -> Result<(), io::IoError> {
+    fn serialize_u16(&mut self, v: u16) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u32(&mut self, v: u32) -> Result<(), io::IoError> {
+    fn serialize_u32(&mut self, v: u32) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_u64(&mut self, v: u64) -> Result<(), io::IoError> {
+    fn serialize_u64(&mut self, v: u64) -> IoResult<()> {
         write!(self.wr, "{}", v)
     }
 
     #[inline]
-    fn serialize_f32(&mut self, v: f32) -> Result<(), io::IoError> {
-        write!(self.wr, "{}", v)
+    fn serialize_f32(&mut self, v: f32) -> IoResult<()> {
+        fmt_f32_or_null(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_f64(&mut self, v: f64) -> Result<(), io::IoError> {
-        write!(self.wr, "{}", v)
+    fn serialize_f64(&mut self, v: f64) -> IoResult<()> {
+        fmt_f64_or_null(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_char(&mut self, v: char) -> Result<(), io::IoError> {
+    fn serialize_char(&mut self, v: char) -> IoResult<()> {
         escape_char(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_str(&mut self, v: &str) -> Result<(), io::IoError> {
+    fn serialize_str(&mut self, v: &str) -> IoResult<()> {
         escape_str(&mut self.wr, v)
     }
 
     #[inline]
-    fn serialize_tuple_start(&mut self, _len: uint) -> Result<(), io::IoError> {
+    fn serialize_tuple_start(&mut self, _len: uint) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("[")
     }
@@ -1145,18 +1161,18 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     #[inline]
     fn serialize_tuple_sep<
         T: Serializable
-    >(&mut self, value: &T) -> Result<(), io::IoError> {
+    >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         value.serialize(self)
     }
 
     #[inline]
-    fn serialize_tuple_end(&mut self) -> Result<(), io::IoError> {
+    fn serialize_tuple_end(&mut self) -> IoResult<()> {
         self.serialize_end("]")
     }
 
     #[inline]
-    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> Result<(), io::IoError> {
+    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("{")
     }
@@ -1164,7 +1180,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     #[inline]
     fn serialize_struct_sep<
         T: Serializable
-    >(&mut self, name: &str, value: &T) -> Result<(), io::IoError> {
+    >(&mut self, name: &str, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         try!(self.serialize_str(name));
         try!(self.wr.write_str(": "));
@@ -1172,12 +1188,12 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_end(&mut self) -> Result<(), io::IoError> {
+    fn serialize_struct_end(&mut self) -> IoResult<()> {
         self.serialize_end("}")
     }
 
     #[inline]
-    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> Result<(), io::IoError> {
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> IoResult<()> {
         self.first = true;
         try!(self.wr.write_str("{"));
         try!(self.serialize_sep());
@@ -1189,13 +1205,13 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     #[inline]
     fn serialize_enum_sep<
         T: Serializable
-    >(&mut self, value: &T) -> Result<(), io::IoError> {
+    >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         value.serialize(self)
     }
 
     #[inline]
-    fn serialize_enum_end(&mut self) -> Result<(), io::IoError> {
+    fn serialize_enum_end(&mut self) -> IoResult<()> {
         try!(self.serialize_tuple_end());
         self.serialize_struct_end()
     }
@@ -1203,7 +1219,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     #[inline]
     fn serialize_option<
         T: Serializable
-    >(&mut self, v: &Option<T>) -> Result<(), io::IoError> {
+    >(&mut self, v: &Option<T>) -> IoResult<()> {
         match *v {
             Some(ref v) => {
                 v.serialize(self)
@@ -1218,7 +1234,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     fn serialize_seq<
         T: Serializable,
         Iter: Iterator<T>
-    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+    >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
 
         self.first = true;
@@ -1235,7 +1251,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
         K: Serializable,
         V: Serializable,
         Iter: Iterator<(K, V)>
-    >(&mut self, mut iter: Iter) -> Result<(), io::IoError> {
+    >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
 
         self.first = true;
