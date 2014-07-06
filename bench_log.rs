@@ -4,6 +4,7 @@ extern crate serialize;
 extern crate test;
 extern crate time;
 
+use std::io;
 use std::io::MemWriter;
 use test::Bencher;
 
@@ -417,6 +418,188 @@ struct Log {
     ray_id: String,
 }
 
+struct MyMemWriter {
+    buf: Vec<u8>,
+}
+
+impl MyMemWriter {
+    pub fn new() -> MyMemWriter {
+        MyMemWriter::with_capacity(128)
+    }
+
+    pub fn with_capacity(cap: uint) -> MyMemWriter {
+        MyMemWriter {
+            buf: Vec::with_capacity(cap)
+        }
+    }
+
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+
+impl Writer for MyMemWriter {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        //self.buf.push_all(buf);
+
+        unsafe {
+                let self_buf_len = self.buf.len();
+                let buf_len = buf.len();
+
+                self.buf.reserve_additional(buf_len);
+                self.buf.set_len(self_buf_len + buf_len);
+                ::std::ptr::copy_nonoverlapping_memory(
+                    self.buf.as_mut_ptr().offset(self_buf_len as int),
+                    buf.as_ptr(),
+                    buf_len);
+        }
+        Ok(())
+    }
+}
+
+pub struct MyMemWriter2 {
+    buf: Vec<u8>,
+    pos: uint,
+}
+
+impl MyMemWriter2 {
+    /// Create a new `MemWriter`.
+    #[inline]
+    pub fn new() -> MyMemWriter2 {
+        MyMemWriter2::with_capacity(128)
+    }
+    /// Create a new `MemWriter`, allocating at least `n` bytes for
+    /// the internal buffer.
+    #[inline]
+    pub fn with_capacity(n: uint) -> MyMemWriter2 {
+        MyMemWriter2 { buf: Vec::with_capacity(n), pos: 0 }
+    }
+
+    /// Acquires an immutable reference to the underlying buffer of this
+    /// `MemWriter`.
+    ///
+    /// No method is exposed for acquiring a mutable reference to the buffer
+    /// because it could corrupt the state of this `MemWriter`.
+    #[inline]
+    pub fn get_ref<'a>(&'a self) -> &'a [u8] { self.buf.as_slice() }
+
+    /// Unwraps this `MemWriter`, returning the underlying buffer
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+macro_rules! likely(
+    ($val:expr) => {
+        {
+            extern {
+                #[link_name = "llvm.expect.i8"]
+                fn expect(val: u8, expected_val: u8) -> u8;
+            }
+            let x: bool = $val;
+            unsafe { expect(x as u8, 1) != 0 }
+        }
+    }
+)
+
+macro_rules! unlikely(
+    ($val:expr) => {
+        {
+            extern {
+                #[link_name = "llvm.expect.i8"]
+                fn expect(val: u8, expected_val: u8) -> u8;
+            }
+            let x: bool = $val;
+            unsafe { expect(x as u8, 0) != 0 }
+        }
+    }
+)
+
+impl Writer for MyMemWriter2 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        if self.pos == self.buf.len() {
+        //if likely!(self.pos == self.buf.len()) {
+            // Hot path.
+            //self.buf.push_all(buf)
+            unsafe {
+                let self_buf_len = self.buf.len();
+                let buf_len = buf.len();
+
+                self.buf.reserve_additional(buf_len);
+                self.buf.set_len(self_buf_len + buf_len);
+                ::std::ptr::copy_nonoverlapping_memory(
+                    self.buf.as_mut_ptr().offset(self_buf_len as int),
+                    buf.as_ptr(),
+                    buf_len);
+
+                //::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+            }
+        } else {
+            fail!();
+
+            // Make sure the internal buffer is as least as big as where we
+            // currently are
+            let difference = self.pos as i64 - self.buf.len() as i64;
+            if difference > 0 {
+                self.buf.grow(difference as uint, &0);
+            }
+
+            // Figure out what bytes will be used to overwrite what's currently
+            // there (left), and what will be appended on the end (right)
+            let cap = self.buf.len() - self.pos;
+            let (left, right) = if cap <= buf.len() {
+                (buf.slice_to(cap), buf.slice_from(cap))
+            } else {
+                (buf, &[])
+            };
+
+            // Do the necessary writes
+            if left.len() > 0 {
+                ::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+            }
+            if right.len() > 0 {
+                self.buf.push_all(right);
+            }
+        }
+
+        // Bump us forward
+        self.pos += buf.len();
+        Ok(())
+    }
+}
+
+fn combine(seek: io::SeekStyle, cur: uint, end: uint, offset: i64) -> io::IoResult<u64> {
+    // compute offset as signed and clamp to prevent overflow
+    let pos = match seek {
+        io::SeekSet => 0,
+        io::SeekEnd => end,
+        io::SeekCur => cur,
+    } as i64;
+
+    if offset + pos < 0 {
+        Err(io::IoError {
+            kind: io::InvalidInput,
+            desc: "invalid seek to a negative offset",
+            detail: None
+        })
+    } else {
+        Ok((offset + pos) as u64)
+    }
+}
+
+impl Seek for MyMemWriter2 {
+    #[inline]
+    fn tell(&self) -> io::IoResult<u64> { Ok(self.pos as u64) }
+
+    #[inline]
+    fn seek(&mut self, pos: i64, style: io::SeekStyle) -> io::IoResult<()> {
+        let new = try!(combine(style, self.pos, self.buf.len(), pos));
+        self.pos = new as uint;
+        Ok(())
+    }
+}
+
 impl Log {
     fn new() -> Log {
         Log {
@@ -455,7 +638,7 @@ impl Log {
 fn bench_encoder(b: &mut Bencher) {
     let log = Log::new();
     let json = serialize::json::encode(&log);
-    let _len = json.len();
+    b.bytes = json.len() as u64;
 
     b.iter(|| {
         let _ = serialize::json::encode(&log);
@@ -465,10 +648,29 @@ fn bench_encoder(b: &mut Bencher) {
 #[bench]
 fn bench_serializer(b: &mut Bencher) {
     let log = Log::new();
-    let _json = json::to_str(&log).unwrap();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
 
     b.iter(|| {
-        let _json = json::to_str(&log).unwrap();
+        //let _json = json::to_str(&log).unwrap();
+        let _json = json::to_vec(&log);
+    });
+}
+
+#[bench]
+fn bench_serializer2(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
+
+    b.iter(|| {
+        //let _json = json::to_str(&log).unwrap();
+        let mut wr = MyMemWriter::with_capacity(1024);
+        {
+            let mut serializer = json::Serializer::new(wr.by_ref());
+            log.serialize(&mut serializer).unwrap();
+        }
+        let _json = wr.unwrap();
     });
 }
 
@@ -476,70 +678,371 @@ fn bench_serializer(b: &mut Bencher) {
 fn bench_copy(b: &mut Bencher) {
     let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
+    let json = Vec::from_slice(s.as_bytes());
+    b.bytes = json.len() as u64;
+
     b.iter(|| {
-        let _json = s.to_str();
+        let _json = Vec::from_slice(s.as_bytes());
+    });
+}
+
+fn manual_no_escape<W: Writer>(mut wr: W, log: &Log) {
+    wr.write_str("{\"timestamp\":").unwrap();
+    (write!(wr, "{}", log.timestamp)).unwrap();
+    wr.write_str(",\"zone_id\":").unwrap();
+    (write!(wr, "{}", log.zone_id)).unwrap();
+    wr.write_str(",\"zone_plan\":").unwrap();
+    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+
+    wr.write_str(",\"http\":{\"protocol\":").unwrap();
+    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    wr.write_str(",\"status\":").unwrap();
+    (write!(wr, "{}", log.http.status)).unwrap();
+    wr.write_str(",\"host_status\":").unwrap();
+    (write!(wr, "{}", log.http.host_status)).unwrap();
+    wr.write_str(",\"up_status\":").unwrap();
+    (write!(wr, "{}", log.http.up_status)).unwrap();
+    wr.write_str(",\"method\":").unwrap();
+    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    wr.write_str(",\"content_type\":").unwrap();
+    json::escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
+    wr.write_str(",\"user_agent\":").unwrap();
+    json::escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
+    wr.write_str(",\"referer\":").unwrap();
+    json::escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
+    wr.write_str(",\"request_uri\":").unwrap();
+    json::escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
+
+    wr.write_str("},\"origin\":{\"port\":").unwrap();
+    (write!(wr, "{}", log.origin.port)).unwrap();
+    wr.write_str(",\"hostname\":").unwrap();
+    json::escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
+    wr.write_str(",\"protocol\":").unwrap();
+    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+
+    wr.write_str("},\"country\":").unwrap();
+    (write!(wr, "{}", log.country as uint)).unwrap();
+    wr.write_str(",\"cache_status\":").unwrap();
+    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    wr.write_str(",\"server_ip\":").unwrap();
+    json::escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
+    wr.write_str(",\"server_name\":").unwrap();
+    json::escape_str(&mut wr, log.server_name.as_slice()).unwrap();
+    wr.write_str(",\"remote_ip\":").unwrap();
+    json::escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
+    wr.write_str(",\"bytes_dlv\":").unwrap();
+    (write!(wr, "{}", log.bytes_dlv)).unwrap();
+
+    wr.write_str(",\"ray_id\":").unwrap();
+    json::escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
+    wr.write_str("}").unwrap();
+}
+
+fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
+    wr.write_str("{\"").unwrap();
+    json::escape_str(&mut wr, "timestamp").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.timestamp)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "zone_id").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.zone_id)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "zone_plan").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "http").unwrap();
+    wr.write_str("\":{\"").unwrap();
+    json::escape_str(&mut wr, "protocol").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "status").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.http.status)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "host_status").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.http.host_status)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "up_status").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.http.up_status)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "method").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "content_type").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "user_agent").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "referer").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "request_uri").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
+
+    wr.write_str("},\"").unwrap();
+    json::escape_str(&mut wr, "origin").unwrap();
+    wr.write_str("\":{\"").unwrap();
+    json::escape_str(&mut wr, "port").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.origin.port)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "hostname").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "protocol").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+
+    wr.write_str("},\"").unwrap();
+    json::escape_str(&mut wr, "country").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.country as uint)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "cache_status").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "server_ip").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "server_name").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.server_name.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "remote_ip").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "bytes_dlv").unwrap();
+    wr.write_str("\":").unwrap();
+    (write!(wr, "{}", log.bytes_dlv)).unwrap();
+
+    wr.write_str(",\"").unwrap();
+    json::escape_str(&mut wr, "ray_id").unwrap();
+    wr.write_str("\":").unwrap();
+    json::escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
+    wr.write_str("}").unwrap();
+}
+
+#[bench]
+fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MemWriter::with_capacity(1024);
+    manual_no_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MemWriter::with_capacity(1024);
+        manual_no_escape(wr.by_ref(), &log);
+
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
     });
 }
 
 #[bench]
-fn bench_manual(b: &mut Bencher) {
+fn bench_manual_mem_writer_escape(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
+    let mut wr = MemWriter::with_capacity(1024);
+    manual_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
     b.iter(|| {
-        let mut wr = MemWriter::with_capacity(1000);
-        wr.write_str("{\"timestamp\":").unwrap();
-        (write!(wr, "{}", log.timestamp)).unwrap();
-        wr.write_str(",\"zone_id\":").unwrap();
-        (write!(wr, "{}", log.zone_id)).unwrap();
-        wr.write_str(",\"zone_plan\":").unwrap();
-        (write!(wr, "{}", log.zone_plan as int)).unwrap();
+        let mut wr = MemWriter::with_capacity(1024);
+        manual_escape(wr.by_ref(), &log);
+        let _json = wr.unwrap();
 
-        wr.write_str(",\"http\":{\"protocol\":").unwrap();
-        (write!(wr, "{}", log.http.protocol as uint)).unwrap();
-        wr.write_str(",\"status\":").unwrap();
-        (write!(wr, "{}", log.http.status)).unwrap();
-        wr.write_str(",\"host_status\":").unwrap();
-        (write!(wr, "{}", log.http.host_status)).unwrap();
-        wr.write_str(",\"up_status\":").unwrap();
-        (write!(wr, "{}", log.http.up_status)).unwrap();
-        wr.write_str(",\"method\":").unwrap();
-        (write!(wr, "{}", log.http.method as uint)).unwrap();
-        wr.write_str(",\"content_type\":").unwrap();
-        json::escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
-        wr.write_str(",\"user_agent\":").unwrap();
-        json::escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
-        wr.write_str(",\"referer\":").unwrap();
-        json::escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
-        wr.write_str(",\"request_uri\":").unwrap();
-        json::escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
-
-        wr.write_str("},\"origin\":{\"port\":").unwrap();
-        (write!(wr, "{}", log.origin.port)).unwrap();
-        wr.write_str(",\"hostname\":").unwrap();
-        json::escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
-        wr.write_str(",\"protocol\":").unwrap();
-        (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
-
-        wr.write_str("},\"country\":").unwrap();
-        (write!(wr, "{}", log.country as uint)).unwrap();
-        wr.write_str(",\"cache_status\":").unwrap();
-        (write!(wr, "{}", log.cache_status as uint)).unwrap();
-        wr.write_str(",\"server_ip\":").unwrap();
-        json::escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
-        wr.write_str(",\"server_name\":").unwrap();
-        json::escape_str(&mut wr, log.server_name.as_slice()).unwrap();
-        wr.write_str(",\"remote_ip\":").unwrap();
-        json::escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
-        wr.write_str(",\"bytes_dlv\":").unwrap();
-        (write!(wr, "{}", log.bytes_dlv)).unwrap();
-
-        wr.write_str(",\"ray_id\":").unwrap();
-        json::escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
-        wr.write_str("}").unwrap();
-
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
         /*
-        let _json = ::std::str::from_utf8_owned(wr.unwrap()).unwrap();
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer_no_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter::with_capacity(1000);
+    manual_no_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter::with_capacity(1024);
+        manual_no_escape(wr.by_ref(), &log);
+
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MemWriter::with_capacity(1024);
+    manual_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter::with_capacity(1024);
+        manual_escape(wr.by_ref(), &log);
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer2_no_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter2::with_capacity(1000);
+    manual_no_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter2::with_capacity(1024);
+        manual_no_escape(wr.by_ref(), &log);
+
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer2_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter2::with_capacity(1024);
+    manual_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter2::with_capacity(1024);
+        manual_escape(wr.by_ref(), &log);
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+fn direct<W: Writer>(mut wr: W, log: &Log) {
+    use ser::Serializer;
+
+    let mut serializer = json::Serializer::new(wr.by_ref());
+    serializer.serialize_struct_start("Log", 12).unwrap();
+
+    serializer.serialize_struct_sep("timestamp", &log.timestamp).unwrap();
+    serializer.serialize_struct_sep("zone_id", &log.zone_id).unwrap();
+    serializer.serialize_struct_sep("zone_plan", &(log.zone_plan as uint)).unwrap();
+
+    serializer.serialize_struct_start("Http", 9).unwrap();
+    serializer.serialize_struct_sep("protocol", &(log.http.protocol as uint)).unwrap();
+    serializer.serialize_struct_sep("status", &log.http.status).unwrap();
+    serializer.serialize_struct_sep("host_status", &log.http.host_status).unwrap();
+    serializer.serialize_struct_sep("up_status", &log.http.up_status).unwrap();
+    serializer.serialize_struct_sep("method", &(log.http.method as uint)).unwrap();
+    serializer.serialize_struct_sep("content_type", &log.http.content_type).unwrap();
+    serializer.serialize_struct_sep("user_agent", &log.http.user_agent).unwrap();
+    serializer.serialize_struct_sep("referer", &log.http.referer.as_slice()).unwrap();
+    serializer.serialize_struct_sep("request_uri", &log.http.request_uri.as_slice()).unwrap();
+    serializer.serialize_struct_end().unwrap();
+
+    serializer.serialize_struct_start("Origin", 3).unwrap();
+    serializer.serialize_struct_sep("port", &log.origin.port).unwrap();
+    serializer.serialize_struct_sep("hostname", &log.origin.hostname.as_slice()).unwrap();
+    serializer.serialize_struct_sep("protocol", &(log.origin.protocol as uint)).unwrap();
+    serializer.serialize_struct_end().unwrap();
+
+    serializer.serialize_struct_sep("country", &(log.country as uint)).unwrap();
+    serializer.serialize_struct_sep("cache_status", &(log.cache_status as uint)).unwrap();
+    serializer.serialize_struct_sep("server_ip", &log.server_ip.as_slice()).unwrap();
+    serializer.serialize_struct_sep("server_name", &log.server_name.as_slice()).unwrap();
+    serializer.serialize_struct_sep("remote_ip", &log.remote_ip.as_slice()).unwrap();
+    serializer.serialize_struct_sep("bytes_dlv", &log.bytes_dlv).unwrap();
+    serializer.serialize_struct_sep("ray_id", &log.ray_id.as_slice()).unwrap();
+
+    serializer.serialize_struct_end().unwrap();
+}
+
+#[bench]
+fn bench_direct_mem_writer(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MemWriter::with_capacity(1024);
+    direct(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MemWriter::with_capacity(1024);
+        direct(wr.by_ref(), &log);
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_direct_my_mem_writer(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter::with_capacity(1024);
+    direct(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter::with_capacity(1024);
+        direct(wr.by_ref(), &log);
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
         assert_eq!(_s, _json.as_slice());
         */
     });
@@ -549,9 +1052,24 @@ fn bench_manual(b: &mut Bencher) {
 fn bench_decoder(b: &mut Bencher) {
     let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
+    b.bytes = s.len() as u64;
+
     b.iter(|| {
         let json = serialize::json::from_str(s).unwrap();
         let mut decoder = serialize::json::Decoder::new(json);
         let _log: Log = serialize::Decodable::decode(&mut decoder).unwrap();
     });
 }
+
+/*
+#[bench]
+fn bench_deserializer(b: &mut Bencher) {
+    let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    b.bytes = s.len() as u64;
+
+    b.iter(|| {
+        let _log: Log = json::from_str(s).unwrap();
+    });
+}
+*/
