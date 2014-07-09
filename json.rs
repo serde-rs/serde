@@ -120,7 +120,7 @@ impl ToJson for MyStruct {
 fn main() {
     let test2: MyStruct = MyStruct {attr1: 1, attr2:"test".to_string()};
     let tjson: json::Json = test2.to_json();
-    let json_str: String = tjson.to_str().into_string();
+    let json_str: String = tjson.to_string();
 }
 ```
 
@@ -214,7 +214,7 @@ fn main() {
     let test2: TestStruct1 = TestStruct1 {data_int: 1, data_str:"toto".to_string(),
                                           data_vector:vec![2,3,4,5]};
     let tjson: json::Json = test2.to_json();
-    let json_str: String = tjson.to_str().into_string();
+    let json_str: String = tjson.to_string().into_string();
 
     // Deserialize like before.
 
@@ -275,7 +275,7 @@ impl Json {
     }
 
     /// Encodes a json value into a string
-    pub fn to_pretty_str(&self) -> String {
+    pub fn to_pretty_string(&self) -> String {
         let mut wr = MemWriter::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
         str::from_utf8(wr.unwrap().as_slice()).unwrap().to_string()
@@ -470,8 +470,8 @@ impl de::Deserializable for Json {
             de::U64(x) => Ok(Number(x as f64)),
             de::F32(x) => Ok(Number(x as f64)),
             de::F64(x) => Ok(Number(x)),
-            de::Char(x) => Ok(String(x.to_str())),
-            de::Str(x) => Ok(String(x.to_str())),
+            de::Char(x) => Ok(String(x.to_string())),
+            de::Str(x) => Ok(String(x.to_string())),
             de::String(x) => Ok(String(x)),
             de::Option(false) => Ok(Null),
             de::Option(true) => de::Deserializable::deserialize(d),
@@ -1313,7 +1313,7 @@ pub fn to_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
 
 /// Encode the specified struct into a json `String` buffer.
 #[inline]
-pub fn to_str<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
+pub fn to_string<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
     let buf = to_vec(value);
     String::from_utf8(buf)
 }
@@ -1329,7 +1329,7 @@ pub fn to_pretty_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
 }
 
 /// Encode the specified struct into a json `String` buffer.
-pub fn to_pretty_str<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
+pub fn to_pretty_string<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
     let buf = to_pretty_vec(value);
     String::from_utf8(buf)
 }
@@ -2491,10 +2491,10 @@ mod tests {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
 
-            let s = super::to_str(value).unwrap();
+            let s = super::to_string(value).unwrap();
             assert_eq!(s, out);
 
-            let s = super::to_str(&value.to_json()).unwrap();
+            let s = super::to_string(&value.to_json()).unwrap();
             assert_eq!(s, out);
         }
     }
@@ -2505,10 +2505,10 @@ mod tests {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
 
-            let s = super::to_pretty_str(value).unwrap();
+            let s = super::to_pretty_string(value).unwrap();
             assert_eq!(s, out);
 
-            let s = super::to_pretty_str(&value.to_json()).unwrap();
+            let s = super::to_pretty_string(&value.to_json()).unwrap();
             assert_eq!(s, out);
         }
     }
@@ -3783,7 +3783,7 @@ mod bench {
         let json = encoder_json(count);
 
         b.iter(|| {
-            assert_eq!(json.to_str(), src);
+            assert_eq!(json.to_string(), src);
         });
     }
 
@@ -3801,7 +3801,7 @@ mod bench {
         let json = serializer_json(count);
 
         b.iter(|| {
-            assert_eq!(json.to_str(), src);
+            assert_eq!(json.to_string(), src);
         });
     }
 
@@ -3810,7 +3810,7 @@ mod bench {
         let json = serializer_json(count);
 
         b.iter(|| {
-            assert_eq!(json.to_pretty_str(), src);
+            assert_eq!(json.to_pretty_string(), src);
         });
     }
 

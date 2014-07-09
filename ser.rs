@@ -113,35 +113,54 @@ pub trait Serializable {
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_serializable {
-    ($ty:ty, $method:ident, $variant:expr) => {
-        impl<'a> Serializable for $ty {
+    ($ty:ty, $method:ident) => {
+        impl Serializable for $ty {
             #[inline]
-            fn serialize<
-                S: Serializer<E>,
-                E
-            >(&self, s: &mut S) -> Result<(), E> {
-                s.$method($variant)
+            fn serialize<S: Serializer<E>, E>(&self, s: &mut S) -> Result<(), E> {
+                s.$method(*self)
             }
         }
     }
 }
 
-impl_serializable!(bool, serialize_bool, *self)
-impl_serializable!(int, serialize_int, *self)
-impl_serializable!(i8, serialize_i8, *self)
-impl_serializable!(i16, serialize_i16, *self)
-impl_serializable!(i32, serialize_i32, *self)
-impl_serializable!(i64, serialize_i64, *self)
-impl_serializable!(uint, serialize_uint, *self)
-impl_serializable!(u8, serialize_u8, *self)
-impl_serializable!(u16, serialize_u16, *self)
-impl_serializable!(u32, serialize_u32, *self)
-impl_serializable!(u64, serialize_u64, *self)
-impl_serializable!(f32, serialize_f32, *self)
-impl_serializable!(f64, serialize_f64, *self)
-impl_serializable!(char, serialize_char, *self)
-impl_serializable!(&'a str, serialize_str, *self)
-impl_serializable!(String, serialize_str, self.as_slice())
+impl_serializable!(bool, serialize_bool)
+impl_serializable!(int, serialize_int)
+impl_serializable!(i8, serialize_i8)
+impl_serializable!(i16, serialize_i16)
+impl_serializable!(i32, serialize_i32)
+impl_serializable!(i64, serialize_i64)
+impl_serializable!(uint, serialize_uint)
+impl_serializable!(u8, serialize_u8)
+impl_serializable!(u16, serialize_u16)
+impl_serializable!(u32, serialize_u32)
+impl_serializable!(u64, serialize_u64)
+impl_serializable!(f32, serialize_f32)
+impl_serializable!(f64, serialize_f64)
+impl_serializable!(char, serialize_char)
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<'a> Serializable for &'a str {
+    #[inline]
+    fn serialize<
+        S: Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
+        s.serialize_str(*self)
+    }
+}
+
+impl Serializable for String {
+    #[inline]
+    fn serialize<
+        S: Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
+        self.as_slice().serialize(s)
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 impl<
     'a,

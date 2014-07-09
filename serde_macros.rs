@@ -82,7 +82,7 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                     bounds: vec!(
                         (
                             "__S",
-                            ast::StaticSize,
+                            None,
                             vec!(
                                 Path::new_(
                                     vec!("serde", "ser", "Serializer"),
@@ -90,9 +90,14 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                                     vec!(box Literal(Path::new_local("__E"))),
                                     true
                                 )
-                            )
+                            ),
                         ),
-                        ("__E", ast::StaticSize, vec!()))
+                        (
+                            "__E",
+                            None,
+                            vec!(),
+                        ),
+                    )
                 },
                 explicit_self: borrowed_explicit_self(),
                 args: vec!(Ptr(box Literal(Path::new_local("__S")),
@@ -247,7 +252,7 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
                     bounds: vec!(
                         (
                             "__D",
-                            ast::StaticSize,
+                            None,
                             vec!(
                                 Path::new_(
                                     vec!("serde", "de", "Deserializer"),
@@ -259,7 +264,12 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
                                 )
                             )
                         ),
-                        ("__E", ast::StaticSize, vec!()))
+                        (
+                            "__E",
+                            None,
+                            vec!(),
+                        ),
+                    )
                 },
                 explicit_self: None,
                 args: vec!(
