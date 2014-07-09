@@ -418,17 +418,45 @@ struct Log {
     ray_id: String,
 }
 
-struct MyMemWriter {
+macro_rules! likely(
+    ($val:expr) => {
+        {
+            extern {
+                #[link_name = "llvm.expect.i8"]
+                fn expect(val: u8, expected_val: u8) -> u8;
+            }
+            let x: bool = $val;
+            unsafe { expect(x as u8, 1) != 0 }
+        }
+    }
+)
+
+macro_rules! unlikely(
+    ($val:expr) => {
+        {
+            extern {
+                #[link_name = "llvm.expect.i8"]
+                fn expect(val: u8, expected_val: u8) -> u8;
+            }
+            let x: bool = $val;
+            unsafe { expect(x as u8, 0) != 0 }
+        }
+    }
+)
+
+struct MyMemWriter0 {
     buf: Vec<u8>,
 }
 
-impl MyMemWriter {
-    pub fn new() -> MyMemWriter {
-        MyMemWriter::with_capacity(128)
+impl MyMemWriter0 {
+    /*
+    pub fn new() -> MyMemWriter0 {
+        MyMemWriter0::with_capacity(128)
     }
+    */
 
-    pub fn with_capacity(cap: uint) -> MyMemWriter {
-        MyMemWriter {
+    pub fn with_capacity(cap: uint) -> MyMemWriter0 {
+        MyMemWriter0 {
             buf: Vec::with_capacity(cap)
         }
     }
@@ -438,22 +466,51 @@ impl MyMemWriter {
 }
 
 
-impl Writer for MyMemWriter {
+impl Writer for MyMemWriter0 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
-        //self.buf.push_all(buf);
+        self.buf.push_all(buf);
+        Ok(())
+    }
+}
 
-        unsafe {
-                let self_buf_len = self.buf.len();
-                let buf_len = buf.len();
+struct MyMemWriter1 {
+    buf: Vec<u8>,
+}
 
-                self.buf.reserve_additional(buf_len);
-                self.buf.set_len(self_buf_len + buf_len);
-                ::std::ptr::copy_nonoverlapping_memory(
-                    self.buf.as_mut_ptr().offset(self_buf_len as int),
-                    buf.as_ptr(),
-                    buf_len);
+impl MyMemWriter1 {
+    /*
+    pub fn new() -> MyMemWriter1 {
+        MyMemWriter1::with_capacity(128)
+    }
+    */
+
+    pub fn with_capacity(cap: uint) -> MyMemWriter1 {
+        MyMemWriter1 {
+            buf: Vec::with_capacity(cap)
         }
+    }
+
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+
+impl Writer for MyMemWriter1 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        unsafe {
+            let self_buf_len = self.buf.len();
+            let buf_len = buf.len();
+
+            self.buf.reserve_additional(buf_len);
+            self.buf.set_len(self_buf_len + buf_len);
+            ::std::ptr::copy_nonoverlapping_memory(
+                self.buf.as_mut_ptr().offset(self_buf_len as int),
+                buf.as_ptr(),
+                buf_len);
+        }
+
         Ok(())
     }
 }
@@ -489,78 +546,35 @@ impl MyMemWriter2 {
     pub fn unwrap(self) -> Vec<u8> { self.buf }
 }
 
-macro_rules! likely(
-    ($val:expr) => {
-        {
-            extern {
-                #[link_name = "llvm.expect.i8"]
-                fn expect(val: u8, expected_val: u8) -> u8;
-            }
-            let x: bool = $val;
-            unsafe { expect(x as u8, 1) != 0 }
-        }
-    }
-)
-
-macro_rules! unlikely(
-    ($val:expr) => {
-        {
-            extern {
-                #[link_name = "llvm.expect.i8"]
-                fn expect(val: u8, expected_val: u8) -> u8;
-            }
-            let x: bool = $val;
-            unsafe { expect(x as u8, 0) != 0 }
-        }
-    }
-)
-
 impl Writer for MyMemWriter2 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
-        if self.pos == self.buf.len() {
-        //if likely!(self.pos == self.buf.len()) {
-            // Hot path.
-            //self.buf.push_all(buf)
-            unsafe {
-                let self_buf_len = self.buf.len();
-                let buf_len = buf.len();
+        // Make sure the internal buffer is as least as big as where we
+        // currently are
+        /*
+        let difference = self.pos as i64 - self.buf.len() as i64;
+        if difference > 0 {
+            self.buf.grow(difference as uint, &0);
+        }
+        */
 
-                self.buf.reserve_additional(buf_len);
-                self.buf.set_len(self_buf_len + buf_len);
-                ::std::ptr::copy_nonoverlapping_memory(
-                    self.buf.as_mut_ptr().offset(self_buf_len as int),
-                    buf.as_ptr(),
-                    buf_len);
-
-                //::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
-            }
+        // Figure out what bytes will be used to overwrite what's currently
+        // there (left), and what will be appended on the end (right)
+        let cap = self.buf.len() - self.pos;
+        let (left, right) = if cap <= buf.len() {
+            fail!()
+            //(buf.slice_to(cap), buf.slice_from(cap))
         } else {
-            fail!();
+            (buf, &[])
+        };
 
-            // Make sure the internal buffer is as least as big as where we
-            // currently are
-            let difference = self.pos as i64 - self.buf.len() as i64;
-            if difference > 0 {
-                self.buf.grow(difference as uint, &0);
-            }
-
-            // Figure out what bytes will be used to overwrite what's currently
-            // there (left), and what will be appended on the end (right)
-            let cap = self.buf.len() - self.pos;
-            let (left, right) = if cap <= buf.len() {
-                (buf.slice_to(cap), buf.slice_from(cap))
-            } else {
-                (buf, &[])
-            };
-
-            // Do the necessary writes
-            if left.len() > 0 {
-                ::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
-            }
-            if right.len() > 0 {
-                self.buf.push_all(right);
-            }
+        // Do the necessary writes
+        if left.len() > 0 {
+            fail!()
+            //::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+        }
+        if right.len() > 0 {
+            self.buf.push_all(right);
         }
 
         // Bump us forward
@@ -665,7 +679,7 @@ fn bench_serializer2(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let mut wr = MyMemWriter::with_capacity(1024);
+        let mut wr = MyMemWriter0::with_capacity(1024);
         {
             let mut serializer = json::Serializer::new(wr.by_ref());
             log.serialize(&mut serializer).unwrap();
@@ -882,16 +896,16 @@ fn bench_manual_mem_writer_escape(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_manual_my_mem_writer_no_escape(b: &mut Bencher) {
+fn bench_manual_my_mem_writer0_no_escape(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let mut wr = MyMemWriter::with_capacity(1000);
+    let mut wr = MyMemWriter0::with_capacity(1000);
     manual_no_escape(wr.by_ref(), &log);
     b.bytes = wr.unwrap().len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter::with_capacity(1024);
+        let mut wr = MyMemWriter0::with_capacity(1024);
         manual_no_escape(wr.by_ref(), &log);
 
         let _json = wr.unwrap();
@@ -904,7 +918,7 @@ fn bench_manual_my_mem_writer_no_escape(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_manual_my_mem_writer_escape(b: &mut Bencher) {
+fn bench_manual_my_mem_writer0_escape(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
@@ -913,7 +927,50 @@ fn bench_manual_my_mem_writer_escape(b: &mut Bencher) {
     b.bytes = wr.unwrap().len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter::with_capacity(1024);
+        let mut wr = MyMemWriter0::with_capacity(1024);
+        manual_escape(wr.by_ref(), &log);
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer1_no_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter1::with_capacity(1000);
+    manual_no_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter1::with_capacity(1024);
+        manual_no_escape(wr.by_ref(), &log);
+
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer1_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter1::with_capacity(1024);
+    manual_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter1::with_capacity(1024);
         manual_escape(wr.by_ref(), &log);
         let _json = wr.unwrap();
 
@@ -1028,16 +1085,16 @@ fn bench_direct_mem_writer(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_direct_my_mem_writer(b: &mut Bencher) {
+fn bench_direct_my_mem_writer0(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let mut wr = MyMemWriter::with_capacity(1024);
+    let mut wr = MyMemWriter0::with_capacity(1024);
     direct(wr.by_ref(), &log);
     b.bytes = wr.unwrap().len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter::with_capacity(1024);
+        let mut wr = MyMemWriter0::with_capacity(1024);
         direct(wr.by_ref(), &log);
         let _json = wr.unwrap();
 
