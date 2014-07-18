@@ -1,5 +1,6 @@
+#![crate_name = "serde_macros"]
 #![crate_type = "dylib"]
-#![crate_type = "rlib"]
+#![license = "MIT/ASL2"]
 
 #![feature(plugin_registrar)]
 
@@ -114,7 +115,6 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                     )
                 ),
                 attributes: attrs,
-                const_nonmatching: true,
                 combine_substructure: combine_substructure(|a, b, c| {
                     serializable_substructure(a, b, c)
                 }),
@@ -291,7 +291,6 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
                     )
                 ),
                 attributes: Vec::new(),
-                const_nonmatching: true,
                 combine_substructure: combine_substructure(|a, b, c| {
                     deserializable_substructure(a, b, c)
                 }),

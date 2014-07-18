@@ -1,0 +1,11 @@
+[package]
+name = "serde"
+version = "0.1.0"
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+
+[[lib]]
+name = "serde"
+path = "src/lib.rs"
+
+[dependencies.serde_macros]
+path = "serde_macros/"
