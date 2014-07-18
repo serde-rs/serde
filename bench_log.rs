@@ -418,6 +418,41 @@ struct Log {
     ray_id: String,
 }
 
+impl Log {
+    fn new() -> Log {
+        Log {
+            timestamp: time::precise_time_ns() as i64,
+            zone_id: 123456,
+            zone_plan: FREE,
+            http: Http {
+                protocol: HTTP11,
+                status: 200,
+                host_status: 503,
+                up_status: 520,
+                method: GET,
+                content_type: "text/html".to_string(),
+                user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36".to_string(),
+                referer: "https://www.cloudflare.com/".to_string(),
+                request_uri: "/cdn-cgi/trace".to_string(),
+            },
+            origin: Origin {
+                ip: "1.2.3.4".to_string(),
+                port: 8000,
+                hostname: "www.example.com".to_string(),
+                protocol: HTTPS,
+            },
+            country: US,
+            cache_status: Hit,
+            server_ip: "192.168.1.1".to_string(),
+            server_name: "metal.cloudflare.com".to_string(),
+            remote_ip: "10.1.2.3".to_string(),
+            bytes_dlv: 123456,
+            ray_id: "10c73629cce30078-LAX".to_string(),
+        }
+    }
+}
+
+
 macro_rules! likely(
     ($val:expr) => {
         {
@@ -495,22 +530,30 @@ impl MyMemWriter1 {
     pub fn unwrap(self) -> Vec<u8> { self.buf }
 }
 
+// LLVM isn't yet able to lower `Vec::push_all` into a memcpy, so this helps
+// MemWriter eke out that last bit of performance. 
+//#[inline(always)]
+fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
+    let dst_len = dst.len();
+    let src_len = src.len();
+
+    dst.reserve_additional(src_len);
+
+    unsafe {
+        // we would have failed if `reserve_additional` overflowed.
+        dst.set_len(dst_len + src_len);
+
+        ::std::ptr::copy_nonoverlapping_memory(
+            dst.as_mut_ptr().offset(dst_len as int),
+            src.as_ptr(),
+            src_len);
+    }
+}
 
 impl Writer for MyMemWriter1 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
-        unsafe {
-            let self_buf_len = self.buf.len();
-            let buf_len = buf.len();
-
-            self.buf.reserve_additional(buf_len);
-            self.buf.set_len(self_buf_len + buf_len);
-            ::std::ptr::copy_nonoverlapping_memory(
-                self.buf.as_mut_ptr().offset(self_buf_len as int),
-                buf.as_ptr(),
-                buf_len);
-        }
-
+        push_all_bytes(&mut self.buf, buf);
         Ok(())
     }
 }
@@ -549,32 +592,32 @@ impl MyMemWriter2 {
 impl Writer for MyMemWriter2 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
-        // Make sure the internal buffer is as least as big as where we
-        // currently are
-        /*
-        let difference = self.pos as i64 - self.buf.len() as i64;
-        if difference > 0 {
-            self.buf.grow(difference as uint, &0);
-        }
-        */
-
-        // Figure out what bytes will be used to overwrite what's currently
-        // there (left), and what will be appended on the end (right)
-        let cap = self.buf.len() - self.pos;
-        let (left, right) = if cap <= buf.len() {
-            fail!()
-            //(buf.slice_to(cap), buf.slice_from(cap))
+        if self.pos != self.buf.len() {
+            push_all_bytes(&mut self.buf, buf);
         } else {
-            (buf, &[])
-        };
+            // Make sure the internal buffer is as least as big as where we
+            // currently are
+            let difference = self.pos as i64 - self.buf.len() as i64;
+            if difference > 0 {
+                self.buf.grow(difference as uint, &0);
+            }
 
-        // Do the necessary writes
-        if left.len() > 0 {
-            fail!()
-            //::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
-        }
-        if right.len() > 0 {
-            self.buf.push_all(right);
+            // Figure out what bytes will be used to overwrite what's currently
+            // there (left), and what will be appended on the end (right)
+            let cap = self.buf.len() - self.pos;
+            let (left, right) = if cap <= buf.len() {
+                (buf.slice_to(cap), buf.slice_from(cap))
+            } else {
+                (buf, &[])
+            };
+
+            // Do the necessary writes
+            if left.len() > 0 {
+                ::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+            }
+            if right.len() > 0 {
+                push_all_bytes(&mut self.buf, right);
+            }
         }
 
         // Bump us forward
@@ -614,37 +657,68 @@ impl Seek for MyMemWriter2 {
     }
 }
 
-impl Log {
-    fn new() -> Log {
-        Log {
-            timestamp: time::precise_time_ns() as i64,
-            zone_id: 123456,
-            zone_plan: FREE,
-            http: Http {
-                protocol: HTTP11,
-                status: 200,
-                host_status: 503,
-                up_status: 520,
-                method: GET,
-                content_type: "text/html".to_string(),
-                user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36".to_string(),
-                referer: "https://www.cloudflare.com/".to_string(),
-                request_uri: "/cdn-cgi/trace".to_string(),
-            },
-            origin: Origin {
-                ip: "1.2.3.4".to_string(),
-                port: 8000,
-                hostname: "www.example.com".to_string(),
-                protocol: HTTPS,
-            },
-            country: US,
-            cache_status: Hit,
-            server_ip: "192.168.1.1".to_string(),
-            server_name: "metal.cloudflare.com".to_string(),
-            remote_ip: "10.1.2.3".to_string(),
-            bytes_dlv: 123456,
-            ray_id: "10c73629cce30078-LAX".to_string(),
+
+pub struct MyMemWriter3 {
+    buf: Vec<u8>,
+    pos: uint,
+}
+
+impl MyMemWriter3 {
+    /// Create a new `MemWriter`.
+    #[inline]
+    pub fn new() -> MyMemWriter3 {
+        MyMemWriter3::with_capacity(128)
+    }
+    /// Create a new `MemWriter`, allocating at least `n` bytes for
+    /// the internal buffer.
+    #[inline]
+    pub fn with_capacity(n: uint) -> MyMemWriter3 {
+        MyMemWriter3 { buf: Vec::with_capacity(n), pos: 0 }
+    }
+
+    /// Acquires an immutable reference to the underlying buffer of this
+    /// `MemWriter`.
+    ///
+    /// No method is exposed for acquiring a mutable reference to the buffer
+    /// because it could corrupt the state of this `MemWriter`.
+    #[inline]
+    pub fn get_ref<'a>(&'a self) -> &'a [u8] { self.buf.as_slice() }
+
+    /// Unwraps this `MemWriter`, returning the underlying buffer
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+impl Writer for MyMemWriter3 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        // Make sure the internal buffer is as least as big as where we
+        // currently are
+        let difference = self.pos as i64 - self.buf.len() as i64;
+        if difference > 0 {
+            self.buf.grow(difference as uint, &0);
         }
+
+        // Figure out what bytes will be used to overwrite what's currently
+        // there (left), and what will be appended on the end (right)
+        let cap = self.buf.len() - self.pos;
+        let (left, right) = if cap <= buf.len() {
+            (buf.slice_to(cap), buf.slice_from(cap))
+        } else {
+            (buf, &[])
+        };
+
+        // Do the necessary writes
+        if left.len() > 0 {
+            ::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+        }
+        if right.len() > 0 {
+            push_all_bytes(&mut self.buf, right);
+        }
+
+        // Bump us forward
+        self.pos += buf.len();
+        Ok(())
     }
 }
 
@@ -672,7 +746,24 @@ fn bench_serializer(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_serializer2(b: &mut Bencher) {
+fn bench_serializer_mem_writer(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
+
+    b.iter(|| {
+        //let _json = json::to_str(&log).unwrap();
+        let mut wr = MemWriter::with_capacity(1024);
+        {
+            let mut serializer = json::Serializer::new(wr.by_ref());
+            log.serialize(&mut serializer).unwrap();
+        }
+        let _json = wr.unwrap();
+    });
+}
+
+#[bench]
+fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
     let log = Log::new();
     let json = json::to_vec(&log);
     b.bytes = json.len() as u64;
@@ -680,6 +771,57 @@ fn bench_serializer2(b: &mut Bencher) {
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
         let mut wr = MyMemWriter0::with_capacity(1024);
+        {
+            let mut serializer = json::Serializer::new(wr.by_ref());
+            log.serialize(&mut serializer).unwrap();
+        }
+        let _json = wr.unwrap();
+    });
+}
+
+#[bench]
+fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
+
+    b.iter(|| {
+        //let _json = json::to_str(&log).unwrap();
+        let mut wr = MyMemWriter1::with_capacity(1024);
+        {
+            let mut serializer = json::Serializer::new(wr.by_ref());
+            log.serialize(&mut serializer).unwrap();
+        }
+        let _json = wr.unwrap();
+    });
+}
+
+#[bench]
+fn bench_serializer_my_mem_writer2(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
+
+    b.iter(|| {
+        //let _json = json::to_str(&log).unwrap();
+        let mut wr = MyMemWriter2::with_capacity(1024);
+        {
+            let mut serializer = json::Serializer::new(wr.by_ref());
+            log.serialize(&mut serializer).unwrap();
+        }
+        let _json = wr.unwrap();
+    });
+}
+
+#[bench]
+fn bench_serializer_my_mem_writer3(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
+
+    b.iter(|| {
+        //let _json = json::to_str(&log).unwrap();
+        let mut wr = MyMemWriter3::with_capacity(1024);
         {
             let mut serializer = json::Serializer::new(wr.by_ref());
             log.serialize(&mut serializer).unwrap();
@@ -1014,6 +1156,50 @@ fn bench_manual_my_mem_writer2_escape(b: &mut Bencher) {
 
     b.iter(|| {
         let mut wr = MyMemWriter2::with_capacity(1024);
+        manual_escape(wr.by_ref(), &log);
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+
+#[bench]
+fn bench_manual_my_mem_writer3_no_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter3::with_capacity(1000);
+    manual_no_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter3::with_capacity(1024);
+        manual_no_escape(wr.by_ref(), &log);
+
+        let _json = wr.unwrap();
+
+        //let _json = String::from_utf8(wr.unwrap()).unwrap();
+        /*
+        assert_eq!(_s, _json.as_slice());
+        */
+    });
+}
+
+#[bench]
+fn bench_manual_my_mem_writer3_escape(b: &mut Bencher) {
+    let log = Log::new();
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    let mut wr = MyMemWriter3::with_capacity(1024);
+    manual_escape(wr.by_ref(), &log);
+    b.bytes = wr.unwrap().len() as u64;
+
+    b.iter(|| {
+        let mut wr = MyMemWriter3::with_capacity(1024);
         manual_escape(wr.by_ref(), &log);
         let _json = wr.unwrap();
 

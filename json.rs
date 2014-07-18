@@ -1294,7 +1294,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 /// Encode the specified struct into a json `[u8]` buffer.
 #[inline]
 pub fn to_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
-    let mut wr = MemWriter::with_capacity(1000);
+    let mut wr = MemWriter::with_capacity(1024);
     {
         let mut serializer = Serializer::new(wr.by_ref());
         value.serialize(&mut serializer).unwrap();
