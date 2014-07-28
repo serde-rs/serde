@@ -2,7 +2,7 @@
 #![crate_type = "dylib"]
 #![license = "MIT/ASL2"]
 
-#![feature(plugin_registrar)]
+#![feature(plugin_registrar, quote)]
 
 extern crate syntax;
 extern crate rustc;
@@ -303,174 +303,91 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
 fn deserializable_substructure(cx: &mut ExtCtxt, trait_span: Span,
                                substr: &Substructure) -> Gc<Expr> {
     let deserializer = substr.nonself_args[0];
+    let token = substr.nonself_args[1];
 
     match *substr.fields {
-        StaticStruct(_, ref summary) => {
-            let mut stmts = vec!();
-
-            let call = cx.expr_method_call(
-                trait_span,
-                deserializer,
-                cx.ident_of("expect_struct_start"),
-                vec!(
-                    substr.nonself_args[1],
-                    cx.expr_str(trait_span, token::get_ident(substr.type_ident)),
-                )
-            );
-            let call = cx.expr_try(trait_span, call);
-            stmts.push(cx.stmt_expr(call));
-
-            let expect_struct_field = cx.ident_of("expect_struct_field");
-
-            let call = deserializable_static_fields(
+        StaticStruct(_, ref fields) => {
+            let struct_block = struct_block(
                 cx,
                 trait_span,
                 substr.type_ident,
-                summary,
-                |cx, span, name| {
-                    cx.expr_try(span,
-                        cx.expr_method_call(
-                            span,
-                            deserializer,
-                            expect_struct_field,
-                            vec!(
-                                cx.expr_str(span, name),
-                            )
-                        )
-                    )
-                }
+                fields,
+                deserializer
             );
 
-            let result = cx.ident_of("result");
-
-            stmts.push(
-                cx.stmt_let(
-                    trait_span,
-                    false,
-                    result,
-                    call
-                )
-            );
-
-            let call = cx.expr_method_call(
+            let map_block = map_block(
+                cx,
                 trait_span,
-                deserializer,
-                cx.ident_of("expect_struct_end"),
-                vec!()
+                substr.type_ident,
+                fields,
+                deserializer
             );
-            let call = cx.expr_try(trait_span, call);
-            stmts.push(cx.stmt_expr(call));
 
-            cx.expr_block(
-                cx.block(
-                    trait_span,
-                    stmts,
-                    Some(
-                        cx.expr_ok(
-                            trait_span,
-                            cx.expr_ident(trait_span, result)
-                        )
-                    )
-                )
+            quote_expr!(
+                cx,
+                match $token {
+                    ::serde::de::StructStart(_, _) => $struct_block,
+                    ::serde::de::MapStart(_) => $map_block,
+                    _ => $deserializer.syntax_error(),
+                }
             )
         }
         StaticEnum(_, ref fields) => {
-            let mut stmts = vec!();
+            let type_name = cx.expr_str(
+                trait_span,
+                token::get_ident(substr.type_ident)
+            );
 
-            let mut arms = vec!();
-            let mut variants = vec!();
+            let variants = fields.iter()
+                .map(|&(name, span, _)| {
+                    cx.expr_str(span, token::get_ident(name))
+                })
+                .collect();
 
-            let expect_enum_sep = cx.ident_of("expect_enum_sep");
-            for (i, &(name, v_span, ref parts)) in fields.iter().enumerate() {
-                variants.push(cx.expr_str(v_span, token::get_ident(name)));
+            let variants = cx.expr_vec(trait_span, variants);
 
-                let deserializabled = deserializable_static_fields(cx,
-                                                   v_span,
-                                                   name,
-                                                   parts,
-                                                   |cx, span, _| {
-                    cx.expr_try(span,
-                        cx.expr_method_call(
-                            span,
-                            deserializer,
-                            expect_enum_sep,
-                            vec!()
-                        )
-                    )
-                });
+            let arms: Vec<ast::Arm> = fields.iter()
+                .enumerate()
+                .map(|(i, &(name, span, ref parts))| {
+                    let call = deserializable_static_fields(
+                        cx,
+                        span,
+                        name,
+                        parts,
+                        |cx, span, _| {
+                            cx.expr_try(span,
+                                cx.expr_method_call(
+                                    span,
+                                    deserializer,
+                                    cx.ident_of("expect_enum_sep"),
+                                    vec!()
+                                )
+                            )
+                        }
+                    );
 
-                arms.push(
                     cx.arm(
-                        v_span,
+                        span,
                         vec!(
-                            cx.pat_lit(v_span, cx.expr_uint(v_span, i)),
+                            cx.pat_lit(span, cx.expr_uint(span, i)),
                         ),
-                        deserializabled
+                        call 
                     )
-                );
-            }
+                })
+                .collect();
 
-            arms.push(cx.arm_unreachable(trait_span));
+            quote_expr!(cx, {
+                let i = try!($deserializer.expect_enum_start($token, $type_name, $variants));
 
+                let result = match i {
+                    $arms
+                    _ => { unreachable!() }
+                };
 
-            let call = cx.expr_method_call(
-                trait_span,
-                deserializer,
-                cx.ident_of("expect_enum_start"),
-                vec!(
-                    substr.nonself_args[1],
-                    cx.expr_str(trait_span, token::get_ident(substr.type_ident)),
-                    cx.expr_vec(trait_span, variants),
-                )
-            );
-            let call = cx.expr_try(trait_span, call);
+                try!($deserializer.expect_enum_end());
 
-            let variant = cx.ident_of("i");
-            stmts.push(
-                cx.stmt_let(
-                    trait_span,
-                    false,
-                    variant,
-                    call
-                )
-            );
-
-            let result = cx.ident_of("result");
-            let call = cx.expr_match(
-                trait_span,
-                cx.expr_ident(trait_span, variant),
-                arms
-            );
-            stmts.push(
-                cx.stmt_let(
-                    trait_span,
-                    false,
-                    result,
-                    call
-                )
-            );
-
-            let call = cx.expr_method_call(
-                trait_span,
-                deserializer,
-                cx.ident_of("expect_enum_end"),
-                vec!()
-            );
-            let call = cx.expr_try(trait_span, call);
-            stmts.push(cx.stmt_expr(call));
-
-            cx.expr_block(
-                cx.block(
-                    trait_span,
-                    stmts,
-                    Some(
-                        cx.expr_ok(
-                            trait_span,
-                            cx.expr_ident(trait_span, result)
-                        )
-                    )
-                )
-            )
+                Ok(result)
+            })
         }
         _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserializable)")
     }
@@ -478,13 +395,13 @@ fn deserializable_substructure(cx: &mut ExtCtxt, trait_span: Span,
 
 /// Create a deserializer for a single enum variant/struct:
 /// - `outer_pat_ident` is the name of this enum variant/struct
-/// - `getarg` should retrieve the `uint`-th field with name `@str`.
+/// - `getarg` should retrieve the `uint`-th field with name `&str`.
 fn deserializable_static_fields(
-    cx: &mut ExtCtxt,
+    cx: &ExtCtxt,
     trait_span: Span,
     outer_pat_ident: Ident,
     fields: &StaticFields,
-    getarg: |&mut ExtCtxt, Span, token::InternedString| -> Gc<Expr>
+    getarg: |&ExtCtxt, Span, token::InternedString| -> Gc<Expr>
 ) -> Gc<Expr> {
     match *fields {
         Unnamed(ref fields) => {
@@ -516,4 +433,148 @@ fn deserializable_static_fields(
             cx.expr_struct_ident(trait_span, outer_pat_ident, fields)
         }
     }
+}
+
+fn struct_block<'a>(
+    cx: &ExtCtxt<'a>,
+    span: Span,
+    type_ident: Ident,
+    fields: &StaticFields,
+    deserializer: Gc<ast::Expr>
+) -> Gc<ast::Expr> {
+    let mut stmts = vec!();
+
+    let expect_struct_field = cx.ident_of("expect_struct_field");
+
+    let call = deserializable_static_fields(
+        cx,
+        span,
+        type_ident,
+        fields,
+        |cx, span, name| {
+            cx.expr_try(span,
+                cx.expr_method_call(
+                    span,
+                    deserializer,
+                    expect_struct_field,
+                    vec!(
+                        cx.expr_str(span, name),
+                    )
+                )
+            )
+        }
+    );
+
+    let result = cx.ident_of("result");
+
+    stmts.push(
+        cx.stmt_let(span, false, result, call)
+    );
+
+    let call = cx.expr_method_call(
+        span,
+        deserializer,
+        cx.ident_of("expect_struct_end"),
+        vec!()
+    );
+    let call = cx.expr_try(span, call);
+    stmts.push(cx.stmt_expr(call));
+
+    let expr = cx.expr_ok(span, cx.expr_ident(span, result));
+
+    cx.expr_block(
+        cx.block(
+            span,
+            stmts,
+            Some(expr)
+        )
+    )
+}
+
+fn map_block<'a>(
+    cx: &ExtCtxt<'a>,
+    span: Span,
+    type_ident: Ident,
+    fields: &StaticFields,
+    deserializer: Gc<ast::Expr>
+) -> Gc<ast::Expr> {
+    let fields = match *fields {
+        Unnamed(_) => fail!(),
+        Named(ref fields) => fields.as_slice(),
+    };
+
+    // Declare each field.
+    let let_fields: Vec<Gc<ast::Stmt>> = fields.iter()
+        .map(|&(name, span)| {
+            cx.stmt_let(span, true, name, cx.expr_none(span))
+        })
+        .collect();
+
+    // Declare key arms.
+    let key_arms: Vec<Vec<ast::TokenTree>> = fields.iter()
+        .map(|&(name, span)| {
+            let s = cx.expr_str(span, token::get_ident(name));
+            quote_tokens!(cx, $s => {
+                $name = Some(try!(::serde::de::Deserializable::deserialize($deserializer)));
+            })
+        })
+        .collect();
+
+    let fields_tuple = cx.expr_tuple(
+        span,
+        fields.iter()
+            .map(|&(name, span)| {
+                cx.expr_ident(span, name)
+            })
+            .collect()
+    );
+        
+    let fields_pats: Vec<Gc<ast::Pat>> = fields.iter()
+        .map(|&(name, span)| {
+            cx.pat_some(span, cx.pat_ident(span, name))
+        })
+        .collect();
+
+    let fields_pat = cx.pat_tuple(span, fields_pats);
+
+    let result = cx.expr_struct_ident(
+        span,
+        type_ident,
+        fields.iter()
+            .map(|&(name, span)| {
+                cx.field_imm(span, name, cx.expr_ident(span, name))
+            })
+            .collect()
+    );
+
+    quote_expr!(cx, {
+        $let_fields
+
+        loop {
+            let token = match try!($deserializer.expect_token()) {
+                ::serde::de::End => { break; }
+                token => token,
+            };
+
+            let key = match token {
+                ::serde::de::Str(s) => s,
+                ::serde::de::String(ref s) => s.as_slice(),
+                _ => { return $deserializer.syntax_error(); }
+            };
+
+            match key {
+                $key_arms
+                _ => { return $deserializer.syntax_error(); }
+            }
+        }
+
+        let result = match $fields_tuple {
+            $fields_pat => { $result }
+            _ => { return $deserializer.syntax_error(); }
+        };
+
+        try!($deserializer.expect_struct_end());
+
+        Ok(result)
+    })
 }
