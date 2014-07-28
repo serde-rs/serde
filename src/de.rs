@@ -229,7 +229,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_enum_sep<
+    fn expect_enum_elt<
         T: Deserializable
     >(&mut self) -> Result<T, E> {
         Deserializable::deserialize(self)

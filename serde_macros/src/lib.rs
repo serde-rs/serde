@@ -307,135 +307,62 @@ fn deserializable_substructure(cx: &mut ExtCtxt, trait_span: Span,
 
     match *substr.fields {
         StaticStruct(_, ref fields) => {
-            let struct_block = struct_block(
+            deserialize_struct(
                 cx,
                 trait_span,
                 substr.type_ident,
                 fields,
-                deserializer
-            );
-
-            let map_block = map_block(
-                cx,
-                trait_span,
-                substr.type_ident,
-                fields,
-                deserializer
-            );
-
-            quote_expr!(
-                cx,
-                match $token {
-                    ::serde::de::StructStart(_, _) => $struct_block,
-                    ::serde::de::MapStart(_) => $map_block,
-                    _ => $deserializer.syntax_error(),
-                }
-            )
+                deserializer,
+                token)
         }
         StaticEnum(_, ref fields) => {
-            let type_name = cx.expr_str(
+            deserialize_enum(
+                cx,
                 trait_span,
-                token::get_ident(substr.type_ident)
-            );
-
-            let variants = fields.iter()
-                .map(|&(name, span, _)| {
-                    cx.expr_str(span, token::get_ident(name))
-                })
-                .collect();
-
-            let variants = cx.expr_vec(trait_span, variants);
-
-            let arms: Vec<ast::Arm> = fields.iter()
-                .enumerate()
-                .map(|(i, &(name, span, ref parts))| {
-                    let call = deserializable_static_fields(
-                        cx,
-                        span,
-                        name,
-                        parts,
-                        |cx, span, _| {
-                            cx.expr_try(span,
-                                cx.expr_method_call(
-                                    span,
-                                    deserializer,
-                                    cx.ident_of("expect_enum_sep"),
-                                    vec!()
-                                )
-                            )
-                        }
-                    );
-
-                    cx.arm(
-                        span,
-                        vec!(
-                            cx.pat_lit(span, cx.expr_uint(span, i)),
-                        ),
-                        call 
-                    )
-                })
-                .collect();
-
-            quote_expr!(cx, {
-                let i = try!($deserializer.expect_enum_start($token, $type_name, $variants));
-
-                let result = match i {
-                    $arms
-                    _ => { unreachable!() }
-                };
-
-                try!($deserializer.expect_enum_end());
-
-                Ok(result)
-            })
+                substr.type_ident,
+                fields.as_slice(),
+                deserializer,
+                token)
         }
         _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserializable)")
     }
 }
 
-/// Create a deserializer for a single enum variant/struct:
-/// - `outer_pat_ident` is the name of this enum variant/struct
-/// - `getarg` should retrieve the `uint`-th field with name `&str`.
-fn deserializable_static_fields(
-    cx: &ExtCtxt,
-    trait_span: Span,
-    outer_pat_ident: Ident,
+fn deserialize_struct<'a>(
+    cx: &ExtCtxt<'a>,
+    span: Span,
+    type_ident: Ident,
     fields: &StaticFields,
-    getarg: |&ExtCtxt, Span, token::InternedString| -> Gc<Expr>
-) -> Gc<Expr> {
-    match *fields {
-        Unnamed(ref fields) => {
-            if fields.is_empty() {
-                cx.expr_ident(trait_span, outer_pat_ident)
-            } else {
-                let fields = fields.iter().enumerate().map(|(i, &span)| {
-                    getarg(
-                        cx,
-                        span,
-                        token::intern_and_get_ident(format!("_field{}", i).as_slice())
-                    )
-                }).collect();
+    deserializer: Gc<ast::Expr>,
+    token: Gc<ast::Expr>
+) -> Gc<ast::Expr> {
+    let struct_block = deserialize_struct_from_struct(
+        cx,
+        span,
+        type_ident,
+        fields,
+        deserializer
+    );
 
-                cx.expr_call_ident(trait_span, outer_pat_ident, fields)
-            }
-        }
-        Named(ref fields) => {
-            // use the field's span to get nicer error messages.
-            let fields = fields.iter().map(|&(name, span)| {
-                let arg = getarg(
-                    cx,
-                    span,
-                    token::get_ident(name)
-                );
-                cx.field_imm(span, name, arg)
-            }).collect();
+    let map_block = deserialize_struct_from_map(
+        cx,
+        span,
+        type_ident,
+        fields,
+        deserializer
+    );
 
-            cx.expr_struct_ident(trait_span, outer_pat_ident, fields)
+    quote_expr!(
+        cx,
+        match $token {
+            ::serde::de::StructStart(_, _) => $struct_block,
+            ::serde::de::MapStart(_) => $map_block,
+            _ => $deserializer.syntax_error(),
         }
-    }
+    )
 }
 
-fn struct_block<'a>(
+fn deserialize_struct_from_struct<'a>(
     cx: &ExtCtxt<'a>,
     span: Span,
     type_ident: Ident,
@@ -491,7 +418,7 @@ fn struct_block<'a>(
     )
 }
 
-fn map_block<'a>(
+fn deserialize_struct_from_map<'a>(
     cx: &ExtCtxt<'a>,
     span: Span,
     type_ident: Ident,
@@ -506,17 +433,20 @@ fn map_block<'a>(
     // Declare each field.
     let let_fields: Vec<Gc<ast::Stmt>> = fields.iter()
         .map(|&(name, span)| {
-            cx.stmt_let(span, true, name, cx.expr_none(span))
+            quote_stmt!(cx, let mut $name = None)
         })
         .collect();
 
     // Declare key arms.
-    let key_arms: Vec<Vec<ast::TokenTree>> = fields.iter()
+    let key_arms: Vec<ast::Arm> = fields.iter()
         .map(|&(name, span)| {
             let s = cx.expr_str(span, token::get_ident(name));
-            quote_tokens!(cx, $s => {
-                $name = Some(try!(::serde::de::Deserializable::deserialize($deserializer)));
-            })
+            quote_arm!(cx,
+                $s => {
+                    $name = Some(
+                        try!(::serde::de::Deserializable::deserialize($deserializer))
+                    );
+                })
         })
         .collect();
 
@@ -528,10 +458,10 @@ fn map_block<'a>(
             })
             .collect()
     );
-        
+
     let fields_pats: Vec<Gc<ast::Pat>> = fields.iter()
         .map(|&(name, span)| {
-            cx.pat_some(span, cx.pat_ident(span, name))
+            quote_pat!(cx, Some($name))
         })
         .collect();
 
@@ -569,7 +499,7 @@ fn map_block<'a>(
         }
 
         let result = match $fields_tuple {
-            $fields_pat => { $result }
+            $fields_pat => $result,
             _ => { return $deserializer.syntax_error(); }
         };
 
@@ -577,4 +507,95 @@ fn map_block<'a>(
 
         Ok(result)
     })
+}
+
+fn deserialize_enum<'a>(
+    cx: &ExtCtxt<'a>,
+    span: Span,
+    type_ident: Ident,
+    fields: &[(Ident, Span, StaticFields)],
+    deserializer: Gc<ast::Expr>,
+    token: Gc<ast::Expr>
+) -> Gc<ast::Expr> {
+    let type_name = cx.expr_str(span, token::get_ident(type_ident));
+
+    let variants = fields.iter()
+        .map(|&(name, span, _)| {
+            cx.expr_str(span, token::get_ident(name))
+        })
+        .collect();
+
+    let variants = cx.expr_vec(span, variants);
+
+    let arms: Vec<ast::Arm> = fields.iter()
+        .enumerate()
+        .map(|(i, &(name, span, ref parts))| {
+            let call = deserializable_static_fields(
+                cx,
+                span,
+                name,
+                parts,
+                |cx, span, _| {
+                    quote_expr!(cx, try!($deserializer.expect_enum_elt()))
+                }
+            );
+
+            quote_arm!(cx, $i => $call,)
+        })
+        .collect();
+
+    quote_expr!(cx, {
+        let i = try!($deserializer.expect_enum_start($token, $type_name, $variants));
+
+        let result = match i {
+            $arms
+            _ => { unreachable!() }
+        };
+
+        try!($deserializer.expect_enum_end());
+
+        Ok(result)
+    })
+}
+
+/// Create a deserializer for a single enum variant/struct:
+/// - `outer_pat_ident` is the name of this enum variant/struct
+/// - `getarg` should retrieve the `uint`-th field with name `&str`.
+fn deserializable_static_fields(
+    cx: &ExtCtxt,
+    trait_span: Span,
+    outer_pat_ident: Ident,
+    fields: &StaticFields,
+    getarg: |&ExtCtxt, Span, token::InternedString| -> Gc<Expr>
+) -> Gc<Expr> {
+    match *fields {
+        Unnamed(ref fields) => {
+            if fields.is_empty() {
+                cx.expr_ident(trait_span, outer_pat_ident)
+            } else {
+                let fields = fields.iter().enumerate().map(|(i, &span)| {
+                    getarg(
+                        cx,
+                        span,
+                        token::intern_and_get_ident(format!("_field{}", i).as_slice())
+                    )
+                }).collect();
+
+                cx.expr_call_ident(trait_span, outer_pat_ident, fields)
+            }
+        }
+        Named(ref fields) => {
+            // use the field's span to get nicer error messages.
+            let fields = fields.iter().map(|&(name, span)| {
+                let arg = getarg(
+                    cx,
+                    span,
+                    token::get_ident(name)
+                );
+                cx.field_imm(span, name, arg)
+            }).collect();
+
+            cx.expr_struct_ident(trait_span, outer_pat_ident, fields)
+        }
+    }
 }
