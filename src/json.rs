@@ -925,7 +925,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_sep<
+    fn serialize_tuple_elt<
         T: Serializable
     >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
@@ -948,7 +948,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_sep<
+    fn serialize_struct_elt<
         T: Serializable
     >(&mut self, name: &str, value: &T) -> IoResult<()> {
         if self.first {
@@ -975,7 +975,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_sep<
+    fn serialize_enum_elt<
         T: Serializable
     >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
@@ -1184,7 +1184,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_sep<
+    fn serialize_tuple_elt<
         T: Serializable
     >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
@@ -1203,7 +1203,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_sep<
+    fn serialize_struct_elt<
         T: Serializable
     >(&mut self, name: &str, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
@@ -1228,7 +1228,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_sep<
+    fn serialize_enum_elt<
         T: Serializable
     >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
@@ -2234,11 +2234,14 @@ mod tests {
     }
 
     #[deriving(PartialEq, Show)]
+    #[deriving_serializable]
+    #[deriving_deserializable]
     enum Animal {
         Dog,
         Frog(String, Vec<int>)
     }
 
+    /*
     impl ser::Serializable for Animal {
         #[inline]
         fn serialize<
@@ -2285,6 +2288,7 @@ mod tests {
             }
         }
     }
+    */
 
     impl ToJson for Animal {
         fn to_json(&self) -> Json {
@@ -2308,12 +2312,15 @@ mod tests {
     }
 
     #[deriving(PartialEq, Show)]
+    #[deriving_serializable]
+    #[deriving_deserializable]
     struct Inner {
         a: (),
         b: uint,
         c: Vec<String>,
     }
 
+    /*
     impl ser::Serializable for Inner {
         #[inline]
         fn serialize<
@@ -2388,6 +2395,7 @@ mod tests {
             }
         }
     }
+    */
 
     impl ToJson for Inner {
         fn to_json(&self) -> Json {
@@ -2402,10 +2410,13 @@ mod tests {
     }
 
     #[deriving(PartialEq, Show)]
+    #[deriving_serializable]
+    #[deriving_deserializable]
     struct Outer {
         inner: Vec<Inner>,
     }
 
+    /*
     impl ser::Serializable for Outer {
         #[inline]
         fn serialize<
@@ -2465,6 +2476,7 @@ mod tests {
             }
         }
     }
+    */
 
     impl ToJson for Outer {
         fn to_json(&self) -> Json {

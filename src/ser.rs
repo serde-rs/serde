@@ -76,15 +76,15 @@ pub trait Serializer<E> {
     fn serialize_str(&mut self, v: &str) -> Result<(), E>;
 
     fn serialize_tuple_start(&mut self, len: uint) -> Result<(), E>;
-    fn serialize_tuple_sep<T: Serializable>(&mut self, v: &T) -> Result<(), E>;
+    fn serialize_tuple_elt<T: Serializable>(&mut self, v: &T) -> Result<(), E>;
     fn serialize_tuple_end(&mut self) -> Result<(), E>;
 
     fn serialize_struct_start(&mut self, name: &str, len: uint) -> Result<(), E>;
-    fn serialize_struct_sep<T: Serializable>(&mut self, name: &str, v: &T) -> Result<(), E>;
+    fn serialize_struct_elt<T: Serializable>(&mut self, name: &str, v: &T) -> Result<(), E>;
     fn serialize_struct_end(&mut self) -> Result<(), E>;
 
     fn serialize_enum_start(&mut self, name: &str, variant: &str, len: uint) -> Result<(), E>;
-    fn serialize_enum_sep<T: Serializable>(&mut self, v: &T) -> Result<(), E>;
+    fn serialize_enum_elt<T: Serializable>(&mut self, v: &T) -> Result<(), E>;
     fn serialize_enum_end(&mut self) -> Result<(), E>;
 
     fn serialize_option<T: Serializable>(&mut self, v: &Option<T>) -> Result<(), E>;
@@ -267,7 +267,7 @@ macro_rules! impl_serialize_tuple {
 
                 try!(s.serialize_tuple_start(len));
                 $(
-                    try!(s.serialize_tuple_sep($name));
+                    try!(s.serialize_tuple_elt($name));
                  )*
                 s.serialize_tuple_end()
             }
@@ -455,7 +455,7 @@ mod tests {
             self.serialize(TupleStart(len))
         }
 
-        fn serialize_tuple_sep<
+        fn serialize_tuple_elt<
             T: Serializable
         >(&mut self, value: &T) -> Result<(), Error> {
             try!(self.serialize(TupleSep));
@@ -470,7 +470,7 @@ mod tests {
             self.serialize(StructStart(name, len))
         }
 
-        fn serialize_struct_sep<
+        fn serialize_struct_elt<
             T: Serializable
         >(&mut self, name: &str, value: &T) -> Result<(), Error> {
             try!(self.serialize(StructSep(name)));
@@ -485,7 +485,7 @@ mod tests {
             self.serialize(EnumStart(name, variant, len))
         }
 
-        fn serialize_enum_sep<
+        fn serialize_enum_elt<
             T: Serializable
         >(&mut self, value: &T) -> Result<(), Error> {
             try!(self.serialize(EnumSep));
