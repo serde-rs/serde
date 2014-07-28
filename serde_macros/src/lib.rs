@@ -332,8 +332,6 @@ fn deserialize_struct_from_struct(
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
-    let mut stmts = vec!();
-
     let expect_struct_field = cx.ident_of("expect_struct_field");
 
     let call = deserializable_static_fields(
@@ -342,43 +340,19 @@ fn deserialize_struct_from_struct(
         type_ident,
         fields,
         |cx, span, name| {
-            cx.expr_try(span,
-                cx.expr_method_call(
-                    span,
-                    deserializer,
-                    expect_struct_field,
-                    vec!(
-                        cx.expr_str(span, name),
-                    )
-                )
+            let name = cx.expr_str(span, name);
+            quote_expr!(
+                cx,
+                try!($deserializer.expect_struct_field($name))
             )
         }
     );
 
-    let result = cx.ident_of("result");
-
-    stmts.push(
-        cx.stmt_let(span, false, result, call)
-    );
-
-    let call = cx.expr_method_call(
-        span,
-        deserializer,
-        cx.ident_of("expect_struct_end"),
-        vec!()
-    );
-    let call = cx.expr_try(span, call);
-    stmts.push(cx.stmt_expr(call));
-
-    let expr = cx.expr_ok(span, cx.expr_ident(span, result));
-
-    cx.expr_block(
-        cx.block(
-            span,
-            stmts,
-            Some(expr)
-        )
-    )
+    quote_expr!(cx, {
+        let result = $call;
+        try!($deserializer.expect_struct_end());
+        Ok(result)
+    })
 }
 
 fn deserialize_struct_from_map(
