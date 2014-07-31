@@ -246,6 +246,8 @@ use de;
 use ser::Serializable;
 use ser;
 
+pub mod builder;
+
 /// Represents a json value
 #[deriving(Clone, PartialEq, PartialOrd)]
 pub enum Json {
