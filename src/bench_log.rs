@@ -1216,35 +1216,35 @@ fn direct<W: Writer>(mut wr: W, log: &Log) {
     let mut serializer = json::Serializer::new(wr.by_ref());
     serializer.serialize_struct_start("Log", 12).unwrap();
 
-    serializer.serialize_struct_sep("timestamp", &log.timestamp).unwrap();
-    serializer.serialize_struct_sep("zone_id", &log.zone_id).unwrap();
-    serializer.serialize_struct_sep("zone_plan", &(log.zone_plan as uint)).unwrap();
+    serializer.serialize_struct_elt("timestamp", &log.timestamp).unwrap();
+    serializer.serialize_struct_elt("zone_id", &log.zone_id).unwrap();
+    serializer.serialize_struct_elt("zone_plan", &(log.zone_plan as uint)).unwrap();
 
     serializer.serialize_struct_start("Http", 9).unwrap();
-    serializer.serialize_struct_sep("protocol", &(log.http.protocol as uint)).unwrap();
-    serializer.serialize_struct_sep("status", &log.http.status).unwrap();
-    serializer.serialize_struct_sep("host_status", &log.http.host_status).unwrap();
-    serializer.serialize_struct_sep("up_status", &log.http.up_status).unwrap();
-    serializer.serialize_struct_sep("method", &(log.http.method as uint)).unwrap();
-    serializer.serialize_struct_sep("content_type", &log.http.content_type).unwrap();
-    serializer.serialize_struct_sep("user_agent", &log.http.user_agent).unwrap();
-    serializer.serialize_struct_sep("referer", &log.http.referer.as_slice()).unwrap();
-    serializer.serialize_struct_sep("request_uri", &log.http.request_uri.as_slice()).unwrap();
+    serializer.serialize_struct_elt("protocol", &(log.http.protocol as uint)).unwrap();
+    serializer.serialize_struct_elt("status", &log.http.status).unwrap();
+    serializer.serialize_struct_elt("host_status", &log.http.host_status).unwrap();
+    serializer.serialize_struct_elt("up_status", &log.http.up_status).unwrap();
+    serializer.serialize_struct_elt("method", &(log.http.method as uint)).unwrap();
+    serializer.serialize_struct_elt("content_type", &log.http.content_type).unwrap();
+    serializer.serialize_struct_elt("user_agent", &log.http.user_agent).unwrap();
+    serializer.serialize_struct_elt("referer", &log.http.referer.as_slice()).unwrap();
+    serializer.serialize_struct_elt("request_uri", &log.http.request_uri.as_slice()).unwrap();
     serializer.serialize_struct_end().unwrap();
 
     serializer.serialize_struct_start("Origin", 3).unwrap();
-    serializer.serialize_struct_sep("port", &log.origin.port).unwrap();
-    serializer.serialize_struct_sep("hostname", &log.origin.hostname.as_slice()).unwrap();
-    serializer.serialize_struct_sep("protocol", &(log.origin.protocol as uint)).unwrap();
+    serializer.serialize_struct_elt("port", &log.origin.port).unwrap();
+    serializer.serialize_struct_elt("hostname", &log.origin.hostname.as_slice()).unwrap();
+    serializer.serialize_struct_elt("protocol", &(log.origin.protocol as uint)).unwrap();
     serializer.serialize_struct_end().unwrap();
 
-    serializer.serialize_struct_sep("country", &(log.country as uint)).unwrap();
-    serializer.serialize_struct_sep("cache_status", &(log.cache_status as uint)).unwrap();
-    serializer.serialize_struct_sep("server_ip", &log.server_ip.as_slice()).unwrap();
-    serializer.serialize_struct_sep("server_name", &log.server_name.as_slice()).unwrap();
-    serializer.serialize_struct_sep("remote_ip", &log.remote_ip.as_slice()).unwrap();
-    serializer.serialize_struct_sep("bytes_dlv", &log.bytes_dlv).unwrap();
-    serializer.serialize_struct_sep("ray_id", &log.ray_id.as_slice()).unwrap();
+    serializer.serialize_struct_elt("country", &(log.country as uint)).unwrap();
+    serializer.serialize_struct_elt("cache_status", &(log.cache_status as uint)).unwrap();
+    serializer.serialize_struct_elt("server_ip", &log.server_ip.as_slice()).unwrap();
+    serializer.serialize_struct_elt("server_name", &log.server_name.as_slice()).unwrap();
+    serializer.serialize_struct_elt("remote_ip", &log.remote_ip.as_slice()).unwrap();
+    serializer.serialize_struct_elt("bytes_dlv", &log.bytes_dlv).unwrap();
+    serializer.serialize_struct_elt("ray_id", &log.ray_id.as_slice()).unwrap();
 
     serializer.serialize_struct_end().unwrap();
 }
