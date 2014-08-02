@@ -120,13 +120,14 @@ impl Deserializable for Outer {
 enum Error {
     EndOfStream,
     SyntaxError,
+    OtherError(String),
 }
 
 mod decoder {
     use std::collections::HashMap;
     use serialize::Decoder;
 
-    use super::{Outer, Inner, Error, SyntaxError};
+    use super::{Outer, Inner, Error, SyntaxError, OtherError};
 
     #[deriving(Show)]
     enum State {
@@ -157,6 +158,10 @@ mod decoder {
     }
 
     impl Decoder<Error> for OuterDecoder {
+        fn error(&mut self, msg: &str) -> Error {
+            OtherError(msg.to_string())
+        }
+
         // Primitive types:
         #[inline]
         fn read_nil(&mut self) -> Result<(), Error> {

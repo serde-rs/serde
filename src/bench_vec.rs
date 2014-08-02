@@ -11,6 +11,7 @@ use de::{Deserializer, Deserializable};
 enum Error {
     EndOfStream,
     SyntaxError,
+    OtherError(String),
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -19,7 +20,7 @@ mod decoder {
     use std::vec;
     use serialize;
 
-    use super::{Error, EndOfStream, SyntaxError};
+    use super::{Error, EndOfStream, SyntaxError, OtherError};
 
     pub struct IntDecoder {
         len: uint,
@@ -37,6 +38,10 @@ mod decoder {
     }
 
     impl serialize::Decoder<Error> for IntDecoder {
+        fn error(&mut self, msg: &str) -> Error {
+            OtherError(msg.to_string())
+        }
+
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
         fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
@@ -138,6 +143,10 @@ mod decoder {
     }
 
     impl serialize::Decoder<Error> for U8Decoder {
+        fn error(&mut self, msg: &str) -> Error {
+            OtherError(msg.to_string())
+        }
+
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
         fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }

@@ -41,6 +41,7 @@ impl Deserializable for Animal {
 enum Error {
     EndOfStream,
     SyntaxError,
+    OtherError(String),
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -48,7 +49,7 @@ enum Error {
 mod decoder {
     use serialize::Decoder;
 
-    use super::{Animal, Dog, Frog, Error, SyntaxError};
+    use super::{Animal, Dog, Frog, Error, SyntaxError, OtherError};
 
     enum State {
         AnimalState(Animal),
@@ -73,6 +74,10 @@ mod decoder {
     }
 
     impl Decoder<Error> for AnimalDecoder {
+        fn error(&mut self, msg: &str) -> Error {
+            OtherError(msg.to_string())
+        }
+
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
         fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
