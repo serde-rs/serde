@@ -7,11 +7,13 @@ use de::{Deserializer, Deserializable, Token};
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
+#[deriving_deserializable]
 enum Animal {
     Dog,
     Frog(String, int)
 }
 
+/*
 impl Deserializable for Animal {
     #[inline]
     fn deserialize_token<
@@ -34,6 +36,7 @@ impl Deserializable for Animal {
         }
     }
 }
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -9,12 +9,14 @@ use de::{Token, Deserializer, Deserializable};
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
+#[deriving_deserializable]
 struct Inner {
     a: (),
     b: uint,
     c: HashMap<String, Option<char>>,
 }
 
+/*
 impl Deserializable for Inner {
     #[inline]
     fn deserialize_token<
@@ -64,14 +66,17 @@ impl Deserializable for Inner {
         }
     }
 }
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
+#[deriving_deserializable]
 struct Outer {
     inner: Vec<Inner>,
 }
 
+/*
 impl Deserializable for Outer {
     #[inline]
     fn deserialize_token<
@@ -113,6 +118,7 @@ impl Deserializable for Outer {
         }
     }
 }
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 
