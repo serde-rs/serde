@@ -9,11 +9,13 @@ use std::io::MemWriter;
 use test::Bencher;
 
 use json;
+use de;
 use ser::Serializable;
 use ser;
 
 #[deriving(Encodable, Decodable)]
 #[deriving_serializable]
+#[deriving_deserializable]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -26,7 +28,7 @@ struct Http {
     request_uri: String,
 }
 
-#[deriving(Show, Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -43,7 +45,21 @@ impl ser::Serializable for HttpProtocol {
     }
 }
 
-#[deriving(Show, Encodable, Decodable)]
+impl de::Deserializable for HttpProtocol {
+    #[inline]
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
+        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
+        match FromPrimitive::from_uint(x) {
+            Some(x) => Ok(x),
+            None => d.syntax_error(),
+        }
+    }
+}
+
+#[deriving(Show, Encodable, Decodable, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -68,7 +84,21 @@ impl ser::Serializable for HttpMethod {
     }
 }
 
-#[deriving(Show, Encodable, Decodable)]
+impl de::Deserializable for HttpMethod {
+    #[inline]
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
+        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
+        match FromPrimitive::from_uint(x) {
+            Some(x) => Ok(x),
+            None => d.syntax_error(),
+        }
+    }
+}
+
+#[deriving(Show, Encodable, Decodable, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -86,8 +116,23 @@ impl ser::Serializable for CacheStatus {
     }
 }
 
+impl de::Deserializable for CacheStatus {
+    #[inline]
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
+        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
+        match FromPrimitive::from_uint(x) {
+            Some(x) => Ok(x),
+            None => d.syntax_error(),
+        }
+    }
+}
+
 #[deriving(Encodable, Decodable)]
 #[deriving_serializable]
+#[deriving_deserializable]
 struct Origin {
     ip: String,
     port: u32,
@@ -95,7 +140,7 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-#[deriving(Show, Encodable, Decodable)]
+#[deriving(Show, Encodable, Decodable, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -112,7 +157,21 @@ impl ser::Serializable for OriginProtocol {
     }
 }
 
-#[deriving(Show, Encodable, Decodable)]
+impl de::Deserializable for OriginProtocol {
+    #[inline]
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
+        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
+        match FromPrimitive::from_uint(x) {
+            Some(x) => Ok(x),
+            None => d.syntax_error(),
+        }
+    }
+}
+
+#[deriving(Show, Encodable, Decodable, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -131,7 +190,21 @@ impl ser::Serializable for ZonePlan {
     }
 }
 
-#[deriving(Show, Encodable, Decodable)]
+impl de::Deserializable for ZonePlan {
+    #[inline]
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
+        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
+        match FromPrimitive::from_uint(x) {
+            Some(x) => Ok(x),
+            None => d.syntax_error(),
+        }
+    }
+}
+
+#[deriving(Show, Encodable, Decodable, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -401,8 +474,23 @@ impl ser::Serializable for Country {
     }
 }
 
+impl de::Deserializable for Country {
+    #[inline]
+    fn deserialize_token<
+        D: de::Deserializer<E>,
+        E
+    >(d: &mut D, token: de::Token) -> Result<Country, E> {
+        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
+        match FromPrimitive::from_uint(x) {
+            Some(x) => Ok(x),
+            None => d.syntax_error(),
+        }
+    }
+}
+
 #[deriving(Encodable, Decodable)]
 #[deriving_serializable]
+#[deriving_deserializable]
 struct Log {
     timestamp: i64,
     zone_id: u32,
@@ -1304,10 +1392,9 @@ fn bench_decoder(b: &mut Bencher) {
     });
 }
 
-/*
 #[bench]
 fn bench_deserializer(b: &mut Bencher) {
-    let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+    let s = r#"{"timestamp":25469139677502,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
     b.bytes = s.len() as u64;
 
@@ -1315,4 +1402,3 @@ fn bench_deserializer(b: &mut Bencher) {
         let _log: Log = json::from_str(s).unwrap();
     });
 }
-*/
