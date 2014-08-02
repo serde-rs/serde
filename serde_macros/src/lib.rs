@@ -440,8 +440,6 @@ fn deserialize_struct_from_map(
             _ => { return $deserializer.syntax_error(); }
         };
 
-        try!($deserializer.expect_struct_end());
-
         Ok(result)
     })
 }
