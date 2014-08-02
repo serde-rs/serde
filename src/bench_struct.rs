@@ -3,8 +3,7 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use de;
-use de::{Token, Deserializer, Deserializable};
+use de::{Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,58 +15,6 @@ struct Inner {
     c: HashMap<String, Option<char>>,
 }
 
-/*
-impl Deserializable for Inner {
-    #[inline]
-    fn deserialize_token<
-        D: Deserializer<E>,
-        E
-    >(d: &mut D, token: Token) -> Result<Inner, E> {
-        match token {
-            de::StructStart("Inner", _) | de::MapStart(_) => { }
-            _ => { return d.syntax_error(); }
-        }
-
-        let mut a = None;
-        let mut b = None;
-        let mut c = None;
-
-        loop {
-            let token = match try!(d.expect_token()) {
-                de::End => { break; }
-                token => token,
-            };
-
-            let name = match token {
-                de::Str(name) => name,
-                de::String(ref name) => name.as_slice(),
-                _ => { return d.syntax_error(); }
-            };
-
-            match name {
-                "a" => {
-                    a = Some(try!(de::Deserializable::deserialize(d)));
-                }
-                "b" => {
-                    b = Some(try!(de::Deserializable::deserialize(d)));
-                }
-                "c" => {
-                    c = Some(try!(de::Deserializable::deserialize(d)));
-                }
-                _ => { }
-            }
-        }
-
-        match (a, b, c) {
-            (Some(a), Some(b), Some(c)) => {
-                Ok(Inner { a: a, b: b, c: c })
-            }
-            _ => d.syntax_error(),
-        }
-    }
-}
-*/
-
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
@@ -75,50 +22,6 @@ impl Deserializable for Inner {
 struct Outer {
     inner: Vec<Inner>,
 }
-
-/*
-impl Deserializable for Outer {
-    #[inline]
-    fn deserialize_token<
-        D: Deserializer<E>,
-        E
-    >(d: &mut D, token: Token) -> Result<Outer, E> {
-        match token {
-            de::StructStart("Outer", _) | de::MapStart(_) => { }
-            _ => { return d.syntax_error(); }
-        }
-
-        let mut inner = None;
-
-        loop {
-            let token = match try!(d.expect_token()) {
-                de::End => { break; }
-                token => token,
-            };
-
-            let name = match token {
-                de::Str(name) => name,
-                de::String(ref name) => name.as_slice(),
-                _ => { return d.syntax_error(); }
-            };
-
-            match name {
-                "inner" => {
-                    inner = Some(try!(de::Deserializable::deserialize(d)));
-                }
-                _ => { }
-            }
-        }
-
-        match inner {
-            Some(inner) => {
-                Ok(Outer { inner: inner })
-            }
-            _ => d.syntax_error(),
-        }
-    }
-}
-*/
 
 //////////////////////////////////////////////////////////////////////////////
 

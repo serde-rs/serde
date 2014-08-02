@@ -2,7 +2,7 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use de::{Deserializer, Deserializable, Token};
+use de::{Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -12,31 +12,6 @@ enum Animal {
     Dog,
     Frog(String, int)
 }
-
-/*
-impl Deserializable for Animal {
-    #[inline]
-    fn deserialize_token<
-        D: Deserializer<E>, E
-    >(d: &mut D, token: Token) -> Result<Animal, E> {
-        match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
-            0 => {
-                try!(d.expect_enum_end());
-                Ok(Dog)
-            }
-            1 => {
-                let x0 = try!(Deserializable::deserialize(d));
-                let x1 = try!(Deserializable::deserialize(d));
-
-                try!(d.expect_enum_end());
-
-                Ok(Frog(x0, x1))
-            }
-            _ => d.syntax_error(),
-        }
-    }
-}
-*/
 
 //////////////////////////////////////////////////////////////////////////////
 

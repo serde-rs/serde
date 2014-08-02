@@ -2274,55 +2274,6 @@ mod tests {
         Frog(String, Vec<int>)
     }
 
-    /*
-    impl ser::Serializable for Animal {
-        #[inline]
-        fn serialize<
-            S: ser::Serializer<E>,
-            E
-        >(&self, s: &mut S) -> Result<(), E> {
-            match *self {
-                Dog => {
-                    try!(s.serialize_enum_start("Animal", "Dog", 0));
-                    s.serialize_enum_end()
-                }
-                Frog(ref x0, ref x1) => {
-                    try!(s.serialize_enum_start("Animal", "Frog", 2));
-
-                    try!(s.serialize_enum_sep(x0));
-                    try!(s.serialize_enum_sep(x1));
-
-                    s.serialize_enum_end()
-                }
-            }
-        }
-    }
-
-    impl de::Deserializable for Animal {
-        #[inline]
-        fn deserialize_token<
-            D: de::Deserializer<E>,
-            E
-        >(d: &mut D, token: de::Token) -> Result<Animal, E> {
-            match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
-                0 => {
-                    try!(d.expect_enum_end());
-                    Ok(Dog)
-                }
-                1 => {
-                    let x0 = try!(de::Deserializable::deserialize(d));
-                    let x1 = try!(de::Deserializable::deserialize(d));
-
-                    try!(d.expect_enum_end());
-
-                    Ok(Frog(x0, x1))
-                }
-                _ => d.syntax_error(),
-            }
-        }
-    }
-    */
-
     impl ToJson for Animal {
         fn to_json(&self) -> Json {
             match *self {
@@ -2353,83 +2304,6 @@ mod tests {
         c: Vec<String>,
     }
 
-    /*
-    impl ser::Serializable for Inner {
-        #[inline]
-        fn serialize<
-            S: ser::Serializer<E>,
-            E
-        >(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize_struct_start("Inner", 3));
-
-            try!(s.serialize_struct_sep("a", &self.a));
-            try!(s.serialize_struct_sep("b", &self.b));
-            try!(s.serialize_struct_sep("c", &self.c));
-
-            s.serialize_struct_end()
-        }
-    }
-
-    impl de::Deserializable for Inner {
-        #[inline]
-        fn deserialize_token<
-            D: de::Deserializer<E>, E
-        >(d: &mut D, token: de::Token) -> Result<Inner, E> {
-            match token {
-                de::StructStart("Inner", _) |
-                de::MapStart(_) => {
-                    let mut a = None;
-                    let mut b = None;
-                    let mut c = None;
-
-                    loop {
-                        match try!(d.expect_token()) {
-                            de::End => { break; }
-                            de::Str(name) => {
-                                match name {
-                                    "a" => {
-                                        a = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    "b" => {
-                                        b = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    "c" => {
-                                        c = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    _ => { }
-                                }
-                            }
-                            de::String(ref name) => {
-                                match name.as_slice() {
-                                    "a" => {
-                                        a = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    "b" => {
-                                        b = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    "c" => {
-                                        c = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    _ => { }
-                                }
-                            }
-                            _ => { return d.syntax_error(); }
-                        }
-                    }
-
-                    match (a, b, c) {
-                        (Some(a), Some(b), Some(c)) => {
-                            Ok(Inner { a: a, b: b, c: c })
-                        }
-                        _ => d.syntax_error(),
-                    }
-                }
-                _ => d.syntax_error(),
-            }
-        }
-    }
-    */
-
     impl ToJson for Inner {
         fn to_json(&self) -> Json {
             Object(
@@ -2448,65 +2322,6 @@ mod tests {
     struct Outer {
         inner: Vec<Inner>,
     }
-
-    /*
-    impl ser::Serializable for Outer {
-        #[inline]
-        fn serialize<
-            S: ser::Serializer<E>,
-            E
-        >(&self, s: &mut S) -> Result<(), E> {
-            try!(s.serialize_struct_start("Outer", 1));
-
-            try!(s.serialize_struct_sep("inner", &self.inner));
-
-            s.serialize_struct_end()
-        }
-    }
-
-    impl de::Deserializable for Outer {
-        #[inline]
-        fn deserialize_token<
-            D: de::Deserializer<E>,
-            E
-        >(d: &mut D, token: de::Token) -> Result<Outer, E> {
-            match token {
-                de::StructStart("Outer", _) |
-                de::MapStart(_) => {
-                    let mut inner = None;
-
-                    loop {
-                        let token = match try!(d.expect_token()) {
-                            de::End => { break; }
-                            token => token,
-                        };
-
-                        let key = match token {
-                            de::Str(key) => key,
-                            de::String(ref key) => key.as_slice(),
-                            _ => { return d.syntax_error(); }
-                        };
-
-                        match key {
-                            "inner" => {
-                                inner = Some(try!(de::Deserializable::deserialize(d)));
-                            }
-                            _ => { }
-                        }
-                    }
-
-                    match inner {
-                        Some(inner) => {
-                            Ok(Outer { inner: inner })
-                        }
-                        _ => d.syntax_error(),
-                    }
-                }
-                _ => d.syntax_error(),
-            }
-        }
-    }
-    */
 
     impl ToJson for Outer {
         fn to_json(&self) -> Json {
