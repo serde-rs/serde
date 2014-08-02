@@ -253,7 +253,8 @@ pub mod builder;
 pub enum Json {
     Null,
     Boolean(bool),
-    Number(f64),
+    Integer(i64),
+    Floating(f64),
     String(String),
     List(List),
     Object(Object),
@@ -372,16 +373,46 @@ impl Json {
         }
     }
 
-    /// Returns true if the Json value is a Number. Returns false otherwise.
+    /// Returns true if the Json value is a i64 or f64. Returns false otherwise.
     pub fn is_number(&self) -> bool {
-        self.as_number().is_some()
+        match *self {
+            Integer(_) | Floating(_) => true,
+            _ => false,
+        }
     }
 
-    /// If the Json value is a Number, returns the associated f64.
-    /// Returns None otherwise.
-    pub fn as_number(&self) -> Option<f64> {
+    /// Returns true if the Json value is a i64. Returns false otherwise.
+    pub fn is_i64(&self) -> bool {
         match *self {
-            Number(n) => Some(n),
+            Integer(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if the Json value is a f64. Returns false otherwise.
+    pub fn is_f64(&self) -> bool {
+        match *self {
+            Floating(_) => true,
+            _ => false,
+        }
+    }
+
+    /// If the Json value is a i64, returns the associated i64.
+    /// Returns None otherwise.
+    pub fn as_i64(&self) -> Option<i64> {
+        match *self {
+            Integer(n) => Some(n),
+            Floating(n) => Some(n as i64),
+            _ => None
+        }
+    }
+
+    /// If the Json value is a f64, returns the associated f64.
+    /// Returns None otherwise.
+    pub fn as_f64(&self) -> Option<f64> {
+        match *self {
+            Integer(n) => Some(n as f64),
+            Floating(n) => Some(n),
             _ => None
         }
     }
@@ -435,7 +466,10 @@ impl ser::Serializable for Json {
             Boolean(v) => {
                 v.serialize(s)
             }
-            Number(v) => {
+            Integer(v) => {
+                v.serialize(s)
+            }
+            Floating(v) => {
                 v.serialize(s)
             }
             String(ref v) => {
@@ -460,18 +494,18 @@ impl de::Deserializable for Json {
         match token {
             de::Null => Ok(Null),
             de::Bool(x) => Ok(Boolean(x)),
-            de::Int(x) => Ok(Number(x as f64)),
-            de::I8(x) => Ok(Number(x as f64)),
-            de::I16(x) => Ok(Number(x as f64)),
-            de::I32(x) => Ok(Number(x as f64)),
-            de::I64(x) => Ok(Number(x as f64)),
-            de::Uint(x) => Ok(Number(x as f64)),
-            de::U8(x) => Ok(Number(x as f64)),
-            de::U16(x) => Ok(Number(x as f64)),
-            de::U32(x) => Ok(Number(x as f64)),
-            de::U64(x) => Ok(Number(x as f64)),
-            de::F32(x) => Ok(Number(x as f64)),
-            de::F64(x) => Ok(Number(x)),
+            de::Int(x) => Ok(Integer(x as i64)),
+            de::I8(x) => Ok(Integer(x as i64)),
+            de::I16(x) => Ok(Integer(x as i64)),
+            de::I32(x) => Ok(Integer(x as i64)),
+            de::I64(x) => Ok(Integer(x)),
+            de::Uint(x) => Ok(Integer(x as i64)),
+            de::U8(x) => Ok(Integer(x as i64)),
+            de::U16(x) => Ok(Integer(x as i64)),
+            de::U32(x) => Ok(Integer(x as i64)),
+            de::U64(x) => Ok(Integer(x as i64)),
+            de::F32(x) => Ok(Floating(x as f64)),
+            de::F64(x) => Ok(Floating(x)),
             de::Char(x) => Ok(String(x.to_string())),
             de::Str(x) => Ok(String(x.to_string())),
             de::String(x) => Ok(String(x)),
@@ -526,7 +560,8 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
                     let token = match value {
                         Null => de::Null,
                         Boolean(x) => de::Bool(x),
-                        Number(x) => de::F64(x),
+                        Integer(x) => de::I64(x),
+                        Floating(x) => de::F64(x),
                         String(x) => de::String(x),
                         List(x) => {
                             let len = x.len();
@@ -1593,38 +1628,36 @@ impl<T: Iterator<char>> Parser<T> {
               self.ch_is('\r') { self.bump(); }
     }
 
-    fn parse_number(&mut self) -> Result<f64, ParserError> {
-        let mut neg = 1.0;
+    fn parse_number(&mut self) -> Result<de::Token, ParserError> {
+        let mut neg = 1;
 
         if self.ch_is('-') {
             self.bump();
-            neg = -1.0;
+            neg = -1;
         }
 
-        let mut res = match self.parse_integer() {
-          Ok(res) => res,
-          Err(e) => return Err(e)
-        };
+        let res = try!(self.parse_integer());
 
-        if self.ch_is('.') {
-            match self.parse_decimal(res) {
-              Ok(r) => res = r,
-              Err(e) => return Err(e)
+        if self.ch_is('.') || self.ch_is('e') || self.ch_is('E') {
+            let neg = neg as f64;
+            let mut res = res as f64;
+
+            if self.ch_is('.') {
+                res = try!(self.parse_decimal(res));
             }
-        }
 
-        if self.ch_is('e') || self.ch_is('E') {
-            match self.parse_exponent(res) {
-              Ok(r) => res = r,
-              Err(e) => return Err(e)
+            if self.ch_is('e') || self.ch_is('E') {
+                res = try!(self.parse_exponent(res));
             }
-        }
 
-        Ok(neg * res)
+            Ok(de::F64(neg * res))
+        } else {
+            Ok(de::I64(neg * res))
+        }
     }
 
-    fn parse_integer(&mut self) -> Result<f64, ParserError> {
-        let mut res = 0.0;
+    fn parse_integer(&mut self) -> Result<i64, ParserError> {
+        let mut res = 0;
 
         match self.ch_or_null() {
             '0' => {
@@ -1640,8 +1673,8 @@ impl<T: Iterator<char>> Parser<T> {
                 while !self.eof() {
                     match self.ch_or_null() {
                         c @ '0' .. '9' => {
-                            res *= 10.0;
-                            res += ((c as int) - ('0' as int)) as f64;
+                            res *= 10;
+                            res += (c as i64) - ('0' as i64);
                             self.bump();
                         }
                         _ => break,
@@ -1650,6 +1683,7 @@ impl<T: Iterator<char>> Parser<T> {
             }
             _ => return self.error(InvalidNumber),
         }
+
         Ok(res)
     }
 
@@ -1745,7 +1779,7 @@ impl<T: Iterator<char>> Parser<T> {
         Ok(n)
     }
 
-    fn parse_str(&mut self) -> Result<String, ParserError> {
+    fn parse_string(&mut self) -> Result<String, ParserError> {
         let mut escape = false;
         let mut res = String::new();
 
@@ -1875,7 +1909,7 @@ impl<T: Iterator<char>> Parser<T> {
 
         match self.ch_or_null() {
             '"' => {
-                let s = try!(self.parse_str());
+                let s = try!(self.parse_string());
                 Ok(de::String(s))
             }
             _ => self.error_event(KeyMustBeAString),
@@ -1907,12 +1941,9 @@ impl<T: Iterator<char>> Parser<T> {
             'n' => self.parse_ident("ull", de::Null),
             't' => self.parse_ident("rue", de::Bool(true)),
             'f' => self.parse_ident("alse", de::Bool(false)),
-            '0' .. '9' | '-' => {
-                let number = try!(self.parse_number());
-                Ok(de::F64(number))
-            }
+            '0' .. '9' | '-' => self.parse_number(),
             '"' => {
-                let s = try!(self.parse_str());
+                let s = try!(self.parse_string());
                 Ok(de::String(s))
             }
             '[' => {
@@ -2073,51 +2104,51 @@ impl ToJson for Json {
 }
 
 impl ToJson for int {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for i8 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for i16 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for i32 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for i64 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for uint {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for u8 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for u16 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for u32 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for u64 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Integer(*self as i64) }
 }
 
 impl ToJson for f32 {
-    fn to_json(&self) -> Json { Number(*self as f64) }
+    fn to_json(&self) -> Json { Floating(*self as f64) }
 }
 
 impl ToJson for f64 {
-    fn to_json(&self) -> Json { Number(*self) }
+    fn to_json(&self) -> Json { Floating(*self) }
 }
 
 impl ToJson for bool {
@@ -2208,7 +2239,7 @@ mod tests {
     use std::fmt::Show;
     use std::collections::TreeMap;
 
-    use super::{Json, Null, Boolean, Number, String, List, Object};
+    use super::{Json, Null, Boolean, Floating, String, List, Object};
     use super::{ParserError, from_iter, from_str};
     use super::{from_json, ToJson};
     use super::{
@@ -2445,25 +2476,22 @@ mod tests {
                     let mut inner = None;
 
                     loop {
-                        match try!(d.expect_token()) {
+                        let token = match try!(d.expect_token()) {
                             de::End => { break; }
-                            de::Str(name) => {
-                                match name {
-                                    "inner" => {
-                                        inner = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    _ => { }
-                                }
-                            }
-                            de::String(ref name) => {
-                                match name.as_slice() {
-                                    "inner" => {
-                                        inner = Some(try!(de::Deserializable::deserialize(d)));
-                                    }
-                                    _ => { }
-                                }
-                            }
+                            token => token,
+                        };
+
+                        let key = match token {
+                            de::Str(key) => key,
+                            de::String(ref key) => key.as_slice(),
                             _ => { return d.syntax_error(); }
+                        };
+
+                        match key {
+                            "inner" => {
+                                inner = Some(try!(de::Deserializable::deserialize(d)));
+                            }
+                            _ => { }
                         }
                     }
 
@@ -2528,7 +2556,18 @@ mod tests {
     }
 
     #[test]
-    fn test_write_number() {
+    fn test_write_i64() {
+        let tests = [
+            (3i, "3"),
+            (-2i, "-2"),
+            (-1234i, "-1234"),
+        ];
+        test_encode_ok(tests);
+        test_pretty_encode_ok(tests);
+    }
+
+    #[test]
+    fn test_write_f64() {
         let tests = [
             (3.0f64, "3"),
             (3.1, "3.1"),
@@ -2591,7 +2630,7 @@ mod tests {
         let long_test_list = List(vec![
             Boolean(false),
             Null,
-            List(vec![String("foo\nbar".to_string()), Number(3.5)])]);
+            List(vec![String("foo\nbar".to_string()), Floating(3.5)])]);
 
         test_encode_ok([
             (long_test_list, "[false,null,[\"foo\\nbar\",3.5]]"),
@@ -2600,7 +2639,7 @@ mod tests {
         let long_test_list = List(vec![
             Boolean(false),
             Null,
-            List(vec![String("foo\nbar".to_string()), Number(3.5)])]);
+            List(vec![String("foo\nbar".to_string()), Floating(3.5)])]);
 
         test_pretty_encode_ok([
             (
@@ -2909,7 +2948,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_numbers() {
+    fn test_parse_number_errors() {
         test_parse_err::<f64>([
             ("+", SyntaxError(InvalidSyntax, 1, 1)),
             (".", SyntaxError(InvalidSyntax, 1, 1)),
@@ -2920,9 +2959,21 @@ mod tests {
             ("1e+", SyntaxError(InvalidNumber, 1, 4)),
             ("1a", SyntaxError(TrailingCharacters, 1, 2)),
         ]);
+    }
 
+    #[test]
+    fn test_parse_i64() {
         test_parse_ok([
-            ("3", 3.0f64),
+            ("3", 3i64),
+            ("-2", -2),
+            ("-1234", -1234),
+        ]);
+    }
+
+    #[test]
+    fn test_parse_f64() {
+        test_parse_ok([
+            ("3.0", 3.0f64),
             ("3.1", 3.1),
             ("-1.2", -1.2),
             ("0.4", 0.4),
@@ -2946,7 +2997,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_str() {
+    fn test_parse_string() {
         test_parse_err::<String>([
             ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
@@ -3279,26 +3330,27 @@ mod tests {
     }
 
     #[test]
-    fn test_is_object(){
+    fn test_is_object() {
         let json_value: Json = from_str("{}").unwrap();
         assert!(json_value.is_object());
     }
 
     #[test]
-    fn test_as_object(){
+    fn test_as_object() {
         let json_value: Json = from_str("{}").unwrap();
         let json_object = json_value.as_object();
-        assert!(json_object.is_some());
+        let map = TreeMap::<String, Json>::new();
+        assert_eq!(json_object, Some(&map));
     }
 
     #[test]
-    fn test_is_list(){
+    fn test_is_list() {
         let json_value: Json = from_str("[1, 2, 3]").unwrap();
         assert!(json_value.is_list());
     }
 
     #[test]
-    fn test_as_list(){
+    fn test_as_list() {
         let json_value: Json = from_str("[1, 2, 3]").unwrap();
         let json_list = json_value.as_list();
         let expected_length = 3;
@@ -3306,13 +3358,13 @@ mod tests {
     }
 
     #[test]
-    fn test_is_string(){
+    fn test_is_string() {
         let json_value: Json = from_str("\"dog\"").unwrap();
         assert!(json_value.is_string());
     }
 
     #[test]
-    fn test_as_string(){
+    fn test_as_string() {
         let json_value: Json = from_str("\"dog\"").unwrap();
         let json_str = json_value.as_string();
         let expected_str = "dog";
@@ -3320,27 +3372,52 @@ mod tests {
     }
 
     #[test]
-    fn test_is_number(){
+    fn test_is_number() {
         let json_value: Json = from_str("12").unwrap();
+        assert!(json_value.is_number());
+
+        let json_value: Json = from_str("12.0").unwrap();
         assert!(json_value.is_number());
     }
 
     #[test]
-    fn test_as_number(){
+    fn test_is_i64() {
         let json_value: Json = from_str("12").unwrap();
-        let json_num = json_value.as_number();
-        let expected_num = 12f64;
-        assert!(json_num.is_some() && json_num.unwrap() == expected_num);
+        assert!(json_value.is_i64());
+
+        let json_value: Json = from_str("12.0").unwrap();
+        assert!(!json_value.is_i64());
     }
 
     #[test]
-    fn test_is_boolean(){
+    fn test_is_f64() {
+        let json_value: Json = from_str("12").unwrap();
+        assert!(!json_value.is_f64());
+
+        let json_value: Json = from_str("12.0").unwrap();
+        assert!(json_value.is_f64());
+    }
+
+    #[test]
+    fn test_as_i64() {
+        let json_value: Json = from_str("12").unwrap();
+        assert_eq!(json_value.as_i64(), Some(12));
+    }
+
+    #[test]
+    fn test_as_f64() {
+        let json_value: Json = from_str("12").unwrap();
+        assert_eq!(json_value.as_f64(), Some(12.0));
+    }
+
+    #[test]
+    fn test_is_boolean() {
         let json_value: Json = from_str("false").unwrap();
         assert!(json_value.is_boolean());
     }
 
     #[test]
-    fn test_as_boolean(){
+    fn test_as_boolean() {
         let json_value: Json = from_str("false").unwrap();
         let json_bool = json_value.as_boolean();
         let expected_bool = false;
@@ -3348,13 +3425,13 @@ mod tests {
     }
 
     #[test]
-    fn test_is_null(){
+    fn test_is_null() {
         let json_value: Json = from_str("null").unwrap();
         assert!(json_value.is_null());
     }
 
     #[test]
-    fn test_as_null(){
+    fn test_as_null() {
         let json_value: Json = from_str("null").unwrap();
         let json_null = json_value.as_null();
         let expected_null = ();
@@ -3699,7 +3776,7 @@ mod bench {
     use serialize;
     use test::Bencher;
 
-    use super::{Json, Null, Boolean, Number, String, List, Object};
+    use super::{Json, Null, Boolean, Integer, Floating, String, List, Object};
     use super::{Parser, from_str};
     use de;
 
@@ -3751,12 +3828,12 @@ mod bench {
             list.push(json::Object(treemap!(
                 "a".to_string() => json::Boolean(true),
                 "b".to_string() => json::Null,
-                "c".to_string() => json::Number(3.1415),
+                "c".to_string() => json::Floating(3.1415),
                 "d".to_string() => json::String("Hello world".to_string()),
                 "e".to_string() => json::List(vec!(
-                    json::Number(1.0),
-                    json::Number(2.0),
-                    json::Number(3.0)
+                    json::Integer(1),
+                    json::Integer(2),
+                    json::Integer(3)
                 ))
             )));
         }
@@ -3770,12 +3847,12 @@ mod bench {
             list.push(Object(treemap!(
                 "a".to_string() => Boolean(true),
                 "b".to_string() => Null,
-                "c".to_string() => Number(3.1415),
+                "c".to_string() => Floating(3.1415),
                 "d".to_string() => String("Hello world".to_string()),
                 "e".to_string() => List(vec!(
-                    Number(1.0),
-                    Number(2.0),
-                    Number(3.0)
+                    Integer(1),
+                    Integer(2),
+                    Integer(3)
                 ))
             )));
         }
@@ -3852,7 +3929,7 @@ mod bench {
                 assert_eq!(parser.next(), Some(json::NullValue));
                 assert_eq!(parser.stack().top(), Some(json::Key("b")));
 
-                assert_eq!(parser.next(), Some(json::NumberValue(3.1415)));
+                assert_eq!(parser.next(), Some(json::FloatingValue(3.1415)));
                 assert_eq!(parser.stack().top(), Some(json::Key("c")));
 
                 assert_eq!(parser.next(), Some(json::StringValue("Hello world".to_string())));
@@ -3860,9 +3937,9 @@ mod bench {
 
                 assert_eq!(parser.next(), Some(json::ListStart));
                 assert_eq!(parser.stack().top(), Some(json::Key("e")));
-                assert_eq!(parser.next(), Some(json::NumberValue(1.0)));
-                assert_eq!(parser.next(), Some(json::NumberValue(2.0)));
-                assert_eq!(parser.next(), Some(json::NumberValue(3.0)));
+                assert_eq!(parser.next(), Some(json::IntegerValue(1)));
+                assert_eq!(parser.next(), Some(json::IntegerValue(2)));
+                assert_eq!(parser.next(), Some(json::IntegerValue(3)));
                 assert_eq!(parser.next(), Some(json::ListEnd));
 
                 assert_eq!(parser.next(), Some(json::ObjectEnd));
@@ -3898,9 +3975,9 @@ mod bench {
 
                 assert_eq!(parser.next(), Some(Ok(de::String("e".to_string()))));
                 assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
-                assert_eq!(parser.next(), Some(Ok(de::F64(1.0))));
-                assert_eq!(parser.next(), Some(Ok(de::F64(2.0))));
-                assert_eq!(parser.next(), Some(Ok(de::F64(3.0))));
+                assert_eq!(parser.next(), Some(Ok(de::I64(1))));
+                assert_eq!(parser.next(), Some(Ok(de::I64(2))));
+                assert_eq!(parser.next(), Some(Ok(de::I64(3))));
                 assert_eq!(parser.next(), Some(Ok(de::End)));
 
                 assert_eq!(parser.next(), Some(Ok(de::End)));

@@ -75,8 +75,8 @@ impl ObjectBuilder {
 
 #[cfg(test)]
 mod tests {
-    use collections::TreeMap;
-    use super::super::{List, I64, Object};
+    use std::collections::TreeMap;
+    use json::{List, Integer, Object};
     use super::{ListBuilder, ObjectBuilder};
 
     #[test]
@@ -85,27 +85,27 @@ mod tests {
         assert_eq!(value, List(Vec::new()));
 
         let value = ListBuilder::new()
-            .push(1)
-            .push(2)
-            .push(3)
+            .push(1i)
+            .push(2i)
+            .push(3i)
             .unwrap();
-        assert_eq!(value, List(vec!(I64(1), I64(2), I64(3))));
+        assert_eq!(value, List(vec!(Integer(1), Integer(2), Integer(3))));
 
         let value = ListBuilder::new()
-            .push_list(|bld| bld.push(1).push(2).push(3))
+            .push_list(|bld| bld.push(1i).push(2i).push(3i))
             .unwrap();
-        assert_eq!(value, List(vec!(List(vec!(I64(1), I64(2), I64(3))))));
+        assert_eq!(value, List(vec!(List(vec!(Integer(1), Integer(2), Integer(3))))));
 
         let value = ListBuilder::new()
             .push_object(|bld|
                 bld
-                    .insert("a".to_strbuf(), 1)
-                    .insert("b".to_strbuf(), 2))
+                    .insert("a".to_string(), 1i)
+                    .insert("b".to_string(), 2i))
             .unwrap();
 
         let mut map = TreeMap::new();
-        map.insert("a".to_strbuf(), I64(1));
-        map.insert("b".to_strbuf(), I64(2));
+        map.insert("a".to_string(), Integer(1));
+        map.insert("b".to_string(), Integer(2));
         assert_eq!(value, List(vec!(Object(map))));
     }
 
@@ -115,13 +115,13 @@ mod tests {
         assert_eq!(value, Object(TreeMap::new()));
 
         let value = ObjectBuilder::new()
-            .insert("a".to_strbuf(), 1)
-            .insert("b".to_strbuf(), 2)
+            .insert("a".to_string(), 1i)
+            .insert("b".to_string(), 2i)
             .unwrap();
 
         let mut map = TreeMap::new();
-        map.insert("a".to_strbuf(), I64(1));
-        map.insert("b".to_strbuf(), I64(2));
+        map.insert("a".to_string(), Integer(1));
+        map.insert("b".to_string(), Integer(2));
         assert_eq!(value, Object(map));
     }
 }
