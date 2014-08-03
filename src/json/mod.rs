@@ -526,7 +526,7 @@ impl de::Deserializable for Json {
                 object.insert(name.to_string(), List(fields));
                 Ok(Object(object))
             }
-            de::End => d.syntax_error(),
+            de::End => d.syntax_error(de::End),
         }
     }
 }
@@ -615,8 +615,12 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
         Err(SyntaxError(EOFWhileParsingValue, 0, 0))
     }
 
-    fn syntax_error<T>(&self) -> Result<T, ParserError> {
+    fn syntax_error<T>(&self, _token: de::Token) -> Result<T, ParserError> {
         Err(SyntaxError(InvalidSyntax, 0, 0))
+    }
+
+    fn missing_field_error<T>(&self, field: &'static str) -> Result<T, ParserError> {
+        Err(SyntaxError(MissingField(field), 0, 0))
     }
 
     // Special case treating options as a nullable value.
@@ -702,7 +706,7 @@ pub enum ErrorCode {
     InvalidUnicodeCodePoint,
     KeyMustBeAString,
     LoneLeadingSurrogateInHexEscape,
-    MissingField,
+    MissingField(&'static str),
     NotFourDigit,
     NotUtf8,
     TrailingCharacters,
@@ -734,33 +738,28 @@ pub enum DecoderError {
 }
 */
 
-/// Returns a readable error string for a given error code.
-pub fn error_str(error: ErrorCode) -> &'static str {
-    return match error {
-        EOFWhileParsingList => "EOF While parsing list",
-        EOFWhileParsingObject => "EOF While parsing object",
-        EOFWhileParsingString => "EOF While parsing string",
-        EOFWhileParsingValue => "EOF While parsing value",
-        ExpectedColon => "expected `:`",
-        InvalidEscape => "invalid escape",
-        InvalidNumber => "invalid number",
-        InvalidSyntax => "invalid syntax",
-        InvalidUnicodeCodePoint => "invalid unicode code point",
-        KeyMustBeAString => "key must be a string",
-        LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape",
-        MissingField => "missing variant",
-        NotFourDigit => "invalid \\u escape (not four digits)",
-        NotUtf8 => "contents not utf-8",
-        TrailingCharacters => "trailing characters",
-        UnexpectedEndOfHexEscape => "unexpected end of hex escape",
-        UnknownVariant => "unknown variant",
-        UnrecognizedHex => "invalid \\u escape (unrecognized hex)",
-    }
-}
-
 impl fmt::Show for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        error_str(*self).fmt(f)
+        match *self {
+            EOFWhileParsingList => "EOF While parsing list".fmt(f),
+            EOFWhileParsingObject => "EOF While parsing object".fmt(f),
+            EOFWhileParsingString => "EOF While parsing string".fmt(f),
+            EOFWhileParsingValue => "EOF While parsing value".fmt(f),
+            ExpectedColon => "expected `:`".fmt(f),
+            InvalidEscape => "invalid escape".fmt(f),
+            InvalidNumber => "invalid number".fmt(f),
+            InvalidSyntax => "invalid syntax".fmt(f),
+            InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
+            KeyMustBeAString => "key must be a string".fmt(f),
+            LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
+            MissingField(field) => write!(f, "missing field \"{}\"", field),
+            NotFourDigit => "invalid \\u escape (not four digits)".fmt(f),
+            NotUtf8 => "contents not utf-8".fmt(f),
+            TrailingCharacters => "trailing characters".fmt(f),
+            UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
+            UnknownVariant => "unknown variant".fmt(f),
+            UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
+        }
     }
 }
 
@@ -1982,8 +1981,12 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
         Err(SyntaxError(EOFWhileParsingValue, self.line, self.col))
     }
 
-    fn syntax_error<U>(&self) -> Result<U, ParserError> {
+    fn syntax_error<U>(&self, _token: de::Token) -> Result<U, ParserError> {
         Err(SyntaxError(InvalidSyntax, self.line, self.col))
+    }
+
+    fn missing_field_error<T>(&self, field: &'static str) -> Result<T, ParserError> {
+        Err(SyntaxError(MissingField(field), self.line, self.col))
     }
 
     // Special case treating options as a nullable value.

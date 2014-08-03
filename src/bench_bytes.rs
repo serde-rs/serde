@@ -126,8 +126,7 @@ mod deserializer {
 
     use super::{Error, EndOfStream, SyntaxError};
 
-    use de::Deserializer;
-    use de::{Token, Int, SeqStart, Sep, End};
+    use de;
 
     #[deriving(Eq, Show)]
     enum State {
@@ -153,22 +152,22 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<Token, Error>> for BytesDeserializer {
+    impl Iterator<Result<de::Token, Error>> for BytesDeserializer {
         #[inline]
         fn next(&mut self) -> Option<Result<Token, Error>> {
             match self.state {
                 StartState => {
                     self.state = SepOrEndState;
-                    Some(Ok(SeqStart(self.len)))
+                    Some(Ok(de::SeqStart(self.len)))
                 }
                 SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            Some(Ok(Int(value)))
+                            Some(Ok(de::Int(value)))
                         }
                         None => {
                             self.state = EndState;
-                            Some(Ok(End))
+                            Some(Ok(de::End))
                         }
                     }
                 }
@@ -179,14 +178,19 @@ mod deserializer {
         }
     }
 
-    impl Deserializer<Error> for BytesDeserializer {
+    impl de::Deserializer<Error> for BytesDeserializer {
         #[inline]
         fn end_of_stream_error<T>(&self) -> Result<T, Error> {
             Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error<T>(&self) -> Result<T, Error> {
+        fn syntax_error<T>(&self, _token: de::Token) -> Result<T, Error> {
+            Err(SyntaxError)
+        }
+
+        #[inline]
+        fn missing_field_error(&mut self, _field: &'static str) -> Error {
             Err(SyntaxError)
         }
     }

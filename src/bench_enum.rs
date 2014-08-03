@@ -178,8 +178,7 @@ mod decoder {
 mod deserializer {
     use super::{Animal, Dog, Frog, Error, EndOfStream, SyntaxError};
 
-    use de::Deserializer;
-    use de::{Token, Int, String, EnumStart, End};
+    use de;
 
     enum State {
         AnimalState(Animal),
@@ -202,42 +201,47 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<Token, Error>> for AnimalDeserializer {
+    impl Iterator<Result<de::Token, Error>> for AnimalDeserializer {
         #[inline]
-        fn next(&mut self) -> Option<Result<Token, Error>> {
+        fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.stack.pop() {
                 Some(AnimalState(Dog)) => {
                     self.stack.push(EndState);
-                    Some(Ok(EnumStart("Animal", "Dog", 0)))
+                    Some(Ok(de::EnumStart("Animal", "Dog", 0)))
                 }
                 Some(AnimalState(Frog(x0, x1))) => {
                     self.stack.push(EndState);
                     self.stack.push(IntState(x1));
                     self.stack.push(StringState(x0));
-                    Some(Ok(EnumStart("Animal", "Frog", 2)))
+                    Some(Ok(de::EnumStart("Animal", "Frog", 2)))
                 }
                 Some(IntState(x)) => {
-                    Some(Ok(Int(x)))
+                    Some(Ok(de::Int(x)))
                 }
                 Some(StringState(x)) => {
-                    Some(Ok(String(x)))
+                    Some(Ok(de::String(x)))
                 }
                 Some(EndState) => {
-                    Some(Ok(End))
+                    Some(Ok(de::End))
                 }
                 None => None,
             }
         }
     }
 
-    impl Deserializer<Error> for AnimalDeserializer {
+    impl de::Deserializer<Error> for AnimalDeserializer {
         #[inline]
         fn end_of_stream_error<T>(&self) -> Result<T, Error> {
             Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error<T>(&self) -> Result<T, Error> {
+        fn syntax_error<T>(&self, _token: de::Token) -> Result<T, Error> {
+            Err(SyntaxError)
+        }
+
+        #[inline]
+        fn missing_field_error<T>(&self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
     }

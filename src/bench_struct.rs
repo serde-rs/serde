@@ -256,8 +256,7 @@ mod decoder {
 mod deserializer {
     use std::collections::HashMap;
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
-    use de::Deserializer;
-    use de::{Token, Uint, Char, String, Null, TupleStart, StructStart, Str, SeqStart, MapStart, End, Option};
+    use de;
 
     enum State {
         OuterState(Outer),
@@ -288,15 +287,15 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<Token, Error>> for OuterDeserializer {
+    impl Iterator<Result<de::Token, Error>> for OuterDeserializer {
         #[inline]
-        fn next(&mut self) -> Option<Result<Token, Error>> {
+        fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.stack.pop() {
                 Some(OuterState(Outer { inner })) => {
                     self.stack.push(EndState);
                     self.stack.push(VecState(inner));
                     self.stack.push(FieldState("inner"));
-                    Some(Ok(StructStart("Outer", 1)))
+                    Some(Ok(de::StructStart("Outer", 1)))
                 }
                 Some(InnerState(Inner { a: (), b, c })) => {
                     self.stack.push(EndState);
@@ -308,16 +307,16 @@ mod deserializer {
 
                     self.stack.push(NullState);
                     self.stack.push(FieldState("a"));
-                    Some(Ok(StructStart("Inner", 3)))
+                    Some(Ok(de::StructStart("Inner", 3)))
                 }
-                Some(FieldState(name)) => Some(Ok(Str(name))),
+                Some(FieldState(name)) => Some(Ok(de::Str(name))),
                 Some(VecState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
                     for inner in value.move_iter().rev() {
                         self.stack.push(InnerState(inner));
                     }
-                    Some(Ok(SeqStart(len)))
+                    Some(Ok(de::SeqStart(len)))
                 }
                 Some(MapState(value)) => {
                     self.stack.push(EndState);
@@ -334,30 +333,35 @@ mod deserializer {
                         }
                         self.stack.push(StringState(key));
                     }
-                    Some(Ok(MapStart(len)))
+                    Some(Ok(de::MapStart(len)))
                 }
-                Some(TupleState(len)) => Some(Ok(TupleStart(len))),
-                Some(NullState) => Some(Ok(Null)),
-                Some(UintState(x)) => Some(Ok(Uint(x))),
-                Some(CharState(x)) => Some(Ok(Char(x))),
-                Some(StringState(x)) => Some(Ok(String(x))),
-                Some(OptionState(x)) => Some(Ok(Option(x))),
+                Some(TupleState(len)) => Some(Ok(de::TupleStart(len))),
+                Some(NullState) => Some(Ok(de::Null)),
+                Some(UintState(x)) => Some(Ok(de::Uint(x))),
+                Some(CharState(x)) => Some(Ok(de::Char(x))),
+                Some(StringState(x)) => Some(Ok(de::String(x))),
+                Some(OptionState(x)) => Some(Ok(de::Option(x))),
                 Some(EndState) => {
-                    Some(Ok(End))
+                    Some(Ok(de::End))
                 }
                 None => None,
             }
         }
     }
 
-    impl Deserializer<Error> for OuterDeserializer {
+    impl de::Deserializer<Error> for OuterDeserializer {
         #[inline]
         fn end_of_stream_error<T>(&self) -> Result<T, Error> {
             Err(EndOfStream)
         }
 
         #[inline]
-        fn syntax_error<T>(&self) -> Result<T, Error> {
+        fn syntax_error<T>(&self, _token: de::Token) -> Result<T, Error> {
+            Err(SyntaxError)
+        }
+
+        #[inline]
+        fn missing_field_error<T>(&self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
     }

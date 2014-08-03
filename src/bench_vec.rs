@@ -300,7 +300,12 @@ mod deserializer {
         }
 
         #[inline]
-        fn syntax_error<T>(&self) -> Result<T, Error> {
+        fn syntax_error<T>(&self, _token: de::Token) -> Result<T, Error> {
+            Err(SyntaxError)
+        }
+
+        #[inline]
+        fn missing_field_error<T>(&self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
     }
@@ -355,7 +360,12 @@ mod deserializer {
         }
 
         #[inline]
-        fn syntax_error<T>(&self) -> Result<T, Error> {
+        fn syntax_error<T>(&self, _token: de::Token) -> Result<T, Error> {
+            Err(SyntaxError)
+        }
+
+        #[inline]
+        fn missing_field_error<T>(&self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
     }

@@ -320,7 +320,7 @@ fn deserialize_struct(
         match $token {
             ::serde::de::StructStart(_, _) => $struct_block,
             ::serde::de::MapStart(_) => $map_block,
-            _ => $deserializer.syntax_error(),
+            token => $deserializer.syntax_error(token),
         }
     )
 }
@@ -383,6 +383,7 @@ fn deserialize_struct_from_map(
                     $name = Some(
                         try!(::serde::de::Deserializable::deserialize($deserializer))
                     );
+                    false
                 })
         })
         .collect();
@@ -414,6 +415,25 @@ fn deserialize_struct_from_map(
             .collect()
     );
 
+    let error_arms: Vec<ast::Arm> = fields.iter()
+        .map(|&(name, span)| {
+            let pats = fields.iter()
+                .map(|&(n, _)| {
+                    if n == name {
+                        quote_pat!(cx, None)
+                    } else {
+                        quote_pat!(cx, _)
+                    }
+                })
+                .collect();
+
+            let pat = cx.pat_tuple(span, pats);
+            let s = cx.expr_str(span, token::get_ident(name));
+
+            quote_arm!(cx, $pat => { return $deserializer.missing_field_error($s); })
+        })
+        .collect();
+
     quote_expr!(cx, {
         $let_fields
 
@@ -423,21 +443,27 @@ fn deserialize_struct_from_map(
                 token => token,
             };
 
-            let key = match token {
-                ::serde::de::Str(s) => s,
-                ::serde::de::String(ref s) => s.as_slice(),
-                _ => { return $deserializer.syntax_error(); }
+            let error = {
+                let key = match token {
+                    ::serde::de::Str(s) => s,
+                    ::serde::de::String(ref s) => s.as_slice(),
+                    token => { return $deserializer.syntax_error(token); }
+                };
+
+                match key {
+                    $key_arms
+                    _ => true
+                }
             };
 
-            match key {
-                $key_arms
-                _ => { return $deserializer.syntax_error(); }
+            if error {
+                return $deserializer.syntax_error(token);
             }
         }
 
         let result = match $fields_tuple {
             $fields_pat => $result,
-            _ => { return $deserializer.syntax_error(); }
+            $error_arms
         };
 
         Ok(result)

@@ -54,7 +54,9 @@ macro_rules! to_result {
 pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn end_of_stream_error<T>(&self) -> Result<T, E>;
 
-    fn syntax_error<T>(&self) -> Result<T, E>;
+    fn syntax_error<T>(&self, token: Token) -> Result<T, E>;
+
+    fn missing_field_error<T>(&self, field: &'static str) -> Result<T, E>;
 
     #[inline]
     fn expect_token(&mut self) -> Result<Token, E> {
@@ -72,10 +74,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             TupleStart(_) => {
                 match try!(self.expect_token()) {
                     End => Ok(()),
-                    _ => self.syntax_error(),
+                    token => self.syntax_error(token),
                 }
             }
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -83,42 +85,45 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_bool(&mut self, token: Token) -> Result<bool, E> {
         match token {
             Bool(value) => Ok(value),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
     #[inline]
     fn expect_num<T: NumCast>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Int(x) => to_result!(num::cast(x), self.syntax_error()),
-            I8(x) => to_result!(num::cast(x), self.syntax_error()),
-            I16(x) => to_result!(num::cast(x), self.syntax_error()),
-            I32(x) => to_result!(num::cast(x), self.syntax_error()),
-            I64(x) => to_result!(num::cast(x), self.syntax_error()),
-            Uint(x) => to_result!(num::cast(x), self.syntax_error()),
-            U8(x) => to_result!(num::cast(x), self.syntax_error()),
-            U16(x) => to_result!(num::cast(x), self.syntax_error()),
-            U32(x) => to_result!(num::cast(x), self.syntax_error()),
-            U64(x) => to_result!(num::cast(x), self.syntax_error()),
-            F32(x) => to_result!(num::cast(x), self.syntax_error()),
-            F64(x) => to_result!(num::cast(x), self.syntax_error()),
+            Int(x) => to_result!(num::cast(x), self.syntax_error(Int(x))),
+            I8(x) => to_result!(num::cast(x), self.syntax_error(I8(x))),
+            I16(x) => to_result!(num::cast(x), self.syntax_error(I16(x))),
+            I32(x) => to_result!(num::cast(x), self.syntax_error(I32(x))),
+            I64(x) => to_result!(num::cast(x), self.syntax_error(I64(x))),
+            Uint(x) => to_result!(num::cast(x), self.syntax_error(Uint(x))),
+            U8(x) => to_result!(num::cast(x), self.syntax_error(U8(x))),
+            U16(x) => to_result!(num::cast(x), self.syntax_error(U16(x))),
+            U32(x) => to_result!(num::cast(x), self.syntax_error(U32(x))),
+            U64(x) => to_result!(num::cast(x), self.syntax_error(U64(x))),
+            F32(x) => to_result!(num::cast(x), self.syntax_error(F32(x))),
+            F64(x) => to_result!(num::cast(x), self.syntax_error(F64(x))),
+            token => self.syntax_error(token),
+        }
+    }
 
     #[inline]
     fn expect_from_primitive<T: FromPrimitive>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Int(x) => to_result!(num::from_int(x), self.syntax_error()),
-            I8(x) => to_result!(num::from_i8(x), self.syntax_error()),
-            I16(x) => to_result!(num::from_i16(x), self.syntax_error()),
-            I32(x) => to_result!(num::from_i32(x), self.syntax_error()),
-            I64(x) => to_result!(num::from_i64(x), self.syntax_error()),
-            Uint(x) => to_result!(num::from_uint(x), self.syntax_error()),
-            U8(x) => to_result!(num::from_u8(x), self.syntax_error()),
-            U16(x) => to_result!(num::from_u16(x), self.syntax_error()),
-            U32(x) => to_result!(num::from_u32(x), self.syntax_error()),
-            U64(x) => to_result!(num::from_u64(x), self.syntax_error()),
-            F32(x) => to_result!(num::from_f32(x), self.syntax_error()),
-            F64(x) => to_result!(num::from_f64(x), self.syntax_error()),
-            _ => self.syntax_error(),
+            Int(x) => to_result!(num::from_int(x), self.syntax_error(Int(x))),
+            I8(x) => to_result!(num::from_i8(x), self.syntax_error(I8(x))),
+            I16(x) => to_result!(num::from_i16(x), self.syntax_error(I16(x))),
+            I32(x) => to_result!(num::from_i32(x), self.syntax_error(I32(x))),
+            I64(x) => to_result!(num::from_i64(x), self.syntax_error(I64(x))),
+            Uint(x) => to_result!(num::from_uint(x), self.syntax_error(Uint(x))),
+            U8(x) => to_result!(num::from_u8(x), self.syntax_error(U8(x))),
+            U16(x) => to_result!(num::from_u16(x), self.syntax_error(U16(x))),
+            U32(x) => to_result!(num::from_u32(x), self.syntax_error(U32(x))),
+            U64(x) => to_result!(num::from_u64(x), self.syntax_error(U64(x))),
+            F32(x) => to_result!(num::from_f32(x), self.syntax_error(F32(x))),
+            F64(x) => to_result!(num::from_f64(x), self.syntax_error(F64(x))),
+            token => self.syntax_error(token),
         }
     }
 
@@ -126,7 +131,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_char(&mut self, token: Token) -> Result<char, E> {
         match token {
             Char(value) => Ok(value),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -134,7 +139,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_str(&mut self, token: Token) -> Result<&'static str, E> {
         match token {
             Str(value) => Ok(value),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -143,7 +148,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match token {
             Str(value) => Ok(value.to_string()),
             String(value) => Ok(value),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -157,7 +162,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 let value: T = try!(Deserializable::deserialize(self));
                 Ok(Some(value))
             }
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -165,12 +170,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_tuple_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             TupleStart(len) => Ok(len),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
     #[inline]
-    fn expect_tuple_sep<
+    fn expect_tuple_elt<
         T: Deserializable
     >(&mut self) -> Result<T, E> {
         Deserializable::deserialize(self)
@@ -180,7 +185,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_tuple_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -191,10 +196,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 if name == n {
                     Ok(())
                 } else {
-                    self.syntax_error()
+                    self.syntax_error(token)
                 }
             }
-            _ => self.syntax_error(),
+            _ => self.syntax_error(token),
         }
     }
 
@@ -205,15 +210,15 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match try!(self.expect_token()) {
             Str(n) => {
                 if name != n {
-                    return self.syntax_error();
+                    return self.syntax_error(Str(n));
                 }
             }
             String(n) => {
                 if name != n.as_slice() {
-                    return self.syntax_error();
+                    return self.syntax_error(String(n));
                 }
             }
-            _ => { return self.syntax_error(); }
+            token => { return self.syntax_error(token); }
         }
 
         Deserializable::deserialize(self)
@@ -223,7 +228,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_struct_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -234,13 +239,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 if name == n {
                     match variants.iter().position(|variant| *variant == v) {
                         Some(position) => Ok(position),
-                        None => self.syntax_error(),
+                        None => self.syntax_error(token),
                     }
                 } else {
-                    self.syntax_error()
+                    self.syntax_error(token)
                 }
             }
-            _ => self.syntax_error(),
+            _ => self.syntax_error(token),
         }
     }
 
@@ -255,7 +260,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_enum_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -264,7 +269,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match token {
             TupleStart(len) => Ok(len),
             SeqStart(len) => Ok(len),
-            _ => self.syntax_error(),
+            token => self.syntax_error(token),
         }
     }
 
@@ -307,7 +312,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             MapStart(len) => Ok(len),
-            _ => self.syntax_error(),
+            _ => self.syntax_error(token),
         }
     }
 
@@ -567,7 +572,7 @@ macro_rules! impl_deserialize_tuple {
                 try!(d.expect_tuple_start(token));
 
                 let result = ($({
-                    let $name = try!(Deserializable::deserialize(d));
+                    let $name = try!(d.expect_tuple_elt());
                     $name
                 },)*);
 
@@ -617,7 +622,7 @@ impl Deserializable for IgnoreTokens {
                         Str(_) | String(_) => {
                             let _: IgnoreTokens = try!(Deserializable::deserialize(d));
                         }
-                        _token => { return d.syntax_error(); }
+                        _token => { return d.syntax_error(token); }
                     }
                 }
             }
@@ -656,7 +661,7 @@ impl Deserializable for IgnoreTokens {
                 }
             }
 
-            End => d.syntax_error(),
+            End => d.syntax_error(token),
 
             _ => Ok(IgnoreTokens),
         }
@@ -716,7 +721,7 @@ impl GatherTokens {
                 self.gather_map(d)
             }
             End => {
-                d.syntax_error()
+                d.syntax_error(token)
             }
             token => {
                 self.tokens.push(token);
@@ -752,7 +757,7 @@ impl GatherTokens {
                     self.tokens.push(token);
                     try!(self.gather(d))
                 }
-                _token => { return d.syntax_error(); }
+                token => { return d.syntax_error(token); }
             }
         }
     }
@@ -908,6 +913,7 @@ mod tests {
     enum Error {
         EndOfStream,
         SyntaxError,
+        IncompleteValue,
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -940,8 +946,12 @@ mod tests {
             Err(EndOfStream)
         }
 
-        fn syntax_error<T>(&self) -> Result<T, Error> {
+        fn syntax_error<T>(&self, _token: Token) -> Result<T, Error> {
             Err(SyntaxError)
+        }
+
+        fn missing_field_error<T>(&self, _field: &'static str) -> Result<T, Error> {
+            Err(IncompleteValue)
         }
     }
 
