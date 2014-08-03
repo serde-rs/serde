@@ -51,11 +51,7 @@ impl de::Deserializable for HttpProtocol {
         D: de::Deserializer<E>,
         E
     >(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
-        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
-        match FromPrimitive::from_uint(x) {
-            Some(x) => Ok(x),
-            None => d.syntax_error(),
-        }
+        d.expect_from_primitive(token)
     }
 }
 
@@ -90,11 +86,7 @@ impl de::Deserializable for HttpMethod {
         D: de::Deserializer<E>,
         E
     >(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
-        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
-        match FromPrimitive::from_uint(x) {
-            Some(x) => Ok(x),
-            None => d.syntax_error(),
-        }
+        d.expect_from_primitive(token)
     }
 }
 
@@ -122,11 +114,7 @@ impl de::Deserializable for CacheStatus {
         D: de::Deserializer<E>,
         E
     >(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
-        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
-        match FromPrimitive::from_uint(x) {
-            Some(x) => Ok(x),
-            None => d.syntax_error(),
-        }
+        d.expect_from_primitive(token)
     }
 }
 
@@ -163,11 +151,7 @@ impl de::Deserializable for OriginProtocol {
         D: de::Deserializer<E>,
         E
     >(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
-        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
-        match FromPrimitive::from_uint(x) {
-            Some(x) => Ok(x),
-            None => d.syntax_error(),
-        }
+        d.expect_from_primitive(token)
     }
 }
 
@@ -196,11 +180,7 @@ impl de::Deserializable for ZonePlan {
         D: de::Deserializer<E>,
         E
     >(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
-        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
-        match FromPrimitive::from_uint(x) {
-            Some(x) => Ok(x),
-            None => d.syntax_error(),
-        }
+        d.expect_from_primitive(token)
     }
 }
 
@@ -480,11 +460,7 @@ impl de::Deserializable for Country {
         D: de::Deserializer<E>,
         E
     >(d: &mut D, token: de::Token) -> Result<Country, E> {
-        let x: uint = try!(de::Deserializable::deserialize_token(d, token));
-        match FromPrimitive::from_uint(x) {
-            Some(x) => Ok(x),
-            None => d.syntax_error(),
-        }
+        d.expect_from_primitive(token)
     }
 }
 

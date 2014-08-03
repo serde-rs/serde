@@ -102,6 +102,22 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             U64(x) => to_result!(num::cast(x), self.syntax_error()),
             F32(x) => to_result!(num::cast(x), self.syntax_error()),
             F64(x) => to_result!(num::cast(x), self.syntax_error()),
+
+    #[inline]
+    fn expect_from_primitive<T: FromPrimitive>(&mut self, token: Token) -> Result<T, E> {
+        match token {
+            Int(x) => to_result!(num::from_int(x), self.syntax_error()),
+            I8(x) => to_result!(num::from_i8(x), self.syntax_error()),
+            I16(x) => to_result!(num::from_i16(x), self.syntax_error()),
+            I32(x) => to_result!(num::from_i32(x), self.syntax_error()),
+            I64(x) => to_result!(num::from_i64(x), self.syntax_error()),
+            Uint(x) => to_result!(num::from_uint(x), self.syntax_error()),
+            U8(x) => to_result!(num::from_u8(x), self.syntax_error()),
+            U16(x) => to_result!(num::from_u16(x), self.syntax_error()),
+            U32(x) => to_result!(num::from_u32(x), self.syntax_error()),
+            U64(x) => to_result!(num::from_u64(x), self.syntax_error()),
+            F32(x) => to_result!(num::from_f32(x), self.syntax_error()),
+            F64(x) => to_result!(num::from_f64(x), self.syntax_error()),
             _ => self.syntax_error(),
         }
     }
