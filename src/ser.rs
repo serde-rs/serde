@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::{HashMap, TreeMap};
+use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
 use std::gc::Gc;
 use std::hash::Hash;
 use std::rc::Rc;
@@ -235,6 +235,32 @@ impl<
         E
     >(&self, s: &mut S) -> Result<(), E> {
         s.serialize_map(self.iter())
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<
+    T: Serializable + Eq + Hash
+> Serializable for HashSet<T> {
+    #[inline]
+    fn serialize<
+        S: Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
+        s.serialize_seq(self.iter())
+    }
+}
+
+impl<
+    T: Serializable + Ord
+> Serializable for TreeSet<T> {
+    #[inline]
+    fn serialize<
+        S: Serializer<E>,
+        E
+    >(&self, s: &mut S) -> Result<(), E> {
+        s.serialize_seq(self.iter())
     }
 }
 

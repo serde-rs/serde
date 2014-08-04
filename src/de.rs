@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::{HashMap, TreeMap};
+use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
 use std::gc::{GC, Gc};
 use std::hash::Hash;
 use std::num;
@@ -583,6 +583,32 @@ impl<
         E
     >(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
         d.expect_map(token)
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<
+    T: Deserializable + Eq + Hash
+> Deserializable for HashSet<T> {
+    #[inline]
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<HashSet<T>, E> {
+        d.expect_seq(token)
+    }
+}
+
+impl<
+    T: Deserializable + Ord
+> Deserializable for TreeSet<T> {
+    #[inline]
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<TreeSet<T>, E> {
+        d.expect_seq(token)
     }
 }
 
