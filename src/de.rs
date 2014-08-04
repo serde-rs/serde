@@ -9,8 +9,11 @@
 // except according to those terms.
 
 use std::collections::{HashMap, TreeMap};
+use std::gc::{GC, Gc};
 use std::hash::Hash;
 use std::num;
+use std::rc::Rc;
+use std::sync::Arc;
 
 #[deriving(Clone, PartialEq, Show)]
 pub enum Token {
@@ -468,6 +471,48 @@ impl_deserializable!(f64, expect_num)
 impl_deserializable!(char, expect_char)
 impl_deserializable!(&'static str, expect_str)
 impl_deserializable!(String, expect_string)
+
+//////////////////////////////////////////////////////////////////////////////
+
+impl<T: Deserializable> Deserializable for Box<T> {
+    #[inline]
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Box<T>, E> {
+        Ok(box try!(Deserializable::deserialize_token(d, token)))
+    }
+}
+
+impl<T: Deserializable + 'static> Deserializable for Gc<T> {
+    #[inline]
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Gc<T>, E> {
+        Ok(box (GC) try!(Deserializable::deserialize_token(d, token)))
+    }
+}
+
+impl<T: Deserializable> Deserializable for Rc<T> {
+    #[inline]
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Rc<T>, E> {
+        Ok(Rc::new(try!(Deserializable::deserialize_token(d, token))))
+    }
+}
+
+impl<T: Deserializable + Send + Share> Deserializable for Arc<T> {
+    #[inline]
+    fn deserialize_token<
+        D: Deserializer<E>,
+        E
+    >(d: &mut D, token: Token) -> Result<Arc<T>, E> {
+        Ok(Arc::new(try!(Deserializable::deserialize_token(d, token))))
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 

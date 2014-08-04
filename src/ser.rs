@@ -9,7 +9,10 @@
 // except according to those terms.
 
 use std::collections::{HashMap, TreeMap};
+use std::gc::Gc;
 use std::hash::Hash;
+use std::rc::Rc;
+use std::sync::Arc;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -162,18 +165,22 @@ impl Serializable for String {
 
 //////////////////////////////////////////////////////////////////////////////
 
-impl<
-    'a,
-    T: Serializable
-> Serializable for &'a T {
-    #[inline]
-    fn serialize<
-        S: Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
-        (*self).serialize(s)
+macro_rules! impl_serializable_box {
+    ($ty:ty) => {
+        impl<'a, T: Serializable> Serializable for $ty {
+            #[inline]
+            fn serialize<S: Serializer<E>, E>(&self, s: &mut S) -> Result<(), E> {
+                (*self).serialize(s)
+            }
+        }
     }
 }
+
+impl_serializable_box!(&'a T)
+impl_serializable_box!(Box<T>)
+impl_serializable_box!(Gc<T>)
+impl_serializable_box!(Rc<T>)
+impl_serializable_box!(Arc<T>)
 
 //////////////////////////////////////////////////////////////////////////////
 
