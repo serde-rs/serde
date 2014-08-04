@@ -524,7 +524,7 @@ mod tests {
             let (len, _) = iter.size_hint();
             try!(self.serialize(SeqStart(len)));
             for elt in iter {
-                elt.serialize(self).unwrap();
+                try!(elt.serialize(self));
             }
             self.serialize(SeqEnd)
         }
