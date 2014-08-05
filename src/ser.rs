@@ -170,7 +170,7 @@ macro_rules! impl_serializable_box {
         impl<'a, T: Serializable> Serializable for $ty {
             #[inline]
             fn serialize<S: Serializer<E>, E>(&self, s: &mut S) -> Result<(), E> {
-                (*self).serialize(s)
+                (**self).serialize(s)
             }
         }
     }
@@ -180,7 +180,13 @@ impl_serializable_box!(&'a T)
 impl_serializable_box!(Box<T>)
 impl_serializable_box!(Gc<T>)
 impl_serializable_box!(Rc<T>)
-impl_serializable_box!(Arc<T>)
+
+impl<T: Serializable + Send + Share> Serializable for Arc<T> {
+    #[inline]
+    fn serialize<S: Serializer<E>, E>(&self, s: &mut S) -> Result<(), E> {
+        (**self).serialize(s)
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
