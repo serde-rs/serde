@@ -528,26 +528,6 @@ impl<T: Deserializable> Deserializable for Option<T> {
 
 //////////////////////////////////////////////////////////////////////////////
 
-macro_rules! deserialize_seq {
-    ($seq:expr) => {
-        {
-            loop {
-                match d.next() {
-                    Some(Ok(End)) => { break; }
-                    Some(Ok(token)) => {
-                        let v = try!(Deserializable::deserialize_token(d, token));
-                        $seq.push(v)
-                    }
-                    Some(Err(err)) => { return Err(err); }
-                    None => { return d.end_of_stream_error(); }
-                }
-            }
-
-            Ok($seq)
-        }
-    }
-}
-
 impl<T: Deserializable> Deserializable for Vec<T> {
     #[inline]
     fn deserialize_token<
