@@ -320,7 +320,7 @@ fn deserialize_struct(
         match $token {
             ::serde::de::StructStart(_, _) => $struct_block,
             ::serde::de::MapStart(_) => $map_block,
-            token => $deserializer.syntax_error(token),
+            token => Err($deserializer.syntax_error(token)),
         }
     )
 }
@@ -430,7 +430,9 @@ fn deserialize_struct_from_map(
             let pat = cx.pat_tuple(span, pats);
             let s = cx.expr_str(span, token::get_ident(name));
 
-            quote_arm!(cx, $pat => { return $deserializer.missing_field_error($s); })
+            quote_arm!(cx,
+                $pat => Err($deserializer.missing_field_error($s)),
+            )
         })
         .collect();
 
@@ -447,7 +449,7 @@ fn deserialize_struct_from_map(
                 let key = match token {
                     ::serde::de::Str(s) => s,
                     ::serde::de::String(ref s) => s.as_slice(),
-                    token => { return $deserializer.syntax_error(token); }
+                    token => { return Err($deserializer.syntax_error(token)); }
                 };
 
                 match key {
@@ -457,16 +459,14 @@ fn deserialize_struct_from_map(
             };
 
             if error {
-                return $deserializer.syntax_error(token);
+                return Err($deserializer.syntax_error(token));
             }
         }
 
-        let result = match $fields_tuple {
-            $fields_pat => $result,
+        match $fields_tuple {
+            $fields_pat => Ok($result),
             $error_arms
-        };
-
-        Ok(result)
+        }
     })
 }
 

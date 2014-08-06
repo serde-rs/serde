@@ -180,18 +180,18 @@ mod deserializer {
 
     impl de::Deserializer<Error> for BytesDeserializer {
         #[inline]
-        fn end_of_stream_error<T>(&self) -> Result<T, Error> {
-            Err(EndOfStream)
+        fn end_of_stream_error(&self) -> Error {
+            EndOfStream
         }
 
         #[inline]
-        fn syntax_error<T>(&self, _token: de::Token) -> Result<T, Error> {
-            Err(SyntaxError)
+        fn syntax_error(&self, _token: de::Token) -> Error {
+            SyntaxError
         }
 
         #[inline]
         fn missing_field_error(&mut self, _field: &'static str) -> Error {
-            Err(SyntaxError)
+            SyntaxError
         }
     }
 }
