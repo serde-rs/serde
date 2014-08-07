@@ -526,7 +526,7 @@ impl de::Deserializable for Json {
                 object.insert(name.to_string(), List(fields));
                 Ok(Object(object))
             }
-            de::End => Err(d.syntax_error(de::End)),
+            de::End => Err(d.syntax_error(de::End, [de::EndKind])),
         }
     }
 }
@@ -615,7 +615,15 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
         SyntaxError(EOFWhileParsingValue, 0, 0)
     }
 
-    fn syntax_error(&self, _token: de::Token) -> ParserError {
+    fn syntax_error(&self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
+        SyntaxError(InvalidSyntax, 0, 0)
+    }
+
+    fn unexpected_name_error(&self, _token: de::Token) -> ParserError {
+        SyntaxError(InvalidSyntax, 0, 0)
+    }
+
+    fn conversion_error(&self, _token: de::Token) -> ParserError {
         SyntaxError(InvalidSyntax, 0, 0)
     }
 
@@ -1981,7 +1989,15 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
         SyntaxError(EOFWhileParsingValue, self.line, self.col)
     }
 
-    fn syntax_error(&self, _token: de::Token) -> ParserError {
+    fn syntax_error(&self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
+        SyntaxError(InvalidSyntax, self.line, self.col)
+    }
+
+    fn unexpected_name_error(&self, _token: de::Token) -> ParserError {
+        SyntaxError(InvalidSyntax, self.line, self.col)
+    }
+
+    fn conversion_error(&self, _token: de::Token) -> ParserError {
         SyntaxError(InvalidSyntax, self.line, self.col)
     }
 

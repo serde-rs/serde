@@ -320,7 +320,13 @@ fn deserialize_struct(
         match $token {
             ::serde::de::StructStart(_, _) => $struct_block,
             ::serde::de::MapStart(_) => $map_block,
-            token => Err($deserializer.syntax_error(token)),
+            token => {
+                let expected_tokens = [
+                    ::serde::de::StructStartKind,
+                    ::serde::de::MapStartKind,
+                ];
+                Err($deserializer.syntax_error(token, expected_tokens))
+            }
         }
     )
 }
@@ -383,7 +389,6 @@ fn deserialize_struct_from_map(
                     $name = Some(
                         try!(::serde::de::Deserializable::deserialize($deserializer))
                     );
-                    false
                 })
         })
         .collect();
@@ -445,21 +450,23 @@ fn deserialize_struct_from_map(
                 token => token,
             };
 
-            let error = {
+            {
                 let key = match token {
                     ::serde::de::Str(s) => s,
                     ::serde::de::String(ref s) => s.as_slice(),
-                    token => { return Err($deserializer.syntax_error(token)); }
+                    token => {
+                        let expected_tokens = [
+                            ::serde::de::StrKind,
+                            ::serde::de::StringKind,
+                        ];
+                        return Err($deserializer.syntax_error(token, expected_tokens));
+                    }
                 };
 
                 match key {
                     $key_arms
-                    _ => true
+                    _ => { }
                 }
-            };
-
-            if error {
-                return Err($deserializer.syntax_error(token));
             }
         }
 

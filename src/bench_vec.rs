@@ -300,12 +300,22 @@ mod deserializer {
         }
 
         #[inline]
-        fn syntax_error(&self, _token: de::Token) -> Error {
+        fn syntax_error(&self, _token: de::Token, _expected: &[de::TokenKind]) -> Error {
             SyntaxError
         }
 
         #[inline]
         fn missing_field_error(&self, _field: &'static str) -> Error {
+            SyntaxError
+        }
+
+        #[inline]
+        fn unexpected_name_error(&self, _token: de::Token) -> Error {
+            SyntaxError
+        }
+
+        #[inline]
+        fn conversion_error(&self, _token: de::Token) -> Error {
             SyntaxError
         }
     }
@@ -360,12 +370,22 @@ mod deserializer {
         }
 
         #[inline]
-        fn syntax_error(&self, _token: de::Token) -> Error {
+        fn syntax_error(&self, _token: de::Token, _expected: &[de::TokenKind]) -> Error {
             SyntaxError
         }
 
         #[inline]
         fn missing_field_error(&self, _field: &'static str) -> Error {
+            SyntaxError
+        }
+
+        #[inline]
+        fn unexpected_name_error(&self, _token: de::Token) -> Error {
+            SyntaxError
+        }
+
+        #[inline]
+        fn conversion_error(&self, _token: de::Token) -> Error {
             SyntaxError
         }
     }

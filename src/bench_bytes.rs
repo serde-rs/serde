@@ -185,7 +185,7 @@ mod deserializer {
         }
 
         #[inline]
-        fn syntax_error(&self, _token: de::Token) -> Error {
+        fn syntax_error(&self, _token: de::Token, _msg: &'static str) -> Error {
             SyntaxError
         }
 
