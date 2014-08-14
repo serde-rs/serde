@@ -181,7 +181,7 @@ impl_serializable_box!(Box<T>)
 impl_serializable_box!(Gc<T>)
 impl_serializable_box!(Rc<T>)
 
-impl<T: Serializable + Send + Share> Serializable for Arc<T> {
+impl<T: Serializable + Send + Sync> Serializable for Arc<T> {
     #[inline]
     fn serialize<S: Serializer<E>, E>(&self, s: &mut S) -> Result<(), E> {
         (**self).serialize(s)

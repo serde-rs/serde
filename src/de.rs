@@ -638,7 +638,7 @@ impl<T: Deserializable> Deserializable for Rc<T> {
     }
 }
 
-impl<T: Deserializable + Send + Share> Deserializable for Arc<T> {
+impl<T: Deserializable + Send + Sync> Deserializable for Arc<T> {
     #[inline]
     fn deserialize_token<
         D: Deserializer<E>,
