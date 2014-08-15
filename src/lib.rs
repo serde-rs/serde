@@ -18,6 +18,9 @@ extern crate debug;
 #[cfg(test)]
 extern crate serialize;
 
+pub use ser::{Serializer, Serializable};
+pub use de::{Deserializer, Deserializable};
+
 pub mod de;
 pub mod ser;
 pub mod json;
