@@ -465,7 +465,11 @@ fn deserialize_struct_from_map(
 
                 match key {
                     $key_arms
-                    _ => { }
+                    _ => {
+                        // Ignore unknown fields.
+                        let _: ::serde::de::IgnoreTokens =
+                            try!(Deserializable::deserialize($deserializer));
+                    }
                 }
             }
         }
