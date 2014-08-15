@@ -20,15 +20,16 @@ JSON parsing and serialization
 # What is JSON?
 
 JSON (JavaScript Object Notation) is a way to write data in Javascript.
-Like XML it allows one to encode structured data in a text format that can be read by humans easily.
+Like XML it allows one to serialize structured data in a text format that can be read by humans
+easily.
 Its native compatibility with JavaScript and its simple syntax make it used widely.
 
-Json data are encoded in a form of "key":"value".
-Data types that can be encoded are JavaScript types :
+Json data are serialized in a form of "key":"value".
+Data types that can be serialized are JavaScript types :
 boolean (`true` or `false`), number (`f64`), string, array, object, null.
 An object is a series of string keys mapping to values, in `"key": value` format.
 Arrays are enclosed in square brackets ([ ... ]) and objects in curly brackets ({ ... }).
-A simple JSON document encoding a person, his/her age, address and phone numbers could look like:
+A simple JSON document serializing a person, his/her age, address and phone numbers could look like:
 
 ```ignore
 {
@@ -47,61 +48,76 @@ A simple JSON document encoding a person, his/her age, address and phone numbers
 }
 ```
 
-# Rust Type-based Encoding and Decoding
+# Rust Type-based Serializing and Deserializing
 
-Rust provides a mechanism for low boilerplate encoding & decoding
+Rust provides a mechanism for low boilerplate serializing and deserializing
 of values to and from JSON via the serialization API.
-To be able to encode a piece of data, it must implement the `serialize::Encodable` trait.
-To be able to decode a piece of data, it must implement the `serialize::Decodable` trait.
+To be able to serialize a piece of data, it must implement the `serde::Serializable` trait.
+To be able to deserialize a piece of data, it must implement the `serde::Deserializable` trait.
 The Rust compiler provides an annotation to automatically generate
-the code for these traits: `#[deriving(Decodable, Encodable)]`
+the code for these traits: `#[deriving_serializable]` and `#[deriving_deserializable]`.
 
-To encode using Encodable :
+To serialize using `Serializable`:
 
 ```rust
-use std::io;
-use serialize::{json, Encodable};
+#![feature(phase)]
+#[phase(plugin)]
+extern crate serde_macros;
+extern crate serde;
 
- #[deriving(Encodable)]
- pub struct TestStruct   {
+use std::io;
+use serde::json;
+use serde::Serializable;
+
+#[deriving_serializable]
+pub struct TestStruct   {
     data_str: String,
- }
+}
 
 fn main() {
-    let to_encode_object = TestStruct{data_str:"example of string to encode".to_string()};
+    let to_serialize_object = TestStruct {
+        data_str: "example of string to serialize".to_string()
+    };
+
     let mut m = io::MemWriter::new();
     {
         let mut serializer = json::Serializer::new(m.by_ref());
-        match to_encode_object.encode(&mut serializer) {
+        match to_serialize_object.serialize(&mut serializer) {
             Ok(()) => (),
-            Err(e) => fail!("json encoding error: {}", e)
-        };
+            Err(e) => fail!("json serialization error: {}", e),
+        }
     }
 }
 ```
 
-Two wrapper functions are provided to encode a Encodable object
-into a string (String) or buffer (~[u8]): `str_encode(&m)` and `buffer_encode(&m)`.
+Two wrapper functions are provided to serialize a Serializable object
+into a string (String) or buffer (~[u8]): `json::to_string(value)` and
+`json::to_vec(value)`.
 
 ```rust
-use serialize::json;
-let to_encode_object = "example of string to encode".to_string();
-let encoded_str: String = json::Serializer::str_encode(&to_encode_object);
+use serde::json;
+let to_serialize_object = "example of string to serialize";
+let serialized_str: String = json::to_string(&to_serialize_object).unwrap();
 ```
 
-JSON API provide an enum `json::Json` and a trait `ToJson` to encode object.
-The trait `ToJson` encode object into a container `json::Json` and the API provide writer
-to encode them into a stream or a string ...
+JSON API provide an enum `json::Json` and a trait `ToJson` to serialize object.
+The trait `ToJson` serialize object into a container `json::Json` and the API provide writer
+to serialize them into a stream or a string ...
 
-When using `ToJson` the `Encodable` trait implementation is not mandatory.
+When using `ToJson` the `Serializable` trait implementation is not mandatory.
 
 A basic `ToJson` example using a TreeMap of attribute name / attribute value:
 
 
 ```rust
+#![feature(phase)]
+#[phase(plugin)]
+extern crate serde_macros;
+extern crate serde;
+
 use std::collections::TreeMap;
-use serialize::json;
-use serialize::json::ToJson;
+use serde::json;
+use serde::json::ToJson;
 
 pub struct MyStruct  {
     attr1: u8,
@@ -110,7 +126,7 @@ pub struct MyStruct  {
 
 impl ToJson for MyStruct {
     fn to_json( &self ) -> json::Json {
-        let mut d = box TreeMap::new();
+        let mut d = TreeMap::new();
         d.insert("attr1".to_string(), self.attr1.to_json());
         d.insert("attr2".to_string(), self.attr2.to_json());
         json::Object(d)
@@ -124,27 +140,30 @@ fn main() {
 }
 ```
 
-To decode a JSON string using `Decodable` trait :
+To deserialize a JSON string using `Deserializable` trait :
 
 ```rust
-extern crate serialize;
-use serialize::{json, Decodable};
+#![feature(phase)]
+#[phase(plugin)]
+extern crate serde_macros;
+extern crate serde;
 
-#[deriving(Decodable)]
+use serde::json;
+use serde::Deserializable;
+
+#[deriving_deserializable]
 pub struct MyStruct  {
      attr1: u8,
      attr2: String,
 }
 
 fn main() {
-    let json_str_to_decode: String =
-            "{\"attr1\":1,\"attr2\":\"toto\"}".to_string();
-    let json_object = json::from_str(json_str_to_decode.as_slice());
-    let mut decoder = json::Decoder::new(json_object.unwrap());
-    let decoded_object: MyStruct = match Decodable::decode(&mut decoder) {
+    let json_str_to_deserialize = "{ \"attr1\": 1, \"attr2\": \"toto\" }";
+    let mut parser = json::Parser::new(json_str_to_deserialize.chars());
+    let deserialized_object: MyStruct = match Deserializable::deserialize(&mut parser) {
         Ok(v) => v,
         Err(e) => fail!("Decoding error: {}", e)
-    }; // create the final object
+    };
 }
 ```
 
@@ -152,32 +171,41 @@ fn main() {
 
 ## Using Autoserialization
 
-Create a struct called TestStruct1 and serialize and deserialize it to and from JSON
+Create a struct called `TestStruct1` and serialize and deserialize it to and from JSON
 using the serialization API, using the derived serialization code.
 
 ```rust
-extern crate serialize;
-use serialize::{json, Encodable, Decodable};
+#![feature(phase)]
+#[phase(plugin)]
+extern crate serde_macros;
+extern crate serde;
 
- #[deriving(Decodable, Encodable)] //generate Decodable, Encodable impl.
- pub struct TestStruct1  {
+use serde::json;
+
+#[deriving_serializable]
+#[deriving_deserializable]
+pub struct TestStruct1  {
     data_int: u8,
     data_str: String,
     data_vector: Vec<u8>,
- }
+}
 
-// To serialize use the `json::str_encode` to encode an object in a string.
-// It calls the generated `Encodable` impl.
+// To serialize use the `json::to_string` to serialize an object in a string.
+// It calls the generated `Serializable` impl.
 fn main() {
-    let to_encode_object = TestStruct1
-         {data_int: 1, data_str:"toto".to_string(), data_vector:vec![2,3,4,5]};
-    let encoded_str: String = json::Serializer::str_encode(&to_encode_object);
+    let to_serialize_object = TestStruct1 {
+        data_int: 1,
+        data_str: "toto".to_string(),
+        data_vector: vec![2,3,4,5]
+    };
+    let serialized_str: String = json::to_string(&to_serialize_object).unwrap();
 
-    // To deserialize use the `json::from_str` and `json::Decoder`
+    // To deserialize use the `json::from_str` function.
 
-    let json_object = json::from_str(encoded_str.as_slice());
-    let mut decoder = json::Decoder::new(json_object.unwrap());
-    let decoded1: TestStruct1 = Decodable::decode(&mut decoder).unwrap(); // create the final object
+    let deserialized_object: TestStruct1 = match json::from_str(serialized_str.as_slice()) {
+        Ok(deserialized_object) => deserialized_object,
+        Err(e) => fail!("json deserialization error: {}", e),
+    };
 }
 ```
 
@@ -187,11 +215,18 @@ This example use the ToJson impl to deserialize the JSON string.
 Example of `ToJson` trait implementation for TestStruct1.
 
 ```rust
-use std::collections::TreeMap;
-use serialize::json::ToJson;
-use serialize::{json, Encodable, Decodable};
+#![feature(phase)]
+#[phase(plugin)]
+extern crate serde_macros;
+extern crate serde;
 
-#[deriving(Decodable, Encodable)] // generate Decodable, Encodable impl.
+use std::collections::TreeMap;
+use serde::json::ToJson;
+use serde::json;
+use serde::Deserializable;
+
+#[deriving_serializable]   // generate Serializable impl
+#[deriving_deserializable] // generate Deserializable impl
 pub struct TestStruct1  {
     data_int: u8,
     data_str: String,
@@ -200,7 +235,7 @@ pub struct TestStruct1  {
 
 impl ToJson for TestStruct1 {
     fn to_json( &self ) -> json::Json {
-        let mut d = box TreeMap::new();
+        let mut d = TreeMap::new();
         d.insert("data_int".to_string(), self.data_int.to_json());
         d.insert("data_str".to_string(), self.data_str.to_json());
         d.insert("data_vector".to_string(), self.data_vector.to_json());
@@ -211,17 +246,18 @@ impl ToJson for TestStruct1 {
 fn main() {
     // Serialization using our impl of to_json
 
-    let test2: TestStruct1 = TestStruct1 {data_int: 1, data_str:"toto".to_string(),
-                                          data_vector:vec![2,3,4,5]};
+    let test2: TestStruct1 = TestStruct1 {
+        data_int: 1,
+        data_str: "toto".to_string(),
+        data_vector: vec![2,3,4,5],
+    };
     let tjson: json::Json = test2.to_json();
     let json_str: String = tjson.to_string().into_string();
 
     // Deserialize like before.
 
-    let mut decoder =
-        json::Decoder::new(json::from_str(json_str.as_slice()).unwrap());
-    // create the final object
-    let decoded2: TestStruct1 = Decodable::decode(&mut decoder).unwrap();
+    let mut parser = json::Parser::new(json_str.as_slice().chars());
+    let deserialized: TestStruct1 = Deserializable::deserialize(&mut parser).unwrap();
 }
 ```
 
@@ -264,20 +300,20 @@ pub type List = Vec<Json>;
 pub type Object = TreeMap<String, Json>;
 
 impl Json {
-    /// Encodes a json value into an io::writer.  Uses a single line.
-    pub fn to_writer<W: Writer>(&self, wr: W) -> EncodeResult {
+    /// Serializes a json value into an io::writer.  Uses a single line.
+    pub fn to_writer<W: Writer>(&self, wr: W) -> SerializeResult {
         let mut serializer = Serializer::new(wr);
         self.serialize(&mut serializer)
     }
 
-    /// Encodes a json value into an io::writer.
+    /// Serializes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
-    pub fn to_pretty_writer<W: Writer>(&self, wr: W) -> EncodeResult {
+    pub fn to_pretty_writer<W: Writer>(&self, wr: W) -> SerializeResult {
         let mut serializer = PrettySerializer::new(wr);
         self.serialize(&mut serializer)
     }
 
-    /// Encodes a json value into a string
+    /// Serializes a json value into a string
     pub fn to_pretty_string(&self) -> String {
         let mut wr = MemWriter::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
@@ -447,7 +483,7 @@ impl Json {
 }
 
 impl fmt::Show for Json {
-    /// Encodes a json value into a string
+    /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.to_writer(f as &mut Writer).map_err(|_| fmt::WriteError)
     }
@@ -543,7 +579,7 @@ pub struct JsonDeserializer {
 }
 
 impl JsonDeserializer {
-    /// Creates a new decoder instance for decoding the specified JSON value.
+    /// Creates a new deserializer instance for deserializing the specified JSON value.
     pub fn new(json: Json) -> JsonDeserializer {
         JsonDeserializer {
             stack: vec!(JsonDeserializerValueState(json)),
@@ -777,7 +813,7 @@ fn io_error_to_error(io: io::IoError) -> ParserError {
 }
 */
 
-pub type EncodeResult = io::IoResult<()>;
+pub type SerializeResult = io::IoResult<()>;
 
 pub fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> IoResult<()> {
     try!(wr.write_str("\""));
@@ -1341,6 +1377,8 @@ pub fn to_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
     let mut wr = MemWriter::with_capacity(1024);
     {
         let mut serializer = Serializer::new(wr.by_ref());
+        // We are writing to a MemWriter, which doesn't fail. So we can ignore
+        // the error.
         value.serialize(&mut serializer).unwrap();
     }
     wr.unwrap()
