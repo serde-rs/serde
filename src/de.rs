@@ -305,7 +305,8 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_tuple_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             TupleStart(len) => Ok(len),
-            token => Err(self.syntax_error(token, [TupleStartKind])),
+            SeqStart(len) => Ok(len),
+            token => Err(self.syntax_error(token, [TupleStartKind, SeqStartKind])),
         }
     }
 
