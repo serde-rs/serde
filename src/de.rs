@@ -199,13 +199,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_null(&mut self, token: Token) -> Result<(), E> {
         match token {
             Null => Ok(()),
-            TupleStart(_) => {
+            TupleStart(_) | SeqStart(_) => {
                 match try!(self.expect_token()) {
                     End => Ok(()),
                     token => Err(self.syntax_error(token, [EndKind])),
                 }
             }
-            token => Err(self.syntax_error(token, [NullKind, TupleStartKind])),
+            token => Err(self.syntax_error(token, [NullKind, TupleStartKind, SeqStartKind])),
         }
     }
 

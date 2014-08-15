@@ -2897,6 +2897,13 @@ mod tests {
         test_parse_ok([
             ("[[3], [1, 2]]", vec!(vec!(3i), vec!(1, 2))),
         ]);
+
+        let v: () = from_iter("[]".chars()).unwrap();
+        assert_eq!(v, ());
+
+        test_parse_ok([
+            ("[1, 2, 3]", (1u, 2u, 3u)),
+        ]);
     }
 
     #[test]
