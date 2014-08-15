@@ -25,9 +25,6 @@ pub mod de;
 pub mod ser;
 pub mod json;
 
-//#[cfg(test)]
-//pub mod bench_bytes;
-
 #[cfg(test)]
 pub mod bench_enum;
 
