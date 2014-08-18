@@ -3730,12 +3730,12 @@ mod bench {
             list.push(json::Object(treemap!(
                 "a".to_string() => json::Boolean(true),
                 "b".to_string() => json::Null,
-                "c".to_string() => json::Floating(3.1415),
+                "c".to_string() => json::Number(3.1415),
                 "d".to_string() => json::String("Hello world".to_string()),
                 "e".to_string() => json::List(vec!(
-                    json::Integer(1),
-                    json::Integer(2),
-                    json::Integer(3)
+                    json::Number(1f64),
+                    json::Number(2f64),
+                    json::Number(3f64)
                 ))
             )));
         }
@@ -3831,7 +3831,7 @@ mod bench {
                 assert_eq!(parser.next(), Some(json::NullValue));
                 assert_eq!(parser.stack().top(), Some(json::Key("b")));
 
-                assert_eq!(parser.next(), Some(json::FloatingValue(3.1415)));
+                assert_eq!(parser.next(), Some(json::NumberValue(3.1415)));
                 assert_eq!(parser.stack().top(), Some(json::Key("c")));
 
                 assert_eq!(parser.next(), Some(json::StringValue("Hello world".to_string())));
@@ -3839,9 +3839,9 @@ mod bench {
 
                 assert_eq!(parser.next(), Some(json::ListStart));
                 assert_eq!(parser.stack().top(), Some(json::Key("e")));
-                assert_eq!(parser.next(), Some(json::IntegerValue(1)));
-                assert_eq!(parser.next(), Some(json::IntegerValue(2)));
-                assert_eq!(parser.next(), Some(json::IntegerValue(3)));
+                assert_eq!(parser.next(), Some(json::NumberValue(1f64)));
+                assert_eq!(parser.next(), Some(json::NumberValue(2f64)));
+                assert_eq!(parser.next(), Some(json::NumberValue(3f64)));
                 assert_eq!(parser.next(), Some(json::ListEnd));
 
                 assert_eq!(parser.next(), Some(json::ObjectEnd));
