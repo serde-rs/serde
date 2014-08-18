@@ -394,22 +394,17 @@ fn deserialize_struct_from_map(
         })
         .collect();
 
-    let fields_tuple = cx.expr_tuple(
-        span,
-        fields.iter()
-            .map(|&(name, span)| {
-                cx.expr_ident(span, name)
-            })
-            .collect()
-    );
-
-    let fields_pats: Vec<Gc<ast::Pat>> = fields.iter()
+    let extract_fields: Vec<Gc<ast::Stmt>> = fields.iter()
         .map(|&(name, span)| {
-            quote_pat!(cx, Some($name))
+            let name_str = cx.expr_str(span, token::get_ident(name));
+            quote_stmt!(cx,
+                let $name = match $name {
+                    Some($name) => $name,
+                    None => try!($deserializer.missing_field($name_str)),
+                };
+            )
         })
         .collect();
-
-    let fields_pat = cx.pat_tuple(span, fields_pats);
 
     let result = cx.expr_struct_ident(
         span,
@@ -420,27 +415,6 @@ fn deserialize_struct_from_map(
             })
             .collect()
     );
-
-    let error_arms: Vec<ast::Arm> = fields.iter()
-        .map(|&(name, span)| {
-            let pats = fields.iter()
-                .map(|&(n, _)| {
-                    if n == name {
-                        quote_pat!(cx, None)
-                    } else {
-                        quote_pat!(cx, _)
-                    }
-                })
-                .collect();
-
-            let pat = cx.pat_tuple(span, pats);
-            let s = cx.expr_str(span, token::get_ident(name));
-
-            quote_arm!(cx,
-                $pat => Err($deserializer.missing_field_error($s)),
-            )
-        })
-        .collect();
 
     quote_expr!(cx, {
         $let_fields
@@ -473,10 +447,8 @@ fn deserialize_struct_from_map(
             try!($deserializer.ignore_field(token))
         }
 
-        match $fields_tuple {
-            $fields_pat => Ok($result),
-            $error_arms
-        }
+        $extract_fields
+        Ok($result)
     })
 }
 

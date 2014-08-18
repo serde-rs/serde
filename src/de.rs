@@ -191,7 +191,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     /// Called when a `Deserializable` structure did not deserialize a field
     /// named `field`.
-    fn missing_field_error(&mut self, field: &'static str) -> E;
+    fn missing_field<
+        T: Deserializable
+    >(&mut self, field: &'static str) -> Result<T, E>;
 
     /// Called when a deserializable has decided to not consume this token.
     fn ignore_field(&mut self, _token: Token) -> Result<(), E> {
@@ -1161,8 +1163,11 @@ mod tests {
             SyntaxError
         }
 
-        fn missing_field_error(&mut self, _field: &'static str) -> Error {
-            IncompleteValue
+        #[inline]
+        fn missing_field<
+            T: Deserializable
+        >(&mut self, _field: &'static str) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 

@@ -663,8 +663,13 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
         SyntaxError(InvalidSyntax, 0, 0)
     }
 
-    fn missing_field_error(&mut self, field: &'static str) -> ParserError {
-        SyntaxError(MissingField(field), 0, 0)
+    #[inline]
+    fn missing_field<
+        T: de::Deserializable
+    >(&mut self, _field: &'static str) -> Result<T, ParserError> {
+        // JSON can represent `null` values as a missing value, so this isn't
+        // necessarily an error.
+        de::Deserializable::deserialize_token(self, de::Null)
     }
 
     // Special case treating options as a nullable value.
@@ -2039,8 +2044,13 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
         SyntaxError(InvalidSyntax, self.line, self.col)
     }
 
-    fn missing_field_error(&mut self, field: &'static str) -> ParserError {
-        SyntaxError(MissingField(field), self.line, self.col)
+    #[inline]
+    fn missing_field<
+        T: de::Deserializable
+    >(&mut self, _field: &'static str) -> Result<T, ParserError> {
+        // JSON can represent `null` values as a missing value, so this isn't
+        // necessarily an error.
+        de::Deserializable::deserialize_token(self, de::Null)
     }
 
     // Special case treating options as a nullable value.
@@ -3066,6 +3076,19 @@ mod tests {
             ("null", None),
             ("\"jodhpurs\"", Some("jodhpurs".to_string())),
         ]);
+
+        #[deriving(PartialEq, Show)]
+        #[deriving_serializable]
+        #[deriving_deserializable]
+        struct Foo {
+            x: Option<int>,
+        }
+
+        let value: Foo = from_str("{}").unwrap();
+        assert_eq!(value, Foo { x: None });
+
+        let value: Foo = from_str("{ \"x\": 5 }").unwrap();
+        assert_eq!(value, Foo { x: Some(5) });
     }
 
     #[test]

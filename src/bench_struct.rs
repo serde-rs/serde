@@ -361,11 +361,6 @@ mod deserializer {
         }
 
         #[inline]
-        fn missing_field_error(&mut self, _field: &'static str) -> Error {
-            SyntaxError
-        }
-
-        #[inline]
         fn unexpected_name_error(&mut self, _token: de::Token) -> Error {
             SyntaxError
         }
@@ -373,6 +368,13 @@ mod deserializer {
         #[inline]
         fn conversion_error(&mut self, _token: de::Token) -> Error {
             SyntaxError
+        }
+
+        #[inline]
+        fn missing_field<
+            T: de::Deserializable
+        >(&mut self, _field: &'static str) -> Result<T, Error> {
+            Err(SyntaxError)
         }
     }
 }
