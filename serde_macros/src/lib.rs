@@ -389,6 +389,7 @@ fn deserialize_struct_from_map(
                     $name = Some(
                         try!(::serde::de::Deserializable::deserialize($deserializer))
                     );
+                    continue;
                 })
         })
         .collect();
@@ -465,13 +466,11 @@ fn deserialize_struct_from_map(
 
                 match key {
                     $key_arms
-                    _ => {
-                        // Ignore unknown fields.
-                        let _: ::serde::de::IgnoreTokens =
-                            try!(Deserializable::deserialize($deserializer));
-                    }
+                    _ => { }
                 }
             }
+
+            try!($deserializer.ignore_field(token))
         }
 
         match $fields_tuple {

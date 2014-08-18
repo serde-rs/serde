@@ -193,6 +193,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     /// named `field`.
     fn missing_field_error(&mut self, field: &'static str) -> E;
 
+    /// Called when a deserializable has decided to not consume this token.
+    fn ignore_field(&mut self, _token: Token) -> Result<(), E> {
+        let _: IgnoreTokens = try!(Deserializable::deserialize(self));
+        Ok(())
+    }
+
     #[inline]
     fn expect_token(&mut self) -> Result<Token, E> {
         match self.next() {
