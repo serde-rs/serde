@@ -176,15 +176,22 @@ macro_rules! to_result {
 }
 
 pub trait Deserializer<E>: Iterator<Result<Token, E>> {
-    fn end_of_stream_error(&self) -> E;
+    /// Called when a `Deserializable` expected more tokens, but the
+    /// `Deserializer` was empty.
+    fn end_of_stream_error(&mut self) -> E;
 
-    fn syntax_error(&self, token: Token, expected: &[TokenKind]) -> E;
+    /// Called when a `Deserializer` was unable to properly parse the stream.
+    fn syntax_error(&mut self, token: Token, expected: &[TokenKind]) -> E;
 
-    fn unexpected_name_error(&self, token: Token) -> E;
+    /// Called when a named structure or enum got a name that it didn't expect.
+    fn unexpected_name_error(&mut self, token: Token) -> E;
 
-    fn conversion_error(&self, token: Token) -> E;
+    /// Called when a value was unable to be coerced into another value.
+    fn conversion_error(&mut self, token: Token) -> E;
 
-    fn missing_field_error(&self, field: &'static str) -> E;
+    /// Called when a `Deserializable` structure did not deserialize a field
+    /// named `field`.
+    fn missing_field_error(&mut self, field: &'static str) -> E;
 
     #[inline]
     fn expect_token(&mut self) -> Result<Token, E> {
@@ -1132,23 +1139,23 @@ mod tests {
     }
 
     impl<Iter: Iterator<Token>> Deserializer<Error> for TokenDeserializer<Iter> {
-        fn end_of_stream_error(&self) -> Error {
+        fn end_of_stream_error(&mut self) -> Error {
             EndOfStream
         }
 
-        fn syntax_error(&self, _token: Token, _expected: &[TokenKind]) -> Error {
+        fn syntax_error(&mut self, _token: Token, _expected: &[TokenKind]) -> Error {
             SyntaxError
         }
 
-        fn unexpected_name_error(&self, _token: Token) -> Error {
+        fn unexpected_name_error(&mut self, _token: Token) -> Error {
             SyntaxError
         }
 
-        fn conversion_error(&self, _token: Token) -> Error {
+        fn conversion_error(&mut self, _token: Token) -> Error {
             SyntaxError
         }
 
-        fn missing_field_error(&self, _field: &'static str) -> Error {
+        fn missing_field_error(&mut self, _field: &'static str) -> Error {
             IncompleteValue
         }
     }

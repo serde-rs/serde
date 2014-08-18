@@ -647,23 +647,23 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
 }
 
 impl de::Deserializer<ParserError> for JsonDeserializer {
-    fn end_of_stream_error(&self) -> ParserError {
+    fn end_of_stream_error(&mut self) -> ParserError {
         SyntaxError(EOFWhileParsingValue, 0, 0)
     }
 
-    fn syntax_error(&self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
+    fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
         SyntaxError(InvalidSyntax, 0, 0)
     }
 
-    fn unexpected_name_error(&self, _token: de::Token) -> ParserError {
+    fn unexpected_name_error(&mut self, _token: de::Token) -> ParserError {
         SyntaxError(InvalidSyntax, 0, 0)
     }
 
-    fn conversion_error(&self, _token: de::Token) -> ParserError {
+    fn conversion_error(&mut self, _token: de::Token) -> ParserError {
         SyntaxError(InvalidSyntax, 0, 0)
     }
 
-    fn missing_field_error(&self, field: &'static str) -> ParserError {
+    fn missing_field_error(&mut self, field: &'static str) -> ParserError {
         SyntaxError(MissingField(field), 0, 0)
     }
 
@@ -2023,23 +2023,23 @@ impl<T: Iterator<char>> Parser<T> {
 }
 
 impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
-    fn end_of_stream_error(&self) -> ParserError {
+    fn end_of_stream_error(&mut self) -> ParserError {
         SyntaxError(EOFWhileParsingValue, self.line, self.col)
     }
 
-    fn syntax_error(&self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
+    fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
         SyntaxError(InvalidSyntax, self.line, self.col)
     }
 
-    fn unexpected_name_error(&self, _token: de::Token) -> ParserError {
+    fn unexpected_name_error(&mut self, _token: de::Token) -> ParserError {
         SyntaxError(InvalidSyntax, self.line, self.col)
     }
 
-    fn conversion_error(&self, _token: de::Token) -> ParserError {
+    fn conversion_error(&mut self, _token: de::Token) -> ParserError {
         SyntaxError(InvalidSyntax, self.line, self.col)
     }
 
-    fn missing_field_error(&self, field: &'static str) -> ParserError {
+    fn missing_field_error(&mut self, field: &'static str) -> ParserError {
         SyntaxError(MissingField(field), self.line, self.col)
     }
 
