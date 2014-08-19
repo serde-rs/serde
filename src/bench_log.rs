@@ -45,12 +45,9 @@ impl ser::Serializable for HttpProtocol {
     }
 }
 
-impl de::Deserializable for HttpProtocol {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for HttpProtocol {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
         d.expect_from_primitive(token)
     }
 }
@@ -80,12 +77,9 @@ impl ser::Serializable for HttpMethod {
     }
 }
 
-impl de::Deserializable for HttpMethod {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for HttpMethod {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
         d.expect_from_primitive(token)
     }
 }
@@ -108,12 +102,9 @@ impl ser::Serializable for CacheStatus {
     }
 }
 
-impl de::Deserializable for CacheStatus {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for CacheStatus {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
         d.expect_from_primitive(token)
     }
 }
@@ -145,12 +136,9 @@ impl ser::Serializable for OriginProtocol {
     }
 }
 
-impl de::Deserializable for OriginProtocol {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for OriginProtocol {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
         d.expect_from_primitive(token)
     }
 }
@@ -174,12 +162,9 @@ impl ser::Serializable for ZonePlan {
     }
 }
 
-impl de::Deserializable for ZonePlan {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for ZonePlan {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
         d.expect_from_primitive(token)
     }
 }
@@ -454,12 +439,9 @@ impl ser::Serializable for Country {
     }
 }
 
-impl de::Deserializable for Country {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Country {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<Country, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<Country, E> {
         d.expect_from_primitive(token)
     }
 }

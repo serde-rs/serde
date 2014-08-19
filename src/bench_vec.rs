@@ -316,7 +316,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable
+            T: de::Deserializable<IntDeserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
@@ -388,7 +388,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable
+            T: de::Deserializable<U8Deserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
@@ -398,8 +398,8 @@ mod deserializer {
 //////////////////////////////////////////////////////////////////////////////
 
 fn run_decoder<
-    E: Show,
     D: Decoder<E>,
+    E: Show,
     T: Clone + PartialEq + Show + Decodable<D, E>
 >(mut d: D, value: T) {
     let v: T = Decodable::decode(&mut d).unwrap();
@@ -408,9 +408,9 @@ fn run_decoder<
 }
 
 fn run_deserializer<
-    E: Show,
     D: Deserializer<E>,
-    T: Clone + PartialEq + Show + Deserializable
+    E: Show,
+    T: Clone + PartialEq + Show + Deserializable<D, E>
 >(mut d: D, value: T) {
     let v: T = Deserializable::deserialize(&mut d).unwrap();
 

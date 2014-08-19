@@ -248,7 +248,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable
+            T: de::Deserializable<IntDeserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
@@ -298,9 +298,9 @@ fn bench_decoder_100(b: &mut Bencher) {
 }
 
 fn run_deserializer<
-    E: Show,
     D: Deserializer<E>,
-    T: Clone + PartialEq + Show + Deserializable
+    E: Show,
+    T: Clone + PartialEq + Show + Deserializable<D, E>
 >(mut d: D, value: T) {
     let v: T = Deserializable::deserialize(&mut d).unwrap();
 

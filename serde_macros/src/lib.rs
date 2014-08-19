@@ -73,8 +73,22 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
         span: sp,
         attributes: vec!(),
         path: Path::new(vec!("serde", "ser", "Serializable")),
+        /*
+        path: Path::new_(vec!("serde", "ser", "Serializable"), None,
+                         vec!(box Literal(Path::new_local("__S")),
+                              box Literal(Path::new_local("__E"))), true),
+                              */
         additional_bounds: Vec::new(),
         generics: LifetimeBounds::empty(),
+        /*
+        generics: LifetimeBounds {
+            lifetimes: Vec::new(),
+            bounds: vec!(("__S", None, vec!(Path::new_(
+                            vec!("serde", "ser", "Serializer"), None,
+                            vec!(box Literal(Path::new_local("__E"))), true))),
+                         ("__E", None, vec!()))
+        },
+        */
         methods: vec!(
             MethodDef {
                 name: "serialize",
@@ -204,36 +218,21 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
     let trait_def = TraitDef {
         span: span,
         attributes: Vec::new(),
-        path: Path::new(vec!("serde", "de", "Deserializable")),
+        path: Path::new_(vec!("serde", "de", "Deserializable"), None,
+                         vec!(box Literal(Path::new_local("__D")),
+                              box Literal(Path::new_local("__E"))), true),
         additional_bounds: Vec::new(),
-        generics: LifetimeBounds::empty(),
+        generics: LifetimeBounds {
+            lifetimes: Vec::new(),
+            bounds: vec!(("__D", None, vec!(Path::new_(
+                            vec!("serde", "de", "Deserializer"), None,
+                            vec!(box Literal(Path::new_local("__E"))), true))),
+                         ("__E", None, vec!()))
+        },
         methods: vec!(
             MethodDef {
                 name: "deserialize_token",
-                generics: LifetimeBounds {
-                    lifetimes: Vec::new(),
-                    bounds: vec!(
-                        (
-                            "__D",
-                            None,
-                            vec!(
-                                Path::new_(
-                                    vec!("serde", "de", "Deserializer"),
-                                    None,
-                                    vec!(
-                                        box Literal(Path::new_local("__E"))
-                                    ),
-                                    true
-                                )
-                            )
-                        ),
-                        (
-                            "__E",
-                            None,
-                            vec!(),
-                        ),
-                    )
-                },
+                generics: LifetimeBounds::empty(),
                 explicit_self: None,
                 args: vec!(
                     Ptr(

@@ -252,7 +252,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable
+            T: de::Deserializable<AnimalDeserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }

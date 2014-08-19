@@ -521,12 +521,9 @@ impl ser::Serializable for Json {
     }
 }
 
-impl de::Deserializable for Json {
+impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Json {
     #[inline]
-    fn deserialize_token<
-        D: de::Deserializer<E>,
-        E
-    >(d: &mut D, token: de::Token) -> Result<Json, E> {
+    fn deserialize_token(d: &mut D, token: de::Token) -> Result<Json, E> {
         match token {
             de::Null => Ok(Null),
             de::Bool(x) => Ok(Boolean(x)),
@@ -665,7 +662,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 
     #[inline]
     fn missing_field<
-        T: de::Deserializable
+        T: de::Deserializable<JsonDeserializer, ParserError>
     >(&mut self, _field: &'static str) -> Result<T, ParserError> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
@@ -675,7 +672,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserializable
+        U: de::Deserializable<JsonDeserializer, ParserError>
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
@@ -1592,8 +1589,8 @@ impl Stack {
 
 /// A streaming JSON parser implemented as an iterator of JsonEvent, consuming
 /// an iterator of char.
-pub struct Parser<T> {
-    rdr: T,
+pub struct Parser<Iter> {
+    rdr: Iter,
     ch: Option<char>,
     line: uint,
     col: uint,
@@ -1601,7 +1598,7 @@ pub struct Parser<T> {
     state_stack: Vec<ParserState>,
 }
 
-impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
+impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<Iter> {
     #[inline]
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
         let state = match self.state_stack.pop() {
@@ -1632,9 +1629,9 @@ impl<T: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<T> {
     }
 }
 
-impl<T: Iterator<char>> Parser<T> {
+impl<Iter: Iterator<char>> Parser<Iter> {
     /// Creates the JSON parser.
-    pub fn new(rdr: T) -> Parser<T> {
+    pub fn new(rdr: Iter) -> Parser<Iter> {
         let mut p = Parser {
             rdr: rdr,
             ch: Some('\x00'),
@@ -2027,7 +2024,7 @@ impl<T: Iterator<char>> Parser<T> {
     }
 }
 
-impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
+impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
     fn end_of_stream_error(&mut self) -> ParserError {
         SyntaxError(EOFWhileParsingValue, self.line, self.col)
     }
@@ -2046,7 +2043,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
 
     #[inline]
     fn missing_field<
-        T: de::Deserializable
+        T: de::Deserializable<Parser<Iter>, ParserError>
     >(&mut self, _field: &'static str) -> Result<T, ParserError> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
@@ -2056,7 +2053,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserializable
+        U: de::Deserializable<Parser<Iter>, ParserError>
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
@@ -2113,7 +2110,7 @@ impl<T: Iterator<char>> de::Deserializer<ParserError> for Parser<T> {
 /// Decodes a json value from an `Iterator<Char>`.
 pub fn from_iter<
     Iter: Iterator<char>,
-    T: de::Deserializable
+    T: de::Deserializable<Parser<Iter>, ParserError>
 >(iter: Iter) -> Result<T, ParserError> {
     let mut parser = Parser::new(iter);
     let value = try!(de::Deserializable::deserialize(&mut parser));
@@ -2128,14 +2125,15 @@ pub fn from_iter<
 
 /// Decodes a json value from a string
 pub fn from_str<
-    T: de::Deserializable
->(s: &str) -> Result<T, BuilderError> {
+    'a,
+    T: de::Deserializable<Parser<str::Chars<'a>>, ParserError>
+>(s: &'a str) -> Result<T, BuilderError> {
     from_iter(s.chars())
 }
 
 /// Decodes a json value from a `Json`.
 pub fn from_json<
-    T: de::Deserializable
+    T: de::Deserializable<JsonDeserializer, ParserError>
 >(json: Json) -> Result<T, ParserError> {
     let mut d = JsonDeserializer::new(json);
     de::Deserializable::deserialize(&mut d)
@@ -2304,11 +2302,12 @@ impl<A:ToJson> ToJson for Option<A> {
 #[cfg(test)]
 mod tests {
     use std::fmt::Show;
+    use std::str;
     use std::collections::TreeMap;
 
     use super::{Json, Null, Boolean, Floating, String, List, Object};
-    use super::{ParserError, from_iter, from_str};
-    use super::{from_json, ToJson};
+    use super::{Parser, ParserError, from_iter, from_str};
+    use super::{JsonDeserializer, ToJson, from_json};
     use super::{
         EOFWhileParsingList,
         EOFWhileParsingObject,
@@ -2751,8 +2750,9 @@ mod tests {
 
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
-        T: Show + de::Deserializable
-    >(errors: &[(&str, ParserError)]) {
+        'a,
+        T: Show + de::Deserializable<Parser<str::Chars<'a>>, ParserError>
+    >(errors: &[(&'a str, ParserError)]) {
         for &(s, ref err) in errors.iter() {
             let v: Result<T, ParserError> = from_iter(s.chars());
             assert_eq!(v.unwrap_err(), *err);
@@ -2760,8 +2760,9 @@ mod tests {
     }
 
     fn test_parse_ok<
-        T: PartialEq + Show + ToJson + de::Deserializable
-    >(errors: &[(&str, T)]) {
+        'a,
+        T: PartialEq + Show + ToJson + de::Deserializable<Parser<str::Chars<'a>>, ParserError>
+    >(errors: &[(&'a str, T)]) {
         for &(s, ref value) in errors.iter() {
             let v: T = from_iter(s.chars()).unwrap();
             assert_eq!(v, *value);
@@ -2772,7 +2773,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserializable
+        T: PartialEq + Show + ToJson + de::Deserializable<JsonDeserializer, ParserError>
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();
