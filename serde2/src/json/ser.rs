@@ -65,34 +65,18 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     }
 
     fn visit_seq<
-        T: ser::Serialize<Serializer<W>, io::IoResult<()>>,
-        Iter: Iterator<T>
-    >(&mut self, mut iter: Iter) -> io::IoResult<()> {
-        try!(write!(self.writer, "["));
-        let mut first = true;
-        for elt in iter {
-            try!(self.visit_seq_elt(first, elt));
-            first = false;
-
-        }
-        write!(self.writer, "]")
-    }
-
-    fn visit_seq_elt<
-        T: ser::Serialize<Serializer<W>, io::IoResult<()>>
-    >(&mut self, first: bool, value: T) -> io::IoResult<()> {
-        if !first {
-            try!(write!(self.writer, ", "));
-        }
-
-        value.serialize(self)
-    }
-
-    fn visit_tuple<
         V: ser::Visitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
         try!(write!(self.writer, "["));
+
+        let mut first = true;
         loop {
+            if first {
+                first = false;
+            } else {
+                try!(write!(self.writer, ", "));
+            }
+
             match visitor.visit(self) {
                 Some(Ok(())) => { }
                 Some(Err(err)) => { return Err(err); }
@@ -102,29 +86,30 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
         write!(self.writer, "]")
     }
 
-    fn visit_tuple_struct<
-        V: ser::Visitor<Serializer<W>, io::IoResult<()>>
-    >(&mut self, _name: &'static str, visitor: V) -> io::IoResult<()> {
-        self.visit_tuple(visitor)
-    }
-
-
-    fn visit_enum<
-        V: ser::Visitor<Serializer<W>, io::IoResult<()>>
-    >(&mut self, _name: &'static str, _variant: &'static str, visitor: V) -> io::IoResult<()> {
-        self.visit_tuple(visitor)
+    fn visit_seq_elt<
+        T: ser::Serialize<Serializer<W>, io::IoResult<()>>
+    >(&mut self, value: T) -> io::IoResult<()> {
+        value.serialize(self)
     }
 
     fn visit_map<
-        K: ser::Serialize<Serializer<W>, io::IoResult<()>>,
-        V: ser::Serialize<Serializer<W>, io::IoResult<()>>,
-        Iter: Iterator<(K, V)>
-    >(&mut self, mut iter: Iter) -> io::IoResult<()> {
+        V: ser::Visitor<Serializer<W>, io::IoResult<()>>
+    >(&mut self, mut visitor: V) -> io::IoResult<()> {
         try!(write!(self.writer, "{{"));
+
         let mut first = true;
-        for (key, value) in iter {
-            try!(self.visit_map_elt(first, &key, &value))
-            first = false;
+        loop {
+            if first {
+                first = false;
+            } else {
+                try!(write!(self.writer, ", "));
+            }
+
+            match visitor.visit(self) {
+                Some(Ok(())) => { }
+                Some(Err(err)) => { return Err(err); }
+                None => { break; }
+            }
         }
         write!(self.writer, "}}")
     }
@@ -132,28 +117,10 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     fn visit_map_elt<
         K: ser::Serialize<Serializer<W>, io::IoResult<()>>,
         V: ser::Serialize<Serializer<W>, io::IoResult<()>>
-    >(&mut self, first: bool, key: K, value: V) -> io::IoResult<()> {
-        if !first {
-            try!(write!(self.writer, ", "));
-        }
-
+    >(&mut self, key: K, value: V) -> io::IoResult<()> {
         try!(key.serialize(self));
         try!(write!(self.writer, ": "));
         value.serialize(self)
-    }
-
-    fn visit_struct<
-        V: ser::Visitor<Serializer<W>, io::IoResult<()>>
-    >(&mut self, _name: &'static str, mut visitor: V) -> io::IoResult<()> {
-        try!(write!(self.writer, "{{"));
-        loop {
-            match visitor.visit(self) {
-                Some(Ok(())) => { }
-                Some(Err(err)) => { return Err(err); }
-                None => { break; }
-            }
-        }
-        write!(self.writer, "}}")
     }
 }
 

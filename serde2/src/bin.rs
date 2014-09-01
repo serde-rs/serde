@@ -14,7 +14,7 @@ struct Foo {
 
 impl<S: serde2::VisitorState<R>, R> serde2::Serialize<S, R> for Foo {
     fn serialize(&self, state: &mut S) -> R {
-        state.visit_struct("Foo", FooSerialize {
+        state.visit_named_map("Foo", FooSerialize {
             value: self,
             state: 0,
         })
@@ -31,15 +31,15 @@ impl<'a, S: serde2::VisitorState<R>, R> serde2::Visitor<S, R> for FooSerialize<'
         match self.state {
             0 => {
                 self.state += 1;
-                Some(state.visit_map_elt(true, "x", &self.value.x))
+                Some(state.visit_map_elt("x", &self.value.x))
             }
             1 => {
                 self.state += 1;
-                Some(state.visit_map_elt(false, "y", &self.value.y))
+                Some(state.visit_map_elt("y", &self.value.y))
             }
             2 => {
                 self.state += 1;
-                Some(state.visit_map_elt(false, "z", &self.value.z))
+                Some(state.visit_map_elt("z", &self.value.z))
             }
             _ => {
                 None
