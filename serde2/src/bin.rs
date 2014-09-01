@@ -12,7 +12,7 @@ struct Foo {
     z: &'static str,
 }
 
-impl<S: serde2::SerializeState<R>, R> serde2::Serialize<S, R> for Foo {
+impl<S: serde2::VisitorState<R>, R> serde2::Serialize<S, R> for Foo {
     fn serialize(&self, state: &mut S) -> R {
         state.serialize_struct("Foo", FooSerialize {
             value: self,
@@ -26,7 +26,7 @@ struct FooSerialize<'a> {
     state: uint,
 }
 
-impl<'a, S: serde2::SerializeState<R>, R> serde2::Visitor<S, R> for FooSerialize<'a> {
+impl<'a, S: serde2::VisitorState<R>, R> serde2::Visitor<S, R> for FooSerialize<'a> {
     fn visit(&mut self, state: &mut S) -> Option<R> {
         match self.state {
             0 => {

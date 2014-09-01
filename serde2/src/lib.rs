@@ -24,7 +24,7 @@ pub trait Visitor<S, R> {
     }
 }
 
-pub trait SerializeState<R> {
+pub trait VisitorState<R> {
     fn serialize_int(&mut self, value: int) -> R;
 
     fn serialize_str(&mut self, value: &'static str) -> R;
@@ -68,20 +68,20 @@ pub trait SerializeState<R> {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<S: SerializeState<R>, R> Serialize<S, R> for int {
+impl<S: VisitorState<R>, R> Serialize<S, R> for int {
     fn serialize(&self, state: &mut S) -> R {
         state.serialize_int(*self)
     }
 }
 
-impl<S: SerializeState<R>, R> Serialize<S, R> for &'static str {
+impl<S: VisitorState<R>, R> Serialize<S, R> for &'static str {
     fn serialize(&self, state: &mut S) -> R {
         state.serialize_str(*self)
     }
 }
 
 impl<
-    S: SerializeState<R>,
+    S: VisitorState<R>,
     R,
     T: Serialize<S, R>
 > Serialize<S, R> for Vec<T> {
@@ -91,7 +91,7 @@ impl<
 }
 
 impl<
-    S: SerializeState<R>,
+    S: VisitorState<R>,
     R,
     K: Serialize<S, R> + Ord,
     V: Serialize<S, R>
@@ -103,7 +103,7 @@ impl<
 
 impl<
     'a,
-    S: SerializeState<R>,
+    S: VisitorState<R>,
     R,
     T0: Serialize<S, R>,
     T1: Serialize<S, R>
@@ -120,7 +120,7 @@ struct Tuple2Serialize<'a, T0, T1> {
 
 impl<
     'a,
-    S: SerializeState<R>,
+    S: VisitorState<R>,
     R,
     T0: Serialize<S, R>,
     T1: Serialize<S, R>
@@ -151,7 +151,7 @@ impl<
 
 impl<
     'a,
-    S: SerializeState<R>,
+    S: VisitorState<R>,
     R,
     T: Serialize<S, R>
 > Serialize<S, R> for &'a T {
@@ -172,7 +172,7 @@ pub enum Token {
     End,
 }
 
-pub trait TokenState<R>: SerializeState<R> {
+pub trait TokenState<R>: VisitorState<R> {
     fn serialize(&mut self, token: Token) -> R;
 }
 
@@ -200,7 +200,7 @@ impl TokenState<()> for GatherTokens {
     }
 }
 
-impl SerializeState<()> for GatherTokens {
+impl VisitorState<()> for GatherTokens {
     fn serialize_int(&mut self, value: int) -> () {
         self.serialize(Int(value))
     }
@@ -314,7 +314,7 @@ impl<W: Writer> FormatState<W> {
     }
 }
 
-impl<W: Writer> SerializeState<IoResult<()>> for FormatState<W> {
+impl<W: Writer> VisitorState<IoResult<()>> for FormatState<W> {
     fn serialize_int(&mut self, value: int) -> IoResult<()> {
         write!(self.writer, "{}", value)
     }
@@ -438,7 +438,7 @@ impl JsonSerializer {
     }
 }
 
-impl SerializeState<Json> for JsonSerializer {
+impl VisitorState<Json> for JsonSerializer {
     fn serialize_int(&mut self, value: int) -> Json {
         Integer(value)
     }
