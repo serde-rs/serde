@@ -4,19 +4,19 @@ use std::collections::TreeMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-trait Serialize<S, R> {
+pub trait Serialize<S, R> {
     fn serialize(&self, state: &mut S) -> R;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-trait Serializer<S, R> {
+pub trait Serializer<S, R> {
     fn hash<T: Serialize<S, R>>(&self, value: &T) -> R;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-trait Visitor<S, R> {
+pub trait Visitor<S, R> {
     fn visit(&mut self, state: &mut S) -> Option<R>;
 
     fn size_hint(&self) -> (uint, Option<uint>) {
@@ -24,7 +24,7 @@ trait Visitor<S, R> {
     }
 }
 
-trait SerializeState<R> {
+pub trait SerializeState<R> {
     fn serialize_int(&mut self, value: int) -> R;
 
     fn serialize_str(&mut self, value: &'static str) -> R;
@@ -163,7 +163,7 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Show)]
-enum Token {
+pub enum Token {
     Int(int),
     Str(&'static str),
     SeqStart(uint),
@@ -172,24 +172,24 @@ enum Token {
     End,
 }
 
-trait TokenState<R>: SerializeState<R> {
+pub trait TokenState<R>: SerializeState<R> {
     fn serialize(&mut self, token: Token) -> R;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct GatherTokens {
+pub struct GatherTokens {
     tokens: Vec<Token>,
 }
 
 impl GatherTokens {
-    fn new() -> GatherTokens {
+    pub fn new() -> GatherTokens {
         GatherTokens {
             tokens: Vec::new(),
         }
     }
 
-    fn unwrap(self) -> Vec<Token> {
+    pub fn unwrap(self) -> Vec<Token> {
         self.tokens
     }
 }
@@ -298,15 +298,19 @@ impl SerializeState<()> for GatherTokens {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct FormatState<W: Writer> {
+pub struct FormatState<W: Writer> {
     writer: W,
 }
 
 impl<W: Writer> FormatState<W> {
-    fn new(writer: W) -> FormatState<W> {
+    pub fn new(writer: W) -> FormatState<W> {
         FormatState {
             writer: writer,
         }
+    }
+
+    pub fn unwrap(self) -> W {
+        self.writer
     }
 }
 
@@ -539,17 +543,13 @@ impl SerializeState<Json> for JsonSerializer {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/*
 pub fn to_format_vec<
-    W: Writer,
-    T: Serialize<FormatState<W>, IoResult<()>>
+    T: Serialize<FormatState<io::MemWriter>, IoResult<()>>
 >(value: &T) -> IoResult<Vec<u8>> {
-    let mut writer = io::MemWriter::new();
-    {
-        let mut w = FormatState::new(writer.by_ref());
-        try!(value.serialize(&mut w));
-    }
-    Ok(writer.unwrap())
+    let writer = io::MemWriter::new();
+    let mut state = FormatState::new(writer);
+    try!(value.serialize(&mut state));
+    Ok(state.unwrap().unwrap())
 }
 
 pub fn to_format_string<
@@ -557,128 +557,4 @@ pub fn to_format_string<
 >(value: &T) -> IoResult<Result<String, Vec<u8>>> {
     let vec = try!(to_format_vec(value));
     Ok(String::from_utf8(vec))
-}
-*/
-
-///////////////////////////////////////////////////////////////////////////////
-
-struct Foo {
-    x: int,
-    y: int,
-    z: &'static str,
-}
-
-impl<S: SerializeState<R>, R> Serialize<S, R> for Foo {
-    fn serialize(&self, state: &mut S) -> R {
-        let mut x = FooSerialize {
-            value: self,
-            state: 0,
-            foo_state: state,
-        };
-        x.foo_state.serialize_struct("Foo", &mut x)
-        /*
-        state.serialize_struct("Foo", FooSerialize {
-            value: self,
-            state: 0,
-            foo_state: state,
-        })
-        */
-    }
-}
-
-struct FooSerialize<'a, S> {
-    value: &'a Foo,
-    state: uint,
-    foo_state: &'a mut S,
-}
-
-impl<'a, S: SerializeState<R>, R> Visitor<S, R> for FooSerialize<'a, S> {
-    fn visit(&mut self, state: &mut S) -> Option<R> {
-        match self.state {
-            0 => {
-                self.state += 1;
-                Some(state.serialize_map_elt(true, "x", &self.value.x))
-            }
-            1 => {
-                self.state += 1;
-                Some(state.serialize_map_elt(false, "y", &self.value.y))
-            }
-            2 => {
-                self.state += 1;
-                Some(state.serialize_map_elt(false, "z", &self.value.z))
-            }
-            _ => {
-                None
-            }
-        }
-    }
-
-    fn size_hint(&self) -> (uint, Option<uint>) {
-        let size = 3 - self.state;
-        (size, Some(size))
-    }
-}
-
-fn main() {
-
-    let value = 5i;
-
-    let mut s = GatherTokens::new();
-    value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
-
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
-    println!("");
-
-    ////
-
-    let value = vec!(1i, 2, 3);
-
-    let mut s = GatherTokens::new();
-    value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
-
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
-    println!("");
-
-    ////
-
-    let mut value = TreeMap::new();
-    value.insert("a", 1i);
-    value.insert("b", 2);
-    value.insert("c", 3);
-
-    let mut s = GatherTokens::new();
-    value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
-
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
-    println!("");
-
-    ////
-
-    /*
-    println!("{}", to_format_vec(&5i));
-    println!("{}", to_format_string(&5i));
-    */
-
-    let value = Foo { x: 1, y: 2, z: "abc" };
-
-    let mut s = GatherTokens::new();
-    value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
-
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
-    println!("");
-
-    ////
-
-    let value = (1i, "abc");
-
-    let mut s = GatherTokens::new();
-    value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
-
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
-    println!("");
 }
