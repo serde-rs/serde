@@ -35,12 +35,9 @@ enum HttpProtocol {
     HTTP11,
 }
 
-impl ser::Serializable for HttpProtocol {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for HttpProtocol {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -67,12 +64,9 @@ enum HttpMethod {
     PATCH,
 }
 
-impl ser::Serializable for HttpMethod {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for HttpMethod {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -92,12 +86,9 @@ enum CacheStatus {
     Hit,
 }
 
-impl ser::Serializable for CacheStatus {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for CacheStatus {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -126,12 +117,9 @@ enum OriginProtocol {
     HTTPS,
 }
 
-impl ser::Serializable for OriginProtocol {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for OriginProtocol {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -152,12 +140,9 @@ enum ZonePlan {
     ENT,
 }
 
-impl ser::Serializable for ZonePlan {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for ZonePlan {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -429,12 +414,9 @@ enum Country {
 	ZW,
 }
 
-impl ser::Serializable for Country {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Country {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
@@ -799,12 +781,10 @@ fn bench_serializer_mem_writer(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let mut wr = MemWriter::with_capacity(1024);
-        {
-            let mut serializer = json::Serializer::new(wr.by_ref());
-            log.serialize(&mut serializer).unwrap();
-        }
-        let _json = wr.unwrap();
+        let wr = MemWriter::with_capacity(1024);
+        let mut serializer = json::Serializer::new(wr);
+        log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -816,12 +796,10 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let mut wr = MyMemWriter0::with_capacity(1024);
-        {
-            let mut serializer = json::Serializer::new(wr.by_ref());
-            log.serialize(&mut serializer).unwrap();
-        }
-        let _json = wr.unwrap();
+        let wr = MyMemWriter0::with_capacity(1024);
+        let mut serializer = json::Serializer::new(wr);
+        log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -833,12 +811,10 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let mut wr = MyMemWriter1::with_capacity(1024);
-        {
-            let mut serializer = json::Serializer::new(wr.by_ref());
-            log.serialize(&mut serializer).unwrap();
-        }
-        let _json = wr.unwrap();
+        let wr = MyMemWriter1::with_capacity(1024);
+        let mut serializer = json::Serializer::new(wr);
+        log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -850,12 +826,10 @@ fn bench_serializer_my_mem_writer2(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let mut wr = MyMemWriter2::with_capacity(1024);
-        {
-            let mut serializer = json::Serializer::new(wr.by_ref());
-            log.serialize(&mut serializer).unwrap();
-        }
-        let _json = wr.unwrap();
+        let wr = MyMemWriter2::with_capacity(1024);
+        let mut serializer = json::Serializer::new(wr);
+        log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -867,12 +841,10 @@ fn bench_serializer_my_mem_writer3(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let mut wr = MyMemWriter3::with_capacity(1024);
-        {
-            let mut serializer = json::Serializer::new(wr.by_ref());
-            log.serialize(&mut serializer).unwrap();
-        }
-        let _json = wr.unwrap();
+        let wr = MyMemWriter3::with_capacity(1024);
+        let mut serializer = json::Serializer::new(wr);
+        log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -1256,10 +1228,10 @@ fn bench_manual_my_mem_writer3_escape(b: &mut Bencher) {
     });
 }
 
-fn direct<W: Writer>(mut wr: W, log: &Log) {
+fn direct<W: Writer>(wr: W, log: &Log) {
     use ser::Serializer;
 
-    let mut serializer = json::Serializer::new(wr.by_ref());
+    let mut serializer = json::Serializer::new(wr);
     serializer.serialize_struct_start("Log", 12).unwrap();
 
     serializer.serialize_struct_elt("timestamp", &log.timestamp).unwrap();

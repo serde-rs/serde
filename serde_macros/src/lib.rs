@@ -72,15 +72,10 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
     let trait_def = TraitDef {
         span: sp,
         attributes: vec!(),
-        path: Path::new(vec!("serde", "ser", "Serializable")),
-        /*
         path: Path::new_(vec!("serde", "ser", "Serializable"), None,
                          vec!(box Literal(Path::new_local("__S")),
                               box Literal(Path::new_local("__E"))), true),
-                              */
         additional_bounds: Vec::new(),
-        generics: LifetimeBounds::empty(),
-        /*
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
             bounds: vec!(("__S", None, vec!(Path::new_(
@@ -88,32 +83,10 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                             vec!(box Literal(Path::new_local("__E"))), true))),
                          ("__E", None, vec!()))
         },
-        */
         methods: vec!(
             MethodDef {
                 name: "serialize",
-                generics: LifetimeBounds {
-                    lifetimes: Vec::new(),
-                    bounds: vec!(
-                        (
-                            "__S",
-                            None,
-                            vec!(
-                                Path::new_(
-                                    vec!("serde", "ser", "Serializer"),
-                                    None,
-                                    vec!(box Literal(Path::new_local("__E"))),
-                                    true
-                                )
-                            ),
-                        ),
-                        (
-                            "__E",
-                            None,
-                            vec!(),
-                        ),
-                    )
-                },
+                generics: LifetimeBounds::empty(),
                 explicit_self: borrowed_explicit_self(),
                 args: vec!(Ptr(box Literal(Path::new_local("__S")),
                             Borrowed(None, MutMutable))),

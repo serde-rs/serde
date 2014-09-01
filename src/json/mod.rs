@@ -489,12 +489,9 @@ impl fmt::Show for Json {
     }
 }
 
-impl ser::Serializable for Json {
+impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Json {
     #[inline]
-    fn serialize<
-        S: ser::Serializer<E>,
-        E
-    >(&self, s: &mut S) -> Result<(), E> {
+    fn serialize(&self, s: &mut S) -> Result<(), E> {
         match *self {
             Null => {
                 ().serialize(s)
@@ -913,6 +910,11 @@ impl<W: Writer> Serializer<W> {
             first: true,
         }
     }
+
+    /// Unwrap the Writer from the Serializer.
+    pub fn unwrap(self) -> W {
+        self.wr
+    }
 }
 
 impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
@@ -1008,7 +1010,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_tuple_elt<
-        T: Serializable
+        T: Serializable<Serializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
@@ -1031,7 +1033,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_struct_elt<
-        T: Serializable
+        T: Serializable<Serializer<W>, io::IoError>
     >(&mut self, name: &str, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
@@ -1058,7 +1060,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_enum_elt<
-        T: Serializable
+        T: Serializable<Serializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
@@ -1075,7 +1077,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_option<
-        T: Serializable
+        T: Serializable<Serializer<W>, io::IoError>
     >(&mut self, v: &Option<T>) -> IoResult<()> {
         match *v {
             Some(ref v) => {
@@ -1089,7 +1091,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_seq<
-        T: Serializable,
+        T: Serializable<Serializer<W>, io::IoError>,
         Iter: Iterator<T>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
@@ -1108,8 +1110,8 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_map<
-        K: Serializable,
-        V: Serializable,
+        K: Serializable<Serializer<W>, io::IoError>,
+        V: Serializable<Serializer<W>, io::IoError>,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
@@ -1145,6 +1147,11 @@ impl<W: Writer> PrettySerializer<W> {
             indent: 0,
             first: true,
         }
+    }
+
+    /// Unwrap the Writer from the Serializer.
+    pub fn unwrap(self) -> W {
+        self.wr
     }
 
     #[inline]
@@ -1267,7 +1274,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_tuple_elt<
-        T: Serializable
+        T: Serializable<PrettySerializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         value.serialize(self)
@@ -1286,7 +1293,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_struct_elt<
-        T: Serializable
+        T: Serializable<PrettySerializer<W>, io::IoError>
     >(&mut self, name: &str, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         try!(self.serialize_str(name));
@@ -1311,7 +1318,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_enum_elt<
-        T: Serializable
+        T: Serializable<PrettySerializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         value.serialize(self)
@@ -1325,7 +1332,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_option<
-        T: Serializable
+        T: Serializable<PrettySerializer<W>, io::IoError>
     >(&mut self, v: &Option<T>) -> IoResult<()> {
         match *v {
             Some(ref v) => {
@@ -1339,7 +1346,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_seq<
-        T: Serializable,
+        T: Serializable<PrettySerializer<W>, io::IoError>,
         Iter: Iterator<T>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
@@ -1355,8 +1362,8 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_map<
-        K: Serializable,
-        V: Serializable,
+        K: Serializable<PrettySerializer<W>, io::IoError>,
+        V: Serializable<PrettySerializer<W>, io::IoError>,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
@@ -1375,36 +1382,40 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
 /// Encode the specified struct into a json `[u8]` buffer.
 #[inline]
-pub fn to_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
-    let mut wr = MemWriter::with_capacity(1024);
-    {
-        let mut serializer = Serializer::new(wr.by_ref());
-        // We are writing to a MemWriter, which doesn't fail. So we can ignore
-        // the error.
-        value.serialize(&mut serializer).unwrap();
-    }
-    wr.unwrap()
+pub fn to_vec<
+    T: ser::Serializable<Serializer<MemWriter>, io::IoError>
+>(value: &T) -> Vec<u8> {
+    let wr = MemWriter::with_capacity(1024);
+    let mut serializer = Serializer::new(wr);
+    // We are writing to a MemWriter, which doesn't fail. So we can ignore
+    // the error.
+    value.serialize(&mut serializer).unwrap();
+    serializer.unwrap().unwrap()
 }
 
 /// Encode the specified struct into a json `String` buffer.
 #[inline]
-pub fn to_string<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
+pub fn to_string<
+    T: ser::Serializable<Serializer<MemWriter>, io::IoError>
+>(value: &T) -> Result<String, Vec<u8>> {
     let buf = to_vec(value);
     String::from_utf8(buf)
 }
 
 /// Encode the specified struct into a json `[u8]` buffer.
-pub fn to_pretty_vec<T: ser::Serializable>(value: &T) -> Vec<u8> {
-    let mut wr = MemWriter::new();
-    {
-        let mut serializer = PrettySerializer::new(wr.by_ref());
-        value.serialize(&mut serializer).unwrap();
-    }
-    wr.unwrap()
+pub fn to_pretty_vec<
+    T: ser::Serializable<PrettySerializer<MemWriter>, io::IoError>
+>(value: &T) -> Vec<u8> {
+    let wr = MemWriter::new();
+    let mut serializer = PrettySerializer::new(wr);
+    value.serialize(&mut serializer).unwrap();
+    serializer.unwrap().unwrap()
 }
 
 /// Encode the specified struct into a json `String` buffer.
-pub fn to_pretty_string<T: ser::Serializable>(value: &T) -> Result<String, Vec<u8>> {
+pub fn to_pretty_string<
+    T: ser::Serializable<PrettySerializer<MemWriter>, io::IoError>
+>(value: &T) -> Result<String, Vec<u8>> {
     let buf = to_pretty_vec(value);
     String::from_utf8(buf)
 }
@@ -2302,6 +2313,7 @@ impl<A:ToJson> ToJson for Option<A> {
 #[cfg(test)]
 mod tests {
     use std::fmt::Show;
+    use std::io;
     use std::str;
     use std::collections::TreeMap;
 
@@ -2321,7 +2333,7 @@ mod tests {
         SyntaxError,
     };
     use de;
-    use ser::Serializable;
+    use ser::{Serializable, Serializer};
     use ser;
 
     macro_rules! treemap {
@@ -2400,7 +2412,7 @@ mod tests {
     }
 
     fn test_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serializable
+        T: PartialEq + Show + ToJson + ser::Serializable<super::Serializer<io::MemWriter>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -2414,7 +2426,7 @@ mod tests {
     }
 
     fn test_pretty_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serializable
+        T: PartialEq + Show + ToJson + ser::Serializable<super::PrettySerializer<io::MemWriter>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -3460,7 +3472,7 @@ mod tests {
             "{\"a\": 3}",
             box [
                 (ObjectStart,        box []),
-                  (NumberValue(3.0), box [Key("a")]),
+                  (F64Value(3.0), box [Key("a")]),
                 (ObjectEnd,          box []),
             ]
         );
@@ -3477,7 +3489,7 @@ mod tests {
             "{\"a\" : 1.0 ,\"b\": [ true ]}",
             box [
                 (ObjectStart,           box []),
-                  (NumberValue(1.0),    box [Key("a")]),
+                  (F64Value(1.0),    box [Key("a")]),
                   (ListStart,           box [Key("b")]),
                     (BooleanValue(true),box [Key("b"), Index(0)]),
                   (ListEnd,             box [Key("b")]),
@@ -3495,7 +3507,7 @@ mod tests {
             }"#,
             ~[
                 (ObjectStart,                   ~[]),
-                  (NumberValue(1.0),            ~[Key("a")]),
+                  (F64Value(1.0),            ~[Key("a")]),
                   (ListStart,                   ~[Key("b")]),
                     (BooleanValue(true),        ~[Key("b"), Index(0)]),
                     (StringValue("foo\nbar".to_string()),  ~[Key("b"), Index(1)]),
@@ -3554,8 +3566,8 @@ mod tests {
             "[3, 1]",
             box [
                 (ListStart,     box []),
-                    (NumberValue(3.0), box [Index(0)]),
-                    (NumberValue(1.0), box [Index(1)]),
+                    (F64Value(3.0), box [Index(0)]),
+                    (F64Value(1.0), box [Index(1)]),
                 (ListEnd,       box []),
             ]
         );
@@ -3563,8 +3575,8 @@ mod tests {
             "\n[3, 2]\n",
             box [
                 (ListStart,     box []),
-                    (NumberValue(3.0), box [Index(0)]),
-                    (NumberValue(2.0), box [Index(1)]),
+                    (F64Value(3.0), box [Index(0)]),
+                    (F64Value(2.0), box [Index(1)]),
                 (ListEnd,       box []),
             ]
         );
@@ -3572,10 +3584,10 @@ mod tests {
             "[2, [4, 1]]",
             box [
                 (ListStart,                 box []),
-                    (NumberValue(2.0),      box [Index(0)]),
+                    (F64Value(2.0),      box [Index(0)]),
                     (ListStart,             box [Index(1)]),
-                        (NumberValue(4.0),  box [Index(1), Index(0)]),
-                        (NumberValue(1.0),  box [Index(1), Index(1)]),
+                        (F64Value(4.0),  box [Index(1), Index(0)]),
+                        (F64Value(1.0),  box [Index(1), Index(1)]),
                     (ListEnd,               box [Index(1)]),
                 (ListEnd,                   box []),
             ]
@@ -3731,12 +3743,12 @@ mod bench {
             list.push(json::Object(treemap!(
                 "a".to_string() => json::Boolean(true),
                 "b".to_string() => json::Null,
-                "c".to_string() => json::Number(3.1415),
+                "c".to_string() => json::F64(3.1415),
                 "d".to_string() => json::String("Hello world".to_string()),
                 "e".to_string() => json::List(vec!(
-                    json::Number(1f64),
-                    json::Number(2f64),
-                    json::Number(3f64)
+                    json::U64(1),
+                    json::U64(2),
+                    json::U64(3)
                 ))
             )));
         }
@@ -3832,7 +3844,7 @@ mod bench {
                 assert_eq!(parser.next(), Some(json::NullValue));
                 assert_eq!(parser.stack().top(), Some(json::Key("b")));
 
-                assert_eq!(parser.next(), Some(json::NumberValue(3.1415)));
+                assert_eq!(parser.next(), Some(json::F64Value(3.1415)));
                 assert_eq!(parser.stack().top(), Some(json::Key("c")));
 
                 assert_eq!(parser.next(), Some(json::StringValue("Hello world".to_string())));
@@ -3840,9 +3852,9 @@ mod bench {
 
                 assert_eq!(parser.next(), Some(json::ListStart));
                 assert_eq!(parser.stack().top(), Some(json::Key("e")));
-                assert_eq!(parser.next(), Some(json::NumberValue(1f64)));
-                assert_eq!(parser.next(), Some(json::NumberValue(2f64)));
-                assert_eq!(parser.next(), Some(json::NumberValue(3f64)));
+                assert_eq!(parser.next(), Some(json::U64Value(1)));
+                assert_eq!(parser.next(), Some(json::U64Value(2)));
+                assert_eq!(parser.next(), Some(json::U64Value(3)));
                 assert_eq!(parser.next(), Some(json::ListEnd));
 
                 assert_eq!(parser.next(), Some(json::ObjectEnd));
