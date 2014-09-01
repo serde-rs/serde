@@ -1,8 +1,8 @@
 extern crate serde2;
 
-use std::io;
 use std::collections::TreeMap;
-use serde2::{Serialize, FormatState, GatherTokens};
+use serde2::{Serialize, GatherTokens};
+use serde2::json;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -31,15 +31,15 @@ impl<'a, S: serde2::VisitorState<R>, R> serde2::Visitor<S, R> for FooSerialize<'
         match self.state {
             0 => {
                 self.state += 1;
-                Some(state.visit_map_elt("x", &self.value.x))
+                Some(state.visit_map_elt(true, "x", &self.value.x))
             }
             1 => {
                 self.state += 1;
-                Some(state.visit_map_elt("y", &self.value.y))
+                Some(state.visit_map_elt(false, "y", &self.value.y))
             }
             2 => {
                 self.state += 1;
-                Some(state.visit_map_elt("z", &self.value.z))
+                Some(state.visit_map_elt(false, "z", &self.value.z))
             }
             _ => {
                 None
@@ -62,7 +62,7 @@ fn main() {
     value.serialize(&mut s);
     println!("tokens: {}", s.unwrap());
 
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
+    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -73,7 +73,7 @@ fn main() {
     value.serialize(&mut s);
     println!("tokens: {}", s.unwrap());
 
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
+    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -87,7 +87,7 @@ fn main() {
     value.serialize(&mut s);
     println!("tokens: {}", s.unwrap());
 
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
+    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -103,7 +103,7 @@ fn main() {
     value.serialize(&mut s);
     println!("tokens: {}", s.unwrap());
 
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
+    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -114,6 +114,6 @@ fn main() {
     value.serialize(&mut s);
     println!("tokens: {}", s.unwrap());
 
-    value.serialize(&mut FormatState::new(io::stdout())).unwrap();
+    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
     println!("");
 }

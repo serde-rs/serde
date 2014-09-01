@@ -1,5 +1,3 @@
-use std::io::IoResult;
-use std::io;
 use std::collections::TreeMap;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -106,7 +104,7 @@ pub trait VisitorState<R> {
 
     fn visit_seq_elt<
         T: Serialize<Self, R>
-    >(&mut self, value: T) -> R;
+    >(&mut self, first: bool, value: T) -> R;
 
     fn visit_map<
         V: Visitor<Self, R>
@@ -122,7 +120,7 @@ pub trait VisitorState<R> {
     fn visit_map_elt<
         K: Serialize<Self, R>,
         V: Serialize<Self, R>
-    >(&mut self, key: K, value: V) -> R;
+    >(&mut self, first: bool, key: K, value: V) -> R;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,14 +139,16 @@ impl<S: VisitorState<R>, R> Serialize<S, R> for &'static str {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct SeqIteratorVisitor<Iter> {
+pub struct SeqIteratorVisitor<Iter> {
     iter: Iter,
+    first: bool,
 }
 
 impl<T, Iter: Iterator<T>> SeqIteratorVisitor<Iter> {
     pub fn new(iter: Iter) -> SeqIteratorVisitor<Iter> {
         SeqIteratorVisitor {
             iter: iter,
+            first: true,
         }
     }
 }
@@ -160,8 +160,11 @@ impl<
     R
 > Visitor<S, R> for SeqIteratorVisitor<Iter> {
     fn visit(&mut self, state: &mut S) -> Option<R> {
+        let first = self.first;
+        self.first = false;
+
         match self.iter.next() {
-            Some(value) => Some(state.visit_seq_elt(value)),
+            Some(value) => Some(state.visit_seq_elt(first, value)),
             None => None
         }
     }
@@ -185,8 +188,9 @@ impl<
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct MapIteratorVisitor<Iter> {
+pub struct MapIteratorVisitor<Iter> {
     iter: Iter,
+    first: bool,
 }
 
 impl<
@@ -196,6 +200,7 @@ impl<
     pub fn new(iter: Iter) -> MapIteratorVisitor<Iter> {
         MapIteratorVisitor {
             iter: iter,
+            first: true,
         }
     }
 }
@@ -208,8 +213,11 @@ impl<
     R
 > Visitor<S, R> for MapIteratorVisitor<Iter> {
     fn visit(&mut self, state: &mut S) -> Option<R> {
+        let first = self.first;
+        self.first = false;
+
         match self.iter.next() {
-            Some((key, value)) => Some(state.visit_map_elt(key, value)),
+            Some((key, value)) => Some(state.visit_map_elt(first, key, value)),
             None => None
         }
     }
@@ -261,12 +269,12 @@ impl<
             0 => {
                 self.state += 1;
                 let (ref value, _) = *self.value;
-                Some(state.visit_seq_elt(value))
+                Some(state.visit_seq_elt(true, value))
             }
             1 => {
                 self.state += 1;
                 let (_, ref value) = *self.value;
-                Some(state.visit_seq_elt(value))
+                Some(state.visit_seq_elt(false, value))
             }
             _ => {
                 None
@@ -382,7 +390,7 @@ impl VisitorState<()> for GatherTokens {
 
     fn visit_seq_elt<
         T: Serialize<GatherTokens, ()>
-    >(&mut self, value: T) -> () {
+    >(&mut self, _first: bool, value: T) -> () {
         value.serialize(self)
     }
 
@@ -417,134 +425,8 @@ impl VisitorState<()> for GatherTokens {
     fn visit_map_elt<
         K: Serialize<GatherTokens, ()>,
         V: Serialize<GatherTokens, ()>
-    >(&mut self, key: K, value: V) -> () {
+    >(&mut self, _first: bool, key: K, value: V) -> () {
         key.serialize(self);
         value.serialize(self)
     }
-
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub struct FormatState<W: Writer> {
-    writer: W,
-}
-
-impl<W: Writer> FormatState<W> {
-    pub fn new(writer: W) -> FormatState<W> {
-        FormatState {
-            writer: writer,
-        }
-    }
-
-    pub fn unwrap(self) -> W {
-        self.writer
-    }
-}
-
-impl<W: Writer> VisitorState<IoResult<()>> for FormatState<W> {
-    fn visit_null(&mut self) -> IoResult<()> {
-        write!(self.writer, "()")
-    }
-
-    fn visit_bool(&mut self, value: bool) -> IoResult<()> {
-        write!(self.writer, "{}", value)
-    }
-
-    fn visit_i64(&mut self, value: i64) -> IoResult<()> {
-        write!(self.writer, "{}", value)
-    }
-
-    fn visit_u64(&mut self, value: u64) -> IoResult<()> {
-        write!(self.writer, "{}", value)
-    }
-
-    fn visit_f64(&mut self, value: f64) -> IoResult<()> {
-        write!(self.writer, "{}", value)
-    }
-
-    fn visit_char(&mut self, value: char) -> io::IoResult<()> {
-        write!(self.writer, "{}", value)
-    }
-
-    fn visit_str(&mut self, value: &'static str) -> IoResult<()> {
-        write!(self.writer, "{}", value)
-    }
-
-    fn visit_seq<
-        V: Visitor<FormatState<W>, IoResult<()>>
-    >(&mut self, mut visitor: V) -> IoResult<()> {
-        try!(write!(self.writer, "["));
-
-        let mut first = true;
-        loop {
-            if first {
-                first = false;
-            } else {
-                try!(write!(self.writer, ", "));
-            }
-
-            match visitor.visit(self) {
-                Some(Ok(())) => { }
-                Some(Err(err)) => { return Err(err); }
-                None => { break; }
-            }
-        }
-        write!(self.writer, "]")
-    }
-
-    fn visit_seq_elt<
-        T: Serialize<FormatState<W>, IoResult<()>>
-    >(&mut self, value: T) -> IoResult<()> {
-        value.serialize(self)
-    }
-
-    fn visit_map<
-        V: Visitor<FormatState<W>, IoResult<()>>
-    >(&mut self, mut visitor: V) -> IoResult<()> {
-        try!(write!(self.writer, "{{"));
-
-        let mut first = true;
-        loop {
-            if first {
-                first = false;
-            } else {
-                try!(write!(self.writer, ", "));
-            }
-
-            match visitor.visit(self) {
-                Some(Ok(())) => { }
-                Some(Err(err)) => { return Err(err); }
-                None => { break; }
-            }
-        }
-        write!(self.writer, "}}")
-    }
-
-    fn visit_map_elt<
-        K: Serialize<FormatState<W>, IoResult<()>>,
-        V: Serialize<FormatState<W>, IoResult<()>>
-    >(&mut self, key: K, value: V) -> IoResult<()> {
-        try!(key.serialize(self));
-        try!(write!(self.writer, ": "));
-        value.serialize(self)
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub fn to_format_vec<
-    T: Serialize<FormatState<io::MemWriter>, IoResult<()>>
->(value: &T) -> IoResult<Vec<u8>> {
-    let writer = io::MemWriter::new();
-    let mut state = FormatState::new(writer);
-    try!(value.serialize(&mut state));
-    Ok(state.unwrap().unwrap())
-}
-
-pub fn to_format_string<
-    T: Serialize<FormatState<io::MemWriter>, IoResult<()>>
->(value: &T) -> IoResult<Result<String, Vec<u8>>> {
-    let vec = try!(to_format_vec(value));
-    Ok(String::from_utf8(vec))
 }

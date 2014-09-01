@@ -2,7 +2,7 @@ use std::io;
 use std::num::{FPNaN, FPInfinite};
 use std::f64;
 
-use super::super::ser as ser;
+use ser;
 
 /// A structure for implementing serialization to JSON.
 pub struct Serializer<W> {
@@ -69,14 +69,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
         try!(write!(self.writer, "["));
 
-        let mut first = true;
         loop {
-            if first {
-                first = false;
-            } else {
-                try!(write!(self.writer, ", "));
-            }
-
             match visitor.visit(self) {
                 Some(Ok(())) => { }
                 Some(Err(err)) => { return Err(err); }
@@ -88,7 +81,11 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
 
     fn visit_seq_elt<
         T: ser::Serialize<Serializer<W>, io::IoResult<()>>
-    >(&mut self, value: T) -> io::IoResult<()> {
+    >(&mut self, first: bool, value: T) -> io::IoResult<()> {
+        if !first {
+            try!(write!(self.writer, ", "));
+        }
+
         value.serialize(self)
     }
 
@@ -97,14 +94,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
         try!(write!(self.writer, "{{"));
 
-        let mut first = true;
         loop {
-            if first {
-                first = false;
-            } else {
-                try!(write!(self.writer, ", "));
-            }
-
             match visitor.visit(self) {
                 Some(Ok(())) => { }
                 Some(Err(err)) => { return Err(err); }
@@ -117,7 +107,11 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     fn visit_map_elt<
         K: ser::Serialize<Serializer<W>, io::IoResult<()>>,
         V: ser::Serialize<Serializer<W>, io::IoResult<()>>
-    >(&mut self, key: K, value: V) -> io::IoResult<()> {
+    >(&mut self, first: bool, key: K, value: V) -> io::IoResult<()> {
+        if !first {
+            try!(write!(self.writer, ", "));
+        }
+
         try!(key.serialize(self));
         try!(write!(self.writer, ": "));
         value.serialize(self)
@@ -172,4 +166,20 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, value: f64) -> io::IoResult<()> {
         FPNaN | FPInfinite => wr.write_str("null"),
         _ => wr.write_str(f64::to_str_digits(value, 6).as_slice()),
     }
+}
+
+pub fn to_vec<
+    T: ser::Serialize<Serializer<io::MemWriter>, io::IoResult<()>>
+>(value: &T) -> io::IoResult<Vec<u8>> {
+    let writer = io::MemWriter::new();
+    let mut state = Serializer::new(writer);
+    try!(value.serialize(&mut state));
+    Ok(state.unwrap().unwrap())
+}
+
+pub fn to_string<
+    T: ser::Serialize<Serializer<io::MemWriter>, io::IoResult<()>>
+>(value: &T) -> io::IoResult<Result<String, Vec<u8>>> {
+    let vec = try!(to_vec(value));
+    Ok(String::from_utf8(vec))
 }
