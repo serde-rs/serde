@@ -12,6 +12,7 @@ pub struct Serializer<W> {
 impl<W: Writer> Serializer<W> {
     /// Creates a new JSON serializer whose output will be written to the writer
     /// specified.
+    #[inline]
     pub fn new(writer: W) -> Serializer<W> {
         Serializer {
             writer: writer,
@@ -19,6 +20,7 @@ impl<W: Writer> Serializer<W> {
     }
 
     /// Unwrap the Writer from the Serializer.
+    #[inline]
     pub fn unwrap(self) -> W {
         self.writer
     }
@@ -40,7 +42,47 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     }
 
     #[inline]
+    fn visit_int(&mut self, value: int) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_i8(&mut self, value: i8) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_i16(&mut self, value: i16) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_i32(&mut self, value: i32) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
     fn visit_i64(&mut self, value: i64) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_uint(&mut self, value: uint) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_u8(&mut self, value: u8) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_u16(&mut self, value: u16) -> io::IoResult<()> {
+        write!(self.writer, "{}", value)
+    }
+
+    #[inline]
+    fn visit_u32(&mut self, value: u32) -> io::IoResult<()> {
         write!(self.writer, "{}", value)
     }
 
@@ -60,10 +102,11 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     }
 
     #[inline]
-    fn visit_str(&mut self, value: &'static str) -> io::IoResult<()> {
+    fn visit_str(&mut self, value: &str) -> io::IoResult<()> {
         escape_str(&mut self.writer, value)
     }
 
+    #[inline]
     fn visit_seq<
         V: ser::Visitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
@@ -76,19 +119,22 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
                 None => { break; }
             }
         }
+
         write!(self.writer, "]")
     }
 
+    #[inline]
     fn visit_seq_elt<
         T: ser::Serialize<Serializer<W>, io::IoResult<()>>
     >(&mut self, first: bool, value: T) -> io::IoResult<()> {
         if !first {
-            try!(write!(self.writer, ", "));
+            try!(write!(self.writer, ","));
         }
 
-        value.serialize(self)
+        //value.serialize(self)
     }
 
+    #[inline]
     fn visit_map<
         V: ser::Visitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
@@ -104,21 +150,22 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
         write!(self.writer, "}}")
     }
 
+    #[inline]
     fn visit_map_elt<
         K: ser::Serialize<Serializer<W>, io::IoResult<()>>,
         V: ser::Serialize<Serializer<W>, io::IoResult<()>>
     >(&mut self, first: bool, key: K, value: V) -> io::IoResult<()> {
         if !first {
-            try!(write!(self.writer, ", "));
+            try!(write!(self.writer, ","));
         }
 
         try!(key.serialize(self));
-        try!(write!(self.writer, ": "));
+        try!(write!(self.writer, ":"));
         value.serialize(self)
     }
 }
 
-pub fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> io::IoResult<()> {
+fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> io::IoResult<()> {
     try!(wr.write_str("\""));
 
     let mut start = 0;
@@ -151,7 +198,7 @@ pub fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> io::IoResult<()> {
     wr.write_str("\"")
 }
 
-pub fn escape_str<W: Writer>(wr: &mut W, value: &str) -> io::IoResult<()> {
+fn escape_str<W: Writer>(wr: &mut W, value: &str) -> io::IoResult<()> {
     escape_bytes(wr, value.as_bytes())
 }
 
@@ -168,6 +215,7 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, value: f64) -> io::IoResult<()> {
     }
 }
 
+#[inline]
 pub fn to_vec<
     T: ser::Serialize<Serializer<io::MemWriter>, io::IoResult<()>>
 >(value: &T) -> io::IoResult<Vec<u8>> {
@@ -177,6 +225,7 @@ pub fn to_vec<
     Ok(state.unwrap().unwrap())
 }
 
+#[inline]
 pub fn to_string<
     T: ser::Serialize<Serializer<io::MemWriter>, io::IoResult<()>>
 >(value: &T) -> io::IoResult<Result<String, Vec<u8>>> {

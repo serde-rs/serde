@@ -9,3 +9,6 @@ name = "serde2"
 [[bin]]
 name = "serde2"
 path = "src/bin.rs"
+
+[dependencies.serde2_macros]
+path = "serde2_macros/"

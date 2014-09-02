@@ -1,4 +1,11 @@
 [root]
 name = "serde2"
 version = "0.1.0"
+dependencies = [
+ "serde2_macros 0.1.0",
+]
+
+[[package]]
+name = "serde2_macros"
+version = "0.1.0"
 
