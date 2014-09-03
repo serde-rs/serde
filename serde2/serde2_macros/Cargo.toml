@@ -1,0 +1,9 @@
+[package]
+name = "serde2_macros"
+version = "0.1.0"
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+
+[[lib]]
+name = "serde2_macros"
+path = "src/lib.rs"
+plugin = true

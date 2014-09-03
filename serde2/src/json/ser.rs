@@ -131,7 +131,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
             try!(write!(self.writer, ","));
         }
 
-        //value.serialize(self)
+        value.serialize(self)
     }
 
     #[inline]
