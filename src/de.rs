@@ -510,7 +510,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct SeqDeserializer<'a, D, E> {
+struct SeqDeserializer<'a, D: 'a, E> {
     d: &'a mut D,
     len: uint,
     err: Option<E>,
@@ -541,7 +541,7 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct MapDeserializer<'a, D, E> {
+struct MapDeserializer<'a, D:'a, E> {
     d: &'a mut D,
     len: uint,
     err: Option<E>,
@@ -760,7 +760,7 @@ macro_rules! impl_deserialize_tuple {
             $($name: Deserializable<D, E>),*
         > Deserializable<D, E> for ($($name,)*) {
             #[inline]
-            #[allow(uppercase_variables)]
+            #[allow(non_snake_case)]
             fn deserialize_token(d: &mut D, token: Token) -> Result<($($name,)*), E> {
                 try!(d.expect_tuple_start(token));
 
