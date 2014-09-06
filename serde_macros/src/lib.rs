@@ -10,14 +10,21 @@ extern crate rustc;
 use std::gc::Gc;
 
 use syntax::ast::{
+    Attribute,
     Ident,
     MetaItem,
+    MetaNameValue,
     Item,
     Expr,
     MutMutable,
     LitNil,
+    LitStr,
+    P,
+    StructField,
+    Variant,
 };
 use syntax::ast;
+use syntax::attr;
 use syntax::codemap::Span;
 use syntax::ext::base::{ExtCtxt, ItemDecorator};
 use syntax::ext::build::AstBuilder;
@@ -241,20 +248,22 @@ fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
     let token = substr.nonself_args[1];
 
     match *substr.fields {
-        StaticStruct(_, ref fields) => {
+        StaticStruct(ref definition, ref fields) => {
             deserialize_struct(
                 cx,
                 span,
                 substr.type_ident,
+                definition.fields.as_slice(),
                 fields,
                 deserializer,
                 token)
         }
-        StaticEnum(_, ref fields) => {
+        StaticEnum(ref definition, ref fields) => {
             deserialize_enum(
                 cx,
                 span,
                 substr.type_ident,
+                definition.variants.as_slice(),
                 fields.as_slice(),
                 deserializer,
                 token)
@@ -263,18 +272,43 @@ fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
     }
 }
 
+fn find_serial_name<'a, I: Iterator<&'a Attribute>>(mut iterator: I)
+                    -> Option<token::InternedString> {
+    for at in iterator {
+        match at.node.value.node {
+            MetaNameValue(ref at_name, ref value) => {
+                match (at_name.get(), &value.node) {
+                    ("serial_name", &LitStr(ref string, _)) => {
+                        attr::mark_used(at);
+                        return Some(string.clone());
+                    },
+                    _ => ()
+                }
+            },
+            _ => ()
+        }
+    }
+    None
+}
+
 fn deserialize_struct(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    definitions: &[StructField],
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>,
     token: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
+    let serial_names = definitions.iter().map(|def|
+        find_serial_name(def.node.attrs.iter())
+    ).collect();
+
     let struct_block = deserialize_struct_from_struct(
         cx,
         span,
         type_ident,
+        serial_names,
         fields,
         deserializer
     );
@@ -307,6 +341,7 @@ fn deserialize_struct_from_struct(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    serial_names: Vec<Option<token::InternedString>>,
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
@@ -316,6 +351,7 @@ fn deserialize_struct_from_struct(
         cx,
         span,
         type_ident,
+        serial_names.as_slice(),
         fields,
         |cx, span, name| {
             let name = cx.expr_str(span, name);
@@ -428,11 +464,16 @@ fn deserialize_enum(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    definitions: &[P<Variant>],
     fields: &[(Ident, Span, StaticFields)],
     deserializer: Gc<ast::Expr>,
     token: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
     let type_name = cx.expr_str(span, token::get_ident(type_ident));
+
+    let serial_names = definitions.iter().map(|def|
+        find_serial_name(def.node.attrs.iter())
+    ).collect::<Vec<Option<token::InternedString>>>();
 
     let variants = fields.iter()
         .map(|&(name, span, _)| {
@@ -449,6 +490,7 @@ fn deserialize_enum(
                 cx,
                 span,
                 name,
+                serial_names.as_slice(),
                 parts,
                 |cx, span, _| {
                     quote_expr!(cx, try!($deserializer.expect_enum_elt()))
@@ -480,6 +522,7 @@ fn deserializable_static_fields(
     cx: &ExtCtxt,
     span: Span,
     outer_pat_ident: Ident,
+    serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     getarg: |&ExtCtxt, Span, token::InternedString| -> Gc<Expr>
 ) -> Gc<Expr> {
@@ -501,11 +544,15 @@ fn deserializable_static_fields(
         }
         Named(ref fields) => {
             // use the field's span to get nicer error messages.
-            let fields = fields.iter().map(|&(name, span)| {
+            let fields = serial_names.iter()
+                .zip(fields.iter()).map(|(serial_name, &(name, span))| {
+                let effective_name = serial_name.clone().unwrap_or(
+                    token::get_ident(name)
+                );
                 let arg = getarg(
                     cx,
                     span,
-                    token::get_ident(name)
+                    effective_name
                 );
                 cx.field_imm(span, name, arg)
             }).collect();
