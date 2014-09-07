@@ -870,7 +870,7 @@ fn manual_no_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str(",\"zone_id\":").unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",\"zone_plan\":").unwrap();
-    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+    (write!(wr, "{}", log.zone_plan as uint)).unwrap();
 
     wr.write_str(",\"http\":{\"protocol\":").unwrap();
     (write!(wr, "{}", log.http.protocol as uint)).unwrap();
@@ -883,18 +883,23 @@ fn manual_no_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str(",\"method\":").unwrap();
     (write!(wr, "{}", log.http.method as uint)).unwrap();
     wr.write_str(",\"content_type\":").unwrap();
-    json::escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
     wr.write_str(",\"user_agent\":").unwrap();
-    json::escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.http.user_agent)).unwrap();
     wr.write_str(",\"referer\":").unwrap();
-    json::escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.http.referer)).unwrap();
     wr.write_str(",\"request_uri\":").unwrap();
-    json::escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.http.request_uri)).unwrap();
 
-    wr.write_str("},\"origin\":{\"port\":").unwrap();
+    wr.write_str("},\"origin\":{").unwrap();
+
+    wr.write_str("\"ip\":").unwrap();
+    (write!(wr, "\"{}\"", log.origin.ip)).unwrap();
+    wr.write_str(",\"port\":").unwrap();
     (write!(wr, "{}", log.origin.port)).unwrap();
     wr.write_str(",\"hostname\":").unwrap();
-    json::escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
+
     wr.write_str(",\"protocol\":").unwrap();
     (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
 
@@ -903,115 +908,120 @@ fn manual_no_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str(",\"cache_status\":").unwrap();
     (write!(wr, "{}", log.cache_status as uint)).unwrap();
     wr.write_str(",\"server_ip\":").unwrap();
-    json::escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.server_ip)).unwrap();
     wr.write_str(",\"server_name\":").unwrap();
-    json::escape_str(&mut wr, log.server_name.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.server_name)).unwrap();
     wr.write_str(",\"remote_ip\":").unwrap();
-    json::escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.remote_ip)).unwrap();
     wr.write_str(",\"bytes_dlv\":").unwrap();
     (write!(wr, "{}", log.bytes_dlv)).unwrap();
 
     wr.write_str(",\"ray_id\":").unwrap();
-    json::escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
+    (write!(wr, "\"{}\"", log.ray_id)).unwrap();
     wr.write_str("}").unwrap();
 }
 
 fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
-    wr.write_str("{\"").unwrap();
+    wr.write_str("{").unwrap();
     json::escape_str(&mut wr, "timestamp").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.timestamp)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "zone_id").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "zone_plan").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.zone_plan as int)).unwrap();
 
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "http").unwrap();
-    wr.write_str("\":{\"").unwrap();
+    wr.write_str(":{").unwrap();
     json::escape_str(&mut wr, "protocol").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.http.protocol as uint)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "status").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.http.status)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "host_status").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.http.host_status)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "up_status").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.http.up_status)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "method").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.http.method as uint)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "content_type").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "user_agent").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "referer").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "request_uri").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
 
-    wr.write_str("},\"").unwrap();
+    wr.write_str("},").unwrap();
     json::escape_str(&mut wr, "origin").unwrap();
-    wr.write_str("\":{\"").unwrap();
+    wr.write_str(":{").unwrap();
+
+    json::escape_str(&mut wr, "ip").unwrap();
+    wr.write_str(":").unwrap();
+    json::escape_str(&mut wr, log.origin.ip.as_slice()).unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "port").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.origin.port)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "hostname").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "protocol").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
 
-    wr.write_str("},\"").unwrap();
+    wr.write_str("},").unwrap();
     json::escape_str(&mut wr, "country").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.country as uint)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "cache_status").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.cache_status as uint)).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "server_ip").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "server_name").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.server_name.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "remote_ip").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "bytes_dlv").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     (write!(wr, "{}", log.bytes_dlv)).unwrap();
 
-    wr.write_str(",\"").unwrap();
+    wr.write_str(",").unwrap();
     json::escape_str(&mut wr, "ray_id").unwrap();
-    wr.write_str("\":").unwrap();
+    wr.write_str(":").unwrap();
     json::escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
     wr.write_str("}").unwrap();
 }
@@ -1019,7 +1029,7 @@ fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
 #[bench]
 fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
     let log = Log::new();
-    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
     let mut wr = MemWriter::with_capacity(1024);
     manual_no_escape(wr.by_ref(), &log);
@@ -1028,20 +1038,17 @@ fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
     b.iter(|| {
         let mut wr = MemWriter::with_capacity(1024);
         manual_no_escape(wr.by_ref(), &log);
-
         let _json = wr.unwrap();
 
-        //let _json = String::from_utf8(wr.unwrap()).unwrap();
-        /*
-        assert_eq!(_s, _json.as_slice());
-        */
+        //let _json = String::from_utf8(_json).unwrap();
+        //assert_eq!(_s, _json.as_slice());
     });
 }
 
 #[bench]
 fn bench_manual_mem_writer_escape(b: &mut Bencher) {
     let log = Log::new();
-    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+    let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
     let mut wr = MemWriter::with_capacity(1024);
     manual_escape(wr.by_ref(), &log);
@@ -1052,10 +1059,8 @@ fn bench_manual_mem_writer_escape(b: &mut Bencher) {
         manual_escape(wr.by_ref(), &log);
         let _json = wr.unwrap();
 
-        //let _json = String::from_utf8(wr.unwrap()).unwrap();
-        /*
-        assert_eq!(_s, _json.as_slice());
-        */
+        //let _json = String::from_utf8(_json).unwrap();
+        //assert_eq!(_s, _json.as_slice());
     });
 }
 
