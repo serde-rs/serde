@@ -68,10 +68,6 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                                 item: Gc<Item>,
                                 mut push: |Gc<ast::Item>|) {
 
-
-    foo(cx, sp, mitem, item, &mut push);
-
-    /*
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
 
@@ -80,14 +76,14 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
         attributes: vec!(),
         path: Path::new_(vec!("serde2", "ser", "Serialize"), None,
                          vec!(box Literal(Path::new_local("__S")),
-                              box Literal(Path::new_local("__E"))), true),
+                              box Literal(Path::new_local("__R"))), true),
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
             bounds: vec!(("__S", None, vec!(Path::new_(
                             vec!("serde2", "ser", "VisitorState"), None,
-                            vec!(box Literal(Path::new_local("__E"))), true))),
-                         ("__E", None, vec!()))
+                            vec!(box Literal(Path::new_local("__R"))), true))),
+                         ("__R", None, vec!()))
         },
         methods: vec!(
             MethodDef {
@@ -97,15 +93,7 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                 args: vec!(Ptr(box Literal(Path::new_local("__S")),
                             Borrowed(None, MutMutable))),
                 ret_ty: Literal(
-                    Path::new_(
-                        vec!("std", "result", "Result"),
-                        None,
-                        vec!(
-                            box Tuple(Vec::new()),
-                            box Literal(Path::new_local("__E"))
-                        ),
-                        true
-                    )
+                    Path::new_local("__R")
                 ),
                 attributes: attrs,
                 combine_substructure: combine_substructure(|a, b, c| {
@@ -114,77 +102,55 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
             })
     };
 
-    trait_def.expand(cx, mitem, item, push);
-    */
+    trait_def.expand(cx, mitem, item, push)
 }
 
-fn foo(cx: &ExtCtxt,
-       sp: Span,
-       _mitem: Gc<MetaItem>,
-       item: Gc<Item>,
-       push: &mut |Gc<ast::Item>|) {
-    match item.node {
-        ast::ItemStruct(ref struct_def, ref generics) => {
-            foo_struct(cx, sp, &**struct_def, item.ident, generics, push)
+fn serializable_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> Gc<Expr> {
+    let serializer = substr.nonself_args[0];
+
+    match *substr.fields {
+        Struct(ref fields) => {
+            if fields.is_empty() {
+                serialize_tuple_struct(cx)
+            } else {
+                serialize_struct(cx, span, serializer, substr.type_ident, fields)
+            }
         }
-        _ => { }
+
+        EnumMatching(_idx, variant, ref fields) => {
+            serialize_enum(cx, span, serializer, substr.type_ident, variant, fields)
+        }
+
+        _ => cx.bug("expected Struct or EnumMatching in deriving_serializable")
     }
 }
 
-fn foo_struct(cx: &ExtCtxt,
-              sp: Span,
-              struct_def: &ast::StructDef,
-              ident: ast::Ident,
-              generics: &ast::Generics,
-              push: &mut |Gc<ast::Item>|) {
+fn serialize_tuple_struct(cx: &ExtCtxt) -> Gc<Expr> {
+    // unit structs have no fields and need to return `Ok()`
+    quote_expr!(cx, Ok(()))
+}
 
-    let ident_str = token::get_ident(ident);
-    //let visitor_name = token::gensym_ident(ident_str.get().as_slice());
+fn serialize_struct(cx: &ExtCtxt,
+                    span: Span,
+                    serializer: Gc<Expr>,
+                    type_ident: Ident,
+                    fields: &Vec<FieldInfo>) -> Gc<Expr> {
 
-    // FIXME: is there a better way to gensym a symbol that is pretty-printable?
-    let visitor_name = token::str_to_ident(
-        format!(
-            "{}{}",
-            ident_str,
-            token::gensym("").uint()).as_slice());
+    let type_name = cx.expr_str(
+        span,
+        token::get_ident(type_ident));
+    let len = fields.len();
 
-    let item: Gc<ast::Item> = quote_item!(cx,
-        struct $visitor_name<'a> {
-            state: uint,
-            value: &'a $ident,
-        }
-    ).unwrap();
-
-    (*push)(item);
-
-    let ident_expr = cx.expr_str(sp, ident_str);
-
-    let item: Gc<ast::Item> = quote_item!(cx,
-        impl<S: ::serde2::VisitorState<R>, R> ::serde2::Serialize<S, R> for $ident {
-            #[inline]
-            fn serialize(&self, s: &mut S) -> R {
-                s.visit_named_map($ident_expr, $visitor_name {
-                    value: self,
-                    state: 0,
-                })
-            }
-        }
-    ).unwrap();
-
-    (*push)(item);
-
-    let arms: Vec<ast::Arm> = struct_def.fields.iter()
+    let arms: Vec<ast::Arm> = fields.iter()
         .enumerate()
-        .map(|(i, field)| {
+        .map(|(i, &FieldInfo { name, span, .. })| {
             let first = if i == 0 {
                 quote_expr!(cx, true)
             } else {
                 quote_expr!(cx, false)
             };
 
-            let name = field.node.ident().unwrap();
-            let span = field.span;
-
+            let name = name.unwrap();
             let name_expr = cx.expr_str(span, token::get_ident(name));
 
             quote_arm!(cx,
@@ -196,12 +162,17 @@ fn foo_struct(cx: &ExtCtxt,
         })
         .collect();
 
-    let item: Gc<ast::Item> = quote_item!(cx,
+    quote_expr!(cx, {
+        struct Visitor<'a> {
+            state: uint,
+            value: &'a $type_ident,
+        }
+
         impl<
             'a,
             S: ::serde2::VisitorState<R>,
             R
-        > ::serde2::Visitor<S, R> for $visitor_name<'a> {
+        > ::serde2::Visitor<S, R> for Visitor<'a> {
             #[inline]
             fn visit(&mut self, s: &mut S) -> Option<R> {
                 match self.state {
@@ -209,82 +180,51 @@ fn foo_struct(cx: &ExtCtxt,
                     _ => None,
                 }
             }
-        }
-    ).unwrap();
 
-    (*push)(item);
-}
-
-fn serializable_substructure(cx: &ExtCtxt, span: Span,
-                          substr: &Substructure) -> Gc<Expr> {
-    let serializer = substr.nonself_args[0];
-
-    return match *substr.fields {
-        Struct(ref fields) => {
-            if fields.is_empty() {
-                // unit structs have no fields and need to return `Ok()`
-                quote_expr!(cx, Ok(()))
-            } else {
-                let type_name = cx.expr_str(
-                    span,
-                    token::get_ident(substr.type_ident)
-                );
-                let len = fields.len();
-
-                let mut stmts: Vec<Gc<ast::Stmt>> = fields.iter()
-                    .enumerate()
-                    .map(|(i, &FieldInfo { name, self_, span, .. })| {
-                        let name = match name {
-                            Some(id) => token::get_ident(id),
-                            None => token::intern_and_get_ident(format!("_field{}", i).as_slice()),
-                        };
-
-                        let name = cx.expr_str(span, name);
-
-                        quote_stmt!(
-                            cx,
-                            try!($serializer.serialize_struct_elt($name, &$self_))
-                        )
-                    })
-                    .collect();
-
-                quote_expr!(cx, {
-                    try!($serializer.serialize_struct_start($type_name, $len));
-                    $stmts
-                    $serializer.serialize_struct_end()
-                })
+            #[inline]
+            fn size_hint(&self) -> (uint, Option<uint>) {
+                let size = $len - self.state;
+                (size, Some(size))
             }
         }
 
-        EnumMatching(_idx, variant, ref fields) => {
-            let type_name = cx.expr_str(
-                span,
-                token::get_ident(substr.type_ident)
-            );
-            let variant_name = cx.expr_str(
-                span,
-                token::get_ident(variant.node.name)
-            );
-            let len = fields.len();
+        $serializer.visit_named_map($type_name, Visitor {
+            value: self,
+            state: 0,
+        })
+    })
+}
 
-            let stmts: Vec<Gc<ast::Stmt>> = fields.iter()
-                .map(|&FieldInfo { self_, span, .. }| {
-                    quote_stmt!(
-                        cx,
-                        try!($serializer.serialize_enum_elt(&$self_))
-                    )
-                })
-                .collect();
+fn serialize_enum(cx: &ExtCtxt,
+                  span: Span,
+                  serializer: Gc<Expr>,
+                  type_ident: Ident,
+                  variant: &ast::Variant,
+                  fields: &Vec<FieldInfo>) -> Gc<Expr> {
+    let type_name = cx.expr_str(
+        span,
+        token::get_ident(type_ident)
+    );
+    let variant_name = cx.expr_str(
+        span,
+        token::get_ident(variant.node.name)
+    );
+    let len = fields.len();
 
-            quote_expr!(cx, {
-                try!($serializer.serialize_enum_start($type_name, $variant_name, $len));
-                $stmts
-                $serializer.serialize_enum_end()
-            })
-        }
+    let stmts: Vec<Gc<ast::Stmt>> = fields.iter()
+        .map(|&FieldInfo { self_, span, .. }| {
+            quote_stmt!(
+                cx,
+                try!($serializer.serialize_enum_elt(&$self_))
+            )
+        })
+        .collect();
 
-        _ => cx.bug("expected Struct or EnumMatching in deriving_serializable")
-    }
+    quote_expr!(cx, {
+        try!($serializer.serialize_enum_start($type_name, $variant_name, $len));
+        $stmts
+        $serializer.serialize_enum_end()
+    })
 }
 
 /*
