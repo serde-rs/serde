@@ -1,9 +1,18 @@
+#![feature(phase)]
+
+#[phase(plugin)]
+extern crate serde_macros;
+
+extern crate serde;
+extern crate serialize;
+extern crate test;
+
 use std::collections::HashMap;
 use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use de::{Deserializer, Deserializable};
+use serde::de::{Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -256,7 +265,7 @@ mod decoder {
 mod deserializer {
     use std::collections::HashMap;
     use super::{Outer, Inner, Error, EndOfStream, SyntaxError};
-    use de;
+    use serde::de;
 
     enum State {
         OuterState(Outer),

@@ -1,5 +1,10 @@
+#![feature(phase, macro_rules)]
 #![allow(non_camel_case_types)]
 
+#[phase(plugin)]
+extern crate serde_macros;
+
+extern crate serde;
 extern crate serialize;
 extern crate test;
 extern crate time;
@@ -8,10 +13,10 @@ use std::io;
 use std::io::MemWriter;
 use test::Bencher;
 
-use json;
-use de;
-use ser::Serializable;
-use ser;
+use serde::de;
+use serde::json;
+use serde::ser::Serializable;
+use serde::ser;
 
 #[deriving(Encodable, Decodable)]
 #[deriving_serializable]
@@ -1229,7 +1234,7 @@ fn bench_manual_my_mem_writer3_escape(b: &mut Bencher) {
 }
 
 fn direct<W: Writer>(wr: W, log: &Log) {
-    use ser::Serializer;
+    use serde::ser::Serializer;
 
     let mut serializer = json::Serializer::new(wr);
     serializer.serialize_struct_start("Log", 12).unwrap();

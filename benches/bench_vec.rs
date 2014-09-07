@@ -1,9 +1,18 @@
+#![feature(phase)]
+
+#[phase(plugin)]
+extern crate serde_macros;
+
+extern crate serde;
+extern crate serialize;
+extern crate test;
+
 use std::fmt::Show;
 use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use de::{Deserializer, Deserializable};
+use serde::de::{Deserializer, Deserializable};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -241,7 +250,7 @@ mod deserializer {
 
     use super::{Error, EndOfStream, SyntaxError};
 
-    use de;
+    use serde::de;
 
     #[deriving(PartialEq, Show)]
     enum State {
