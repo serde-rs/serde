@@ -4,8 +4,10 @@ rust:
   - nightly
 
 script:
+  - cargo build --verbose
   - cargo test --verbose
   - cargo bench --verbose
   - cd serde2
+  - cargo build --verbose
   - cargo test --verbose
   - cargo bench --verbose
