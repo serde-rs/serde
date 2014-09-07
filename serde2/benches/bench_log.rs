@@ -502,66 +502,66 @@ impl <S: ::serde2::VisitorState<R>, R> ::serde2::Serialize<S, R> for Log {
     #[inline]
     fn serialize(&self, s: &mut S) -> R {
         struct Log3033<'a> {
-            state: uint,
             value: &'a Log,
+            state: u8,
         }
 
         impl<'a, S: ::serde2::VisitorState<R>, R> ::serde2::Visitor<S, R> for Log3033<'a> {
             #[inline]
             fn visit(&mut self, s: &mut S) -> Option<R> {
                 match self.state {
-                    0u => {
+                    0 => {
                         self.state += 1;
                         Some(s.visit_map_elt(true, "timestamp",
                                              &self.value.timestamp))
                     }
-                    1u => {
+                    1 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "zone_id", &self.value.zone_id))
                     }
-                    2u => {
+                    2 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "zone_plan",
                                              &self.value.zone_plan))
                     }
-                    3u => {
+                    3 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "http", &self.value.http))
                     }
-                    4u => {
+                    4 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "origin", &self.value.origin))
                     }
-                    5u => {
+                    5 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "country", &self.value.country))
                     }
-                    6u => {
+                    6 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "cache_status",
                                              &self.value.cache_status))
                     }
-                    7u => {
+                    7 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "server_ip",
                                              &self.value.server_ip))
                     }
-                    8u => {
+                    8 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "server_name",
                                              &self.value.server_name))
                     }
-                    9u => {
+                    9 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "remote_ip",
                                              &self.value.remote_ip))
                     }
-                    10u => {
+                    10 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "bytes_dlv",
                                              &self.value.bytes_dlv))
                     }
-                    11u => {
+                    11 => {
                         self.state += 1;
                         Some(s.visit_map_elt(false, "ray_id", &self.value.ray_id))
                     }
