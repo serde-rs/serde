@@ -294,7 +294,7 @@ macro_rules! impl_serialize_tuple {
             $($name:Serializable<S, E>),+
         > Serializable<S, E> for ($($name,)+) {
             #[inline]
-            #[allow(uppercase_variables)]
+            #[allow(non_snake_case)]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
                 // FIXME: how can we count macro args?
                 let mut len = 0;

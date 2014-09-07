@@ -2255,7 +2255,7 @@ macro_rules! impl_to_json_tuple {
     ( $($name:ident,)+ ) => {
         impl<$($name: ToJson),*> ToJson for ($($name,)*) {
             #[inline]
-            #[allow(uppercase_variables)]
+            #[allow(non_snake_case)]
             fn to_json(&self) -> Json {
                 // FIXME: how can we count macro args?
                 let mut len = 0;
