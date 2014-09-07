@@ -110,7 +110,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     fn visit_seq<
         V: ser::Visitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
-        try!(write!(self.writer, "["));
+        try!(self.writer.write_str("["));
 
         loop {
             match visitor.visit(self) {
@@ -120,7 +120,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
             }
         }
 
-        write!(self.writer, "]")
+        self.writer.write_str("]")
     }
 
     #[inline]
@@ -128,7 +128,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
         T: ser::Serialize<Serializer<W>, io::IoResult<()>>
     >(&mut self, first: bool, value: T) -> io::IoResult<()> {
         if !first {
-            try!(write!(self.writer, ","));
+            try!(self.writer.write_str(","));
         }
 
         value.serialize(self)
@@ -138,7 +138,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     fn visit_map<
         V: ser::Visitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
-        try!(write!(self.writer, "{{"));
+        try!(self.writer.write_str("{{"));
 
         loop {
             match visitor.visit(self) {
@@ -147,7 +147,8 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
                 None => { break; }
             }
         }
-        write!(self.writer, "}}")
+
+        self.writer.write_str("}}")
     }
 
     #[inline]
@@ -156,11 +157,11 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
         V: ser::Serialize<Serializer<W>, io::IoResult<()>>
     >(&mut self, first: bool, key: K, value: V) -> io::IoResult<()> {
         if !first {
-            try!(write!(self.writer, ","));
+            try!(self.writer.write_str(","));
         }
 
         try!(key.serialize(self));
-        try!(write!(self.writer, ":"));
+        try!(self.writer.write_str(":"));
         value.serialize(self)
     }
 }
