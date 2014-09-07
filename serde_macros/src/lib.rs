@@ -291,15 +291,16 @@ fn deserialize_struct(
     deserializer: Gc<ast::Expr>,
     token: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
-    let serial_names = definitions.iter().map(|def|
-        find_serial_name(def.node.attrs.iter())
-    ).collect();
+    let serial_names: Vec<Option<token::InternedString>> =
+        definitions.iter().map(|def|
+            find_serial_name(def.node.attrs.iter())
+        ).collect();
 
     let struct_block = deserialize_struct_from_struct(
         cx,
         span,
         type_ident,
-        serial_names,
+        serial_names.as_slice(),
         fields,
         deserializer
     );
@@ -308,6 +309,7 @@ fn deserialize_struct(
         cx,
         span,
         type_ident,
+        serial_names.as_slice(),
         fields,
         deserializer
     );
@@ -332,7 +334,7 @@ fn deserialize_struct_from_struct(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
-    serial_names: Vec<Option<token::InternedString>>,
+    serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
@@ -364,6 +366,7 @@ fn deserialize_struct_from_map(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
@@ -380,9 +383,14 @@ fn deserialize_struct_from_map(
         .collect();
 
     // Declare key arms.
-    let key_arms: Vec<ast::Arm> = fields.iter()
-        .map(|&(name, span)| {
-            let s = cx.expr_str(span, token::get_ident(name));
+    let key_arms: Vec<ast::Arm> = serial_names.iter()
+        .zip(fields.iter())
+        .map(|(serial, &(name, span))| {
+            let serial_name = match serial {
+                &Some(ref string) => string.clone(),
+                &None => token::get_ident(name),
+            };
+            let s = cx.expr_str(span, serial_name);
             quote_arm!(cx,
                 $s => {
                     $name = Some(
@@ -393,9 +401,14 @@ fn deserialize_struct_from_map(
         })
         .collect();
 
-    let extract_fields: Vec<Gc<ast::Stmt>> = fields.iter()
-        .map(|&(name, span)| {
-            let name_str = cx.expr_str(span, token::get_ident(name));
+    let extract_fields: Vec<Gc<ast::Stmt>> = serial_names.iter()
+        .zip(fields.iter())
+        .map(|(serial, &(name, span))| {
+            let serial_name = match serial {
+                &Some(ref string) => string.clone(),
+                &None => token::get_ident(name),
+            };
+            let name_str = cx.expr_str(span, serial_name);
             quote_stmt!(cx,
                 let $name = match $name {
                     Some($name) => $name,

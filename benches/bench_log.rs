@@ -844,7 +844,6 @@ fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
     b.iter(|| {
         let mut wr = MemWriter::with_capacity(1024);
         manual_no_escape(wr.by_ref(), &log);
-
         let _json = wr.unwrap();
 
         //let _json = String::from_utf8(_json).unwrap();
