@@ -4,7 +4,6 @@
 extern crate serde2;
 extern crate serialize;
 extern crate test;
-extern crate time;
 
 #[phase(plugin)]
 extern crate serde2_macros;
@@ -466,7 +465,7 @@ struct Log {
 impl Log {
     fn new() -> Log {
         Log {
-            timestamp: time::precise_time_ns() as i64,
+            timestamp: 2837513946597,
             zone_id: 123456,
             zone_plan: FREE,
             http: Http {

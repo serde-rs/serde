@@ -7,7 +7,6 @@ extern crate serde_macros;
 extern crate serde;
 extern crate serialize;
 extern crate test;
-extern crate time;
 
 use std::io;
 use std::io::MemWriter;
@@ -454,7 +453,7 @@ struct Log {
 impl Log {
     fn new() -> Log {
         Log {
-            timestamp: time::precise_time_ns() as i64,
+            timestamp: 2837513946597,
             zone_id: 123456,
             zone_plan: FREE,
             http: Http {
