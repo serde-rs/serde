@@ -15,6 +15,8 @@ use syntax::ast::{
     MetaItem,
     MetaNameValue,
     Item,
+    ItemEnum,
+    ItemStruct,
     Expr,
     MutMutable,
     LitNil,
@@ -110,7 +112,7 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                 ),
                 attributes: attrs,
                 combine_substructure: combine_substructure(|a, b, c| {
-                    serializable_substructure(a, b, c)
+                    serializable_substructure(a, b, c, item)
                 }),
             })
     };
@@ -118,12 +120,15 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, push)
 }
 
-fn serializable_substructure(cx: &ExtCtxt, span: Span,
-                          substr: &Substructure) -> Gc<Expr> {
+fn serializable_substructure(cx: &ExtCtxt,
+                             span: Span,
+                             substr: &Substructure,
+                             item: Gc<Item>
+                             ) -> Gc<Expr> {
     let serializer = substr.nonself_args[0];
 
-    return match *substr.fields {
-        Struct(ref fields) => {
+    match (&item.deref().node, substr.fields) {
+        (&ItemStruct(ref definition, _), &Struct(ref fields)) => {
             if fields.is_empty() {
                 // unit structs have no fields and need to return `Ok()`
                 quote_expr!(cx, Ok(()))
@@ -134,12 +139,15 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span,
                 );
                 let len = fields.len();
 
-                let mut stmts: Vec<Gc<ast::Stmt>> = fields.iter()
+                let mut stmts: Vec<Gc<ast::Stmt>> = definition.fields.iter()
+                    .zip(fields.iter())
                     .enumerate()
-                    .map(|(i, &FieldInfo { name, self_, span, .. })| {
-                        let name = match name {
-                            Some(id) => token::get_ident(id),
-                            None => token::intern_and_get_ident(format!("_field{}", i).as_slice()),
+                    .map(|(i, (def, &FieldInfo { name, self_, span, .. }))| {
+                        let serial_name = find_serial_name(def.node.attrs.iter());
+                        let name = match (serial_name, name) {
+                            (Some(serial), _) => serial.clone(),
+                            (None, Some(id)) => token::get_ident(id),
+                            (None, None) => token::intern_and_get_ident(format!("_field{}", i).as_slice()),
                         };
 
                         let name = cx.expr_str(span, name);
@@ -159,7 +167,7 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span,
             }
         }
 
-        EnumMatching(_idx, variant, ref fields) => {
+        (&ItemEnum(ref definition, _), &EnumMatching(_idx, variant, ref fields)) => {
             let type_name = cx.expr_str(
                 span,
                 token::get_ident(substr.type_ident)
@@ -170,8 +178,10 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span,
             );
             let len = fields.len();
 
-            let stmts: Vec<Gc<ast::Stmt>> = fields.iter()
-                .map(|&FieldInfo { self_, span, .. }| {
+            let stmts: Vec<Gc<ast::Stmt>> = definition.variants.iter()
+                .zip(fields.iter())
+                .map(|(def, &FieldInfo { self_, span, .. })| {
+                    let _serial_name = find_serial_name(def.node.attrs.iter());
                     quote_stmt!(
                         cx,
                         try!($serializer.serialize_enum_elt(&$self_))
@@ -270,25 +280,6 @@ fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
         }
         _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserializable)")
     }
-}
-
-fn find_serial_name<'a, I: Iterator<&'a Attribute>>(mut iterator: I)
-                    -> Option<token::InternedString> {
-    for at in iterator {
-        match at.node.value.node {
-            MetaNameValue(ref at_name, ref value) => {
-                match (at_name.get(), &value.node) {
-                    ("serial_name", &LitStr(ref string, _)) => {
-                        attr::mark_used(at);
-                        return Some(string.clone());
-                    },
-                    _ => ()
-                }
-            },
-            _ => ()
-        }
-    }
-    None
 }
 
 fn deserialize_struct(
@@ -560,4 +551,23 @@ fn deserializable_static_fields(
             cx.expr_struct_ident(span, outer_pat_ident, fields)
         }
     }
+}
+
+fn find_serial_name<'a, I: Iterator<&'a Attribute>>(mut iterator: I)
+                    -> Option<token::InternedString> {
+    for at in iterator {
+        match at.node.value.node {
+            MetaNameValue(ref at_name, ref value) => {
+                match (at_name.get(), &value.node) {
+                    ("serial_name", &LitStr(ref string, _)) => {
+                        attr::mark_used(at);
+                        return Some(string.clone());
+                    },
+                    _ => ()
+                }
+            },
+            _ => ()
+        }
+    }
+    None
 }
