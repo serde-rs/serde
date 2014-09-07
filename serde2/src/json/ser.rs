@@ -166,7 +166,8 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
     }
 }
 
-fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> io::IoResult<()> {
+#[inline]
+pub fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> io::IoResult<()> {
     try!(wr.write_str("\""));
 
     let mut start = 0;
@@ -199,10 +200,12 @@ fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> io::IoResult<()> {
     wr.write_str("\"")
 }
 
-fn escape_str<W: Writer>(wr: &mut W, value: &str) -> io::IoResult<()> {
+#[inline]
+pub fn escape_str<W: Writer>(wr: &mut W, value: &str) -> io::IoResult<()> {
     escape_bytes(wr, value.as_bytes())
 }
 
+#[inline]
 pub fn escape_char<W: Writer>(wr: &mut W, value: char) -> io::IoResult<()> {
     let mut buf = [0, .. 4];
     value.encode_utf8(buf);
