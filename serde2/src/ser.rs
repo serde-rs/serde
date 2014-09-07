@@ -288,7 +288,7 @@ impl<
     }
 }
 
-struct Tuple2Serialize<'a, T0, T1> {
+struct Tuple2Serialize<'a, T0: 'a, T1: 'a> {
     value: &'a (T0, T1),
     state: uint,
 }
