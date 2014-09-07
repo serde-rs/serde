@@ -563,7 +563,7 @@ impl MyMemWriter1 {
 }
 
 // LLVM isn't yet able to lower `Vec::push_all` into a memcpy, so this helps
-// MemWriter eke out that last bit of performance. 
+// MemWriter eke out that last bit of performance.
 //#[inline(always)]
 fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
     let dst_len = dst.len();

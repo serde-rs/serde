@@ -1,19 +1,19 @@
-#![allow(non_camel_case_types)]
 #![feature(phase, macro_rules)]
+#![allow(non_camel_case_types)]
+
+#[phase(plugin)]
+extern crate serde2_macros;
 
 extern crate serde2;
 extern crate serialize;
 extern crate test;
 
-#[phase(plugin)]
-extern crate serde2_macros;
-
-//use std::io;
-//use std::io::MemWriter;
+use std::io;
+use std::io::MemWriter;
 use test::Bencher;
 
-use serde2::json;
 //use serde2::de;
+use serde2::json;
 use serde2::Serialize;
 use serde2::ser;
 
@@ -445,7 +445,7 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Country {
 */
 
 #[deriving(Encodable, Decodable)]
-//#[deriving_serializable]
+#[deriving_serializable]
 //#[deriving_deserializable]
 struct Log {
     timestamp: i64,
@@ -497,82 +497,274 @@ impl Log {
 }
 
 
-impl <S: ::serde2::VisitorState<R>, R> ::serde2::Serialize<S, R> for Log {
-    #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        struct Log3033<'a> {
-            value: &'a Log,
-            state: u8,
-        }
-
-        impl<'a, S: ::serde2::VisitorState<R>, R> ::serde2::Visitor<S, R> for Log3033<'a> {
-            #[inline]
-            fn visit(&mut self, s: &mut S) -> Option<R> {
-                match self.state {
-                    0 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(true, "timestamp",
-                                             &self.value.timestamp))
-                    }
-                    1 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "zone_id", &self.value.zone_id))
-                    }
-                    2 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "zone_plan",
-                                             &self.value.zone_plan))
-                    }
-                    3 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "http", &self.value.http))
-                    }
-                    4 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "origin", &self.value.origin))
-                    }
-                    5 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "country", &self.value.country))
-                    }
-                    6 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "cache_status",
-                                             &self.value.cache_status))
-                    }
-                    7 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "server_ip",
-                                             &self.value.server_ip))
-                    }
-                    8 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "server_name",
-                                             &self.value.server_name))
-                    }
-                    9 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "remote_ip",
-                                             &self.value.remote_ip))
-                    }
-                    10 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "bytes_dlv",
-                                             &self.value.bytes_dlv))
-                    }
-                    11 => {
-                        self.state += 1;
-                        Some(s.visit_map_elt(false, "ray_id", &self.value.ray_id))
-                    }
-                    _ => None,
-                }
+macro_rules! likely(
+    ($val:expr) => {
+        {
+            extern {
+                #[link_name = "llvm.expect.i8"]
+                fn expect(val: u8, expected_val: u8) -> u8;
             }
+            let x: bool = $val;
+            unsafe { expect(x as u8, 1) != 0 }
         }
+    }
+)
 
-        s.visit_named_map("Log", Log3033{value: self, state: 0,})
+macro_rules! unlikely(
+    ($val:expr) => {
+        {
+            extern {
+                #[link_name = "llvm.expect.i8"]
+                fn expect(val: u8, expected_val: u8) -> u8;
+            }
+            let x: bool = $val;
+            unsafe { expect(x as u8, 0) != 0 }
+        }
+    }
+)
+
+struct MyMemWriter0 {
+    buf: Vec<u8>,
+}
+
+impl MyMemWriter0 {
+    /*
+    pub fn new() -> MyMemWriter0 {
+        MyMemWriter0::with_capacity(128)
+    }
+    */
+
+    pub fn with_capacity(cap: uint) -> MyMemWriter0 {
+        MyMemWriter0 {
+            buf: Vec::with_capacity(cap)
+        }
+    }
+
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+
+impl Writer for MyMemWriter0 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        self.buf.push_all(buf);
+        Ok(())
     }
 }
 
+struct MyMemWriter1 {
+    buf: Vec<u8>,
+}
+
+impl MyMemWriter1 {
+    /*
+    pub fn new() -> MyMemWriter1 {
+        MyMemWriter1::with_capacity(128)
+    }
+    */
+
+    pub fn with_capacity(cap: uint) -> MyMemWriter1 {
+        MyMemWriter1 {
+            buf: Vec::with_capacity(cap)
+        }
+    }
+
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+// LLVM isn't yet able to lower `Vec::push_all` into a memcpy, so this helps
+// MemWriter eke out that last bit of performance.
+//#[inline(always)]
+fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
+    let dst_len = dst.len();
+    let src_len = src.len();
+
+    dst.reserve_additional(src_len);
+
+    unsafe {
+        // we would have failed if `reserve_additional` overflowed.
+        dst.set_len(dst_len + src_len);
+
+        ::std::ptr::copy_nonoverlapping_memory(
+            dst.as_mut_ptr().offset(dst_len as int),
+            src.as_ptr(),
+            src_len);
+    }
+}
+
+impl Writer for MyMemWriter1 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        push_all_bytes(&mut self.buf, buf);
+        Ok(())
+    }
+}
+
+pub struct MyMemWriter2 {
+    buf: Vec<u8>,
+    pos: uint,
+}
+
+impl MyMemWriter2 {
+    /// Create a new `MemWriter`.
+    #[inline]
+    pub fn new() -> MyMemWriter2 {
+        MyMemWriter2::with_capacity(128)
+    }
+    /// Create a new `MemWriter`, allocating at least `n` bytes for
+    /// the internal buffer.
+    #[inline]
+    pub fn with_capacity(n: uint) -> MyMemWriter2 {
+        MyMemWriter2 { buf: Vec::with_capacity(n), pos: 0 }
+    }
+
+    /// Acquires an immutable reference to the underlying buffer of this
+    /// `MemWriter`.
+    ///
+    /// No method is exposed for acquiring a mutable reference to the buffer
+    /// because it could corrupt the state of this `MemWriter`.
+    #[inline]
+    pub fn get_ref<'a>(&'a self) -> &'a [u8] { self.buf.as_slice() }
+
+    /// Unwraps this `MemWriter`, returning the underlying buffer
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+impl Writer for MyMemWriter2 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        if self.pos != self.buf.len() {
+            push_all_bytes(&mut self.buf, buf);
+        } else {
+            // Make sure the internal buffer is as least as big as where we
+            // currently are
+            let difference = self.pos as i64 - self.buf.len() as i64;
+            if difference > 0 {
+                self.buf.grow(difference as uint, &0);
+            }
+
+            // Figure out what bytes will be used to overwrite what's currently
+            // there (left), and what will be appended on the end (right)
+            let cap = self.buf.len() - self.pos;
+            let (left, right) = if cap <= buf.len() {
+                (buf.slice_to(cap), buf.slice_from(cap))
+            } else {
+                (buf, &[])
+            };
+
+            // Do the necessary writes
+            if left.len() > 0 {
+                ::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+            }
+            if right.len() > 0 {
+                push_all_bytes(&mut self.buf, right);
+            }
+        }
+
+        // Bump us forward
+        self.pos += buf.len();
+        Ok(())
+    }
+}
+
+fn combine(seek: io::SeekStyle, cur: uint, end: uint, offset: i64) -> io::IoResult<u64> {
+    // compute offset as signed and clamp to prevent overflow
+    let pos = match seek {
+        io::SeekSet => 0,
+        io::SeekEnd => end,
+        io::SeekCur => cur,
+    } as i64;
+
+    if offset + pos < 0 {
+        Err(io::IoError {
+            kind: io::InvalidInput,
+            desc: "invalid seek to a negative offset",
+            detail: None
+        })
+    } else {
+        Ok((offset + pos) as u64)
+    }
+}
+
+impl Seek for MyMemWriter2 {
+    #[inline]
+    fn tell(&self) -> io::IoResult<u64> { Ok(self.pos as u64) }
+
+    #[inline]
+    fn seek(&mut self, pos: i64, style: io::SeekStyle) -> io::IoResult<()> {
+        let new = try!(combine(style, self.pos, self.buf.len(), pos));
+        self.pos = new as uint;
+        Ok(())
+    }
+}
+
+
+pub struct MyMemWriter3 {
+    buf: Vec<u8>,
+    pos: uint,
+}
+
+impl MyMemWriter3 {
+    /// Create a new `MemWriter`.
+    #[inline]
+    pub fn new() -> MyMemWriter3 {
+        MyMemWriter3::with_capacity(128)
+    }
+    /// Create a new `MemWriter`, allocating at least `n` bytes for
+    /// the internal buffer.
+    #[inline]
+    pub fn with_capacity(n: uint) -> MyMemWriter3 {
+        MyMemWriter3 { buf: Vec::with_capacity(n), pos: 0 }
+    }
+
+    /// Acquires an immutable reference to the underlying buffer of this
+    /// `MemWriter`.
+    ///
+    /// No method is exposed for acquiring a mutable reference to the buffer
+    /// because it could corrupt the state of this `MemWriter`.
+    #[inline]
+    pub fn get_ref<'a>(&'a self) -> &'a [u8] { self.buf.as_slice() }
+
+    /// Unwraps this `MemWriter`, returning the underlying buffer
+    #[inline]
+    pub fn unwrap(self) -> Vec<u8> { self.buf }
+}
+
+impl Writer for MyMemWriter3 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        // Make sure the internal buffer is as least as big as where we
+        // currently are
+        let difference = self.pos as i64 - self.buf.len() as i64;
+        if difference > 0 {
+            self.buf.grow(difference as uint, &0);
+        }
+
+        // Figure out what bytes will be used to overwrite what's currently
+        // there (left), and what will be appended on the end (right)
+        let cap = self.buf.len() - self.pos;
+        let (left, right) = if cap <= buf.len() {
+            (buf.slice_to(cap), buf.slice_from(cap))
+        } else {
+            (buf, &[])
+        };
+
+        // Do the necessary writes
+        if left.len() > 0 {
+            ::std::slice::bytes::copy_memory(self.buf.mut_slice_from(self.pos), left);
+        }
+        if right.len() > 0 {
+            push_all_bytes(&mut self.buf, right);
+        }
+
+        // Bump us forward
+        self.pos += buf.len();
+        Ok(())
+    }
+}
 
 #[bench]
 fn bench_encoder(b: &mut Bencher) {
@@ -600,7 +792,6 @@ fn bench_serializer(b: &mut Bencher) {
     });
 }
 
-/*
 #[bench]
 fn bench_copy(b: &mut Bencher) {
     let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
@@ -787,7 +978,6 @@ fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
     b.iter(|| {
         let mut wr = MemWriter::with_capacity(1024);
         manual_no_escape(wr.by_ref(), &log);
-
         let _json = wr.unwrap();
 
         //let _json = String::from_utf8(_json).unwrap();
@@ -987,14 +1177,15 @@ fn bench_manual_my_mem_writer3_escape(b: &mut Bencher) {
     });
 }
 
+/*
 fn direct<W: Writer>(wr: W, log: &Log) {
-    use ser::VisitorState;
+    use serde2::ser::VisitorState;
 
     let mut serializer = json::Serializer::new(wr);
-    serializer.visit_struct_start("Log", 12).unwrap();
+    serializer.serialize_struct_start("Log", 12).unwrap();
 
-    serializer.visit_struct_elt("timestamp", &log.timestamp).unwrap();
-    serializer.visit_struct_elt("zone_id", &log.zone_id).unwrap();
+    serializer.serialize_struct_elt("timestamp", &log.timestamp).unwrap();
+    serializer.serialize_struct_elt("zone_id", &log.zone_id).unwrap();
     serializer.serialize_struct_elt("zone_plan", &(log.zone_plan as uint)).unwrap();
 
     serializer.serialize_struct_start("Http", 9).unwrap();
@@ -1040,10 +1231,8 @@ fn bench_direct_mem_writer(b: &mut Bencher) {
         direct(wr.by_ref(), &log);
         let _json = wr.unwrap();
 
-        //let _json = String::from_utf8(wr.unwrap()).unwrap();
-        /*
-        assert_eq!(_s, _json.as_slice());
-        */
+        //let _json = String::from_utf8(_json).unwrap();
+        //assert_eq!(_s, _json.as_slice());
     });
 }
 
@@ -1061,13 +1250,13 @@ fn bench_direct_my_mem_writer0(b: &mut Bencher) {
         direct(wr.by_ref(), &log);
         let _json = wr.unwrap();
 
-        //let _json = String::from_utf8(wr.unwrap()).unwrap();
-        /*
-        assert_eq!(_s, _json.as_slice());
-        */
+        //let _json = String::from_utf8(_json).unwrap();
+        //assert_eq!(_s, _json.as_slice());
     });
 }
+*/
 
+/*
 #[bench]
 fn bench_decoder(b: &mut Bencher) {
     let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
