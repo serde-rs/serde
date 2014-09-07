@@ -1100,8 +1100,11 @@ mod tests {
     #[deriving(Show)]
     enum Error {
         EndOfStream,
-        SyntaxError,
+        SyntaxError(Vec<TokenKind>),
+        UnexpectedName,
+        ConversionError,
         IncompleteValue,
+        MissingField(&'static str),
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -1134,23 +1137,23 @@ mod tests {
             EndOfStream
         }
 
-        fn syntax_error(&mut self, _token: Token, _expected: &[TokenKind]) -> Error {
-            SyntaxError
+        fn syntax_error(&mut self, _token: Token, expected: &[TokenKind]) -> Error {
+            SyntaxError(expected.to_vec())
         }
 
         fn unexpected_name_error(&mut self, _token: Token) -> Error {
-            SyntaxError
+            UnexpectedName
         }
 
         fn conversion_error(&mut self, _token: Token) -> Error {
-            SyntaxError
+            ConversionError
         }
 
         #[inline]
         fn missing_field<
             T: Deserializable<TokenDeserializer<Iter>, Error>
-        >(&mut self, _field: &'static str) -> Result<T, Error> {
-            Err(SyntaxError)
+        >(&mut self, field: &'static str) -> Result<T, Error> {
+            Err(MissingField(field))
         }
     }
 
