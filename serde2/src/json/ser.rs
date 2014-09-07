@@ -220,7 +220,7 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, value: f64) -> io::IoResult<()> {
 pub fn to_vec<
     T: ser::Serialize<Serializer<io::MemWriter>, io::IoResult<()>>
 >(value: &T) -> io::IoResult<Vec<u8>> {
-    let writer = io::MemWriter::new();
+    let writer = io::MemWriter::with_capacity(1024);
     let mut state = Serializer::new(writer);
     try!(value.serialize(&mut state));
     Ok(state.unwrap().unwrap())
