@@ -645,16 +645,16 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
         SyntaxError(EOFWhileParsingValue, 0, 0)
     }
 
-    fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
-        SyntaxError(InvalidSyntax, 0, 0)
+    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> ParserError {
+        SyntaxError(DeserializerError(token, ExpectTokens(expected.to_vec())), 0, 0)
     }
 
-    fn unexpected_name_error(&mut self, _token: de::Token) -> ParserError {
-        SyntaxError(InvalidSyntax, 0, 0)
+    fn unexpected_name_error(&mut self, token: de::Token) -> ParserError {
+        SyntaxError(DeserializerError(token, ExpectName), 0, 0)
     }
 
-    fn conversion_error(&mut self, _token: de::Token) -> ParserError {
-        SyntaxError(InvalidSyntax, 0, 0)
+    fn conversion_error(&mut self, token: de::Token) -> ParserError {
+        SyntaxError(DeserializerError(token, ExpectConversion), 0, 0)
     }
 
     #[inline]
@@ -735,9 +735,32 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
     }
 }
 
+/// The failed expectation of InvalidSyntax
+#[deriving(Clone, PartialEq, Show)]
+pub enum SyntaxExpectation {
+    ListCommaOrEnd,
+    ObjectCommaOrEnd,
+    SomeValue,
+    SomeIdent,
+    EnumMapStart,
+    EnumVariantString,
+    EnumToken,
+    EnumEndToken,
+    EnumEnd,
+}
+
+/// JSON deserializer expectations
+#[deriving(Clone, PartialEq, Show)]
+pub enum DeserializerExpectation {
+    ExpectTokens(Vec<de::TokenKind>),
+    ExpectName,
+    ExpectConversion,
+}
+
 /// The errors that can arise while parsing a JSON stream.
 #[deriving(Clone, PartialEq)]
 pub enum ErrorCode {
+    DeserializerError(de::Token, DeserializerExpectation),
     EOFWhileParsingList,
     EOFWhileParsingObject,
     EOFWhileParsingString,
@@ -745,7 +768,7 @@ pub enum ErrorCode {
     ExpectedColon,
     InvalidEscape,
     InvalidNumber,
-    InvalidSyntax,
+    InvalidSyntax(SyntaxExpectation),
     InvalidUnicodeCodePoint,
     KeyMustBeAString,
     LoneLeadingSurrogateInHexEscape,
@@ -784,6 +807,8 @@ pub enum DecoderError {
 impl fmt::Show for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            DeserializerError(ref token, ref expect) => write!(f,
+                "deserializer found {} when {}", token, expect),
             EOFWhileParsingList => "EOF While parsing list".fmt(f),
             EOFWhileParsingObject => "EOF While parsing object".fmt(f),
             EOFWhileParsingString => "EOF While parsing string".fmt(f),
@@ -791,7 +816,7 @@ impl fmt::Show for ErrorCode {
             ExpectedColon => "expected `:`".fmt(f),
             InvalidEscape => "invalid escape".fmt(f),
             InvalidNumber => "invalid number".fmt(f),
-            InvalidSyntax => "invalid syntax".fmt(f),
+            InvalidSyntax(expect) => write!(f, "invalid syntax, expected: {}", expect),
             InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
             KeyMustBeAString => "key must be a string".fmt(f),
             LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
@@ -1925,7 +1950,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         } else if self.eof() {
             self.error_event(EOFWhileParsingList)
         } else {
-            self.error_event(InvalidSyntax)
+            self.error_event(InvalidSyntax(ListCommaOrEnd))
         }
     }
 
@@ -1952,7 +1977,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         } else if self.eof() {
             self.error_event(EOFWhileParsingObject)
         } else {
-            self.error_event(InvalidSyntax)
+            self.error_event(InvalidSyntax(ObjectCommaOrEnd))
         }
     }
 
@@ -2015,7 +2040,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
                 Ok(de::MapStart(0))
             }
             _ => {
-                self.error_event(InvalidSyntax)
+                self.error_event(InvalidSyntax(SomeValue))
             }
         }
     }
@@ -2025,7 +2050,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
             self.bump();
             Ok(token)
         } else {
-            self.error_event(InvalidSyntax)
+            self.error_event(InvalidSyntax(SomeIdent))
         }
     }
 
@@ -2040,16 +2065,16 @@ impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
         SyntaxError(EOFWhileParsingValue, self.line, self.col)
     }
 
-    fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> ParserError {
-        SyntaxError(InvalidSyntax, self.line, self.col)
+    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> ParserError {
+        SyntaxError(DeserializerError(token, ExpectTokens(expected.to_vec())), self.line, self.col)
     }
 
-    fn unexpected_name_error(&mut self, _token: de::Token) -> ParserError {
-        SyntaxError(InvalidSyntax, self.line, self.col)
+    fn unexpected_name_error(&mut self, token: de::Token) -> ParserError {
+        SyntaxError(DeserializerError(token, ExpectName), self.line, self.col)
     }
 
-    fn conversion_error(&mut self, _token: de::Token) -> ParserError {
-        SyntaxError(InvalidSyntax, self.line, self.col)
+    fn conversion_error(&mut self, token: de::Token) -> ParserError {
+        SyntaxError(DeserializerError(token, ExpectConversion), self.line, self.col)
     }
 
     #[inline]
@@ -2083,19 +2108,19 @@ impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
                          variants: &[&str]) -> Result<uint, ParserError> {
         match token {
             de::MapStart(_) => { }
-            _ => { return self.error(InvalidSyntax); }
+            _ => { return self.error(InvalidSyntax(EnumMapStart)); }
         };
 
         // Enums only have one field in them, which is the variant name.
         let variant = match try!(self.expect_token()) {
             de::String(variant) => variant,
-            _ => { return self.error(InvalidSyntax); }
+            _ => { return self.error(InvalidSyntax(EnumVariantString)); }
         };
 
         // The variant's field is a list of the values.
         match try!(self.expect_token()) {
             de::SeqStart(_) => { }
-            _ => { return self.error(InvalidSyntax); }
+            _ => { return self.error(InvalidSyntax(EnumToken)); }
         }
 
         match variants.iter().position(|v| *v == variant.as_slice()) {
@@ -2110,10 +2135,10 @@ impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
             de::End => {
                 match try!(self.expect_token()) {
                     de::End => Ok(()),
-                    _ => self.error(InvalidSyntax),
+                    _ => self.error(InvalidSyntax(EnumEndToken)),
                 }
             }
-            _ => self.error(InvalidSyntax),
+            _ => self.error(InvalidSyntax(EnumEnd)),
         }
     }
 }
@@ -2331,6 +2356,10 @@ mod tests {
         KeyMustBeAString,
         TrailingCharacters,
         SyntaxError,
+        SomeIdent,
+        SomeValue,
+        ObjectCommaOrEnd,
+        ListCommaOrEnd,
     };
     use de;
     use ser::{Serializable, Serializer};
@@ -2800,8 +2829,8 @@ mod tests {
     #[test]
     fn test_parse_null() {
         test_parse_err::<()>([
-            ("n", SyntaxError(InvalidSyntax, 1, 2)),
-            ("nul", SyntaxError(InvalidSyntax, 1, 4)),
+            ("n", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
+            ("nul", SyntaxError(InvalidSyntax(SomeIdent), 1, 4)),
             ("nulla", SyntaxError(TrailingCharacters, 1, 5)),
         ]);
 
@@ -2820,10 +2849,10 @@ mod tests {
     #[test]
     fn test_parse_bool() {
         test_parse_err::<bool>([
-            ("t", SyntaxError(InvalidSyntax, 1, 2)),
-            ("truz", SyntaxError(InvalidSyntax, 1, 4)),
-            ("f", SyntaxError(InvalidSyntax, 1, 2)),
-            ("faz", SyntaxError(InvalidSyntax, 1, 3)),
+            ("t", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
+            ("truz", SyntaxError(InvalidSyntax(SomeIdent), 1, 4)),
+            ("f", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
+            ("faz", SyntaxError(InvalidSyntax(SomeIdent), 1, 3)),
             ("truea", SyntaxError(TrailingCharacters, 1, 5)),
             ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
         ]);
@@ -2845,8 +2874,8 @@ mod tests {
     #[test]
     fn test_parse_number_errors() {
         test_parse_err::<f64>([
-            ("+", SyntaxError(InvalidSyntax, 1, 1)),
-            (".", SyntaxError(InvalidSyntax, 1, 1)),
+            ("+", SyntaxError(InvalidSyntax(SomeValue), 1, 1)),
+            (".", SyntaxError(InvalidSyntax(SomeValue), 1, 1)),
             ("-", SyntaxError(InvalidNumber, 1, 2)),
             ("00", SyntaxError(InvalidNumber, 1, 2)),
             ("1.", SyntaxError(InvalidNumber, 1, 3)),
@@ -2934,8 +2963,8 @@ mod tests {
             ("[ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
             ("[1", SyntaxError(EOFWhileParsingList,  1, 3)),
             ("[1,", SyntaxError(EOFWhileParsingValue, 1, 4)),
-            ("[1,]", SyntaxError(InvalidSyntax, 1, 4)),
-            ("[1 2]", SyntaxError(InvalidSyntax, 1, 4)),
+            ("[1,]", SyntaxError(InvalidSyntax(SomeValue), 1, 4)),
+            ("[1 2]", SyntaxError(InvalidSyntax(ListCommaOrEnd), 1, 4)),
             ("[]a", SyntaxError(TrailingCharacters, 1, 3)),
         ]);
 
@@ -2999,7 +3028,7 @@ mod tests {
             ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
             ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
             ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
-            ("{\"a\":1 1", SyntaxError(InvalidSyntax, 1, 8)),
+            ("{\"a\":1 1", SyntaxError(InvalidSyntax(ObjectCommaOrEnd), 1, 8)),
             ("{\"a\":1,", SyntaxError(EOFWhileParsingString, 1, 8)),
             ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
         ]);

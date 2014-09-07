@@ -10,14 +10,23 @@ extern crate rustc;
 use std::gc::Gc;
 
 use syntax::ast::{
+    Attribute,
     Ident,
     MetaItem,
+    MetaNameValue,
     Item,
+    ItemEnum,
+    ItemStruct,
     Expr,
     MutMutable,
     LitNil,
+    LitStr,
+    P,
+    StructField,
+    Variant,
 };
 use syntax::ast;
+use syntax::attr;
 use syntax::codemap::Span;
 use syntax::ext::base::{ExtCtxt, ItemDecorator};
 use syntax::ext::build::AstBuilder;
@@ -103,7 +112,7 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                 ),
                 attributes: attrs,
                 combine_substructure: combine_substructure(|a, b, c| {
-                    serializable_substructure(a, b, c)
+                    serializable_substructure(a, b, c, item)
                 }),
             })
     };
@@ -111,12 +120,15 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, push)
 }
 
-fn serializable_substructure(cx: &ExtCtxt, span: Span,
-                          substr: &Substructure) -> Gc<Expr> {
+fn serializable_substructure(cx: &ExtCtxt,
+                             span: Span,
+                             substr: &Substructure,
+                             item: Gc<Item>
+                             ) -> Gc<Expr> {
     let serializer = substr.nonself_args[0];
 
-    return match *substr.fields {
-        Struct(ref fields) => {
+    match (&item.deref().node, substr.fields) {
+        (&ItemStruct(ref definition, _), &Struct(ref fields)) => {
             if fields.is_empty() {
                 // unit structs have no fields and need to return `Ok()`
                 quote_expr!(cx, Ok(()))
@@ -127,12 +139,15 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span,
                 );
                 let len = fields.len();
 
-                let mut stmts: Vec<Gc<ast::Stmt>> = fields.iter()
+                let mut stmts: Vec<Gc<ast::Stmt>> = definition.fields.iter()
+                    .zip(fields.iter())
                     .enumerate()
-                    .map(|(i, &FieldInfo { name, self_, span, .. })| {
-                        let name = match name {
-                            Some(id) => token::get_ident(id),
-                            None => token::intern_and_get_ident(format!("_field{}", i).as_slice()),
+                    .map(|(i, (def, &FieldInfo { name, self_, span, .. }))| {
+                        let serial_name = find_serial_name(def.node.attrs.iter());
+                        let name = match (serial_name, name) {
+                            (Some(serial), _) => serial.clone(),
+                            (None, Some(id)) => token::get_ident(id),
+                            (None, None) => token::intern_and_get_ident(format!("_field{}", i).as_slice()),
                         };
 
                         let name = cx.expr_str(span, name);
@@ -152,7 +167,7 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span,
             }
         }
 
-        EnumMatching(_idx, variant, ref fields) => {
+        (&ItemEnum(ref definition, _), &EnumMatching(_idx, variant, ref fields)) => {
             let type_name = cx.expr_str(
                 span,
                 token::get_ident(substr.type_ident)
@@ -163,8 +178,10 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span,
             );
             let len = fields.len();
 
-            let stmts: Vec<Gc<ast::Stmt>> = fields.iter()
-                .map(|&FieldInfo { self_, span, .. }| {
+            let stmts: Vec<Gc<ast::Stmt>> = definition.variants.iter()
+                .zip(fields.iter())
+                .map(|(def, &FieldInfo { self_, span, .. })| {
+                    let _serial_name = find_serial_name(def.node.attrs.iter());
                     quote_stmt!(
                         cx,
                         try!($serializer.serialize_enum_elt(&$self_))
@@ -241,20 +258,22 @@ fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
     let token = substr.nonself_args[1];
 
     match *substr.fields {
-        StaticStruct(_, ref fields) => {
+        StaticStruct(ref definition, ref fields) => {
             deserialize_struct(
                 cx,
                 span,
                 substr.type_ident,
+                definition.fields.as_slice(),
                 fields,
                 deserializer,
                 token)
         }
-        StaticEnum(_, ref fields) => {
+        StaticEnum(ref definition, ref fields) => {
             deserialize_enum(
                 cx,
                 span,
                 substr.type_ident,
+                definition.variants.as_slice(),
                 fields.as_slice(),
                 deserializer,
                 token)
@@ -267,14 +286,21 @@ fn deserialize_struct(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    definitions: &[StructField],
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>,
     token: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
+    let serial_names: Vec<Option<token::InternedString>> =
+        definitions.iter().map(|def|
+            find_serial_name(def.node.attrs.iter())
+        ).collect();
+
     let struct_block = deserialize_struct_from_struct(
         cx,
         span,
         type_ident,
+        serial_names.as_slice(),
         fields,
         deserializer
     );
@@ -283,6 +309,7 @@ fn deserialize_struct(
         cx,
         span,
         type_ident,
+        serial_names.as_slice(),
         fields,
         deserializer
     );
@@ -307,6 +334,7 @@ fn deserialize_struct_from_struct(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
@@ -316,6 +344,7 @@ fn deserialize_struct_from_struct(
         cx,
         span,
         type_ident,
+        serial_names.as_slice(),
         fields,
         |cx, span, name| {
             let name = cx.expr_str(span, name);
@@ -337,6 +366,7 @@ fn deserialize_struct_from_map(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     deserializer: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
@@ -353,9 +383,14 @@ fn deserialize_struct_from_map(
         .collect();
 
     // Declare key arms.
-    let key_arms: Vec<ast::Arm> = fields.iter()
-        .map(|&(name, span)| {
-            let s = cx.expr_str(span, token::get_ident(name));
+    let key_arms: Vec<ast::Arm> = serial_names.iter()
+        .zip(fields.iter())
+        .map(|(serial, &(name, span))| {
+            let serial_name = match serial {
+                &Some(ref string) => string.clone(),
+                &None => token::get_ident(name),
+            };
+            let s = cx.expr_str(span, serial_name);
             quote_arm!(cx,
                 $s => {
                     $name = Some(
@@ -366,9 +401,14 @@ fn deserialize_struct_from_map(
         })
         .collect();
 
-    let extract_fields: Vec<Gc<ast::Stmt>> = fields.iter()
-        .map(|&(name, span)| {
-            let name_str = cx.expr_str(span, token::get_ident(name));
+    let extract_fields: Vec<Gc<ast::Stmt>> = serial_names.iter()
+        .zip(fields.iter())
+        .map(|(serial, &(name, span))| {
+            let serial_name = match serial {
+                &Some(ref string) => string.clone(),
+                &None => token::get_ident(name),
+            };
+            let name_str = cx.expr_str(span, serial_name);
             quote_stmt!(cx,
                 let $name = match $name {
                     Some($name) => $name,
@@ -428,11 +468,16 @@ fn deserialize_enum(
     cx: &ExtCtxt,
     span: Span,
     type_ident: Ident,
+    definitions: &[P<Variant>],
     fields: &[(Ident, Span, StaticFields)],
     deserializer: Gc<ast::Expr>,
     token: Gc<ast::Expr>
 ) -> Gc<ast::Expr> {
     let type_name = cx.expr_str(span, token::get_ident(type_ident));
+
+    let serial_names = definitions.iter().map(|def|
+        find_serial_name(def.node.attrs.iter())
+    ).collect::<Vec<Option<token::InternedString>>>();
 
     let variants = fields.iter()
         .map(|&(name, span, _)| {
@@ -449,6 +494,7 @@ fn deserialize_enum(
                 cx,
                 span,
                 name,
+                serial_names.as_slice(),
                 parts,
                 |cx, span, _| {
                     quote_expr!(cx, try!($deserializer.expect_enum_elt()))
@@ -480,6 +526,7 @@ fn deserializable_static_fields(
     cx: &ExtCtxt,
     span: Span,
     outer_pat_ident: Ident,
+    serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     getarg: |&ExtCtxt, Span, token::InternedString| -> Gc<Expr>
 ) -> Gc<Expr> {
@@ -501,11 +548,15 @@ fn deserializable_static_fields(
         }
         Named(ref fields) => {
             // use the field's span to get nicer error messages.
-            let fields = fields.iter().map(|&(name, span)| {
+            let fields = serial_names.iter()
+                .zip(fields.iter()).map(|(serial_name, &(name, span))| {
+                let effective_name = serial_name.clone().unwrap_or(
+                    token::get_ident(name)
+                );
                 let arg = getarg(
                     cx,
                     span,
-                    token::get_ident(name)
+                    effective_name
                 );
                 cx.field_imm(span, name, arg)
             }).collect();
@@ -513,4 +564,23 @@ fn deserializable_static_fields(
             cx.expr_struct_ident(span, outer_pat_ident, fields)
         }
     }
+}
+
+fn find_serial_name<'a, I: Iterator<&'a Attribute>>(mut iterator: I)
+                    -> Option<token::InternedString> {
+    for at in iterator {
+        match at.node.value.node {
+            MetaNameValue(ref at_name, ref value) => {
+                match (at_name.get(), &value.node) {
+                    ("serial_name", &LitStr(ref string, _)) => {
+                        attr::mark_used(at);
+                        return Some(string.clone());
+                    },
+                    _ => ()
+                }
+            },
+            _ => ()
+        }
+    }
+    None
 }
