@@ -1,0 +1,11 @@
+language: rust
+
+rust:
+  - nightly
+
+script:
+  - cargo test --verbose
+  - cargo bench --verbose
+  - cd serde2
+  - cargo test --verbose
+  - cargo bench --verbose
