@@ -9,7 +9,7 @@ pub trait Serialize<S, R> {
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serializer<S, R> {
-    fn hash<T: Serialize<S, R>>(&self, value: &T) -> R;
+    fn serialize<T: Serialize<S, R>>(&mut self, value: &T) -> R;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17,6 +17,7 @@ pub trait Serializer<S, R> {
 pub trait Visitor<S, R> {
     fn visit(&mut self, state: &mut S) -> Option<R>;
 
+    #[inline]
     fn size_hint(&self) -> (uint, Option<uint>) {
         (0, None)
     }
