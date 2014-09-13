@@ -15,14 +15,23 @@ trait VisitorState<E> {
     fn visit_string(&mut self) -> Result<String, E>;
 
     fn visit_seq<
-        C: Deserialize<Self, E>,
-        V: Visitor<C, Self, E>
-    >(&mut self) -> Result<C, E>;
+        T: Deserialize<Self, E>,
+        V: Visitor<T, Self, E>
+    >(&mut self) -> Result<T, E>;
+
+    fn visit_seq_elt<
+        T: Deserialize<Self, E>,
+    >(&mut self) -> Result<T, E>;
 
     fn visit_map<
-        C: Deserialize<Self, E>,
-        V: Visitor<C, Self, E>
-    >(&mut self) -> Result<C, E>;
+        T: Deserialize<Self, E>,
+        V: Visitor<T, Self, E>
+    >(&mut self) -> Result<T, E>;
+
+    fn visit_map_elt<
+        K: Deserialize<Self, E>,
+        V: Deserialize<Self, E>
+    >(&mut self) -> Result<(K, V), E>;
 }
 
 trait Visitor<C, S, E> {
@@ -71,7 +80,7 @@ impl<
             }
 
             fn visit(&mut self, state: &mut S) -> Result<(), E> {
-                let value = try!(Deserialize::deserialize(state));
+                let value = try!(state.visit_seq_elt());
                 self.value.push(value);
                 Ok(())
             }
@@ -103,7 +112,7 @@ impl<
         impl<
             T0: Deserialize<S, E>,
             T1: Deserialize<S, E>,
-            S,
+            S: VisitorState<E>,
             E
         > ::Visitor<(T0, T1), S, E> for Visitor<T0, T1> {
             fn new(_: uint) -> Visitor<T0, T1> {
@@ -118,11 +127,11 @@ impl<
                 match self.state {
                     0 => {
                         self.state += 1;
-                        self.t0 = Some(try!(Deserialize::deserialize(state)));
+                        self.t0 = Some(try!(state.visit_seq_elt()));
                     }
                     1 => {
                         self.state += 1;
-                        self.t1 = Some(try!(Deserialize::deserialize(state)));
+                        self.t1 = Some(try!(state.visit_seq_elt()));
                     }
                     _ => fail!()
                 }
@@ -175,8 +184,7 @@ impl<
             }
 
             fn visit(&mut self, state: &mut S) -> Result<(), E> {
-                let key = try!(Deserialize::deserialize(state));
-                let value = try!(Deserialize::deserialize(state));
+                let (key, value) = try!(state.visit_map_elt());
                 self.value.insert(key, value);
                 Ok(())
             }
@@ -269,6 +277,12 @@ impl<Iter: Iterator<Token>> VisitorState<()> for MyDeserializerState<Iter> {
         visitor.unwrap()
     }
 
+    fn visit_seq_elt<
+        T: Deserialize<MyDeserializerState<Iter>, ()>,
+    >(&mut self) -> Result<T, ()> {
+        Deserialize::deserialize(self)
+    }
+
     fn visit_map<
         T: Deserialize<MyDeserializerState<Iter>, ()>,
         V: Visitor<T, MyDeserializerState<Iter>, ()>
@@ -292,6 +306,15 @@ impl<Iter: Iterator<Token>> VisitorState<()> for MyDeserializerState<Iter> {
         }
 
         visitor.unwrap()
+    }
+
+    fn visit_map_elt<
+        K: Deserialize<MyDeserializerState<Iter>, ()>,
+        V: Deserialize<MyDeserializerState<Iter>, ()>
+    >(&mut self) -> Result<(K, V), ()> {
+        let k = try!(Deserialize::deserialize(self));
+        let v = try!(Deserialize::deserialize(self));
+        Ok((k, v))
     }
 }
 
