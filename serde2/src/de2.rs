@@ -18,32 +18,6 @@ trait VisitorState<E> {
         SeqState,
         MapState,
     >(&mut self, visitor: &mut V) -> Result<T, E>;
-
-    /*
-    fn visit_null(&mut self) -> Result<(), E>;
-
-    fn visit_int(&mut self) -> Result<int, E>;
-
-    fn visit_string(&mut self) -> Result<String, E>;
-
-    fn visit_seq(&mut self) -> Result<uint, E>;
-
-    fn visit_seq_elt<
-        T: Deserialize<Self, E>,
-    >(&mut self) -> Option<Result<T, E>>;
-
-    /*
-    fn visit_map<
-        T: Deserialize<Self, E>,
-        V: Visitor<T, Self, E>
-    >(&mut self) -> Result<T, E>;
-
-    fn visit_map_elt<
-        K: Deserialize<Self, E>,
-        V: Deserialize<Self, E>
-    >(&mut self) -> Result<(K, V), E>;
-    */
-    */
 }
 
 trait Visitor<
@@ -90,26 +64,6 @@ trait Visitor<
     }
 }
 
-/*
-trait Visitor<VS: VisitorState<Self, E>, E> {
-    fn next<
-        T: Deserialize<VS, E>,
-    >(&mut self) -> Option<Result<T, E>>;
-
-    fn size_hint(&self) -> (uint, Option<uint>);
-}
-*/
-
-/*
-trait Visitor<C, S, E> {
-    fn new(len: uint) -> Self;
-
-    fn visit(&mut self, state: &mut S) -> Result<(), E>;
-
-    fn unwrap(self) -> Result<C, E>;
-}
-*/
-
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
@@ -129,8 +83,6 @@ impl<
         }
 
         state.visit(&mut Visitor)
-
-        //state.visit_int()
     }
 }
 
@@ -151,8 +103,6 @@ impl<
         }
 
         state.visit(&mut Visitor)
-
-        //state.visit_string()
     }
 }
 
@@ -187,21 +137,6 @@ impl<
         }
 
         state.visit(&mut Visitor)
-
-        /*
-        let len = try!(state.visit_seq());
-        let mut value = Vec::with_capacity(len);
-
-        loop {
-            match state.visit_seq_elt() {
-                Some(Ok(v)) => { value.push(v); }
-                Some(Err(err)) => { return Err(err); }
-                None => { break; }
-            }
-        }
-
-        Ok(value)
-        */
     }
 }
 
@@ -225,8 +160,6 @@ impl<
         }
 
         state.visit(&mut Visitor)
-
-        //state.visit_null()
     }
 }
 
@@ -277,120 +210,9 @@ impl<
                     _ => Err(state.syntax_error()),
                 }
             }
-
-            /*
-                match self.state {
-                    0 => {
-                        self.state += 1;
-                        self.t0 = Some(try!(state.visit_seq_elt()));
-                    }
-                    1 => {
-                        self.state += 1;
-                        self.t1 = Some(try!(state.visit_seq_elt()));
-                    }
-                    _ => fail!()
-                }
-
-                Ok(())
-            }
-
-            fn unwrap(self) -> Result<(T0, T1), E> {
-                let t0 = match self.t0 {
-                    Some(t0) => t0,
-                    None => { fail!(); }
-                };
-
-                let t1 = match self.t1 {
-                    Some(t1) => t1,
-                    None => { fail!(); }
-                };
-
-                Ok((t0, t1))
-            }
-            */
         }
 
         state.visit(&mut Visitor { state: 0 })
-
-
-        /*
-        let _ = try!(state.visit_seq());
-
-        let t0 = match state.visit_seq_elt() {
-            Some(Ok(v)) => v,
-            Some(Err(err)) => { return Err(err); }
-            None => { fail!(); }
-        };
-
-        let t1 = match state.visit_seq_elt() {
-            Some(Ok(v)) => v,
-            Some(Err(err)) => { return Err(err); }
-            None => { fail!(); }
-        };
-
-        match state.visit_seq_elt() {
-            Some(Ok(())) => { fail!(); }
-            Some(Err(err)) => { return Err(err); }
-            None => { }
-        }
-
-        Ok((t0, t1))
-        */
-
-        /*
-        struct Visitor<T0, T1> {
-            state: uint,
-            t0: Option<T0>,
-            t1: Option<T1>,
-        }
-
-        impl<
-            T0: Deserialize<S, E>,
-            T1: Deserialize<S, E>,
-            S: VisitorState<E>,
-            E
-        > ::Visitor<(T0, T1), S, E> for Visitor<T0, T1> {
-            fn new(_: uint) -> Visitor<T0, T1> {
-                Visitor {
-                    state: 0,
-                    t0: None,
-                    t1: None,
-                }
-            }
-
-            fn visit(&mut self, state: &mut S) -> Result<(), E> {
-                match self.state {
-                    0 => {
-                        self.state += 1;
-                        self.t0 = Some(try!(state.visit_seq_elt()));
-                    }
-                    1 => {
-                        self.state += 1;
-                        self.t1 = Some(try!(state.visit_seq_elt()));
-                    }
-                    _ => fail!()
-                }
-
-                Ok(())
-            }
-
-            fn unwrap(self) -> Result<(T0, T1), E> {
-                let t0 = match self.t0 {
-                    Some(t0) => t0,
-                    None => { fail!(); }
-                };
-
-                let t1 = match self.t1 {
-                    Some(t1) => t1,
-                    None => { fail!(); }
-                };
-
-                Ok((t0, t1))
-            }
-        }
-
-        state.visit_seq::<(T0, T1), Visitor<T0, T1>>()
-        */
     }
 }
 
@@ -428,38 +250,6 @@ impl<
         }
 
         state.visit(&mut Visitor)
-
-
-        /*
-        struct Visitor<K, V> {
-            value: HashMap<K, V>,
-        }
-
-        impl<
-            K: Deserialize<S, E> + Eq + Hash,
-            V: Deserialize<S, E>,
-            S: VisitorState<E>,
-            E
-        > ::Visitor<HashMap<K, V>, S, E> for Visitor<K, V> {
-            fn new(len: uint) -> Visitor<K, V> {
-                Visitor {
-                    value: HashMap::with_capacity(len),
-                }
-            }
-
-            fn visit(&mut self, state: &mut S) -> Result<(), E> {
-                let (key, value) = try!(state.visit_map_elt());
-                self.value.insert(key, value);
-                Ok(())
-            }
-
-            fn unwrap(self) -> Result<HashMap<K, V>, E> {
-                Ok(self.value)
-            }
-        }
-
-        state.visit_map::<HashMap<K, V>, Visitor<K, V>>()
-        */
     }
 }
 
@@ -495,38 +285,6 @@ impl<
         }
 
         state.visit(&mut Visitor)
-
-
-        /*
-        struct Visitor<K, V> {
-            value: HashMap<K, V>,
-        }
-
-        impl<
-            K: Deserialize<S, E> + Eq + Hash,
-            V: Deserialize<S, E>,
-            S: VisitorState<E>,
-            E
-        > ::Visitor<HashMap<K, V>, S, E> for Visitor<K, V> {
-            fn new(len: uint) -> Visitor<K, V> {
-                Visitor {
-                    value: HashMap::with_capacity(len),
-                }
-            }
-
-            fn visit(&mut self, state: &mut S) -> Result<(), E> {
-                let (key, value) = try!(state.visit_map_elt());
-                self.value.insert(key, value);
-                Ok(())
-            }
-
-            fn unwrap(self) -> Result<HashMap<K, V>, E> {
-                Ok(self.value)
-            }
-        }
-
-        state.visit_map::<HashMap<K, V>, Visitor<K, V>>()
-        */
     }
 }
 
@@ -730,89 +488,6 @@ impl<
         }
 
     }
-
-    /*
-    fn visit_null(&mut self) -> Result<(), ()> {
-        match self.next() {
-            Some(Null) => Ok(()),
-            _ => Err(())
-        }
-    }
-
-    fn visit_int(&mut self) -> Result<int, ()> {
-        match self.next() {
-            Some(Int(v)) => Ok(v),
-            _ => Err(())
-        }
-    }
-
-    fn visit_string(&mut self) -> Result<String, ()> {
-        match self.next() {
-            Some(String(v)) => Ok(v),
-            _ => Err(())
-        }
-    }
-
-    fn visit_seq(&mut self) -> Result<uint, ()> {
-        match self.next() {
-            Some(SeqStart(len)) => Ok(len),
-            _ => Err(()),
-        }
-    }
-
-    fn visit_seq_elt<
-        T: Deserialize<MyDeserializerState<Iter>, ()>,
-    >(&mut self) -> Option<Result<T, ()>> {
-        match self.peek() {
-            Some(&End) => {
-                self.next();
-                None
-            }
-            Some(_) => {
-                Some(Deserialize::deserialize(self))
-            }
-            None => {
-                Some(Err(()))
-            }
-        }
-    }
-
-    /*
-    fn visit_map<
-        T: Deserialize<MyDeserializerState<Iter>, ()>,
-        V: Visitor<T, MyDeserializerState<Iter>, ()>
-    >(&mut self) -> Result<T, ()> {
-        let len = match self.next() {
-            Some(MapStart(len)) => len,
-            _ => { return Err(()); }
-        };
-
-        let mut visitor: V = Visitor::new(len);
-
-        loop {
-            match self.next() {
-                Some(End) => { break; }
-                Some(token) => {
-                    self.peeked = Some(token);
-                    try!(visitor.visit(self));
-                }
-                _ => { return Err(()); }
-            }
-        }
-
-        visitor.unwrap()
-    }
-
-    fn visit_map_elt<
-        K: Deserialize<MyDeserializerState<Iter>, ()>,
-        V: Deserialize<MyDeserializerState<Iter>, ()>
-    >(&mut self) -> Result<(K, V), ()> {
-        let k = try!(Deserialize::deserialize(self));
-        let v = try!(Deserialize::deserialize(self));
-        Ok((k, v))
-    }
-    */
-    */
 }
 
 ///////////////////////////////////////////////////////////////////////////////
