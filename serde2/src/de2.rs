@@ -19,12 +19,12 @@ trait DeserializerState<E> {
     fn syntax_error(&mut self) -> E;
 
     fn visit<
-        V: Visitor<T, Self, E>,
+        V: VisitorState<T, Self, E>,
         T: Deserialize<Self, E>,
     >(&mut self, visitor: &mut V) -> Result<T, E>;
 }
 
-trait Visitor<
+trait VisitorState<
     T,
     D: DeserializerState<E>,
     E,
@@ -77,7 +77,6 @@ trait MapVisitor<D, E> {
     }
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
@@ -90,7 +89,7 @@ impl<
         impl<
             D: DeserializerState<E>,
             E,
-        > ::Visitor<int, D, E> for Visitor {
+        > ::VisitorState<int, D, E> for Visitor {
             fn visit_int(&mut self, _d: &mut D, v: int) -> Result<int, E> {
                 Ok(v)
             }
@@ -110,7 +109,7 @@ impl<
         impl<
             D: DeserializerState<E>,
             E,
-        > ::Visitor<String, D, E> for Visitor {
+        > ::VisitorState<String, D, E> for Visitor {
             fn visit_string(&mut self, _d: &mut D, v: String) -> Result<String, E> {
                 Ok(v)
             }
@@ -134,9 +133,9 @@ impl<
             T: Deserialize<D, E>,
             D: DeserializerState<E>,
             E,
-        > ::Visitor<Vec<T>, D, E> for Visitor {
+        > ::VisitorState<Vec<T>, D, E> for Visitor {
             fn visit_seq<
-                Visitor: SeqVisitor<D, E>,
+                Visitor: ::SeqVisitor<D, E>,
             >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Vec<T>, E> {
                 let (len, _) = visitor.size_hint();
                 let mut values = Vec::with_capacity(len);
@@ -175,7 +174,7 @@ impl<
         impl<
             D: DeserializerState<E>,
             E,
-        > ::Visitor<(), D, E> for Visitor {
+        > ::VisitorState<(), D, E> for Visitor {
             fn visit_null(&mut self, _d: &mut D) -> Result<(), E> {
                 Ok(())
             }
@@ -201,9 +200,9 @@ impl<
             T1: Deserialize<D, E>,
             D: DeserializerState<E>,
             E
-        > ::Visitor<(T0, T1), D, E> for Visitor {
+        > ::VisitorState<(T0, T1), D, E> for Visitor {
             fn visit_seq<
-                Visitor: SeqVisitor<D, E>,
+                Visitor: ::SeqVisitor<D, E>,
             >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<(T0, T1), E> {
                 let mut state = 0u;
                 let mut t0 = None;
@@ -264,15 +263,16 @@ impl<
             V: Deserialize<D, E>,
             D: DeserializerState<E>,
             E,
-        > ::Visitor<HashMap<K, V>, D, E> for Visitor {
+        > ::VisitorState<HashMap<K, V>, D, E> for Visitor {
             fn visit_map<
-                Visitor: MapVisitor<D, E>,
+                Visitor: ::MapVisitor<D, E>,
             >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<HashMap<K, V>, E> {
                 let (len, _) = visitor.size_hint();
                 let mut values = HashMap::with_capacity(len);
 
                 loop {
-                    match visitor.next(d) {
+                    let kv: Option<Result<(K, V), E>> = visitor.next(d);
+                    match kv {
                         Some(Ok((key, value))) => {
                             values.insert(key, value);
                         }
@@ -307,14 +307,15 @@ impl<
             V: Deserialize<D, E>,
             D: DeserializerState<E>,
             E,
-        > ::Visitor<TreeMap<K, V>, D, E> for Visitor {
+        > ::VisitorState<TreeMap<K, V>, D, E> for Visitor {
             fn visit_map<
-                Visitor: MapVisitor<D, E>,
+                Visitor: ::MapVisitor<D, E>,
             >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<TreeMap<K, V>, E> {
                 let mut values = TreeMap::new();
 
                 loop {
-                    match visitor.next(d) {
+                    let kv: Option<Result<(K, V), E>> = visitor.next(d);
+                    match kv {
                         Some(Ok((key, value))) => {
                             values.insert(key, value);
                         }
@@ -360,7 +361,7 @@ mod json {
             impl<
                 D: super::DeserializerState<E>,
                 E,
-            > super::Visitor<Value, D, E> for Visitor {
+            > super::VisitorState<Value, D, E> for Visitor {
                 fn visit_null(&mut self, _d: &mut D) -> Result<Value, E> {
                     Ok(Null)
                 }
@@ -402,7 +403,8 @@ mod json {
                     let mut values = TreeMap::new();
 
                     loop {
-                        match visitor.next(d) {
+                        let kv: Option<Result<(String, Value), E>> = visitor.next(d);
+                        match kv {
                             Some(Ok((key, value))) => {
                                 values.insert(key, value);
                             }
@@ -479,7 +481,7 @@ impl<
     }
 
     fn visit<
-        V: Visitor<T, MyDeserializer<Iter>, ()>,
+        V: VisitorState<T, MyDeserializer<Iter>, ()>,
         T: Deserialize<MyDeserializer<Iter>, ()>,
     >(&mut self, visitor: &mut V) -> Result<T, ()> {
         match self.next() {
