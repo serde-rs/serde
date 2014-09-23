@@ -6,8 +6,6 @@
 extern crate syntax;
 extern crate rustc;
 
-use std::gc::Gc;
-
 use syntax::ast::{
     Ident,
     MetaItem,
@@ -45,6 +43,7 @@ use syntax::ext::deriving::generic::ty::{
     borrowed_explicit_self,
 };
 use syntax::parse::token;
+use syntax::ptr::P;
 
 use rustc::plugin::Registry;
 
@@ -53,20 +52,20 @@ use rustc::plugin::Registry;
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
         token::intern("deriving_serializable"),
-        ItemDecorator(expand_deriving_serializable));
+        ItemDecorator(box expand_deriving_serializable));
 
     /*
     reg.register_syntax_extension(
         token::intern("deriving_deserializable"),
-        ItemDecorator(expand_deriving_deserializable));
+        ItemDecorator(box expand_deriving_deserializable));
         */
 }
 
 fn expand_deriving_serializable(cx: &mut ExtCtxt,
                                 sp: Span,
-                                mitem: Gc<MetaItem>,
-                                item: Gc<Item>,
-                                mut push: |Gc<ast::Item>|) {
+                                mitem: &MetaItem,
+                                item: &Item,
+                                mut push: |P<ast::Item>|) {
 
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
@@ -105,8 +104,8 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, push)
 }
 
-fn serializable_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> Gc<Expr> {
-    let serializer = substr.nonself_args[0];
+fn serializable_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<Expr> {
+    let serializer = substr.nonself_args[0].clone();
 
     match *substr.fields {
         Struct(ref fields) => {
@@ -125,16 +124,16 @@ fn serializable_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) ->
     }
 }
 
-fn serialize_tuple_struct(cx: &ExtCtxt) -> Gc<Expr> {
+fn serialize_tuple_struct(cx: &ExtCtxt) -> P<Expr> {
     // unit structs have no fields and need to return `Ok()`
     quote_expr!(cx, Ok(()))
 }
 
 fn serialize_struct(cx: &ExtCtxt,
                     span: Span,
-                    serializer: Gc<Expr>,
+                    serializer: P<Expr>,
                     type_ident: Ident,
-                    fields: &Vec<FieldInfo>) -> Gc<Expr> {
+                    fields: &Vec<FieldInfo>) -> P<Expr> {
 
     let type_name = cx.expr_str(
         span,
@@ -197,10 +196,10 @@ fn serialize_struct(cx: &ExtCtxt,
 
 fn serialize_enum(cx: &ExtCtxt,
                   span: Span,
-                  serializer: Gc<Expr>,
+                  serializer: P<Expr>,
                   type_ident: Ident,
                   variant: &ast::Variant,
-                  fields: &Vec<FieldInfo>) -> Gc<Expr> {
+                  fields: &Vec<FieldInfo>) -> P<Expr> {
     let type_name = cx.expr_str(
         span,
         token::get_ident(type_ident)
@@ -211,8 +210,8 @@ fn serialize_enum(cx: &ExtCtxt,
     );
     let len = fields.len();
 
-    let stmts: Vec<Gc<ast::Stmt>> = fields.iter()
-        .map(|&FieldInfo { self_, span, .. }| {
+    let stmts: Vec<P<ast::Stmt>> = fields.iter()
+        .map(|&FieldInfo { ref self_, span, .. }| {
             quote_stmt!(
                 cx,
                 try!($serializer.serialize_enum_elt(&$self_))
@@ -230,9 +229,9 @@ fn serialize_enum(cx: &ExtCtxt,
 /*
 pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
                                       span: Span,
-                                      mitem: Gc<MetaItem>,
-                                      item: Gc<Item>,
-                                      push: |Gc<Item>|) {
+                                      mitem: &MetaItem,
+                                      item: &Item,
+                                      push: |P<Item>|) {
     let trait_def = TraitDef {
         span: span,
         attributes: Vec::new(),
@@ -281,7 +280,7 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
 }
 
 fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
-                               substr: &Substructure) -> Gc<Expr> {
+                               substr: &Substructure) -> P<Expr> {
     let deserializer = substr.nonself_args[0];
     let token = substr.nonself_args[1];
 
@@ -313,9 +312,9 @@ fn deserialize_struct(
     span: Span,
     type_ident: Ident,
     fields: &StaticFields,
-    deserializer: Gc<ast::Expr>,
-    token: Gc<ast::Expr>
-) -> Gc<ast::Expr> {
+    deserializer: P<ast::Expr>,
+    token: P<ast::Expr>
+) -> P<ast::Expr> {
     let struct_block = deserialize_struct_from_struct(
         cx,
         span,
@@ -353,8 +352,8 @@ fn deserialize_struct_from_struct(
     span: Span,
     type_ident: Ident,
     fields: &StaticFields,
-    deserializer: Gc<ast::Expr>
-) -> Gc<ast::Expr> {
+    deserializer: P<ast::Expr>
+) -> P<ast::Expr> {
     let expect_struct_field = cx.ident_of("expect_struct_field");
 
     let call = deserializable_static_fields(
@@ -383,15 +382,15 @@ fn deserialize_struct_from_map(
     span: Span,
     type_ident: Ident,
     fields: &StaticFields,
-    deserializer: Gc<ast::Expr>
-) -> Gc<ast::Expr> {
+    deserializer: P<ast::Expr>
+) -> P<ast::Expr> {
     let fields = match *fields {
         Unnamed(_) => fail!(),
         Named(ref fields) => fields.as_slice(),
     };
 
     // Declare each field.
-    let let_fields: Vec<Gc<ast::Stmt>> = fields.iter()
+    let let_fields: Vec<P<ast::Stmt>> = fields.iter()
         .map(|&(name, span)| {
             quote_stmt!(cx, let mut $name = None)
         })
@@ -411,7 +410,7 @@ fn deserialize_struct_from_map(
         })
         .collect();
 
-    let extract_fields: Vec<Gc<ast::Stmt>> = fields.iter()
+    let extract_fields: Vec<P<ast::Stmt>> = fields.iter()
         .map(|&(name, span)| {
             let name_str = cx.expr_str(span, token::get_ident(name));
             quote_stmt!(cx,
@@ -474,9 +473,9 @@ fn deserialize_enum(
     span: Span,
     type_ident: Ident,
     fields: &[(Ident, Span, StaticFields)],
-    deserializer: Gc<ast::Expr>,
-    token: Gc<ast::Expr>
-) -> Gc<ast::Expr> {
+    deserializer: P<ast::Expr>,
+    token: P<ast::Expr>
+) -> P<ast::Expr> {
     let type_name = cx.expr_str(span, token::get_ident(type_ident));
 
     let variants = fields.iter()
@@ -526,8 +525,8 @@ fn deserializable_static_fields(
     span: Span,
     outer_pat_ident: Ident,
     fields: &StaticFields,
-    getarg: |&ExtCtxt, Span, token::InternedString| -> Gc<Expr>
-) -> Gc<Expr> {
+    getarg: |&ExtCtxt, Span, token::InternedString| -> P<Expr>
+) -> P<Expr> {
     match *fields {
         Unnamed(ref fields) => {
             if fields.is_empty() {
