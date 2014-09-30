@@ -274,7 +274,7 @@ use std::num::{FPNaN, FPInfinite};
 use std::num;
 use std::str::ScalarValue;
 use std::str;
-use std::string::String;
+use std::string;
 use std::vec::Vec;
 use std::vec;
 
@@ -291,13 +291,13 @@ pub enum Json {
     Boolean(bool),
     Integer(i64),
     Floating(f64),
-    String(String),
-    List(List),
-    Object(Object),
+    String(string::String),
+    List(JsonList),
+    Object(JsonObject),
 }
 
-pub type List = Vec<Json>;
-pub type Object = TreeMap<String, Json>;
+pub type JsonList = Vec<Json>;
+pub type JsonObject = TreeMap<string::String, Json>;
 
 impl Json {
     /// Serializes a json value into an io::writer.  Uses a single line.
@@ -314,7 +314,7 @@ impl Json {
     }
 
     /// Serializes a json value into a string
-    pub fn to_pretty_string(&self) -> String {
+    pub fn to_pretty_string(&self) -> string::String {
         let mut wr = MemWriter::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
         str::from_utf8(wr.unwrap().as_slice()).unwrap().to_string()
@@ -322,7 +322,7 @@ impl Json {
 
      /// If the Json value is an Object, returns the value associated with the provided key.
     /// Otherwise, returns None.
-    pub fn find<'a>(&'a self, key: &String) -> Option<&'a Json>{
+    pub fn find<'a>(&'a self, key: &string::String) -> Option<&'a Json>{
         match self {
             &Object(ref map) => map.find(key),
             _ => None
@@ -332,7 +332,7 @@ impl Json {
     /// Attempts to get a nested Json Object for each key in `keys`.
     /// If any key is found not to exist, find_path will return None.
     /// Otherwise, it will return the Json value associated with the final key.
-    pub fn find_path<'a>(&'a self, keys: &[&String]) -> Option<&'a Json>{
+    pub fn find_path<'a>(&'a self, keys: &[&string::String]) -> Option<&'a Json>{
         let mut target = self;
         for key in keys.iter() {
             match target.find(*key) {
@@ -346,7 +346,7 @@ impl Json {
     /// If the Json value is an Object, performs a depth-first search until
     /// a value associated with the provided key is found. If no value is found
     /// or the Json value is not an Object, returns None.
-    pub fn search<'a>(&'a self, key: &String) -> Option<&'a Json> {
+    pub fn search<'a>(&'a self, key: &string::String) -> Option<&'a Json> {
         match self {
             &Object(ref map) => {
                 match map.find(key) {
@@ -374,7 +374,7 @@ impl Json {
 
     /// If the Json value is an Object, returns the associated TreeMap.
     /// Returns None otherwise.
-    pub fn as_object<'a>(&'a self) -> Option<&'a Object> {
+    pub fn as_object<'a>(&'a self) -> Option<&'a JsonObject> {
         match *self {
             Object(ref map) => Some(map),
             _ => None
@@ -388,7 +388,7 @@ impl Json {
 
     /// If the Json value is a List, returns the associated vector.
     /// Returns None otherwise.
-    pub fn as_list<'a>(&'a self) -> Option<&'a List> {
+    pub fn as_list<'a>(&'a self) -> Option<&'a JsonList> {
         match *self {
             List(ref list) => Some(list),
             _ => None
@@ -564,7 +564,7 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Json {
 enum JsonDeserializerState {
     JsonDeserializerValueState(Json),
     JsonDeserializerListState(vec::MoveItems<Json>),
-    JsonDeserializerObjectState(treemap::MoveEntries<String, Json>),
+    JsonDeserializerObjectState(treemap::MoveEntries<string::String, Json>),
     JsonDeserializerEndState,
 }
 
@@ -595,12 +595,12 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
                         String(x) => de::String(x),
                         List(x) => {
                             let len = x.len();
-                            self.stack.push(JsonDeserializerListState(x.move_iter()));
+                            self.stack.push(JsonDeserializerListState(x.into_iter()));
                             de::SeqStart(len)
                         }
                         Object(x) => {
                             let len = x.len();
-                            self.stack.push(JsonDeserializerObjectState(x.move_iter()));
+                            self.stack.push(JsonDeserializerObjectState(x.into_iter()));
                             de::MapStart(len)
                         }
                     };
@@ -716,7 +716,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 
                 self.stack.push(JsonDeserializerEndState);
 
-                for field in fields.move_iter().rev() {
+                for field in fields.into_iter().rev() {
                     self.stack.push(JsonDeserializerValueState(field));
                 }
 
@@ -786,9 +786,9 @@ pub enum ParserError {
     /// msg, line, col
     SyntaxError(ErrorCode, uint, uint),
     IoError(io::IoErrorKind, &'static str),
-    ExpectedError(String, String),
-    MissingFieldError(String),
-    UnknownVariantError(String),
+    ExpectedError(string::String, string::String),
+    MissingFieldError(string::String),
+    UnknownVariantError(string::String),
 }
 
 // Builder and Parser have the same errors.
@@ -1422,9 +1422,9 @@ pub fn to_vec<
 #[inline]
 pub fn to_string<
     T: ser::Serializable<Serializer<MemWriter>, io::IoError>
->(value: &T) -> Result<String, Vec<u8>> {
+>(value: &T) -> Result<string::String, Vec<u8>> {
     let buf = to_vec(value);
-    String::from_utf8(buf)
+    string::String::from_utf8(buf)
 }
 
 /// Encode the specified struct into a json `[u8]` buffer.
@@ -1440,9 +1440,9 @@ pub fn to_pretty_vec<
 /// Encode the specified struct into a json `String` buffer.
 pub fn to_pretty_string<
     T: ser::Serializable<PrettySerializer<MemWriter>, io::IoError>
->(value: &T) -> Result<String, Vec<u8>> {
+>(value: &T) -> Result<string::String, Vec<u8>> {
     let buf = to_pretty_vec(value);
-    String::from_utf8(buf)
+    string::String::from_utf8(buf)
 }
 
 /*
@@ -1862,9 +1862,9 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         Ok(n)
     }
 
-    fn parse_string(&mut self) -> Result<String, ParserError> {
+    fn parse_string(&mut self) -> Result<string::String, ParserError> {
         let mut escape = false;
-        let mut res = String::new();
+        let mut res = string::String::new();
 
         loop {
             self.bump();
@@ -2260,7 +2260,7 @@ impl<'a> ToJson for &'a str {
     fn to_json(&self) -> Json { String(self.to_string()) }
 }
 
-impl ToJson for String {
+impl ToJson for string::String {
     fn to_json(&self) -> Json { String((*self).clone()) }
 }
 
@@ -2306,7 +2306,7 @@ impl<A:ToJson> ToJson for Vec<A> {
     fn to_json(&self) -> Json { List(self.iter().map(|elt| elt.to_json()).collect()) }
 }
 
-impl<A:ToJson> ToJson for TreeMap<String, A> {
+impl<A:ToJson> ToJson for TreeMap<string::String, A> {
     fn to_json(&self) -> Json {
         let mut d = TreeMap::new();
         for (key, value) in self.iter() {
@@ -2316,7 +2316,7 @@ impl<A:ToJson> ToJson for TreeMap<String, A> {
     }
 }
 
-impl<A:ToJson> ToJson for HashMap<String, A> {
+impl<A:ToJson> ToJson for HashMap<string::String, A> {
     fn to_json(&self) -> Json {
         let mut d = TreeMap::new();
         for (key, value) in self.iter() {

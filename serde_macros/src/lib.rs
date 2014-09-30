@@ -17,7 +17,6 @@ use syntax::ast::{
     ItemStruct,
     Expr,
     MutMutable,
-    LitNil,
     LitStr,
     StructField,
     Variant,
@@ -25,7 +24,7 @@ use syntax::ast::{
 use syntax::ast;
 use syntax::attr;
 use syntax::codemap::Span;
-use syntax::ext::base::{ExtCtxt, ItemDecorator};
+use syntax::ext::base::{ExtCtxt, Decorator};
 use syntax::ext::build::AstBuilder;
 use syntax::ext::deriving::generic::{
     EnumMatching,
@@ -61,11 +60,11 @@ use rustc::plugin::Registry;
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
         token::intern("deriving_serializable"),
-        ItemDecorator(box expand_deriving_serializable));
+        Decorator(box expand_deriving_serializable));
 
     reg.register_syntax_extension(
         token::intern("deriving_deserializable"),
-        ItemDecorator(box expand_deriving_deserializable));
+        Decorator(box expand_deriving_deserializable));
 }
 
 fn expand_deriving_serializable(cx: &mut ExtCtxt,
@@ -137,7 +136,7 @@ fn serializable_substructure(cx: &ExtCtxt,
                 );
                 let len = fields.len();
 
-                let mut stmts: Vec<P<ast::Stmt>> = definition.fields.iter()
+                let stmts: Vec<P<ast::Stmt>> = definition.fields.iter()
                     .zip(fields.iter())
                     .enumerate()
                     .map(|(i, (def, &FieldInfo { name, ref self_, span, .. }))| {
@@ -178,7 +177,7 @@ fn serializable_substructure(cx: &ExtCtxt,
 
             let stmts: Vec<P<ast::Stmt>> = definition.variants.iter()
                 .zip(fields.iter())
-                .map(|(def, &FieldInfo { ref self_, span, .. })| {
+                .map(|(def, &FieldInfo { ref self_, .. })| {
                     let _serial_name = find_serial_name(def.node.attrs.iter());
                     quote_stmt!(
                         cx,
@@ -336,7 +335,7 @@ fn deserialize_struct_from_struct(
     fields: &StaticFields,
     deserializer: P<ast::Expr>
 ) -> P<ast::Expr> {
-    let expect_struct_field = cx.ident_of("expect_struct_field");
+    //let expect_struct_field = cx.ident_of("expect_struct_field");
 
     let call = deserializable_static_fields(
         cx,
@@ -375,7 +374,7 @@ fn deserialize_struct_from_map(
 
     // Declare each field.
     let let_fields: Vec<P<ast::Stmt>> = fields.iter()
-        .map(|&(name, span)| {
+        .map(|&(name, _)| {
             quote_stmt!(cx, let mut $name = None)
         })
         .collect();
@@ -494,7 +493,7 @@ fn deserialize_enum(
                 name,
                 serial_names.as_slice(),
                 parts,
-                |cx, span, _| {
+                |cx, _, _| {
                     quote_expr!(cx, try!($deserializer.expect_enum_elt()))
                 }
             );
