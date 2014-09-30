@@ -991,6 +991,7 @@ impl<D: Deserializer<E>, E> Deserializable<D, E> for GatherTokens {
 #[cfg(test)]
 mod tests {
     use std::collections::TreeMap;
+    use std::{option, string};
     use serialize::Decoder;
 
     use super::{Deserializer, Deserializable, Token, TokenKind};
@@ -1035,7 +1036,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: TreeMap<String, Option<char>>,
+        c: TreeMap<string::String, option::Option<char>>,
     }
 
     impl<
@@ -1075,7 +1076,7 @@ mod tests {
     #[deriving(Clone, PartialEq, Show, Decodable)]
     enum Animal {
         Dog,
-        Frog(String, int)
+        Frog(string::String, int)
     }
 
     impl<D: Deserializer<E>, E> Deserializable<D, E> for Animal {
@@ -1126,7 +1127,7 @@ mod tests {
 
     impl<Iter: Iterator<Token>> Iterator<Result<Token, Error>> for TokenDeserializer<Iter> {
         #[inline]
-        fn next(&mut self) -> Option<Result<Token, Error>> {
+        fn next(&mut self) -> option::Option<Result<Token, Error>> {
             match self.tokens.next() {
                 None => None,
                 Some(token) => Some(Ok(token)),
@@ -1166,7 +1167,7 @@ mod tests {
             #[test]
             fn $name() {
                 $(
-                    let mut deserializer = TokenDeserializer::new($tokens.move_iter());
+                    let mut deserializer = TokenDeserializer::new($tokens.into_iter());
                     let value: $ty = Deserializable::deserialize(&mut deserializer).unwrap();
 
                     assert_eq!(value, $value);
@@ -1193,7 +1194,7 @@ mod tests {
         vec!(F64(5.0)) => 5.0: f64,
         vec!(Char('c')) => 'c': char,
         vec!(Str("abc")) => "abc": &str,
-        vec!(String("abc".to_string())) => "abc".to_string(): String
+        vec!(String("abc".to_string())) => "abc".to_string(): string::String
     ])
 
     test_value!(test_tuples, [
@@ -1227,12 +1228,12 @@ mod tests {
     ])
 
     test_value!(test_options, [
-        vec!(Option(false)) => None: Option<int>,
+        vec!(Option(false)) => None: option::Option<int>,
 
         vec!(
             Option(true),
             Int(5),
-        ) => Some(5): Option<int>
+        ) => Some(5): option::Option<int>
     ])
 
     test_value!(test_structs, [
@@ -1334,7 +1335,7 @@ mod tests {
         vec!(
             MapStart(0),
             End,
-        ) => treemap!(): TreeMap<int, String>,
+        ) => treemap!(): TreeMap<int, string::String>,
 
         vec!(
             MapStart(2),
@@ -1344,6 +1345,7 @@ mod tests {
                 Int(6),
                 String("b".to_string()),
             End,
-        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, String>
+        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, string::
+        String>
     ])
 }

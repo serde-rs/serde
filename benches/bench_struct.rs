@@ -214,7 +214,7 @@ mod decoder {
             match self.stack.pop() {
                 Some(VecState(value)) => {
                     let len = value.len();
-                    for inner in value.move_iter().rev() {
+                    for inner in value.into_iter().rev() {
                         self.stack.push(InnerState(inner));
                     }
                     f(self, len)
@@ -232,7 +232,7 @@ mod decoder {
             match self.stack.pop() {
                 Some(MapState(map)) => {
                     let len = map.len();
-                    for (key, value) in map.move_iter() {
+                    for (key, value) in map.into_iter() {
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));
@@ -322,7 +322,7 @@ mod deserializer {
                 Some(VecState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
-                    for inner in value.move_iter().rev() {
+                    for inner in value.into_iter().rev() {
                         self.stack.push(InnerState(inner));
                     }
                     Some(Ok(de::SeqStart(len)))
@@ -330,7 +330,7 @@ mod deserializer {
                 Some(MapState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
-                    for (key, value) in value.move_iter() {
+                    for (key, value) in value.into_iter() {
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));

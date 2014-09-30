@@ -321,6 +321,8 @@ impl_serialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 mod tests {
     use std::collections::{HashMap, TreeMap};
 
+    use std::{option, string};
+
     use serialize::Decoder;
 
     use super::{Serializer, Serializable};
@@ -332,7 +334,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: HashMap<String, Option<char>>,
+        c: HashMap<string::String, option::Option<char>>,
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -535,7 +537,7 @@ mod tests {
 
         fn serialize_option<
             T: Serializable<AssertSerializer<Iter>, Error>
-        >(&mut self, v: &Option<T>) -> Result<(), Error> {
+        >(&mut self, v: &option::Option<T>) -> Result<(), Error> {
             match *v {
                 Some(ref v) => {
                     try!(self.serialize(Option(true)));
@@ -581,7 +583,7 @@ mod tests {
         let tokens = vec!(
             Int(5)
         );
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         5i.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -592,7 +594,7 @@ mod tests {
             Str("a"),
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         "a".serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -603,7 +605,7 @@ mod tests {
             Null,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         ().serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -614,7 +616,7 @@ mod tests {
             Option(false),
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         None::<int>.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -626,7 +628,7 @@ mod tests {
             Int(5),
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         Some(5i).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -643,7 +645,7 @@ mod tests {
             TupleEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         (5i, "a").serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -669,7 +671,7 @@ mod tests {
             TupleEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         ((), (), (5i, "a")).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -684,7 +686,7 @@ mod tests {
             StructEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         Outer { inner: vec!() }.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -713,7 +715,7 @@ mod tests {
             StructEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
 
         let mut map = HashMap::new();
         map.insert("abc".to_string(), Some('c'));
@@ -737,7 +739,7 @@ mod tests {
             EnumEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         Dog.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
 
@@ -751,7 +753,7 @@ mod tests {
             EnumEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         Frog("Henry".to_string(), 349).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -763,7 +765,7 @@ mod tests {
             SeqEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         let v: Vec<int> = vec!();
         v.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
@@ -779,7 +781,7 @@ mod tests {
             SeqEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         (vec!(5i, 6, 7)).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -805,7 +807,7 @@ mod tests {
             SeqEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
         (vec!(vec!(1i), vec!(2, 3), vec!(4, 5, 6))).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -822,7 +824,7 @@ mod tests {
             MapEnd,
         );
 
-        let mut serializer = AssertSerializer::new(tokens.move_iter());
+        let mut serializer = AssertSerializer::new(tokens.into_iter());
 
         let mut map = TreeMap::new();
         map.insert(5i, "a".to_string());

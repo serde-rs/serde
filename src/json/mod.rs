@@ -2340,6 +2340,7 @@ mod tests {
     use std::fmt::Show;
     use std::io;
     use std::str;
+    use std::string;
     use std::collections::TreeMap;
 
     use super::{Json, Null, Boolean, Floating, String, List, Object};
@@ -2378,7 +2379,7 @@ mod tests {
     #[deriving_deserializable]
     enum Animal {
         Dog,
-        Frog(String, Vec<int>)
+        Frog(string::String, Vec<int>)
     }
 
     impl ToJson for Animal {
@@ -2408,7 +2409,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: Vec<String>,
+        c: Vec<string::String>,
     }
 
     impl ToJson for Inner {
@@ -2922,7 +2923,7 @@ mod tests {
 
     #[test]
     fn test_parse_string() {
-        test_parse_err::<String>([
+        test_parse_err::<string::String>([
             ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
             ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
@@ -3018,7 +3019,7 @@ mod tests {
 
     #[test]
     fn test_parse_object() {
-        test_parse_err::<TreeMap<String, int>>([
+        test_parse_err::<TreeMap<string::String, int>>([
             ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
             ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
@@ -3187,7 +3188,7 @@ mod tests {
 
     #[test]
     fn test_multiline_errors() {
-        test_parse_err::<TreeMap<String, String>>([
+        test_parse_err::<TreeMap<string::String, string::String>>([
             ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3u, 8u)),
         ]);
     }
@@ -3283,7 +3284,7 @@ mod tests {
     fn test_as_object() {
         let json_value: Json = from_str("{}").unwrap();
         let json_object = json_value.as_object();
-        let map = TreeMap::<String, Json>::new();
+        let map = TreeMap::<string::String, Json>::new();
         assert_eq!(json_object, Some(&map));
     }
 
@@ -3717,6 +3718,7 @@ mod tests {
 #[cfg(test)]
 mod bench {
     use std::collections::TreeMap;
+    use std::string;
     use serialize;
     use test::Bencher;
 
@@ -3732,7 +3734,7 @@ mod bench {
         })
     }
 
-    fn json_str(count: uint) -> String {
+    fn json_str(count: uint) -> string::String {
         let mut src = "[".to_string();
         for _ in range(0, count) {
             src.push_str(r#"{"a":true,"b":null,"c":3.1415,"d":"Hello world","e":[1,2,3]},"#);
@@ -3741,7 +3743,7 @@ mod bench {
         src
     }
 
-    fn pretty_json_str(count: uint) -> String {
+    fn pretty_json_str(count: uint) -> string::String {
         let mut src = "[\n".to_string();
         for _ in range(0, count) {
             src.push_str(
