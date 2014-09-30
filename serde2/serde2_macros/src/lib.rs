@@ -16,7 +16,7 @@ use syntax::ast::{
 };
 use syntax::ast;
 use syntax::codemap::Span;
-use syntax::ext::base::{ExtCtxt, ItemDecorator};
+use syntax::ext::base::{ExtCtxt, Decorator};
 use syntax::ext::build::AstBuilder;
 use syntax::ext::deriving::generic::{
     EnumMatching,
@@ -52,7 +52,7 @@ use rustc::plugin::Registry;
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
         token::intern("deriving_serializable"),
-        ItemDecorator(box expand_deriving_serializable));
+        Decorator(box expand_deriving_serializable));
 
     /*
     reg.register_syntax_extension(
