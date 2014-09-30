@@ -86,41 +86,41 @@ pub trait VisitorState<R> {
     fn visit_str(&mut self, value: &str) -> R;
 
     fn visit_seq<
-        V: Visitor<Self, R>
+        V: Visitor<Self, R>,
     >(&mut self, visitor: V) -> R;
 
     #[inline]
     fn visit_named_seq<
-        V: Visitor<Self, R>
+        V: Visitor<Self, R>,
     >(&mut self, _name: &'static str, visitor: V) -> R {
         self.visit_seq(visitor)
     }
 
     #[inline]
     fn visit_enum<
-        V: Visitor<Self, R>
+        V: Visitor<Self, R>,
     >(&mut self, _name: &'static str, _variant: &'static str, visitor: V) -> R {
         self.visit_seq(visitor)
     }
 
     fn visit_seq_elt<
-        T: Serialize<Self, R>
+        T: Serialize<Self, R>,
     >(&mut self, first: bool, value: T) -> R;
 
     fn visit_map<
-        V: Visitor<Self, R>
+        V: Visitor<Self, R>,
     >(&mut self, visitor: V) -> R;
 
     #[inline]
     fn visit_named_map<
-        V: Visitor<Self, R>
+        V: Visitor<Self, R>,
     >(&mut self, _name: &'static str, visitor: V) -> R {
         self.visit_map(visitor)
     }
 
     fn visit_map_elt<
         K: Serialize<Self, R>,
-        V: Serialize<Self, R>
+        V: Serialize<Self, R>,
     >(&mut self, first: bool, key: K, value: V) -> R;
 }
 
