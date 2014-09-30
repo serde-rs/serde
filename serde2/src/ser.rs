@@ -124,6 +124,25 @@ pub trait VisitorState<R> {
     >(&mut self, first: bool, key: K, value: V) -> R;
 }
 
+pub trait SeqVisitor<S, R> {
+    fn visit(&mut self, state: &mut S) -> Option<R>;
+
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        (0, None)
+    }
+}
+
+pub trait MapVisitor<S, R> {
+    fn visit(&mut self, state: &mut S) -> Option<R>;
+
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        (0, None)
+    }
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_serialize {
@@ -339,6 +358,7 @@ impl<
     }
 }
 
+/*
 ///////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Show)]
@@ -471,3 +491,4 @@ impl<'a> VisitorState<()> for GatherTokens<'a> {
         value.serialize(self)
     }
 }
+*/

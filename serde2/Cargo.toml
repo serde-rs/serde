@@ -6,9 +6,9 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 [lib]
 name = "serde2"
 
-[[bin]]
-name = "serde2"
-path = "src/bin.rs"
+#[[bin]]
+#name = "serde2"
+#path = "src/bin.rs"
 
 [dependencies.serde2_macros]
 path = "serde2_macros/"

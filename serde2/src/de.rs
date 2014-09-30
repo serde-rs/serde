@@ -1,11 +1,12 @@
-pub trait Deserialize<D, E> {
-    fn deserialize(state: &mut D) -> Result<Self, E>;
+pub trait Deserialize<S, E> {
+    fn deserialize(state: &mut S) -> Result<Self, E>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Deserializer<D, R> {
     fn deserialize<T: Deserialize<D, R>>(&mut self) -> R;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -24,11 +25,9 @@ pub trait SeqVisitor {
 }
 
 pub trait VisitorState<E> {
-    fn syntax_error
-
+    fn syntax_error(&mut self) -> E;
 
     fn visit_int(&mut self) -> Result<int, E> {
-
     }
 
     fn visit_seq<Iter: FromIterator>(&mut self, ) -> Iter

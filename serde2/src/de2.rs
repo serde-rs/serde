@@ -3,18 +3,21 @@ use std::hash::Hash;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-trait Deserialize<D, E> {
-    fn deserialize(d: &mut D) -> Result<Self, E>;
+trait Deserialize<S, E> {
+    fn deserialize(state: &mut S) -> Result<Self, E>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-trait Deserializer<D, E> {
-    fn deserialize<T: Deserialize<D, E>>(&mut self) -> Result<T, E>;
+trait Deserializer<R, E> {
+    fn visit<S>(&mut self, state: &mut S) -> Result<R, E>;
+
+    fn syntax_error(&mut self) -> E;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/*
 trait DeserializerState<E> {
     fn syntax_error(&mut self) -> E;
 
@@ -23,48 +26,70 @@ trait DeserializerState<E> {
         T: Deserialize<Self, E>,
     >(&mut self, visitor: &mut V) -> Result<T, E>;
 }
+*/
+
+trait Visitor<R> {
+    fn visit<S>(&mut self, state: &mut S) -> R;
+}
 
 trait VisitorState<
-    T,
-    D: DeserializerState<E>,
+    D: Deserializer<R, E>,
+    R,
     E,
 > {
-    fn visit_null(&mut self, d: &mut D) -> Result<T, E> {
-        Err(d.syntax_error())
-    }
+    /*
+    fn visit_null(&mut self) -> R;
+    */
 
-    fn visit_int(&mut self, d: &mut D, _v: int) -> Result<T, E> {
-        Err(d.syntax_error())
-    }
+    fn visit_int(&mut self, d: &mut D, _v: int) -> Result<R, E>;
 
-    fn visit_string(&mut self, d: &mut D, _v: String) -> Result<T, E> {
-        Err(d.syntax_error())
-    }
+    /*
+    fn visit_string(&mut self, _v: String) -> R;
 
     fn visit_seq<
-        V: SeqVisitor<D, E>,
-    >(&mut self, d: &mut D, _visitor: V) -> Result<T, E> {
-        Err(d.syntax_error())
-    }
+        V: Visitor<R>,
+    >(&mut self, _visitor: V) -> R;
 
+    /*
+    #[inline]
+    fn visit_named_seq<
+        Elt: Deserialize<D, E>,
+        V: SeqVisitor<D, Result<Elt, E>>,
+    >(&mut self, d: &mut D, _name: &str, visitor: V) -> Result<T, E> {
+        self.visit_seq(d, visitor)
+    }
+    */
+
+    fn visit_seq_elt<
+        T: Deserialize<Self, R>,
+    >(&mut self, first: bool, value: T) -> R;
+    */
+
+    /*
+    #[inline]
     fn visit_map<
-        V: MapVisitor<D, E>,
+        K: Deserialize<D, E>,
+        V: Deserialize<D, E>,
+        V: Visitor<D, Result<T, E>>,
     >(&mut self, d: &mut D, _visitor: V) -> Result<T, E> {
         Err(d.syntax_error())
     }
-}
-
-trait SeqVisitor<D, E> {
-    fn next<
-        T: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Option<Result<T, E>>;
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
-        (0, None)
+    fn visit_named_map<
+        V: Visitor<D, E>,
+    >(&mut self, d: &mut D, _name: &str, visitor: V) -> Result<T, E> {
+        self.visit_map(d, visitor)
     }
+
+    fn visit_map_elt<
+        K: Deserialize<D, E>,
+        V: Deserialize<D, E>,
+    >(&mut self, first: bool, value: T) -> Result<(K, V), E>;
+    */
 }
 
+/*
 trait MapVisitor<D, E> {
     fn next<
         K: Deserialize<D, E>,
@@ -76,29 +101,32 @@ trait MapVisitor<D, E> {
         (0, None)
     }
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    D: DeserializerState<E>,
+    S: Deserializer<int, E>,
     E,
-> Deserialize<D, E> for int {
-    fn deserialize(d: &mut D) -> Result<int, E> {
+> Deserialize<S, E> for int {
+    fn deserialize(state: &mut S) -> Result<int, E> {
         struct Visitor;
 
         impl<
-            D: DeserializerState<E>,
+            D: Deserializer<int, E>,
             E,
-        > ::VisitorState<int, D, E> for Visitor {
-            fn visit_int(&mut self, _d: &mut D, v: int) -> Result<int, E> {
+        > VisitorState<S, int, E> for Visitor {
+            fn visit_int(&mut self, d: &mut D, v: int) -> Result<int, E> {
                 Ok(v)
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }
 
+
+/*
 impl<
     D: DeserializerState<E>,
     E,
@@ -135,7 +163,7 @@ impl<
             E,
         > ::VisitorState<Vec<T>, D, E> for Visitor {
             fn visit_seq<
-                Visitor: ::SeqVisitor<D, E>,
+                Visitor: ::Visitor<D, E>,
             >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Vec<T>, E> {
                 let (len, _) = visitor.size_hint();
                 let mut values = Vec::with_capacity(len);
@@ -162,6 +190,7 @@ impl<
     }
 }
 
+/*
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
@@ -516,10 +545,8 @@ struct MySeqVisitor {
 
 impl<
     Iter: Iterator<Token>,
-> SeqVisitor<MyDeserializer<Iter>, ()> for MySeqVisitor {
-    fn next<
-        T: Deserialize<MyDeserializer<Iter>, ()>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Option<Result<T, ()>> {
+> Visitor<MyDeserializer<Iter>, ()> for MySeqVisitor {
+    fn next(&mut self, d: &mut MyDeserializer<Iter>) -> Option<Result<T, ()>> {
         match d.peek() {
             Some(&End) => {
                 d.next();
@@ -527,7 +554,7 @@ impl<
             }
             Some(_) => {
                 self.len -= 1;
-                Some(Deserialize::deserialize(d))
+                Some(d.visit_seq_elt())
             }
             None => {
                 Some(Err(d.syntax_error()))
@@ -546,11 +573,8 @@ struct MyMapVisitor {
 
 impl<
     Iter: Iterator<Token>,
-> MapVisitor<MyDeserializer<Iter>, ()> for MyMapVisitor {
-    fn next<
-        K: Deserialize<MyDeserializer<Iter>, ()>,
-        V: Deserialize<MyDeserializer<Iter>, ()>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Option<Result<(K, V), ()>> {
+> Visitor<MyDeserializer<Iter>, ()> for MyMapVisitor {
+    fn next(&mut self, d: &mut MyDeserializer<Iter>) -> Option<Result<(K, V), ()>> {
         match d.peek() {
             Some(&End) => {
                 d.next();
@@ -558,18 +582,7 @@ impl<
             }
             Some(_) => {
                 self.len -= 1;
-
-                let key = match Deserialize::deserialize(d) {
-                    Ok(key) => key,
-                    Err(err) => { return Some(Err(err)); }
-                };
-
-                let value = match Deserialize::deserialize(d) {
-                    Ok(value) => value,
-                    Err(err) => { return Some(Err(err)); }
-                };
-
-                Some(Ok((key, value)))
+                Some(d.visit_map_elt())
             }
             None => {
                 Some(Err(d.syntax_error()))
@@ -652,3 +665,7 @@ fn main() {
     let v: Result<json::Value, ()> = Deserialize::deserialize(&mut state);
     println!("{}", v);
 }
+*/
+*/
+
+fn main() {}
