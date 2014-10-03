@@ -31,13 +31,11 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
         Err(d.syntax_error())
     }
 
-    /*
     fn visit_option<
         V: OptionVisitor<D, E>
     >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
         Err(d.syntax_error())
     }
-    */
 
     fn visit_seq<
         V: SeqVisitor<D, E>
@@ -46,19 +44,11 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
     }
 }
 
-/*
-pub trait OptionVisitor<D, R, T: Deserialize<D, E>, E> {
-    /*
-    fn next<
-        T: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Option<Result<T, E>>;
-    */
-
+pub trait OptionVisitor<D, E> {
     fn visit<
         T: Deserialize<D, E>,
     >(&mut self, d: &mut D) -> Result<Option<T>, E>;
 }
-*/
 
 pub trait SeqVisitor<D, E> {
     fn next<
@@ -119,37 +109,6 @@ impl<
     E,
 > Deserialize<D, E> for Option<T> {
     fn deserialize(d: &mut D) -> Result<Option<T>, E> {
-        /*
-        struct Visitor;
-
-        impl<
-            R: Deserialize<D, E>,
-            D: Deserializer<E>,
-            E,
-        > self::OptionVisitor<D, E> for Visitor {
-            /*
-            fn visit_option<
-                V: OptionVisitor<D, E>,
-            >(&mut self, d: &mut D, mut visitor: V) -> Result<Option<R>, E> {
-                match visitor.next(d) {
-                    Some(value) => {
-                        Ok(Some(try!(value)))
-                    }
-                    None => {
-                        Ok(None)
-                    }
-                }
-            }
-            */
-
-            fn visit<
-                T: Deserialize<D, E>,
-            >(&mut self, d: &mut D, value: Option<T>) -> Result<Option<T>, E> {
-                Ok(value)
-            }
-        }
-        */
-
         d.visit_option()
     }
 }
