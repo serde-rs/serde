@@ -31,6 +31,10 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
         Err(d.syntax_error())
     }
 
+    fn visit_string(&mut self, d: &mut D, _v: String) -> Result<R, E> {
+        Err(d.syntax_error())
+    }
+
     fn visit_option<
         V: OptionVisitor<D, E>
     >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
@@ -93,6 +97,25 @@ impl<
 
         impl<D: Deserializer<E>, E> self::Visitor<D, int, E> for Visitor {
             fn visit_int(&mut self, _d: &mut D, v: int) -> Result<int, E> {
+                Ok(v)
+            }
+        }
+
+        d.visit(&mut Visitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl<
+    D: Deserializer<E>,
+    E,
+> Deserialize<D, E> for String {
+    fn deserialize(d: &mut D) -> Result<String, E> {
+        struct Visitor;
+
+        impl<D: Deserializer<E>, E> self::Visitor<D, String, E> for Visitor {
+            fn visit_string(&mut self, _d: &mut D, v: String) -> Result<String, E> {
                 Ok(v)
             }
         }
