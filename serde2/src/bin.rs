@@ -3,8 +3,9 @@ extern crate serde2;
 use serde2::de2;
 use serde2::de2::{Deserialize, Deserializer};
 
+#[deriving(Show)]
 enum Token {
-    //Null,
+    Null,
     Int(int),
     //String(String),
     SeqStart(uint),
@@ -58,11 +59,9 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
         V: de2::Visitor<MyDeserializer<Iter>, R, Error>,
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
         match self.next() {
-            /*
             Some(Null) => {
                 visitor.visit_null(self)
             }
-            */
             Some(Int(v)) => {
                 visitor.visit_int(self, v)
             }
@@ -84,6 +83,21 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
             }
             None => {
                 Err(self.end_of_stream_error())
+            }
+        }
+    }
+
+    fn visit_option<
+        T: Deserialize<MyDeserializer<Iter>, Error>,
+    >(&mut self) -> Result<Option<T>, Error> {
+        match self.peek() {
+            Some(&Null) => {
+                self.next();
+                Ok(None)
+            }
+            _ => {
+                let v = try!(Deserialize::deserialize(self));
+                Ok(Some(v))
             }
         }
     }
@@ -173,7 +187,7 @@ mod json {
 
     #[deriving(Show)]
     pub enum Value {
-        //Null,
+        Null,
         //Bool(bool),
         Int(int),
         //String(String),
@@ -192,11 +206,9 @@ mod json {
                 D: de2::Deserializer<E>,
                 E,
             > de2::Visitor<D, Value, E> for Visitor {
-                /*
                 fn visit_null(&mut self, _d: &mut D) -> Result<Value, E> {
                     Ok(Null)
                 }
-                */
 
                 fn visit_int(&mut self, _d: &mut D, v: int) -> Result<Value, E> {
                     Ok(Int(v))
@@ -205,6 +217,17 @@ mod json {
                 /*
                 fn visit_string(&mut self, _d: &mut D, v: String) -> Result<Value, E> {
                     Ok(String(v))
+                }
+                */
+
+                /*
+                fn visit_option<
+                    Visitor: de2::OptionVisitor<D, E>,
+                >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
+                    match visitor.next(d) {
+                        Some(v) => v,
+                        None => Ok(Null),
+                    }
                 }
                 */
 
@@ -266,7 +289,7 @@ fn main() {
         SeqStart(2),
         Int(1),
         Int(2),
-        End
+        End,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -279,7 +302,7 @@ fn main() {
         SeqStart(2),
         Int(1),
         Int(2),
-        End
+        End,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -292,7 +315,47 @@ fn main() {
         SeqStart(2),
         Int(1),
         Int(2),
-        End
+        End,
+    );
+    let mut state = MyDeserializer::new(tokens.into_iter());
+
+    let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
+    println!("{}", v);
+
+    ////
+
+    let tokens = vec!(
+        Int(1),
+    );
+    let mut state = MyDeserializer::new(tokens.into_iter());
+
+    let v: Result<Option<int>, Error> = Deserialize::deserialize(&mut state);
+    println!("{}", v);
+
+    ////
+
+    let tokens = vec!(
+        Null,
+    );
+    let mut state = MyDeserializer::new(tokens.into_iter());
+
+    let v: Result<Option<int>, Error> = Deserialize::deserialize(&mut state);
+    println!("{}", v);
+
+    ////
+
+    let tokens = vec!(
+        Int(1),
+    );
+    let mut state = MyDeserializer::new(tokens.into_iter());
+
+    let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
+    println!("{}", v);
+
+    ////
+
+    let tokens = vec!(
+        Null,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
