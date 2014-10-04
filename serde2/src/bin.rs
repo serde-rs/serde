@@ -1,5 +1,8 @@
 extern crate serde2;
 
+use std::string;
+use std::option;
+
 use serde2::de2;
 use serde2::de2::{Deserialize, Deserializer};
 
@@ -7,8 +10,8 @@ use serde2::de2::{Deserialize, Deserializer};
 enum Token {
     Null,
     Int(int),
-    //String(String),
-    Optiony(bool),
+    String(string::String),
+    Option(bool),
     SeqStart(uint),
     //MapStart(uint),
     End,
@@ -24,7 +27,7 @@ enum Error {
 
 struct MyDeserializer<Iter> {
     tokens: Iter,
-    peeked: ::std::option::Option<Token>,
+    peeked: option::Option<Token>,
 }
 
 impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
@@ -35,7 +38,7 @@ impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
         }
     }
 
-    fn next(&mut self) -> Option<Token> {
+    fn next(&mut self) -> option::Option<Token> {
         match self.peeked.take() {
             Some(token) => { return Some(token); }
             None => { }
@@ -44,7 +47,7 @@ impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
         self.tokens.next()
     }
 
-    fn peek<'a>(&'a mut self) -> Option<&'a Token> {
+    fn peek<'a>(&'a mut self) -> option::Option<&'a Token> {
         match self.peeked {
             Some(_) => { }
             None => { self.peeked = self.tokens.next(); }
@@ -66,12 +69,10 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
             Some(Int(v)) => {
                 visitor.visit_int(self, v)
             }
-            /*
             Some(String(v)) => {
                 visitor.visit_string(self, v)
             }
-            */
-            Some(Optiony(is_some)) => {
+            Some(Option(is_some)) => {
                 visitor.visit_option(self, MyOptionVisitor {
                     is_some: is_some,
                     finished: false,
@@ -96,18 +97,18 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
 
     fn visit_option<
         T: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self) -> Result<Option<T>, Error> {
+    >(&mut self) -> Result<option::Option<T>, Error> {
         match self.peek() {
             Some(&Null) => {
                 self.next();
                 Ok(None)
             }
-            Some(&Optiony(true)) => {
+            Some(&Option(true)) => {
                 self.next();
                 let v = try!(Deserialize::deserialize(self));
                 Ok(Some(v))
             }
-            Some(&Optiony(false)) => {
+            Some(&Option(false)) => {
                 self.next();
                 Ok(None)
             }
@@ -137,7 +138,7 @@ impl<
 > de2::OptionVisitor<MyDeserializer<Iter>, Error> for MyOptionVisitor {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<Option<T>, Error> {
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
         if self.finished {
             Err(d.syntax_error())
         } else {
@@ -162,7 +163,7 @@ impl<
 > de2::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor {
     fn next<
         T: Deserialize<MyDeserializer<Iter>, Error>
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Option<Result<T, Error>> {
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> option::Option<Result<T, Error>> {
         match d.peek() {
             Some(&End) => {
                 d.next();
@@ -186,7 +187,7 @@ impl<
         }
     }
 
-    fn size_hint(&self, _d: &mut MyDeserializer<Iter>) -> (uint, Option<uint>) {
+    fn size_hint(&self, _d: &mut MyDeserializer<Iter>) -> (uint, option::Option<uint>) {
         (self.len, Some(self.len))
     }
 }
@@ -334,7 +335,7 @@ fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<Vec<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("vec:          {}", v);
+    println!("vec:           {}", v);
 
     ////
 
@@ -347,7 +348,7 @@ fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<(int, int), Error> = Deserialize::deserialize(&mut state);
-    println!("tuple:        {}", v);
+    println!("tuple:         {}", v);
 
     ////
 
@@ -360,49 +361,49 @@ fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("value:        {}", v);
+    println!("value:         {}", v);
 
     ////
 
     let tokens = vec!(
-        Optiony(true),
+        Option(true),
         Int(1),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
-    let v: Result<Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony:      {}", v);
+    let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
+    println!("optiony:       {}", v);
 
     ////
 
     let tokens = vec!(
-        Optiony(false),
+        Option(false),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
-    let v: Result<Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony:      {}", v);
+    let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
+    println!("optiony:       {}", v);
 
     ////
 
     let tokens = vec!(
-        Optiony(true),
+        Option(true),
         Int(1),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony value:{}", v);
+    println!("optiony value: {}", v);
 
     ////
 
     let tokens = vec!(
-        Optiony(false),
+        Option(false),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony value:{}", v);
+    println!("optiony value: {}", v);
 
     ////
 
@@ -411,8 +412,8 @@ fn main() {
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
-    let v: Result<Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("option:       {}", v);
+    let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
+    println!("option:        {}", v);
 
     ////
 
@@ -421,8 +422,8 @@ fn main() {
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
-    let v: Result<Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("option:       {}", v);
+    let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
+    println!("option:        {}", v);
 
     ////
 
@@ -432,7 +433,7 @@ fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("option value: {}", v);
+    println!("option value:  {}", v);
 
     ////
 
@@ -442,7 +443,7 @@ fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("option value: {}", v);
+    println!("option value:  {}", v);
 
     /*
     ////
