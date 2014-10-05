@@ -1748,14 +1748,14 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
                 // There can be only one leading '0'.
                 match self.ch_or_null() {
-                    '0' .. '9' => return self.error(InvalidNumber),
+                    '0' ... '9' => return self.error(InvalidNumber),
                     _ => ()
                 }
             },
-            '1' .. '9' => {
+            '1' ... '9' => {
                 while !self.eof() {
                     match self.ch_or_null() {
-                        c @ '0' .. '9' => {
+                        c @ '0' ... '9' => {
                             res *= 10;
                             res += (c as i64) - ('0' as i64);
                             self.bump();
@@ -1775,7 +1775,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
         // Make sure a digit follows the decimal place.
         match self.ch_or_null() {
-            '0' .. '9' => (),
+            '0' ... '9' => (),
              _ => return self.error(InvalidNumber)
         }
 
@@ -1783,7 +1783,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         let mut dec = 1.0;
         while !self.eof() {
             match self.ch_or_null() {
-                c @ '0' .. '9' => {
+                c @ '0' ... '9' => {
                     dec /= 10.0;
                     res += (((c as int) - ('0' as int)) as f64) * dec;
                     self.bump();
@@ -1810,12 +1810,12 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
         // Make sure a digit follows the exponent place.
         match self.ch_or_null() {
-            '0' .. '9' => (),
+            '0' ... '9' => (),
             _ => return self.error(InvalidNumber)
         }
         while !self.eof() {
             match self.ch_or_null() {
-                c @ '0' .. '9' => {
+                c @ '0' ... '9' => {
                     exp *= 10;
                     exp += (c as uint) - ('0' as uint);
 
@@ -1841,7 +1841,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         while i < 4u && !self.eof() {
             self.bump();
             n = match self.ch_or_null() {
-                c @ '0' .. '9' => n * 16_u16 + ((c as u16) - ('0' as u16)),
+                c @ '0' ... '9' => n * 16_u16 + ((c as u16) - ('0' as u16)),
                 'a' | 'A' => n * 16_u16 + 10_u16,
                 'b' | 'B' => n * 16_u16 + 11_u16,
                 'c' | 'C' => n * 16_u16 + 12_u16,
@@ -1874,20 +1874,20 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
             if escape {
                 match self.ch_or_null() {
-                    '"' => res.push_char('"'),
-                    '\\' => res.push_char('\\'),
-                    '/' => res.push_char('/'),
-                    'b' => res.push_char('\x08'),
-                    'f' => res.push_char('\x0c'),
-                    'n' => res.push_char('\n'),
-                    'r' => res.push_char('\r'),
-                    't' => res.push_char('\t'),
+                    '"' => res.push('"'),
+                    '\\' => res.push('\\'),
+                    '/' => res.push('/'),
+                    'b' => res.push('\x08'),
+                    'f' => res.push('\x0c'),
+                    'n' => res.push('\n'),
+                    'r' => res.push('\r'),
+                    't' => res.push('\t'),
                     'u' => match try!(self.decode_hex_escape()) {
-                        0xDC00 .. 0xDFFF => return self.error(LoneLeadingSurrogateInHexEscape),
+                        0xDC00 ... 0xDFFF => return self.error(LoneLeadingSurrogateInHexEscape),
 
                         // Non-BMP characters are encoded as a sequence of
                         // two hex escapes, representing UTF-16 surrogates.
-                        n1 @ 0xD800 .. 0xDBFF => {
+                        n1 @ 0xD800 ... 0xDBFF => {
                             let c1 = self.next_char();
                             let c2 = self.next_char();
                             match (c1, c2) {
@@ -1897,13 +1897,13 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
                             let buf = [n1, try!(self.decode_hex_escape())];
                             match str::utf16_items(buf.as_slice()).next() {
-                                Some(ScalarValue(c)) => res.push_char(c),
+                                Some(ScalarValue(c)) => res.push(c),
                                 _ => return self.error(LoneLeadingSurrogateInHexEscape),
                             }
                         }
 
                         n => match char::from_u32(n as u32) {
-                            Some(c) => res.push_char(c),
+                            Some(c) => res.push(c),
                             None => return self.error(InvalidUnicodeCodePoint),
                         },
                     },
@@ -1918,7 +1918,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
                         self.bump();
                         return Ok(res);
                     },
-                    Some(c) => res.push_char(c),
+                    Some(c) => res.push(c),
                     None => unreachable!()
                 }
             }
@@ -2024,7 +2024,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
             'n' => self.parse_ident("ull", de::Null),
             't' => self.parse_ident("rue", de::Bool(true)),
             'f' => self.parse_ident("alse", de::Bool(false)),
-            '0' .. '9' | '-' => self.parse_number(),
+            '0' ... '9' | '-' => self.parse_number(),
             '"' => {
                 let s = try!(self.parse_string());
                 Ok(de::String(s))
