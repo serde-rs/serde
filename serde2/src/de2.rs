@@ -13,9 +13,18 @@ pub trait Deserializer<E> {
         V: Visitor<Self, R, E>,
     >(&mut self, visitor: &mut V) -> Result<R, E>;
 
+    /*
     fn visit_option<
-        T: Deserialize<Self, E>,
-    >(&mut self) -> Result<Option<T>, E>;
+        R,
+        V: Visitor<Self, R, E>,
+    >(&mut self, visitor: &mut V) -> Result<R, E> {
+        self.visit(visitor)
+    }
+    */
+
+    fn visit_option<
+        R: Deserialize<Self, E>,
+    >(&mut self) -> Result<Option<R>, E>;
 
     fn syntax_error(&mut self) -> E;
 
@@ -40,10 +49,31 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
     }
 
     fn visit_option<
-        V: OptionVisitor<D, E>
+        T: Deserialize<D, E>,
+    >(&mut self, d: &mut D, _v: Option<T>) -> Result<R, E> {
+        Err(d.syntax_error())
+    }
+
+    /*
+    fn visit_option_some<
+        T: Deserialize<Self, E>,
+    >(&mut self, d: &mut D, _v: T) -> Result<R, E> {
+        Err(d.syntax_error())
+    }
+
+    fn visit_option_none(&mut self, d: &mut D) -> Result<R, E> {
+        Err(d.syntax_error())
+    }
+    */
+
+    /*
+    fn visit_option<
+        T: Deserialize<D, E>,
+        V: OptionVisitor<T, D, R, E>,
     >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
         Err(d.syntax_error())
     }
+    */
 
     fn visit_seq<
         V: SeqVisitor<D, E>
@@ -52,10 +82,10 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
     }
 }
 
-pub trait OptionVisitor<D, E> {
-    fn visit<
-        T: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Result<Option<T>, E>;
+pub trait OptionVisitor<T: Deserialize<D, E>, D, R, E> {
+    fn visit_some(&mut self, d: &mut D, _v: T) -> Result<R, E>;
+
+    fn visit_none(&mut self, d: &mut D) -> Result<R, E>;
 }
 
 pub trait SeqVisitor<D, E> {
@@ -136,6 +166,22 @@ impl<
     E,
 > Deserialize<D, E> for Option<T> {
     fn deserialize(d: &mut D) -> Result<Option<T>, E> {
+        /*
+        struct Visitor;
+
+        impl<
+            T: Deserialize<D, E>,
+            D: Deserializer<E>,
+            E,
+        > self::Visitor<D, Option<T>, E> for Visitor {
+            fn visit_option(&mut self, _d: &mut D, v: Option<T>) -> Result<Option<T>, E> {
+                Ok(v)
+            }
+        }
+
+        d.visit_option(&mut Visitor)
+        */
+
         d.visit_option()
     }
 }
