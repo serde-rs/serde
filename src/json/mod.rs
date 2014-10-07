@@ -906,21 +906,22 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
 }
 
 fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
-    static len: uint = 16;
-    static buf: [u8, ..len] = [b' ', ..len];
+    static LEN: uint = 16;
+    static BUF: [u8, ..LEN] = [b' ', ..LEN];
 
-    while n >= len {
-        try!(wr.write(buf));
-        n -= len;
+    while n >= LEN {
+        try!(wr.write(BUF));
+        n -= LEN;
     }
 
     if n > 0 {
-        wr.write(buf.slice_to(n))
+        wr.write(BUF.slice_to(n))
     } else {
         Ok(())
     }
 }
 
+/*
 #[deriving(Show)]
 enum SerializerState {
     ValueState,
@@ -928,6 +929,7 @@ enum SerializerState {
     StructState,
     EnumState,
 }
+*/
 
 /// A structure for implementing serialization to JSON.
 pub struct Serializer<W> {
@@ -1484,7 +1486,7 @@ enum ParserState {
     // Parse ',' or ']' after an element in an object.
     ParseObjectCommaOrEnd,
     // Parse a key in an object.
-    ParseObjectKey,
+    //ParseObjectKey,
     // Parse a value in an object.
     ParseObjectValue,
 }
@@ -1669,7 +1671,7 @@ impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<I
             ParseListCommaOrEnd => Some(self.parse_list_comma_or_end()),
             ParseObjectStart => Some(self.parse_object_start()),
             ParseObjectCommaOrEnd => Some(self.parse_object_comma_or_end()),
-            ParseObjectKey => Some(self.parse_object_key()),
+            //ParseObjectKey => Some(self.parse_object_key()),
             ParseObjectValue => Some(self.parse_object_value()),
         }
     }

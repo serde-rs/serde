@@ -107,7 +107,7 @@ pub enum TokenKind {
     EndKind,
 }
 
-static primitive_token_kinds: [TokenKind, .. 12] = [
+static PRIMITIVE_TOKEN_KINDS: [TokenKind, .. 12] = [
     IntKind,
     I8Kind,
     I16Kind,
@@ -122,12 +122,12 @@ static primitive_token_kinds: [TokenKind, .. 12] = [
     F64Kind,
 ];
 
-static str_token_kinds: [TokenKind, .. 2] = [
+static STR_TOKEN_KINDS: [TokenKind, .. 2] = [
     StrKind,
     StringKind,
 ];
 
-static compound_token_kinds: [TokenKind, .. 6] = [
+static COMPOUND_TOKEN_KINDS: [TokenKind, .. 6] = [
     OptionKind,
     EnumStartKind,
     StructStartKind,
@@ -236,19 +236,19 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_num<T: NumCast>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Int(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            I8(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            I16(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            I32(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            I64(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            Uint(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            U8(x) =>  to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            U16(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            U32(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            U64(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            F32(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            F64(x) => to_result!(num::cast(x), self.syntax_error(token, primitive_token_kinds)),
-            token => Err(self.syntax_error(token, primitive_token_kinds)),
+            Int(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            I8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            I16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            I32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            I64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Uint(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            U8(x) =>  to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            U16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            U32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            U64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            F32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            F64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            token => Err(self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
         }
     }
 
@@ -267,7 +267,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             U64(x) => to_result!(num::from_u64(x), self.conversion_error(token)),
             F32(x) => to_result!(num::from_f32(x), self.conversion_error(token)),
             F64(x) => to_result!(num::from_f64(x), self.conversion_error(token)),
-            token => Err(self.syntax_error(token, primitive_token_kinds)),
+            token => Err(self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
         }
     }
 
@@ -289,7 +289,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_str(&mut self, token: Token) -> Result<&'static str, E> {
         match token {
             Str(value) => Ok(value),
-            token => Err(self.syntax_error(token, str_token_kinds)),
+            token => Err(self.syntax_error(token, STR_TOKEN_KINDS)),
         }
     }
 
@@ -299,7 +299,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             Char(value) => Ok(value.to_string()),
             Str(value) => Ok(value.to_string()),
             String(value) => Ok(value),
-            token => Err(self.syntax_error(token, str_token_kinds)),
+            token => Err(self.syntax_error(token, STR_TOKEN_KINDS)),
         }
     }
 
@@ -371,7 +371,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 }
             }
             token => {
-                return Err(self.syntax_error(token, str_token_kinds));
+                return Err(self.syntax_error(token, STR_TOKEN_KINDS));
             }
         }
 
@@ -842,7 +842,7 @@ impl<D: Deserializer<E>, E> Deserializable<D, E> for IgnoreTokens {
             }
 
             End => {
-                Err(d.syntax_error(token, compound_token_kinds))
+                Err(d.syntax_error(token, COMPOUND_TOKEN_KINDS))
             }
 
             _ => Ok(IgnoreTokens),
@@ -903,7 +903,7 @@ impl GatherTokens {
                 self.gather_map(d)
             }
             End => {
-                Err(d.syntax_error(token, compound_token_kinds))
+                Err(d.syntax_error(token, COMPOUND_TOKEN_KINDS))
             }
             token => {
                 self.tokens.push(token);
