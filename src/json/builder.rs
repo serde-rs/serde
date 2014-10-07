@@ -11,7 +11,7 @@
 use std::collections::TreeMap;
 use std::str::StrAllocating;
 
-use super::{Json, List, Object, ToJson};
+use super::{Json, JsonObject, List, Object, ToJson};
 
 pub struct ListBuilder {
     list: Vec<Json>,
@@ -44,7 +44,7 @@ impl ListBuilder {
 }
 
 pub struct ObjectBuilder {
-    object: Object,
+    object: JsonObject,
 }
 
 impl ObjectBuilder {

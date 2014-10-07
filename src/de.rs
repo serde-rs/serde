@@ -13,6 +13,8 @@ use std::gc::{GC, Gc};
 use std::hash::Hash;
 use std::num;
 use std::rc::Rc;
+use std::option;
+use std::string;
 use std::sync::Arc;
 
 #[deriving(Clone, PartialEq, Show)]
@@ -33,7 +35,7 @@ pub enum Token {
     F64(f64),
     Char(char),
     Str(&'static str),
-    String(String),
+    String(string::String),
     Option(bool),
 
     TupleStart(uint),
@@ -293,7 +295,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_string(&mut self, token: Token) -> Result<String, E> {
+    fn expect_string(&mut self, token: Token) -> Result<string::String, E> {
         match token {
             Char(value) => Ok(value.to_string()),
             Str(value) => Ok(value.to_string()),
@@ -305,7 +307,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_option<
         T: Deserializable<Self, E>
-    >(&mut self, token: Token) -> Result<Option<T>, E> {
+    >(&mut self, token: Token) -> Result<option::Option<T>, E> {
         match token {
             Option(false) => Ok(None),
             Option(true) => {
@@ -429,7 +431,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_seq_elt_or_end<
         T: Deserializable<Self, E>
-    >(&mut self) -> Result<Option<T>, E> {
+    >(&mut self) -> Result<option::Option<T>, E> {
         match try!(self.expect_token()) {
             End => Ok(None),
             token => {
@@ -473,7 +475,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_map_elt_or_end<
         K: Deserializable<Self, E>,
         V: Deserializable<Self, E>
-    >(&mut self) -> Result<Option<(K, V)>, E> {
+    >(&mut self) -> Result<option::Option<(K, V)>, E> {
         match try!(self.expect_token()) {
             End => Ok(None),
             token => {
@@ -513,7 +515,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 struct SeqDeserializer<'a, D: 'a, E> {
     d: &'a mut D,
     len: uint,
-    err: Option<E>,
+    err: option::Option<E>,
 }
 
 impl<
@@ -523,7 +525,7 @@ impl<
     T: Deserializable<D, E>
 > Iterator<T> for SeqDeserializer<'a, D, E> {
     #[inline]
-    fn next(&mut self) -> Option<T> {
+    fn next(&mut self) -> option::Option<T> {
         match self.d.expect_seq_elt_or_end() {
             Ok(next) => next,
             Err(err) => {
@@ -534,7 +536,7 @@ impl<
     }
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn size_hint(&self) -> (uint, option::Option<uint>) {
         (self.len, Some(self.len))
     }
 }
@@ -544,7 +546,7 @@ impl<
 struct MapDeserializer<'a, D:'a, E> {
     d: &'a mut D,
     len: uint,
-    err: Option<E>,
+    err: option::Option<E>,
 }
 
 impl<
@@ -555,7 +557,7 @@ impl<
     V: Deserializable<D, E>
 > Iterator<(K, V)> for MapDeserializer<'a, D, E> {
     #[inline]
-    fn next(&mut self) -> Option<(K, V)> {
+    fn next(&mut self) -> option::Option<(K, V)> {
         match self.d.expect_map_elt_or_end() {
             Ok(next) => next,
             Err(err) => {
@@ -566,7 +568,7 @@ impl<
     }
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn size_hint(&self) -> (uint, option::Option<uint>) {
         (self.len, Some(self.len))
     }
 }
@@ -611,7 +613,7 @@ impl_deserializable!(f32, expect_num)
 impl_deserializable!(f64, expect_num)
 impl_deserializable!(char, expect_char)
 impl_deserializable!(&'static str, expect_str)
-impl_deserializable!(String, expect_string)
+impl_deserializable!(string::String, expect_string)
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -665,9 +667,9 @@ impl<
     D: Deserializer<E>,
     E,
     T: Deserializable<D ,E>
-> Deserializable<D, E> for Option<T> {
+> Deserializable<D, E> for option::Option<T> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Option<T>, E> {
+    fn deserialize_token(d: &mut D, token: Token) -> Result<option::Option<T>, E> {
         d.expect_option(token)
     }
 }
@@ -989,6 +991,7 @@ impl<D: Deserializer<E>, E> Deserializable<D, E> for GatherTokens {
 #[cfg(test)]
 mod tests {
     use std::collections::TreeMap;
+    use std::{option, string};
     use serialize::Decoder;
 
     use super::{Deserializer, Deserializable, Token, TokenKind};
@@ -1033,7 +1036,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: TreeMap<String, Option<char>>,
+        c: TreeMap<string::String, option::Option<char>>,
     }
 
     impl<
@@ -1073,7 +1076,7 @@ mod tests {
     #[deriving(Clone, PartialEq, Show, Decodable)]
     enum Animal {
         Dog,
-        Frog(String, int)
+        Frog(string::String, int)
     }
 
     impl<D: Deserializer<E>, E> Deserializable<D, E> for Animal {
@@ -1124,7 +1127,7 @@ mod tests {
 
     impl<Iter: Iterator<Token>> Iterator<Result<Token, Error>> for TokenDeserializer<Iter> {
         #[inline]
-        fn next(&mut self) -> Option<Result<Token, Error>> {
+        fn next(&mut self) -> option::Option<Result<Token, Error>> {
             match self.tokens.next() {
                 None => None,
                 Some(token) => Some(Ok(token)),
@@ -1164,7 +1167,7 @@ mod tests {
             #[test]
             fn $name() {
                 $(
-                    let mut deserializer = TokenDeserializer::new($tokens.move_iter());
+                    let mut deserializer = TokenDeserializer::new($tokens.into_iter());
                     let value: $ty = Deserializable::deserialize(&mut deserializer).unwrap();
 
                     assert_eq!(value, $value);
@@ -1191,7 +1194,7 @@ mod tests {
         vec!(F64(5.0)) => 5.0: f64,
         vec!(Char('c')) => 'c': char,
         vec!(Str("abc")) => "abc": &str,
-        vec!(String("abc".to_string())) => "abc".to_string(): String
+        vec!(String("abc".to_string())) => "abc".to_string(): string::String
     ])
 
     test_value!(test_tuples, [
@@ -1225,12 +1228,12 @@ mod tests {
     ])
 
     test_value!(test_options, [
-        vec!(Option(false)) => None: Option<int>,
+        vec!(Option(false)) => None: option::Option<int>,
 
         vec!(
             Option(true),
             Int(5),
-        ) => Some(5): Option<int>
+        ) => Some(5): option::Option<int>
     ])
 
     test_value!(test_structs, [
@@ -1332,7 +1335,7 @@ mod tests {
         vec!(
             MapStart(0),
             End,
-        ) => treemap!(): TreeMap<int, String>,
+        ) => treemap!(): TreeMap<int, string::String>,
 
         vec!(
             MapStart(2),
@@ -1342,6 +1345,7 @@ mod tests {
                 Int(6),
                 String("b".to_string()),
             End,
-        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, String>
+        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, string::
+        String>
     ])
 }

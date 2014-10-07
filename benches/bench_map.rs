@@ -49,7 +49,7 @@ mod decoder {
         pub fn new(values: HashMap<String, int>) -> IntDecoder {
             IntDecoder {
                 len: values.len(),
-                iter: values.move_iter(),
+                iter: values.into_iter(),
                 stack: vec!(),
             }
         }
@@ -195,7 +195,7 @@ mod deserializer {
             IntDeserializer {
                 stack: vec!(StartState),
                 len: values.len(),
-                iter: values.move_iter(),
+                iter: values.into_iter(),
             }
         }
     }

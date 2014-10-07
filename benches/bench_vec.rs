@@ -41,7 +41,7 @@ mod decoder {
         pub fn new(values: Vec<int>) -> IntDecoder {
             IntDecoder {
                 len: values.len(),
-                iter: values.move_iter(),
+                iter: values.into_iter(),
             }
         }
     }
@@ -146,7 +146,7 @@ mod decoder {
         pub fn new(values: Vec<u8>) -> U8Decoder {
             U8Decoder {
                 len: values.len(),
-                iter: values.move_iter(),
+                iter: values.into_iter(),
             }
         }
     }
@@ -271,7 +271,7 @@ mod deserializer {
             IntDeserializer {
                 state: StartState,
                 len: values.len(),
-                iter: values.move_iter(),
+                iter: values.into_iter(),
             }
         }
     }
@@ -343,7 +343,7 @@ mod deserializer {
             U8Deserializer {
                 state: StartState,
                 len: values.len(),
-                iter: values.move_iter(),
+                iter: values.into_iter(),
             }
         }
     }
