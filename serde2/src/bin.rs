@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::option;
 use std::string;
 
-use serde2::de2;
-use serde2::de2::{Deserialize, Deserializer};
+use serde2::de;
+use serde2::de::{Deserialize, Deserializer};
 
 #[deriving(Show)]
 enum Token {
@@ -61,7 +61,7 @@ impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
 impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
     fn visit<
         R,
-        V: de2::Visitor<MyDeserializer<Iter>, R, Error>,
+        V: de::Visitor<MyDeserializer<Iter>, R, Error>,
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
         match self.next() {
             Some(Null) => {
@@ -95,7 +95,7 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
 
     fn visit_option<
         R,
-        V: de2::Visitor<MyDeserializer<Iter>, R, Error>,
+        V: de::Visitor<MyDeserializer<Iter>, R, Error>,
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
         match self.peek() {
             Some(&Null) => {
@@ -133,7 +133,7 @@ struct MyOptionVisitor {
 
 impl<
     Iter: Iterator<Token>,
-> de2::OptionVisitor<MyDeserializer<Iter>, Error> for MyOptionVisitor {
+> de::OptionVisitor<MyDeserializer<Iter>, Error> for MyOptionVisitor {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>,
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
@@ -153,7 +153,7 @@ struct MySeqVisitor {
 
 impl<
     Iter: Iterator<Token>,
-> de2::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor {
+> de::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
@@ -192,7 +192,7 @@ struct MyMapVisitor {
 
 impl<
     Iter: Iterator<Token>,
-> de2::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor {
+> de::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor {
     fn visit<
         K: Deserialize<MyDeserializer<Iter>, Error>,
         V: Deserialize<MyDeserializer<Iter>, Error>,
@@ -233,7 +233,7 @@ impl<
 
 mod json {
     use std::collections::TreeMap;
-    use serde2::de2;
+    use serde2::de;
 
     #[deriving(Show)]
     pub enum Value {
@@ -246,16 +246,16 @@ mod json {
     }
 
     impl<
-        D: de2::Deserializer<E>,
+        D: de::Deserializer<E>,
         E,
-    > de2::Deserialize<D, E> for Value {
+    > de::Deserialize<D, E> for Value {
         fn deserialize(d: &mut D) -> Result<Value, E> {
             struct Visitor;
 
             impl<
-                D: de2::Deserializer<E>,
+                D: de::Deserializer<E>,
                 E,
-            > de2::Visitor<D, Value, E> for Visitor {
+            > de::Visitor<D, Value, E> for Visitor {
                 fn visit_null(&mut self, _d: &mut D) -> Result<Value, E> {
                     Ok(Null)
                 }
@@ -271,7 +271,7 @@ mod json {
                 */
 
                 fn visit_option<
-                    Visitor: de2::OptionVisitor<D, E>,
+                    Visitor: de::OptionVisitor<D, E>,
                 >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
                     match try!(visitor.visit(d)) {
                         Some(value) => Ok(value),
@@ -280,7 +280,7 @@ mod json {
                 }
 
                 fn visit_seq<
-                    Visitor: de2::SeqVisitor<D, E>,
+                    Visitor: de::SeqVisitor<D, E>,
                 >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
                     let (len, _) = visitor.size_hint(d);
                     let mut values = Vec::with_capacity(len);
@@ -300,7 +300,7 @@ mod json {
                 }
 
                 fn visit_map<
-                    Visitor: de2::MapVisitor<D, E>,
+                    Visitor: de::MapVisitor<D, E>,
                 >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
                     let mut values = TreeMap::new();
 
@@ -480,8 +480,8 @@ fn main() {
 
 /*
 use std::collections::TreeMap;
-use serde2::{Serialize, GatherTokens};
-use serde2::json;
+use serde::{Serialize, GatherTokens};
+use serde::json;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -491,7 +491,7 @@ struct Foo {
     z: &'static str,
 }
 
-impl<S: serde2::VisitorState<R>, R> serde2::Serialize<S, R> for Foo {
+impl<S: serde::VisitorState<R>, R> serde::Serialize<S, R> for Foo {
     fn serialize(&self, state: &mut S) -> R {
         state.visit_named_map("Foo", FooSerialize {
             value: self,
@@ -505,7 +505,7 @@ struct FooSerialize<'a> {
     state: uint,
 }
 
-impl<'a, S: serde2::VisitorState<R>, R> serde2::Visitor<S, R> for FooSerialize<'a> {
+impl<'a, S: serde::VisitorState<R>, R> serde::Visitor<S, R> for FooSerialize<'a> {
     fn visit(&mut self, state: &mut S) -> Option<R> {
         match self.state {
             0 => {
