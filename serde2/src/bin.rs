@@ -73,15 +73,9 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
                 visitor.visit_string(self, v)
             }
             Some(Option(is_some)) => {
-                /*
                 visitor.visit_option(self, MyOptionVisitor {
                     is_some: is_some,
-                    finished: false,
                 })
-                */
-                //fail!()
-                let value = try!(self.visit_option());
-                visitor.visit_option(self, value)
             }
             Some(SeqStart(len)) => {
                 visitor.visit_seq(self, MySeqVisitor { len: len })
@@ -101,47 +95,28 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
     }
 
     fn visit_option<
-        R: Deserialize<MyDeserializer<Iter>, Error>,
-        //V: de2::Visitor<MyDeserializer<Iter>, R, Error>,
-    //>(&mut self, visitor: &mut V) -> Result<R, Error> {
-    >(&mut self) -> Result<option::Option<R>, Error> {
-        match self.next() {
-            Some(Option(true)) => {
-                let v = try!(Deserialize::deserialize(self));
-                Ok(Some(v))
-            }
-            Some(Option(false)) => {
-                Ok(None)
-            }
-            Some(_) => {
-                Err(self.syntax_error())
-            }
-            None => {
-                Err(self.end_of_stream_error())
-            }
-        }
-
-        /*
+        R,
+        V: de2::Visitor<MyDeserializer<Iter>, R, Error>,
+    >(&mut self, visitor: &mut V) -> Result<R, Error> {
         match self.peek() {
             Some(&Null) => {
                 self.next();
-                Ok(None)
+                visitor.visit_option(self, MyOptionVisitor {
+                    is_some: false,
+                })
             }
-            Some(&Option(true)) => {
+            Some(&Option(is_some)) => {
                 self.next();
-                let v = try!(Deserialize::deserialize(self));
-                Ok(Some(v))
-            }
-            Some(&Option(false)) => {
-                self.next();
-                Ok(None)
+                visitor.visit_option(self, MyOptionVisitor {
+                    is_some: is_some,
+                })
             }
             _ => {
-                let v = try!(Deserialize::deserialize(self));
-                Ok(Some(v))
+                visitor.visit_option(self, MyOptionVisitor {
+                    is_some: true,
+                })
             }
         }
-        */
     }
 
     fn syntax_error(&mut self) -> Error {
@@ -153,10 +128,8 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
     }
 }
 
-/*
 struct MyOptionVisitor {
     is_some: bool,
-    finished: bool,
 }
 
 impl<
@@ -165,21 +138,15 @@ impl<
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>,
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
-        if self.finished {
-            Err(d.syntax_error())
+        if self.is_some {
+            self.is_some = false;
+            let value = try!(Deserialize::deserialize(d));
+            Ok(Some(value))
         } else {
-            self.finished = true;
-
-            if self.is_some {
-                let v = try!(Deserialize::deserialize(d));
-                Ok(Some(v))
-            } else {
-                Ok(None)
-            }
+            Ok(None)
         }
     }
 }
-*/
 
 struct MySeqVisitor {
     len: uint,
@@ -290,7 +257,6 @@ mod json {
                 }
                 */
 
-                /*
                 fn visit_option<
                     Visitor: de2::OptionVisitor<D, E>,
                 >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
@@ -299,7 +265,6 @@ mod json {
                         None => Ok(Null),
                     }
                 }
-                */
 
                 fn visit_seq<
                     Visitor: de2::SeqVisitor<D, E>,

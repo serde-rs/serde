@@ -13,18 +13,12 @@ pub trait Deserializer<E> {
         V: Visitor<Self, R, E>,
     >(&mut self, visitor: &mut V) -> Result<R, E>;
 
-    /*
     fn visit_option<
         R,
         V: Visitor<Self, R, E>,
     >(&mut self, visitor: &mut V) -> Result<R, E> {
         self.visit(visitor)
     }
-    */
-
-    fn visit_option<
-        R: Deserialize<Self, E>,
-    >(&mut self) -> Result<Option<R>, E>;
 
     fn syntax_error(&mut self) -> E;
 
@@ -49,31 +43,10 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
     }
 
     fn visit_option<
-        T: Deserialize<D, E>,
-    >(&mut self, d: &mut D, _v: Option<T>) -> Result<R, E> {
-        Err(d.syntax_error())
-    }
-
-    /*
-    fn visit_option_some<
-        T: Deserialize<Self, E>,
-    >(&mut self, d: &mut D, _v: T) -> Result<R, E> {
-        Err(d.syntax_error())
-    }
-
-    fn visit_option_none(&mut self, d: &mut D) -> Result<R, E> {
-        Err(d.syntax_error())
-    }
-    */
-
-    /*
-    fn visit_option<
-        T: Deserialize<D, E>,
-        V: OptionVisitor<T, D, R, E>,
+        V: OptionVisitor<D, E>,
     >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
         Err(d.syntax_error())
     }
-    */
 
     fn visit_seq<
         V: SeqVisitor<D, E>
@@ -82,10 +55,10 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
     }
 }
 
-pub trait OptionVisitor<T: Deserialize<D, E>, D, R, E> {
-    fn visit_some(&mut self, d: &mut D, _v: T) -> Result<R, E>;
-
-    fn visit_none(&mut self, d: &mut D) -> Result<R, E>;
+pub trait OptionVisitor<D, E> {
+    fn visit<
+        T: Deserialize<D, E>,
+    >(&mut self, d: &mut D) -> Result<Option<T>, E>;
 }
 
 pub trait SeqVisitor<D, E> {
@@ -166,7 +139,6 @@ impl<
     E,
 > Deserialize<D, E> for Option<T> {
     fn deserialize(d: &mut D) -> Result<Option<T>, E> {
-        /*
         struct Visitor;
 
         impl<
@@ -174,15 +146,14 @@ impl<
             D: Deserializer<E>,
             E,
         > self::Visitor<D, Option<T>, E> for Visitor {
-            fn visit_option(&mut self, _d: &mut D, v: Option<T>) -> Result<Option<T>, E> {
-                Ok(v)
+            fn visit_option<
+                V: OptionVisitor<D, E>,
+            >(&mut self, d: &mut D, mut visitor: V) -> Result<Option<T>, E> {
+                visitor.visit(d)
             }
         }
 
         d.visit_option(&mut Visitor)
-        */
-
-        d.visit_option()
     }
 }
 
@@ -296,7 +267,7 @@ trait Deserialize<S, E> {
 ///////////////////////////////////////////////////////////////////////////////
 
 trait Deserializer<S, E> {
-    fn visit<R>(&mut self, state: &mut S) -> Result<R, E>;
+    fn visit<R>(&mut self, state: &mut S) -> Result<(), E>;
 
     fn syntax_error(&mut self) -> E;
 }
@@ -314,7 +285,7 @@ trait DeserializerState<E> {
 }
 
 trait Visitor<R, E> {
-    fn visit<S>(&mut self, state: &mut S) -> Result<R, E>;
+    fn visit<S>(&mut self, state: &mut S) -> Result<(), E>;
 
     fn size_hint(&self) -> (uint, Option<uint>);
 }
@@ -335,43 +306,43 @@ trait VisitorState<
     }
 
     /*
-    fn visit_i8(&mut self, d: &mut D, v: i8) -> Result<R, E> {
+    fn visit_i8(&mut self, d: &mut D, v: i8) -> Result<(), E> {
         self.visit_i64(d, v as i64)
     }
 
-    fn visit_i16(&mut self, d: &mut D, v: i16) -> Result<R, E> {
+    fn visit_i16(&mut self, d: &mut D, v: i16) -> Result<(), E> {
         self.visit_i64(d, v as i64)
     }
 
-    fn visit_i32(&mut self, d: &mut D, v: i32) -> Result<R, E> {
+    fn visit_i32(&mut self, d: &mut D, v: i32) -> Result<(), E> {
         self.visit_i64(d, v as i64)
     }
 
-    fn visit_i64(&mut self, d: &mut D, v: i64) -> Result<R, E> {
+    fn visit_i64(&mut self, d: &mut D, v: i64) -> Result<(), E> {
         Err(d.syntax_error())
     }
 
-    fn visit_uint(&mut self, d: &mut D, v: int) -> Result<R, E> {
+    fn visit_uint(&mut self, d: &mut D, v: int) -> Result<(), E> {
         self.visit_u64(d, v as u64)
     }
 
-    fn visit_u8(&mut self, d: &mut D, v: u8) -> Result<R, E> {
+    fn visit_u8(&mut self, d: &mut D, v: u8) -> Result<(), E> {
         self.visit_u64(d, v as u64)
     }
 
-    fn visit_u16(&mut self, d: &mut D, v: u16) -> Result<R, E> {
+    fn visit_u16(&mut self, d: &mut D, v: u16) -> Result<(), E> {
         self.visit_u64(d, v as u64)
     }
 
-    fn visit_u32(&mut self, d: &mut D, v: u32) -> Result<R, E> {
+    fn visit_u32(&mut self, d: &mut D, v: u32) -> Result<(), E> {
         self.visit_u64(d, v as u64)
     }
 
-    fn visit_u64(&mut self, d: &mut D, _v: u64) -> Result<R, E> {
+    fn visit_u64(&mut self, d: &mut D, _v: u64) -> Result<(), E> {
         Err(d.syntax_error())
     }
 
-    fn visit_string(&mut self, d: &mut D, _v: String) -> Result<R, E> {
+    fn visit_string(&mut self, d: &mut D, _v: String) -> Result<(), E> {
         Err(d.syntax_error())
     }
     */
@@ -379,7 +350,7 @@ trait VisitorState<
     fn visit_seq<
         R,
         V: SeqVisitor<D, E>,
-    >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
+    >(&mut self, d: &mut D, _visitor: V) -> Result<(), E> {
         Err(d.syntax_error())
     }
 
@@ -746,6 +717,3 @@ impl<
 
 */
 */
-
-///////////////////////////////////////////////////////////////////////////////
-
