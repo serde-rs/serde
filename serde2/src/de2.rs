@@ -68,9 +68,9 @@ pub trait OptionVisitor<D, E> {
 }
 
 pub trait SeqVisitor<D, E> {
-    fn next<
+    fn visit<
         T: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Option<Result<T, E>>;
+    >(&mut self, d: &mut D) -> Result<Option<T>, E>;
 
     fn end(&mut self, d: &mut D) -> Result<(), E>;
 
@@ -81,10 +81,10 @@ pub trait SeqVisitor<D, E> {
 }
 
 pub trait MapVisitor<D, E> {
-    fn next<
+    fn visit<
         K: Deserialize<D, E>,
         V: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Option<Result<(K, V), E>>;
+    >(&mut self, d: &mut D) -> Result<Option<(K, V)>, E>;
 
     fn end(&mut self, d: &mut D) -> Result<(), E>;
 
@@ -199,9 +199,9 @@ impl<
                 let mut values = Vec::with_capacity(len);
 
                 loop {
-                    match visitor.next(d) {
+                    match try!(visitor.visit(d)) {
                         Some(value) => {
-                            values.push(try!(value));
+                            values.push(value);
                         }
                         None => {
                             break;
@@ -243,9 +243,9 @@ impl<
                     match state {
                         0 => {
                             state += 1;
-                            match visitor.next(d) {
+                            match try!(visitor.visit(d)) {
                                 Some(value) => {
-                                    t0 = Some(try!(value));
+                                    t0 = Some(value);
                                 }
                                 None => {
                                     return Err(d.end_of_stream_error());
@@ -254,9 +254,9 @@ impl<
                         }
                         1 => {
                             state += 1;
-                            match visitor.next(d) {
+                            match try!(visitor.visit(d)) {
                                 Some(value) => {
-                                    t1 = Some(try!(value));
+                                    t1 = Some(value);
                                 }
                                 None => {
                                     return Err(d.end_of_stream_error());
@@ -301,12 +301,9 @@ impl<
                 let mut values = HashMap::with_capacity(len);
 
                 loop {
-                    match visitor.next(d) {
-                        Some(Ok((key, value))) => {
+                    match try!(visitor.visit(d)) {
+                        Some((key, value)) => {
                             values.insert(key, value);
-                        }
-                        Some(Err(err)) => {
-                            return Err(err);
                         }
                         None => {
                             break;
@@ -343,12 +340,9 @@ impl<
                 let mut values = TreeMap::new();
 
                 loop {
-                    match visitor.next(d) {
-                        Some(Ok((key, value))) => {
+                    match try!(visitor.visit(d)) {
+                        Some((key, value)) => {
                             values.insert(key, value);
-                        }
-                        Some(Err(err)) => {
-                            return Err(err);
                         }
                         None => {
                             break;

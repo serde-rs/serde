@@ -154,20 +154,21 @@ struct MySeqVisitor {
 impl<
     Iter: Iterator<Token>,
 > de2::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor {
-    fn next<
+    fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> option::Option<Result<T, Error>> {
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
         match d.peek() {
             Some(&End) => {
                 d.next();
-                None
+                Ok(None)
             }
             Some(_) => {
                 self.len -= 1;
-                Some(Deserialize::deserialize(d))
+                let value = try!(Deserialize::deserialize(d));
+                Ok(Some(value))
             }
             None => {
-                Some(Err(d.syntax_error()))
+                Err(d.syntax_error())
             }
         }
     }
@@ -192,32 +193,25 @@ struct MyMapVisitor {
 impl<
     Iter: Iterator<Token>,
 > de2::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor {
-    fn next<
+    fn visit<
         K: Deserialize<MyDeserializer<Iter>, Error>,
         V: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> option::Option<Result<(K, V), Error>> {
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<(K, V)>, Error> {
         match d.peek() {
             Some(&End) => {
                 d.next();
-                None
+                Ok(None)
             }
             Some(_) => {
                 self.len -= 1;
 
-                let key = match Deserialize::deserialize(d) {
-                    Ok(key) => key,
-                    Err(err) => { return Some(Err(err)); }
-                };
+                let key = try!(Deserialize::deserialize(d));
+                let value = try!(Deserialize::deserialize(d));
 
-                let value = match Deserialize::deserialize(d) {
-                    Ok(value) => value,
-                    Err(err) => { return Some(Err(err)); }
-                };
-
-                Some(Ok((key, value)))
+                Ok(Some((key, value)))
             }
             None => {
-                Some(Err(d.syntax_error()))
+                Err(d.syntax_error())
             }
         }
     }
@@ -238,7 +232,7 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 mod json {
-    //use std::collections::TreeMap;
+    use std::collections::TreeMap;
     use serde2::de2;
 
     #[deriving(Show)]
@@ -248,7 +242,7 @@ mod json {
         Int(int),
         //String(String),
         List(Vec<Value>),
-        //Map(TreeMap<String, Value>),
+        Map(TreeMap<String, Value>),
     }
 
     impl<
@@ -292,9 +286,9 @@ mod json {
                     let mut values = Vec::with_capacity(len);
 
                     loop {
-                        match visitor.next(d) {
+                        match try!(visitor.visit(d)) {
                             Some(value) => {
-                                values.push(try!(value));
+                                values.push(value);
                             }
                             None => {
                                 break;
@@ -305,20 +299,15 @@ mod json {
                     Ok(List(values))
                 }
 
-                /*
                 fn visit_map<
-                    Visitor: ::MapVisitor<D, E>,
+                    Visitor: de2::MapVisitor<D, E>,
                 >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
                     let mut values = TreeMap::new();
 
                     loop {
-                        let kv: Option<Result<(String, Value), E>> = visitor.next(d);
-                        match kv {
-                            Some(Ok((key, value))) => {
+                        match try!(visitor.visit(d)) {
+                            Some((key, value)) => {
                                 values.insert(key, value);
-                            }
-                            Some(Err(err)) => {
-                                return Err(err);
                             }
                             None => {
                                 break;
@@ -328,7 +317,6 @@ mod json {
 
                     Ok(Map(values))
                 }
-                */
             }
 
             d.visit(&mut Visitor)
@@ -473,7 +461,6 @@ fn main() {
     let v: Result<HashMap<string::String, int>, Error> = Deserialize::deserialize(&mut state);
     println!("{}", v);
 
-    /*
     ////
 
     let tokens = vec!(
@@ -488,7 +475,6 @@ fn main() {
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
     println!("{}", v);
-    */
 }
 
 
