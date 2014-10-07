@@ -1,7 +1,8 @@
 extern crate serde2;
 
-use std::string;
+use std::collections::HashMap;
 use std::option;
+use std::string;
 
 use serde2::de2;
 use serde2::de2::{Deserialize, Deserializer};
@@ -13,7 +14,7 @@ enum Token {
     String(string::String),
     Option(bool),
     SeqStart(uint),
-    //MapStart(uint),
+    MapStart(uint),
     End,
 }
 
@@ -80,11 +81,9 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
             Some(SeqStart(len)) => {
                 visitor.visit_seq(self, MySeqVisitor { len: len })
             }
-            /*
             Some(MapStart(len)) => {
                 visitor.visit_map(self, MyMapVisitor { len: len })
             }
-            */
             Some(End) => {
                 Err(self.syntax_error())
             }
@@ -186,15 +185,17 @@ impl<
     }
 }
 
-/*
 struct MyMapVisitor {
     len: uint,
 }
 
 impl<
     Iter: Iterator<Token>,
-> Visitor<MyDeserializer<Iter>, ()> for MyMapVisitor {
-    fn next(&mut self, d: &mut MyDeserializer<Iter>) -> Option<Result<(K, V), ()>> {
+> de2::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor {
+    fn next<
+        K: Deserialize<MyDeserializer<Iter>, Error>,
+        V: Deserialize<MyDeserializer<Iter>, Error>,
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> option::Option<Result<(K, V), Error>> {
         match d.peek() {
             Some(&End) => {
                 d.next();
@@ -202,7 +203,18 @@ impl<
             }
             Some(_) => {
                 self.len -= 1;
-                Some(d.visit_map_elt())
+
+                let key = match Deserialize::deserialize(d) {
+                    Ok(key) => key,
+                    Err(err) => { return Some(Err(err)); }
+                };
+
+                let value = match Deserialize::deserialize(d) {
+                    Ok(value) => value,
+                    Err(err) => { return Some(Err(err)); }
+                };
+
+                Some(Ok((key, value)))
             }
             None => {
                 Some(Err(d.syntax_error()))
@@ -210,11 +222,18 @@ impl<
         }
     }
 
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
+        match d.next() {
+            Some(End) => Ok(()),
+            Some(_) => Err(d.syntax_error()),
+            None => Err(d.end_of_stream_error()),
+        }
+    }
+
+    fn size_hint(&self, _d: &mut MyDeserializer<Iter>) -> (uint, option::Option<uint>) {
         (self.len, Some(self.len))
     }
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -439,6 +458,21 @@ fn main() {
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
     println!("option value:  {}", v);
 
+    ////
+
+    let tokens = vec!(
+        MapStart(2),
+        String("a".to_string()),
+        Int(1),
+        String("b".to_string()),
+        Int(2),
+        End
+    );
+    let mut state = MyDeserializer::new(tokens.into_iter());
+
+    let v: Result<HashMap<string::String, int>, Error> = Deserialize::deserialize(&mut state);
+    println!("{}", v);
+
     /*
     ////
 
@@ -452,22 +486,7 @@ fn main() {
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
-    let v: Result<HashMap<String, int>, ()> = Deserialize::deserialize(&mut state);
-    println!("{}", v);
-
-    ////
-
-    let tokens = vec!(
-        MapStart(2),
-        String("a".to_string()),
-        Int(1),
-        String("b".to_string()),
-        Int(2),
-        End
-    );
-    let mut state = MyDeserializer::new(tokens.into_iter());
-
-    let v: Result<json::Value, ()> = Deserialize::deserialize(&mut state);
+    let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
     println!("{}", v);
     */
 }

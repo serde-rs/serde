@@ -1,5 +1,5 @@
-//use std::collections::{HashMap, TreeMap};
-//use std::hash::Hash;
+use std::collections::{HashMap, TreeMap};
+use std::hash::Hash;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -49,7 +49,13 @@ pub trait Visitor<D: Deserializer<E>, R, E> {
     }
 
     fn visit_seq<
-        V: SeqVisitor<D, E>
+        V: SeqVisitor<D, E>,
+    >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
+        Err(d.syntax_error())
+    }
+
+    fn visit_map<
+        V: MapVisitor<D, E>,
     >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
         Err(d.syntax_error())
     }
@@ -65,6 +71,20 @@ pub trait SeqVisitor<D, E> {
     fn next<
         T: Deserialize<D, E>,
     >(&mut self, d: &mut D) -> Option<Result<T, E>>;
+
+    fn end(&mut self, d: &mut D) -> Result<(), E>;
+
+    #[inline]
+    fn size_hint(&self, _d: &mut D) -> (uint, Option<uint>) {
+        (0, None)
+    }
+}
+
+pub trait MapVisitor<D, E> {
+    fn next<
+        K: Deserialize<D, E>,
+        V: Deserialize<D, E>,
+    >(&mut self, d: &mut D) -> Option<Result<(K, V), E>>;
 
     fn end(&mut self, d: &mut D) -> Result<(), E>;
 
@@ -257,7 +277,92 @@ impl<
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
 
+impl<
+    K: Deserialize<D, E> + Eq + Hash,
+    V: Deserialize<D, E>,
+    D: Deserializer<E>,
+    E,
+> Deserialize<D, E> for HashMap<K, V> {
+    fn deserialize(d: &mut D) -> Result<HashMap<K, V>, E> {
+        struct Visitor;
+
+        impl<
+            K: Deserialize<D, E> + Eq + Hash,
+            V: Deserialize<D, E>,
+            D: Deserializer<E>,
+            E,
+        > self::Visitor<D, HashMap<K, V>, E> for Visitor {
+            fn visit_map<
+                Visitor: MapVisitor<D, E>,
+            >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<HashMap<K, V>, E> {
+                let (len, _) = visitor.size_hint(d);
+                let mut values = HashMap::with_capacity(len);
+
+                loop {
+                    match visitor.next(d) {
+                        Some(Ok((key, value))) => {
+                            values.insert(key, value);
+                        }
+                        Some(Err(err)) => {
+                            return Err(err);
+                        }
+                        None => {
+                            break;
+                        }
+                    }
+                }
+
+                Ok(values)
+            }
+        }
+
+        d.visit(&mut Visitor)
+    }
+}
+
+impl<
+    K: Deserialize<D, E> + Eq + Ord,
+    V: Deserialize<D, E>,
+    D: Deserializer<E>,
+    E,
+> Deserialize<D, E> for TreeMap<K, V> {
+    fn deserialize(d: &mut D) -> Result<TreeMap<K, V>, E> {
+        struct Visitor;
+
+        impl<
+            K: Deserialize<D, E> + Eq + Ord,
+            V: Deserialize<D, E>,
+            D: Deserializer<E>,
+            E,
+        > self::Visitor<D, TreeMap<K, V>, E> for Visitor {
+            fn visit_map<
+                Visitor: MapVisitor<D, E>,
+            >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<TreeMap<K, V>, E> {
+                let mut values = TreeMap::new();
+
+                loop {
+                    match visitor.next(d) {
+                        Some(Ok((key, value))) => {
+                            values.insert(key, value);
+                        }
+                        Some(Err(err)) => {
+                            return Err(err);
+                        }
+                        None => {
+                            break;
+                        }
+                    }
+                }
+
+                Ok(values)
+            }
+        }
+
+        d.visit(&mut Visitor)
+    }
+}
 
 /*
 trait Deserialize<S, E> {
