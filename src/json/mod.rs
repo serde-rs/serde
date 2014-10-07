@@ -482,10 +482,19 @@ impl Json {
     }
 }
 
+struct WriterFormatter<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
+
+impl<'a, 'b> Writer for WriterFormatter<'a, 'b> {
+    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+        let WriterFormatter(ref mut f) = *self;
+        f.write(buf).map_err(|_| io::IoError::last_error())
+    }
+}
+
 impl fmt::Show for Json {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.to_writer(f as &mut Writer).map_err(|_| fmt::WriteError)
+        self.to_writer(WriterFormatter(f)).map_err(|_| fmt::WriteError)
     }
 }
 
@@ -1139,6 +1148,8 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
         V: Serializable<Serializer<W>, io::IoError>,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
+        //Warning: WriterFormatter was added to work around
+        // the stack overflow happening on this line
         try!(self.wr.write_str("{"));
         let mut first = true;
         for (key, value) in iter {
@@ -1150,7 +1161,6 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
             try!(key.serialize(self));
             try!(self.wr.write_str(":"));
             try!(value.serialize(self));
-
         }
         self.wr.write_str("}")
     }
