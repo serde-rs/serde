@@ -9,7 +9,6 @@
 // except according to those terms.
 
 use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
-use std::gc::{GC, Gc};
 use std::hash::Hash;
 use std::num;
 use std::rc::Rc;
@@ -625,17 +624,6 @@ impl<
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Box<T>, E> {
         Ok(box try!(Deserializable::deserialize_token(d, token)))
-    }
-}
-
-impl<
-    D: Deserializer<E>,
-    E,
-    T: Deserializable<D, E> + 'static
-> Deserializable<D, E> for Gc<T> {
-    #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<Gc<T>, E> {
-        Ok(box (GC) try!(Deserializable::deserialize_token(d, token)))
     }
 }
 

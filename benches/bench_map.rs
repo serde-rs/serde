@@ -18,7 +18,7 @@ use serde::de::{Deserializer, Deserializable};
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Show)]
-enum Error {
+pub enum Error {
     EndOfStream,
     SyntaxError,
     OtherError(String),

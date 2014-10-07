@@ -9,7 +9,6 @@
 // except according to those terms.
 
 use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
-use std::gc::Gc;
 use std::hash::Hash;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -182,7 +181,6 @@ macro_rules! impl_serializable_box {
 
 impl_serializable_box!(&'a T)
 impl_serializable_box!(Box<T>)
-impl_serializable_box!(Gc<T>)
 impl_serializable_box!(Rc<T>)
 
 impl<

@@ -35,7 +35,7 @@ struct Outer {
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Show)]
-enum Error {
+pub enum Error {
     EndOfStream,
     SyntaxError,
     OtherError(String),
