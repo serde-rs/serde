@@ -14,16 +14,7 @@ pub trait Serializer<S, R> {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Visitor<S, R> {
-    fn visit(&mut self, state: &mut S) -> Option<R>;
-
-    #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
-        (0, None)
-    }
-}
-
-pub trait VisitorState<R> {
+pub trait Visitor<R> {
     fn visit_null(&mut self) -> R;
 
     fn visit_bool(&mut self, v: bool) -> R;
@@ -86,19 +77,19 @@ pub trait VisitorState<R> {
     fn visit_str(&mut self, value: &str) -> R;
 
     fn visit_seq<
-        V: Visitor<Self, R>,
+        V: SeqVisitor<Self, R>,
     >(&mut self, visitor: V) -> R;
 
     #[inline]
     fn visit_named_seq<
-        V: Visitor<Self, R>,
+        V: SeqVisitor<Self, R>,
     >(&mut self, _name: &'static str, visitor: V) -> R {
         self.visit_seq(visitor)
     }
 
     #[inline]
     fn visit_enum<
-        V: Visitor<Self, R>,
+        V: SeqVisitor<Self, R>,
     >(&mut self, _name: &'static str, _variant: &'static str, visitor: V) -> R {
         self.visit_seq(visitor)
     }
@@ -108,12 +99,12 @@ pub trait VisitorState<R> {
     >(&mut self, first: bool, value: T) -> R;
 
     fn visit_map<
-        V: Visitor<Self, R>,
+        V: MapVisitor<Self, R>,
     >(&mut self, visitor: V) -> R;
 
     #[inline]
     fn visit_named_map<
-        V: Visitor<Self, R>,
+        V: MapVisitor<Self, R>,
     >(&mut self, _name: &'static str, visitor: V) -> R {
         self.visit_map(visitor)
     }
@@ -147,7 +138,7 @@ pub trait MapVisitor<S, R> {
 
 macro_rules! impl_serialize {
     ($ty:ty, $method:ident) => {
-        impl<S: VisitorState<R>, R> Serialize<S, R> for $ty {
+        impl<S: Visitor<R>, R> Serialize<S, R> for $ty {
             #[inline]
             fn serialize(&self, state: &mut S) -> R {
                 state.$method(*self)
@@ -173,14 +164,14 @@ impl_serialize!(char, visit_char)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<'a, S: VisitorState<R>, R> Serialize<S, R> for &'a str {
+impl<'a, S: Visitor<R>, R> Serialize<S, R> for &'a str {
     #[inline]
     fn serialize(&self, s: &mut S) -> R {
         s.visit_str(*self)
     }
 }
 
-impl<S: VisitorState<R>, R> Serialize<S, R> for String {
+impl<S: Visitor<R>, R> Serialize<S, R> for String {
     #[inline]
     fn serialize(&self, s: &mut S) -> R {
         s.visit_str(self.as_slice())
@@ -207,9 +198,9 @@ impl<T, Iter: Iterator<T>> SeqIteratorVisitor<Iter> {
 impl<
     T: Serialize<S, R>,
     Iter: Iterator<T>,
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R
-> Visitor<S, R> for SeqIteratorVisitor<Iter> {
+> SeqVisitor<S, R> for SeqIteratorVisitor<Iter> {
     #[inline]
     fn visit(&mut self, state: &mut S) -> Option<R> {
         let first = self.first;
@@ -230,7 +221,7 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R,
     T: Serialize<S, R>
 > Serialize<S, R> for Vec<T> {
@@ -261,9 +252,9 @@ impl<
     K: Serialize<S, R>,
     V: Serialize<S, R>,
     Iter: Iterator<(K, V)>,
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R
-> Visitor<S, R> for MapIteratorVisitor<Iter> {
+> MapVisitor<S, R> for MapIteratorVisitor<Iter> {
     #[inline]
     fn visit(&mut self, state: &mut S) -> Option<R> {
         let first = self.first;
@@ -284,7 +275,7 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R,
     K: Serialize<S, R> + Ord,
     V: Serialize<S, R>
@@ -297,7 +288,7 @@ impl<
 
 impl<
     'a,
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R,
     T0: Serialize<S, R>,
     T1: Serialize<S, R>
@@ -315,11 +306,11 @@ struct Tuple2Serialize<'a, T0: 'a, T1: 'a> {
 
 impl<
     'a,
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R,
     T0: Serialize<S, R>,
     T1: Serialize<S, R>
-> Visitor<S, R> for Tuple2Serialize<'a, T0, T1> {
+> SeqVisitor<S, R> for Tuple2Serialize<'a, T0, T1> {
     #[inline]
     fn visit(&mut self, state: &mut S) -> Option<R> {
         match self.state {
@@ -348,7 +339,7 @@ impl<
 
 impl<
     'a,
-    S: VisitorState<R>,
+    S: Visitor<R>,
     R,
     T: Serialize<S, R>
 > Serialize<S, R> for &'a T {
@@ -378,7 +369,7 @@ pub enum Token<'a> {
     End,
 }
 
-pub trait TokenState<'a, R>: VisitorState<R> {
+pub trait TokenState<'a, R>: Visitor<R> {
     fn serialize(&mut self, token: Token<'a>) -> R;
 }
 
@@ -406,7 +397,7 @@ impl<'a> TokenState<'a, ()> for GatherTokens<'a> {
     }
 }
 
-impl<'a> VisitorState<()> for GatherTokens<'a> {
+impl<'a> Visitor<()> for GatherTokens<'a> {
     fn visit_null(&mut self) -> () {
         self.serialize(Null)
     }

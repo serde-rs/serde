@@ -26,7 +26,7 @@ impl<W: Writer> Serializer<W> {
     }
 }
 
-impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
+impl<W: Writer> ser::Visitor<io::IoResult<()>> for Serializer<W> {
     #[inline]
     fn visit_null(&mut self) -> io::IoResult<()> {
         self.writer.write_str("null")
@@ -108,7 +108,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
 
     #[inline]
     fn visit_seq<
-        V: ser::Visitor<Serializer<W>, io::IoResult<()>>
+        V: ser::SeqVisitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
         try!(self.writer.write_str("["));
 
@@ -136,7 +136,7 @@ impl<W: Writer> ser::VisitorState<io::IoResult<()>> for Serializer<W> {
 
     #[inline]
     fn visit_map<
-        V: ser::Visitor<Serializer<W>, io::IoResult<()>>
+        V: ser::MapVisitor<Serializer<W>, io::IoResult<()>>
     >(&mut self, mut visitor: V) -> io::IoResult<()> {
         try!(self.writer.write_str("{{"));
 
