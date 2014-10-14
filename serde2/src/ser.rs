@@ -2,123 +2,130 @@ use std::collections::TreeMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Serialize<S, R, E> {
-    fn serialize(&self, state: &mut S) -> Result<R, E>;
+pub trait Serialize {
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serializer<S, R, E> {
-    fn serialize<
-        T: Serialize<S, R, E>,
+    fn visit<
+        T: Serialize,
     >(&mut self, value: &T) -> Result<R, E>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Visitor<R, E> {
-    fn visit_null(&mut self) -> Result<R, E>;
+pub trait Visitor<S, R, E> {
+    fn visit_null(&self, state: &mut S) -> Result<R, E>;
 
-    fn visit_bool(&mut self, v: bool) -> Result<R, E>;
+    fn visit_bool(&self, state: &mut S, v: bool) -> Result<R, E>;
 
     #[inline]
-    fn visit_int(&mut self, v: int) -> Result<R, E> {
-        self.visit_i64(v as i64)
+    fn visit_int(&self, state: &mut S, v: int) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
     }
 
     #[inline]
-    fn visit_i8(&mut self, v: i8) -> Result<R, E> {
-        self.visit_i64(v as i64)
+    fn visit_i8(&self, state: &mut S, v: i8) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
     }
 
     #[inline]
-    fn visit_i16(&mut self, v: i16) -> Result<R, E> {
-        self.visit_i64(v as i64)
+    fn visit_i16(&self, state: &mut S, v: i16) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
     }
 
     #[inline]
-    fn visit_i32(&mut self, v: i32) -> Result<R, E> {
-        self.visit_i64(v as i64)
+    fn visit_i32(&self, state: &mut S, v: i32) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
     }
 
     #[inline]
-    fn visit_i64(&mut self, v: i64) -> Result<R, E>;
+    fn visit_i64(&self, state: &mut S, v: i64) -> Result<R, E>;
 
     #[inline]
-    fn visit_uint(&mut self, v: uint) -> Result<R, E> {
-        self.visit_u64(v as u64)
+    fn visit_uint(&self, state: &mut S, v: uint) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
     }
 
     #[inline]
-    fn visit_u8(&mut self, v: u8) -> Result<R, E> {
-        self.visit_u64(v as u64)
+    fn visit_u8(&self, state: &mut S, v: u8) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
     }
 
     #[inline]
-    fn visit_u16(&mut self, v: u16) -> Result<R, E> {
-        self.visit_u64(v as u64)
+    fn visit_u16(&self, state: &mut S, v: u16) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
     }
 
     #[inline]
-    fn visit_u32(&mut self, v: u32) -> Result<R, E> {
-        self.visit_u64(v as u64)
+    fn visit_u32(&self, state: &mut S, v: u32) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
     }
 
     #[inline]
-    fn visit_u64(&mut self, v: u64) -> Result<R, E>;
+    fn visit_u64(&self, state: &mut S, v: u64) -> Result<R, E>;
 
     #[inline]
-    fn visit_f32(&mut self, v: f32) -> Result<R, E> {
-        self.visit_f64(v as f64)
+    fn visit_f32(&self, state: &mut S, v: f32) -> Result<R, E> {
+        self.visit_f64(state, v as f64)
     }
 
-    fn visit_f64(&mut self, v: f64) -> Result<R, E>;
+    fn visit_f64(&self, state: &mut S, v: f64) -> Result<R, E>;
 
-    fn visit_char(&mut self, value: char) -> Result<R, E>;
+    fn visit_char(&self, state: &mut S, value: char) -> Result<R, E>;
 
-    fn visit_str(&mut self, value: &str) -> Result<R, E>;
+    fn visit_str(&self, state: &mut S, value: &str) -> Result<R, E>;
 
     fn visit_seq<
-        V: SeqVisitor<Self, R, E>,
-    >(&mut self, visitor: V) -> Result<R, E>;
+        V: SeqVisitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E>;
 
     #[inline]
     fn visit_named_seq<
-        V: SeqVisitor<Self, R, E>,
-    >(&mut self, _name: &'static str, visitor: V) -> Result<R, E> {
-        self.visit_seq(visitor)
+        V: SeqVisitor<S, R, E>,
+    >(&self, state: &mut S, _name: &'static str, visitor: V) -> Result<R, E> {
+        self.visit_seq(state, visitor)
     }
 
     #[inline]
     fn visit_enum<
-        V: SeqVisitor<Self, R, E>,
-    >(&mut self, _name: &'static str, _variant: &'static str, visitor: V) -> Result<R, E> {
-        self.visit_seq(visitor)
+        V: SeqVisitor<S, R, E>,
+    >(&self, state: &mut S, _name: &'static str, _variant: &'static str, visitor: V) -> Result<R, E> {
+        self.visit_seq(state, visitor)
     }
 
     fn visit_seq_elt<
-        T: Serialize<Self, R, E>,
-    >(&mut self, first: bool, value: T) -> Result<R, E>;
+        T: Serialize,
+    >(&self, state: &mut S, first: bool, value: T) -> Result<R, E>;
 
     fn visit_map<
-        V: MapVisitor<Self, R, E>,
-    >(&mut self, visitor: V) -> Result<R, E>;
+        V: MapVisitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E>;
 
     #[inline]
     fn visit_named_map<
-        V: MapVisitor<Self, R, E>,
-    >(&mut self, _name: &'static str, visitor: V) -> Result<R, E> {
-        self.visit_map(visitor)
+        V: MapVisitor<S, R, E>,
+    >(&self, state: &mut S, _name: &'static str, visitor: V) -> Result<R, E> {
+        self.visit_map(state, visitor)
     }
 
     fn visit_map_elt<
-        K: Serialize<Self, R, E>,
-        V: Serialize<Self, R, E>,
-    >(&mut self, first: bool, key: K, value: V) -> Result<R, E>;
+        K: Serialize,
+        V: Serialize,
+    >(&self, state: &mut S, first: bool, key: K, value: V) -> Result<R, E>;
 }
 
 pub trait SeqVisitor<S, R, E> {
-    fn visit(&mut self, state: &mut S) -> Result<Option<R>, E>;
+    fn visit<
+        V: Visitor<S, R, E>,
+    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E>;
 
     #[inline]
     fn size_hint(&self) -> (uint, Option<uint>) {
@@ -127,7 +134,9 @@ pub trait SeqVisitor<S, R, E> {
 }
 
 pub trait MapVisitor<S, R, E> {
-    fn visit(&mut self, state: &mut S) -> Result<Option<R>, E>;
+    fn visit<
+        V: Visitor<S, R, E>,
+    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E>;
 
     #[inline]
     fn size_hint(&self) -> (uint, Option<uint>) {
@@ -135,48 +144,76 @@ pub trait MapVisitor<S, R, E> {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+impl Serialize for () {
+    #[inline]
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_null(state)
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
-macro_rules! impl_serialize {
+macro_rules! impl_visit {
     ($ty:ty, $method:ident) => {
-        impl<S: Visitor<R, E>, R, E> Serialize<S, R, E> for $ty {
+        impl Serialize for $ty {
             #[inline]
-            fn serialize(&self, state: &mut S) -> Result<R, E> {
-                state.$method(*self)
+            fn visit<
+                S,
+                R,
+                E,
+                V: Visitor<S, R, E>,
+            >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+                visitor.$method(state, *self)
             }
         }
     }
 }
 
-impl_serialize!(bool, visit_bool)
-impl_serialize!(int, visit_int)
-impl_serialize!(i8, visit_i8)
-impl_serialize!(i16, visit_i16)
-impl_serialize!(i32, visit_i32)
-impl_serialize!(i64, visit_i64)
-impl_serialize!(uint, visit_uint)
-impl_serialize!(u8, visit_u8)
-impl_serialize!(u16, visit_u16)
-impl_serialize!(u32, visit_u32)
-impl_serialize!(u64, visit_u64)
-impl_serialize!(f32, visit_f32)
-impl_serialize!(f64, visit_f64)
-impl_serialize!(char, visit_char)
+impl_visit!(bool, visit_bool)
+impl_visit!(int, visit_int)
+impl_visit!(i8, visit_i8)
+impl_visit!(i16, visit_i16)
+impl_visit!(i32, visit_i32)
+impl_visit!(i64, visit_i64)
+impl_visit!(uint, visit_uint)
+impl_visit!(u8, visit_u8)
+impl_visit!(u16, visit_u16)
+impl_visit!(u32, visit_u32)
+impl_visit!(u64, visit_u64)
+impl_visit!(f32, visit_f32)
+impl_visit!(f64, visit_f64)
+impl_visit!(char, visit_char)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<'a, S: Visitor<R, E>, R, E> Serialize<S, R, E> for &'a str {
+impl<'a> Serialize for &'a str {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<R, E> {
-        s.visit_str(*self)
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_str(state, *self)
     }
 }
 
-impl<S: Visitor<R, E>, R, E> Serialize<S, R, E> for String {
+impl Serialize for String {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<R, E> {
-        s.visit_str(self.as_slice())
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_str(state, self.as_slice())
     }
 }
 
@@ -198,20 +235,22 @@ impl<T, Iter: Iterator<T>> SeqIteratorVisitor<Iter> {
 }
 
 impl<
+    T: Serialize,
     Iter: Iterator<T>,
-    S: Visitor<R, E>,
+    S,
     R,
     E,
-    T: Serialize<S, R, E>,
 > SeqVisitor<S, R, E> for SeqIteratorVisitor<Iter> {
     #[inline]
-    fn visit(&mut self, state: &mut S) -> Result<Option<R>, E> {
+    fn visit<
+        V: Visitor<S, R, E>,
+    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
         let first = self.first;
         self.first = false;
 
         match self.iter.next() {
             Some(value) => {
-                let value = try!(state.visit_seq_elt(first, value));
+                let value = try!(visitor.visit_seq_elt(state, first, value));
                 Ok(Some(value))
             }
             None => Ok(None),
@@ -227,74 +266,178 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    S: Visitor<R, E>,
-    R,
-    E,
-    T: Serialize<S, R, E>,
-> Serialize<S, R, E> for Vec<T> {
+    T: Serialize,
+> Serialize for Vec<T> {
     #[inline]
-    fn serialize(&self, state: &mut S) -> Result<R, E> {
-        state.visit_seq(SeqIteratorVisitor::new(self.iter()))
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_seq(state, SeqIteratorVisitor::new(self.iter()))
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<
-    'a,
-    S: Visitor<R, E>,
-    R,
-    E,
-    T0: Serialize<S, R, E>,
-    T1: Serialize<S, R, E>
-> Serialize<S, R, E> for (T0, T1) {
-    #[inline]
-    fn serialize(&self, state: &mut S) -> Result<R, E> {
-        struct Visitor<'a, T0: 'a, T1: 'a> {
-            value: &'a (T0, T1),
-            state: uint,
+macro_rules! tuple_impls {
+    ($(
+        ($($T:ident),+) {
+            $($state:pat => $method:ident,)+
         }
+    )+) => {
+        $(
+            impl<
+                $($T: Serialize),+
+            > Serialize for ($($T,)+) {
+                #[inline]
+                fn visit<
+                    S,
+                    R,
+                    E,
+                    V: Visitor<S, R, E>,
+                >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+                    struct Visitor<'a, $($T: 'a),+> {
+                        state: uint,
+                        tuple: &'a ($($T,)+),
+                    }
 
-        impl<
-            'a,
-            S: self::Visitor<R, E>,
-            R,
-            E,
-            T0: Serialize<S, R, E>,
-            T1: Serialize<S, R, E>,
-        > SeqVisitor<S, R, E> for Visitor<'a, T0, T1> {
-            #[inline]
-            fn visit(&mut self, state: &mut S) -> Result<Option<R>, E> {
-                match self.state {
-                    0 => {
-                        self.state += 1;
-                        let (ref value, _) = *self.value;
-                        let v = try!(state.visit_seq_elt(true, value));
-                        Ok(Some(v))
+                    impl<
+                        'a,
+                        S,
+                        R,
+                        E,
+                        $($T: Serialize),+
+                    > SeqVisitor<S, R, E> for Visitor<'a, $($T),+> {
+                        fn visit<
+                            V: self::Visitor<S, R, E>,
+                        >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
+                            match self.state {
+                                $(
+                                    $state => {
+                                        self.state += 1;
+                                        let value = self.tuple.$method();
+                                        let value = try!(visitor.visit_seq_elt(state, true, value));
+                                        Ok(Some(value))
+                                    }
+                                )+
+                                _ => {
+                                    Ok(None)
+                                }
+                            }
+                        }
                     }
-                    1 => {
-                        self.state += 1;
-                        let (_, ref value) = *self.value;
-                        let v = try!(state.visit_seq_elt(false, value));
-                        Ok(Some(v))
-                    }
-                    _ => {
-                        Ok(None)
-                    }
+
+                    visitor.visit_seq(state, Visitor {
+                        state: 0,
+                        tuple: self,
+                    })
                 }
             }
-
-            #[inline]
-            fn size_hint(&self) -> (uint, Option<uint>) {
-                let size = 2 - self.state;
-                (size, Some(size))
-            }
-        }
-
-        state.visit_seq(Visitor { value: self, state: 0 })
+        )+
     }
 }
 
+tuple_impls! {
+    (T0) {
+        0 => ref0,
+    }
+    (T0, T1) {
+        0 => ref0,
+        1 => ref1,
+    }
+    (T0, T1, T2, T3) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+    }
+    (T0, T1, T2, T3, T4) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+    }
+    (T0, T1, T2, T3, T4, T5) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+    }
+    (T0, T1, T2, T3, T4, T5, T6) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+        6 => ref6,
+    }
+    (T0, T1, T2, T3, T4, T5, T6, T7) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+        6 => ref6,
+        7 => ref7,
+    }
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+        6 => ref6,
+        7 => ref7,
+        8 => ref8,
+    }
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+        6 => ref6,
+        7 => ref7,
+        8 => ref8,
+        9 => ref9,
+    }
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+        6 => ref6,
+        7 => ref7,
+        8 => ref8,
+        9 => ref9,
+        10 => ref10,
+    }
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) {
+        0 => ref0,
+        1 => ref1,
+        2 => ref2,
+        3 => ref3,
+        4 => ref4,
+        5 => ref5,
+        6 => ref6,
+        7 => ref7,
+        8 => ref8,
+        9 => ref9,
+        10 => ref10,
+        11 => ref11,
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -314,21 +457,23 @@ impl<K, V, Iter: Iterator<(K, V)>> MapIteratorVisitor<Iter> {
 }
 
 impl<
-    S: Visitor<R, E>,
+    K: Serialize,
+    V: Serialize,
+    Iter: Iterator<(K, V)>,
+    S,
     R,
     E,
-    K: Serialize<S, R, E>,
-    V: Serialize<S, R, E>,
-    Iter: Iterator<(K, V)>,
 > MapVisitor<S, R, E> for MapIteratorVisitor<Iter> {
     #[inline]
-    fn visit(&mut self, state: &mut S) -> Result<Option<R>, E> {
+    fn visit<
+        V: Visitor<S, R, E>,
+    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
         let first = self.first;
         self.first = false;
 
         match self.iter.next() {
             Some((key, value)) => {
-                let value = try!(state.visit_map_elt(first, key, value));
+                let value = try!(visitor.visit_map_elt(state, first, key, value));
                 Ok(Some(value))
             }
             None => Ok(None)
@@ -344,15 +489,17 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    S: Visitor<R, E>,
-    R,
-    E,
-    K: Serialize<S, R, E> + Ord,
-    V: Serialize<S, R, E>,
-> Serialize<S, R, E> for TreeMap<K, V> {
+    K: Serialize + Ord,
+    V: Serialize,
+> Serialize for TreeMap<K, V> {
     #[inline]
-    fn serialize(&self, state: &mut S) -> Result<R, E> {
-        state.visit_map(MapIteratorVisitor::new(self.iter()))
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_map(state, MapIteratorVisitor::new(self.iter()))
     }
 }
 
@@ -360,13 +507,15 @@ impl<
 
 impl<
     'a,
-    S: Visitor<R, E>,
-    R,
-    E,
-    T: Serialize<S, R, E>
-> Serialize<S, R, E> for &'a T {
+    T: Serialize,
+> Serialize for &'a T {
     #[inline]
-    fn serialize(&self, state: &mut S) -> Result<R, E> {
-        (**self).serialize(state)
+    fn visit<
+        S,
+        R,
+        E,
+        V: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        (**self).visit(state, visitor)
     }
 }
