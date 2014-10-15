@@ -4,8 +4,8 @@ use std::num;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Deserialize<D, E> {
-    fn deserialize(d: &mut D) -> Result<Self, E>;
+pub trait Deserialize<S, E> {
+    fn deserialize(state: &mut S) -> Result<Self, E>;
 }
 
 pub trait Deserializer<E> {
@@ -26,95 +26,95 @@ pub trait Deserializer<E> {
     fn end_of_stream_error(&mut self) -> E;
 }
 
-pub trait Visitor<D: Deserializer<E>, R, E> {
-    fn visit_null(&mut self, d: &mut D) -> Result<R, E> {
-        Err(d.syntax_error())
+pub trait Visitor<S: Deserializer<E>, R, E> {
+    fn visit_null(&mut self, state: &mut S) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
-    fn visit_bool(&mut self, d: &mut D, _v: bool) -> Result<R, E> {
-        Err(d.syntax_error())
+    fn visit_bool(&mut self, state: &mut S, _v: bool) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
-    fn visit_int(&mut self, d: &mut D, v: int) -> Result<R, E> {
-        self.visit_i64(d, v as i64)
+    fn visit_int(&mut self, state: &mut S, v: int) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
     }
 
-    fn visit_i64(&mut self, d: &mut D, _v: i64) -> Result<R, E> {
-        Err(d.syntax_error())
+    fn visit_i64(&mut self, state: &mut S, _v: i64) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
-    fn visit_uint(&mut self, d: &mut D, v: uint) -> Result<R, E> {
-        self.visit_u64(d, v as u64)
+    fn visit_uint(&mut self, state: &mut S, v: uint) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
     }
 
-    fn visit_u64(&mut self, d: &mut D, _v: u64) -> Result<R, E> {
-        Err(d.syntax_error())
+    fn visit_u64(&mut self, state: &mut S, _v: u64) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
-    fn visit_f32(&mut self, d: &mut D, v: f32) -> Result<R, E> {
-        self.visit_f64(d, v as f64)
+    fn visit_f32(&mut self, state: &mut S, v: f32) -> Result<R, E> {
+        self.visit_f64(state, v as f64)
     }
 
-    fn visit_f64(&mut self, d: &mut D, _v: f64) -> Result<R, E> {
-        Err(d.syntax_error())
+    fn visit_f64(&mut self, state: &mut S, _v: f64) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
-    fn visit_str(&mut self, d: &mut D, _v: &str) -> Result<R, E> {
-        Err(d.syntax_error())
+    fn visit_str(&mut self, state: &mut S, _v: &str) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
-    fn visit_string(&mut self, d: &mut D, v: String) -> Result<R, E> {
-        self.visit_str(d, v.as_slice())
+    fn visit_string(&mut self, state: &mut S, v: String) -> Result<R, E> {
+        self.visit_str(state, v.as_slice())
     }
 
     fn visit_option<
-        V: OptionVisitor<D, E>,
-    >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
-        Err(d.syntax_error())
+        V: OptionVisitor<S, E>,
+    >(&mut self, state: &mut S, _visitor: V) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
     fn visit_seq<
-        V: SeqVisitor<D, E>,
-    >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
-        Err(d.syntax_error())
+        V: SeqVisitor<S, E>,
+    >(&mut self, state: &mut S, _visitor: V) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 
     fn visit_map<
-        V: MapVisitor<D, E>,
-    >(&mut self, d: &mut D, _visitor: V) -> Result<R, E> {
-        Err(d.syntax_error())
+        V: MapVisitor<S, E>,
+    >(&mut self, state: &mut S, _visitor: V) -> Result<R, E> {
+        Err(state.syntax_error())
     }
 }
 
-pub trait OptionVisitor<D, E> {
+pub trait OptionVisitor<S, E> {
     fn visit<
-        T: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Result<Option<T>, E>;
+        T: Deserialize<S, E>,
+    >(&mut self, state: &mut S) -> Result<Option<T>, E>;
 }
 
-pub trait SeqVisitor<D, E> {
+pub trait SeqVisitor<S, E> {
     fn visit<
-        T: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Result<Option<T>, E>;
+        T: Deserialize<S, E>,
+    >(&mut self, state: &mut S) -> Result<Option<T>, E>;
 
-    fn end(&mut self, d: &mut D) -> Result<(), E>;
+    fn end(&mut self, state: &mut S) -> Result<(), E>;
 
     #[inline]
-    fn size_hint(&self, _d: &mut D) -> (uint, Option<uint>) {
+    fn size_hint(&self, _state: &mut S) -> (uint, Option<uint>) {
         (0, None)
     }
 }
 
-pub trait MapVisitor<D, E> {
+pub trait MapVisitor<S, E> {
     fn visit<
-        K: Deserialize<D, E>,
-        V: Deserialize<D, E>,
-    >(&mut self, d: &mut D) -> Result<Option<(K, V)>, E>;
+        K: Deserialize<S, E>,
+        V: Deserialize<S, E>,
+    >(&mut self, state: &mut S) -> Result<Option<(K, V)>, E>;
 
-    fn end(&mut self, d: &mut D) -> Result<(), E>;
+    fn end(&mut self, state: &mut S) -> Result<(), E>;
 
     #[inline]
-    fn size_hint(&self, _d: &mut D) -> (uint, Option<uint>) {
+    fn size_hint(&self, _state: &mut S) -> (uint, Option<uint>) {
         (0, None)
     }
 }
@@ -122,45 +122,45 @@ pub trait MapVisitor<D, E> {
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    D: Deserializer<E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for () {
-    fn deserialize(d: &mut D) -> Result<(), E> {
+> Deserialize<S, E> for () {
+    fn deserialize(state: &mut S) -> Result<(), E> {
         struct Visitor;
 
-        impl<D: Deserializer<E>, E> self::Visitor<D, (), E> for Visitor {
-            fn visit_null(&mut self, _d: &mut D) -> Result<(), E> {
+        impl<S: Deserializer<E>, E> self::Visitor<S, (), E> for Visitor {
+            fn visit_null(&mut self, _state: &mut S) -> Result<(), E> {
                 Ok(())
             }
 
             fn visit_seq<
-                V: SeqVisitor<D, E>,
-            >(&mut self, d: &mut D, mut visitor: V) -> Result<(), E> {
-                try!(visitor.end(d));
+                V: SeqVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: V) -> Result<(), E> {
+                try!(visitor.end(state));
                 Ok(())
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    D: Deserializer<E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for bool {
-    fn deserialize(d: &mut D) -> Result<bool, E> {
+> Deserialize<S, E> for bool {
+    fn deserialize(state: &mut S) -> Result<bool, E> {
         struct Visitor;
 
-        impl<D: Deserializer<E>, E> self::Visitor<D, bool, E> for Visitor {
-            fn visit_bool(&mut self, _d: &mut D, v: bool) -> Result<bool, E> {
+        impl<S: Deserializer<E>, E> self::Visitor<S, bool, E> for Visitor {
+            fn visit_bool(&mut self, _state: &mut S, v: bool) -> Result<bool, E> {
                 Ok(v)
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }
 
@@ -168,10 +168,10 @@ impl<
 
 macro_rules! impl_deserialize_num_method {
     ($dst_ty:ty, $src_ty:ty, $method:ident) => {
-        fn $method(&mut self, d: &mut D, v: $src_ty) -> Result<$dst_ty, E> {
+        fn $method(&mut self, state: &mut S, v: $src_ty) -> Result<$dst_ty, E> {
             match num::cast(v) {
                 Some(v) => Ok(v),
-                None => Err(d.syntax_error()),
+                None => Err(state.syntax_error()),
             }
         }
     }
@@ -179,12 +179,12 @@ macro_rules! impl_deserialize_num_method {
 
 macro_rules! impl_deserialize_num {
     ($ty:ty) => {
-        impl<D: Deserializer<E>, E> Deserialize<D, E> for $ty {
+        impl<S: Deserializer<E>, E> Deserialize<S, E> for $ty {
             #[inline]
-            fn deserialize(d: &mut D) -> Result<$ty, E> {
+            fn deserialize(state: &mut S) -> Result<$ty, E> {
                 struct Visitor;
 
-                impl<D: Deserializer<E>, E> self::Visitor<D, $ty, E> for Visitor {
+                impl<S: Deserializer<E>, E> self::Visitor<S, $ty, E> for Visitor {
                     impl_deserialize_num_method!($ty, int, visit_int)
                     impl_deserialize_num_method!($ty, i64, visit_i64)
                     impl_deserialize_num_method!($ty, uint, visit_uint)
@@ -193,7 +193,7 @@ macro_rules! impl_deserialize_num {
                     impl_deserialize_num_method!($ty, f64, visit_f64)
                 }
 
-                d.visit(&mut Visitor)
+                state.visit(&mut Visitor)
             }
         }
     }
@@ -209,75 +209,75 @@ impl_deserialize_num!(f64)
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    D: Deserializer<E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for String {
-    fn deserialize(d: &mut D) -> Result<String, E> {
+> Deserialize<S, E> for String {
+    fn deserialize(state: &mut S) -> Result<String, E> {
         struct Visitor;
 
-        impl<D: Deserializer<E>, E> self::Visitor<D, String, E> for Visitor {
-            fn visit_str(&mut self, _d: &mut D, v: &str) -> Result<String, E> {
+        impl<S: Deserializer<E>, E> self::Visitor<S, String, E> for Visitor {
+            fn visit_str(&mut self, _state: &mut S, v: &str) -> Result<String, E> {
                 Ok(v.to_string())
             }
 
-            fn visit_string(&mut self, _d: &mut D, v: String) -> Result<String, E> {
+            fn visit_string(&mut self, _state: &mut S, v: String) -> Result<String, E> {
                 Ok(v)
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    T: Deserialize<D, E>,
-    D: Deserializer<E>,
+    T: Deserialize<S, E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for Option<T> {
-    fn deserialize(d: &mut D) -> Result<Option<T>, E> {
+> Deserialize<S, E> for Option<T> {
+    fn deserialize(state: &mut S) -> Result<Option<T>, E> {
         struct Visitor;
 
         impl<
-            T: Deserialize<D, E>,
-            D: Deserializer<E>,
+            T: Deserialize<S, E>,
+            S: Deserializer<E>,
             E,
-        > self::Visitor<D, Option<T>, E> for Visitor {
+        > self::Visitor<S, Option<T>, E> for Visitor {
             fn visit_option<
-                V: OptionVisitor<D, E>,
-            >(&mut self, d: &mut D, mut visitor: V) -> Result<Option<T>, E> {
-                visitor.visit(d)
+                V: OptionVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: V) -> Result<Option<T>, E> {
+                visitor.visit(state)
             }
         }
 
-        d.visit_option(&mut Visitor)
+        state.visit_option(&mut Visitor)
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    T: Deserialize<D, E>,
-    D: Deserializer<E>,
+    T: Deserialize<S, E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for Vec<T> {
-    fn deserialize(d: &mut D) -> Result<Vec<T>, E> {
+> Deserialize<S, E> for Vec<T> {
+    fn deserialize(state: &mut S) -> Result<Vec<T>, E> {
         struct Visitor;
 
         impl<
-            T: Deserialize<D, E>,
-            D: Deserializer<E>,
+            T: Deserialize<S, E>,
+            S: Deserializer<E>,
             E,
-        > self::Visitor<D, Vec<T>, E> for Visitor {
+        > self::Visitor<S, Vec<T>, E> for Visitor {
             fn visit_seq<
-                V: SeqVisitor<D, E>,
-            >(&mut self, d: &mut D, mut visitor: V) -> Result<Vec<T>, E> {
-                let (len, _) = visitor.size_hint(d);
+                V: SeqVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: V) -> Result<Vec<T>, E> {
+                let (len, _) = visitor.size_hint(state);
                 let mut values = Vec::with_capacity(len);
 
                 loop {
-                    match try!(visitor.visit(d)) {
+                    match try!(visitor.visit(state)) {
                         Some(value) => {
                             values.push(value);
                         }
@@ -291,7 +291,7 @@ impl<
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }
 
@@ -309,37 +309,37 @@ macro_rules! impl_deserialize_tuple {
         peel!($($name,)*)
 
         impl<
-            D: Deserializer<E>,
+            S: Deserializer<E>,
             E,
-            $($name: Deserialize<D, E>),+
-        > Deserialize<D, E> for ($($name,)+) {
+            $($name: Deserialize<S, E>),+
+        > Deserialize<S, E> for ($($name,)+) {
             #[inline]
             #[allow(non_snake_case)]
-            fn deserialize(d: &mut D) -> Result<($($name,)+), E> {
+            fn deserialize(state: &mut S) -> Result<($($name,)+), E> {
                 struct Visitor;
 
                 impl<
-                    D: Deserializer<E>,
+                    S: Deserializer<E>,
                     E,
-                    $($name: Deserialize<D, E>,)+
-                > self::Visitor<D, ($($name,)+), E> for Visitor {
+                    $($name: Deserialize<S, E>,)+
+                > self::Visitor<S, ($($name,)+), E> for Visitor {
                     fn visit_seq<
-                        V: SeqVisitor<D, E>,
-                    >(&mut self, d: &mut D, mut visitor: V) -> Result<($($name,)+), E> {
+                        V: SeqVisitor<S, E>,
+                    >(&mut self, state: &mut S, mut visitor: V) -> Result<($($name,)+), E> {
                         $(
-                            let $name = match try!(visitor.visit(d)) {
+                            let $name = match try!(visitor.visit(state)) {
                                 Some(value) => value,
-                                None => { return Err(d.end_of_stream_error()); }
+                                None => { return Err(state.end_of_stream_error()); }
                             };
                          )+;
 
-                        try!(visitor.end(d));
+                        try!(visitor.end(state));
 
                         Ok(($($name,)+))
                     }
                 }
 
-                d.visit(&mut Visitor)
+                state.visit(&mut Visitor)
             }
         }
     }
@@ -350,28 +350,28 @@ impl_deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    K: Deserialize<D, E> + Eq + Hash,
-    V: Deserialize<D, E>,
-    D: Deserializer<E>,
+    K: Deserialize<S, E> + Eq + Hash,
+    V: Deserialize<S, E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for HashMap<K, V> {
-    fn deserialize(d: &mut D) -> Result<HashMap<K, V>, E> {
+> Deserialize<S, E> for HashMap<K, V> {
+    fn deserialize(state: &mut S) -> Result<HashMap<K, V>, E> {
         struct Visitor;
 
         impl<
-            K: Deserialize<D, E> + Eq + Hash,
-            V: Deserialize<D, E>,
-            D: Deserializer<E>,
+            K: Deserialize<S, E> + Eq + Hash,
+            V: Deserialize<S, E>,
+            S: Deserializer<E>,
             E,
-        > self::Visitor<D, HashMap<K, V>, E> for Visitor {
+        > self::Visitor<S, HashMap<K, V>, E> for Visitor {
             fn visit_map<
-                Visitor: MapVisitor<D, E>,
-            >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<HashMap<K, V>, E> {
-                let (len, _) = visitor.size_hint(d);
+                Visitor: MapVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<HashMap<K, V>, E> {
+                let (len, _) = visitor.size_hint(state);
                 let mut values = HashMap::with_capacity(len);
 
                 loop {
-                    match try!(visitor.visit(d)) {
+                    match try!(visitor.visit(state)) {
                         Some((key, value)) => {
                             values.insert(key, value);
                         }
@@ -385,32 +385,32 @@ impl<
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }
 
 impl<
-    K: Deserialize<D, E> + Eq + Ord,
-    V: Deserialize<D, E>,
-    D: Deserializer<E>,
+    K: Deserialize<S, E> + Eq + Ord,
+    V: Deserialize<S, E>,
+    S: Deserializer<E>,
     E,
-> Deserialize<D, E> for TreeMap<K, V> {
-    fn deserialize(d: &mut D) -> Result<TreeMap<K, V>, E> {
+> Deserialize<S, E> for TreeMap<K, V> {
+    fn deserialize(state: &mut S) -> Result<TreeMap<K, V>, E> {
         struct Visitor;
 
         impl<
-            K: Deserialize<D, E> + Eq + Ord,
-            V: Deserialize<D, E>,
-            D: Deserializer<E>,
+            K: Deserialize<S, E> + Eq + Ord,
+            V: Deserialize<S, E>,
+            S: Deserializer<E>,
             E,
-        > self::Visitor<D, TreeMap<K, V>, E> for Visitor {
+        > self::Visitor<S, TreeMap<K, V>, E> for Visitor {
             fn visit_map<
-                Visitor: MapVisitor<D, E>,
-            >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<TreeMap<K, V>, E> {
+                Visitor: MapVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<TreeMap<K, V>, E> {
                 let mut values = TreeMap::new();
 
                 loop {
-                    match try!(visitor.visit(d)) {
+                    match try!(visitor.visit(state)) {
                         Some((key, value)) => {
                             values.insert(key, value);
                         }
@@ -424,6 +424,6 @@ impl<
             }
         }
 
-        d.visit(&mut Visitor)
+        state.visit(&mut Visitor)
     }
 }

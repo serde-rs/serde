@@ -14,12 +14,11 @@ use test::Bencher;
 
 //use serde2::de;
 use serde2::json;
-use serde2::Serialize;
 use serde2::ser;
 
 #[deriving(Encodable, Decodable)]
-#[deriving_serializable]
-//#[deriving_deserializable]
+#[deriving_serialize]
+//#[deriving_deserialize]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -39,15 +38,20 @@ enum HttpProtocol {
     HTTP11,
 }
 
-impl<S: ser::VisitorState<R>, R> ser::Serialize<S, R> for HttpProtocol {
+impl ser::Serialize for HttpProtocol {
     #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        s.visit_uint(*self as uint)
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_uint(state, *self as uint)
     }
 }
 
 /*
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for HttpProtocol {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpProtocol {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
         d.expect_from_primitive(token)
@@ -70,15 +74,20 @@ enum HttpMethod {
     PATCH,
 }
 
-impl<S: ser::VisitorState<R>, R> ser::Serialize<S, R> for HttpMethod {
+impl ser::Serialize for HttpMethod {
     #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        s.visit_uint(*self as uint)
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_uint(state, *self as uint)
     }
 }
 
 /*
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for HttpMethod {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpMethod {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
         d.expect_from_primitive(token)
@@ -94,15 +103,20 @@ enum CacheStatus {
     Hit,
 }
 
-impl<S: ser::VisitorState<R>, R> ser::Serialize<S, R> for CacheStatus {
+impl ser::Serialize for CacheStatus {
     #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        s.visit_uint(*self as uint)
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_uint(state, *self as uint)
     }
 }
 
 /*
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for CacheStatus {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for CacheStatus {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
         d.expect_from_primitive(token)
@@ -111,8 +125,8 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for CacheStatus {
 */
 
 #[deriving(Encodable, Decodable)]
-#[deriving_serializable]
-//#[deriving_deserializable]
+#[deriving_serialize]
+//#[deriving_deserialize]
 struct Origin {
     ip: String,
     port: u32,
@@ -127,15 +141,20 @@ enum OriginProtocol {
     HTTPS,
 }
 
-impl<S: ser::VisitorState<R>, R> ser::Serialize<S, R> for OriginProtocol {
+impl ser::Serialize for OriginProtocol {
     #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        s.visit_uint(*self as uint)
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_uint(state, *self as uint)
     }
 }
 
 /*
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for OriginProtocol {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for OriginProtocol {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
         d.expect_from_primitive(token)
@@ -152,15 +171,20 @@ enum ZonePlan {
     ENT,
 }
 
-impl<S: ser::VisitorState<R>, R> ser::Serialize<S, R> for ZonePlan {
+impl ser::Serialize for ZonePlan {
     #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        s.visit_uint(*self as uint)
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_uint(state, *self as uint)
     }
 }
 
 /*
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for ZonePlan {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for ZonePlan {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
         d.expect_from_primitive(token)
@@ -428,15 +452,20 @@ enum Country {
 	ZW,
 }
 
-impl<S: ser::VisitorState<R>, R> ser::Serialize<S, R> for Country {
+impl ser::Serialize for Country {
     #[inline]
-    fn serialize(&self, s: &mut S) -> R {
-        s.visit_uint(*self as uint)
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        visitor.visit_uint(state, *self as uint)
     }
 }
 
 /*
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Country {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Country {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<Country, E> {
         d.expect_from_primitive(token)
@@ -445,8 +474,8 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Country {
 */
 
 #[deriving(Encodable, Decodable)]
-#[deriving_serializable]
-//#[deriving_deserializable]
+#[deriving_serialize]
+//#[deriving_deserialize]
 struct Log {
     timestamp: i64,
     zone_id: u32,
@@ -632,11 +661,11 @@ fn bench_serializer(b: &mut Bencher) {
 fn bench_copy(b: &mut Bencher) {
     let s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let json = Vec::from_slice(s.as_bytes());
+    let json = s.as_bytes().to_vec();
     b.bytes = json.len() as u64;
 
     b.iter(|| {
-        let _json = Vec::from_slice(s.as_bytes());
+        let _json = s.as_bytes().to_vec();
     });
 }
 
@@ -930,7 +959,7 @@ fn bench_manual_my_mem_writer1_escape(b: &mut Bencher) {
 fn direct<W: Writer>(wr: W, log: &Log) {
     use serde2::ser::VisitorState;
 
-    let mut serializer = json::Serializer::new(wr);
+    let mut serializer = json::Writer::new(wr);
     serializer.serialize_struct_start("Log", 12).unwrap();
 
     serializer.serialize_struct_elt("timestamp", &log.timestamp).unwrap();
