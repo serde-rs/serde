@@ -906,8 +906,8 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
 }
 
 fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
-    static LEN: uint = 16;
-    static BUF: [u8, ..LEN] = [b' ', ..LEN];
+    const LEN: uint = 16;
+    const BUF: [u8, ..LEN] = [b' ', ..LEN];
 
     while n >= LEN {
         try!(wr.write(BUF));
