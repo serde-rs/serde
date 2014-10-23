@@ -1060,3 +1060,16 @@ fn bench_deserializer(b: &mut Bencher) {
         let _log: Log = json::from_str(s).unwrap();
     });
 }
+
+#[bench]
+fn bench_deserializers(b: &mut Bencher) {
+    let s = r#"{"timestamp":25469139677502,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
+
+    b.bytes = s.len() as u64;
+
+    //b.iter(|| {
+        for _ in range(0i, 10000) {
+        let _log: Log = json::from_str(s).unwrap();
+        }
+    //});
+}

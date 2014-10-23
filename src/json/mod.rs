@@ -159,7 +159,7 @@ pub struct MyStruct  {
 
 fn main() {
     let json_str_to_deserialize = "{ \"attr1\": 1, \"attr2\": \"toto\" }";
-    let mut parser = json::Parser::new(json_str_to_deserialize.chars());
+    let mut parser = json::Parser::new(json_str_to_deserialize.bytes());
     let deserialized_object: MyStruct = match Deserializable::deserialize(&mut parser) {
         Ok(v) => v,
         Err(e) => fail!("Decoding error: {}", e)
@@ -256,7 +256,7 @@ fn main() {
 
     // Deserialize like before.
 
-    let mut parser = json::Parser::new(json_str.as_slice().chars());
+    let mut parser = json::Parser::new(json_str.as_slice().bytes());
     let deserialized: TestStruct1 = Deserializable::deserialize(&mut parser).unwrap();
 }
 ```
@@ -1647,15 +1647,15 @@ impl Stack {
 /// an iterator of char.
 pub struct Parser<Iter> {
     rdr: Iter,
-    ch: Option<char>,
+    ch: Option<u8>,
     line: uint,
     col: uint,
     // A state machine is kept to make it possible to interupt and resume parsing.
     state_stack: Vec<ParserState>,
-    buf: string::String,
+    buf: Vec<u8>,
 }
 
-impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<Iter> {
+impl<Iter: Iterator<u8>> Iterator<Result<de::Token, ParserError>> for Parser<Iter> {
     #[inline]
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
         let state = match self.state_stack.pop() {
@@ -1698,28 +1698,33 @@ impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<I
     }
 }
 
-impl<Iter: Iterator<char>> Parser<Iter> {
+impl<Iter: Iterator<u8>> Parser<Iter> {
     /// Creates the JSON parser.
     #[inline]
     pub fn new(rdr: Iter) -> Parser<Iter> {
         let mut p = Parser {
             rdr: rdr,
-            ch: Some('\x00'),
+            ch: Some(b'\x00'),
             line: 1,
             col: 0,
             state_stack: vec!(ParseValue),
-            buf: string::String::with_capacity(100),
+            buf: Vec::with_capacity(100),
         };
         p.bump();
         return p;
     }
 
+    #[inline(always)]
     fn eof(&self) -> bool { self.ch.is_none() }
-    fn ch_or_null(&self) -> char { self.ch.unwrap_or('\x00') }
+
+    #[inline]
+    fn ch_or_null(&self) -> u8 { self.ch.unwrap_or(b'\x00') }
+
+    #[inline(always)]
     fn bump(&mut self) {
         self.ch = self.rdr.next();
 
-        if self.ch_is('\n') {
+        if self.ch_is(b'\n') {
             self.line += 1;
             self.col = 1;
         } else {
@@ -1727,44 +1732,50 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
-    fn next_char(&mut self) -> Option<char> {
+    #[inline]
+    fn next_char(&mut self) -> Option<u8> {
         self.bump();
         self.ch
     }
-    fn ch_is(&self, c: char) -> bool {
+
+    #[inline(always)]
+    fn ch_is(&self, c: u8) -> bool {
         self.ch == Some(c)
     }
 
+    #[inline]
     fn error<T>(&self, reason: ErrorCode) -> Result<T, ParserError> {
         Err(SyntaxError(reason, self.line, self.col))
     }
 
+    #[inline]
     fn parse_whitespace(&mut self) {
-        while self.ch_is(' ') ||
-              self.ch_is('\n') ||
-              self.ch_is('\t') ||
-              self.ch_is('\r') { self.bump(); }
+        while self.ch_is(b' ') ||
+              self.ch_is(b'\n') ||
+              self.ch_is(b'\t') ||
+              self.ch_is(b'\r') { self.bump(); }
     }
 
+    #[inline]
     fn parse_number(&mut self) -> Result<de::Token, ParserError> {
         let mut neg = 1;
 
-        if self.ch_is('-') {
+        if self.ch_is(b'-') {
             self.bump();
             neg = -1;
         }
 
         let res = try!(self.parse_integer());
 
-        if self.ch_is('.') || self.ch_is('e') || self.ch_is('E') {
+        if self.ch_is(b'.') || self.ch_is(b'e') || self.ch_is(b'E') {
             let neg = neg as f64;
             let mut res = res as f64;
 
-            if self.ch_is('.') {
+            if self.ch_is(b'.') {
                 res = try!(self.parse_decimal(res));
             }
 
-            if self.ch_is('e') || self.ch_is('E') {
+            if self.ch_is(b'e') || self.ch_is(b'E') {
                 res = try!(self.parse_exponent(res));
             }
 
@@ -1774,23 +1785,24 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_integer(&mut self) -> Result<i64, ParserError> {
         let mut res = 0;
 
         match self.ch_or_null() {
-            '0' => {
+            b'0' => {
                 self.bump();
 
                 // There can be only one leading '0'.
                 match self.ch_or_null() {
-                    '0' ... '9' => return self.error(InvalidNumber),
+                    b'0' ... b'9' => return self.error(InvalidNumber),
                     _ => ()
                 }
             },
-            '1' ... '9' => {
+            b'1' ... b'9' => {
                 while !self.eof() {
                     match self.ch_or_null() {
-                        c @ '0' ... '9' => {
+                        c @ b'0' ... b'9' => {
                             res *= 10;
                             res += (c as i64) - ('0' as i64);
                             self.bump();
@@ -1811,7 +1823,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
         // Make sure a digit follows the decimal place.
         match self.ch_or_null() {
-            '0' ... '9' => (),
+            b'0' ... b'9' => (),
              _ => return self.error(InvalidNumber)
         }
 
@@ -1819,9 +1831,9 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         let mut dec = 1.0;
         while !self.eof() {
             match self.ch_or_null() {
-                c @ '0' ... '9' => {
+                c @ b'0' ... b'9' => {
                     dec /= 10.0;
-                    res += (((c as int) - ('0' as int)) as f64) * dec;
+                    res += (((c as int) - (b'0' as int)) as f64) * dec;
                     self.bump();
                 }
                 _ => break,
@@ -1831,29 +1843,30 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         Ok(res)
     }
 
+    #[inline]
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, ParserError> {
         self.bump();
 
         let mut exp = 0u;
         let mut neg_exp = false;
 
-        if self.ch_is('+') {
+        if self.ch_is(b'+') {
             self.bump();
-        } else if self.ch_is('-') {
+        } else if self.ch_is(b'-') {
             self.bump();
             neg_exp = true;
         }
 
         // Make sure a digit follows the exponent place.
         match self.ch_or_null() {
-            '0' ... '9' => (),
+            b'0' ... b'9' => (),
             _ => return self.error(InvalidNumber)
         }
         while !self.eof() {
             match self.ch_or_null() {
-                c @ '0' ... '9' => {
+                c @ b'0' ... b'9' => {
                     exp *= 10;
-                    exp += (c as uint) - ('0' as uint);
+                    exp += (c as uint) - (b'0' as uint);
 
                     self.bump();
                 }
@@ -1871,19 +1884,20 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         Ok(res)
     }
 
+    #[inline]
     fn decode_hex_escape(&mut self) -> Result<u16, ParserError> {
         let mut i = 0u;
         let mut n = 0u16;
         while i < 4u && !self.eof() {
             self.bump();
             n = match self.ch_or_null() {
-                c @ '0' ... '9' => n * 16_u16 + ((c as u16) - ('0' as u16)),
-                'a' | 'A' => n * 16_u16 + 10_u16,
-                'b' | 'B' => n * 16_u16 + 11_u16,
-                'c' | 'C' => n * 16_u16 + 12_u16,
-                'd' | 'D' => n * 16_u16 + 13_u16,
-                'e' | 'E' => n * 16_u16 + 14_u16,
-                'f' | 'F' => n * 16_u16 + 15_u16,
+                c @ b'0' ... b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
+                b'a' | b'A' => n * 16_u16 + 10_u16,
+                b'b' | b'B' => n * 16_u16 + 11_u16,
+                b'c' | b'C' => n * 16_u16 + 12_u16,
+                b'd' | b'D' => n * 16_u16 + 13_u16,
+                b'e' | b'E' => n * 16_u16 + 14_u16,
+                b'f' | b'F' => n * 16_u16 + 15_u16,
                 _ => return self.error(InvalidEscape)
             };
 
@@ -1898,6 +1912,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         Ok(n)
     }
 
+    #[inline]
     fn parse_string(&mut self) -> Result<&str, ParserError> {
         self.buf.clear();
 
@@ -1912,15 +1927,15 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
             if escape {
                 match ch {
-                    '"' => self.buf.push('"'),
-                    '\\' => self.buf.push('\\'),
-                    '/' => self.buf.push('/'),
-                    'b' => self.buf.push('\x08'),
-                    'f' => self.buf.push('\x0c'),
-                    'n' => self.buf.push('\n'),
-                    'r' => self.buf.push('\r'),
-                    't' => self.buf.push('\t'),
-                    'u' => {
+                    b'"' => self.buf.push(b'"'),
+                    b'\\' => self.buf.push(b'\\'),
+                    b'/' => self.buf.push(b'/'),
+                    b'b' => self.buf.push(b'\x08'),
+                    b'f' => self.buf.push(b'\x0c'),
+                    b'n' => self.buf.push(b'\n'),
+                    b'r' => self.buf.push(b'\r'),
+                    b't' => self.buf.push(b'\t'),
+                    b'u' => {
                         let c = match try!(self.decode_hex_escape()) {
                             0xDC00 ... 0xDFFF => return self.error(LoneLeadingSurrogateInHexEscape),
 
@@ -1930,7 +1945,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
                                 let c1 = self.next_char();
                                 let c2 = self.next_char();
                                 match (c1, c2) {
-                                    (Some('\\'), Some('u')) => (),
+                                    (Some(b'\\'), Some(b'u')) => (),
                                     _ => return self.error(UnexpectedEndOfHexEscape),
                                 }
 
@@ -1947,18 +1962,20 @@ impl<Iter: Iterator<char>> Parser<Iter> {
                             }
                         };
 
-                        self.buf.push(c);
+                        let mut buf = [0u8, .. 4];
+                        let len = c.encode_utf8(buf).unwrap_or(0);
+                        self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
                     }
                     _ => return self.error(InvalidEscape),
                 }
                 escape = false;
             } else {
                 match ch {
-                    '"' => {
+                    b'"' => {
                         self.bump();
-                        return Ok(self.buf.as_slice());
+                        return Ok(str::from_utf8(self.buf.as_slice()).unwrap());
                     }
-                    '\\' => {
+                    b'\\' => {
                         escape = true;
                     }
                     ch => {
@@ -1969,10 +1986,11 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_list_start(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
 
-        if self.ch_is(']') {
+        if self.ch_is(b']') {
             self.bump();
             Ok(de::End)
         } else {
@@ -1981,14 +1999,15 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_list_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
 
-        if self.ch_is(',') {
+        if self.ch_is(b',') {
             self.bump();
             self.state_stack.push(ParseListCommaOrEnd);
             self.parse_value()
-        } else if self.ch_is(']') {
+        } else if self.ch_is(b']') {
             self.bump();
             Ok(de::End)
         } else if self.eof() {
@@ -1998,10 +2017,11 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_object_start(&mut self) -> Result<Option<&str>, ParserError> {
         self.parse_whitespace();
 
-        if self.ch_is('}') {
+        if self.ch_is(b'}') {
             self.bump();
             Ok(None)
         } else {
@@ -2009,13 +2029,14 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_object_comma_or_end(&mut self) -> Result<Option<&str>, ParserError> {
         self.parse_whitespace();
 
-        if self.ch_is(',') {
+        if self.ch_is(b',') {
             self.bump();
             Ok(Some(try!(self.parse_object_key())))
-        } else if self.ch_is('}') {
+        } else if self.ch_is(b'}') {
             self.bump();
             Ok(None)
         } else if self.eof() {
@@ -2025,6 +2046,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_object_key(&mut self) -> Result<&str, ParserError> {
         self.parse_whitespace();
 
@@ -2033,7 +2055,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
 
         match self.ch_or_null() {
-            '"' => {
+            b'"' => {
                 self.state_stack.push(ParseObjectValue);
 
                 Ok(try!(self.parse_string()))
@@ -2042,10 +2064,11 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_object_value(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
 
-        if self.ch_is(':') {
+        if self.ch_is(b':') {
             self.bump();
             self.state_stack.push(ParseObjectCommaOrEnd);
             self.parse_value()
@@ -2056,6 +2079,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn parse_value(&mut self) -> Result<de::Token, ParserError> {
         self.parse_whitespace();
 
@@ -2064,19 +2088,19 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
 
         match self.ch_or_null() {
-            'n' => self.parse_ident("ull", de::Null),
-            't' => self.parse_ident("rue", de::Bool(true)),
-            'f' => self.parse_ident("alse", de::Bool(false)),
-            '0' ... '9' | '-' => self.parse_number(),
-            '"' => {
+            b'n' => self.parse_ident(b"ull", de::Null),
+            b't' => self.parse_ident(b"rue", de::Bool(true)),
+            b'f' => self.parse_ident(b"alse", de::Bool(false)),
+            b'0' ... b'9' | b'-' => self.parse_number(),
+            b'"' => {
                 Ok(de::String(try!(self.parse_string()).to_string()))
             }
-            '[' => {
+            b'[' => {
                 self.bump();
                 self.state_stack.push(ParseListStart);
                 Ok(de::SeqStart(0))
             }
-            '{' => {
+            b'{' => {
                 self.bump();
                 self.state_stack.push(ParseObjectStart);
                 Ok(de::MapStart(0))
@@ -2087,8 +2111,9 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
-    fn parse_ident(&mut self, ident: &str, token: de::Token) -> Result<de::Token, ParserError> {
-        if ident.chars().all(|c| Some(c) == self.next_char()) {
+    #[inline]
+    fn parse_ident(&mut self, ident: &[u8], token: de::Token) -> Result<de::Token, ParserError> {
+        if ident.iter().all(|c| Some(*c) == self.next_char()) {
             self.bump();
             Ok(token)
         } else {
@@ -2096,13 +2121,14 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
+    #[inline]
     fn error_event<T>(&mut self, reason: ErrorCode) -> Result<T, ParserError> {
         self.state_stack.clear();
         Err(SyntaxError(reason, self.line, self.col))
     }
 }
 
-impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
+impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
     fn end_of_stream_error(&mut self) -> ParserError {
         SyntaxError(EOFWhileParsingValue, self.line, self.col)
     }
@@ -2215,9 +2241,9 @@ impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
     }
 }
 
-/// Decodes a json value from an `Iterator<Char>`.
+/// Decodes a json value from an `Iterator<u8>`.
 pub fn from_iter<
-    Iter: Iterator<char>,
+    Iter: Iterator<u8>,
     T: de::Deserializable<Parser<Iter>, ParserError>
 >(iter: Iter) -> Result<T, ParserError> {
     let mut parser = Parser::new(iter);
@@ -2234,9 +2260,9 @@ pub fn from_iter<
 /// Decodes a json value from a string
 pub fn from_str<
     'a,
-    T: de::Deserializable<Parser<str::Chars<'a>>, ParserError>
+    T: de::Deserializable<Parser<str::Bytes<'a>>, ParserError>
 >(s: &'a str) -> Result<T, BuilderError> {
-    from_iter(s.chars())
+    from_iter(s.bytes())
 }
 
 /// Decodes a json value from a `Json`.
@@ -2416,7 +2442,7 @@ mod tests {
     use std::collections::TreeMap;
 
     use super::{Json, Null, Boolean, Floating, String, List, Object};
-    use super::{Parser, ParserError, from_iter, from_str};
+    use super::{Parser, ParserError, from_str};
     use super::{JsonDeserializer, ToJson, from_json};
     use super::{
         EOFWhileParsingList,
@@ -2865,23 +2891,23 @@ mod tests {
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
-        T: Show + de::Deserializable<Parser<str::Chars<'a>>, ParserError>
+        T: Show + de::Deserializable<Parser<str::Bytes<'a>>, ParserError>
     >(errors: &[(&'a str, ParserError)]) {
         for &(s, ref err) in errors.iter() {
-            let v: Result<T, ParserError> = from_iter(s.chars());
+            let v: Result<T, ParserError> = from_str(s);
             assert_eq!(v.unwrap_err(), *err);
         }
     }
 
     fn test_parse_ok<
         'a,
-        T: PartialEq + Show + ToJson + de::Deserializable<Parser<str::Chars<'a>>, ParserError>
+        T: PartialEq + Show + ToJson + de::Deserializable<Parser<str::Bytes<'a>>, ParserError>
     >(errors: &[(&'a str, T)]) {
         for &(s, ref value) in errors.iter() {
-            let v: T = from_iter(s.chars()).unwrap();
+            let v: T = from_str(s).unwrap();
             assert_eq!(v, *value);
 
-            let v: Json = from_iter(s.chars()).unwrap();
+            let v: Json = from_str(s).unwrap();
             assert_eq!(v, value.to_json());
         }
     }
@@ -3061,7 +3087,7 @@ mod tests {
             ("[[3], [1, 2]]", vec!(vec!(3i), vec!(1, 2))),
         ]);
 
-        let v: () = from_iter("[]".chars()).unwrap();
+        let v: () = from_str("[]").unwrap();
         assert_eq!(v, ());
 
         test_parse_ok([
@@ -3973,7 +3999,7 @@ mod bench {
         let src = json_str(count);
 
         b.iter( || {
-            let mut parser = Parser::new(src.as_slice().chars());
+            let mut parser = Parser::new(src.as_slice().bytes());
 
             assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
             for _ in range(0, count) {
