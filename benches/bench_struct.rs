@@ -276,7 +276,7 @@ mod deserializer {
         CharState(char),
         StringState(String),
         OptionState(bool),
-        TupleState(uint),
+        //TupleState(uint),
         VecState(Vec<Inner>),
         MapState(HashMap<String, Option<char>>),
         EndState,
@@ -344,7 +344,7 @@ mod deserializer {
                     }
                     Some(Ok(de::MapStart(len)))
                 }
-                Some(TupleState(len)) => Some(Ok(de::TupleStart(len))),
+                //Some(TupleState(len)) => Some(Ok(de::TupleStart(len))),
                 Some(NullState) => Some(Ok(de::Null)),
                 Some(UintState(x)) => Some(Ok(de::Uint(x))),
                 Some(CharState(x)) => Some(Ok(de::Char(x))),

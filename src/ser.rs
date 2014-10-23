@@ -395,6 +395,7 @@ mod tests {
     }
 
     #[deriving(Show)]
+    #[allow(dead_code)]
     enum Error {
         EndOfStream,
         SyntaxError,

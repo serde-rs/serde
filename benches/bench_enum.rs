@@ -40,8 +40,6 @@ mod decoder {
 
     enum State {
         AnimalState(Animal),
-        DogState,
-        FrogState,
         IntState(int),
         StringState(String),
     }
