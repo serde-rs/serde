@@ -288,128 +288,57 @@ fn deserialize_struct(
     deserializer: P<ast::Expr>,
     token: P<ast::Expr>
 ) -> P<ast::Expr> {
-    let serial_names: Vec<Option<token::InternedString>> =
-        definitions.iter().map(|def|
-            find_serial_name(def.node.attrs.iter())
-        ).collect();
+    let type_name_str = cx.expr_str(span, token::get_ident(type_ident));
 
-    let struct_block = deserialize_struct_from_struct(
-        cx,
-        span,
-        type_ident,
-        serial_names.as_slice(),
-        fields,
-        deserializer.clone()
-    );
-
-    let map_block = deserialize_struct_from_map(
-        cx,
-        span,
-        type_ident,
-        serial_names.as_slice(),
-        fields,
-        deserializer.clone()
-    );
-
-    quote_expr!(
-        cx,
-        match $token {
-            ::serde::de::StructStart(_, _) => $struct_block,
-            ::serde::de::MapStart(_) => $map_block,
-            token => {
-                let expected_tokens = [
-                    ::serde::de::StructStartKind,
-                    ::serde::de::MapStartKind,
-                ];
-                Err($deserializer.syntax_error(token, expected_tokens))
-            }
-        }
-    )
-}
-
-fn deserialize_struct_from_struct(
-    cx: &ExtCtxt,
-    span: Span,
-    type_ident: Ident,
-    serial_names: &[Option<token::InternedString>],
-    fields: &StaticFields,
-    deserializer: P<ast::Expr>
-) -> P<ast::Expr> {
-    //let expect_struct_field = cx.ident_of("expect_struct_field");
-
-    let call = deserializable_static_fields(
-        cx,
-        span,
-        type_ident,
-        serial_names.as_slice(),
-        fields,
-        |cx, span, name| {
-            let name = cx.expr_str(span, name);
-            quote_expr!(
-                cx,
-                try!($deserializer.expect_struct_field($name))
-            )
-        }
-    );
-
-    quote_expr!(cx, {
-        let result = $call;
-        try!($deserializer.expect_struct_end());
-        Ok(result)
-    })
-}
-
-fn deserialize_struct_from_map(
-    cx: &ExtCtxt,
-    span: Span,
-    type_ident: Ident,
-    serial_names: &[Option<token::InternedString>],
-    fields: &StaticFields,
-    deserializer: P<ast::Expr>
-) -> P<ast::Expr> {
     let fields = match *fields {
         Unnamed(_) => fail!(),
         Named(ref fields) => fields.as_slice(),
     };
 
-    // Declare each field.
-    let let_fields: Vec<P<ast::Stmt>> = fields.iter()
-        .map(|&(name, _)| {
-            quote_stmt!(cx, let mut $name = None)
+    // Convert each field into a unique ident.
+    let field_idents: Vec<ast::Ident> = fields.iter()
+        .enumerate()
+        .map(|(idx, _)| {
+            cx.ident_of(format!("field{}", idx).as_slice())
         })
+        .collect();
+
+    // Convert each field into their string.
+    let field_strs: Vec<P<ast::Expr>> = fields.iter()
+        .zip(definitions.iter())
+        .map(|(&(name, _), def)| {
+            match find_serial_name(def.node.attrs.iter()) {
+                Some(serial) => cx.expr_str(span, serial),
+                None => cx.expr_str(span, token::get_ident(name)),
+            }
+        })
+        .collect();
+
+    // Declare the static vec slice of field names.
+    let static_fields = cx.expr_vec_slice(span, field_strs.clone());
+
+    // Declare each field.
+    let let_fields: Vec<P<ast::Stmt>> = field_idents.iter()
+        .map(|ident| quote_stmt!(cx, let mut $ident = None))
         .collect();
 
     // Declare key arms.
-    let key_arms: Vec<ast::Arm> = serial_names.iter()
-        .zip(fields.iter())
-        .map(|(serial, &(name, span))| {
-            let serial_name = match serial {
-                &Some(ref string) => string.clone(),
-                &None => token::get_ident(name),
-            };
-            let s = cx.expr_str(span, serial_name);
+    let idx_arms: Vec<ast::Arm> = field_idents.iter()
+        .enumerate()
+        .map(|(idx, ident)| {
             quote_arm!(cx,
-                $s => {
-                    $name = Some(
-                        try!(::serde::de::Deserializable::deserialize($deserializer))
-                    );
-                    continue;
-                })
+                Some($idx) => { $ident = Some(try!($deserializer.expect_struct_value())); }
+            )
         })
         .collect();
 
-    let extract_fields: Vec<P<ast::Stmt>> = serial_names.iter()
-        .zip(fields.iter())
-        .map(|(serial, &(name, span))| {
-            let serial_name = match serial {
-                &Some(ref string) => string.clone(),
-                &None => token::get_ident(name),
-            };
-            let name_str = cx.expr_str(span, serial_name);
+    let extract_fields: Vec<P<ast::Stmt>> = field_idents.iter()
+        .zip(field_strs.iter())
+        .map(|(ident, field_str)| {
             quote_stmt!(cx,
-                let $name = match $name {
-                    Some($name) => $name,
-                    None => try!($deserializer.missing_field($name_str)),
+                let $ident = match $ident {
+                    Some($ident) => $ident,
+                    None => try!($deserializer.missing_field($field_str)),
                 };
             )
         })
@@ -419,41 +348,34 @@ fn deserialize_struct_from_map(
         span,
         type_ident,
         fields.iter()
-            .map(|&(name, span)| {
-                cx.field_imm(span, name, cx.expr_ident(span, name))
+            .zip(field_idents.iter())
+            .map(|(&(name, _), ident)| {
+                cx.field_imm(span, name, cx.expr_ident(span, *ident))
             })
             .collect()
     );
 
     quote_expr!(cx, {
+        try!($deserializer.expect_struct_start($token, $type_name_str));
+
+        static FIELDS: &'static [&'static str] = $static_fields;
         $let_fields
 
         loop {
-            let token = match try!($deserializer.expect_token()) {
-                ::serde::de::End => { break; }
-                token => token,
+            let idx = match try!($deserializer.expect_struct_field_or_end(FIELDS)) {
+                Some(idx) => idx,
+                None => { break; }
             };
 
-            {
-                let key = match token {
-                    ::serde::de::Str(s) => s,
-                    ::serde::de::String(ref s) => s.as_slice(),
-                    token => {
-                        let expected_tokens = [
-                            ::serde::de::StrKind,
-                            ::serde::de::StringKind,
-                        ];
-                        return Err($deserializer.syntax_error(token, expected_tokens));
-                    }
-                };
-
-                match key {
-                    $key_arms
-                    _ => { }
+            match idx {
+                $idx_arms
+                Some(_) => unreachable!(),
+                None => {
+                    let _: ::serde::de::IgnoreTokens =
+                        try!(::serde::de::Deserializable::deserialize($deserializer));
                 }
             }
-
-            try!($deserializer.ignore_field(token))
+            //try!($deserializer.ignore_field(token))
         }
 
         $extract_fields

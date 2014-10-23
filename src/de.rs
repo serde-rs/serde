@@ -356,25 +356,29 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_struct_field<
-        T: Deserializable<Self, E>
-    >(&mut self, name: &str) -> Result<T, E> {
+    fn expect_struct_field_or_end(&mut self,
+                                  fields: &'static [&'static str]
+                                 ) -> Result<option::Option<option::Option<uint>>, E> {
         match try!(self.expect_token()) {
+            End => {
+                Ok(None)
+            }
             Str(n) => {
-                if name != n {
-                    return Err(self.unexpected_name_error(Str(n)));
-                }
+                Ok(Some(fields.iter().position(|field| **field == n)))
             }
             String(n) => {
-                if name != n.as_slice() {
-                    return Err(self.unexpected_name_error(String(n)));
-                }
+                Ok(Some(fields.iter().position(|field| **field == n.as_slice())))
             }
             token => {
-                return Err(self.syntax_error(token, STR_TOKEN_KINDS));
+                Err(self.syntax_error(token, STR_TOKEN_KINDS))
             }
         }
+    }
 
+    #[inline]
+    fn expect_struct_value<
+        T: Deserializable<Self, E>
+    >(&mut self) -> Result<T, E> {
         Deserializable::deserialize(self)
     }
 
@@ -982,7 +986,7 @@ mod tests {
     use std::{option, string};
     use serialize::Decoder;
 
-    use super::{Deserializer, Deserializable, Token, TokenKind};
+    use super::{Deserializer, Deserializable, Token, TokenKind, IgnoreTokens};
     use super::{
         Null,
         Bool,
@@ -1034,11 +1038,29 @@ mod tests {
         #[inline]
         fn deserialize_token(d: &mut D, token: Token) -> Result<Inner, E> {
             try!(d.expect_struct_start(token, "Inner"));
-            let a = try!(d.expect_struct_field("a"));
-            let b = try!(d.expect_struct_field("b"));
-            let c = try!(d.expect_struct_field("c"));
-            try!(d.expect_struct_end());
-            Ok(Inner { a: a, b: b, c: c })
+
+            let mut a = None;
+            let mut b = None;
+            let mut c = None;
+
+            static FIELDS: &'static [&'static str] = &["a", "b", "c"];
+
+            loop {
+                let idx = match try!(d.expect_struct_field_or_end(FIELDS)) {
+                    Some(idx) => idx,
+                    None => { break; }
+                };
+
+                match idx {
+                    Some(0) => { a = Some(try!(d.expect_struct_value())); }
+                    Some(1) => { b = Some(try!(d.expect_struct_value())); }
+                    Some(2) => { c = Some(try!(d.expect_struct_value())); }
+                    Some(_) => unreachable!(),
+                    None => { let _: IgnoreTokens = try!(Deserializable::deserialize(d)); }
+                }
+            }
+
+            Ok(Inner { a: a.unwrap(), b: b.unwrap(), c: c.unwrap() })
         }
     }
 
@@ -1053,9 +1075,25 @@ mod tests {
         #[inline]
         fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
             try!(d.expect_struct_start(token, "Outer"));
-            let inner = try!(d.expect_struct_field("inner"));
-            try!(d.expect_struct_end());
-            Ok(Outer { inner: inner })
+
+            static FIELDS: &'static [&'static str] = ["inner"];
+
+            let mut inner = None;
+
+            loop {
+                let idx = match try!(d.expect_struct_field_or_end(FIELDS)) {
+                    Some(idx) => idx,
+                    None => { break; }
+                };
+
+                match idx {
+                    Some(0) => { inner = Some(try!(d.expect_struct_value())); }
+                    Some(_) => unreachable!(),
+                    None => { let _: IgnoreTokens = try!(Deserializable::deserialize(d)); }
+                }
+            }
+
+            Ok(Outer { inner: inner.unwrap() })
         }
     }
 
@@ -1094,7 +1132,6 @@ mod tests {
         SyntaxError(Vec<TokenKind>),
         UnexpectedName,
         ConversionError,
-        IncompleteValue,
         MissingField(&'static str),
     }
 

@@ -742,6 +742,14 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
             None => Err(UnknownVariantError(variant)),
         }
     }
+
+    #[inline]
+    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), ParserError> {
+        match token {
+            de::MapStart(_) => Ok(()),
+            _ => Err(self.syntax_error(token, [de::MapStartKind])),
+        }
+    }
 }
 
 /// The failed expectation of InvalidSyntax
@@ -1644,6 +1652,7 @@ pub struct Parser<Iter> {
     col: uint,
     // A state machine is kept to make it possible to interupt and resume parsing.
     state_stack: Vec<ParserState>,
+    buf: string::String,
 }
 
 impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<Iter> {
@@ -1669,8 +1678,20 @@ impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<I
             ParseValue => Some(self.parse_value()),
             ParseListStart => Some(self.parse_list_start()),
             ParseListCommaOrEnd => Some(self.parse_list_comma_or_end()),
-            ParseObjectStart => Some(self.parse_object_start()),
-            ParseObjectCommaOrEnd => Some(self.parse_object_comma_or_end()),
+            ParseObjectStart => {
+                match self.parse_object_start() {
+                    Ok(Some(s)) => Some(Ok(de::String(s.to_string()))),
+                    Ok(None) => Some(Ok(de::End)),
+                    Err(err) => Some(Err(err)),
+                }
+            }
+            ParseObjectCommaOrEnd => {
+                match self.parse_object_comma_or_end() {
+                    Ok(Some(s)) => Some(Ok(de::String(s.to_string()))),
+                    Ok(None) => Some(Ok(de::End)),
+                    Err(err) => Some(Err(err)),
+                }
+            }
             //ParseObjectKey => Some(self.parse_object_key()),
             ParseObjectValue => Some(self.parse_object_value()),
         }
@@ -1679,6 +1700,7 @@ impl<Iter: Iterator<char>> Iterator<Result<de::Token, ParserError>> for Parser<I
 
 impl<Iter: Iterator<char>> Parser<Iter> {
     /// Creates the JSON parser.
+    #[inline]
     pub fn new(rdr: Iter) -> Parser<Iter> {
         let mut p = Parser {
             rdr: rdr,
@@ -1686,6 +1708,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
             line: 1,
             col: 0,
             state_stack: vec!(ParseValue),
+            buf: string::String::with_capacity(100),
         };
         p.bump();
         return p;
@@ -1782,6 +1805,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         Ok(res)
     }
 
+    #[inline]
     fn parse_decimal(&mut self, res: f64) -> Result<f64, ParserError> {
         self.bump();
 
@@ -1874,64 +1898,72 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         Ok(n)
     }
 
-    fn parse_string(&mut self) -> Result<string::String, ParserError> {
+    fn parse_string(&mut self) -> Result<&str, ParserError> {
+        self.buf.clear();
+
         let mut escape = false;
-        let mut res = string::String::new();
+
 
         loop {
-            self.bump();
-            if self.eof() {
-                return self.error(EOFWhileParsingString);
-            }
+            let ch = match self.next_char() {
+                Some(ch) => ch,
+                None => { return self.error(EOFWhileParsingString); }
+            };
 
             if escape {
-                match self.ch_or_null() {
-                    '"' => res.push('"'),
-                    '\\' => res.push('\\'),
-                    '/' => res.push('/'),
-                    'b' => res.push('\x08'),
-                    'f' => res.push('\x0c'),
-                    'n' => res.push('\n'),
-                    'r' => res.push('\r'),
-                    't' => res.push('\t'),
-                    'u' => match try!(self.decode_hex_escape()) {
-                        0xDC00 ... 0xDFFF => return self.error(LoneLeadingSurrogateInHexEscape),
+                match ch {
+                    '"' => self.buf.push('"'),
+                    '\\' => self.buf.push('\\'),
+                    '/' => self.buf.push('/'),
+                    'b' => self.buf.push('\x08'),
+                    'f' => self.buf.push('\x0c'),
+                    'n' => self.buf.push('\n'),
+                    'r' => self.buf.push('\r'),
+                    't' => self.buf.push('\t'),
+                    'u' => {
+                        let c = match try!(self.decode_hex_escape()) {
+                            0xDC00 ... 0xDFFF => return self.error(LoneLeadingSurrogateInHexEscape),
 
-                        // Non-BMP characters are encoded as a sequence of
-                        // two hex escapes, representing UTF-16 surrogates.
-                        n1 @ 0xD800 ... 0xDBFF => {
-                            let c1 = self.next_char();
-                            let c2 = self.next_char();
-                            match (c1, c2) {
-                                (Some('\\'), Some('u')) => (),
-                                _ => return self.error(UnexpectedEndOfHexEscape),
+                            // Non-BMP characters are encoded as a sequence of
+                            // two hex escapes, representing UTF-16 surrogates.
+                            n1 @ 0xD800 ... 0xDBFF => {
+                                let c1 = self.next_char();
+                                let c2 = self.next_char();
+                                match (c1, c2) {
+                                    (Some('\\'), Some('u')) => (),
+                                    _ => return self.error(UnexpectedEndOfHexEscape),
+                                }
+
+                                let buf = [n1, try!(self.decode_hex_escape())];
+                                match str::utf16_items(buf.as_slice()).next() {
+                                    Some(ScalarValue(c)) => c,
+                                    _ => return self.error(LoneLeadingSurrogateInHexEscape),
+                                }
                             }
 
-                            let buf = [n1, try!(self.decode_hex_escape())];
-                            match str::utf16_items(buf.as_slice()).next() {
-                                Some(ScalarValue(c)) => res.push(c),
-                                _ => return self.error(LoneLeadingSurrogateInHexEscape),
+                            n => match char::from_u32(n as u32) {
+                                Some(c) => c,
+                                None => return self.error(InvalidUnicodeCodePoint),
                             }
-                        }
+                        };
 
-                        n => match char::from_u32(n as u32) {
-                            Some(c) => res.push(c),
-                            None => return self.error(InvalidUnicodeCodePoint),
-                        },
-                    },
+                        self.buf.push(c);
+                    }
                     _ => return self.error(InvalidEscape),
                 }
                 escape = false;
-            } else if self.ch_is('\\') {
-                escape = true;
             } else {
-                match self.ch {
-                    Some('"') => {
+                match ch {
+                    '"' => {
                         self.bump();
-                        return Ok(res);
-                    },
-                    Some(c) => res.push(c),
-                    None => unreachable!()
+                        return Ok(self.buf.as_slice());
+                    }
+                    '\\' => {
+                        escape = true;
+                    }
+                    ch => {
+                        self.buf.push(ch);
+                    }
                 }
             }
         }
@@ -1966,26 +1998,26 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
-    fn parse_object_start(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_object_start(&mut self) -> Result<Option<&str>, ParserError> {
         self.parse_whitespace();
 
         if self.ch_is('}') {
             self.bump();
-            Ok(de::End)
+            Ok(None)
         } else {
-            self.parse_object_key()
+            Ok(Some(try!(self.parse_object_key())))
         }
     }
 
-    fn parse_object_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_object_comma_or_end(&mut self) -> Result<Option<&str>, ParserError> {
         self.parse_whitespace();
 
         if self.ch_is(',') {
             self.bump();
-            self.parse_object_key()
+            Ok(Some(try!(self.parse_object_key())))
         } else if self.ch_is('}') {
             self.bump();
-            Ok(de::End)
+            Ok(None)
         } else if self.eof() {
             self.error_event(EOFWhileParsingObject)
         } else {
@@ -1993,10 +2025,8 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
-    fn parse_object_key(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_object_key(&mut self) -> Result<&str, ParserError> {
         self.parse_whitespace();
-
-        self.state_stack.push(ParseObjectValue);
 
         if self.eof() {
             return self.error_event(EOFWhileParsingString);
@@ -2004,8 +2034,9 @@ impl<Iter: Iterator<char>> Parser<Iter> {
 
         match self.ch_or_null() {
             '"' => {
-                let s = try!(self.parse_string());
-                Ok(de::String(s))
+                self.state_stack.push(ParseObjectValue);
+
+                Ok(try!(self.parse_string()))
             }
             _ => self.error_event(KeyMustBeAString),
         }
@@ -2038,8 +2069,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
             'f' => self.parse_ident("alse", de::Bool(false)),
             '0' ... '9' | '-' => self.parse_number(),
             '"' => {
-                let s = try!(self.parse_string());
-                Ok(de::String(s))
+                Ok(de::String(try!(self.parse_string()).to_string()))
             }
             '[' => {
                 self.bump();
@@ -2066,7 +2096,7 @@ impl<Iter: Iterator<char>> Parser<Iter> {
         }
     }
 
-    fn error_event(&mut self, reason: ErrorCode) -> Result<de::Token, ParserError> {
+    fn error_event<T>(&mut self, reason: ErrorCode) -> Result<T, ParserError> {
         self.state_stack.clear();
         Err(SyntaxError(reason, self.line, self.col))
     }
@@ -2152,6 +2182,36 @@ impl<Iter: Iterator<char>> de::Deserializer<ParserError> for Parser<Iter> {
             }
             _ => self.error(InvalidSyntax(EnumEnd)),
         }
+    }
+
+    #[inline]
+    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), ParserError> {
+        match token {
+            de::MapStart(_) => Ok(()),
+            _ => Err(self.syntax_error(token, [de::MapStartKind])),
+        }
+    }
+
+    #[inline]
+    fn expect_struct_field_or_end(&mut self,
+                                  fields: &'static [&'static str]
+                                 ) -> Result<Option<Option<uint>>, ParserError> {
+        let result = match self.state_stack.pop() {
+            Some(ParseObjectStart) => {
+                try!(self.parse_object_start())
+            }
+            Some(ParseObjectCommaOrEnd) => {
+                try!(self.parse_object_comma_or_end())
+            }
+            _ => fail!("invalid internal state"),
+        };
+
+        let s = match result {
+            Some(s) => s,
+            None => { return Ok(None); }
+        };
+
+        Ok(Some(fields.iter().position(|field| **field == s.as_slice())))
     }
 }
 
