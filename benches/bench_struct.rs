@@ -457,9 +457,6 @@ fn bench_decoder_1_5(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_0_0(b: &mut Bencher) {
     b.iter(|| {
-        let mut map = HashMap::new();
-        map.insert("abc".to_string(), Some('c'));
-
         let outer = Outer {
             inner: vec!(),
         };
