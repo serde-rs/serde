@@ -29,6 +29,7 @@ impl<W: io::Writer> Writer<W> {
 }
 
 impl<W: io::Writer> ser::Serializer<W, (), IoError> for Writer<W> {
+    #[inline]
     fn visit<
         T: ser::Serialize,
     >(&mut self, value: &T) -> Result<(), IoError> {
