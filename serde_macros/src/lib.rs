@@ -291,7 +291,7 @@ fn deserialize_struct(
     let type_name_str = cx.expr_str(span, token::get_ident(type_ident));
 
     let fields = match *fields {
-        Unnamed(_) => fail!(),
+        Unnamed(_) => panic!(),
         Named(ref fields) => fields.as_slice(),
     };
 

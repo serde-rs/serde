@@ -12,7 +12,7 @@
 // Copyright (c) 2011 Google Inc.
 
 #![forbid(non_camel_case_types)]
-#![allow(missing_doc)]
+#![allow(missing_docs)]
 
 /*!
 JSON parsing and serialization
@@ -65,7 +65,7 @@ To serialize using `Serializable`:
 extern crate serde_macros;
 extern crate serde;
 
-use std::io;
+use std::io::{MemWriter, AsRefWriter};
 use serde::json;
 use serde::Serializable;
 
@@ -79,12 +79,12 @@ fn main() {
         data_str: "example of string to serialize".to_string()
     };
 
-    let mut m = io::MemWriter::new();
+    let mut m = MemWriter::new();
     {
         let mut serializer = json::Serializer::new(m.by_ref());
         match to_serialize_object.serialize(&mut serializer) {
             Ok(()) => (),
-            Err(e) => fail!("json serialization error: {}", e),
+            Err(e) => panic!("json serialization error: {}", e),
         }
     }
 }
@@ -162,7 +162,7 @@ fn main() {
     let mut parser = json::Parser::new(json_str_to_deserialize.bytes());
     let deserialized_object: MyStruct = match Deserializable::deserialize(&mut parser) {
         Ok(v) => v,
-        Err(e) => fail!("Decoding error: {}", e)
+        Err(e) => panic!("Decoding error: {}", e)
     };
 }
 ```
@@ -204,7 +204,7 @@ fn main() {
 
     let deserialized_object: TestStruct1 = match json::from_str(serialized_str.as_slice()) {
         Ok(deserialized_object) => deserialized_object,
-        Err(e) => fail!("json deserialization error: {}", e),
+        Err(e) => panic!("json deserialization error: {}", e),
     };
 }
 ```
@@ -268,7 +268,7 @@ use std::collections::{HashMap, TreeMap, treemap};
 use std::f32;
 use std::f64;
 use std::fmt;
-use std::io::{IoResult, MemWriter};
+use std::io::{IoResult, MemWriter, AsRefWriter};
 use std::io;
 use std::num::{FPNaN, FPInfinite};
 use std::num;
@@ -699,12 +699,12 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
             de::MapStart(_) => {
                 let state = match self.stack.pop() {
                     Some(state) => state,
-                    None => { fail!("state machine error, state stack empty"); }
+                    None => { panic!("state machine error, state stack empty"); }
                 };
 
                 let mut iter = match state {
                     JsonDeserializerObjectState(iter) => iter,
-                    _ => { fail!("state machine error, expected an object"); }
+                    _ => { panic!("state machine error, expected an object"); }
                 };
 
                 let (variant, fields) = match iter.next() {
@@ -1636,7 +1636,7 @@ impl Stack {
         let len = self.stack.len();
         let idx = match *self.stack.last().unwrap() {
           InternalIndex(i) => { i + 1 }
-          _ => { fail!(); }
+          _ => { panic!(); }
         };
         *self.stack.get_mut(len - 1) = InternalIndex(idx);
     }
@@ -2229,7 +2229,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
             Some(ParseObjectCommaOrEnd) => {
                 try!(self.parse_object_comma_or_end())
             }
-            _ => fail!("invalid internal state"),
+            _ => panic!("invalid internal state"),
         };
 
         let s = match result {
@@ -3311,9 +3311,9 @@ mod tests {
             Ok(json) => Decodable::decode(&mut Decoder::new(json))
         };
         match res {
-            Ok(_) => fail!("`{}` parsed & decoded ok, expecting error `{}`",
+            Ok(_) => panic!("`{}` parsed & decoded ok, expecting error `{}`",
                               to_parse, expected),
-            Err(ParseError(e)) => fail!("`{}` is not valid json: {}",
+            Err(ParseError(e)) => panic!("`{}` is not valid json: {}",
                                            to_parse, e),
             Err(e) => {
                 assert_eq!(e, expected);
@@ -3537,7 +3537,7 @@ mod tests {
             };
             let (ref expected_evt, ref expected_stack) = expected[i];
             if !parser.stack().is_equal_to(expected_stack.as_slice()) {
-                fail!("Parser stack is not equal to {}", expected_stack);
+                panic!("Parser stack is not equal to {}", expected_stack);
             }
             assert_eq!(&evt, expected_evt);
             i+=1;
@@ -4035,7 +4035,7 @@ mod bench {
                 match parser.next() {
                     None => return,
                     Some(Ok(_)) => { }
-                    Some(Err(err)) => { fail!("error: {}", err); }
+                    Some(Err(err)) => { panic!("error: {}", err); }
                 }
             }
         });

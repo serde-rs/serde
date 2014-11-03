@@ -9,7 +9,7 @@ extern crate serialize;
 extern crate test;
 
 use std::io;
-use std::io::MemWriter;
+use std::io::{MemWriter, AsRefWriter};
 use test::Bencher;
 
 //use serde2::de;

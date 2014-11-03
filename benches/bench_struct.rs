@@ -150,7 +150,7 @@ mod decoder {
         #[inline]
         fn read_struct<T>(&mut self, s_name: &str, _len: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
             match self.stack.pop() {
-                Some(OuterState(Outer { inner: inner })) => {
+                Some(OuterState(Outer { inner })) => {
                     if s_name == "Outer" {
                         self.stack.push(VecState(inner));
                         self.stack.push(FieldState("inner"));
@@ -159,7 +159,7 @@ mod decoder {
                         Err(SyntaxError("expected Outer".to_string()))
                     }
                 }
-                Some(InnerState(Inner { a: (), b: b, c: c })) => {
+                Some(InnerState(Inner { a: (), b, c })) => {
                     if s_name == "Inner" {
                         self.stack.push(MapState(c));
                         self.stack.push(FieldState("c"));

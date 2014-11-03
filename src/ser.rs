@@ -417,7 +417,7 @@ mod tests {
         fn serialize<'b>(&mut self, token: Token<'b>) -> Result<(), Error> {
             let t = match self.iter.next() {
                 Some(t) => t,
-                None => { fail!(); }
+                None => { panic!(); }
             };
 
             assert_eq!(t, token);
