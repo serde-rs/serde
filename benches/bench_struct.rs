@@ -191,12 +191,13 @@ mod decoder {
             }
         }
 
-        fn read_tuple<T>(&mut self, _f: |&mut OuterDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError("".to_string())) }
         fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError("".to_string())) }
 
         fn read_tuple_struct<T>(&mut self,
                                 _s_name: &str,
-                                _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
+                                _len: uint,
+                                _f: |&mut OuterDecoder| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError("".to_string())) }
         fn read_tuple_struct_arg<T>(&mut self,
                                     _a_idx: uint,

@@ -105,12 +105,13 @@ mod decoder {
                                 _f: |&mut IntDecoder| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
 
-        fn read_tuple<T>(&mut self, _f: |&mut IntDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut IntDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
         fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut IntDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
 
         fn read_tuple_struct<T>(&mut self,
                                 _s_name: &str,
-                                _f: |&mut IntDecoder, uint| -> Result<T, Error>)
+                                _len: uint,
+                                _f: |&mut IntDecoder| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
         fn read_tuple_struct_arg<T>(&mut self,
                                     _a_idx: uint,
@@ -211,12 +212,13 @@ mod decoder {
                                 _f: |&mut U8Decoder| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
 
-        fn read_tuple<T>(&mut self, _f: |&mut U8Decoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut U8Decoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
         fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut U8Decoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
 
         fn read_tuple_struct<T>(&mut self,
                                 _s_name: &str,
-                                _f: |&mut U8Decoder, uint| -> Result<T, Error>)
+                                _len: uint,
+                                _f: |&mut U8Decoder| -> Result<T, Error>)
                                 -> Result<T, Error> { Err(SyntaxError) }
         fn read_tuple_struct_arg<T>(&mut self,
                                     _a_idx: uint,
