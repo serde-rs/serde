@@ -264,7 +264,7 @@ fn main() {
 */
 
 use std::char;
-use std::collections::{HashMap, TreeMap, treemap};
+use std::collections::{HashMap, TreeMap, tree_map};
 use std::f32;
 use std::f64;
 use std::fmt;
@@ -573,7 +573,7 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Json {
 enum JsonDeserializerState {
     JsonDeserializerValueState(Json),
     JsonDeserializerListState(vec::MoveItems<Json>),
-    JsonDeserializerObjectState(treemap::MoveEntries<string::String, Json>),
+    JsonDeserializerObjectState(tree_map::MoveEntries<string::String, Json>),
     JsonDeserializerEndState,
 }
 
