@@ -882,27 +882,27 @@ impl GatherTokens {
                 self.gather(d)
             }
             EnumStart(name, variant, len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(EnumStart(name, variant, len));
                 self.gather_seq(d)
             }
             StructStart(name, len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(StructStart(name, len));
                 self.gather_struct(d)
             }
             TupleStart(len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(TupleStart(len));
                 self.gather_seq(d)
             }
             SeqStart(len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(SeqStart(len));
                 self.gather_seq(d)
             }
             MapStart(len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(MapStart(len));
                 self.gather_map(d)
             }

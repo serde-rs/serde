@@ -324,7 +324,7 @@ impl Json {
     /// Otherwise, returns None.
     pub fn find<'a>(&'a self, key: &string::String) -> Option<&'a Json>{
         match self {
-            &Object(ref map) => map.find(key),
+            &Object(ref map) => map.get(key),
             _ => None
         }
     }
@@ -349,7 +349,7 @@ impl Json {
     pub fn search<'a>(&'a self, key: &string::String) -> Option<&'a Json> {
         match self {
             &Object(ref map) => {
-                match map.find(key) {
+                match map.get(key) {
                     Some(json_value) => Some(json_value),
                     None => {
                         let mut value : Option<&'a Json> = None;
