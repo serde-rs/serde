@@ -364,10 +364,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 Ok(None)
             }
             Str(n) => {
-                Ok(Some(fields.iter().position(|field| **field == n)))
+                Ok(Some(fields.iter().position(|field| *field == n)))
             }
             String(n) => {
-                Ok(Some(fields.iter().position(|field| **field == n.as_slice())))
+                Ok(Some(fields.iter().position(|field| *field == n.as_slice())))
             }
             token => {
                 Err(self.syntax_error(token, STR_TOKEN_KINDS))

@@ -2237,7 +2237,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
             None => { return Ok(None); }
         };
 
-        Ok(Some(fields.iter().position(|field| **field == s.as_slice())))
+        Ok(Some(fields.iter().position(|field| *field == s.as_slice())))
     }
 }
 
