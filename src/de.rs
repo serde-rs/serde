@@ -364,10 +364,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 Ok(None)
             }
             Str(n) => {
-                Ok(Some(fields.iter().position(|field| **field == n)))
+                Ok(Some(fields.iter().position(|field| *field == n)))
             }
             String(n) => {
-                Ok(Some(fields.iter().position(|field| **field == n.as_slice())))
+                Ok(Some(fields.iter().position(|field| *field == n.as_slice())))
             }
             token => {
                 Err(self.syntax_error(token, STR_TOKEN_KINDS))
@@ -882,27 +882,27 @@ impl GatherTokens {
                 self.gather(d)
             }
             EnumStart(name, variant, len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(EnumStart(name, variant, len));
                 self.gather_seq(d)
             }
             StructStart(name, len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(StructStart(name, len));
                 self.gather_struct(d)
             }
             TupleStart(len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(TupleStart(len));
                 self.gather_seq(d)
             }
             SeqStart(len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(SeqStart(len));
                 self.gather_seq(d)
             }
             MapStart(len) => {
-                self.tokens.reserve_additional(len + 1);
+                self.tokens.reserve(len + 1);
                 self.tokens.push(MapStart(len));
                 self.gather_map(d)
             }

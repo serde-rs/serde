@@ -569,10 +569,10 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
     let dst_len = dst.len();
     let src_len = src.len();
 
-    dst.reserve_additional(src_len);
+    dst.reserve(src_len);
 
     unsafe {
-        // we would have failed if `reserve_additional` overflowed.
+        // we would have failed if `reserve` overflowed.
         dst.set_len(dst_len + src_len);
 
         ::std::ptr::copy_nonoverlapping_memory(
