@@ -12,12 +12,12 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use serde::de::{Deserializer, Deserializable};
+use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
-#[deriving_deserializable]
+#[deriving_deserialize]
 struct Inner {
     a: (),
     b: uint,
@@ -27,7 +27,7 @@ struct Inner {
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
-#[deriving_deserializable]
+#[deriving_deserialize]
 struct Outer {
     inner: Vec<Inner>,
 }
@@ -387,7 +387,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable<OuterDeserializer, Error>
+            T: de::Deserialize<OuterDeserializer, Error>
         >(&mut self, field: &'static str) -> Result<T, Error> {
             Err(MissingField(field))
         }
@@ -468,7 +468,7 @@ fn bench_deserializer_0_0(b: &mut Bencher) {
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+        let value: Outer = Deserialize::deserialize(&mut d).unwrap();
 
         assert_eq!(value, outer);
     })
@@ -490,7 +490,7 @@ fn bench_deserializer_1_0(b: &mut Bencher) {
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+        let value: Outer = Deserialize::deserialize(&mut d).unwrap();
 
         assert_eq!(value, outer);
     })
@@ -517,7 +517,7 @@ fn bench_deserializer_1_5(b: &mut Bencher) {
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserializable::deserialize(&mut d).unwrap();
+        let value: Outer = Deserialize::deserialize(&mut d).unwrap();
 
         assert_eq!(value, outer);
     })

@@ -79,49 +79,49 @@ pub trait Serializer<E> {
 
     fn serialize_tuple_start(&mut self, len: uint) -> Result<(), E>;
     fn serialize_tuple_elt<
-        T: Serializable<Self, E>
+        T: Serialize<Self, E>
     >(&mut self, v: &T) -> Result<(), E>;
     fn serialize_tuple_end(&mut self) -> Result<(), E>;
 
     fn serialize_struct_start(&mut self, name: &str, len: uint) -> Result<(), E>;
     fn serialize_struct_elt<
-        T: Serializable<Self, E>
+        T: Serialize<Self, E>
     >(&mut self, name: &str, v: &T) -> Result<(), E>;
     fn serialize_struct_end(&mut self) -> Result<(), E>;
 
     fn serialize_enum_start(&mut self, name: &str, variant: &str, len: uint) -> Result<(), E>;
     fn serialize_enum_elt<
-        T: Serializable<Self, E>
+        T: Serialize<Self, E>
     >(&mut self, v: &T) -> Result<(), E>;
     fn serialize_enum_end(&mut self) -> Result<(), E>;
 
     fn serialize_option<
-        T: Serializable<Self, E>
+        T: Serialize<Self, E>
     >(&mut self, v: &Option<T>) -> Result<(), E>;
 
     fn serialize_seq<
-        T: Serializable<Self, E>,
+        T: Serialize<Self, E>,
         Iter: Iterator<T>
     >(&mut self, iter: Iter) -> Result<(), E>;
 
     fn serialize_map<
-        K: Serializable<Self, E>,
-        V: Serializable<Self, E>,
+        K: Serialize<Self, E>,
+        V: Serialize<Self, E>,
         Iter: Iterator<(K, V)>
     >(&mut self, iter: Iter) -> Result<(), E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-pub trait Serializable<S: Serializer<E>, E> {
+pub trait Serialize<S: Serializer<E>, E> {
     fn serialize(&self, s: &mut S) -> Result<(), E>;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-macro_rules! impl_serializable {
+macro_rules! impl_serialize {
     ($ty:ty, $method:ident) => {
-        impl<S: Serializer<E>, E> Serializable<S, E> for $ty {
+        impl<S: Serializer<E>, E> Serialize<S, E> for $ty {
             #[inline]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
                 s.$method(*self)
@@ -130,31 +130,31 @@ macro_rules! impl_serializable {
     }
 }
 
-impl_serializable!(bool, serialize_bool)
-impl_serializable!(int, serialize_int)
-impl_serializable!(i8, serialize_i8)
-impl_serializable!(i16, serialize_i16)
-impl_serializable!(i32, serialize_i32)
-impl_serializable!(i64, serialize_i64)
-impl_serializable!(uint, serialize_uint)
-impl_serializable!(u8, serialize_u8)
-impl_serializable!(u16, serialize_u16)
-impl_serializable!(u32, serialize_u32)
-impl_serializable!(u64, serialize_u64)
-impl_serializable!(f32, serialize_f32)
-impl_serializable!(f64, serialize_f64)
-impl_serializable!(char, serialize_char)
+impl_serialize!(bool, serialize_bool)
+impl_serialize!(int, serialize_int)
+impl_serialize!(i8, serialize_i8)
+impl_serialize!(i16, serialize_i16)
+impl_serialize!(i32, serialize_i32)
+impl_serialize!(i64, serialize_i64)
+impl_serialize!(uint, serialize_uint)
+impl_serialize!(u8, serialize_u8)
+impl_serialize!(u16, serialize_u16)
+impl_serialize!(u32, serialize_u32)
+impl_serialize!(u64, serialize_u64)
+impl_serialize!(f32, serialize_f32)
+impl_serialize!(f64, serialize_f64)
+impl_serialize!(char, serialize_char)
 
 //////////////////////////////////////////////////////////////////////////////
 
-impl<'a, S: Serializer<E>, E> Serializable<S, E> for &'a str {
+impl<'a, S: Serializer<E>, E> Serialize<S, E> for &'a str {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_str(*self)
     }
 }
 
-impl<S: Serializer<E>, E> Serializable<S, E> for String {
+impl<S: Serializer<E>, E> Serialize<S, E> for String {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         self.as_slice().serialize(s)
@@ -163,14 +163,14 @@ impl<S: Serializer<E>, E> Serializable<S, E> for String {
 
 //////////////////////////////////////////////////////////////////////////////
 
-macro_rules! impl_serializable_box {
+macro_rules! impl_serialize_box {
     ($ty:ty) => {
         impl<
             'a,
             S: Serializer<E>,
             E,
-            T: Serializable<S, E>
-        > Serializable<S, E> for $ty {
+            T: Serialize<S, E>
+        > Serialize<S, E> for $ty {
             #[inline]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
                 (**self).serialize(s)
@@ -179,15 +179,15 @@ macro_rules! impl_serializable_box {
     }
 }
 
-impl_serializable_box!(&'a T)
-impl_serializable_box!(Box<T>)
-impl_serializable_box!(Rc<T>)
+impl_serialize_box!(&'a T)
+impl_serialize_box!(Box<T>)
+impl_serialize_box!(Rc<T>)
 
 impl<
     S: Serializer<E>,
     E,
-    T: Serializable<S, E> + Send + Sync
-> Serializable<S, E> for Arc<T> {
+    T: Serialize<S, E> + Send + Sync
+> Serialize<S, E> for Arc<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         (**self).serialize(s)
@@ -199,8 +199,8 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    T: Serializable<S, E>
-> Serializable<S, E> for Option<T> {
+    T: Serialize<S, E>
+> Serialize<S, E> for Option<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_option(self)
@@ -212,8 +212,8 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    T: Serializable<S, E>
-> Serializable<S, E> for Vec<T> {
+    T: Serialize<S, E>
+> Serialize<S, E> for Vec<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_seq(self.iter())
@@ -225,9 +225,9 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    K: Serializable<S, E> + Eq + Hash,
-    V: Serializable<S, E>
-> Serializable<S, E> for HashMap<K, V> {
+    K: Serialize<S, E> + Eq + Hash,
+    V: Serialize<S, E>
+> Serialize<S, E> for HashMap<K, V> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_map(self.iter())
@@ -237,9 +237,9 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    K: Serializable<S, E> + Ord,
-    V: Serializable<S, E>
-> Serializable<S, E> for TreeMap<K, V> {
+    K: Serialize<S, E> + Ord,
+    V: Serialize<S, E>
+> Serialize<S, E> for TreeMap<K, V> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_map(self.iter())
@@ -251,8 +251,8 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    T: Serializable<S, E> + Eq + Hash
-> Serializable<S, E> for HashSet<T> {
+    T: Serialize<S, E> + Eq + Hash
+> Serialize<S, E> for HashSet<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_seq(self.iter())
@@ -262,8 +262,8 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    T: Serializable<S, E> + Ord
-> Serializable<S, E> for TreeSet<T> {
+    T: Serialize<S, E> + Ord
+> Serialize<S, E> for TreeSet<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_seq(self.iter())
@@ -278,7 +278,7 @@ macro_rules! peel {
 
 macro_rules! impl_serialize_tuple {
     () => {
-        impl<S: Serializer<E>, E> Serializable<S, E> for () {
+        impl<S: Serializer<E>, E> Serialize<S, E> for () {
             #[inline]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
                 s.serialize_null()
@@ -289,8 +289,8 @@ macro_rules! impl_serialize_tuple {
         impl<
             S: Serializer<E>,
             E,
-            $($name:Serializable<S, E>),+
-        > Serializable<S, E> for ($($name,)+) {
+            $($name:Serialize<S, E>),+
+        > Serialize<S, E> for ($($name,)+) {
             #[inline]
             #[allow(non_snake_case)]
             fn serialize(&self, s: &mut S) -> Result<(), E> {
@@ -323,12 +323,12 @@ mod tests {
 
     use serialize::Decoder;
 
-    use super::{Serializer, Serializable};
+    use super::{Serializer, Serialize};
 
     //////////////////////////////////////////////////////////////////////////////
 
     #[deriving(Clone, PartialEq, Show, Decodable)]
-    #[deriving_serializable]
+    #[deriving_serialize]
     struct Inner {
         a: (),
         b: uint,
@@ -338,7 +338,7 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////////
 
     #[deriving(Clone, PartialEq, Show, Decodable)]
-    #[deriving_serializable]
+    #[deriving_serialize]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -346,7 +346,7 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////////
 
     #[deriving(Clone, PartialEq, Show, Decodable)]
-    #[deriving_serializable]
+    #[deriving_serialize]
     enum Animal {
         Dog,
         Frog(String, int)
@@ -494,7 +494,7 @@ mod tests {
         }
 
         fn serialize_tuple_elt<
-            T: Serializable<AssertSerializer<Iter>, Error>
+            T: Serialize<AssertSerializer<Iter>, Error>
         >(&mut self, value: &T) -> Result<(), Error> {
             try!(self.serialize(TupleSep));
             value.serialize(self)
@@ -509,7 +509,7 @@ mod tests {
         }
 
         fn serialize_struct_elt<
-            T: Serializable<AssertSerializer<Iter>, Error>
+            T: Serialize<AssertSerializer<Iter>, Error>
         >(&mut self, name: &str, value: &T) -> Result<(), Error> {
             try!(self.serialize(StructSep(name)));
             value.serialize(self)
@@ -524,7 +524,7 @@ mod tests {
         }
 
         fn serialize_enum_elt<
-            T: Serializable<AssertSerializer<Iter>, Error>
+            T: Serialize<AssertSerializer<Iter>, Error>
         >(&mut self, value: &T) -> Result<(), Error> {
             try!(self.serialize(EnumSep));
             value.serialize(self)
@@ -535,7 +535,7 @@ mod tests {
         }
 
         fn serialize_option<
-            T: Serializable<AssertSerializer<Iter>, Error>
+            T: Serialize<AssertSerializer<Iter>, Error>
         >(&mut self, v: &option::Option<T>) -> Result<(), Error> {
             match *v {
                 Some(ref v) => {
@@ -549,7 +549,7 @@ mod tests {
         }
 
         fn serialize_seq<
-            T: Serializable<AssertSerializer<Iter>, Error>,
+            T: Serialize<AssertSerializer<Iter>, Error>,
             SeqIter: Iterator<T>
         >(&mut self, mut iter: SeqIter) -> Result<(), Error> {
             let (len, _) = iter.size_hint();
@@ -561,8 +561,8 @@ mod tests {
         }
 
         fn serialize_map<
-            K: Serializable<AssertSerializer<Iter>, Error>,
-            V: Serializable<AssertSerializer<Iter>, Error>,
+            K: Serialize<AssertSerializer<Iter>, Error>,
+            V: Serialize<AssertSerializer<Iter>, Error>,
             MapIter: Iterator<(K, V)>
         >(&mut self, mut iter: MapIter) -> Result<(), Error> {
             let (len, _) = iter.size_hint();

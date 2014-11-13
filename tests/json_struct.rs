@@ -5,8 +5,8 @@ extern crate serde;
 extern crate serde_macros;
 
 #[deriving(PartialEq, Show)]
-#[deriving_serializable]
-#[deriving_deserializable]
+#[deriving_serialize]
+#[deriving_deserialize]
 struct Test {
     #[serial_name = "$schema"]
     schema: String,

@@ -52,12 +52,12 @@ A simple JSON document serializing a person, his/her age, address and phone numb
 
 Rust provides a mechanism for low boilerplate serializing and deserializing
 of values to and from JSON via the serialization API.
-To be able to serialize a piece of data, it must implement the `serde::Serializable` trait.
-To be able to deserialize a piece of data, it must implement the `serde::Deserializable` trait.
+To be able to serialize a piece of data, it must implement the `serde::Serialize` trait.
+To be able to deserialize a piece of data, it must implement the `serde::Deserialize` trait.
 The Rust compiler provides an annotation to automatically generate
-the code for these traits: `#[deriving_serializable]` and `#[deriving_deserializable]`.
+the code for these traits: `#[deriving_serialize]` and `#[deriving_deserialize]`.
 
-To serialize using `Serializable`:
+To serialize using `Serialize`:
 
 ```rust
 #![feature(phase)]
@@ -67,9 +67,9 @@ extern crate serde;
 
 use std::io::{MemWriter, AsRefWriter};
 use serde::json;
-use serde::Serializable;
+use serde::Serialize;
 
-#[deriving_serializable]
+#[deriving_serialize]
 pub struct TestStruct   {
     data_str: String,
 }
@@ -90,7 +90,7 @@ fn main() {
 }
 ```
 
-Two wrapper functions are provided to serialize a Serializable object
+Two wrapper functions are provided to serialize a `Serialize` object
 into a string (String) or buffer (~[u8]): `json::to_string(value)` and
 `json::to_vec(value)`.
 
@@ -104,7 +104,7 @@ JSON API provide an enum `json::Json` and a trait `ToJson` to serialize object.
 The trait `ToJson` serialize object into a container `json::Json` and the API provide writer
 to serialize them into a stream or a string ...
 
-When using `ToJson` the `Serializable` trait implementation is not mandatory.
+When using `ToJson` the `Serialize` trait implementation is not mandatory.
 
 A basic `ToJson` example using a TreeMap of attribute name / attribute value:
 
@@ -140,7 +140,7 @@ fn main() {
 }
 ```
 
-To deserialize a JSON string using `Deserializable` trait :
+To deserialize a JSON string using `Deserialize` trait :
 
 ```rust
 #![feature(phase)]
@@ -149,9 +149,9 @@ extern crate serde_macros;
 extern crate serde;
 
 use serde::json;
-use serde::Deserializable;
+use serde::Deserialize;
 
-#[deriving_deserializable]
+#[deriving_deserialize]
 pub struct MyStruct  {
      attr1: u8,
      attr2: String,
@@ -160,7 +160,7 @@ pub struct MyStruct  {
 fn main() {
     let json_str_to_deserialize = "{ \"attr1\": 1, \"attr2\": \"toto\" }";
     let mut parser = json::Parser::new(json_str_to_deserialize.bytes());
-    let deserialized_object: MyStruct = match Deserializable::deserialize(&mut parser) {
+    let deserialized_object: MyStruct = match Deserialize::deserialize(&mut parser) {
         Ok(v) => v,
         Err(e) => panic!("Decoding error: {}", e)
     };
@@ -182,8 +182,8 @@ extern crate serde;
 
 use serde::json;
 
-#[deriving_serializable]
-#[deriving_deserializable]
+#[deriving_serialize]
+#[deriving_deserialize]
 pub struct TestStruct1  {
     data_int: u8,
     data_str: String,
@@ -191,7 +191,7 @@ pub struct TestStruct1  {
 }
 
 // To serialize use the `json::to_string` to serialize an object in a string.
-// It calls the generated `Serializable` impl.
+// It calls the generated `Serialize` impl.
 fn main() {
     let to_serialize_object = TestStruct1 {
         data_int: 1,
@@ -223,10 +223,10 @@ extern crate serde;
 use std::collections::TreeMap;
 use serde::json::ToJson;
 use serde::json;
-use serde::Deserializable;
+use serde::Deserialize;
 
-#[deriving_serializable]   // generate Serializable impl
-#[deriving_deserializable] // generate Deserializable impl
+#[deriving_serialize]   // generate Serialize impl
+#[deriving_deserialize] // generate Deserialize impl
 pub struct TestStruct1  {
     data_int: u8,
     data_str: String,
@@ -257,7 +257,7 @@ fn main() {
     // Deserialize like before.
 
     let mut parser = json::Parser::new(json_str.as_slice().bytes());
-    let deserialized: TestStruct1 = Deserializable::deserialize(&mut parser).unwrap();
+    let deserialized: TestStruct1 = Deserialize::deserialize(&mut parser).unwrap();
 }
 ```
 
@@ -279,7 +279,7 @@ use std::vec::Vec;
 use std::vec;
 
 use de;
-use ser::Serializable;
+use ser::Serialize;
 use ser;
 
 pub mod builder;
@@ -498,7 +498,7 @@ impl fmt::Show for Json {
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Json {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for Json {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         match *self {
@@ -527,7 +527,7 @@ impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Json {
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Json {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Json {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<Json, E> {
         match token {
@@ -549,18 +549,18 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Json {
             de::Str(x) => Ok(String(x.to_string())),
             de::String(x) => Ok(String(x)),
             de::Option(false) => Ok(Null),
-            de::Option(true) => de::Deserializable::deserialize(d),
+            de::Option(true) => de::Deserialize::deserialize(d),
             de::TupleStart(_) | de::SeqStart(_) => {
-                let list = try!(de::Deserializable::deserialize_token(d, token));
+                let list = try!(de::Deserialize::deserialize_token(d, token));
                 Ok(List(list))
             }
             de::StructStart(_, _) | de::MapStart(_) => {
-                let object = try!(de::Deserializable::deserialize_token(d, token));
+                let object = try!(de::Deserialize::deserialize_token(d, token));
                 Ok(Object(object))
             }
             de::EnumStart(_, name, len) => {
                 let token = de::SeqStart(len);
-                let fields: Vec<Json> = try!(de::Deserializable::deserialize_token(d, token));
+                let fields: Vec<Json> = try!(de::Deserialize::deserialize_token(d, token));
                 let mut object = TreeMap::new();
                 object.insert(name.to_string(), List(fields));
                 Ok(Object(object))
@@ -668,22 +668,22 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 
     #[inline]
     fn missing_field<
-        T: de::Deserializable<JsonDeserializer, ParserError>
+        T: de::Deserialize<JsonDeserializer, ParserError>
     >(&mut self, _field: &'static str) -> Result<T, ParserError> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
-        de::Deserializable::deserialize_token(self, de::Null)
+        de::Deserialize::deserialize_token(self, de::Null)
     }
 
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserializable<JsonDeserializer, ParserError>
+        U: de::Deserialize<JsonDeserializer, ParserError>
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
             token => {
-                let value: U = try!(de::Deserializable::deserialize_token(self, token));
+                let value: U = try!(de::Deserialize::deserialize_token(self, token));
                 Ok(Some(value))
             }
         }
@@ -1054,7 +1054,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_tuple_elt<
-        T: Serializable<Serializer<W>, io::IoError>
+        T: Serialize<Serializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
@@ -1077,7 +1077,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_struct_elt<
-        T: Serializable<Serializer<W>, io::IoError>
+        T: Serialize<Serializer<W>, io::IoError>
     >(&mut self, name: &str, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
@@ -1104,7 +1104,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_enum_elt<
-        T: Serializable<Serializer<W>, io::IoError>
+        T: Serialize<Serializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         if self.first {
             self.first = false;
@@ -1121,7 +1121,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_option<
-        T: Serializable<Serializer<W>, io::IoError>
+        T: Serialize<Serializer<W>, io::IoError>
     >(&mut self, v: &Option<T>) -> IoResult<()> {
         match *v {
             Some(ref v) => {
@@ -1135,7 +1135,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_seq<
-        T: Serializable<Serializer<W>, io::IoError>,
+        T: Serialize<Serializer<W>, io::IoError>,
         Iter: Iterator<T>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
@@ -1154,8 +1154,8 @@ impl<W: Writer> ser::Serializer<io::IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_map<
-        K: Serializable<Serializer<W>, io::IoError>,
-        V: Serializable<Serializer<W>, io::IoError>,
+        K: Serialize<Serializer<W>, io::IoError>,
+        V: Serialize<Serializer<W>, io::IoError>,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         //Warning: WriterFormatter was added to work around
@@ -1319,7 +1319,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_tuple_elt<
-        T: Serializable<PrettySerializer<W>, io::IoError>
+        T: Serialize<PrettySerializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         value.serialize(self)
@@ -1338,7 +1338,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_struct_elt<
-        T: Serializable<PrettySerializer<W>, io::IoError>
+        T: Serialize<PrettySerializer<W>, io::IoError>
     >(&mut self, name: &str, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         try!(self.serialize_str(name));
@@ -1363,7 +1363,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_enum_elt<
-        T: Serializable<PrettySerializer<W>, io::IoError>
+        T: Serialize<PrettySerializer<W>, io::IoError>
     >(&mut self, value: &T) -> IoResult<()> {
         try!(self.serialize_sep());
         value.serialize(self)
@@ -1377,7 +1377,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_option<
-        T: Serializable<PrettySerializer<W>, io::IoError>
+        T: Serialize<PrettySerializer<W>, io::IoError>
     >(&mut self, v: &Option<T>) -> IoResult<()> {
         match *v {
             Some(ref v) => {
@@ -1391,7 +1391,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_seq<
-        T: Serializable<PrettySerializer<W>, io::IoError>,
+        T: Serialize<PrettySerializer<W>, io::IoError>,
         Iter: Iterator<T>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
@@ -1407,8 +1407,8 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_map<
-        K: Serializable<PrettySerializer<W>, io::IoError>,
-        V: Serializable<PrettySerializer<W>, io::IoError>,
+        K: Serialize<PrettySerializer<W>, io::IoError>,
+        V: Serialize<PrettySerializer<W>, io::IoError>,
         Iter: Iterator<(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
@@ -1428,7 +1428,7 @@ impl<W: Writer> ser::Serializer<io::IoError> for PrettySerializer<W> {
 /// Encode the specified struct into a json `[u8]` buffer.
 #[inline]
 pub fn to_vec<
-    T: ser::Serializable<Serializer<MemWriter>, io::IoError>
+    T: ser::Serialize<Serializer<MemWriter>, io::IoError>
 >(value: &T) -> Vec<u8> {
     let wr = MemWriter::with_capacity(1024);
     let mut serializer = Serializer::new(wr);
@@ -1441,7 +1441,7 @@ pub fn to_vec<
 /// Encode the specified struct into a json `String` buffer.
 #[inline]
 pub fn to_string<
-    T: ser::Serializable<Serializer<MemWriter>, io::IoError>
+    T: ser::Serialize<Serializer<MemWriter>, io::IoError>
 >(value: &T) -> Result<string::String, Vec<u8>> {
     let buf = to_vec(value);
     string::String::from_utf8(buf)
@@ -1449,7 +1449,7 @@ pub fn to_string<
 
 /// Encode the specified struct into a json `[u8]` buffer.
 pub fn to_pretty_vec<
-    T: ser::Serializable<PrettySerializer<MemWriter>, io::IoError>
+    T: ser::Serialize<PrettySerializer<MemWriter>, io::IoError>
 >(value: &T) -> Vec<u8> {
     let wr = MemWriter::new();
     let mut serializer = PrettySerializer::new(wr);
@@ -1459,7 +1459,7 @@ pub fn to_pretty_vec<
 
 /// Encode the specified struct into a json `String` buffer.
 pub fn to_pretty_string<
-    T: ser::Serializable<PrettySerializer<MemWriter>, io::IoError>
+    T: ser::Serialize<PrettySerializer<MemWriter>, io::IoError>
 >(value: &T) -> Result<string::String, Vec<u8>> {
     let buf = to_pretty_vec(value);
     string::String::from_utf8(buf)
@@ -2147,22 +2147,22 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
 
     #[inline]
     fn missing_field<
-        T: de::Deserializable<Parser<Iter>, ParserError>
+        T: de::Deserialize<Parser<Iter>, ParserError>
     >(&mut self, _field: &'static str) -> Result<T, ParserError> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
-        de::Deserializable::deserialize_token(self, de::Null)
+        de::Deserialize::deserialize_token(self, de::Null)
     }
 
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserializable<Parser<Iter>, ParserError>
+        U: de::Deserialize<Parser<Iter>, ParserError>
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
             token => {
-                let value: U = try!(de::Deserializable::deserialize_token(self, token));
+                let value: U = try!(de::Deserialize::deserialize_token(self, token));
                 Ok(Some(value))
             }
         }
@@ -2244,10 +2244,10 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
 /// Decodes a json value from an `Iterator<u8>`.
 pub fn from_iter<
     Iter: Iterator<u8>,
-    T: de::Deserializable<Parser<Iter>, ParserError>
+    T: de::Deserialize<Parser<Iter>, ParserError>
 >(iter: Iter) -> Result<T, ParserError> {
     let mut parser = Parser::new(iter);
-    let value = try!(de::Deserializable::deserialize(&mut parser));
+    let value = try!(de::Deserialize::deserialize(&mut parser));
 
     // Make sure the whole stream has been consumed.
     match parser.next() {
@@ -2260,17 +2260,17 @@ pub fn from_iter<
 /// Decodes a json value from a string
 pub fn from_str<
     'a,
-    T: de::Deserializable<Parser<str::Bytes<'a>>, ParserError>
+    T: de::Deserialize<Parser<str::Bytes<'a>>, ParserError>
 >(s: &'a str) -> Result<T, BuilderError> {
     from_iter(s.bytes())
 }
 
 /// Decodes a json value from a `Json`.
 pub fn from_json<
-    T: de::Deserializable<JsonDeserializer, ParserError>
+    T: de::Deserialize<JsonDeserializer, ParserError>
 >(json: Json) -> Result<T, ParserError> {
     let mut d = JsonDeserializer::new(json);
-    de::Deserializable::deserialize(&mut d)
+    de::Deserialize::deserialize(&mut d)
 }
 
 macro_rules! expect(
@@ -2461,7 +2461,7 @@ mod tests {
         ListCommaOrEnd,
     };
     use de;
-    use ser::{Serializable, Serializer};
+    use ser::{Serialize, Serializer};
     use ser;
 
     macro_rules! treemap {
@@ -2473,8 +2473,8 @@ mod tests {
     }
 
     #[deriving(PartialEq, Show)]
-    #[deriving_serializable]
-    #[deriving_deserializable]
+    #[deriving_serialize]
+    #[deriving_deserialize]
     enum Animal {
         Dog,
         Frog(string::String, Vec<int>)
@@ -2502,8 +2502,8 @@ mod tests {
     }
 
     #[deriving(PartialEq, Show)]
-    #[deriving_serializable]
-    #[deriving_deserializable]
+    #[deriving_serialize]
+    #[deriving_deserialize]
     struct Inner {
         a: (),
         b: uint,
@@ -2523,8 +2523,8 @@ mod tests {
     }
 
     #[deriving(PartialEq, Show)]
-    #[deriving_serializable]
-    #[deriving_deserializable]
+    #[deriving_serialize]
+    #[deriving_deserialize]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -2540,7 +2540,7 @@ mod tests {
     }
 
     fn test_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serializable<super::Serializer<io::MemWriter>, io::IoError>
+        T: PartialEq + Show + ToJson + ser::Serialize<super::Serializer<io::MemWriter>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -2554,7 +2554,7 @@ mod tests {
     }
 
     fn test_pretty_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serializable<super::PrettySerializer<io::MemWriter>, io::IoError>
+        T: PartialEq + Show + ToJson + ser::Serialize<super::PrettySerializer<io::MemWriter>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -2891,7 +2891,7 @@ mod tests {
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
-        T: Show + de::Deserializable<Parser<str::Bytes<'a>>, ParserError>
+        T: Show + de::Deserialize<Parser<str::Bytes<'a>>, ParserError>
     >(errors: &[(&'a str, ParserError)]) {
         for &(s, ref err) in errors.iter() {
             let v: Result<T, ParserError> = from_str(s);
@@ -2901,7 +2901,7 @@ mod tests {
 
     fn test_parse_ok<
         'a,
-        T: PartialEq + Show + ToJson + de::Deserializable<Parser<str::Bytes<'a>>, ParserError>
+        T: PartialEq + Show + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, ParserError>
     >(errors: &[(&'a str, T)]) {
         for &(s, ref value) in errors.iter() {
             let v: T = from_str(s).unwrap();
@@ -2913,7 +2913,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserializable<JsonDeserializer, ParserError>
+        T: PartialEq + Show + ToJson + de::Deserialize<JsonDeserializer, ParserError>
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();
@@ -3219,8 +3219,8 @@ mod tests {
         ]);
 
         #[deriving(PartialEq, Show)]
-        #[deriving_serializable]
-        #[deriving_deserializable]
+        #[deriving_serialize]
+        #[deriving_deserialize]
         struct Foo {
             x: Option<int>,
         }

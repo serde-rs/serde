@@ -11,12 +11,12 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use serde::de::{Deserializer, Deserializable};
+use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
-#[deriving_deserializable]
+#[deriving_deserialize]
 enum Animal {
     Dog,
     Frog(String, int)
@@ -260,7 +260,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable<AnimalDeserializer, Error>
+            T: de::Deserialize<AnimalDeserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
@@ -299,7 +299,7 @@ fn bench_deserializer_dog(b: &mut Bencher) {
         let animal = Dog;
 
         let mut d = deserializer::AnimalDeserializer::new(animal.clone());
-        let value: Animal = Deserializable::deserialize(&mut d).unwrap();
+        let value: Animal = Deserialize::deserialize(&mut d).unwrap();
 
         assert_eq!(value, animal);
     })
@@ -311,7 +311,7 @@ fn bench_deserializer_frog(b: &mut Bencher) {
         let animal = Frog("Henry".to_string(), 349);
 
         let mut d = deserializer::AnimalDeserializer::new(animal.clone());
-        let value: Animal = Deserializable::deserialize(&mut d).unwrap();
+        let value: Animal = Deserialize::deserialize(&mut d).unwrap();
 
         assert_eq!(value, animal);
     })

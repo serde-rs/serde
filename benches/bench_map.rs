@@ -13,7 +13,7 @@ use test::Bencher;
 
 use serialize::{Decoder, Decodable};
 
-use serde::de::{Deserializer, Deserializable};
+use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -258,7 +258,7 @@ mod deserializer {
 
         #[inline]
         fn missing_field<
-            T: de::Deserializable<IntDeserializer, Error>
+            T: de::Deserialize<IntDeserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
             Err(SyntaxError)
         }
@@ -310,9 +310,9 @@ fn bench_decoder_100(b: &mut Bencher) {
 fn run_deserializer<
     D: Deserializer<E>,
     E: Show,
-    T: Clone + PartialEq + Show + Deserializable<D, E>
+    T: Clone + PartialEq + Show + Deserialize<D, E>
 >(mut d: D, value: T) {
-    let v: T = Deserializable::deserialize(&mut d).unwrap();
+    let v: T = Deserialize::deserialize(&mut d).unwrap();
 
     assert_eq!(value, v);
 }

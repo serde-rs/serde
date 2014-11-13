@@ -14,12 +14,12 @@ use test::Bencher;
 
 use serde::de;
 use serde::json;
-use serde::ser::Serializable;
+use serde::ser::Serialize;
 use serde::ser;
 
 #[deriving(Encodable, Decodable)]
-#[deriving_serializable]
-#[deriving_deserializable]
+#[deriving_serialize]
+#[deriving_deserialize]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -39,14 +39,14 @@ enum HttpProtocol {
     HTTP11,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for HttpProtocol {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpProtocol {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for HttpProtocol {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpProtocol {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
         d.expect_from_primitive(token)
@@ -68,14 +68,14 @@ enum HttpMethod {
     PATCH,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for HttpMethod {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpMethod {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for HttpMethod {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpMethod {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
         d.expect_from_primitive(token)
@@ -90,14 +90,14 @@ enum CacheStatus {
     Hit,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for CacheStatus {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for CacheStatus {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for CacheStatus {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for CacheStatus {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
         d.expect_from_primitive(token)
@@ -105,8 +105,8 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for CacheStatus {
 }
 
 #[deriving(Encodable, Decodable)]
-#[deriving_serializable]
-#[deriving_deserializable]
+#[deriving_serialize]
+#[deriving_deserialize]
 struct Origin {
     ip: String,
     port: u32,
@@ -121,14 +121,14 @@ enum OriginProtocol {
     HTTPS,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for OriginProtocol {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for OriginProtocol {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for OriginProtocol {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for OriginProtocol {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
         d.expect_from_primitive(token)
@@ -144,14 +144,14 @@ enum ZonePlan {
     ENT,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for ZonePlan {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for ZonePlan {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for ZonePlan {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for ZonePlan {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
         d.expect_from_primitive(token)
@@ -418,14 +418,14 @@ enum Country {
 	ZW,
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serializable<S, E> for Country {
+impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for Country {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_uint(*self as uint)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Country {
+impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Country {
     #[inline]
     fn deserialize_token(d: &mut D, token: de::Token) -> Result<Country, E> {
         d.expect_from_primitive(token)
@@ -433,8 +433,8 @@ impl<D: de::Deserializer<E>, E> de::Deserializable<D, E> for Country {
 }
 
 #[deriving(Encodable, Decodable)]
-#[deriving_serializable]
-#[deriving_deserializable]
+#[deriving_serialize]
+#[deriving_deserialize]
 struct Log {
     timestamp: i64,
     zone_id: u32,

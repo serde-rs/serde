@@ -12,8 +12,8 @@ extern crate serde_macros;
 #[cfg(test)]
 extern crate serialize;
 
-pub use ser::{Serializer, Serializable};
-pub use de::{Deserializer, Deserializable};
+pub use ser::{Serializer, Serialize};
+pub use de::{Deserializer, Deserialize};
 
 pub mod de;
 pub mod ser;

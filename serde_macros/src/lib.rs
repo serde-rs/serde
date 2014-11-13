@@ -59,26 +59,26 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
-        token::intern("deriving_serializable"),
-        Decorator(box expand_deriving_serializable));
+        token::intern("deriving_serialize"),
+        Decorator(box expand_deriving_serialize));
 
     reg.register_syntax_extension(
-        token::intern("deriving_deserializable"),
-        Decorator(box expand_deriving_deserializable));
+        token::intern("deriving_deserialize"),
+        Decorator(box expand_deriving_deserialize));
 }
 
-fn expand_deriving_serializable(cx: &mut ExtCtxt,
-                                sp: Span,
-                                mitem: &MetaItem,
-                                item: &Item,
-                                push: |P<ast::Item>|) {
+fn expand_deriving_serialize(cx: &mut ExtCtxt,
+                             sp: Span,
+                             mitem: &MetaItem,
+                             item: &Item,
+                             push: |P<ast::Item>|) {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
 
     let trait_def = TraitDef {
         span: sp,
         attributes: vec!(),
-        path: Path::new_(vec!("serde", "ser", "Serializable"), None,
+        path: Path::new_(vec!("serde", "ser", "Serialize"), None,
                          vec!(box Literal(Path::new_local("__S")),
                               box Literal(Path::new_local("__E"))), true),
         additional_bounds: Vec::new(),
@@ -109,7 +109,7 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
                 ),
                 attributes: attrs,
                 combine_substructure: combine_substructure(|a, b, c| {
-                    serializable_substructure(a, b, c, item)
+                    serialize_substructure(a, b, c, item)
                 }),
             })
     };
@@ -117,11 +117,10 @@ fn expand_deriving_serializable(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, push)
 }
 
-fn serializable_substructure(cx: &ExtCtxt,
-                             span: Span,
-                             substr: &Substructure,
-                             item: &Item
-                             ) -> P<Expr> {
+fn serialize_substructure(cx: &ExtCtxt,
+                          span: Span,
+                          substr: &Substructure,
+                          item: &Item) -> P<Expr> {
     let serializer = substr.nonself_args[0].clone();
 
     match (&item.node, substr.fields) {
@@ -193,19 +192,19 @@ fn serializable_substructure(cx: &ExtCtxt,
             })
         }
 
-        _ => cx.bug("expected Struct or EnumMatching in deriving_serializable")
+        _ => cx.bug("expected Struct or EnumMatching in deriving_serialize")
     }
 }
 
-pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
-                                      span: Span,
-                                      mitem: &MetaItem,
-                                      item: &Item,
-                                      push: |P<Item>|) {
+pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
+                                   span: Span,
+                                   mitem: &MetaItem,
+                                   item: &Item,
+                                   push: |P<Item>|) {
     let trait_def = TraitDef {
         span: span,
         attributes: Vec::new(),
-        path: Path::new_(vec!("serde", "de", "Deserializable"), None,
+        path: Path::new_(vec!("serde", "de", "Deserialize"), None,
                          vec!(box Literal(Path::new_local("__D")),
                               box Literal(Path::new_local("__E"))), true),
         additional_bounds: Vec::new(),
@@ -241,7 +240,7 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
                 ),
                 attributes: Vec::new(),
                 combine_substructure: combine_substructure(|a, b, c| {
-                    deserializable_substructure(a, b, c)
+                    deserialize_substructure(a, b, c)
                 }),
             })
     };
@@ -249,8 +248,9 @@ pub fn expand_deriving_deserializable(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, push)
 }
 
-fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
-                               substr: &Substructure) -> P<Expr> {
+fn deserialize_substructure(cx: &mut ExtCtxt,
+                            span: Span,
+                            substr: &Substructure) -> P<Expr> {
     let deserializer = substr.nonself_args[0].clone();
     let token = substr.nonself_args[1].clone();
 
@@ -275,7 +275,7 @@ fn deserializable_substructure(cx: &mut ExtCtxt, span: Span,
                 deserializer,
                 token)
         }
-        _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserializable)")
+        _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserialize)")
     }
 }
 
@@ -372,7 +372,7 @@ fn deserialize_struct(
                 Some(_) => unreachable!(),
                 None => {
                     let _: ::serde::de::IgnoreTokens =
-                        try!(::serde::de::Deserializable::deserialize($deserializer));
+                        try!(::serde::de::Deserialize::deserialize($deserializer));
                 }
             }
             //try!($deserializer.ignore_field(token))
@@ -409,7 +409,7 @@ fn deserialize_enum(
     let arms: Vec<ast::Arm> = fields.iter()
         .enumerate()
         .map(|(i, &(name, span, ref parts))| {
-            let call = deserializable_static_fields(
+            let call = deserialize_static_fields(
                 cx,
                 span,
                 name,
@@ -441,7 +441,7 @@ fn deserialize_enum(
 /// Create a deserializer for a single enum variant/struct:
 /// - `outer_pat_ident` is the name of this enum variant/struct
 /// - `getarg` should retrieve the `uint`-th field with name `&str`.
-fn deserializable_static_fields(
+fn deserialize_static_fields(
     cx: &ExtCtxt,
     span: Span,
     outer_pat_ident: Ident,
