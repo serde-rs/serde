@@ -116,8 +116,7 @@ extern crate serde_macros;
 extern crate serde;
 
 use std::collections::TreeMap;
-use serde::json;
-use serde::json::ToJson;
+use serde::json::{ToJson, Value};
 
 pub struct MyStruct  {
     attr1: u8,
@@ -125,7 +124,7 @@ pub struct MyStruct  {
 }
 
 impl ToJson for MyStruct {
-    fn to_json( &self ) -> json::Value {
+    fn to_json( &self ) -> Value {
         let mut d = TreeMap::new();
         d.insert("attr1".to_string(), self.attr1.to_json());
         d.insert("attr2".to_string(), self.attr2.to_json());
@@ -134,13 +133,44 @@ impl ToJson for MyStruct {
 }
 
 fn main() {
-    let test2: MyStruct = MyStruct {attr1: 1, attr2:"test".to_string()};
-    let tjson: json::Value = test2.to_json();
-    let json_str: String = tjson.to_string();
+    let test = MyStruct {attr1: 1, attr2:"test".to_string()};
+    let json: Value = test.to_json();
+    let json_str: String = json.to_string();
 }
 ```
 
-To deserialize a JSON string using `Deserialize` trait :
+Or you can use the helper type `ObjectBuilder`:
+
+```rust
+#![feature(phase)]
+#[phase(plugin)]
+extern crate serde_macros;
+extern crate serde;
+
+use serde::json::{ObjectBuilder, ToJson, Value};
+
+pub struct MyStruct  {
+    attr1: u8,
+    attr2: String,
+}
+
+impl ToJson for MyStruct {
+    fn to_json( &self ) -> Value {
+        ObjectBuilder::new()
+            .insert("attr1", &self.attr1)
+            .insert("attr2", &self.attr2)
+            .unwrap()
+    }
+}
+
+fn main() {
+    let test = MyStruct {attr1: 1, attr2:"test".to_string()};
+    let json: Value = test.to_json();
+    let json_str: String = json.to_string();
+}
+```
+
+To deserialize a JSON string using `Deserialize` trait:
 
 ```rust
 #![feature(phase)]
@@ -220,7 +250,6 @@ Example of `ToJson` trait implementation for TestStruct1.
 extern crate serde_macros;
 extern crate serde;
 
-use std::collections::TreeMap;
 use serde::json::ToJson;
 use serde::json;
 use serde::Deserialize;
@@ -235,24 +264,24 @@ pub struct TestStruct1  {
 
 impl ToJson for TestStruct1 {
     fn to_json( &self ) -> json::Value {
-        let mut d = TreeMap::new();
-        d.insert("data_int".to_string(), self.data_int.to_json());
-        d.insert("data_str".to_string(), self.data_str.to_json());
-        d.insert("data_vector".to_string(), self.data_vector.to_json());
-        d.to_json()
+        json::builder::ObjectBuilder::new()
+            .insert("data_int", &self.data_int)
+            .insert("data_str", &self.data_str)
+            .insert("data_vector", &self.data_vector)
+            .unwrap()
     }
 }
 
 fn main() {
     // Serialization using our impl of to_json
 
-    let test2: TestStruct1 = TestStruct1 {
+    let test: TestStruct1 = TestStruct1 {
         data_int: 1,
         data_str: "toto".to_string(),
         data_vector: vec![2,3,4,5],
     };
-    let tjson: json::Value = test2.to_json();
-    let json_str: String = tjson.to_string().into_string();
+    let json: json::Value = test.to_json();
+    let json_str: String = json.to_string().into_string();
 
     // Deserialize like before.
 
@@ -280,7 +309,8 @@ use de;
 use ser::Serialize;
 use ser;
 
-pub use json::value::{Value, ToJson};
+pub use self::value::{Value, ToJson};
+pub use self::builder::{ListBuilder, ObjectBuilder};
 
 pub mod builder;
 pub mod value;
