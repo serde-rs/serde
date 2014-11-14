@@ -11,10 +11,10 @@
 use std::collections::TreeMap;
 use std::str::StrAllocating;
 
-use super::{Json, JsonObject, List, Object, ToJson};
+use json::value::{Value, List, Object, ToJson};
 
 pub struct ListBuilder {
-    list: Vec<Json>,
+    list: Vec<Value>,
 }
 
 impl ListBuilder {
@@ -22,7 +22,7 @@ impl ListBuilder {
         ListBuilder { list: Vec::new() }
     }
 
-    pub fn unwrap(self) -> Json {
+    pub fn unwrap(self) -> Value {
         List(self.list)
     }
 
@@ -44,7 +44,7 @@ impl ListBuilder {
 }
 
 pub struct ObjectBuilder {
-    object: JsonObject,
+    object: TreeMap<String, Value>,
 }
 
 impl ObjectBuilder {
@@ -52,7 +52,7 @@ impl ObjectBuilder {
         ObjectBuilder { object: TreeMap::new() }
     }
 
-    pub fn unwrap(self) -> Json {
+    pub fn unwrap(self) -> Value {
         Object(self.object)
     }
 
@@ -76,7 +76,8 @@ impl ObjectBuilder {
 #[cfg(test)]
 mod tests {
     use std::collections::TreeMap;
-    use json::{List, Integer, Object};
+
+    use json::value::{Integer, List, Object};
     use super::{ListBuilder, ObjectBuilder};
 
     #[test]
