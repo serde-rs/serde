@@ -639,3 +639,9 @@ impl<A:ToJson> ToJson for Option<A> {
         }
     }
 }
+
+impl<'a, T: ToJson> ToJson for &'a T {
+    fn to_json(&self) -> Value {
+        (*self).to_json()
+    }
+}

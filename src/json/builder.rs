@@ -56,9 +56,9 @@ impl ObjectBuilder {
         Object(self.object)
     }
 
-    pub fn insert<T: ToJson>(self, key: String, value: T) -> ObjectBuilder {
+    pub fn insert<K: StrAllocating, V: ToJson>(self, key: K, value: V) -> ObjectBuilder {
         let mut builder = self;
-        builder.object.insert(key, value.to_json());
+        builder.object.insert(key.into_string(), value.to_json());
         builder
     }
 
