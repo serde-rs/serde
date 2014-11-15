@@ -12,7 +12,6 @@ use ser;
 
 use super::PrettySerializer;
 use super::Serializer;
-use super::SerializeResult;
 use super::Error;
 use super::{
     MissingFieldError,
@@ -40,14 +39,14 @@ pub enum Value {
 
 impl Value {
     /// Serializes a json value into an io::writer.  Uses a single line.
-    pub fn to_writer<W: Writer>(&self, wr: W) -> SerializeResult {
+    pub fn to_writer<W: Writer>(&self, wr: W) -> IoResult<()> {
         let mut serializer = Serializer::new(wr);
         self.serialize(&mut serializer)
     }
 
     /// Serializes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
-    pub fn to_pretty_writer<W: Writer>(&self, wr: W) -> SerializeResult {
+    pub fn to_pretty_writer<W: Writer>(&self, wr: W) -> IoResult<()> {
         let mut serializer = PrettySerializer::new(wr);
         self.serialize(&mut serializer)
     }
