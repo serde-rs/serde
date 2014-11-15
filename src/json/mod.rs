@@ -292,17 +292,10 @@ fn main() {
 
 */
 
-use std::char;
 use std::error;
 use std::fmt;
 use std::io;
-use std::num;
-use std::str::ScalarValue;
-use std::str;
 use std::string;
-use std::vec::Vec;
-
-use de;
 
 pub use self::ser::{
     Serializer,
@@ -314,48 +307,41 @@ pub use self::ser::{
     to_pretty_vec,
     to_pretty_string,
 };
+pub use self::de::{
+    Parser,
+    from_str,
+};
 pub use self::value::{Value, ToJson};
 pub use self::builder::{ListBuilder, ObjectBuilder};
 
 pub mod builder;
-pub mod value;
+pub mod de;
 pub mod ser;
-
-
-/// The failed expectation of InvalidSyntax
-#[deriving(Clone, PartialEq, Show)]
-pub enum SyntaxExpectation {
-    ListCommaOrEnd,
-    ObjectCommaOrEnd,
-    SomeValue,
-    SomeIdent,
-    EnumMapStart,
-    EnumVariantString,
-    EnumToken,
-    EnumEndToken,
-    EnumEnd,
-}
-
-/// JSON deserializer expectations
-#[deriving(Clone, PartialEq, Show)]
-pub enum DeserializerExpectation {
-    ExpectTokens(Vec<de::TokenKind>),
-    ExpectName,
-    ExpectConversion,
-}
+pub mod value;
 
 /// The errors that can arise while parsing a JSON stream.
 #[deriving(Clone, PartialEq)]
 pub enum ErrorCode {
-    DeserializerError(de::Token, DeserializerExpectation),
+    ConversionError(super::de::Token),
     EOFWhileParsingList,
     EOFWhileParsingObject,
     EOFWhileParsingString,
     EOFWhileParsingValue,
     ExpectedColon,
+    ExpectedConversion,
+    ExpectedEnumEnd,
+    ExpectedEnumEndToken,
+    ExpectedEnumMapStart,
+    ExpectedEnumToken,
+    ExpectedEnumVariantString,
+    ExpectedListCommaOrEnd,
+    ExpectedName,
+    ExpectedObjectCommaOrEnd,
+    ExpectedSomeIdent,
+    ExpectedSomeValue,
+    ExpectedTokens(super::de::Token, &'static [super::de::TokenKind]),
     InvalidEscape,
     InvalidNumber,
-    InvalidSyntax(SyntaxExpectation),
     InvalidUnicodeCodePoint,
     KeyMustBeAString,
     LoneLeadingSurrogateInHexEscape,
@@ -364,6 +350,7 @@ pub enum ErrorCode {
     NotUtf8,
     TrailingCharacters,
     UnexpectedEndOfHexEscape,
+    UnexpectedName(super::de::Token),
     UnknownVariant,
     UnrecognizedHex,
 }
@@ -371,24 +358,35 @@ pub enum ErrorCode {
 impl fmt::Show for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            DeserializerError(ref token, ref expect) => write!(f,
-                "deserializer found {} when {}", token, expect),
+            ConversionError(ref token) => write!(f, "failed to convert {}", token),
             EOFWhileParsingList => "EOF While parsing list".fmt(f),
             EOFWhileParsingObject => "EOF While parsing object".fmt(f),
             EOFWhileParsingString => "EOF While parsing string".fmt(f),
             EOFWhileParsingValue => "EOF While parsing value".fmt(f),
             ExpectedColon => "expected `:`".fmt(f),
+            ExpectedConversion => "expected conversion".fmt(f),
+            ExpectedEnumEnd => "expected enum end".fmt(f),
+            ExpectedEnumEndToken => "expected enum map end".fmt(f),
+            ExpectedEnumMapStart => "expected enum map start".fmt(f),
+            ExpectedEnumToken => "expected enum token".fmt(f),
+            ExpectedEnumVariantString => "expected variant".fmt(f),
+            ExpectedListCommaOrEnd => "expected `,` or `]`".fmt(f),
+            ExpectedName => "expected name".fmt(f),
+            ExpectedObjectCommaOrEnd => "expected `,` or `}`".fmt(f),
+            ExpectedSomeIdent => "expected ident".fmt(f),
+            ExpectedSomeValue => "expected value".fmt(f),
+            ExpectedTokens(ref token, tokens) => write!(f, "expected {}, found {}", tokens, token),
             InvalidEscape => "invalid escape".fmt(f),
             InvalidNumber => "invalid number".fmt(f),
-            InvalidSyntax(expect) => write!(f, "invalid syntax, expected: {}", expect),
             InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
             KeyMustBeAString => "key must be a string".fmt(f),
             LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
-            MissingField(field) => write!(f, "missing field \"{}\"", field),
+            MissingField(ref field) => write!(f, "missing field \"{}\"", field),
             NotFourDigit => "invalid \\u escape (not four digits)".fmt(f),
             NotUtf8 => "contents not utf-8".fmt(f),
             TrailingCharacters => "trailing characters".fmt(f),
             UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
+            UnexpectedName(ref name) => write!(f, "unexpected name {}", name),
             UnknownVariant => "unknown variant".fmt(f),
             UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
         }
@@ -441,809 +439,6 @@ impl error::FromError<io::IoError> for Error {
     }
 }
 
-#[deriving(PartialEq, Show)]
-enum ParserState {
-    // Parse a value.
-    ParseValue,
-    // Parse a value or ']'.
-    ParseListStart,
-    // Parse ',' or ']' after an element in a list.
-    ParseListCommaOrEnd,
-    // Parse a key:value or an ']'.
-    ParseObjectStart,
-    // Parse ',' or ']' after an element in an object.
-    ParseObjectCommaOrEnd,
-    // Parse a key in an object.
-    //ParseObjectKey,
-    // Parse a value in an object.
-    ParseObjectValue,
-}
-
-/*
-/// A Stack represents the current position of the parser in the logical
-/// structure of the JSON stream.
-/// For example foo.bar[3].x
-pub struct Stack {
-    stack: Vec<InternalStackElement>,
-    str_buffer: Vec<u8>,
-}
-
-/// StackElements compose a Stack.
-/// For example, Key("foo"), Key("bar"), Index(3) and Key("x") are the
-/// StackElements compositing the stack that represents foo.bar[3].x
-#[deriving(Eq, Clone, Show)]
-pub enum StackElement<'l> {
-    Index(u32),
-    Key(&'l str),
-}
-
-// Internally, Key elements are stored as indices in a buffer to avoid
-// allocating a string for every member of an object.
-#[deriving(Eq, Clone, Show)]
-enum InternalStackElement {
-    InternalIndex(u32),
-    InternalKey(u16, u16), // start, size
-}
-
-impl Stack {
-    pub fn new() -> Stack {
-        Stack {
-            stack: Vec::new(),
-            str_buffer: Vec::new(),
-        }
-    }
-
-    /// Returns The number of elements in the Stack.
-    pub fn len(&self) -> uint { self.stack.len() }
-
-    /// Returns true if the stack is empty, equivalent to self.len() == 0.
-    pub fn is_empty(&self) -> bool { self.stack.len() == 0 }
-
-    /// Provides access to the StackElement at a given index.
-    /// lower indices are at the bottom of the stack while higher indices are
-    /// at the top.
-    pub fn get<'l>(&'l self, idx: uint) -> StackElement<'l> {
-        return match *self.stack.get(idx) {
-          InternalIndex(i) => { Index(i) }
-          InternalKey(start, size) => {
-            Key(str::from_utf8(self.str_buffer.slice(start as uint, (start+size) as uint)).unwrap())
-          }
-        }
-    }
-
-    /// Compares this stack with an array of StackElements.
-    pub fn is_equal_to(&self, rhs: &[StackElement]) -> bool {
-        if self.stack.len() != rhs.len() { return false; }
-        for i in range(0, rhs.len()) {
-            if self.get(i) != rhs[i] { return false; }
-        }
-        return true;
-    }
-
-    /// Returns true if the bottom-most elements of this stack are the same as
-    /// the ones passed as parameter.
-    pub fn starts_with(&self, rhs: &[StackElement]) -> bool {
-        if self.stack.len() < rhs.len() { return false; }
-        for i in range(0, rhs.len()) {
-            if self.get(i) != rhs[i] { return false; }
-        }
-        return true;
-    }
-
-    /// Returns true if the top-most elements of this stack are the same as
-    /// the ones passed as parameter.
-    pub fn ends_with(&self, rhs: &[StackElement]) -> bool {
-        if self.stack.len() < rhs.len() { return false; }
-        let offset = self.stack.len() - rhs.len();
-        for i in range(0, rhs.len()) {
-            if self.get(i + offset) != rhs[i] { return false; }
-        }
-        return true;
-    }
-
-    /// Returns the top-most element (if any).
-    pub fn top<'l>(&'l self) -> Option<StackElement<'l>> {
-        return match self.stack.last() {
-            None => None,
-            Some(&InternalIndex(i)) => Some(Index(i)),
-            Some(&InternalKey(start, size)) => {
-                Some(Key(str::from_utf8(
-                    self.str_buffer.slice(start as uint, (start+size) as uint)
-                ).unwrap()))
-            }
-        }
-    }
-
-    // Used by Parser to insert Key elements at the top of the stack.
-    fn push_key(&mut self, key: String) {
-        self.stack.push(InternalKey(self.str_buffer.len() as u16, key.len() as u16));
-        for c in key.as_bytes().iter() {
-            self.str_buffer.push(*c);
-        }
-    }
-
-    // Used by Parser to insert Index elements at the top of the stack.
-    fn push_index(&mut self, index: u32) {
-        self.stack.push(InternalIndex(index));
-    }
-
-    // Used by Parser to remove the top-most element of the stack.
-    fn pop(&mut self) {
-        assert!(!self.is_empty());
-        match *self.stack.last().unwrap() {
-            InternalKey(_, sz) => {
-                let new_size = self.str_buffer.len() - sz as uint;
-                unsafe {
-                    self.str_buffer.set_len(new_size);
-                }
-            }
-            InternalIndex(_) => {}
-        }
-        self.stack.pop();
-    }
-
-    // Used by Parser to test whether the top-most element is an index.
-    fn last_is_index(&self) -> bool {
-        if self.is_empty() { return false; }
-        return match *self.stack.last().unwrap() {
-            InternalIndex(_) => true,
-            _ => false,
-        }
-    }
-
-    // Used by Parser to increment the index of the top-most element.
-    fn bump_index(&mut self) {
-        let len = self.stack.len();
-        let idx = match *self.stack.last().unwrap() {
-          InternalIndex(i) => { i + 1 }
-          _ => { panic!(); }
-        };
-        *self.stack.get_mut(len - 1) = InternalIndex(idx);
-    }
-}
-*/
-
-/// A streaming JSON parser implemented as an iterator of JsonEvent, consuming
-/// an iterator of char.
-pub struct Parser<Iter> {
-    rdr: Iter,
-    ch: Option<u8>,
-    line: uint,
-    col: uint,
-    // A state machine is kept to make it possible to interupt and resume parsing.
-    state_stack: Vec<ParserState>,
-    buf: Vec<u8>,
-}
-
-impl<Iter: Iterator<u8>> Iterator<Result<de::Token, Error>> for Parser<Iter> {
-    #[inline]
-    fn next(&mut self) -> Option<Result<de::Token, Error>> {
-        let state = match self.state_stack.pop() {
-            Some(state) => state,
-            None => {
-                // If we have no state left, then we're expecting the structure
-                // to be done, so make sure there are no trailing characters.
-
-                self.parse_whitespace();
-
-                if self.eof() {
-                    return None;
-                } else {
-                    return Some(self.error(TrailingCharacters));
-                }
-            }
-        };
-
-        match state {
-            ParseValue => Some(self.parse_value()),
-            ParseListStart => Some(self.parse_list_start()),
-            ParseListCommaOrEnd => Some(self.parse_list_comma_or_end()),
-            ParseObjectStart => {
-                match self.parse_object_start() {
-                    Ok(Some(s)) => Some(Ok(de::String(s.to_string()))),
-                    Ok(None) => Some(Ok(de::End)),
-                    Err(err) => Some(Err(err)),
-                }
-            }
-            ParseObjectCommaOrEnd => {
-                match self.parse_object_comma_or_end() {
-                    Ok(Some(s)) => Some(Ok(de::String(s.to_string()))),
-                    Ok(None) => Some(Ok(de::End)),
-                    Err(err) => Some(Err(err)),
-                }
-            }
-            //ParseObjectKey => Some(self.parse_object_key()),
-            ParseObjectValue => Some(self.parse_object_value()),
-        }
-    }
-}
-
-impl<Iter: Iterator<u8>> Parser<Iter> {
-    /// Creates the JSON parser.
-    #[inline]
-    pub fn new(rdr: Iter) -> Parser<Iter> {
-        let mut p = Parser {
-            rdr: rdr,
-            ch: Some(b'\x00'),
-            line: 1,
-            col: 0,
-            state_stack: vec!(ParseValue),
-            buf: Vec::with_capacity(100),
-        };
-        p.bump();
-        return p;
-    }
-
-    #[inline(always)]
-    fn eof(&self) -> bool { self.ch.is_none() }
-
-    #[inline]
-    fn ch_or_null(&self) -> u8 { self.ch.unwrap_or(b'\x00') }
-
-    #[inline(always)]
-    fn bump(&mut self) {
-        self.ch = self.rdr.next();
-
-        if self.ch_is(b'\n') {
-            self.line += 1;
-            self.col = 1;
-        } else {
-            self.col += 1;
-        }
-    }
-
-    #[inline]
-    fn next_char(&mut self) -> Option<u8> {
-        self.bump();
-        self.ch
-    }
-
-    #[inline(always)]
-    fn ch_is(&self, c: u8) -> bool {
-        self.ch == Some(c)
-    }
-
-    #[inline]
-    fn error<T>(&self, reason: ErrorCode) -> Result<T, Error> {
-        Err(SyntaxError(reason, self.line, self.col))
-    }
-
-    #[inline]
-    fn parse_whitespace(&mut self) {
-        while self.ch_is(b' ') ||
-              self.ch_is(b'\n') ||
-              self.ch_is(b'\t') ||
-              self.ch_is(b'\r') { self.bump(); }
-    }
-
-    #[inline]
-    fn parse_number(&mut self) -> Result<de::Token, Error> {
-        let mut neg = 1;
-
-        if self.ch_is(b'-') {
-            self.bump();
-            neg = -1;
-        }
-
-        let res = try!(self.parse_integer());
-
-        if self.ch_is(b'.') || self.ch_is(b'e') || self.ch_is(b'E') {
-            let neg = neg as f64;
-            let mut res = res as f64;
-
-            if self.ch_is(b'.') {
-                res = try!(self.parse_decimal(res));
-            }
-
-            if self.ch_is(b'e') || self.ch_is(b'E') {
-                res = try!(self.parse_exponent(res));
-            }
-
-            Ok(de::F64(neg * res))
-        } else {
-            Ok(de::I64(neg * res))
-        }
-    }
-
-    #[inline]
-    fn parse_integer(&mut self) -> Result<i64, Error> {
-        let mut res = 0;
-
-        match self.ch_or_null() {
-            b'0' => {
-                self.bump();
-
-                // There can be only one leading '0'.
-                match self.ch_or_null() {
-                    b'0' ... b'9' => return self.error(InvalidNumber),
-                    _ => ()
-                }
-            },
-            b'1' ... b'9' => {
-                while !self.eof() {
-                    match self.ch_or_null() {
-                        c @ b'0' ... b'9' => {
-                            res *= 10;
-                            res += (c as i64) - ('0' as i64);
-                            self.bump();
-                        }
-                        _ => break,
-                    }
-                }
-            }
-            _ => return self.error(InvalidNumber),
-        }
-
-        Ok(res)
-    }
-
-    #[inline]
-    fn parse_decimal(&mut self, res: f64) -> Result<f64, Error> {
-        self.bump();
-
-        // Make sure a digit follows the decimal place.
-        match self.ch_or_null() {
-            b'0' ... b'9' => (),
-             _ => return self.error(InvalidNumber)
-        }
-
-        let mut res = res;
-        let mut dec = 1.0;
-        while !self.eof() {
-            match self.ch_or_null() {
-                c @ b'0' ... b'9' => {
-                    dec /= 10.0;
-                    res += (((c as int) - (b'0' as int)) as f64) * dec;
-                    self.bump();
-                }
-                _ => break,
-            }
-        }
-
-        Ok(res)
-    }
-
-    #[inline]
-    fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
-        self.bump();
-
-        let mut exp = 0u;
-        let mut neg_exp = false;
-
-        if self.ch_is(b'+') {
-            self.bump();
-        } else if self.ch_is(b'-') {
-            self.bump();
-            neg_exp = true;
-        }
-
-        // Make sure a digit follows the exponent place.
-        match self.ch_or_null() {
-            b'0' ... b'9' => (),
-            _ => return self.error(InvalidNumber)
-        }
-        while !self.eof() {
-            match self.ch_or_null() {
-                c @ b'0' ... b'9' => {
-                    exp *= 10;
-                    exp += (c as uint) - (b'0' as uint);
-
-                    self.bump();
-                }
-                _ => break
-            }
-        }
-
-        let exp: f64 = num::pow(10u as f64, exp);
-        if neg_exp {
-            res /= exp;
-        } else {
-            res *= exp;
-        }
-
-        Ok(res)
-    }
-
-    #[inline]
-    fn decode_hex_escape(&mut self) -> Result<u16, Error> {
-        let mut i = 0u;
-        let mut n = 0u16;
-        while i < 4u && !self.eof() {
-            self.bump();
-            n = match self.ch_or_null() {
-                c @ b'0' ... b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
-                b'a' | b'A' => n * 16_u16 + 10_u16,
-                b'b' | b'B' => n * 16_u16 + 11_u16,
-                b'c' | b'C' => n * 16_u16 + 12_u16,
-                b'd' | b'D' => n * 16_u16 + 13_u16,
-                b'e' | b'E' => n * 16_u16 + 14_u16,
-                b'f' | b'F' => n * 16_u16 + 15_u16,
-                _ => return self.error(InvalidEscape)
-            };
-
-            i += 1u;
-        }
-
-        // Error out if we didn't parse 4 digits.
-        if i != 4u {
-            return self.error(InvalidEscape);
-        }
-
-        Ok(n)
-    }
-
-    #[inline]
-    fn parse_string(&mut self) -> Result<&str, Error> {
-        self.buf.clear();
-
-        let mut escape = false;
-
-
-        loop {
-            let ch = match self.next_char() {
-                Some(ch) => ch,
-                None => { return self.error(EOFWhileParsingString); }
-            };
-
-            if escape {
-                match ch {
-                    b'"' => self.buf.push(b'"'),
-                    b'\\' => self.buf.push(b'\\'),
-                    b'/' => self.buf.push(b'/'),
-                    b'b' => self.buf.push(b'\x08'),
-                    b'f' => self.buf.push(b'\x0c'),
-                    b'n' => self.buf.push(b'\n'),
-                    b'r' => self.buf.push(b'\r'),
-                    b't' => self.buf.push(b'\t'),
-                    b'u' => {
-                        let c = match try!(self.decode_hex_escape()) {
-                            0xDC00 ... 0xDFFF => return self.error(LoneLeadingSurrogateInHexEscape),
-
-                            // Non-BMP characters are encoded as a sequence of
-                            // two hex escapes, representing UTF-16 surrogates.
-                            n1 @ 0xD800 ... 0xDBFF => {
-                                let c1 = self.next_char();
-                                let c2 = self.next_char();
-                                match (c1, c2) {
-                                    (Some(b'\\'), Some(b'u')) => (),
-                                    _ => return self.error(UnexpectedEndOfHexEscape),
-                                }
-
-                                let buf = [n1, try!(self.decode_hex_escape())];
-                                match str::utf16_items(buf.as_slice()).next() {
-                                    Some(ScalarValue(c)) => c,
-                                    _ => return self.error(LoneLeadingSurrogateInHexEscape),
-                                }
-                            }
-
-                            n => match char::from_u32(n as u32) {
-                                Some(c) => c,
-                                None => return self.error(InvalidUnicodeCodePoint),
-                            }
-                        };
-
-                        let mut buf = [0u8, .. 4];
-                        let len = c.encode_utf8(buf).unwrap_or(0);
-                        self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
-                    }
-                    _ => return self.error(InvalidEscape),
-                }
-                escape = false;
-            } else {
-                match ch {
-                    b'"' => {
-                        self.bump();
-                        return Ok(str::from_utf8(self.buf.as_slice()).unwrap());
-                    }
-                    b'\\' => {
-                        escape = true;
-                    }
-                    ch => {
-                        self.buf.push(ch);
-                    }
-                }
-            }
-        }
-    }
-
-    #[inline]
-    fn parse_list_start(&mut self) -> Result<de::Token, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b']') {
-            self.bump();
-            Ok(de::End)
-        } else {
-            self.state_stack.push(ParseListCommaOrEnd);
-            self.parse_value()
-        }
-    }
-
-    #[inline]
-    fn parse_list_comma_or_end(&mut self) -> Result<de::Token, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b',') {
-            self.bump();
-            self.state_stack.push(ParseListCommaOrEnd);
-            self.parse_value()
-        } else if self.ch_is(b']') {
-            self.bump();
-            Ok(de::End)
-        } else if self.eof() {
-            self.error_event(EOFWhileParsingList)
-        } else {
-            self.error_event(InvalidSyntax(ListCommaOrEnd))
-        }
-    }
-
-    #[inline]
-    fn parse_object_start(&mut self) -> Result<Option<&str>, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b'}') {
-            self.bump();
-            Ok(None)
-        } else {
-            Ok(Some(try!(self.parse_object_key())))
-        }
-    }
-
-    #[inline]
-    fn parse_object_comma_or_end(&mut self) -> Result<Option<&str>, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b',') {
-            self.bump();
-            Ok(Some(try!(self.parse_object_key())))
-        } else if self.ch_is(b'}') {
-            self.bump();
-            Ok(None)
-        } else if self.eof() {
-            self.error_event(EOFWhileParsingObject)
-        } else {
-            self.error_event(InvalidSyntax(ObjectCommaOrEnd))
-        }
-    }
-
-    #[inline]
-    fn parse_object_key(&mut self) -> Result<&str, Error> {
-        self.parse_whitespace();
-
-        if self.eof() {
-            return self.error_event(EOFWhileParsingString);
-        }
-
-        match self.ch_or_null() {
-            b'"' => {
-                self.state_stack.push(ParseObjectValue);
-
-                Ok(try!(self.parse_string()))
-            }
-            _ => self.error_event(KeyMustBeAString),
-        }
-    }
-
-    #[inline]
-    fn parse_object_value(&mut self) -> Result<de::Token, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b':') {
-            self.bump();
-            self.state_stack.push(ParseObjectCommaOrEnd);
-            self.parse_value()
-        } else if self.eof() {
-            self.error_event(EOFWhileParsingObject)
-        } else {
-            self.error_event(ExpectedColon)
-        }
-    }
-
-    #[inline]
-    fn parse_value(&mut self) -> Result<de::Token, Error> {
-        self.parse_whitespace();
-
-        if self.eof() {
-            return self.error_event(EOFWhileParsingValue);
-        }
-
-        match self.ch_or_null() {
-            b'n' => self.parse_ident(b"ull", de::Null),
-            b't' => self.parse_ident(b"rue", de::Bool(true)),
-            b'f' => self.parse_ident(b"alse", de::Bool(false)),
-            b'0' ... b'9' | b'-' => self.parse_number(),
-            b'"' => {
-                Ok(de::String(try!(self.parse_string()).to_string()))
-            }
-            b'[' => {
-                self.bump();
-                self.state_stack.push(ParseListStart);
-                Ok(de::SeqStart(0))
-            }
-            b'{' => {
-                self.bump();
-                self.state_stack.push(ParseObjectStart);
-                Ok(de::MapStart(0))
-            }
-            _ => {
-                self.error_event(InvalidSyntax(SomeValue))
-            }
-        }
-    }
-
-    #[inline]
-    fn parse_ident(&mut self, ident: &[u8], token: de::Token) -> Result<de::Token, Error> {
-        if ident.iter().all(|c| Some(*c) == self.next_char()) {
-            self.bump();
-            Ok(token)
-        } else {
-            self.error_event(InvalidSyntax(SomeIdent))
-        }
-    }
-
-    #[inline]
-    fn error_event<T>(&mut self, reason: ErrorCode) -> Result<T, Error> {
-        self.state_stack.clear();
-        Err(SyntaxError(reason, self.line, self.col))
-    }
-}
-
-impl<Iter: Iterator<u8>> de::Deserializer<Error> for Parser<Iter> {
-    fn end_of_stream_error(&mut self) -> Error {
-        SyntaxError(EOFWhileParsingValue, self.line, self.col)
-    }
-
-    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
-        SyntaxError(DeserializerError(token, ExpectTokens(expected.to_vec())), self.line, self.col)
-    }
-
-    fn unexpected_name_error(&mut self, token: de::Token) -> Error {
-        SyntaxError(DeserializerError(token, ExpectName), self.line, self.col)
-    }
-
-    fn conversion_error(&mut self, token: de::Token) -> Error {
-        SyntaxError(DeserializerError(token, ExpectConversion), self.line, self.col)
-    }
-
-    #[inline]
-    fn missing_field<
-        T: de::Deserialize<Parser<Iter>, Error>
-    >(&mut self, _field: &'static str) -> Result<T, Error> {
-        // JSON can represent `null` values as a missing value, so this isn't
-        // necessarily an error.
-        de::Deserialize::deserialize_token(self, de::Null)
-    }
-
-    // Special case treating options as a nullable value.
-    #[inline]
-    fn expect_option<
-        U: de::Deserialize<Parser<Iter>, Error>
-    >(&mut self, token: de::Token) -> Result<Option<U>, Error> {
-        match token {
-            de::Null => Ok(None),
-            token => {
-                let value: U = try!(de::Deserialize::deserialize_token(self, token));
-                Ok(Some(value))
-            }
-        }
-    }
-
-    // Special case treating enums as a `{"<variant-name>": [<fields>]}`.
-    #[inline]
-    fn expect_enum_start(&mut self,
-                         token: de::Token,
-                         _name: &str,
-                         variants: &[&str]) -> Result<uint, Error> {
-        match token {
-            de::MapStart(_) => { }
-            _ => { return self.error(InvalidSyntax(EnumMapStart)); }
-        };
-
-        // Enums only have one field in them, which is the variant name.
-        let variant = match try!(self.expect_token()) {
-            de::String(variant) => variant,
-            _ => { return self.error(InvalidSyntax(EnumVariantString)); }
-        };
-
-        // The variant's field is a list of the values.
-        match try!(self.expect_token()) {
-            de::SeqStart(_) => { }
-            _ => { return self.error(InvalidSyntax(EnumToken)); }
-        }
-
-        match variants.iter().position(|v| *v == variant.as_slice()) {
-            Some(idx) => Ok(idx),
-            None => self.error(UnknownVariant),
-        }
-    }
-
-    fn expect_enum_end(&mut self) -> Result<(), Error> {
-        // There will be one `End` for the list, and one for the object.
-        match try!(self.expect_token()) {
-            de::End => {
-                match try!(self.expect_token()) {
-                    de::End => Ok(()),
-                    _ => self.error(InvalidSyntax(EnumEndToken)),
-                }
-            }
-            _ => self.error(InvalidSyntax(EnumEnd)),
-        }
-    }
-
-    #[inline]
-    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), Error> {
-        match token {
-            de::MapStart(_) => Ok(()),
-            _ => Err(self.syntax_error(token, [de::MapStartKind])),
-        }
-    }
-
-    #[inline]
-    fn expect_struct_field_or_end(&mut self,
-                                  fields: &'static [&'static str]
-                                 ) -> Result<Option<Option<uint>>, Error> {
-        let result = match self.state_stack.pop() {
-            Some(ParseObjectStart) => {
-                try!(self.parse_object_start())
-            }
-            Some(ParseObjectCommaOrEnd) => {
-                try!(self.parse_object_comma_or_end())
-            }
-            _ => panic!("invalid internal state"),
-        };
-
-        let s = match result {
-            Some(s) => s,
-            None => { return Ok(None); }
-        };
-
-        Ok(Some(fields.iter().position(|field| *field == s.as_slice())))
-    }
-}
-
-/// Decodes a json value from an `Iterator<u8>`.
-pub fn from_iter<
-    Iter: Iterator<u8>,
-    T: de::Deserialize<Parser<Iter>, Error>
->(iter: Iter) -> Result<T, Error> {
-    let mut parser = Parser::new(iter);
-    let value = try!(de::Deserialize::deserialize(&mut parser));
-
-    // Make sure the whole stream has been consumed.
-    match parser.next() {
-        Some(Ok(_token)) => parser.error(TrailingCharacters),
-        Some(Err(err)) => Err(err),
-        None => Ok(value),
-    }
-}
-
-/// Decodes a json value from a string
-pub fn from_str<
-    'a,
-    T: de::Deserialize<Parser<str::Bytes<'a>>, Error>
->(s: &'a str) -> Result<T, Error> {
-    from_iter(s.bytes())
-}
-
-macro_rules! expect(
-    ($e:expr, Null) => ({
-        match $e {
-            Null => Ok(()),
-            other => Err(ExpectedError("Null".to_string(),
-                                       format!("{}", other)))
-        }
-    });
-    ($e:expr, $t:ident) => ({
-        match $e {
-            $t(v) => Ok(v),
-            other => {
-                Err(ExpectedError(stringify!($t).to_string(),
-                                  format!("{}", other)))
-            }
-        }
-    })
-)
-
 #[cfg(test)]
 mod tests {
     use std::fmt::Show;
@@ -1270,15 +465,14 @@ mod tests {
         EOFWhileParsingString,
         EOFWhileParsingValue,
         ExpectedColon,
+        ExpectedListCommaOrEnd,
+        ExpectedObjectCommaOrEnd,
+        ExpectedSomeIdent,
+        ExpectedSomeValue,
         InvalidNumber,
-        InvalidSyntax,
         KeyMustBeAString,
-        TrailingCharacters,
         SyntaxError,
-        SomeIdent,
-        SomeValue,
-        ObjectCommaOrEnd,
-        ListCommaOrEnd,
+        TrailingCharacters,
     };
     use de;
     use ser::{Serialize, Serializer};
@@ -1748,8 +942,8 @@ mod tests {
     #[test]
     fn test_parse_null() {
         test_parse_err::<()>([
-            ("n", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
-            ("nul", SyntaxError(InvalidSyntax(SomeIdent), 1, 4)),
+            ("n", SyntaxError(ExpectedSomeIdent, 1, 2)),
+            ("nul", SyntaxError(ExpectedSomeIdent, 1, 4)),
             ("nulla", SyntaxError(TrailingCharacters, 1, 5)),
         ]);
 
@@ -1768,10 +962,10 @@ mod tests {
     #[test]
     fn test_parse_bool() {
         test_parse_err::<bool>([
-            ("t", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
-            ("truz", SyntaxError(InvalidSyntax(SomeIdent), 1, 4)),
-            ("f", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
-            ("faz", SyntaxError(InvalidSyntax(SomeIdent), 1, 3)),
+            ("t", SyntaxError(ExpectedSomeIdent, 1, 2)),
+            ("truz", SyntaxError(ExpectedSomeIdent, 1, 4)),
+            ("f", SyntaxError(ExpectedSomeIdent, 1, 2)),
+            ("faz", SyntaxError(ExpectedSomeIdent, 1, 3)),
             ("truea", SyntaxError(TrailingCharacters, 1, 5)),
             ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
         ]);
@@ -1793,8 +987,8 @@ mod tests {
     #[test]
     fn test_parse_number_errors() {
         test_parse_err::<f64>([
-            ("+", SyntaxError(InvalidSyntax(SomeValue), 1, 1)),
-            (".", SyntaxError(InvalidSyntax(SomeValue), 1, 1)),
+            ("+", SyntaxError(ExpectedSomeValue, 1, 1)),
+            (".", SyntaxError(ExpectedSomeValue, 1, 1)),
             ("-", SyntaxError(InvalidNumber, 1, 2)),
             ("00", SyntaxError(InvalidNumber, 1, 2)),
             ("1.", SyntaxError(InvalidNumber, 1, 3)),
@@ -1882,8 +1076,8 @@ mod tests {
             ("[ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
             ("[1", SyntaxError(EOFWhileParsingList,  1, 3)),
             ("[1,", SyntaxError(EOFWhileParsingValue, 1, 4)),
-            ("[1,]", SyntaxError(InvalidSyntax(SomeValue), 1, 4)),
-            ("[1 2]", SyntaxError(InvalidSyntax(ListCommaOrEnd), 1, 4)),
+            ("[1,]", SyntaxError(ExpectedSomeValue, 1, 4)),
+            ("[1 2]", SyntaxError(ExpectedListCommaOrEnd, 1, 4)),
             ("[]a", SyntaxError(TrailingCharacters, 1, 3)),
         ]);
 
@@ -1947,7 +1141,7 @@ mod tests {
             ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
             ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
             ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
-            ("{\"a\":1 1", SyntaxError(InvalidSyntax(ObjectCommaOrEnd), 1, 8)),
+            ("{\"a\":1 1", SyntaxError(ExpectedObjectCommaOrEnd, 1, 8)),
             ("{\"a\":1,", SyntaxError(EOFWhileParsingString, 1, 8)),
             ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
         ]);

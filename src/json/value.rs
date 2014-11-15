@@ -14,14 +14,13 @@ use super::PrettySerializer;
 use super::Serializer;
 use super::Error;
 use super::{
-    MissingFieldError,
-    SyntaxError,
-    DeserializerError,
-    ExpectName,
-    ExpectConversion,
-    ExpectTokens,
+    ConversionError,
     EOFWhileParsingValue,
     ExpectedError,
+    ExpectedTokens,
+    MissingFieldError,
+    SyntaxError,
+    UnexpectedName,
     UnknownVariantError,
 };
 
@@ -303,7 +302,12 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
                 object.insert(name.to_string(), List(fields));
                 Ok(Object(object))
             }
-            de::End => Err(d.syntax_error(de::End, [de::EndKind])),
+            de::End => {
+                static EXPECTED_TOKENS: &'static [de::TokenKind] = [
+                    de::EndKind,
+                ];
+                Err(d.syntax_error(de::End, EXPECTED_TOKENS))
+            }
         }
     }
 }
@@ -392,16 +396,18 @@ impl de::Deserializer<Error> for Deserializer {
         SyntaxError(EOFWhileParsingValue, 0, 0)
     }
 
-    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
-        SyntaxError(DeserializerError(token, ExpectTokens(expected.to_vec())), 0, 0)
+    fn syntax_error(&mut self,
+                    token: de::Token,
+                    expected: &'static [de::TokenKind]) -> Error {
+        SyntaxError(ExpectedTokens(token, expected), 0, 0)
     }
 
     fn unexpected_name_error(&mut self, token: de::Token) -> Error {
-        SyntaxError(DeserializerError(token, ExpectName), 0, 0)
+        SyntaxError(UnexpectedName(token), 0, 0)
     }
 
     fn conversion_error(&mut self, token: de::Token) -> Error {
-        SyntaxError(DeserializerError(token, ExpectConversion), 0, 0)
+        SyntaxError(ConversionError(token), 0, 0)
     }
 
     #[inline]
@@ -485,7 +491,12 @@ impl de::Deserializer<Error> for Deserializer {
     fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), Error> {
         match token {
             de::MapStart(_) => Ok(()),
-            _ => Err(self.syntax_error(token, [de::MapStartKind])),
+            _ => {
+                static EXPECTED_TOKENS: &'static [de::TokenKind] = [
+                    de::MapStartKind
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 }

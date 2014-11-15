@@ -107,7 +107,7 @@ pub enum TokenKind {
     EndKind,
 }
 
-static PRIMITIVE_TOKEN_KINDS: [TokenKind, .. 12] = [
+static PRIMITIVE_TOKEN_KINDS: &'static [TokenKind] = [
     IntKind,
     I8Kind,
     I16Kind,
@@ -182,7 +182,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn end_of_stream_error(&mut self) -> E;
 
     /// Called when a `Deserializer` was unable to properly parse the stream.
-    fn syntax_error(&mut self, token: Token, expected: &[TokenKind]) -> E;
+    fn syntax_error(&mut self, token: Token, expected: &'static [TokenKind]) -> E;
 
     /// Called when a named structure or enum got a name that it didn't expect.
     fn unexpected_name_error(&mut self, token: Token) -> E;
@@ -218,10 +218,22 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             TupleStart(_) | SeqStart(_) => {
                 match try!(self.expect_token()) {
                     End => Ok(()),
-                    token => Err(self.syntax_error(token, [EndKind])),
+                    token => {
+                        static EXPECTED_TOKENS: &'static [TokenKind] = [
+                            EndKind,
+                        ];
+                        Err(self.syntax_error(token, EXPECTED_TOKENS))
+                    }
                 }
             }
-            token => Err(self.syntax_error(token, [NullKind, TupleStartKind, SeqStartKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    NullKind,
+                    TupleStartKind,
+                    SeqStartKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -229,7 +241,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_bool(&mut self, token: Token) -> Result<bool, E> {
         match token {
             Bool(value) => Ok(value),
-            token => Err(self.syntax_error(token, [BoolKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    BoolKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -281,7 +298,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
             String(ref value) if value.as_slice().char_len() == 1 => {
                 Ok(value.as_slice().char_at(0))
             }
-            token => Err(self.syntax_error(token, [CharKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    CharKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -313,7 +335,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 let value: T = try!(Deserialize::deserialize(self));
                 Ok(Some(value))
             }
-            token => Err(self.syntax_error(token, [OptionKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    OptionKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -322,7 +349,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match token {
             TupleStart(len) => Ok(len),
             SeqStart(len) => Ok(len),
-            token => Err(self.syntax_error(token, [TupleStartKind, SeqStartKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    TupleStartKind,
+                    SeqStartKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -337,7 +370,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_tuple_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            token => Err(self.syntax_error(token, [EndKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    EndKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -351,7 +389,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                     Err(self.unexpected_name_error(token))
                 }
             }
-            _ => Err(self.syntax_error(token, [StructStartKind])),
+            _ => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    StructStartKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -386,7 +429,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_struct_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            token => Err(self.syntax_error(token, [EndKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    EndKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -403,7 +451,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                     Err(self.unexpected_name_error(token))
                 }
             }
-            token => Err(self.syntax_error(token, [EnumStartKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    EnumStartKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -418,7 +471,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_enum_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
             End => Ok(()),
-            token => Err(self.syntax_error(token, [EndKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    EndKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -427,7 +485,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         match token {
             TupleStart(len) => Ok(len),
             SeqStart(len) => Ok(len),
-            token => Err(self.syntax_error(token, [TupleStartKind, SeqStartKind])),
+            token => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    TupleStartKind,
+                    SeqStartKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -470,7 +534,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
             MapStart(len) => Ok(len),
-            _ => Err(self.syntax_error(token, [MapStartKind])),
+            _ => {
+                static EXPECTED_TOKENS: &'static [TokenKind] = [
+                    MapStartKind,
+                ];
+                Err(self.syntax_error(token, EXPECTED_TOKENS))
+            }
         }
     }
 
@@ -806,7 +875,14 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
                         Str(_) | String(_) => {
                             let _: IgnoreTokens = try!(Deserialize::deserialize(d));
                         }
-                        _token => { return Err(d.syntax_error(token, [EndKind, StrKind, StringKind])); }
+                        _token => {
+                            static EXPECTED_TOKENS: &'static [TokenKind] = [
+                                EndKind,
+                                StrKind,
+                                StringKind,
+                            ];
+                            return Err(d.syntax_error(token, EXPECTED_TOKENS));
+                        }
                     }
                 }
             }
@@ -944,7 +1020,12 @@ impl GatherTokens {
                     try!(self.gather(d))
                 }
                 token => {
-                    return Err(d.syntax_error(token, [EndKind, StrKind, StringKind]));
+                    static EXPECTED_TOKENS: &'static [TokenKind] = [
+                        EndKind,
+                        StrKind,
+                        StringKind,
+                    ];
+                    return Err(d.syntax_error(token, EXPECTED_TOKENS));
                 }
             }
         }
