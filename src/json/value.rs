@@ -309,32 +309,32 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
     }
 }
 
-enum JsonDeserializerState {
-    JsonDeserializerValueState(Value),
-    JsonDeserializerListState(vec::MoveItems<Value>),
-    JsonDeserializerObjectState(tree_map::MoveEntries<string::String, Value>),
-    JsonDeserializerEndState,
+enum DeserializerState {
+    DeserializerValueState(Value),
+    DeserializerListState(vec::MoveItems<Value>),
+    DeserializerObjectState(tree_map::MoveEntries<string::String, Value>),
+    DeserializerEndState,
 }
 
-pub struct JsonDeserializer {
-    stack: Vec<JsonDeserializerState>,
+pub struct Deserializer {
+    stack: Vec<DeserializerState>,
 }
 
-impl JsonDeserializer {
+impl Deserializer {
     /// Creates a new deserializer instance for deserializing the specified JSON value.
-    pub fn new(json: Value) -> JsonDeserializer {
-        JsonDeserializer {
-            stack: vec!(JsonDeserializerValueState(json)),
+    pub fn new(json: Value) -> Deserializer {
+        Deserializer {
+            stack: vec!(DeserializerValueState(json)),
         }
     }
 }
 
-impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
+impl Iterator<Result<de::Token, ParserError>> for Deserializer {
     #[inline]
     fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
         loop {
             match self.stack.pop() {
-                Some(JsonDeserializerValueState(value)) => {
+                Some(DeserializerValueState(value)) => {
                     let token = match value {
                         Null => de::Null,
                         Boolean(x) => de::Bool(x),
@@ -343,23 +343,23 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
                         String(x) => de::String(x),
                         List(x) => {
                             let len = x.len();
-                            self.stack.push(JsonDeserializerListState(x.into_iter()));
+                            self.stack.push(DeserializerListState(x.into_iter()));
                             de::SeqStart(len)
                         }
                         Object(x) => {
                             let len = x.len();
-                            self.stack.push(JsonDeserializerObjectState(x.into_iter()));
+                            self.stack.push(DeserializerObjectState(x.into_iter()));
                             de::MapStart(len)
                         }
                     };
 
                     return Some(Ok(token));
                 }
-                Some(JsonDeserializerListState(mut iter)) => {
+                Some(DeserializerListState(mut iter)) => {
                     match iter.next() {
                         Some(value) => {
-                            self.stack.push(JsonDeserializerListState(iter));
-                            self.stack.push(JsonDeserializerValueState(value));
+                            self.stack.push(DeserializerListState(iter));
+                            self.stack.push(DeserializerValueState(value));
                             // loop around.
                         }
                         None => {
@@ -367,11 +367,11 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
                         }
                     }
                 }
-                Some(JsonDeserializerObjectState(mut iter)) => {
+                Some(DeserializerObjectState(mut iter)) => {
                     match iter.next() {
                         Some((key, value)) => {
-                            self.stack.push(JsonDeserializerObjectState(iter));
-                            self.stack.push(JsonDeserializerValueState(value));
+                            self.stack.push(DeserializerObjectState(iter));
+                            self.stack.push(DeserializerValueState(value));
                             return Some(Ok(de::String(key)));
                         }
                         None => {
@@ -379,7 +379,7 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
                         }
                     }
                 }
-                Some(JsonDeserializerEndState) => {
+                Some(DeserializerEndState) => {
                     return Some(Ok(de::End));
                 }
                 None => { return None; }
@@ -388,7 +388,7 @@ impl Iterator<Result<de::Token, ParserError>> for JsonDeserializer {
     }
 }
 
-impl de::Deserializer<ParserError> for JsonDeserializer {
+impl de::Deserializer<ParserError> for Deserializer {
     fn end_of_stream_error(&mut self) -> ParserError {
         SyntaxError(EOFWhileParsingValue, 0, 0)
     }
@@ -407,7 +407,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 
     #[inline]
     fn missing_field<
-        T: de::Deserialize<JsonDeserializer, ParserError>
+        T: de::Deserialize<Deserializer, ParserError>
     >(&mut self, _field: &'static str) -> Result<T, ParserError> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
@@ -417,7 +417,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserialize<JsonDeserializer, ParserError>
+        U: de::Deserialize<Deserializer, ParserError>
     >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
         match token {
             de::Null => Ok(None),
@@ -442,7 +442,7 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
                 };
 
                 let mut iter = match state {
-                    JsonDeserializerObjectState(iter) => iter,
+                    DeserializerObjectState(iter) => iter,
                     _ => { panic!("state machine error, expected an object"); }
                 };
 
@@ -462,10 +462,10 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
                     None => { }
                 }
 
-                self.stack.push(JsonDeserializerEndState);
+                self.stack.push(DeserializerEndState);
 
                 for field in fields.into_iter().rev() {
-                    self.stack.push(JsonDeserializerValueState(field));
+                    self.stack.push(DeserializerValueState(field));
                 }
 
                 variant
@@ -493,9 +493,9 @@ impl de::Deserializer<ParserError> for JsonDeserializer {
 
 /// Decodes a json value from a `Value`.
 pub fn from_json<
-    T: de::Deserialize<JsonDeserializer, ParserError>
+    T: de::Deserialize<Deserializer, ParserError>
 >(json: Value) -> Result<T, ParserError> {
-    let mut d = JsonDeserializer::new(json);
+    let mut d = Deserializer::new(json);
     de::Deserialize::deserialize(&mut d)
 }
 

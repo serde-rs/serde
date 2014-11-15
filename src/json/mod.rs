@@ -1863,7 +1863,8 @@ mod tests {
         Object,
     };
     use super::{Parser, ParserError, from_str};
-    use super::value::{JsonDeserializer, ToJson, from_json};
+    use super::value;
+    use super::value::{ToJson, from_json};
     use super::{
         EOFWhileParsingList,
         EOFWhileParsingObject,
@@ -2333,7 +2334,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserialize<JsonDeserializer, ParserError>
+        T: PartialEq + Show + ToJson + de::Deserialize<value::Deserializer, ParserError>
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();
