@@ -293,6 +293,7 @@ fn main() {
 */
 
 use std::char;
+use std::error;
 use std::f32;
 use std::f64;
 use std::fmt;
@@ -361,29 +362,6 @@ pub enum ErrorCode {
     UnrecognizedHex,
 }
 
-#[deriving(Clone, PartialEq, Show)]
-pub enum ParserError {
-    /// msg, line, col
-    SyntaxError(ErrorCode, uint, uint),
-    IoError(io::IoErrorKind, &'static str),
-    ExpectedError(string::String, string::String),
-    MissingFieldError(string::String),
-    UnknownVariantError(string::String),
-}
-
-// Builder and Parser have the same errors.
-pub type BuilderError = ParserError;
-
-/*
-#[deriving(Clone, Eq, Show)]
-pub enum DecoderError {
-    ParseError(ParserError),
-    ExpectedError(String, String),
-    MissingFieldError(String),
-    UnknownVariantError(String),
-}
-*/
-
 impl fmt::Show for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -411,11 +389,62 @@ impl fmt::Show for ErrorCode {
     }
 }
 
+#[deriving(Clone, PartialEq, Show)]
+pub enum Error {
+    /// msg, line, col
+    SyntaxError(ErrorCode, uint, uint),
+    IoError(io::IoError),
+    ExpectedError(string::String, string::String),
+    MissingFieldError(string::String),
+    UnknownVariantError(string::String),
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            SyntaxError(..) => "syntax error",
+            IoError(ref error) => error.description(),
+            ExpectedError(ref expected, _) => expected.as_slice(),
+            MissingFieldError(_) => "missing field",
+            UnknownVariantError(_) => "unknown variant",
+        }
+    }
+
+    fn detail(&self) -> Option<String> {
+        match *self {
+            SyntaxError(ref code, line, col) => {
+                Some(format!("{} at line {} column {}", code, line, col))
+            }
+            IoError(ref error) => error.detail(),
+            ExpectedError(ref expected, ref found) => {
+                Some(format!("expected {}, found {}", expected, found))
+            }
+            MissingFieldError(ref field) => {
+                Some(format!("missing field {}", field))
+            }
+            UnknownVariantError(ref variant) => {
+                Some(format!("unknown variant {}", variant))
+            }
+        }
+    }
+}
+
+impl error::FromError<io::IoError> for Error {
+    fn from_error(error: io::IoError) -> Error {
+        IoError(error)
+    }
+}
+
 /*
-fn io_error_to_error(io: io::IoError) -> ParserError {
-    IoError(io.kind, io.desc)
+#[deriving(Clone, Eq, Show)]
+pub enum DecoderError {
+    ParseError(Error),
+    ExpectedError(String, String),
+    MissingFieldError(String),
+    UnknownVariantError(String),
 }
 */
+
 
 pub type SerializeResult = io::IoResult<()>;
 
@@ -1038,7 +1067,7 @@ pub enum JsonEvent {
     NumberValue(f64),
     StringValue(String),
     NullValue,
-    Error(ParserError),
+    Error(Error),
 }
 */
 
@@ -1216,9 +1245,9 @@ pub struct Parser<Iter> {
     buf: Vec<u8>,
 }
 
-impl<Iter: Iterator<u8>> Iterator<Result<de::Token, ParserError>> for Parser<Iter> {
+impl<Iter: Iterator<u8>> Iterator<Result<de::Token, Error>> for Parser<Iter> {
     #[inline]
-    fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
+    fn next(&mut self) -> Option<Result<de::Token, Error>> {
         let state = match self.state_stack.pop() {
             Some(state) => state,
             None => {
@@ -1305,7 +1334,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn error<T>(&self, reason: ErrorCode) -> Result<T, ParserError> {
+    fn error<T>(&self, reason: ErrorCode) -> Result<T, Error> {
         Err(SyntaxError(reason, self.line, self.col))
     }
 
@@ -1318,7 +1347,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_number(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_number(&mut self) -> Result<de::Token, Error> {
         let mut neg = 1;
 
         if self.ch_is(b'-') {
@@ -1347,7 +1376,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_integer(&mut self) -> Result<i64, ParserError> {
+    fn parse_integer(&mut self) -> Result<i64, Error> {
         let mut res = 0;
 
         match self.ch_or_null() {
@@ -1379,7 +1408,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_decimal(&mut self, res: f64) -> Result<f64, ParserError> {
+    fn parse_decimal(&mut self, res: f64) -> Result<f64, Error> {
         self.bump();
 
         // Make sure a digit follows the decimal place.
@@ -1405,7 +1434,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_exponent(&mut self, mut res: f64) -> Result<f64, ParserError> {
+    fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
         self.bump();
 
         let mut exp = 0u;
@@ -1446,7 +1475,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn decode_hex_escape(&mut self) -> Result<u16, ParserError> {
+    fn decode_hex_escape(&mut self) -> Result<u16, Error> {
         let mut i = 0u;
         let mut n = 0u16;
         while i < 4u && !self.eof() {
@@ -1474,7 +1503,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_string(&mut self) -> Result<&str, ParserError> {
+    fn parse_string(&mut self) -> Result<&str, Error> {
         self.buf.clear();
 
         let mut escape = false;
@@ -1548,7 +1577,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_list_start(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_list_start(&mut self) -> Result<de::Token, Error> {
         self.parse_whitespace();
 
         if self.ch_is(b']') {
@@ -1561,7 +1590,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_list_comma_or_end(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_list_comma_or_end(&mut self) -> Result<de::Token, Error> {
         self.parse_whitespace();
 
         if self.ch_is(b',') {
@@ -1579,7 +1608,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_object_start(&mut self) -> Result<Option<&str>, ParserError> {
+    fn parse_object_start(&mut self) -> Result<Option<&str>, Error> {
         self.parse_whitespace();
 
         if self.ch_is(b'}') {
@@ -1591,7 +1620,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_object_comma_or_end(&mut self) -> Result<Option<&str>, ParserError> {
+    fn parse_object_comma_or_end(&mut self) -> Result<Option<&str>, Error> {
         self.parse_whitespace();
 
         if self.ch_is(b',') {
@@ -1608,7 +1637,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_object_key(&mut self) -> Result<&str, ParserError> {
+    fn parse_object_key(&mut self) -> Result<&str, Error> {
         self.parse_whitespace();
 
         if self.eof() {
@@ -1626,7 +1655,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_object_value(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_object_value(&mut self) -> Result<de::Token, Error> {
         self.parse_whitespace();
 
         if self.ch_is(b':') {
@@ -1641,7 +1670,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_value(&mut self) -> Result<de::Token, ParserError> {
+    fn parse_value(&mut self) -> Result<de::Token, Error> {
         self.parse_whitespace();
 
         if self.eof() {
@@ -1673,7 +1702,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn parse_ident(&mut self, ident: &[u8], token: de::Token) -> Result<de::Token, ParserError> {
+    fn parse_ident(&mut self, ident: &[u8], token: de::Token) -> Result<de::Token, Error> {
         if ident.iter().all(|c| Some(*c) == self.next_char()) {
             self.bump();
             Ok(token)
@@ -1683,33 +1712,33 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 
     #[inline]
-    fn error_event<T>(&mut self, reason: ErrorCode) -> Result<T, ParserError> {
+    fn error_event<T>(&mut self, reason: ErrorCode) -> Result<T, Error> {
         self.state_stack.clear();
         Err(SyntaxError(reason, self.line, self.col))
     }
 }
 
-impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
-    fn end_of_stream_error(&mut self) -> ParserError {
+impl<Iter: Iterator<u8>> de::Deserializer<Error> for Parser<Iter> {
+    fn end_of_stream_error(&mut self) -> Error {
         SyntaxError(EOFWhileParsingValue, self.line, self.col)
     }
 
-    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> ParserError {
+    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
         SyntaxError(DeserializerError(token, ExpectTokens(expected.to_vec())), self.line, self.col)
     }
 
-    fn unexpected_name_error(&mut self, token: de::Token) -> ParserError {
+    fn unexpected_name_error(&mut self, token: de::Token) -> Error {
         SyntaxError(DeserializerError(token, ExpectName), self.line, self.col)
     }
 
-    fn conversion_error(&mut self, token: de::Token) -> ParserError {
+    fn conversion_error(&mut self, token: de::Token) -> Error {
         SyntaxError(DeserializerError(token, ExpectConversion), self.line, self.col)
     }
 
     #[inline]
     fn missing_field<
-        T: de::Deserialize<Parser<Iter>, ParserError>
-    >(&mut self, _field: &'static str) -> Result<T, ParserError> {
+        T: de::Deserialize<Parser<Iter>, Error>
+    >(&mut self, _field: &'static str) -> Result<T, Error> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
         de::Deserialize::deserialize_token(self, de::Null)
@@ -1718,8 +1747,8 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserialize<Parser<Iter>, ParserError>
-    >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
+        U: de::Deserialize<Parser<Iter>, Error>
+    >(&mut self, token: de::Token) -> Result<Option<U>, Error> {
         match token {
             de::Null => Ok(None),
             token => {
@@ -1734,7 +1763,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
     fn expect_enum_start(&mut self,
                          token: de::Token,
                          _name: &str,
-                         variants: &[&str]) -> Result<uint, ParserError> {
+                         variants: &[&str]) -> Result<uint, Error> {
         match token {
             de::MapStart(_) => { }
             _ => { return self.error(InvalidSyntax(EnumMapStart)); }
@@ -1758,7 +1787,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
         }
     }
 
-    fn expect_enum_end(&mut self) -> Result<(), ParserError> {
+    fn expect_enum_end(&mut self) -> Result<(), Error> {
         // There will be one `End` for the list, and one for the object.
         match try!(self.expect_token()) {
             de::End => {
@@ -1772,7 +1801,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
     }
 
     #[inline]
-    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), ParserError> {
+    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), Error> {
         match token {
             de::MapStart(_) => Ok(()),
             _ => Err(self.syntax_error(token, [de::MapStartKind])),
@@ -1782,7 +1811,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
     #[inline]
     fn expect_struct_field_or_end(&mut self,
                                   fields: &'static [&'static str]
-                                 ) -> Result<Option<Option<uint>>, ParserError> {
+                                 ) -> Result<Option<Option<uint>>, Error> {
         let result = match self.state_stack.pop() {
             Some(ParseObjectStart) => {
                 try!(self.parse_object_start())
@@ -1805,8 +1834,8 @@ impl<Iter: Iterator<u8>> de::Deserializer<ParserError> for Parser<Iter> {
 /// Decodes a json value from an `Iterator<u8>`.
 pub fn from_iter<
     Iter: Iterator<u8>,
-    T: de::Deserialize<Parser<Iter>, ParserError>
->(iter: Iter) -> Result<T, ParserError> {
+    T: de::Deserialize<Parser<Iter>, Error>
+>(iter: Iter) -> Result<T, Error> {
     let mut parser = Parser::new(iter);
     let value = try!(de::Deserialize::deserialize(&mut parser));
 
@@ -1821,8 +1850,8 @@ pub fn from_iter<
 /// Decodes a json value from a string
 pub fn from_str<
     'a,
-    T: de::Deserialize<Parser<str::Bytes<'a>>, ParserError>
->(s: &'a str) -> Result<T, BuilderError> {
+    T: de::Deserialize<Parser<str::Bytes<'a>>, Error>
+>(s: &'a str) -> Result<T, Error> {
     from_iter(s.bytes())
 }
 
@@ -1862,7 +1891,7 @@ mod tests {
         List,
         Object,
     };
-    use super::{Parser, ParserError, from_str};
+    use super::{Parser, Error, from_str};
     use super::value;
     use super::value::{ToJson, from_json};
     use super::{
@@ -2312,17 +2341,17 @@ mod tests {
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
-        T: Show + de::Deserialize<Parser<str::Bytes<'a>>, ParserError>
-    >(errors: &[(&'a str, ParserError)]) {
+        T: Show + de::Deserialize<Parser<str::Bytes<'a>>, Error>
+    >(errors: &[(&'a str, Error)]) {
         for &(s, ref err) in errors.iter() {
-            let v: Result<T, ParserError> = from_str(s);
+            let v: Result<T, Error> = from_str(s);
             assert_eq!(v.unwrap_err(), *err);
         }
     }
 
     fn test_parse_ok<
         'a,
-        T: PartialEq + Show + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, ParserError>
+        T: PartialEq + Show + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, T)]) {
         for &(s, ref value) in errors.iter() {
             let v: T = from_str(s).unwrap();
@@ -2334,7 +2363,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserialize<value::Deserializer, ParserError>
+        T: PartialEq + Show + ToJson + de::Deserialize<value::Deserializer, Error>
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();

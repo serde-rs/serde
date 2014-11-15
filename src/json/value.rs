@@ -13,7 +13,7 @@ use ser;
 use super::PrettySerializer;
 use super::Serializer;
 use super::SerializeResult;
-use super::ParserError;
+use super::Error;
 use super::{
     MissingFieldError,
     SyntaxError,
@@ -329,9 +329,9 @@ impl Deserializer {
     }
 }
 
-impl Iterator<Result<de::Token, ParserError>> for Deserializer {
+impl Iterator<Result<de::Token, Error>> for Deserializer {
     #[inline]
-    fn next(&mut self) -> Option<Result<de::Token, ParserError>> {
+    fn next(&mut self) -> Option<Result<de::Token, Error>> {
         loop {
             match self.stack.pop() {
                 Some(DeserializerValueState(value)) => {
@@ -388,27 +388,27 @@ impl Iterator<Result<de::Token, ParserError>> for Deserializer {
     }
 }
 
-impl de::Deserializer<ParserError> for Deserializer {
-    fn end_of_stream_error(&mut self) -> ParserError {
+impl de::Deserializer<Error> for Deserializer {
+    fn end_of_stream_error(&mut self) -> Error {
         SyntaxError(EOFWhileParsingValue, 0, 0)
     }
 
-    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> ParserError {
+    fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
         SyntaxError(DeserializerError(token, ExpectTokens(expected.to_vec())), 0, 0)
     }
 
-    fn unexpected_name_error(&mut self, token: de::Token) -> ParserError {
+    fn unexpected_name_error(&mut self, token: de::Token) -> Error {
         SyntaxError(DeserializerError(token, ExpectName), 0, 0)
     }
 
-    fn conversion_error(&mut self, token: de::Token) -> ParserError {
+    fn conversion_error(&mut self, token: de::Token) -> Error {
         SyntaxError(DeserializerError(token, ExpectConversion), 0, 0)
     }
 
     #[inline]
     fn missing_field<
-        T: de::Deserialize<Deserializer, ParserError>
-    >(&mut self, _field: &'static str) -> Result<T, ParserError> {
+        T: de::Deserialize<Deserializer, Error>
+    >(&mut self, _field: &'static str) -> Result<T, Error> {
         // JSON can represent `null` values as a missing value, so this isn't
         // necessarily an error.
         de::Deserialize::deserialize_token(self, de::Null)
@@ -417,8 +417,8 @@ impl de::Deserializer<ParserError> for Deserializer {
     // Special case treating options as a nullable value.
     #[inline]
     fn expect_option<
-        U: de::Deserialize<Deserializer, ParserError>
-    >(&mut self, token: de::Token) -> Result<Option<U>, ParserError> {
+        U: de::Deserialize<Deserializer, Error>
+    >(&mut self, token: de::Token) -> Result<Option<U>, Error> {
         match token {
             de::Null => Ok(None),
             token => {
@@ -433,7 +433,7 @@ impl de::Deserializer<ParserError> for Deserializer {
     fn expect_enum_start(&mut self,
                          token: de::Token,
                          _name: &str,
-                         variants: &[&str]) -> Result<uint, ParserError> {
+                         variants: &[&str]) -> Result<uint, Error> {
         let variant = match token {
             de::MapStart(_) => {
                 let state = match self.stack.pop() {
@@ -483,7 +483,7 @@ impl de::Deserializer<ParserError> for Deserializer {
     }
 
     #[inline]
-    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), ParserError> {
+    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), Error> {
         match token {
             de::MapStart(_) => Ok(()),
             _ => Err(self.syntax_error(token, [de::MapStartKind])),
@@ -493,8 +493,8 @@ impl de::Deserializer<ParserError> for Deserializer {
 
 /// Decodes a json value from a `Value`.
 pub fn from_json<
-    T: de::Deserialize<Deserializer, ParserError>
->(json: Value) -> Result<T, ParserError> {
+    T: de::Deserialize<Deserializer, Error>
+>(json: Value) -> Result<T, Error> {
     let mut d = Deserializer::new(json);
     de::Deserialize::deserialize(&mut d)
 }
