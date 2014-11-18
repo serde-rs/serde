@@ -1,7 +1,7 @@
 use std::f64;
 use std::io::{IoError, MemWriter};
 use std::io;
-use std::num::{FPNaN, FPInfinite};
+use std::num::{Float, FPNaN, FPInfinite};
 
 use ser;
 use ser::Serializer;

@@ -1,6 +1,6 @@
 use std::char;
 use std::fmt;
-use std::num;
+use std::num::Float;
 use std::str::ScalarValue;
 use std::str;
 
@@ -319,7 +319,7 @@ impl<
             }
         }
 
-        let exp: f64 = num::pow(10u as f64, exp);
+        let exp: f64 = 10_f64.powi(exp as i32);
         if neg_exp {
             res /= exp;
         } else {

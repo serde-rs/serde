@@ -1,5 +1,5 @@
 use std::str;
-use std::num;
+use std::num::Float;
 use std::str::ScalarValue;
 use std::char;
 
@@ -286,7 +286,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
             }
         }
 
-        let exp: f64 = num::pow(10u as f64, exp);
+        let exp: f64 = 10_f64.powi(exp as i32);
         if neg_exp {
             res /= exp;
         } else {

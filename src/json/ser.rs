@@ -1,6 +1,6 @@
 use std::f32;
 use std::f64;
-use std::num::{FPNaN, FPInfinite};
+use std::num::{Float, FPNaN, FPInfinite};
 use std::io::{IoError, IoResult, MemWriter};
 
 use ser::Serialize;

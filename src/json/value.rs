@@ -1,6 +1,6 @@
 use std::collections::{HashMap, TreeMap, tree_map};
 use std::fmt;
-use std::io::{AsRefWriter, IoResult, MemWriter};
+use std::io::{ByRefWriter, IoResult, MemWriter};
 use std::io;
 use std::str;
 use std::string;

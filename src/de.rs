@@ -251,7 +251,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     }
 
     #[inline]
-    fn expect_num<T: NumCast>(&mut self, token: Token) -> Result<T, E> {
+    fn expect_num<T: num::NumCast>(&mut self, token: Token) -> Result<T, E> {
         match token {
             Int(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             I8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
