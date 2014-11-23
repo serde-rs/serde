@@ -48,7 +48,20 @@ mod decoder {
     use std::collections::HashMap;
     use serialize::Decoder;
 
-    use super::{Outer, Inner, Error, SyntaxError, OtherError};
+    use super::{Outer, Inner, Error};
+
+    use self::State::{
+        OuterState,
+        InnerState,
+        NullState,
+        UintState,
+        CharState,
+        StringState,
+        FieldState,
+        VecState,
+        MapState,
+        OptionState,
+    };
 
     #[deriving(Show)]
     enum State {
@@ -80,7 +93,7 @@ mod decoder {
 
     impl Decoder<Error> for OuterDecoder {
         fn error(&mut self, msg: &str) -> Error {
-            OtherError(msg.to_string())
+            Error::OtherError(msg.to_string())
         }
 
         // Primitive types:
@@ -88,64 +101,64 @@ mod decoder {
         fn read_nil(&mut self) -> Result<(), Error> {
             match self.stack.pop() {
                 Some(NullState) => Ok(()),
-                _ => Err(SyntaxError("NullState".to_string())),
+                _ => Err(Error::SyntaxError("NullState".to_string())),
             }
         }
         #[inline]
         fn read_uint(&mut self) -> Result<uint, Error> {
             match self.stack.pop() {
                 Some(UintState(value)) => Ok(value),
-                _ => Err(SyntaxError("UintState".to_string())),
+                _ => Err(Error::SyntaxError("UintState".to_string())),
             }
         }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError("".to_string())) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError("".to_string())) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError("".to_string())) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError("".to_string())) }
-        fn read_int(&mut self) -> Result<int, Error> { Err(SyntaxError("".to_string())) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError("".to_string())) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError("".to_string())) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError("".to_string())) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(SyntaxError("".to_string())) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(SyntaxError("".to_string())) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError("".to_string())) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError("".to_string())) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_int(&mut self) -> Result<int, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError("".to_string())) }
         #[inline]
         fn read_char(&mut self) -> Result<char, Error> {
             match self.stack.pop() {
                 Some(CharState(c)) => Ok(c),
-                _ => Err(SyntaxError("".to_string())),
+                _ => Err(Error::SyntaxError("".to_string())),
             }
         }
         #[inline]
         fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
                 Some(StringState(value)) => Ok(value),
-                _ => Err(SyntaxError("".to_string())),
+                _ => Err(Error::SyntaxError("".to_string())),
             }
         }
 
         // Compound types:
-        fn read_enum<T>(&mut self, _name: &str, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+        fn read_enum<T>(&mut self, _name: &str, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
 
         fn read_enum_variant<T>(&mut self,
                                 _names: &[&str],
                                 _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
-                                -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+                                -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_enum_variant_arg<T>(&mut self,
                                     _a_idx: uint,
                                     _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                    -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+                                    -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
 
         fn read_enum_struct_variant<T>(&mut self,
                                        _names: &[&str],
                                        _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
-                                       -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+                                       -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_enum_struct_variant_field<T>(&mut self,
                                              _f_name: &str,
                                              _f_idx: uint,
                                              _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                             -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+                                             -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
 
         #[inline]
         fn read_struct<T>(&mut self, s_name: &str, _len: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
@@ -156,7 +169,7 @@ mod decoder {
                         self.stack.push(FieldState("inner"));
                         f(self)
                     } else {
-                        Err(SyntaxError("expected Outer".to_string()))
+                        Err(Error::SyntaxError("expected Outer".to_string()))
                     }
                 }
                 Some(InnerState(Inner { a: (), b, c })) => {
@@ -171,10 +184,10 @@ mod decoder {
                         self.stack.push(FieldState("a"));
                         f(self)
                     } else {
-                        Err(SyntaxError("expected Inner".to_string()))
+                        Err(Error::SyntaxError("expected Inner".to_string()))
                     }
                 }
-                _ => Err(SyntaxError("expected InnerState or OuterState".to_string())),
+                _ => Err(Error::SyntaxError("expected InnerState or OuterState".to_string())),
             }
         }
         #[inline]
@@ -184,32 +197,32 @@ mod decoder {
                     if f_name == name {
                         f(self)
                     } else {
-                        Err(SyntaxError("expected FieldState".to_string()))
+                        Err(Error::SyntaxError("expected FieldState".to_string()))
                     }
                 }
-                _ => Err(SyntaxError("expected FieldState".to_string()))
+                _ => Err(Error::SyntaxError("expected FieldState".to_string()))
             }
         }
 
-        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError("".to_string())) }
-        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
 
         fn read_tuple_struct<T>(&mut self,
                                 _s_name: &str,
                                 _len: uint,
                                 _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+                                -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_tuple_struct_arg<T>(&mut self,
                                     _a_idx: uint,
                                     _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                    -> Result<T, Error> { Err(SyntaxError("".to_string())) }
+                                    -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
 
         // Specialized types:
         #[inline]
         fn read_option<T>(&mut self, f: |&mut OuterDecoder, bool| -> Result<T, Error>) -> Result<T, Error> {
             match self.stack.pop() {
                 Some(OptionState(b)) => f(self, b),
-                _ => Err(SyntaxError("expected OptionState".to_string())),
+                _ => Err(Error::SyntaxError("expected OptionState".to_string())),
             }
         }
 
@@ -223,7 +236,7 @@ mod decoder {
                     }
                     f(self, len)
                 }
-                _ => Err(SyntaxError("expected VecState".to_string()))
+                _ => Err(Error::SyntaxError("expected VecState".to_string()))
             }
         }
         #[inline]
@@ -250,7 +263,7 @@ mod decoder {
                     }
                     f(self, len)
                 }
-                _ => Err(SyntaxError("expected MapState".to_string())),
+                _ => Err(Error::SyntaxError("expected MapState".to_string())),
             }
         }
         #[inline]
@@ -269,8 +282,23 @@ mod decoder {
 mod deserializer {
     use std::collections::HashMap;
     use super::{Outer, Inner};
-    use super::{Error, EndOfStream, SyntaxError, UnexpectedName, MissingField};
+    use super::Error;
     use serde::de;
+
+    use self::State::{
+        OuterState,
+        InnerState,
+        FieldState,
+        NullState,
+        UintState,
+        CharState,
+        StringState,
+        OptionState,
+        //TupleState(uint),
+        VecState,
+        MapState,
+        EndState,
+    };
 
     #[deriving(Show)]
     enum State {
@@ -286,7 +314,6 @@ mod deserializer {
         VecState(Vec<Inner>),
         MapState(HashMap<String, Option<char>>),
         EndState,
-
     }
 
     pub struct OuterDeserializer {
@@ -367,29 +394,29 @@ mod deserializer {
     impl de::Deserializer<Error> for OuterDeserializer {
         #[inline]
         fn end_of_stream_error(&mut self) -> Error {
-            EndOfStream
+            Error::EndOfStream
         }
 
         #[inline]
         fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
-            SyntaxError(format!("expected {}, found {}", expected, token))
+            Error::SyntaxError(format!("expected {}, found {}", expected, token))
         }
 
         #[inline]
         fn unexpected_name_error(&mut self, token: de::Token) -> Error {
-            UnexpectedName(format!("found {}", token))
+            Error::UnexpectedName(format!("found {}", token))
         }
 
         #[inline]
         fn conversion_error(&mut self, token: de::Token) -> Error {
-            UnexpectedName(format!("found {}", token))
+            Error::UnexpectedName(format!("found {}", token))
         }
 
         #[inline]
         fn missing_field<
             T: de::Deserialize<OuterDeserializer, Error>
         >(&mut self, field: &'static str) -> Result<T, Error> {
-            Err(MissingField(field))
+            Err(Error::MissingField(field))
         }
     }
 }

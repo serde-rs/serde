@@ -11,7 +11,7 @@
 use std::collections::TreeMap;
 use std::str::StrAllocating;
 
-use json::value::{Value, List, Object, ToJson};
+use json::value::{ToJson, Value};
 
 pub struct ListBuilder {
     list: Vec<Value>,
@@ -23,7 +23,7 @@ impl ListBuilder {
     }
 
     pub fn unwrap(self) -> Value {
-        List(self.list)
+        Value::List(self.list)
     }
 
     pub fn push<T: ToJson>(self, value: T) -> ListBuilder {
@@ -53,7 +53,7 @@ impl ObjectBuilder {
     }
 
     pub fn unwrap(self) -> Value {
-        Object(self.object)
+        Value::Object(self.object)
     }
 
     pub fn insert<K: StrAllocating, V: ToJson>(self, key: K, value: V) -> ObjectBuilder {
@@ -77,25 +77,25 @@ impl ObjectBuilder {
 mod tests {
     use std::collections::TreeMap;
 
-    use json::value::{Integer, List, Object};
+    use json::value::Value;
     use super::{ListBuilder, ObjectBuilder};
 
     #[test]
     fn test_list_builder() {
         let value = ListBuilder::new().unwrap();
-        assert_eq!(value, List(Vec::new()));
+        assert_eq!(value, Value::List(Vec::new()));
 
         let value = ListBuilder::new()
             .push(1i)
             .push(2i)
             .push(3i)
             .unwrap();
-        assert_eq!(value, List(vec!(Integer(1), Integer(2), Integer(3))));
+        assert_eq!(value, Value::List(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))));
 
         let value = ListBuilder::new()
             .push_list(|bld| bld.push(1i).push(2i).push(3i))
             .unwrap();
-        assert_eq!(value, List(vec!(List(vec!(Integer(1), Integer(2), Integer(3))))));
+        assert_eq!(value, Value::List(vec!(Value::List(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))))));
 
         let value = ListBuilder::new()
             .push_object(|bld|
@@ -105,15 +105,15 @@ mod tests {
             .unwrap();
 
         let mut map = TreeMap::new();
-        map.insert("a".to_string(), Integer(1));
-        map.insert("b".to_string(), Integer(2));
-        assert_eq!(value, List(vec!(Object(map))));
+        map.insert("a".to_string(), Value::Integer(1));
+        map.insert("b".to_string(), Value::Integer(2));
+        assert_eq!(value, Value::List(vec!(Value::Object(map))));
     }
 
     #[test]
     fn test_object_builder() {
         let value = ObjectBuilder::new().unwrap();
-        assert_eq!(value, Object(TreeMap::new()));
+        assert_eq!(value, Value::Object(TreeMap::new()));
 
         let value = ObjectBuilder::new()
             .insert("a".to_string(), 1i)
@@ -121,8 +121,8 @@ mod tests {
             .unwrap();
 
         let mut map = TreeMap::new();
-        map.insert("a".to_string(), Integer(1));
-        map.insert("b".to_string(), Integer(2));
-        assert_eq!(value, Object(map));
+        map.insert("a".to_string(), Value::Integer(1));
+        map.insert("b".to_string(), Value::Integer(2));
+        assert_eq!(value, Value::Object(map));
     }
 }

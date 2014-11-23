@@ -29,7 +29,8 @@ mod decoder {
     use std::vec;
     use serialize;
 
-    use super::{Error, EndOfStream, SyntaxError, OtherError};
+    use super::Error;
+    use super::Error::{EndOfStream, SyntaxError, OtherError};
 
     pub struct IntDecoder {
         len: uint,
@@ -250,7 +251,9 @@ mod deserializer {
     //use std::num;
     use std::vec;
 
-    use super::{Error, EndOfStream, SyntaxError};
+    use super::Error;
+    use super::Error::{EndOfStream, SyntaxError};
+    use self::State::{StartState, SepOrEndState, EndState};
 
     use serde::de;
 

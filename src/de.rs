@@ -34,7 +34,7 @@ pub enum Token {
     F64(f64),
     Char(char),
     Str(&'static str),
-    String(string::String),
+    String(String),
     Option(bool),
 
     TupleStart(uint),
@@ -49,30 +49,30 @@ pub enum Token {
 impl Token {
     pub fn to_kind(&self) -> TokenKind {
         match *self {
-            Null => NullKind,
-            Bool(_) => BoolKind,
-            Int(_) => IntKind,
-            I8(_) => I8Kind,
-            I16(_) => I16Kind,
-            I32(_) => I32Kind,
-            I64(_) => I64Kind,
-            Uint(_) => UintKind,
-            U8(_) => U8Kind,
-            U16(_) => U16Kind,
-            U32(_) => U32Kind,
-            U64(_) => U64Kind,
-            F32(_) => F32Kind,
-            F64(_) => F64Kind,
-            Char(_) => CharKind,
-            Str(_) => StrKind,
-            String(_) => StringKind,
-            Option(_) => OptionKind,
-            TupleStart(_) => TupleStartKind,
-            StructStart(_, _) => StructStartKind,
-            EnumStart(_, _, _) => EnumStartKind,
-            SeqStart(_) => SeqStartKind,
-            MapStart(_) => MapStartKind,
-            End => EndKind,
+            Token::Null => TokenKind::NullKind,
+            Token::Bool(_) => TokenKind::BoolKind,
+            Token::Int(_) => TokenKind::IntKind,
+            Token::I8(_) => TokenKind::I8Kind,
+            Token::I16(_) => TokenKind::I16Kind,
+            Token::I32(_) => TokenKind::I32Kind,
+            Token::I64(_) => TokenKind::I64Kind,
+            Token::Uint(_) => TokenKind::UintKind,
+            Token::U8(_) => TokenKind::U8Kind,
+            Token::U16(_) => TokenKind::U16Kind,
+            Token::U32(_) => TokenKind::U32Kind,
+            Token::U64(_) => TokenKind::U64Kind,
+            Token::F32(_) => TokenKind::F32Kind,
+            Token::F64(_) => TokenKind::F64Kind,
+            Token::Char(_) => TokenKind::CharKind,
+            Token::Str(_) => TokenKind::StrKind,
+            Token::String(_) => TokenKind::StringKind,
+            Token::Option(_) => TokenKind::OptionKind,
+            Token::TupleStart(_) => TokenKind::TupleStartKind,
+            Token::StructStart(_, _) => TokenKind::StructStartKind,
+            Token::EnumStart(_, _, _) => TokenKind::EnumStartKind,
+            Token::SeqStart(_) => TokenKind::SeqStartKind,
+            Token::MapStart(_) => TokenKind::MapStartKind,
+            Token::End => TokenKind::EndKind,
         }
     }
 }
@@ -107,62 +107,62 @@ pub enum TokenKind {
     EndKind,
 }
 
-static PRIMITIVE_TOKEN_KINDS: &'static [TokenKind] = [
-    IntKind,
-    I8Kind,
-    I16Kind,
-    I32Kind,
-    I64Kind,
-    UintKind,
-    U8Kind,
-    U16Kind,
-    U32Kind,
-    U64Kind,
-    F32Kind,
-    F64Kind,
+static PRIMITIVE_TOKEN_KINDS: &'static [TokenKind] = &[
+    TokenKind::IntKind,
+    TokenKind::I8Kind,
+    TokenKind::I16Kind,
+    TokenKind::I32Kind,
+    TokenKind::I64Kind,
+    TokenKind::UintKind,
+    TokenKind::U8Kind,
+    TokenKind::U16Kind,
+    TokenKind::U32Kind,
+    TokenKind::U64Kind,
+    TokenKind::F32Kind,
+    TokenKind::F64Kind,
 ];
 
-static STR_TOKEN_KINDS: [TokenKind, .. 2] = [
-    StrKind,
-    StringKind,
+static STR_TOKEN_KINDS: &'static [TokenKind] = &[
+    TokenKind::StrKind,
+    TokenKind::StringKind,
 ];
 
-static COMPOUND_TOKEN_KINDS: [TokenKind, .. 6] = [
-    OptionKind,
-    EnumStartKind,
-    StructStartKind,
-    TupleStartKind,
-    SeqStartKind,
-    MapStartKind,
+static COMPOUND_TOKEN_KINDS: &'static [TokenKind] = &[
+    TokenKind::OptionKind,
+    TokenKind::EnumStartKind,
+    TokenKind::StructStartKind,
+    TokenKind::TupleStartKind,
+    TokenKind::SeqStartKind,
+    TokenKind::MapStartKind,
 ];
 
 impl ::std::fmt::Show for TokenKind {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match *self {
-            NullKind => "Null".fmt(f),
-            BoolKind => "Bool".fmt(f),
-            IntKind => "Int".fmt(f),
-            I8Kind => "I8".fmt(f),
-            I16Kind => "I16".fmt(f),
-            I32Kind => "I32".fmt(f),
-            I64Kind => "I64".fmt(f),
-            UintKind => "Uint".fmt(f),
-            U8Kind => "U8".fmt(f),
-            U16Kind => "U16".fmt(f),
-            U32Kind => "U32".fmt(f),
-            U64Kind => "U64".fmt(f),
-            F32Kind => "F32".fmt(f),
-            F64Kind => "F64".fmt(f),
-            CharKind => "Char".fmt(f),
-            StrKind => "Str".fmt(f),
-            StringKind => "String".fmt(f),
-            OptionKind => "Option".fmt(f),
-            TupleStartKind => "TupleStart".fmt(f),
-            StructStartKind => "StructStart".fmt(f),
-            EnumStartKind => "EnumStart".fmt(f),
-            SeqStartKind => "SeqStart".fmt(f),
-            MapStartKind => "MapStart".fmt(f),
-            EndKind => "End".fmt(f),
+            TokenKind::NullKind => "Null".fmt(f),
+            TokenKind::BoolKind => "Bool".fmt(f),
+            TokenKind::IntKind => "Int".fmt(f),
+            TokenKind::I8Kind => "I8".fmt(f),
+            TokenKind::I16Kind => "I16".fmt(f),
+            TokenKind::I32Kind => "I32".fmt(f),
+            TokenKind::I64Kind => "I64".fmt(f),
+            TokenKind::UintKind => "Uint".fmt(f),
+            TokenKind::U8Kind => "U8".fmt(f),
+            TokenKind::U16Kind => "U16".fmt(f),
+            TokenKind::U32Kind => "U32".fmt(f),
+            TokenKind::U64Kind => "U64".fmt(f),
+            TokenKind::F32Kind => "F32".fmt(f),
+            TokenKind::F64Kind => "F64".fmt(f),
+            TokenKind::CharKind => "Char".fmt(f),
+            TokenKind::StrKind => "Str".fmt(f),
+            TokenKind::StringKind => "String".fmt(f),
+            TokenKind::OptionKind => "Option".fmt(f),
+            TokenKind::TupleStartKind => "TupleStart".fmt(f),
+            TokenKind::StructStartKind => "StructStart".fmt(f),
+            TokenKind::EnumStartKind => "EnumStart".fmt(f),
+            TokenKind::SeqStartKind => "SeqStart".fmt(f),
+            TokenKind::MapStartKind => "MapStart".fmt(f),
+            TokenKind::EndKind => "Token::End".fmt(f),
         }
     }
 }
@@ -214,23 +214,23 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_null(&mut self, token: Token) -> Result<(), E> {
         match token {
-            Null => Ok(()),
-            TupleStart(_) | SeqStart(_) => {
+            Token::Null => Ok(()),
+            Token::TupleStart(_) | Token::SeqStart(_) => {
                 match try!(self.expect_token()) {
-                    End => Ok(()),
+                    Token::End => Ok(()),
                     token => {
-                        static EXPECTED_TOKENS: &'static [TokenKind] = [
-                            EndKind,
+                        static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                            TokenKind::EndKind,
                         ];
                         Err(self.syntax_error(token, EXPECTED_TOKENS))
                     }
                 }
             }
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    NullKind,
-                    TupleStartKind,
-                    SeqStartKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::NullKind,
+                    TokenKind::TupleStartKind,
+                    TokenKind::SeqStartKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -240,10 +240,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_bool(&mut self, token: Token) -> Result<bool, E> {
         match token {
-            Bool(value) => Ok(value),
+            Token::Bool(value) => Ok(value),
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    BoolKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::BoolKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -253,18 +253,18 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_num<T: num::NumCast>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Int(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            I8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            I16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            I32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            I64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            Uint(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            U8(x) =>  to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            U16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            U32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            U64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            F32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            F64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::Int(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::I8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::I16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::I32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::I64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::Uint(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::U8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::U16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::U32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::U64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::F32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::F64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             token => Err(self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
         }
     }
@@ -272,18 +272,18 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_from_primitive<T: FromPrimitive>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Int(x) => to_result!(num::from_int(x), self.conversion_error(token)),
-            I8(x) => to_result!(num::from_i8(x), self.conversion_error(token)),
-            I16(x) => to_result!(num::from_i16(x), self.conversion_error(token)),
-            I32(x) => to_result!(num::from_i32(x), self.conversion_error(token)),
-            I64(x) => to_result!(num::from_i64(x), self.conversion_error(token)),
-            Uint(x) => to_result!(num::from_uint(x), self.conversion_error(token)),
-            U8(x) => to_result!(num::from_u8(x), self.conversion_error(token)),
-            U16(x) => to_result!(num::from_u16(x), self.conversion_error(token)),
-            U32(x) => to_result!(num::from_u32(x), self.conversion_error(token)),
-            U64(x) => to_result!(num::from_u64(x), self.conversion_error(token)),
-            F32(x) => to_result!(num::from_f32(x), self.conversion_error(token)),
-            F64(x) => to_result!(num::from_f64(x), self.conversion_error(token)),
+            Token::Int(x) => to_result!(num::from_int(x), self.conversion_error(token)),
+            Token::I8(x) => to_result!(num::from_i8(x), self.conversion_error(token)),
+            Token::I16(x) => to_result!(num::from_i16(x), self.conversion_error(token)),
+            Token::I32(x) => to_result!(num::from_i32(x), self.conversion_error(token)),
+            Token::I64(x) => to_result!(num::from_i64(x), self.conversion_error(token)),
+            Token::Uint(x) => to_result!(num::from_uint(x), self.conversion_error(token)),
+            Token::U8(x) => to_result!(num::from_u8(x), self.conversion_error(token)),
+            Token::U16(x) => to_result!(num::from_u16(x), self.conversion_error(token)),
+            Token::U32(x) => to_result!(num::from_u32(x), self.conversion_error(token)),
+            Token::U64(x) => to_result!(num::from_u64(x), self.conversion_error(token)),
+            Token::F32(x) => to_result!(num::from_f32(x), self.conversion_error(token)),
+            Token::F64(x) => to_result!(num::from_f64(x), self.conversion_error(token)),
             token => Err(self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
         }
     }
@@ -291,16 +291,16 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_char(&mut self, token: Token) -> Result<char, E> {
         match token {
-            Char(value) => Ok(value),
-            Str(value) if value.char_len() == 1 => {
+            Token::Char(value) => Ok(value),
+            Token::Str(value) if value.char_len() == 1 => {
                 Ok(value.char_at(0))
             }
-            String(ref value) if value.as_slice().char_len() == 1 => {
+            Token::String(ref value) if value.as_slice().char_len() == 1 => {
                 Ok(value.as_slice().char_at(0))
             }
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    CharKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::CharKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -310,7 +310,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_str(&mut self, token: Token) -> Result<&'static str, E> {
         match token {
-            Str(value) => Ok(value),
+            Token::Str(value) => Ok(value),
             token => Err(self.syntax_error(token, STR_TOKEN_KINDS)),
         }
     }
@@ -318,9 +318,9 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_string(&mut self, token: Token) -> Result<string::String, E> {
         match token {
-            Char(value) => Ok(value.to_string()),
-            Str(value) => Ok(value.to_string()),
-            String(value) => Ok(value),
+            Token::Char(value) => Ok(value.to_string()),
+            Token::Str(value) => Ok(value.to_string()),
+            Token::String(value) => Ok(value),
             token => Err(self.syntax_error(token, STR_TOKEN_KINDS)),
         }
     }
@@ -330,14 +330,14 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         T: Deserialize<Self, E>
     >(&mut self, token: Token) -> Result<option::Option<T>, E> {
         match token {
-            Option(false) => Ok(None),
-            Option(true) => {
+            Token::Option(false) => Ok(None),
+            Token::Option(true) => {
                 let value: T = try!(Deserialize::deserialize(self));
                 Ok(Some(value))
             }
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    OptionKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::OptionKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -347,12 +347,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_tuple_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
-            TupleStart(len) => Ok(len),
-            SeqStart(len) => Ok(len),
+            Token::TupleStart(len) => Ok(len),
+            Token::SeqStart(len) => Ok(len),
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    TupleStartKind,
-                    SeqStartKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::TupleStartKind,
+                    TokenKind::SeqStartKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -369,10 +369,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_tuple_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
-            End => Ok(()),
+            Token::End => Ok(()),
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    EndKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::EndKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -382,7 +382,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_struct_start(&mut self, token: Token, name: &str) -> Result<(), E> {
         match token {
-            StructStart(n, _) => {
+            Token::StructStart(n, _) => {
                 if name == n {
                     Ok(())
                 } else {
@@ -390,8 +390,8 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 }
             }
             _ => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    StructStartKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::StructStartKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -403,13 +403,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                                   fields: &'static [&'static str]
                                  ) -> Result<option::Option<option::Option<uint>>, E> {
         match try!(self.expect_token()) {
-            End => {
+            Token::End => {
                 Ok(None)
             }
-            Str(n) => {
+            Token::Str(n) => {
                 Ok(Some(fields.iter().position(|field| *field == n)))
             }
-            String(n) => {
+            Token::String(n) => {
                 Ok(Some(fields.iter().position(|field| *field == n.as_slice())))
             }
             token => {
@@ -428,10 +428,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_struct_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
-            End => Ok(()),
+            Token::End => Ok(()),
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    EndKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::EndKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -441,7 +441,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_enum_start(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
         match token {
-            EnumStart(n, v, _) => {
+            Token::EnumStart(n, v, _) => {
                 if name == n {
                     match variants.iter().position(|variant| *variant == v) {
                         Some(position) => Ok(position),
@@ -452,8 +452,8 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
                 }
             }
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    EnumStartKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::EnumStartKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -470,10 +470,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_enum_end(&mut self) -> Result<(), E> {
         match try!(self.expect_token()) {
-            End => Ok(()),
+            Token::End => Ok(()),
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    EndKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::EndKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -483,12 +483,12 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
-            TupleStart(len) => Ok(len),
-            SeqStart(len) => Ok(len),
+            Token::TupleStart(len) => Ok(len),
+            Token::SeqStart(len) => Ok(len),
             token => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    TupleStartKind,
-                    SeqStartKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::TupleStartKind,
+                    TokenKind::SeqStartKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -500,7 +500,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         T: Deserialize<Self, E>
     >(&mut self) -> Result<option::Option<T>, E> {
         match try!(self.expect_token()) {
-            End => Ok(None),
+            Token::End => Ok(None),
             token => {
                 let value = try!(Deserialize::deserialize_token(self, token));
                 Ok(Some(value))
@@ -533,10 +533,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     #[inline]
     fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
         match token {
-            MapStart(len) => Ok(len),
+            Token::MapStart(len) => Ok(len),
             _ => {
-                static EXPECTED_TOKENS: &'static [TokenKind] = [
-                    MapStartKind,
+                static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                    TokenKind::MapStartKind,
                 ];
                 Err(self.syntax_error(token, EXPECTED_TOKENS))
             }
@@ -549,7 +549,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         V: Deserialize<Self, E>
     >(&mut self) -> Result<option::Option<(K, V)>, E> {
         match try!(self.expect_token()) {
-            End => Ok(None),
+            Token::End => Ok(None),
             token => {
                 let key = try!(Deserialize::deserialize_token(self, token));
                 let value = try!(Deserialize::deserialize(self));
@@ -853,14 +853,14 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<IgnoreTokens, E> {
         match token {
-            Option(true) => {
+            Token::Option(true) => {
                 Deserialize::deserialize(d)
             }
 
-            EnumStart(_, _, _) => {
+            Token::EnumStart(_, _, _) => {
                 loop {
                     match try!(d.expect_token()) {
-                        End => { return Ok(IgnoreTokens); }
+                        Token::End => { return Ok(IgnoreTokens); }
                         token => {
                             let _: IgnoreTokens = try!(Deserialize::deserialize_token(d, token));
                         }
@@ -868,18 +868,18 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
                 }
             }
 
-            StructStart(_, _) => {
+            Token::StructStart(_, _) => {
                 loop {
                     match try!(d.expect_token()) {
-                        End => { return Ok(IgnoreTokens); }
-                        Str(_) | String(_) => {
+                        Token::End => { return Ok(IgnoreTokens); }
+                        Token::Str(_) | Token::String(_) => {
                             let _: IgnoreTokens = try!(Deserialize::deserialize(d));
                         }
                         _token => {
-                            static EXPECTED_TOKENS: &'static [TokenKind] = [
-                                EndKind,
-                                StrKind,
-                                StringKind,
+                            static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                                TokenKind::EndKind,
+                                TokenKind::StrKind,
+                                TokenKind::StringKind,
                             ];
                             return Err(d.syntax_error(token, EXPECTED_TOKENS));
                         }
@@ -887,10 +887,10 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
                 }
             }
 
-            TupleStart(_) => {
+            Token::TupleStart(_) => {
                 loop {
                     match try!(d.expect_token()) {
-                        End => { return Ok(IgnoreTokens); }
+                        Token::End => { return Ok(IgnoreTokens); }
                         token => {
                             let _: IgnoreTokens = try!(Deserialize::deserialize_token(d, token));
                         }
@@ -898,10 +898,10 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
                 }
             }
 
-            SeqStart(_) => {
+            Token::SeqStart(_) => {
                 loop {
                     match try!(d.expect_token()) {
-                        End => { return Ok(IgnoreTokens); }
+                        Token::End => { return Ok(IgnoreTokens); }
                         token => {
                             let _: IgnoreTokens = try!(Deserialize::deserialize_token(d, token));
                         }
@@ -909,10 +909,10 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
                 }
             }
 
-            MapStart(_) => {
+            Token::MapStart(_) => {
                 loop {
                     match try!(d.expect_token()) {
-                        End => { return Ok(IgnoreTokens); }
+                        Token::End => { return Ok(IgnoreTokens); }
                         token => {
                             let _: IgnoreTokens = try!(Deserialize::deserialize_token(d, token));
                             let _: IgnoreTokens = try!(Deserialize::deserialize(d));
@@ -921,7 +921,7 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
                 }
             }
 
-            End => {
+            Token::End => {
                 Err(d.syntax_error(token, COMPOUND_TOKEN_KINDS))
             }
 
@@ -953,36 +953,36 @@ impl GatherTokens {
     #[inline]
     fn gather_token<D: Deserializer<E>, E>(&mut self, d: &mut D, token: Token) -> Result<(), E> {
         match token {
-            token @ Option(true) => {
+            token @ Token::Option(true) => {
                 self.tokens.push(token);
                 self.gather(d)
             }
-            EnumStart(name, variant, len) => {
+            Token::EnumStart(name, variant, len) => {
                 self.tokens.reserve(len + 1);
-                self.tokens.push(EnumStart(name, variant, len));
+                self.tokens.push(Token::EnumStart(name, variant, len));
                 self.gather_seq(d)
             }
-            StructStart(name, len) => {
+            Token::StructStart(name, len) => {
                 self.tokens.reserve(len + 1);
-                self.tokens.push(StructStart(name, len));
+                self.tokens.push(Token::StructStart(name, len));
                 self.gather_struct(d)
             }
-            TupleStart(len) => {
+            Token::TupleStart(len) => {
                 self.tokens.reserve(len + 1);
-                self.tokens.push(TupleStart(len));
+                self.tokens.push(Token::TupleStart(len));
                 self.gather_seq(d)
             }
-            SeqStart(len) => {
+            Token::SeqStart(len) => {
                 self.tokens.reserve(len + 1);
-                self.tokens.push(SeqStart(len));
+                self.tokens.push(Token::SeqStart(len));
                 self.gather_seq(d)
             }
-            MapStart(len) => {
+            Token::MapStart(len) => {
                 self.tokens.reserve(len + 1);
-                self.tokens.push(MapStart(len));
+                self.tokens.push(Token::MapStart(len));
                 self.gather_map(d)
             }
-            End => {
+            Token::End => {
                 Err(d.syntax_error(token, COMPOUND_TOKEN_KINDS))
             }
             token => {
@@ -996,7 +996,7 @@ impl GatherTokens {
     fn gather_seq<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         loop {
             match try!(d.expect_token()) {
-                token @ End => {
+                token @ Token::End => {
                     self.tokens.push(token);
                     return Ok(());
                 }
@@ -1011,19 +1011,19 @@ impl GatherTokens {
     fn gather_struct<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         loop {
             match try!(d.expect_token()) {
-                token @ End => {
+                token @ Token::End => {
                     self.tokens.push(token);
                     return Ok(());
                 }
-                token @ Str(_) | token @ String(_) => {
+                token @ Token::Str(_) | token @ Token::String(_) => {
                     self.tokens.push(token);
                     try!(self.gather(d))
                 }
                 token => {
-                    static EXPECTED_TOKENS: &'static [TokenKind] = [
-                        EndKind,
-                        StrKind,
-                        StringKind,
+                    static EXPECTED_TOKENS: &'static [TokenKind] = &[
+                        TokenKind::EndKind,
+                        TokenKind::StrKind,
+                        TokenKind::StringKind,
                     ];
                     return Err(d.syntax_error(token, EXPECTED_TOKENS));
                 }
@@ -1035,8 +1035,8 @@ impl GatherTokens {
     fn gather_map<D: Deserializer<E>, E>(&mut self, d: &mut D) -> Result<(), E> {
         loop {
             match try!(d.expect_token()) {
-                End => {
-                    self.tokens.push(End);
+                Token::End => {
+                    self.tokens.push(Token::End);
                     return Ok(());
                 }
                 token => {
@@ -1068,32 +1068,6 @@ mod tests {
     use serialize::Decoder;
 
     use super::{Deserializer, Deserialize, Token, TokenKind, IgnoreTokens};
-    use super::{
-        Null,
-        Bool,
-        Int,
-        I8,
-        I16,
-        I32,
-        I64,
-        Uint,
-        U8,
-        U16,
-        U32,
-        U64,
-        F32,
-        F64,
-        Char,
-        Str,
-        String,
-        Option,
-        TupleStart,
-        StructStart,
-        EnumStart,
-        SeqStart,
-        MapStart,
-        End,
-    };
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
@@ -1157,7 +1131,7 @@ mod tests {
         fn deserialize_token(d: &mut D, token: Token) -> Result<Outer, E> {
             try!(d.expect_struct_start(token, "Outer"));
 
-            static FIELDS: &'static [&'static str] = ["inner"];
+            static FIELDS: &'static [&'static str] = &["inner"];
 
             let mut inner = None;
 
@@ -1189,16 +1163,16 @@ mod tests {
     impl<D: Deserializer<E>, E> Deserialize<D, E> for Animal {
         #[inline]
         fn deserialize_token(d: &mut D, token: Token) -> Result<Animal, E> {
-            match try!(d.expect_enum_start(token, "Animal", ["Dog", "Frog"])) {
+            match try!(d.expect_enum_start(token, "Animal", &["Dog", "Frog"])) {
                 0 => {
                     try!(d.expect_enum_end());
-                    Ok(Dog)
+                    Ok(Animal::Dog)
                 }
                 1 => {
                     let x0 = try!(Deserialize::deserialize(d));
                     let x1 = try!(Deserialize::deserialize(d));
                     try!(d.expect_enum_end());
-                    Ok(Frog(x0, x1))
+                    Ok(Animal::Frog(x0, x1))
                 }
                 _ => unreachable!(),
             }
@@ -1243,26 +1217,26 @@ mod tests {
 
     impl<Iter: Iterator<Token>> Deserializer<Error> for TokenDeserializer<Iter> {
         fn end_of_stream_error(&mut self) -> Error {
-            EndOfStream
+            Error::EndOfStream
         }
 
         fn syntax_error(&mut self, _token: Token, expected: &[TokenKind]) -> Error {
-            SyntaxError(expected.to_vec())
+            Error::SyntaxError(expected.to_vec())
         }
 
         fn unexpected_name_error(&mut self, _token: Token) -> Error {
-            UnexpectedName
+            Error::UnexpectedName
         }
 
         fn conversion_error(&mut self, _token: Token) -> Error {
-            ConversionError
+            Error::ConversionError
         }
 
         #[inline]
         fn missing_field<
             T: Deserialize<TokenDeserializer<Iter>, Error>
         >(&mut self, field: &'static str) -> Result<T, Error> {
-            Err(MissingField(field))
+            Err(Error::MissingField(field))
         }
     }
 
@@ -1283,95 +1257,95 @@ mod tests {
     }
 
     test_value!(test_primitives, [
-        vec!(Null) => (): (),
-        vec!(Bool(true)) => true: bool,
-        vec!(Bool(false)) => false: bool,
-        vec!(Int(5)) => 5: int,
-        vec!(I8(5)) => 5: i8,
-        vec!(I16(5)) => 5: i16,
-        vec!(I32(5)) => 5: i32,
-        vec!(I64(5)) => 5: i64,
-        vec!(Uint(5)) => 5: uint,
-        vec!(U8(5)) => 5: u8,
-        vec!(U16(5)) => 5: u16,
-        vec!(U32(5)) => 5: u32,
-        vec!(U64(5)) => 5: u64,
-        vec!(F32(5.0)) => 5.0: f32,
-        vec!(F64(5.0)) => 5.0: f64,
-        vec!(Char('c')) => 'c': char,
-        vec!(Str("abc")) => "abc": &str,
-        vec!(String("abc".to_string())) => "abc".to_string(): string::String
+        vec!(Token::Null) => (): (),
+        vec!(Token::Bool(true)) => true: bool,
+        vec!(Token::Bool(false)) => false: bool,
+        vec!(Token::Int(5)) => 5: int,
+        vec!(Token::I8(5)) => 5: i8,
+        vec!(Token::I16(5)) => 5: i16,
+        vec!(Token::I32(5)) => 5: i32,
+        vec!(Token::I64(5)) => 5: i64,
+        vec!(Token::Uint(5)) => 5: uint,
+        vec!(Token::U8(5)) => 5: u8,
+        vec!(Token::U16(5)) => 5: u16,
+        vec!(Token::U32(5)) => 5: u32,
+        vec!(Token::U64(5)) => 5: u64,
+        vec!(Token::F32(5.0)) => 5.0: f32,
+        vec!(Token::F64(5.0)) => 5.0: f64,
+        vec!(Token::Char('c')) => 'c': char,
+        vec!(Token::Str("abc")) => "abc": &str,
+        vec!(Token::String("abc".to_string())) => "abc".to_string(): string::String
     ])
 
     test_value!(test_tuples, [
         vec!(
-            TupleStart(0),
-            End,
+            Token::TupleStart(0),
+            Token::End,
         ) => (): (),
 
         vec!(
-            TupleStart(2),
-                Int(5),
+            Token::TupleStart(2),
+                Token::Int(5),
 
-                Str("a"),
-            End,
+                Token::Str("a"),
+            Token::End,
         ) => (5, "a"): (int, &'static str),
 
         vec!(
-            TupleStart(3),
-                Null,
+            Token::TupleStart(3),
+                Token::Null,
 
-                TupleStart(0),
-                End,
+                Token::TupleStart(0),
+                Token::End,
 
-                TupleStart(2),
-                    Int(5),
+                Token::TupleStart(2),
+                    Token::Int(5),
 
-                    Str("a"),
-                End,
-            End,
+                    Token::Str("a"),
+                Token::End,
+            Token::End,
         ) => ((), (), (5, "a")): ((), (), (int, &'static str))
     ])
 
     test_value!(test_options, [
-        vec!(Option(false)) => None: option::Option<int>,
+        vec!(Token::Option(false)) => None: option::Option<int>,
 
         vec!(
-            Option(true),
-            Int(5),
+            Token::Option(true),
+            Token::Int(5),
         ) => Some(5): option::Option<int>
     ])
 
     test_value!(test_structs, [
         vec!(
-            StructStart("Outer", 1),
-                Str("inner"),
-                SeqStart(0),
-                End,
-            End,
+            Token::StructStart("Outer", 1),
+                Token::Str("inner"),
+                Token::SeqStart(0),
+                Token::End,
+            Token::End,
         ) => Outer { inner: vec!() }: Outer,
 
         vec!(
-            StructStart("Outer", 1),
-                Str("inner"),
-                SeqStart(1),
-                    StructStart("Inner", 3),
-                        Str("a"),
-                        Null,
+            Token::StructStart("Outer", 1),
+                Token::Str("inner"),
+                Token::SeqStart(1),
+                    Token::StructStart("Inner", 3),
+                        Token::Str("a"),
+                        Token::Null,
 
-                        Str("b"),
-                        Uint(5),
+                        Token::Str("b"),
+                        Token::Uint(5),
 
-                        Str("c"),
-                        MapStart(1),
-                            String("abc".to_string()),
+                        Token::Str("c"),
+                        Token::MapStart(1),
+                            Token::String("abc".to_string()),
 
-                            Option(true),
-                            Char('c'),
-                        End,
-                    End,
-                End,
-            End,
+                            Token::Option(true),
+                            Token::Char('c'),
+                        Token::End,
+                    Token::End,
+                Token::End,
+            Token::End,
         ) => Outer {
             inner: vec!(
                 Inner {
@@ -1385,72 +1359,72 @@ mod tests {
 
     test_value!(test_enums, [
         vec!(
-            EnumStart("Animal", "Dog", 0),
-            End,
-        ) => Dog: Animal,
+            Token::EnumStart("Animal", "Dog", 0),
+            Token::End,
+        ) => Animal::Dog: Animal,
 
         vec!(
-            EnumStart("Animal", "Frog", 2),
-                String("Henry".to_string()),
-                Int(349),
-            End,
-        ) => Frog("Henry".to_string(), 349): Animal
+            Token::EnumStart("Animal", "Frog", 2),
+                Token::String("Henry".to_string()),
+                Token::Int(349),
+            Token::End,
+        ) => Animal::Frog("Henry".to_string(), 349): Animal
     ])
 
     test_value!(test_vecs, [
         vec!(
-            SeqStart(0),
-            End,
+            Token::SeqStart(0),
+            Token::End,
         ) => vec!(): Vec<int>,
 
         vec!(
-            SeqStart(3),
-                Int(5),
+            Token::SeqStart(3),
+                Token::Int(5),
 
-                Int(6),
+                Token::Int(6),
 
-                Int(7),
-            End,
+                Token::Int(7),
+            Token::End,
         ) => vec!(5, 6, 7): Vec<int>,
 
 
         vec!(
-            SeqStart(3),
-                SeqStart(1),
-                    Int(1),
-                End,
+            Token::SeqStart(3),
+                Token::SeqStart(1),
+                    Token::Int(1),
+                Token::End,
 
-                SeqStart(2),
-                    Int(2),
+                Token::SeqStart(2),
+                    Token::Int(2),
 
-                    Int(3),
-                End,
+                    Token::Int(3),
+                Token::End,
 
-                SeqStart(3),
-                    Int(4),
+                Token::SeqStart(3),
+                    Token::Int(4),
 
-                    Int(5),
+                    Token::Int(5),
 
-                    Int(6),
-                End,
-            End,
+                    Token::Int(6),
+                Token::End,
+            Token::End,
         ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)): Vec<Vec<int>>
     ])
 
     test_value!(test_treemaps, [
         vec!(
-            MapStart(0),
-            End,
+            Token::MapStart(0),
+            Token::End,
         ) => treemap!(): TreeMap<int, string::String>,
 
         vec!(
-            MapStart(2),
-                Int(5),
-                String("a".to_string()),
+            Token::MapStart(2),
+                Token::Int(5),
+                Token::String("a".to_string()),
 
-                Int(6),
-                String("b".to_string()),
-            End,
+                Token::Int(6),
+                Token::String("b".to_string()),
+            Token::End,
         ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, string::
         String>
     ])

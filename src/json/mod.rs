@@ -28,7 +28,7 @@ Json data are serialized in a form of "key":"value".
 Data types that can be serialized are JavaScript types :
 boolean (`true` or `false`), number (`f64`), string, array, object, null.
 An object is a series of string keys mapping to values, in `"key": value` format.
-Arrays are enclosed in square brackets ([ ... ]) and objects in curly brackets ({ ... }).
+Arrays are enclosed in square brackets (&[ ... ]) and objects in curly brackets ({ ... }).
 A simple JSON document serializing a person, his/her age, address and phone numbers could look like:
 
 ```ignore
@@ -65,7 +65,7 @@ To serialize using `Serialize`:
 extern crate serde_macros;
 extern crate serde;
 
-use std::io::{MemWriter, AsRefWriter};
+use std::io::ByRefWriter;
 use serde::json;
 use serde::Serialize;
 
@@ -79,9 +79,9 @@ fn main() {
         data_str: "example of string to serialize".to_string()
     };
 
-    let mut m = MemWriter::new();
+    let mut wr = Vec::new();
     {
-        let mut serializer = json::Serializer::new(m.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         match to_serialize_object.serialize(&mut serializer) {
             Ok(()) => (),
             Err(e) => panic!("json serialization error: {}", e),
@@ -292,11 +292,12 @@ fn main() {
 
 */
 
-use std::error;
-use std::fmt;
-use std::io;
-use std::string;
-
+pub use self::builder::{ListBuilder, ObjectBuilder};
+pub use self::de::{
+    Parser,
+    from_str,
+};
+pub use self::error::{Error, ErrorCode};
 pub use self::ser::{
     Serializer,
     PrettySerializer,
@@ -307,137 +308,13 @@ pub use self::ser::{
     to_pretty_vec,
     to_pretty_string,
 };
-pub use self::de::{
-    Parser,
-    from_str,
-};
-pub use self::value::{Value, ToJson};
-pub use self::builder::{ListBuilder, ObjectBuilder};
+pub use self::value::{Value, ToJson, from_json};
 
 pub mod builder;
 pub mod de;
 pub mod ser;
 pub mod value;
-
-/// The errors that can arise while parsing a JSON stream.
-#[deriving(Clone, PartialEq)]
-pub enum ErrorCode {
-    ConversionError(super::de::Token),
-    EOFWhileParsingList,
-    EOFWhileParsingObject,
-    EOFWhileParsingString,
-    EOFWhileParsingValue,
-    ExpectedColon,
-    ExpectedConversion,
-    ExpectedEnumEnd,
-    ExpectedEnumEndToken,
-    ExpectedEnumMapStart,
-    ExpectedEnumToken,
-    ExpectedEnumVariantString,
-    ExpectedListCommaOrEnd,
-    ExpectedName,
-    ExpectedObjectCommaOrEnd,
-    ExpectedSomeIdent,
-    ExpectedSomeValue,
-    ExpectedTokens(super::de::Token, &'static [super::de::TokenKind]),
-    InvalidEscape,
-    InvalidNumber,
-    InvalidUnicodeCodePoint,
-    KeyMustBeAString,
-    LoneLeadingSurrogateInHexEscape,
-    MissingField(&'static str),
-    NotFourDigit,
-    NotUtf8,
-    TrailingCharacters,
-    UnexpectedEndOfHexEscape,
-    UnexpectedName(super::de::Token),
-    UnknownVariant,
-    UnrecognizedHex,
-}
-
-impl fmt::Show for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ConversionError(ref token) => write!(f, "failed to convert {}", token),
-            EOFWhileParsingList => "EOF While parsing list".fmt(f),
-            EOFWhileParsingObject => "EOF While parsing object".fmt(f),
-            EOFWhileParsingString => "EOF While parsing string".fmt(f),
-            EOFWhileParsingValue => "EOF While parsing value".fmt(f),
-            ExpectedColon => "expected `:`".fmt(f),
-            ExpectedConversion => "expected conversion".fmt(f),
-            ExpectedEnumEnd => "expected enum end".fmt(f),
-            ExpectedEnumEndToken => "expected enum map end".fmt(f),
-            ExpectedEnumMapStart => "expected enum map start".fmt(f),
-            ExpectedEnumToken => "expected enum token".fmt(f),
-            ExpectedEnumVariantString => "expected variant".fmt(f),
-            ExpectedListCommaOrEnd => "expected `,` or `]`".fmt(f),
-            ExpectedName => "expected name".fmt(f),
-            ExpectedObjectCommaOrEnd => "expected `,` or `}`".fmt(f),
-            ExpectedSomeIdent => "expected ident".fmt(f),
-            ExpectedSomeValue => "expected value".fmt(f),
-            ExpectedTokens(ref token, tokens) => write!(f, "expected {}, found {}", tokens, token),
-            InvalidEscape => "invalid escape".fmt(f),
-            InvalidNumber => "invalid number".fmt(f),
-            InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
-            KeyMustBeAString => "key must be a string".fmt(f),
-            LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
-            MissingField(ref field) => write!(f, "missing field \"{}\"", field),
-            NotFourDigit => "invalid \\u escape (not four digits)".fmt(f),
-            NotUtf8 => "contents not utf-8".fmt(f),
-            TrailingCharacters => "trailing characters".fmt(f),
-            UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
-            UnexpectedName(ref name) => write!(f, "unexpected name {}", name),
-            UnknownVariant => "unknown variant".fmt(f),
-            UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
-        }
-    }
-}
-
-#[deriving(Clone, PartialEq, Show)]
-pub enum Error {
-    /// msg, line, col
-    SyntaxError(ErrorCode, uint, uint),
-    IoError(io::IoError),
-    ExpectedError(string::String, string::String),
-    MissingFieldError(string::String),
-    UnknownVariantError(string::String),
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            SyntaxError(..) => "syntax error",
-            IoError(ref error) => error.description(),
-            ExpectedError(ref expected, _) => expected.as_slice(),
-            MissingFieldError(_) => "missing field",
-            UnknownVariantError(_) => "unknown variant",
-        }
-    }
-
-    fn detail(&self) -> Option<String> {
-        match *self {
-            SyntaxError(ref code, line, col) => {
-                Some(format!("{} at line {} column {}", code, line, col))
-            }
-            IoError(ref error) => error.detail(),
-            ExpectedError(ref expected, ref found) => {
-                Some(format!("expected {}, found {}", expected, found))
-            }
-            MissingFieldError(ref field) => {
-                Some(format!("missing field {}", field))
-            }
-            UnknownVariantError(ref variant) => {
-                Some(format!("unknown variant {}", variant))
-            }
-        }
-    }
-}
-
-impl error::FromError<io::IoError> for Error {
-    fn from_error(error: io::IoError) -> Error {
-        IoError(error)
-    }
-}
+pub mod error;
 
 #[cfg(test)]
 mod tests {
@@ -447,19 +324,17 @@ mod tests {
     use std::string;
     use std::collections::TreeMap;
 
-    use super::value::{
-        Value,
-        Null,
-        Boolean,
-        Floating,
-        String,
-        List,
-        Object,
+    use de;
+    use ser::{Serialize, Serializer};
+    use ser;
+
+    use super::{Error, Parser, ToJson, Value, value, from_str, from_json};
+
+    use super::error::Error::{
+        SyntaxError,
     };
-    use super::{Parser, Error, from_str};
-    use super::value;
-    use super::value::{ToJson, from_json};
-    use super::{
+
+    use super::error::ErrorCode::{
         EOFWhileParsingList,
         EOFWhileParsingObject,
         EOFWhileParsingString,
@@ -471,12 +346,8 @@ mod tests {
         ExpectedSomeValue,
         InvalidNumber,
         KeyMustBeAString,
-        SyntaxError,
         TrailingCharacters,
     };
-    use de;
-    use ser::{Serialize, Serializer};
-    use ser;
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
@@ -491,23 +362,23 @@ mod tests {
     #[deriving_deserialize]
     enum Animal {
         Dog,
-        Frog(string::String, Vec<int>)
+        Frog(String, Vec<int>)
     }
 
     impl ToJson for Animal {
         fn to_json(&self) -> Value {
             match *self {
-                Dog => {
-                    Object(
+                Animal::Dog => {
+                    Value::Object(
                         treemap!(
-                            "Dog".to_string() => List(vec!())
+                            "Dog".to_string() => Value::List(vec!())
                         )
                     )
                 }
-                Frog(ref x0, ref x1) => {
-                    Object(
+                Animal::Frog(ref x0, ref x1) => {
+                    Value::Object(
                         treemap!(
-                            "Frog".to_string() => List(vec!(x0.to_json(), x1.to_json()))
+                            "Frog".to_string() => Value::List(vec!(x0.to_json(), x1.to_json()))
                         )
                     )
                 }
@@ -526,7 +397,7 @@ mod tests {
 
     impl ToJson for Inner {
         fn to_json(&self) -> Value {
-            Object(
+            Value::Object(
                 treemap!(
                     "a".to_string() => self.a.to_json(),
                     "b".to_string() => self.b.to_json(),
@@ -545,7 +416,7 @@ mod tests {
 
     impl ToJson for Outer {
         fn to_json(&self) -> Value {
-            Object(
+            Value::Object(
                 treemap!(
                     "inner".to_string() => self.inner.to_json()
                 )
@@ -583,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_write_null() {
-        let tests = [
+        let tests = &[
             ((), "null"),
         ];
         test_encode_ok(tests);
@@ -592,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_write_i64() {
-        let tests = [
+        let tests = &[
             (3i, "3"),
             (-2i, "-2"),
             (-1234i, "-1234"),
@@ -603,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_write_f64() {
-        let tests = [
+        let tests = &[
             (3.0f64, "3"),
             (3.1, "3.1"),
             (-1.5, "-1.5"),
@@ -615,7 +486,7 @@ mod tests {
 
     #[test]
     fn test_write_str() {
-        let tests = [
+        let tests = &[
             ("", "\"\""),
             ("foo", "\"foo\""),
         ];
@@ -625,7 +496,7 @@ mod tests {
 
     #[test]
     fn test_write_bool() {
-        let tests = [
+        let tests = &[
             (true, "true"),
             (false, "false"),
         ];
@@ -635,13 +506,13 @@ mod tests {
 
     #[test]
     fn test_write_list() {
-        test_encode_ok([
+        test_encode_ok(&[
             (vec!(), "[]"),
             (vec!(true), "[true]"),
             (vec!(true, false), "[true,false]"),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (vec!(), "[]"),
             (
                 vec!(true),
@@ -662,21 +533,21 @@ mod tests {
             ),
         ]);
 
-        let long_test_list = List(vec![
-            Boolean(false),
-            Null,
-            List(vec![String("foo\nbar".to_string()), Floating(3.5)])]);
+        let long_test_list = Value::List(vec![
+            Value::Boolean(false),
+            Value::Null,
+            Value::List(vec![Value::String("foo\nbar".to_string()), Value::Floating(3.5)])]);
 
-        test_encode_ok([
+        test_encode_ok(&[
             (long_test_list, "[false,null,[\"foo\\nbar\",3.5]]"),
         ]);
 
-        let long_test_list = List(vec![
-            Boolean(false),
-            Null,
-            List(vec![String("foo\nbar".to_string()), Floating(3.5)])]);
+        let long_test_list = Value::List(vec![
+            Value::Boolean(false),
+            Value::Null,
+            Value::List(vec![Value::String("foo\nbar".to_string()), Value::Floating(3.5)])]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (
                 long_test_list,
                 concat!(
@@ -695,7 +566,7 @@ mod tests {
 
     #[test]
     fn test_write_object() {
-        test_encode_ok([
+        test_encode_ok(&[
             (treemap!(), "{}"),
             (treemap!("a".to_string() => true), "{\"a\":true}"),
             (
@@ -706,7 +577,7 @@ mod tests {
                 "{\"a\":true,\"b\":false}"),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (treemap!(), "{}"),
             (
                 treemap!("a".to_string() => true),
@@ -730,14 +601,14 @@ mod tests {
             ),
         ]);
 
-        let complex_obj = Object(treemap!(
-            "b".to_string() => List(vec!(
-                Object(treemap!("c".to_string() => String("\x0c\r".to_string()))),
-                Object(treemap!("d".to_string() => String("".to_string())))
+        let complex_obj = Value::Object(treemap!(
+            "b".to_string() => Value::List(vec!(
+                Value::Object(treemap!("c".to_string() => Value::String("\x0c\r".to_string()))),
+                Value::Object(treemap!("d".to_string() => Value::String("".to_string())))
             ))
         ));
 
-        test_encode_ok([
+        test_encode_ok(&[
             (
                 complex_obj.clone(),
                 "{\
@@ -749,7 +620,7 @@ mod tests {
             ),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (
                 complex_obj.clone(),
                 concat!(
@@ -770,14 +641,14 @@ mod tests {
 
     #[test]
     fn test_write_tuple() {
-        test_encode_ok([
+        test_encode_ok(&[
             (
                 (5i,),
                 "[5]",
             ),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (
                 (5i,),
                 concat!(
@@ -788,14 +659,14 @@ mod tests {
             ),
         ]);
 
-        test_encode_ok([
+        test_encode_ok(&[
             (
                 (5i, (6i, "abc")),
                 "[5,[6,\"abc\"]]",
             ),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (
                 (5i, (6i, "abc")),
                 concat!(
@@ -813,16 +684,16 @@ mod tests {
 
     #[test]
     fn test_write_enum() {
-        test_encode_ok([
-            (Dog, "{\"Dog\":[]}"),
-            (Frog("Henry".to_string(), vec!()), "{\"Frog\":[\"Henry\",[]]}"),
-            (Frog("Henry".to_string(), vec!(349)), "{\"Frog\":[\"Henry\",[349]]}"),
-            (Frog("Henry".to_string(), vec!(349, 102)), "{\"Frog\":[\"Henry\",[349,102]]}"),
+        test_encode_ok(&[
+            (Animal::Dog, "{\"Dog\":[]}"),
+            (Animal::Frog("Henry".to_string(), vec!()), "{\"Frog\":[\"Henry\",[]]}"),
+            (Animal::Frog("Henry".to_string(), vec!(349)), "{\"Frog\":[\"Henry\",[349]]}"),
+            (Animal::Frog("Henry".to_string(), vec!(349, 102)), "{\"Frog\":[\"Henry\",[349,102]]}"),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (
-                Dog,
+                Animal::Dog,
                 concat!(
                     "{\n",
                     "  \"Dog\": []\n",
@@ -830,7 +701,7 @@ mod tests {
                 ),
             ),
             (
-                Frog("Henry".to_string(), vec!()),
+                Animal::Frog("Henry".to_string(), vec!()),
                 concat!(
                     "{\n",
                     "  \"Frog\": [\n",
@@ -841,7 +712,7 @@ mod tests {
                 ),
             ),
             (
-                Frog("Henry".to_string(), vec!(349)),
+                Animal::Frog("Henry".to_string(), vec!(349)),
                 concat!(
                     "{\n",
                     "  \"Frog\": [\n",
@@ -854,7 +725,7 @@ mod tests {
                 ),
             ),
             (
-                Frog("Henry".to_string(), vec!(349, 102)),
+                Animal::Frog("Henry".to_string(), vec!(349, 102)),
                 concat!(
                     "{\n",
                     "  \"Frog\": [\n",
@@ -872,22 +743,22 @@ mod tests {
 
     #[test]
     fn test_write_option() {
-        test_encode_ok([
+        test_encode_ok(&[
             (None, "null"),
             (Some("jodhpurs"), "\"jodhpurs\""),
         ]);
 
-        test_encode_ok([
+        test_encode_ok(&[
             (None, "null"),
             (Some(vec!("foo", "bar")), "[\"foo\",\"bar\"]"),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (None, "null"),
             (Some("jodhpurs"), "\"jodhpurs\""),
         ]);
 
-        test_pretty_encode_ok([
+        test_pretty_encode_ok(&[
             (None, "null"),
             (
                 Some(vec!("foo", "bar")),
@@ -941,27 +812,27 @@ mod tests {
 
     #[test]
     fn test_parse_null() {
-        test_parse_err::<()>([
+        test_parse_err::<()>(&[
             ("n", SyntaxError(ExpectedSomeIdent, 1, 2)),
             ("nul", SyntaxError(ExpectedSomeIdent, 1, 4)),
             ("nulla", SyntaxError(TrailingCharacters, 1, 5)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("null", ()),
         ]);
     }
 
     #[test]
     fn test_json_deserialize_null() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             (),
         ]);
     }
 
     #[test]
     fn test_parse_bool() {
-        test_parse_err::<bool>([
+        test_parse_err::<bool>(&[
             ("t", SyntaxError(ExpectedSomeIdent, 1, 2)),
             ("truz", SyntaxError(ExpectedSomeIdent, 1, 4)),
             ("f", SyntaxError(ExpectedSomeIdent, 1, 2)),
@@ -970,7 +841,7 @@ mod tests {
             ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("true", true),
             ("false", false),
         ]);
@@ -978,7 +849,7 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_bool() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             true,
             false,
         ]);
@@ -986,7 +857,7 @@ mod tests {
 
     #[test]
     fn test_parse_number_errors() {
-        test_parse_err::<f64>([
+        test_parse_err::<f64>(&[
             ("+", SyntaxError(ExpectedSomeValue, 1, 1)),
             (".", SyntaxError(ExpectedSomeValue, 1, 1)),
             ("-", SyntaxError(InvalidNumber, 1, 2)),
@@ -1000,7 +871,7 @@ mod tests {
 
     #[test]
     fn test_parse_i64() {
-        test_parse_ok([
+        test_parse_ok(&[
             ("3", 3i64),
             ("-2", -2),
             ("-1234", -1234),
@@ -1009,7 +880,7 @@ mod tests {
 
     #[test]
     fn test_parse_f64() {
-        test_parse_ok([
+        test_parse_ok(&[
             ("3.0", 3.0f64),
             ("3.1", 3.1),
             ("-1.2", -1.2),
@@ -1022,7 +893,7 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_numbers() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             3.0f64,
             3.1,
             -1.2,
@@ -1035,13 +906,13 @@ mod tests {
 
     #[test]
     fn test_parse_string() {
-        test_parse_err::<string::String>([
+        test_parse_err::<string::String>(&[
             ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
             ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("\"\"", "".to_string()),
             ("\"foo\"", "foo".to_string()),
             ("\"\\\"\"", "\"".to_string()),
@@ -1056,7 +927,7 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_str() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             "".to_string(),
             "foo".to_string(),
             "\"".to_string(),
@@ -1071,7 +942,7 @@ mod tests {
 
     #[test]
     fn test_parse_list() {
-        test_parse_err::<Vec<f64>>([
+        test_parse_err::<Vec<f64>>(&[
             ("[", SyntaxError(EOFWhileParsingValue, 1, 2)),
             ("[ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
             ("[1", SyntaxError(EOFWhileParsingList,  1, 3)),
@@ -1081,57 +952,57 @@ mod tests {
             ("[]a", SyntaxError(TrailingCharacters, 1, 3)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("[]", vec!()),
             ("[ ]", vec!()),
             ("[null]", vec!(())),
             ("[ null ]", vec!(())),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("[true]", vec!(true)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("[3,1]", vec!(3i, 1)),
             ("[ 3 , 1 ]", vec!(3i, 1)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("[[3], [1, 2]]", vec!(vec!(3i), vec!(1, 2))),
         ]);
 
         let v: () = from_str("[]").unwrap();
         assert_eq!(v, ());
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("[1, 2, 3]", (1u, 2u, 3u)),
         ]);
     }
 
     #[test]
     fn test_json_deserialize_list() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             vec!(),
             vec!(()),
         ]);
 
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             vec!(true),
         ]);
 
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             vec!(3i, 1),
         ]);
 
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             vec!(vec!(3i), vec!(1, 2)),
         ]);
     }
 
     #[test]
     fn test_parse_object() {
-        test_parse_err::<TreeMap<string::String, int>>([
+        test_parse_err::<TreeMap<string::String, int>>(&[
             ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
             ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
@@ -1146,7 +1017,7 @@ mod tests {
             ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             ("{}", treemap!()),
             ("{ }", treemap!()),
             (
@@ -1167,7 +1038,7 @@ mod tests {
             ),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             (
                 "{\"a\": {\"b\": 3, \"c\": 4}}",
                 treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4i)),
@@ -1177,20 +1048,20 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_object() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             treemap!(),
             treemap!("a".to_string() => 3i),
             treemap!("a".to_string() => 3i, "b".to_string() => 4),
         ]);
 
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4)),
         ]);
     }
 
     #[test]
     fn test_parse_struct() {
-        test_parse_ok([
+        test_parse_ok(&[
             (
                 "{
                     \"inner\": []
@@ -1216,7 +1087,7 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_struct() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             Outer {
                 inner: vec![
                     Inner { a: (), b: 2, c: vec!["abc".to_string(), "xyz".to_string()] }
@@ -1227,7 +1098,7 @@ mod tests {
 
     #[test]
     fn test_parse_option() {
-        test_parse_ok([
+        test_parse_ok(&[
             ("null", None),
             ("\"jodhpurs\"", Some("jodhpurs".to_string())),
         ]);
@@ -1248,7 +1119,7 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_option() {
-        test_json_deserialize_ok([
+        test_json_deserialize_ok(&[
             None,
             Some("jodhpurs".to_string()),
         ]);
@@ -1256,23 +1127,23 @@ mod tests {
 
     #[test]
     fn test_parse_enum() {
-        test_parse_ok([
-            ("{\"Dog\": []}", Dog),
+        test_parse_ok(&[
+            ("{\"Dog\": []}", Animal::Dog),
             (
                 "{\"Frog\": [\"Henry\", []]}",
-                Frog("Henry".to_string(), vec!()),
+                Animal::Frog("Henry".to_string(), vec!()),
             ),
             (
                 "{\"Frog\": [\"Henry\", [349]]}",
-                Frog("Henry".to_string(), vec!(349)),
+                Animal::Frog("Henry".to_string(), vec!(349)),
             ),
             (
                 "{\"Frog\": [\"Henry\", [349, 102]]}",
-                Frog("Henry".to_string(), vec!(349, 102)),
+                Animal::Frog("Henry".to_string(), vec!(349, 102)),
             ),
         ]);
 
-        test_parse_ok([
+        test_parse_ok(&[
             (
                 concat!(
                     "{",
@@ -1281,8 +1152,8 @@ mod tests {
                     "}"
                 ),
                 treemap!(
-                    "a".to_string() => Dog,
-                    "b".to_string() => Frog("Henry".to_string(), vec!())
+                    "a".to_string() => Animal::Dog,
+                    "b".to_string() => Animal::Frog("Henry".to_string(), vec!())
                 )
             ),
         ]);
@@ -1290,17 +1161,17 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_enum() {
-        test_json_deserialize_ok([
-            Dog,
-            Frog("Henry".to_string(), vec!()),
-            Frog("Henry".to_string(), vec!(349)),
-            Frog("Henry".to_string(), vec!(349, 102)),
+        test_json_deserialize_ok(&[
+            Animal::Dog,
+            Animal::Frog("Henry".to_string(), vec!()),
+            Animal::Frog("Henry".to_string(), vec!(349)),
+            Animal::Frog("Henry".to_string(), vec!(349, 102)),
         ]);
     }
 
     #[test]
     fn test_multiline_errors() {
-        test_parse_err::<TreeMap<string::String, string::String>>([
+        test_parse_err::<TreeMap<string::String, string::String>>(&[
             ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3u, 8u)),
         ]);
     }
@@ -1779,20 +1650,20 @@ mod tests {
         stack.bump_index();
 
         assert!(stack.len() == 1);
-        assert!(stack.is_equal_to([Index(1)]));
-        assert!(stack.starts_with([Index(1)]));
-        assert!(stack.ends_with([Index(1)]));
+        assert!(stack.is_equal_to(&[Index(1)]));
+        assert!(stack.starts_with(&[Index(1)]));
+        assert!(stack.ends_with(&[Index(1)]));
         assert!(stack.last_is_index());
         assert!(stack.get(0) == Index(1));
 
         stack.push_key("foo".to_string());
 
         assert!(stack.len() == 2);
-        assert!(stack.is_equal_to([Index(1), Key("foo")]));
-        assert!(stack.starts_with([Index(1), Key("foo")]));
-        assert!(stack.starts_with([Index(1)]));
-        assert!(stack.ends_with([Index(1), Key("foo")]));
-        assert!(stack.ends_with([Key("foo")]));
+        assert!(stack.is_equal_to(&[Index(1), Key("foo")]));
+        assert!(stack.starts_with(&[Index(1), Key("foo")]));
+        assert!(stack.starts_with(&[Index(1)]));
+        assert!(stack.ends_with(&[Index(1), Key("foo")]));
+        assert!(stack.ends_with(&[Key("foo")]));
         assert!(!stack.last_is_index());
         assert!(stack.get(0) == Index(1));
         assert!(stack.get(1) == Key("foo"));
@@ -1800,13 +1671,13 @@ mod tests {
         stack.push_key("bar".to_string());
 
         assert!(stack.len() == 3);
-        assert!(stack.is_equal_to([Index(1), Key("foo"), Key("bar")]));
-        assert!(stack.starts_with([Index(1)]));
-        assert!(stack.starts_with([Index(1), Key("foo")]));
-        assert!(stack.starts_with([Index(1), Key("foo"), Key("bar")]));
-        assert!(stack.ends_with([Key("bar")]));
-        assert!(stack.ends_with([Key("foo"), Key("bar")]));
-        assert!(stack.ends_with([Index(1), Key("foo"), Key("bar")]));
+        assert!(stack.is_equal_to(&[Index(1), Key("foo"), Key("bar")]));
+        assert!(stack.starts_with(&[Index(1)]));
+        assert!(stack.starts_with(&[Index(1), Key("foo")]));
+        assert!(stack.starts_with(&[Index(1), Key("foo"), Key("bar")]));
+        assert!(stack.ends_with(&[Key("bar")]));
+        assert!(stack.ends_with(&[Key("foo"), Key("bar")]));
+        assert!(stack.ends_with(&[Index(1), Key("foo"), Key("bar")]));
         assert!(!stack.last_is_index());
         assert!(stack.get(0) == Index(1));
         assert!(stack.get(1) == Key("foo"));
@@ -1815,11 +1686,11 @@ mod tests {
         stack.pop();
 
         assert!(stack.len() == 2);
-        assert!(stack.is_equal_to([Index(1), Key("foo")]));
-        assert!(stack.starts_with([Index(1), Key("foo")]));
-        assert!(stack.starts_with([Index(1)]));
-        assert!(stack.ends_with([Index(1), Key("foo")]));
-        assert!(stack.ends_with([Key("foo")]));
+        assert!(stack.is_equal_to(&[Index(1), Key("foo")]));
+        assert!(stack.starts_with(&[Index(1), Key("foo")]));
+        assert!(stack.starts_with(&[Index(1)]));
+        assert!(stack.ends_with(&[Index(1), Key("foo")]));
+        assert!(stack.ends_with(&[Key("foo")]));
         assert!(!stack.last_is_index());
         assert!(stack.get(0) == Index(1));
         assert!(stack.get(1) == Key("foo"));
@@ -1834,18 +1705,9 @@ mod bench {
     use serialize;
     use test::Bencher;
 
-    use json::value::{
-        Value,
-        Null,
-        Boolean,
-        Integer,
-        Floating,
-        String,
-        List,
-        Object,
-    };
-    use super::{Parser, from_str};
-    use de;
+    use de::Token;
+
+    use super::{Parser, Value, from_str};
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
@@ -1888,43 +1750,43 @@ mod bench {
     }
 
     fn encoder_json(count: uint) -> serialize::json::Json {
-        use serialize::json;
+        use serialize::json::Json;
 
         let mut list = vec!();
         for _ in range(0, count) {
-            list.push(json::Object(treemap!(
-                "a".to_string() => json::Boolean(true),
-                "b".to_string() => json::Null,
-                "c".to_string() => json::F64(3.1415),
-                "d".to_string() => json::String("Hello world".to_string()),
-                "e".to_string() => json::List(vec!(
-                    json::U64(1),
-                    json::U64(2),
-                    json::U64(3)
+            list.push(Json::Object(treemap!(
+                "a".to_string() => Json::Boolean(true),
+                "b".to_string() => Json::Null,
+                "c".to_string() => Json::F64(3.1415),
+                "d".to_string() => Json::String("Hello world".to_string()),
+                "e".to_string() => Json::Array(vec!(
+                    Json::U64(1),
+                    Json::U64(2),
+                    Json::U64(3)
                 ))
             )));
         }
-        list.push(json::Object(TreeMap::new()));
-        json::List(list)
+        list.push(Json::Object(TreeMap::new()));
+        Json::Array(list)
     }
 
     fn serializer_json(count: uint) -> Value {
         let mut list = vec!();
         for _ in range(0, count) {
-            list.push(Object(treemap!(
-                "a".to_string() => Boolean(true),
-                "b".to_string() => Null,
-                "c".to_string() => Floating(3.1415),
-                "d".to_string() => String("Hello world".to_string()),
-                "e".to_string() => List(vec!(
-                    Integer(1),
-                    Integer(2),
-                    Integer(3)
+            list.push(Value::Object(treemap!(
+                "a".to_string() => Value::Boolean(true),
+                "b".to_string() => Value::Null,
+                "c".to_string() => Value::Floating(3.1415),
+                "d".to_string() => Value::String("Hello world".to_string()),
+                "e".to_string() => Value::List(vec!(
+                    Value::Integer(1),
+                    Value::Integer(2),
+                    Value::Integer(3)
                 ))
             )));
         }
-        list.push(Object(TreeMap::new()));
-        List(list)
+        list.push(Value::Object(TreeMap::new()));
+        Value::List(list)
     }
 
     fn bench_encoder(b: &mut Bencher, count: uint) {
@@ -1980,40 +1842,40 @@ mod bench {
     }
 
     fn bench_decoder_streaming(b: &mut Bencher, count: uint) {
-        use serialize::json;
-
         let src = json_str(count);
 
         b.iter( || {
-            let mut parser = json::Parser::new(src.as_slice().chars());
-            assert_eq!(parser.next(), Some(json::ListStart));
+            use serialize::json::{Parser, JsonEvent, StackElement};
+
+            let mut parser = Parser::new(src.as_slice().chars());
+            assert_eq!(parser.next(), Some(JsonEvent::ArrayStart));
             for _ in range(0, count) {
-                assert_eq!(parser.next(), Some(json::ObjectStart));
+                assert_eq!(parser.next(), Some(JsonEvent::ObjectStart));
 
-                assert_eq!(parser.next(), Some(json::BooleanValue(true)));
-                assert_eq!(parser.stack().top(), Some(json::Key("a")));
+                assert_eq!(parser.next(), Some(JsonEvent::BooleanValue(true)));
+                assert_eq!(parser.stack().top(), Some(StackElement::Key("a")));
 
-                assert_eq!(parser.next(), Some(json::NullValue));
-                assert_eq!(parser.stack().top(), Some(json::Key("b")));
+                assert_eq!(parser.next(), Some(JsonEvent::NullValue));
+                assert_eq!(parser.stack().top(), Some(StackElement::Key("b")));
 
-                assert_eq!(parser.next(), Some(json::F64Value(3.1415)));
-                assert_eq!(parser.stack().top(), Some(json::Key("c")));
+                assert_eq!(parser.next(), Some(JsonEvent::F64Value(3.1415)));
+                assert_eq!(parser.stack().top(), Some(StackElement::Key("c")));
 
-                assert_eq!(parser.next(), Some(json::StringValue("Hello world".to_string())));
-                assert_eq!(parser.stack().top(), Some(json::Key("d")));
+                assert_eq!(parser.next(), Some(JsonEvent::StringValue("Hello world".to_string())));
+                assert_eq!(parser.stack().top(), Some(StackElement::Key("d")));
 
-                assert_eq!(parser.next(), Some(json::ListStart));
-                assert_eq!(parser.stack().top(), Some(json::Key("e")));
-                assert_eq!(parser.next(), Some(json::U64Value(1)));
-                assert_eq!(parser.next(), Some(json::U64Value(2)));
-                assert_eq!(parser.next(), Some(json::U64Value(3)));
-                assert_eq!(parser.next(), Some(json::ListEnd));
+                assert_eq!(parser.next(), Some(JsonEvent::ArrayStart));
+                assert_eq!(parser.stack().top(), Some(StackElement::Key("e")));
+                assert_eq!(parser.next(), Some(JsonEvent::U64Value(1)));
+                assert_eq!(parser.next(), Some(JsonEvent::U64Value(2)));
+                assert_eq!(parser.next(), Some(JsonEvent::U64Value(3)));
+                assert_eq!(parser.next(), Some(JsonEvent::ArrayEnd));
 
-                assert_eq!(parser.next(), Some(json::ObjectEnd));
+                assert_eq!(parser.next(), Some(JsonEvent::ObjectEnd));
             }
-            assert_eq!(parser.next(), Some(json::ObjectStart));
-            assert_eq!(parser.next(), Some(json::ObjectEnd));
-            assert_eq!(parser.next(), Some(json::ListEnd));
+            assert_eq!(parser.next(), Some(JsonEvent::ObjectStart));
+            assert_eq!(parser.next(), Some(JsonEvent::ObjectEnd));
+            assert_eq!(parser.next(), Some(JsonEvent::ArrayEnd));
             assert_eq!(parser.next(), None);
         });
     }
@@ -2024,34 +1886,34 @@ mod bench {
         b.iter( || {
             let mut parser = Parser::new(src.as_slice().bytes());
 
-            assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
+            assert_eq!(parser.next(), Some(Ok(Token::SeqStart(0))));
             for _ in range(0, count) {
-                assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
+                assert_eq!(parser.next(), Some(Ok(Token::MapStart(0))));
 
-                assert_eq!(parser.next(), Some(Ok(de::String("a".to_string()))));
-                assert_eq!(parser.next(), Some(Ok(de::Bool(true))));
+                assert_eq!(parser.next(), Some(Ok(Token::String("a".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(Token::Bool(true))));
 
-                assert_eq!(parser.next(), Some(Ok(de::String("b".to_string()))));
-                assert_eq!(parser.next(), Some(Ok(de::Null)));
+                assert_eq!(parser.next(), Some(Ok(Token::String("b".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(Token::Null)));
 
-                assert_eq!(parser.next(), Some(Ok(de::String("c".to_string()))));
-                assert_eq!(parser.next(), Some(Ok(de::F64(3.1415))));
+                assert_eq!(parser.next(), Some(Ok(Token::String("c".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(Token::F64(3.1415))));
 
-                assert_eq!(parser.next(), Some(Ok(de::String("d".to_string()))));
-                assert_eq!(parser.next(), Some(Ok(de::String("Hello world".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(Token::String("d".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(Token::String("Hello world".to_string()))));
 
-                assert_eq!(parser.next(), Some(Ok(de::String("e".to_string()))));
-                assert_eq!(parser.next(), Some(Ok(de::SeqStart(0))));
-                assert_eq!(parser.next(), Some(Ok(de::I64(1))));
-                assert_eq!(parser.next(), Some(Ok(de::I64(2))));
-                assert_eq!(parser.next(), Some(Ok(de::I64(3))));
-                assert_eq!(parser.next(), Some(Ok(de::End)));
+                assert_eq!(parser.next(), Some(Ok(Token::String("e".to_string()))));
+                assert_eq!(parser.next(), Some(Ok(Token::SeqStart(0))));
+                assert_eq!(parser.next(), Some(Ok(Token::I64(1))));
+                assert_eq!(parser.next(), Some(Ok(Token::I64(2))));
+                assert_eq!(parser.next(), Some(Ok(Token::I64(3))));
+                assert_eq!(parser.next(), Some(Ok(Token::End)));
 
-                assert_eq!(parser.next(), Some(Ok(de::End)));
+                assert_eq!(parser.next(), Some(Ok(Token::End)));
             }
-            assert_eq!(parser.next(), Some(Ok(de::MapStart(0))));
-            assert_eq!(parser.next(), Some(Ok(de::End)));
-            assert_eq!(parser.next(), Some(Ok(de::End)));
+            assert_eq!(parser.next(), Some(Ok(Token::MapStart(0))));
+            assert_eq!(parser.next(), Some(Ok(Token::End)));
+            assert_eq!(parser.next(), Some(Ok(Token::End)));
             assert_eq!(parser.next(), None);
 
             loop {

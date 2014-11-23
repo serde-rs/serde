@@ -409,10 +409,11 @@ fn deserialize_enum(
     let arms: Vec<ast::Arm> = fields.iter()
         .enumerate()
         .map(|(i, &(name, span, ref parts))| {
+            let path = cx.path(span, vec![type_ident, name]);
             let call = deserialize_static_fields(
                 cx,
                 span,
-                name,
+                path,
                 serial_names.as_slice(),
                 parts,
                 |cx, _, _| {
@@ -425,7 +426,7 @@ fn deserialize_enum(
         .collect();
 
     quote_expr!(cx, {
-        let i = try!($deserializer.expect_enum_start($token, $type_name, $variants));
+        let i = try!($deserializer.expect_enum_start($token, $type_name, &$variants));
 
         let result = match i {
             $arms
@@ -444,15 +445,16 @@ fn deserialize_enum(
 fn deserialize_static_fields(
     cx: &ExtCtxt,
     span: Span,
-    outer_pat_ident: Ident,
+    outer_pat_path: ast::Path,
     serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
     getarg: |&ExtCtxt, Span, token::InternedString| -> P<Expr>
 ) -> P<Expr> {
     match *fields {
         Unnamed(ref fields) => {
+            let path_expr = cx.expr_path(outer_pat_path);
             if fields.is_empty() {
-                cx.expr_ident(span, outer_pat_ident)
+                path_expr
             } else {
                 let fields = fields.iter().enumerate().map(|(i, &span)| {
                     getarg(
@@ -462,7 +464,7 @@ fn deserialize_static_fields(
                     )
                 }).collect();
 
-                cx.expr_call_ident(span, outer_pat_ident, fields)
+                cx.expr_call(span, path_expr, fields)
             }
         }
         Named(ref fields) => {
@@ -480,7 +482,7 @@ fn deserialize_static_fields(
                 cx.field_imm(span, name, arg)
             }).collect();
 
-            cx.expr_struct_ident(span, outer_pat_ident, fields)
+            cx.expr_struct(span, outer_pat_path, fields)
         }
     }
 }

@@ -31,7 +31,9 @@ mod decoder {
     use std::collections::hash_map::MoveEntries;
     use serialize;
 
-    use super::{Error, EndOfStream, SyntaxError, OtherError};
+    use super::Error;
+    use super::Error::{EndOfStream, SyntaxError, OtherError};
+    use self::Value::{StringValue, IntValue};
 
     enum Value {
         StringValue(String),
@@ -172,7 +174,9 @@ mod deserializer {
     use std::collections::HashMap;
     use std::collections::hash_map::MoveEntries;
 
-    use super::{Error, EndOfStream, SyntaxError};
+    use super::Error;
+    use super::Error::{EndOfStream, SyntaxError};
+    use self::State::{StartState, KeyOrEndState, ValueState, EndState};
 
     use serde::de;
 

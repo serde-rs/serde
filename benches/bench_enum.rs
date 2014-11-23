@@ -13,6 +13,8 @@ use serialize::{Decoder, Decodable};
 
 use serde::de::{Deserializer, Deserialize};
 
+use Animal::{Dog, Frog};
+
 //////////////////////////////////////////////////////////////////////////////
 
 #[deriving(Clone, PartialEq, Show, Decodable)]
@@ -36,7 +38,10 @@ pub enum Error {
 mod decoder {
     use serialize::Decoder;
 
-    use super::{Animal, Dog, Frog, Error, SyntaxError, OtherError};
+    use super::{Animal, Error};
+    use super::Animal::{Dog, Frog};
+    use super::Error::{SyntaxError, OtherError};
+    use self::State::{AnimalState, IntState, StringState};
 
     enum State {
         AnimalState(Animal),
@@ -184,7 +189,10 @@ mod decoder {
 //////////////////////////////////////////////////////////////////////////////
 
 mod deserializer {
-    use super::{Animal, Dog, Frog, Error, EndOfStream, SyntaxError};
+    use super::{Animal, Error};
+    use super::Animal::{Dog, Frog};
+    use super::Error::{EndOfStream, SyntaxError};
+    use self::State::{AnimalState, IntState, StringState, EndState};
 
     use serde::de;
 

@@ -44,7 +44,7 @@ pub fn escape_str<W: Writer>(wr: &mut W, v: &str) -> IoResult<()> {
 }
 
 fn escape_char<W: Writer>(wr: &mut W, v: char) -> IoResult<()> {
-    let mut buf = [0, .. 4];
+    let buf = &mut [0, .. 4];
     v.encode_utf8(buf);
     escape_bytes(wr, buf)
 }
@@ -65,7 +65,7 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
 
 fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
     const LEN: uint = 16;
-    const BUF: [u8, ..LEN] = [b' ', ..LEN];
+    const BUF: &'static [u8, ..LEN] = &[b' ', ..LEN];
 
     while n >= LEN {
         try!(wr.write(BUF));
@@ -128,52 +128,52 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
 
     #[inline]
     fn serialize_int(&mut self, v: int) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i8(&mut self, v: i8) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i16(&mut self, v: i16) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i32(&mut self, v: i32) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i64(&mut self, v: i64) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_uint(&mut self, v: uint) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u8(&mut self, v: u8) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u16(&mut self, v: u16) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u32(&mut self, v: u32) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u64(&mut self, v: u64) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
@@ -391,52 +391,52 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
 
     #[inline]
     fn serialize_int(&mut self, v: int) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i8(&mut self, v: i8) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i16(&mut self, v: i16) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i32(&mut self, v: i32) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_i64(&mut self, v: i64) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_uint(&mut self, v: uint) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u8(&mut self, v: u8) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u16(&mut self, v: u16) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u32(&mut self, v: u32) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]
     fn serialize_u64(&mut self, v: u64) -> IoResult<()> {
-        write!(self.wr, "{}", v)
+        write!(&mut self.wr, "{}", v)
     }
 
     #[inline]

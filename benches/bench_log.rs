@@ -456,13 +456,13 @@ impl Log {
         Log {
             timestamp: 2837513946597,
             zone_id: 123456,
-            zone_plan: FREE,
+            zone_plan: ZonePlan::FREE,
             http: Http {
-                protocol: HTTP11,
+                protocol: HttpProtocol::HTTP11,
                 status: 200,
                 host_status: 503,
                 up_status: 520,
-                method: GET,
+                method: HttpMethod::GET,
                 content_type: "text/html".to_string(),
                 user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36".to_string(),
                 referer: "https://www.cloudflare.com/".to_string(),
@@ -472,10 +472,10 @@ impl Log {
                 ip: "1.2.3.4".to_string(),
                 port: 8000,
                 hostname: "www.example.com".to_string(),
-                protocol: HTTPS,
+                protocol: OriginProtocol::HTTPS,
             },
-            country: US,
-            cache_status: Hit,
+            country: Country::US,
+            cache_status: CacheStatus::Hit,
             server_ip: "192.168.1.1".to_string(),
             server_name: "metal.cloudflare.com".to_string(),
             remote_ip: "10.1.2.3".to_string(),
@@ -673,58 +673,58 @@ fn bench_copy(b: &mut Bencher) {
 
 fn manual_no_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str("{\"timestamp\":").unwrap();
-    (write!(wr, "{}", log.timestamp)).unwrap();
+    (write!(&mut wr, "{}", log.timestamp)).unwrap();
     wr.write_str(",\"zone_id\":").unwrap();
-    (write!(wr, "{}", log.zone_id)).unwrap();
+    (write!(&mut wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",\"zone_plan\":").unwrap();
-    (write!(wr, "{}", log.zone_plan as uint)).unwrap();
+    (write!(&mut wr, "{}", log.zone_plan as uint)).unwrap();
 
     wr.write_str(",\"http\":{\"protocol\":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(&mut wr, "{}", log.http.protocol as uint)).unwrap();
     wr.write_str(",\"status\":").unwrap();
-    (write!(wr, "{}", log.http.status)).unwrap();
+    (write!(&mut wr, "{}", log.http.status)).unwrap();
     wr.write_str(",\"host_status\":").unwrap();
-    (write!(wr, "{}", log.http.host_status)).unwrap();
+    (write!(&mut wr, "{}", log.http.host_status)).unwrap();
     wr.write_str(",\"up_status\":").unwrap();
-    (write!(wr, "{}", log.http.up_status)).unwrap();
+    (write!(&mut wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",\"method\":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(&mut wr, "{}", log.http.method as uint)).unwrap();
     wr.write_str(",\"content_type\":").unwrap();
-    (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.http.content_type)).unwrap();
     wr.write_str(",\"user_agent\":").unwrap();
-    (write!(wr, "\"{}\"", log.http.user_agent)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.http.user_agent)).unwrap();
     wr.write_str(",\"referer\":").unwrap();
-    (write!(wr, "\"{}\"", log.http.referer)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.http.referer)).unwrap();
     wr.write_str(",\"request_uri\":").unwrap();
-    (write!(wr, "\"{}\"", log.http.request_uri)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.http.request_uri)).unwrap();
 
     wr.write_str("},\"origin\":{").unwrap();
 
     wr.write_str("\"ip\":").unwrap();
-    (write!(wr, "\"{}\"", log.origin.ip)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.origin.ip)).unwrap();
     wr.write_str(",\"port\":").unwrap();
-    (write!(wr, "{}", log.origin.port)).unwrap();
+    (write!(&mut wr, "{}", log.origin.port)).unwrap();
     wr.write_str(",\"hostname\":").unwrap();
-    (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.origin.hostname)).unwrap();
 
     wr.write_str(",\"protocol\":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(&mut wr, "{}", log.origin.protocol as uint)).unwrap();
 
     wr.write_str("},\"country\":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(&mut wr, "{}", log.country as uint)).unwrap();
     wr.write_str(",\"cache_status\":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(&mut wr, "{}", log.cache_status as uint)).unwrap();
     wr.write_str(",\"server_ip\":").unwrap();
-    (write!(wr, "\"{}\"", log.server_ip)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.server_ip)).unwrap();
     wr.write_str(",\"server_name\":").unwrap();
-    (write!(wr, "\"{}\"", log.server_name)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.server_name)).unwrap();
     wr.write_str(",\"remote_ip\":").unwrap();
-    (write!(wr, "\"{}\"", log.remote_ip)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.remote_ip)).unwrap();
     wr.write_str(",\"bytes_dlv\":").unwrap();
-    (write!(wr, "{}", log.bytes_dlv)).unwrap();
+    (write!(&mut wr, "{}", log.bytes_dlv)).unwrap();
 
     wr.write_str(",\"ray_id\":").unwrap();
-    (write!(wr, "\"{}\"", log.ray_id)).unwrap();
+    (write!(&mut wr, "\"{}\"", log.ray_id)).unwrap();
     wr.write_str("}").unwrap();
 }
 
@@ -732,38 +732,38 @@ fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str("{").unwrap();
     escape_str(&mut wr, "timestamp").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.timestamp)).unwrap();
+    (write!(&mut wr, "{}", log.timestamp)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "zone_id").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.zone_id)).unwrap();
+    (write!(&mut wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "zone_plan").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+    (write!(&mut wr, "{}", log.zone_plan as int)).unwrap();
 
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "http").unwrap();
     wr.write_str(":{").unwrap();
     escape_str(&mut wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(&mut wr, "{}", log.http.protocol as uint)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.status)).unwrap();
+    (write!(&mut wr, "{}", log.http.status)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "host_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.host_status)).unwrap();
+    (write!(&mut wr, "{}", log.http.host_status)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "up_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.up_status)).unwrap();
+    (write!(&mut wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "method").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(&mut wr, "{}", log.http.method as uint)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "content_type").unwrap();
     wr.write_str(":").unwrap();
@@ -791,7 +791,7 @@ fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "port").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.origin.port)).unwrap();
+    (write!(&mut wr, "{}", log.origin.port)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "hostname").unwrap();
     wr.write_str(":").unwrap();
@@ -799,16 +799,16 @@ fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(&mut wr, "{}", log.origin.protocol as uint)).unwrap();
 
     wr.write_str("},").unwrap();
     escape_str(&mut wr, "country").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(&mut wr, "{}", log.country as uint)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "cache_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(&mut wr, "{}", log.cache_status as uint)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "server_ip").unwrap();
     wr.write_str(":").unwrap();
@@ -824,7 +824,7 @@ fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "bytes_dlv").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.bytes_dlv)).unwrap();
+    (write!(&mut wr, "{}", log.bytes_dlv)).unwrap();
 
     wr.write_str(",").unwrap();
     escape_str(&mut wr, "ray_id").unwrap();
