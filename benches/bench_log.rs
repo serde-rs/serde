@@ -607,12 +607,6 @@ struct MyMemWriter0 {
 }
 
 impl MyMemWriter0 {
-    /*
-    pub fn new() -> MyMemWriter0 {
-        MyMemWriter0::with_capacity(128)
-    }
-    */
-
     pub fn with_capacity(cap: uint) -> MyMemWriter0 {
         MyMemWriter0 {
             buf: Vec::with_capacity(cap)
@@ -640,12 +634,6 @@ struct MyMemWriter1 {
 }
 
 impl MyMemWriter1 {
-    /*
-    pub fn new() -> MyMemWriter1 {
-        MyMemWriter1::with_capacity(128)
-    }
-    */
-
     pub fn with_capacity(cap: uint) -> MyMemWriter1 {
         MyMemWriter1 {
             buf: Vec::with_capacity(cap)
@@ -661,7 +649,7 @@ impl MyMemWriter1 {
 
 // LLVM isn't yet able to lower `Vec::push_all` into a memcpy, so this helps
 // MemWriter eke out that last bit of performance.
-//#[inline(always)]
+#[inline]
 fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
     let dst_len = dst.len();
     let src_len = src.len();
@@ -995,7 +983,7 @@ fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
 }
 
 #[test]
-fn test_manual_mem_writer_no_escape() {
+fn test_manual_vec_no_escape() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
@@ -1006,7 +994,7 @@ fn test_manual_mem_writer_no_escape() {
 }
 
 #[bench]
-fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
+fn bench_manual_vec_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
@@ -1020,7 +1008,7 @@ fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
 }
 
 #[test]
-fn test_manual_mem_writer_escape() {
+fn test_manual_vec_escape() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
@@ -1031,7 +1019,7 @@ fn test_manual_mem_writer_escape() {
 }
 
 #[bench]
-fn bench_manual_mem_writer_escape(b: &mut Bencher) {
+fn bench_manual_vec_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
@@ -1213,6 +1201,32 @@ fn bench_direct_my_mem_writer0(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
+    direct(wr.by_ref(), &log);
+    b.bytes = wr.buf.len() as u64;
+
+    b.iter(|| {
+        wr.clear();
+
+        direct(wr.by_ref(), &log);
+    });
+}
+
+#[test]
+fn test_direct_my_mem_writer1() {
+    let log = Log::new();
+
+    let mut wr = MyMemWriter1::with_capacity(1024);
+    direct(wr.by_ref(), &log);
+
+    let json = String::from_utf8(wr.unwrap()).unwrap();
+    assert_eq!(JSON_STR, json.as_slice());
+}
+
+#[bench]
+fn bench_direct_my_mem_writer1(b: &mut Bencher) {
+    let log = Log::new();
+
+    let mut wr = MyMemWriter1::with_capacity(1024);
     direct(wr.by_ref(), &log);
     b.bytes = wr.buf.len() as u64;
 
