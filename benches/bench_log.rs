@@ -9,7 +9,7 @@ extern crate serialize;
 extern crate test;
 
 use std::io;
-use std::io::{MemWriter, ByRefWriter};
+use std::io::ByRefWriter;
 use test::Bencher;
 
 use serde::de;
@@ -622,10 +622,10 @@ fn bench_serializer_mem_writer(b: &mut Bencher) {
 
     b.iter(|| {
         //let _json = json::to_str(&log).unwrap();
-        let wr = MemWriter::with_capacity(1024);
+        let wr = Vec::with_capacity(1024);
         let mut serializer = json::Serializer::new(wr);
         log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap().unwrap();
+        let _json = serializer.unwrap();
     });
 }
 
@@ -838,14 +838,13 @@ fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let mut wr = MemWriter::with_capacity(1024);
+    let mut wr = Vec::with_capacity(1024);
     manual_no_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.len() as u64;
 
     b.iter(|| {
-        let mut wr = MemWriter::with_capacity(1024);
+        let mut wr = Vec::with_capacity(1024);
         manual_no_escape(wr.by_ref(), &log);
-        let _json = wr.unwrap();
 
         //let _json = String::from_utf8(_json).unwrap();
         //assert_eq!(_s, _json.as_slice());
@@ -857,14 +856,13 @@ fn bench_manual_mem_writer_escape(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let mut wr = MemWriter::with_capacity(1024);
+    let mut wr = Vec::with_capacity(1024);
     manual_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.len() as u64;
 
     b.iter(|| {
-        let mut wr = MemWriter::with_capacity(1024);
+        let mut wr = Vec::with_capacity(1024);
         manual_escape(wr.by_ref(), &log);
-        let _json = wr.unwrap();
 
         //let _json = String::from_utf8(_json).unwrap();
         //assert_eq!(_s, _json.as_slice());
@@ -898,9 +896,9 @@ fn bench_manual_my_mem_writer0_escape(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let mut wr = MemWriter::with_capacity(1024);
+    let mut wr = Vec::with_capacity(1024);
     manual_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.len() as u64;
 
     b.iter(|| {
         let mut wr = MyMemWriter0::with_capacity(1024);
@@ -1001,14 +999,13 @@ fn bench_direct_mem_writer(b: &mut Bencher) {
     let log = Log::new();
     let _s = r#"{"timestamp":2837513946597,"zone_id":123456,"zone_plan":"FREE","http":{"protocol":"HTTP11","status":200,"host_status":503,"up_status":520,"method":"GET","content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":"HTTPS"},"country":"US","cache_status":"Hit","server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
 
-    let mut wr = MemWriter::with_capacity(1024);
+    let mut wr = Vec::with_capacity(1024);
     direct(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.len() as u64;
 
     b.iter(|| {
-        let mut wr = MemWriter::with_capacity(1024);
+        let mut wr = Vec::with_capacity(1024);
         direct(wr.by_ref(), &log);
-        let _json = wr.unwrap();
 
         //let _json = String::from_utf8(wr.unwrap()).unwrap();
         /*

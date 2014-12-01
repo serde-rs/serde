@@ -1,7 +1,7 @@
 use std::f32;
 use std::f64;
 use std::num::{Float, FPNaN, FPInfinite};
-use std::io::{IoError, IoResult, MemWriter};
+use std::io::{IoError, IoResult};
 
 use ser::Serialize;
 use ser;
@@ -587,18 +587,18 @@ pub fn to_writer<
 /// Encode the specified struct into a json `[u8]` buffer.
 #[inline]
 pub fn to_vec<
-    T: Serialize<Serializer<MemWriter>, IoError>
+    T: Serialize<Serializer<Vec<u8>>, IoError>
 >(value: &T) -> Vec<u8> {
     // We are writing to a Vec, which doesn't fail. So we can ignore
     // the error.
-    let writer = MemWriter::with_capacity(128);
-    to_writer(writer, value).unwrap().unwrap()
+    let writer = Vec::with_capacity(128);
+    to_writer(writer, value).unwrap()
 }
 
 /// Encode the specified struct into a json `String` buffer.
 #[inline]
 pub fn to_string<
-    T: Serialize<Serializer<MemWriter>, IoError>
+    T: Serialize<Serializer<Vec<u8>>, IoError>
 >(value: &T) -> Result<String, Vec<u8>> {
     let buf = to_vec(value);
     String::from_utf8(buf)
@@ -617,17 +617,17 @@ pub fn to_pretty_writer<
 
 /// Encode the specified struct into a json `[u8]` buffer.
 pub fn to_pretty_vec<
-    T: Serialize<PrettySerializer<MemWriter>, IoError>
+    T: Serialize<PrettySerializer<Vec<u8>>, IoError>
 >(value: &T) -> Vec<u8> {
     // We are writing to a Vec, which doesn't fail. So we can ignore
     // the error.
-    let writer = MemWriter::with_capacity(128);
-    to_pretty_writer(writer, value).unwrap().unwrap()
+    let writer = Vec::with_capacity(128);
+    to_pretty_writer(writer, value).unwrap()
 }
 
 /// Encode the specified struct into a json `String` buffer.
 pub fn to_pretty_string<
-    T: Serialize<PrettySerializer<MemWriter>, IoError>
+    T: Serialize<PrettySerializer<Vec<u8>>, IoError>
 >(value: &T) -> Result<String, Vec<u8>> {
     let buf = to_pretty_vec(value);
     String::from_utf8(buf)

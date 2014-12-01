@@ -425,7 +425,7 @@ mod tests {
     }
 
     fn test_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serialize<super::Serializer<io::MemWriter>, io::IoError>
+        T: PartialEq + Show + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -439,7 +439,7 @@ mod tests {
     }
 
     fn test_pretty_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serialize<super::PrettySerializer<io::MemWriter>, io::IoError>
+        T: PartialEq + Show + ToJson + ser::Serialize<super::PrettySerializer<Vec<u8>>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -1370,7 +1370,6 @@ mod tests {
     #[test]
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
-        use std::io::MemWriter;
         use std::collections::HashMap;
         let mut hm: HashMap<uint, bool> = HashMap::new();
         hm.insert(1, true);
@@ -1386,7 +1385,6 @@ mod tests {
     #[test]
     fn test_prettyencode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
-        use std::io::MemWriter;
         use std::collections::HashMap;
         let mut hm: HashMap<uint, bool> = HashMap::new();
         hm.insert(1, true);

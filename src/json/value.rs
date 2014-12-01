@@ -1,6 +1,6 @@
 use std::collections::{HashMap, TreeMap, tree_map};
 use std::fmt;
-use std::io::{ByRefWriter, IoResult, MemWriter};
+use std::io::{ByRefWriter, IoResult};
 use std::io;
 use std::str;
 use std::string;
@@ -41,9 +41,9 @@ impl Value {
 
     /// Serializes a json value into a string
     pub fn to_pretty_string(&self) -> string::String {
-        let mut wr = MemWriter::new();
+        let mut wr = Vec::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
-        str::from_utf8(wr.unwrap().as_slice()).unwrap().to_string()
+        str::from_utf8(wr.as_slice()).unwrap().to_string()
     }
 
      /// If the Json value is an Object, returns the value associated with the provided key.

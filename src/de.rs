@@ -510,21 +510,23 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_seq<
-        'a,
         T: Deserialize<Self, E>,
         C: FromIterator<T>
-    >(&'a mut self, token: Token) -> Result<C, E> {
+    >(&mut self, token: Token) -> Result<C, E> {
         let len = try!(self.expect_seq_start(token));
+        let mut err = None;
 
-        let mut d: SeqDeserializer<'a, Self, E> = SeqDeserializer {
-            d: self,
-            len: len,
-            err: None,
+        let collection: C = {
+            let d = SeqDeserializer {
+                d: self,
+                len: len,
+                err: &mut err,
+            };
+
+            d.collect()
         };
 
-        let collection: C = d.collect();
-
-        match d.err {
+        match err {
             Some(err) => Err(err),
             None => Ok(collection),
         }
@@ -560,22 +562,24 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_map<
-        'a,
         K: Deserialize<Self, E>,
         V: Deserialize<Self, E>,
         C: FromIterator<(K, V)>
-    >(&'a mut self, token: Token) -> Result<C, E> {
+    >(&mut self, token: Token) -> Result<C, E> {
         let len = try!(self.expect_map_start(token));
+        let mut err = None;
 
-        let mut d: MapDeserializer<'a, Self, E> = MapDeserializer {
-            d: self,
-            len: len,
-            err: None,
+        let collection: C = {
+            let d = MapDeserializer {
+                d: self,
+                len: len,
+                err: &mut err,
+            };
+
+            d.collect()
         };
 
-        let collection: C = d.collect();
-
-        match d.err {
+        match err {
             Some(err) => Err(err),
             None => Ok(collection),
         }
@@ -584,10 +588,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct SeqDeserializer<'a, D: 'a, E> {
+struct SeqDeserializer<'a, D: 'a, E: 'a> {
     d: &'a mut D,
     len: uint,
-    err: option::Option<E>,
+    err: &'a mut Option<E>,
 }
 
 impl<
@@ -599,9 +603,12 @@ impl<
     #[inline]
     fn next(&mut self) -> option::Option<T> {
         match self.d.expect_seq_elt_or_end() {
-            Ok(next) => next,
+            Ok(next) => {
+                self.len -= 1;
+                next
+            }
             Err(err) => {
-                self.err = Some(err);
+                *self.err = Some(err);
                 None
             }
         }
@@ -615,10 +622,10 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct MapDeserializer<'a, D:'a, E> {
+struct MapDeserializer<'a, D:'a, E: 'a> {
     d: &'a mut D,
     len: uint,
-    err: option::Option<E>,
+    err: &'a mut option::Option<E>,
 }
 
 impl<
@@ -633,7 +640,7 @@ impl<
         match self.d.expect_map_elt_or_end() {
             Ok(next) => next,
             Err(err) => {
-                self.err = Some(err);
+                *self.err = Some(err);
                 None
             }
         }
