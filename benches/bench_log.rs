@@ -620,6 +620,9 @@ impl MyMemWriter0 {
     }
 
     #[inline]
+    pub fn clear(&mut self) { self.buf.clear() }
+
+    #[inline]
     pub fn unwrap(self) -> Vec<u8> { self.buf }
 }
 
@@ -648,6 +651,9 @@ impl MyMemWriter1 {
             buf: Vec::with_capacity(cap)
         }
     }
+
+    #[inline]
+    pub fn clear(&mut self) { self.buf.clear() }
 
     #[inline]
     pub fn unwrap(self) -> Vec<u8> { self.buf }
@@ -685,9 +691,18 @@ const JSON_STR: &'static str = r#"{"timestamp":2837513946597,"zone_id":123456,"z
 
 #[test]
 fn test_encoder() {
+    use serialize::Encodable;
+
     let log = Log::new();
-    let json = serialize::json::encode(&log);
-    assert_eq!(json.as_slice(), JSON_STR);
+
+    let mut wr = Vec::with_capacity(1024);
+
+    {
+        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut io::Writer);
+        log.encode(&mut encoder).unwrap();
+    }
+
+    assert_eq!(wr.as_slice(), JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -736,9 +751,12 @@ fn bench_serializer_vec(b: &mut Bencher) {
     let json = json::to_vec(&log);
     b.bytes = json.len() as u64;
 
+    let mut wr = Vec::with_capacity(1024);
+
     b.iter(|| {
-        let wr = Vec::with_capacity(1024);
-        let mut serializer = json::Serializer::new(wr);
+        wr.clear();
+
+        let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.unwrap();
     });
@@ -748,12 +766,14 @@ fn bench_serializer_vec(b: &mut Bencher) {
 fn test_serializer_my_mem_writer0() {
     let log = Log::new();
 
-    let wr = MyMemWriter0::with_capacity(1024);
-    let mut serializer = json::Serializer::new(wr);
-    log.serialize(&mut serializer).unwrap();
+    let mut wr = MyMemWriter0::with_capacity(1024);
 
-    let json = serializer.unwrap().unwrap();
-    assert_eq!(json.as_slice(), JSON_STR.as_bytes());
+    {
+        let mut serializer = json::Serializer::new(wr.by_ref());
+        log.serialize(&mut serializer).unwrap();
+    }
+
+    assert_eq!(wr.unwrap().as_slice(), JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -762,12 +782,13 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
     let json = json::to_vec(&log);
     b.bytes = json.len() as u64;
 
+    let mut wr = MyMemWriter0::with_capacity(1024);
+
     b.iter(|| {
-        //let _json = json::to_str(&log).unwrap();
-        let wr = MyMemWriter0::with_capacity(1024);
-        let mut serializer = json::Serializer::new(wr);
+        wr.clear();
+
+        let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -775,12 +796,14 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
 fn test_serializer_my_mem_writer1() {
     let log = Log::new();
 
-    let wr = MyMemWriter1::with_capacity(1024);
-    let mut serializer = json::Serializer::new(wr);
-    log.serialize(&mut serializer).unwrap();
+    let mut wr = MyMemWriter1::with_capacity(1024);
 
-    let json = serializer.unwrap().unwrap();
-    assert_eq!(json.as_slice(), JSON_STR.as_bytes());
+    {
+        let mut serializer = json::Serializer::new(wr.by_ref());
+        log.serialize(&mut serializer).unwrap();
+    }
+
+    assert_eq!(wr.unwrap().as_slice(), JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -789,11 +812,13 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
     let json = json::to_vec(&log);
     b.bytes = json.len() as u64;
 
+    let mut wr = MyMemWriter1::with_capacity(1024);
+
     b.iter(|| {
-        let wr = MyMemWriter1::with_capacity(1024);
-        let mut serializer = json::Serializer::new(wr);
+        wr.clear();
+
+        let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap().unwrap();
     });
 }
 
@@ -989,7 +1014,7 @@ fn bench_manual_mem_writer_no_escape(b: &mut Bencher) {
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
-        let mut wr = Vec::with_capacity(1024);
+        wr.clear();
         manual_no_escape(wr.by_ref(), &log);
     });
 }
@@ -1014,7 +1039,8 @@ fn bench_manual_mem_writer_escape(b: &mut Bencher) {
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
-        let mut wr = Vec::with_capacity(1024);
+        wr.clear();
+
         manual_escape(wr.by_ref(), &log);
     });
 }
@@ -1036,10 +1062,11 @@ fn bench_manual_my_mem_writer0_no_escape(b: &mut Bencher) {
 
     let mut wr = MyMemWriter0::with_capacity(1000);
     manual_no_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter0::with_capacity(1024);
+        wr.clear();
+
         manual_no_escape(wr.by_ref(), &log);
     });
 }
@@ -1061,12 +1088,12 @@ fn bench_manual_my_mem_writer0_escape(b: &mut Bencher) {
 
     let mut wr = MyMemWriter0::with_capacity(1024);
     manual_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter0::with_capacity(1024);
+        wr.clear();
+
         manual_escape(wr.by_ref(), &log);
-        let _json = wr.unwrap();
     });
 }
 
@@ -1087,12 +1114,12 @@ fn bench_manual_my_mem_writer1_no_escape(b: &mut Bencher) {
 
     let mut wr = MyMemWriter1::with_capacity(1000);
     manual_no_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter1::with_capacity(1024);
+        wr.clear();
+
         manual_no_escape(wr.by_ref(), &log);
-        let _json = wr.unwrap();
     });
 }
 
@@ -1187,12 +1214,12 @@ fn bench_direct_my_mem_writer0(b: &mut Bencher) {
 
     let mut wr = MyMemWriter0::with_capacity(1024);
     direct(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter0::with_capacity(1024);
+        wr.clear();
+
         direct(wr.by_ref(), &log);
-        let _json = wr.unwrap();
     });
 }
 
