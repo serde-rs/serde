@@ -575,7 +575,6 @@ impl Log {
     }
 }
 
-
 macro_rules! likely(
     ($val:expr) => {
         {
