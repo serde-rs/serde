@@ -211,23 +211,23 @@ mod deserializer {
             match self.stack.pop() {
                 Some(StartState) => {
                     self.stack.push(KeyOrEndState);
-                    Some(Ok(de::MapStart(self.len)))
+                    Some(Ok(de::Token::MapStart(self.len)))
                 }
                 Some(KeyOrEndState) => {
                     match self.iter.next() {
                         Some((key, value)) => {
                             self.stack.push(ValueState(value));
-                            Some(Ok(de::String(key)))
+                            Some(Ok(de::Token::String(key)))
                         }
                         None => {
                             self.stack.push(EndState);
-                            Some(Ok(de::End))
+                            Some(Ok(de::Token::End))
                         }
                     }
                 }
                 Some(ValueState(x)) => {
                     self.stack.push(KeyOrEndState);
-                    Some(Ok(de::Int(x)))
+                    Some(Ok(de::Token::Int(x)))
                 }
                 Some(EndState) => {
                     None

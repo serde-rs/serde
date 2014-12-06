@@ -223,22 +223,22 @@ mod deserializer {
             match self.stack.pop() {
                 Some(AnimalState(Dog)) => {
                     self.stack.push(EndState);
-                    Some(Ok(de::EnumStart("Animal", "Dog", 0)))
+                    Some(Ok(de::Token::EnumStart("Animal", "Dog", 0)))
                 }
                 Some(AnimalState(Frog(x0, x1))) => {
                     self.stack.push(EndState);
                     self.stack.push(IntState(x1));
                     self.stack.push(StringState(x0));
-                    Some(Ok(de::EnumStart("Animal", "Frog", 2)))
+                    Some(Ok(de::Token::EnumStart("Animal", "Frog", 2)))
                 }
                 Some(IntState(x)) => {
-                    Some(Ok(de::Int(x)))
+                    Some(Ok(de::Token::Int(x)))
                 }
                 Some(StringState(x)) => {
-                    Some(Ok(de::String(x)))
+                    Some(Ok(de::Token::String(x)))
                 }
                 Some(EndState) => {
-                    Some(Ok(de::End))
+                    Some(Ok(de::Token::End))
                 }
                 None => None,
             }

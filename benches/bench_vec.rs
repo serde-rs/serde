@@ -287,16 +287,16 @@ mod deserializer {
             match self.state {
                 StartState => {
                     self.state = SepOrEndState;
-                    Some(Ok(de::SeqStart(self.len)))
+                    Some(Ok(de::Token::SeqStart(self.len)))
                 }
                 SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            Some(Ok(de::Int(value)))
+                            Some(Ok(de::Token::Int(value)))
                         }
                         None => {
                             self.state = EndState;
-                            Some(Ok(de::End))
+                            Some(Ok(de::Token::End))
                         }
                     }
                 }
@@ -359,16 +359,16 @@ mod deserializer {
             match self.state {
                 StartState => {
                     self.state = SepOrEndState;
-                    Some(Ok(de::SeqStart(self.len)))
+                    Some(Ok(de::Token::SeqStart(self.len)))
                 }
                 SepOrEndState => {
                     match self.iter.next() {
                         Some(value) => {
-                            Some(Ok(de::U8(value)))
+                            Some(Ok(de::Token::U8(value)))
                         }
                         None => {
                             self.state = EndState;
-                            Some(Ok(de::End))
+                            Some(Ok(de::Token::End))
                         }
                     }
                 }

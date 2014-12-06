@@ -337,7 +337,7 @@ mod deserializer {
                     self.stack.push(EndState);
                     self.stack.push(VecState(inner));
                     self.stack.push(FieldState("inner"));
-                    Some(Ok(de::StructStart("Outer", 1)))
+                    Some(Ok(de::Token::StructStart("Outer", 1)))
                 }
                 Some(InnerState(Inner { a: (), b, c })) => {
                     self.stack.push(EndState);
@@ -349,16 +349,16 @@ mod deserializer {
 
                     self.stack.push(NullState);
                     self.stack.push(FieldState("a"));
-                    Some(Ok(de::StructStart("Inner", 3)))
+                    Some(Ok(de::Token::StructStart("Inner", 3)))
                 }
-                Some(FieldState(name)) => Some(Ok(de::Str(name))),
+                Some(FieldState(name)) => Some(Ok(de::Token::Str(name))),
                 Some(VecState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
                     for inner in value.into_iter().rev() {
                         self.stack.push(InnerState(inner));
                     }
-                    Some(Ok(de::SeqStart(len)))
+                    Some(Ok(de::Token::SeqStart(len)))
                 }
                 Some(MapState(value)) => {
                     self.stack.push(EndState);
@@ -375,16 +375,16 @@ mod deserializer {
                         }
                         self.stack.push(StringState(key));
                     }
-                    Some(Ok(de::MapStart(len)))
+                    Some(Ok(de::Token::MapStart(len)))
                 }
-                //Some(TupleState(len)) => Some(Ok(de::TupleStart(len))),
-                Some(NullState) => Some(Ok(de::Null)),
-                Some(UintState(x)) => Some(Ok(de::Uint(x))),
-                Some(CharState(x)) => Some(Ok(de::Char(x))),
-                Some(StringState(x)) => Some(Ok(de::String(x))),
-                Some(OptionState(x)) => Some(Ok(de::Option(x))),
+                //Some(TupleState(len)) => Some(Ok(de::Token::TupleStart(len))),
+                Some(NullState) => Some(Ok(de::Token::Null)),
+                Some(UintState(x)) => Some(Ok(de::Token::Uint(x))),
+                Some(CharState(x)) => Some(Ok(de::Token::Char(x))),
+                Some(StringState(x)) => Some(Ok(de::Token::String(x))),
+                Some(OptionState(x)) => Some(Ok(de::Token::Option(x))),
                 Some(EndState) => {
-                    Some(Ok(de::End))
+                    Some(Ok(de::Token::End))
                 }
                 None => None,
             }
