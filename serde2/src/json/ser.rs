@@ -1,6 +1,5 @@
 use std::f64;
-use std::io::IoError;
-use std::io;
+use std::io::{mod, ByRefWriter, IoError};
 use std::num::{Float, FPNaN, FPInfinite};
 
 use ser;
@@ -231,13 +230,22 @@ fn fmt_f64_or_null<W: io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError>
 }
 
 #[inline]
+pub fn to_writer<
+    W: io::Writer,
+    T: ser::Serialize,
+>(wr: &mut W, value: &T) -> Result<(), IoError> {
+    let mut wr = Writer::new(wr.by_ref());
+    try!(wr.visit(value));
+    Ok(())
+}
+
+#[inline]
 pub fn to_vec<
     T: ser::Serialize,
 >(value: &T) -> Result<Vec<u8>, IoError> {
-    let writer = Vec::with_capacity(128);
-    let mut writer = Writer::new(writer);
-    try!(writer.visit(value));
-    Ok(writer.into_inner())
+    let mut wr = Vec::with_capacity(128);
+    to_writer(&mut wr, value).unwrap();
+    Ok(wr)
 }
 
 #[inline]

@@ -1,122 +1,250 @@
+use std::collections::TreeMap;
+use std::fmt;
+use std::io;
+
+use ser::{mod, Serializer};
+
 #[deriving(PartialEq)]
-pub enum Json {
-    Integer(int),
+pub enum Value {
+    Null,
+    Bool(bool),
+    I64(i64),
+    F64(f64),
     String(String),
-    Array(Vec<Json>),
-    Object(TreeMap<String, Json>),
+    Array(Vec<Value>),
+    Object(TreeMap<String, Value>),
 }
 
-pub struct JsonSerializer {
-    key: Option<String>
-}
-
-impl JsonSerializer {
-    pub fn new() -> JsonSerializer {
-        JsonSerializer {
-            key: None
+impl ser::Serialize for Value {
+    #[inline]
+    fn visit<
+        S,
+        R,
+        E,
+        V: ser::Visitor<S, R, E>,
+    >(&self, s: &mut S, visitor: V) -> Result<R, E> {
+        match *self {
+            Value::Null => {
+                visitor.visit_null(s)
+            }
+            Value::Bool(v) => {
+                visitor.visit_bool(s, v)
+            }
+            Value::I64(v) => {
+                visitor.visit_i64(s, v)
+            }
+            Value::F64(v) => {
+                visitor.visit_f64(s, v)
+            }
+            Value::String(ref v) => {
+                visitor.visit_str(s, v.as_slice())
+            }
+            Value::Array(ref v) => {
+                v.visit(s, visitor)
+            }
+            Value::Object(ref v) => {
+                v.visit(s, visitor)
+            }
         }
     }
 }
 
-impl VisitorState<Json> for JsonSerializer {
-    fn visit_int(&mut self, value: int) -> Json {
-        Integer(value)
+struct WriterFormatter<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
+
+impl<'a, 'b> io::Writer for WriterFormatter<'a, 'b> {
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        let WriterFormatter(ref mut f) = *self;
+        f.write(buf).map_err(|_| io::IoError::last_error())
+    }
+}
+
+impl fmt::Show for Value {
+    /// Serializes a json value into a string
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut wr = WriterFormatter(f);
+        super::ser::to_writer(&mut wr, self).map_err(|_| fmt::Error)
+    }
+}
+
+pub fn to_value<
+    T: ser::Serialize,
+>(value: &T) -> Value {
+    let mut writer = Writer::new();
+    writer.visit(value).unwrap();
+    writer.unwrap()
+}
+
+enum State {
+    Value(Value),
+    Array(Vec<Value>),
+    Object(TreeMap<String, Value>),
+}
+
+pub struct Writer {
+    state: Vec<State>,
+}
+
+impl Writer {
+    pub fn new() -> Writer {
+        Writer {
+            state: Vec::with_capacity(4),
+        }
     }
 
-    fn visit_str(&mut self, value: &'static str) -> Json {
-        String(value.to_string())
+    pub fn unwrap(mut self) -> Value {
+        match self.state.pop().unwrap() {
+            State::Value(value) => value,
+            _ => panic!(),
+        }
+    }
+}
+
+impl ser::Serializer<Writer, (), ()> for Writer {
+    #[inline]
+    fn visit<
+        T: ser::Serialize,
+    >(&mut self, value: &T) -> Result<(), ()> {
+        value.visit(self, Visitor)
+    }
+}
+
+struct Visitor;
+
+impl ser::Visitor<Writer, (), ()> for Visitor {
+    #[inline]
+    fn visit_null(&self, state: &mut Writer) -> Result<(), ()> {
+        state.state.push(State::Value(Value::Null));
+        Ok(())
     }
 
+    #[inline]
+    fn visit_bool(&self, state: &mut Writer, value: bool) -> Result<(), ()> {
+        state.state.push(State::Value(Value::Bool(value)));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_i64(&self, state: &mut Writer, value: i64) -> Result<(), ()> {
+        state.state.push(State::Value(Value::I64(value)));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_u64(&self, state: &mut Writer, value: u64) -> Result<(), ()> {
+        state.state.push(State::Value(Value::I64(value as i64)));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_f64(&self, state: &mut Writer, value: f64) -> Result<(), ()> {
+        state.state.push(State::Value(Value::F64(value as f64)));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_char(&self, state: &mut Writer, value: char) -> Result<(), ()> {
+        state.state.push(State::Value(Value::String(value.to_string())));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_str(&self, state: &mut Writer, value: &str) -> Result<(), ()> {
+        state.state.push(State::Value(Value::String(value.to_string())));
+        Ok(())
+    }
+
+    #[inline]
     fn visit_seq<
-        T: Serialize<JsonSerializer, Json>,
-        Iter: Iterator<T>
-    >(&mut self, mut iter: Iter) -> Json {
-        let (len, _) = iter.size_hint();
-        let mut v = Vec::with_capacity(len);
+        V: ser::SeqVisitor<Writer, (), ()>
+    >(&self, state: &mut Writer, mut visitor: V) -> Result<(), ()> {
+        let len = match visitor.size_hint() {
+            (_, Some(len)) => len,
+            (len, None) => len,
+        };
 
-        let mut first = true;
-        for elt in iter {
-            v.push(self.visit_seq_elt(first, elt));
-            first = false;
+        let values = Vec::with_capacity(len);
+
+        state.state.push(State::Array(values));
+
+        loop {
+            match try!(visitor.visit(state, Visitor)) {
+                Some(()) => { }
+                None => { break; }
+            }
         }
 
-        Array(v)
+        match state.state.pop().unwrap() {
+            State::Array(values) => { state.state.push(State::Value(Value::Array(values))); }
+            _ => panic!(),
+        }
+
+        Ok(())
     }
 
+    #[inline]
     fn visit_seq_elt<
-        T: Serialize<JsonSerializer, Json>
-    >(&mut self, _first: bool, value: T) -> Json {
-        value.serialize(self)
-    }
+        T: ser::Serialize,
+    >(&self, state: &mut Writer, _first: bool, value: T) -> Result<(), ()> {
+        try!(value.visit(state, Visitor));
+        let value = match state.state.pop().unwrap() {
+            State::Value(value) => value,
+            _ => panic!(),
+        };
 
-    fn visit_tuple<
-        V: Visitor<JsonSerializer, Json>
-    >(&mut self, mut visitor: V) -> Json {
-        let (len, _) = visitor.size_hint();
-        let mut v = Vec::with_capacity(len);
-
-        loop {
-            match visitor.visit(self) {
-                Some(value) => { v.push(value); }
-                None => { break; }
-            }
+        match *state.state.last_mut().unwrap() {
+            State::Array(ref mut values) => { values.push(value); }
+            _ => panic!(),
         }
 
-        Array(v)
+        Ok(())
     }
 
-    fn visit_tuple_struct<
-        V: Visitor<JsonSerializer, Json>
-    >(&mut self, _name: &'static str, visitor: V) -> Json {
-        self.visit_tuple(visitor)
-    }
-
-    fn visit_enum<
-        V: Visitor<JsonSerializer, Json>
-    >(&mut self, _name: &'static str, _variant: &'static str, visitor: V) -> Json {
-        self.visit_tuple(visitor)
-    }
-
+    #[inline]
     fn visit_map<
-        K: Serialize<JsonSerializer, Json>,
-        V: Serialize<JsonSerializer, Json>,
-        Iter: Iterator<(K, V)>
-    >(&mut self, mut iter: Iter) -> Json {
-        let mut v = TreeMap::new();
-        let mut first = true;
+        V: ser::MapVisitor<Writer, (), ()>
+    >(&self, state: &mut Writer, mut visitor: V) -> Result<(), ()> {
+        let values = TreeMap::new();
 
-        for (key, value) in iter {
-            let value = self.visit_map_elt(first, key, value);
-            v.insert(self.key.take().unwrap(), value);
-            first = false;
-        }
-
-        Object(v)
-    }
-
-    fn visit_map_elt<
-        K: Serialize<JsonSerializer, Json>,
-        V: Serialize<JsonSerializer, Json>
-    >(&mut self, _first: bool, key: K, value: V) -> Json {
-        match key.serialize(self) {
-            String(key) => { self.key = Some(key); }
-            _ => { fail!() }
-        }
-        value.serialize(self)
-    }
-
-    fn visit_struct<
-        V: Visitor<JsonSerializer, Json>
-    >(&mut self, _name: &'static str, mut visitor: V) -> Json {
-        let mut v = TreeMap::new();
+        state.state.push(State::Object(values));
 
         loop {
-            match visitor.visit(self) {
-                Some(value) => { v.insert(self.key.take().unwrap(), value); }
+            match try!(visitor.visit(state, Visitor)) {
+                Some(()) => { }
                 None => { break; }
             }
         }
 
-        Object(v)
+        match state.state.pop().unwrap() {
+            State::Object(values) => { state.state.push(State::Value(Value::Object(values))); }
+            _ => panic!(),
+        }
+
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_map_elt<
+        K: ser::Serialize,
+        V: ser::Serialize,
+    >(&self, state: &mut Writer, _first: bool, key: K, value: V) -> Result<(), ()> {
+        try!(key.visit(state, Visitor));
+        try!(value.visit(state, Visitor));
+
+        let key = match state.state.pop().unwrap() {
+            State::Value(Value::String(value)) => value,
+            _ => panic!(),
+        };
+
+        let value = match state.state.pop().unwrap() {
+            State::Value(value) => value,
+            _ => panic!(),
+        };
+
+        match *state.state.last_mut().unwrap() {
+            State::Object(ref mut values) => { values.insert(key, value); }
+            _ => panic!(),
+        }
+
+        Ok(())
     }
 }
