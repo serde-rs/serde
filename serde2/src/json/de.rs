@@ -46,28 +46,28 @@ pub enum SyntaxExpectation {
 impl fmt::Show for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            EOFWhileParsingList => "EOF While parsing list".fmt(f),
-            EOFWhileParsingObject => "EOF While parsing object".fmt(f),
-            EOFWhileParsingString => "EOF While parsing string".fmt(f),
-            EOFWhileParsingValue => "EOF While parsing value".fmt(f),
-            ExpectedColon => "expected `:`".fmt(f),
-            InvalidEscape => "invalid escape".fmt(f),
-            InvalidNumber => "invalid number".fmt(f),
-            InvalidSyntax(expect) => {
+            ErrorCode::EOFWhileParsingList => "EOF While parsing list".fmt(f),
+            ErrorCode::EOFWhileParsingObject => "EOF While parsing object".fmt(f),
+            ErrorCode::EOFWhileParsingString => "EOF While parsing string".fmt(f),
+            ErrorCode::EOFWhileParsingValue => "EOF While parsing value".fmt(f),
+            ErrorCode::ExpectedColon => "expected `:`".fmt(f),
+            ErrorCode::InvalidEscape => "invalid escape".fmt(f),
+            ErrorCode::InvalidNumber => "invalid number".fmt(f),
+            ErrorCode::InvalidSyntax(expect) => {
                 write!(f, "invalid syntax, expected: {}", expect)
             }
-            InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
-            KeyMustBeAString => "key must be a string".fmt(f),
-            LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
-            MissingField(field) => {
+            ErrorCode::InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
+            ErrorCode::KeyMustBeAString => "key must be a string".fmt(f),
+            ErrorCode::LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
+            ErrorCode::MissingField(field) => {
                 write!(f, "missing field \"{}\"", field)
             }
-            NotFourDigit => "invalid \\u escape (not four digits)".fmt(f),
-            NotUtf8 => "contents not utf-8".fmt(f),
-            TrailingCharacters => "trailing characters".fmt(f),
-            UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
-            UnknownVariant => "unknown variant".fmt(f),
-            UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
+            ErrorCode::NotFourDigit => "invalid \\u escape (not four digits)".fmt(f),
+            ErrorCode::NotUtf8 => "contents not utf-8".fmt(f),
+            ErrorCode::TrailingCharacters => "trailing characters".fmt(f),
+            ErrorCode::UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
+            ErrorCode::UnknownVariant => "unknown variant".fmt(f),
+            ErrorCode::UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
         }
     }
 }
@@ -103,7 +103,7 @@ impl<
         if self.eof() {
             Ok(())
         } else {
-            Err(self.error(TrailingCharacters))
+            Err(self.error(ErrorCode::TrailingCharacters))
         }
     }
 
@@ -140,7 +140,7 @@ impl<
 
     fn error(&mut self, reason: ErrorCode) -> Error {
         //self.state_stack.clear();
-        SyntaxError(reason, self.line, self.col)
+        Error::SyntaxError(reason, self.line, self.col)
     }
 
     fn parse_value<
@@ -150,7 +150,7 @@ impl<
         self.parse_whitespace();
 
         if self.eof() {
-            return Err(self.error(EOFWhileParsingValue));
+            return Err(self.error(ErrorCode::EOFWhileParsingValue));
         }
 
         match self.ch_or_null() {
@@ -180,7 +180,7 @@ impl<
                 visitor.visit_map(self, MapVisitor { first: true })
             }
             _ => {
-                Err(self.error(InvalidSyntax(SomeValue)))
+                Err(self.error(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeValue)))
             }
         }
     }
@@ -190,7 +190,7 @@ impl<
             self.bump();
             Ok(())
         } else {
-            Err(self.error(InvalidSyntax(SomeIdent)))
+            Err(self.error(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeIdent)))
         }
     }
 
@@ -235,7 +235,7 @@ impl<
                 // There can be only one leading '0'.
                 match self.ch_or_null() {
                     '0' ... '9' => {
-                        return Err(self.error(InvalidNumber));
+                        return Err(self.error(ErrorCode::InvalidNumber));
                     }
                     _ => ()
                 }
@@ -253,7 +253,7 @@ impl<
                 }
             }
             _ => {
-                return Err(self.error(InvalidNumber));
+                return Err(self.error(ErrorCode::InvalidNumber));
             }
         }
 
@@ -267,7 +267,7 @@ impl<
         match self.ch_or_null() {
             '0' ... '9' => (),
              _ => {
-                 return Err(self.error(InvalidNumber));
+                 return Err(self.error(ErrorCode::InvalidNumber));
              }
         }
 
@@ -304,7 +304,7 @@ impl<
         match self.ch_or_null() {
             '0' ... '9' => (),
             _ => {
-                return Err(self.error(InvalidNumber));
+                return Err(self.error(ErrorCode::InvalidNumber));
             }
         }
         while !self.eof() {
@@ -343,7 +343,7 @@ impl<
                 'e' | 'E' => n * 16_u16 + 14_u16,
                 'f' | 'F' => n * 16_u16 + 15_u16,
                 _ => {
-                    return Err(self.error(InvalidEscape));
+                    return Err(self.error(ErrorCode::InvalidEscape));
                 }
             };
 
@@ -352,7 +352,7 @@ impl<
 
         // Error out if we didn't parse 4 digits.
         if i != 4u {
-            return Err(self.error(InvalidEscape));
+            return Err(self.error(ErrorCode::InvalidEscape));
         }
 
         Ok(n)
@@ -365,7 +365,7 @@ impl<
         loop {
             self.bump();
             if self.eof() {
-                return Err(self.error(EOFWhileParsingString));
+                return Err(self.error(ErrorCode::EOFWhileParsingString));
             }
 
             if escape {
@@ -380,7 +380,7 @@ impl<
                     't' => res.push('\t'),
                     'u' => match try!(self.decode_hex_escape()) {
                         0xDC00 ... 0xDFFF => {
-                            return Err(self.error(LoneLeadingSurrogateInHexEscape));
+                            return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
                         }
 
                         // Non-BMP characters are encoded as a sequence of
@@ -391,7 +391,7 @@ impl<
                             match (c1, c2) {
                                 (Some('\\'), Some('u')) => (),
                                 _ => {
-                                    return Err(self.error(UnexpectedEndOfHexEscape));
+                                    return Err(self.error(ErrorCode::UnexpectedEndOfHexEscape));
                                 }
                             }
 
@@ -399,7 +399,7 @@ impl<
                             match str::utf16_items(buf.as_slice()).next() {
                                 Some(ScalarValue(c)) => res.push(c),
                                 _ => {
-                                    return Err(self.error(LoneLeadingSurrogateInHexEscape));
+                                    return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
                                 }
                             }
                         }
@@ -407,12 +407,12 @@ impl<
                         n => match char::from_u32(n as u32) {
                             Some(c) => res.push(c),
                             None => {
-                                return Err(self.error(InvalidUnicodeCodePoint));
+                                return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
                             }
                         },
                     },
                     _ => {
-                        return Err(self.error(InvalidEscape));
+                        return Err(self.error(ErrorCode::InvalidEscape));
                     }
                 }
                 escape = false;
@@ -442,11 +442,11 @@ impl<Iter: Iterator<char>> Deserializer<Error> for Parser<Iter> {
     }
 
     fn syntax_error(&mut self) -> Error {
-        SyntaxError(InvalidSyntax(SomeValue), self.line, self.col)
+        Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeValue), self.line, self.col)
     }
 
     fn end_of_stream_error(&mut self) -> Error {
-        SyntaxError(EOFWhileParsingValue, self.line, self.col)
+        Error::SyntaxError(ErrorCode::EOFWhileParsingValue, self.line, self.col)
     }
 }
 
@@ -471,9 +471,9 @@ impl<Iter: Iterator<char>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor {
             if d.ch_is(',') {
                 d.bump();
             } else if d.eof() {
-                return Err(d.error(EOFWhileParsingList));
+                return Err(d.error(ErrorCode::EOFWhileParsingList));
             } else {
-                return Err(d.error(InvalidSyntax(ListCommaOrEnd)));
+                return Err(d.error(ErrorCode::InvalidSyntax(SyntaxExpectation::ListCommaOrEnd)));
             }
         }
 
@@ -486,9 +486,9 @@ impl<Iter: Iterator<char>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor {
             d.bump();
             Ok(())
         } else if d.eof() {
-            Err(d.error(EOFWhileParsingList))
+            Err(d.error(ErrorCode::EOFWhileParsingList))
         } else {
-            Err(d.error(TrailingCharacters))
+            Err(d.error(ErrorCode::TrailingCharacters))
         }
     }
 }
@@ -516,18 +516,18 @@ impl<Iter: Iterator<char>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor {
                 d.bump();
                 d.parse_whitespace();
             } else if d.eof() {
-                return Err(d.error(EOFWhileParsingObject));
+                return Err(d.error(ErrorCode::EOFWhileParsingObject));
             } else {
-                return Err(d.error(InvalidSyntax(ObjectCommaOrEnd)));
+                return Err(d.error(ErrorCode::InvalidSyntax(SyntaxExpectation::ObjectCommaOrEnd)));
             }
         }
 
         if d.eof() {
-            return Err(d.error(EOFWhileParsingValue));
+            return Err(d.error(ErrorCode::EOFWhileParsingValue));
         }
 
         if !d.ch_is('"') {
-            return Err(d.error(KeyMustBeAString));
+            return Err(d.error(ErrorCode::KeyMustBeAString));
         }
 
         let key = try!(de::Deserialize::deserialize(d));
@@ -537,9 +537,9 @@ impl<Iter: Iterator<char>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor {
         if d.ch_is(':') {
             d.bump();
         } else if d.eof() {
-            return Err(d.error(EOFWhileParsingObject));
+            return Err(d.error(ErrorCode::EOFWhileParsingObject));
         } else {
-            return Err(d.error(ExpectedColon));
+            return Err(d.error(ErrorCode::ExpectedColon));
         }
 
         d.parse_whitespace();
@@ -554,9 +554,9 @@ impl<Iter: Iterator<char>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor {
             d.bump();
             Ok(())
         } else if d.eof() {
-            Err(d.error(EOFWhileParsingList))
+            Err(d.error(ErrorCode::EOFWhileParsingList))
         } else {
-            Err(d.error(TrailingCharacters))
+            Err(d.error(ErrorCode::TrailingCharacters))
         }
     }
 }
@@ -590,25 +590,7 @@ mod tests {
     use std::collections::TreeMap;
 
     use de::Deserialize;
-    use super::{Parser, Error, from_str};
-    use super::{
-        ListCommaOrEnd,
-        ObjectCommaOrEnd,
-        SomeIdent,
-        SomeValue,
-    };
-    use super::{
-        EOFWhileParsingList,
-        EOFWhileParsingObject,
-        EOFWhileParsingString,
-        EOFWhileParsingValue,
-        ExpectedColon,
-        InvalidNumber,
-        InvalidSyntax,
-        KeyMustBeAString,
-        TrailingCharacters,
-    };
-    use super::SyntaxError;
+    use super::{Parser, Error, ErrorCode, SyntaxExpectation, from_str};
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
@@ -653,12 +635,12 @@ mod tests {
     #[test]
     fn test_parse_bool() {
         test_parse_err::<bool>(vec![
-            ("t", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
-            ("truz", SyntaxError(InvalidSyntax(SomeIdent), 1, 4)),
-            ("f", SyntaxError(InvalidSyntax(SomeIdent), 1, 2)),
-            ("faz", SyntaxError(InvalidSyntax(SomeIdent), 1, 3)),
-            ("truea", SyntaxError(TrailingCharacters, 1, 5)),
-            ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
+            ("t", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeIdent), 1, 2)),
+            ("truz", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeIdent), 1, 4)),
+            ("f", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeIdent), 1, 2)),
+            ("faz", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeIdent), 1, 3)),
+            ("truea", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 5)),
+            ("falsea", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 6)),
         ]);
 
         test_parse_ok(vec![
@@ -670,14 +652,14 @@ mod tests {
     #[test]
     fn test_parse_numbers() {
         test_parse_err::<f64>(vec![
-            ("+", SyntaxError(InvalidSyntax(SomeValue), 1, 1)),
-            (".", SyntaxError(InvalidSyntax(SomeValue), 1, 1)),
-            ("-", SyntaxError(InvalidNumber, 1, 2)),
-            ("00", SyntaxError(InvalidNumber, 1, 2)),
-            ("1.", SyntaxError(InvalidNumber, 1, 3)),
-            ("1e", SyntaxError(InvalidNumber, 1, 3)),
-            ("1e+", SyntaxError(InvalidNumber, 1, 4)),
-            ("1a", SyntaxError(TrailingCharacters, 1, 2)),
+            ("+", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeValue), 1, 1)),
+            (".", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeValue), 1, 1)),
+            ("-", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
+            ("00", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
+            ("1.", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
+            ("1e", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
+            ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 4)),
+            ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
         ]);
 
         test_parse_ok(vec![
@@ -700,9 +682,9 @@ mod tests {
     #[test]
     fn test_parse_string() {
         test_parse_err::<String>(vec![
-            ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
-            ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
-            ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
+            ("\"", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 2)),
+            ("\"lol", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 5)),
+            ("\"lol\"a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 6)),
         ]);
 
         test_parse_ok(vec![
@@ -721,13 +703,13 @@ mod tests {
     #[test]
     fn test_parse_list() {
         test_parse_err::<Vec<f64>>(vec![
-            ("[", SyntaxError(EOFWhileParsingValue, 1, 2)),
-            ("[ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
-            ("[1", SyntaxError(EOFWhileParsingList,  1, 3)),
-            ("[1,", SyntaxError(EOFWhileParsingValue, 1, 4)),
-            ("[1,]", SyntaxError(InvalidSyntax(SomeValue), 1, 4)),
-            ("[1 2]", SyntaxError(InvalidSyntax(ListCommaOrEnd), 1, 4)),
-            ("[]a", SyntaxError(TrailingCharacters, 1, 3)),
+            ("[", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
+            ("[ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
+            ("[1", Error::SyntaxError(ErrorCode::EOFWhileParsingList,  1, 3)),
+            ("[1,", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 4)),
+            ("[1,]", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::SomeValue), 1, 4)),
+            ("[1 2]", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::ListCommaOrEnd), 1, 4)),
+            ("[]a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 3)),
         ]);
 
         test_parse_ok(vec![
@@ -770,18 +752,18 @@ mod tests {
     #[test]
     fn test_parse_object() {
         test_parse_err::<TreeMap<String, int>>(vec![
-            ("{", SyntaxError(EOFWhileParsingValue, 1, 2)),
-            ("{ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
-            ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
-            ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
-            ("{\"a\"", SyntaxError(EOFWhileParsingObject, 1, 5)),
-            ("{\"a\" ", SyntaxError(EOFWhileParsingObject, 1, 6)),
-            ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
-            ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
-            ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
-            ("{\"a\":1 1", SyntaxError(InvalidSyntax(ObjectCommaOrEnd), 1, 8)),
-            ("{\"a\":1,", SyntaxError(EOFWhileParsingValue, 1, 8)),
-            ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
+            ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
+            ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
+            ("{1", Error::SyntaxError(ErrorCode::KeyMustBeAString, 1, 2)),
+            ("{ \"a\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 6)),
+            ("{\"a\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 5)),
+            ("{\"a\" ", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 6)),
+            ("{\"a\" 1", Error::SyntaxError(ErrorCode::ExpectedColon, 1, 6)),
+            ("{\"a\":", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 6)),
+            ("{\"a\":1", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 7)),
+            ("{\"a\":1 1", Error::SyntaxError(ErrorCode::InvalidSyntax(SyntaxExpectation::ObjectCommaOrEnd), 1, 8)),
+            ("{\"a\":1,", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 8)),
+            ("{}a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 3)),
         ]);
 
         test_parse_ok(vec![

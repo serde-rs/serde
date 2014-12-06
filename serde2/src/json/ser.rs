@@ -218,7 +218,7 @@ pub fn escape_str<W: io::Writer>(wr: &mut W, value: &str) -> Result<(), IoError>
 
 #[inline]
 pub fn escape_char<W: io::Writer>(wr: &mut W, value: char) -> Result<(), IoError> {
-    let mut buf = [0, .. 4];
+    let mut buf = &mut [0, .. 4];
     value.encode_utf8(buf);
     escape_bytes(wr, buf)
 }

@@ -64,27 +64,27 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
         V: de::Visitor<MyDeserializer<Iter>, R, Error>,
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
         match self.next() {
-            Some(Null) => {
+            Some(Token::Null) => {
                 visitor.visit_null(self)
             }
-            Some(Int(v)) => {
+            Some(Token::Int(v)) => {
                 visitor.visit_int(self, v)
             }
-            Some(String(v)) => {
+            Some(Token::String(v)) => {
                 visitor.visit_string(self, v)
             }
-            Some(Option(is_some)) => {
+            Some(Token::Option(is_some)) => {
                 visitor.visit_option(self, MyOptionVisitor {
                     is_some: is_some,
                 })
             }
-            Some(SeqStart(len)) => {
+            Some(Token::SeqStart(len)) => {
                 visitor.visit_seq(self, MySeqVisitor { len: len })
             }
-            Some(MapStart(len)) => {
+            Some(Token::MapStart(len)) => {
                 visitor.visit_map(self, MyMapVisitor { len: len })
             }
-            Some(End) => {
+            Some(Token::End) => {
                 Err(self.syntax_error())
             }
             None => {
@@ -98,13 +98,13 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
         V: de::Visitor<MyDeserializer<Iter>, R, Error>,
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
         match self.peek() {
-            Some(&Null) => {
+            Some(&Token::Null) => {
                 self.next();
                 visitor.visit_option(self, MyOptionVisitor {
                     is_some: false,
                 })
             }
-            Some(&Option(is_some)) => {
+            Some(&Token::Option(is_some)) => {
                 self.next();
                 visitor.visit_option(self, MyOptionVisitor {
                     is_some: is_some,
@@ -119,11 +119,11 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
     }
 
     fn syntax_error(&mut self) -> Error {
-        SyntaxError
+        Error::SyntaxError
     }
 
     fn end_of_stream_error(&mut self) -> Error {
-        EndOfStreamError
+        Error::EndOfStreamError
     }
 }
 
@@ -158,7 +158,7 @@ impl<
         T: Deserialize<MyDeserializer<Iter>, Error>
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
         match d.peek() {
-            Some(&End) => {
+            Some(&Token::End) => {
                 d.next();
                 Ok(None)
             }
@@ -175,7 +175,7 @@ impl<
 
     fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
         match d.next() {
-            Some(End) => Ok(()),
+            Some(Token::End) => Ok(()),
             Some(_) => Err(d.syntax_error()),
             None => Err(d.end_of_stream_error()),
         }
@@ -198,7 +198,7 @@ impl<
         V: Deserialize<MyDeserializer<Iter>, Error>,
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<(K, V)>, Error> {
         match d.peek() {
-            Some(&End) => {
+            Some(&Token::End) => {
                 d.next();
                 Ok(None)
             }
@@ -218,7 +218,7 @@ impl<
 
     fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
         match d.next() {
-            Some(End) => Ok(()),
+            Some(Token::End) => Ok(()),
             Some(_) => Err(d.syntax_error()),
             None => Err(d.end_of_stream_error()),
         }
@@ -257,16 +257,16 @@ mod json {
                 E,
             > de::Visitor<D, Value, E> for Visitor {
                 fn visit_null(&mut self, _d: &mut D) -> Result<Value, E> {
-                    Ok(Null)
+                    Ok(Value::Null)
                 }
 
                 fn visit_int(&mut self, _d: &mut D, v: int) -> Result<Value, E> {
-                    Ok(Int(v))
+                    Ok(Value::Int(v))
                 }
 
                 /*
                 fn visit_string(&mut self, _d: &mut D, v: String) -> Result<Value, E> {
-                    Ok(String(v))
+                    Ok(Value::String(v))
                 }
                 */
 
@@ -275,7 +275,7 @@ mod json {
                 >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
                     match try!(visitor.visit(d)) {
                         Some(value) => Ok(value),
-                        None => Ok(Null),
+                        None => Ok(Value::Null),
                     }
                 }
 
@@ -296,7 +296,7 @@ mod json {
                         }
                     }
 
-                    Ok(List(values))
+                    Ok(Value::List(values))
                 }
 
                 fn visit_map<
@@ -315,7 +315,7 @@ mod json {
                         }
                     }
 
-                    Ok(Map(values))
+                    Ok(Value::Map(values))
                 }
             }
 
@@ -328,10 +328,10 @@ mod json {
 
 fn main() {
     let tokens = vec!(
-        SeqStart(2),
-        Int(1),
-        Int(2),
-        End,
+        Token::SeqStart(2),
+        Token::Int(1),
+        Token::Int(2),
+        Token::End,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -341,10 +341,10 @@ fn main() {
     ////
 
     let tokens = vec!(
-        SeqStart(2),
-        Int(3),
-        Int(4),
-        End,
+        Token::SeqStart(2),
+        Token::Int(3),
+        Token::Int(4),
+        Token::End,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -354,10 +354,10 @@ fn main() {
     ////
 
     let tokens = vec!(
-        SeqStart(2),
-        Int(5),
-        Int(6),
-        End,
+        Token::SeqStart(2),
+        Token::Int(5),
+        Token::Int(6),
+        Token::End,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -367,8 +367,8 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Option(true),
-        Int(7),
+        Token::Option(true),
+        Token::Int(7),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -378,7 +378,7 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Option(false),
+        Token::Option(false),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -388,8 +388,8 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Option(true),
-        Int(8),
+        Token::Option(true),
+        Token::Int(8),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -399,7 +399,7 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Option(false),
+        Token::Option(false),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -409,7 +409,7 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Int(9),
+        Token::Int(9),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -419,7 +419,7 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Null,
+        Token::Null,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -429,7 +429,7 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Int(10),
+        Token::Int(10),
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -439,7 +439,7 @@ fn main() {
     ////
 
     let tokens = vec!(
-        Null,
+        Token::Null,
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -449,12 +449,12 @@ fn main() {
     ////
 
     let tokens = vec!(
-        MapStart(2),
-        String("a".to_string()),
-        Int(1),
-        String("b".to_string()),
-        Int(2),
-        End
+        Token::MapStart(2),
+        Token::String("a".to_string()),
+        Token::Int(1),
+        Token::String("b".to_string()),
+        Token::Int(2),
+        Token::End
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 
@@ -464,12 +464,12 @@ fn main() {
     ////
 
     let tokens = vec!(
-        MapStart(2),
-        String("a".to_string()),
-        Int(1),
-        String("b".to_string()),
-        Int(2),
-        End
+        Token::MapStart(2),
+        Token::String("a".to_string()),
+        Token::Int(1),
+        Token::String("b".to_string()),
+        Token::Int(2),
+        Token::End
     );
     let mut state = MyDeserializer::new(tokens.into_iter());
 

@@ -18,6 +18,8 @@ use serde::json;
 use serde::ser::Serialize;
 use serde::ser;
 
+use serialize::Encodable;
+
 #[deriving(Show, PartialEq, Encodable, Decodable)]
 #[deriving_serialize]
 #[deriving_deserialize]
@@ -611,12 +613,6 @@ impl MyMemWriter0 {
             buf: Vec::with_capacity(cap)
         }
     }
-
-    #[inline]
-    pub fn clear(&mut self) { self.buf.clear() }
-
-    #[inline]
-    pub fn unwrap(self) -> Vec<u8> { self.buf }
 }
 
 
@@ -638,12 +634,6 @@ impl MyMemWriter1 {
             buf: Vec::with_capacity(cap)
         }
     }
-
-    #[inline]
-    pub fn clear(&mut self) { self.buf.clear() }
-
-    #[inline]
-    pub fn unwrap(self) -> Vec<u8> { self.buf }
 }
 
 // LLVM isn't yet able to lower `Vec::push_all` into a memcpy, so this helps
@@ -685,7 +675,7 @@ fn test_encoder() {
     let mut wr = Vec::with_capacity(1024);
 
     {
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut io::Writer);
+        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
         log.encode(&mut encoder).unwrap();
     }
 
@@ -695,11 +685,21 @@ fn test_encoder() {
 #[bench]
 fn bench_encoder(b: &mut Bencher) {
     let log = Log::new();
-    let json = serialize::json::encode(&log);
-    b.bytes = json.len() as u64;
+
+    let mut wr = Vec::with_capacity(1024);
+
+    {
+        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        log.encode(&mut encoder).unwrap();
+    }
+
+    b.bytes = wr.len() as u64;
 
     b.iter(|| {
-        let _ = serialize::json::encode(&log);
+        wr.clear();
+
+        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        log.encode(&mut encoder).unwrap();
     });
 }
 
@@ -707,7 +707,7 @@ fn bench_encoder(b: &mut Bencher) {
 fn test_serializer() {
     let log = Log::new();
     let json = json::to_vec(&log);
-    assert_eq!(json.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(json, JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -717,7 +717,7 @@ fn bench_serializer(b: &mut Bencher) {
     b.bytes = json.len() as u64;
 
     b.iter(|| {
-        let _json = json::to_vec(&log);
+        let _ = json::to_vec(&log);
     });
 }
 
@@ -760,7 +760,7 @@ fn test_serializer_my_mem_writer0() {
         log.serialize(&mut serializer).unwrap();
     }
 
-    assert_eq!(wr.unwrap().as_slice(), JSON_STR.as_bytes());
+    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -772,7 +772,7 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
     let mut wr = MyMemWriter0::with_capacity(1024);
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
@@ -790,7 +790,7 @@ fn test_serializer_my_mem_writer1() {
         log.serialize(&mut serializer).unwrap();
     }
 
-    assert_eq!(wr.unwrap().as_slice(), JSON_STR.as_bytes());
+    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -802,7 +802,7 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
     let mut wr = MyMemWriter1::with_capacity(1024);
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
@@ -819,165 +819,165 @@ fn bench_copy(b: &mut Bencher) {
     });
 }
 
-fn manual_no_escape<W: Writer>(mut wr: W, log: &Log) {
+fn manual_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str("{\"timestamp\":").unwrap();
-    (write!(&mut wr, "{}", log.timestamp)).unwrap();
+    (write!(wr, "{}", log.timestamp)).unwrap();
     wr.write_str(",\"zone_id\":").unwrap();
-    (write!(&mut wr, "{}", log.zone_id)).unwrap();
+    (write!(wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",\"zone_plan\":").unwrap();
-    (write!(&mut wr, "{}", log.zone_plan as uint)).unwrap();
+    (write!(wr, "{}", log.zone_plan as uint)).unwrap();
 
     wr.write_str(",\"http\":{\"protocol\":").unwrap();
-    (write!(&mut wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
     wr.write_str(",\"status\":").unwrap();
-    (write!(&mut wr, "{}", log.http.status)).unwrap();
+    (write!(wr, "{}", log.http.status)).unwrap();
     wr.write_str(",\"host_status\":").unwrap();
-    (write!(&mut wr, "{}", log.http.host_status)).unwrap();
+    (write!(wr, "{}", log.http.host_status)).unwrap();
     wr.write_str(",\"up_status\":").unwrap();
-    (write!(&mut wr, "{}", log.http.up_status)).unwrap();
+    (write!(wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",\"method\":").unwrap();
-    (write!(&mut wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as uint)).unwrap();
     wr.write_str(",\"content_type\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.http.content_type)).unwrap();
+    (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
     wr.write_str(",\"user_agent\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.http.user_agent)).unwrap();
+    (write!(wr, "\"{}\"", log.http.user_agent)).unwrap();
     wr.write_str(",\"referer\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.http.referer)).unwrap();
+    (write!(wr, "\"{}\"", log.http.referer)).unwrap();
     wr.write_str(",\"request_uri\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.http.request_uri)).unwrap();
+    (write!(wr, "\"{}\"", log.http.request_uri)).unwrap();
 
     wr.write_str("},\"origin\":{").unwrap();
 
     wr.write_str("\"ip\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.origin.ip)).unwrap();
+    (write!(wr, "\"{}\"", log.origin.ip)).unwrap();
     wr.write_str(",\"port\":").unwrap();
-    (write!(&mut wr, "{}", log.origin.port)).unwrap();
+    (write!(wr, "{}", log.origin.port)).unwrap();
     wr.write_str(",\"hostname\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.origin.hostname)).unwrap();
+    (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
 
     wr.write_str(",\"protocol\":").unwrap();
-    (write!(&mut wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
 
     wr.write_str("},\"country\":").unwrap();
-    (write!(&mut wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as uint)).unwrap();
     wr.write_str(",\"cache_status\":").unwrap();
-    (write!(&mut wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as uint)).unwrap();
     wr.write_str(",\"server_ip\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.server_ip)).unwrap();
+    (write!(wr, "\"{}\"", log.server_ip)).unwrap();
     wr.write_str(",\"server_name\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.server_name)).unwrap();
+    (write!(wr, "\"{}\"", log.server_name)).unwrap();
     wr.write_str(",\"remote_ip\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.remote_ip)).unwrap();
+    (write!(wr, "\"{}\"", log.remote_ip)).unwrap();
     wr.write_str(",\"bytes_dlv\":").unwrap();
-    (write!(&mut wr, "{}", log.bytes_dlv)).unwrap();
+    (write!(wr, "{}", log.bytes_dlv)).unwrap();
 
     wr.write_str(",\"ray_id\":").unwrap();
-    (write!(&mut wr, "\"{}\"", log.ray_id)).unwrap();
+    (write!(wr, "\"{}\"", log.ray_id)).unwrap();
     wr.write_str("}").unwrap();
 }
 
-fn manual_escape<W: Writer>(mut wr: W, log: &Log) {
+fn manual_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str("{").unwrap();
-    escape_str(&mut wr, "timestamp").unwrap();
+    escape_str(wr, "timestamp").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.timestamp)).unwrap();
+    (write!(wr, "{}", log.timestamp)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "zone_id").unwrap();
+    escape_str(wr, "zone_id").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.zone_id)).unwrap();
+    (write!(wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "zone_plan").unwrap();
+    escape_str(wr, "zone_plan").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.zone_plan as int)).unwrap();
+    (write!(wr, "{}", log.zone_plan as int)).unwrap();
 
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "http").unwrap();
+    escape_str(wr, "http").unwrap();
     wr.write_str(":{").unwrap();
-    escape_str(&mut wr, "protocol").unwrap();
+    escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "status").unwrap();
+    escape_str(wr, "status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.http.status)).unwrap();
+    (write!(wr, "{}", log.http.status)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "host_status").unwrap();
+    escape_str(wr, "host_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.http.host_status)).unwrap();
+    (write!(wr, "{}", log.http.host_status)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "up_status").unwrap();
+    escape_str(wr, "up_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.http.up_status)).unwrap();
+    (write!(wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "method").unwrap();
+    escape_str(wr, "method").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as uint)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "content_type").unwrap();
+    escape_str(wr, "content_type").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.http.content_type.as_slice()).unwrap();
+    escape_str(wr, log.http.content_type.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "user_agent").unwrap();
+    escape_str(wr, "user_agent").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.http.user_agent.as_slice()).unwrap();
+    escape_str(wr, log.http.user_agent.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "referer").unwrap();
+    escape_str(wr, "referer").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.http.referer.as_slice()).unwrap();
+    escape_str(wr, log.http.referer.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "request_uri").unwrap();
+    escape_str(wr, "request_uri").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.http.request_uri.as_slice()).unwrap();
+    escape_str(wr, log.http.request_uri.as_slice()).unwrap();
 
     wr.write_str("},").unwrap();
-    escape_str(&mut wr, "origin").unwrap();
+    escape_str(wr, "origin").unwrap();
     wr.write_str(":{").unwrap();
 
-    escape_str(&mut wr, "ip").unwrap();
+    escape_str(wr, "ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.origin.ip.as_slice()).unwrap();
+    escape_str(wr, log.origin.ip.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "port").unwrap();
+    escape_str(wr, "port").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.origin.port)).unwrap();
+    (write!(wr, "{}", log.origin.port)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "hostname").unwrap();
+    escape_str(wr, "hostname").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.origin.hostname.as_slice()).unwrap();
+    escape_str(wr, log.origin.hostname.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "protocol").unwrap();
+    escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
 
     wr.write_str("},").unwrap();
-    escape_str(&mut wr, "country").unwrap();
+    escape_str(wr, "country").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as uint)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "cache_status").unwrap();
+    escape_str(wr, "cache_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as uint)).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "server_ip").unwrap();
+    escape_str(wr, "server_ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.server_ip.as_slice()).unwrap();
+    escape_str(wr, log.server_ip.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "server_name").unwrap();
+    escape_str(wr, "server_name").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.server_name.as_slice()).unwrap();
+    escape_str(wr, log.server_name.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "remote_ip").unwrap();
+    escape_str(wr, "remote_ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.remote_ip.as_slice()).unwrap();
+    escape_str(wr, log.remote_ip.as_slice()).unwrap();
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "bytes_dlv").unwrap();
+    escape_str(wr, "bytes_dlv").unwrap();
     wr.write_str(":").unwrap();
-    (write!(&mut wr, "{}", log.bytes_dlv)).unwrap();
+    (write!(wr, "{}", log.bytes_dlv)).unwrap();
 
     wr.write_str(",").unwrap();
-    escape_str(&mut wr, "ray_id").unwrap();
+    escape_str(wr, "ray_id").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(&mut wr, log.ray_id.as_slice()).unwrap();
+    escape_str(wr, log.ray_id.as_slice()).unwrap();
     wr.write_str("}").unwrap();
 }
 
@@ -986,7 +986,7 @@ fn test_manual_vec_no_escape() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_no_escape(wr.by_ref(), &log);
+    manual_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
@@ -997,12 +997,12 @@ fn bench_manual_vec_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_no_escape(wr.by_ref(), &log);
+    manual_no_escape(&mut wr, &log);
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
         wr.clear();
-        manual_no_escape(wr.by_ref(), &log);
+        manual_no_escape(&mut wr, &log);
     });
 }
 
@@ -1011,7 +1011,7 @@ fn test_manual_vec_escape() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_escape(wr.by_ref(), &log);
+    manual_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
@@ -1022,13 +1022,13 @@ fn bench_manual_vec_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_escape(wr.by_ref(), &log);
+    manual_escape(&mut wr, &log);
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
         wr.clear();
 
-        manual_escape(wr.by_ref(), &log);
+        manual_escape(&mut wr, &log);
     });
 }
 
@@ -1037,9 +1037,9 @@ fn test_manual_my_mem_writer0_no_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1000);
-    manual_no_escape(wr.by_ref(), &log);
+    manual_no_escape(&mut wr, &log);
 
-    let json = String::from_utf8(wr.unwrap()).unwrap();
+    let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
@@ -1047,14 +1047,14 @@ fn test_manual_my_mem_writer0_no_escape() {
 fn bench_manual_my_mem_writer0_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
-    let mut wr = MyMemWriter0::with_capacity(1000);
-    manual_no_escape(wr.by_ref(), &log);
+    let mut wr = MyMemWriter0::with_capacity(1024);
+    manual_no_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
-        manual_no_escape(wr.by_ref(), &log);
+        manual_no_escape(&mut wr, &log);
     });
 }
 
@@ -1063,9 +1063,9 @@ fn test_manual_my_mem_writer0_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    manual_escape(wr.by_ref(), &log);
+    manual_escape(&mut wr, &log);
 
-    let json = String::from_utf8(wr.unwrap()).unwrap();
+    let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
@@ -1074,13 +1074,13 @@ fn bench_manual_my_mem_writer0_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    manual_escape(wr.by_ref(), &log);
+    manual_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
-        manual_escape(wr.by_ref(), &log);
+        manual_escape(&mut wr, &log);
     });
 }
 
@@ -1089,9 +1089,9 @@ fn test_manual_my_mem_writer1_no_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_no_escape(wr.by_ref(), &log);
+    manual_no_escape(&mut wr, &log);
 
-    let json = String::from_utf8(wr.unwrap()).unwrap();
+    let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
@@ -1099,14 +1099,14 @@ fn test_manual_my_mem_writer1_no_escape() {
 fn bench_manual_my_mem_writer1_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
-    let mut wr = MyMemWriter1::with_capacity(1000);
-    manual_no_escape(wr.by_ref(), &log);
+    let mut wr = MyMemWriter1::with_capacity(1024);
+    manual_no_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
-        manual_no_escape(wr.by_ref(), &log);
+        manual_no_escape(&mut wr, &log);
     });
 }
 
@@ -1115,9 +1115,9 @@ fn test_manual_my_mem_writer1_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_escape(wr.by_ref(), &log);
+    manual_escape(&mut wr, &log);
 
-    let json = String::from_utf8(wr.unwrap()).unwrap();
+    let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
@@ -1126,20 +1126,20 @@ fn bench_manual_my_mem_writer1_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_escape(wr.by_ref(), &log);
-    b.bytes = wr.unwrap().len() as u64;
+    manual_escape(&mut wr, &log);
+    b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        let mut wr = MyMemWriter1::with_capacity(1024);
-        manual_escape(wr.by_ref(), &log);
-        let _json = wr.unwrap();
+        wr.buf.clear();
+
+        manual_escape(&mut wr, &log);
     });
 }
 
-fn direct<W: Writer>(wr: W, log: &Log) {
+fn direct<W: Writer>(wr: &mut W, log: &Log) {
     use serde::ser::Serializer;
 
-    let mut serializer = json::Serializer::new(wr);
+    let mut serializer = json::Serializer::new(wr.by_ref());
 
     serializer.serialize_struct_start("Log", 12).unwrap();
 
@@ -1164,7 +1164,7 @@ fn test_direct_vec() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    direct(wr.by_ref(), &log);
+    direct(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
@@ -1175,12 +1175,12 @@ fn bench_direct_vec(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    direct(wr.by_ref(), &log);
+    direct(&mut wr, &log);
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
         let mut wr = Vec::with_capacity(1024);
-        direct(wr.by_ref(), &log);
+        direct(&mut wr, &log);
     });
 }
 
@@ -1189,9 +1189,9 @@ fn test_direct_my_mem_writer0() {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    direct(wr.by_ref(), &log);
+    direct(&mut wr, &log);
 
-    let json = String::from_utf8(wr.unwrap()).unwrap();
+    let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
@@ -1200,13 +1200,13 @@ fn bench_direct_my_mem_writer0(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    direct(wr.by_ref(), &log);
+    direct(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
-        direct(wr.by_ref(), &log);
+        direct(&mut wr, &log);
     });
 }
 
@@ -1215,9 +1215,9 @@ fn test_direct_my_mem_writer1() {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    direct(wr.by_ref(), &log);
+    direct(&mut wr, &log);
 
-    let json = String::from_utf8(wr.unwrap()).unwrap();
+    let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
@@ -1226,13 +1226,13 @@ fn bench_direct_my_mem_writer1(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    direct(wr.by_ref(), &log);
+    direct(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
-        wr.clear();
+        wr.buf.clear();
 
-        direct(wr.by_ref(), &log);
+        direct(&mut wr, &log);
     });
 }
 
