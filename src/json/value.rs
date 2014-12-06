@@ -20,9 +20,9 @@ pub enum Value {
     Boolean(bool),
     Integer(i64),
     Floating(f64),
-    String(string::String),
+    String(String),
     Array(Vec<Value>),
-    Object(TreeMap<string::String, Value>),
+    Object(TreeMap<String, Value>),
 }
 
 impl Value {
@@ -40,7 +40,7 @@ impl Value {
     }
 
     /// Serializes a json value into a string
-    pub fn to_pretty_string(&self) -> string::String {
+    pub fn to_pretty_string(&self) -> String {
         let mut wr = Vec::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
         str::from_utf8(wr.as_slice()).unwrap().to_string()
@@ -48,7 +48,7 @@ impl Value {
 
      /// If the Json value is an Object, returns the value associated with the provided key.
     /// Otherwise, returns None.
-    pub fn find<'a>(&'a self, key: &string::String) -> Option<&'a Value>{
+    pub fn find<'a>(&'a self, key: &String) -> Option<&'a Value>{
         match self {
             &Value::Object(ref map) => map.get(key),
             _ => None
@@ -58,7 +58,7 @@ impl Value {
     /// Attempts to get a nested Json Object for each key in `keys`.
     /// If any key is found not to exist, find_path will return None.
     /// Otherwise, it will return the Json value associated with the final key.
-    pub fn find_path<'a>(&'a self, keys: &[&string::String]) -> Option<&'a Value>{
+    pub fn find_path<'a>(&'a self, keys: &[&String]) -> Option<&'a Value>{
         let mut target = self;
         for key in keys.iter() {
             match target.find(*key) {
@@ -72,7 +72,7 @@ impl Value {
     /// If the Json value is an Object, performs a depth-first search until
     /// a value associated with the provided key is found. If no value is found
     /// or the Json value is not an Object, returns None.
-    pub fn search<'a>(&'a self, key: &string::String) -> Option<&'a Value> {
+    pub fn search<'a>(&'a self, key: &String) -> Option<&'a Value> {
         match self {
             &Value::Object(ref map) => {
                 match map.get(key) {
@@ -100,7 +100,7 @@ impl Value {
 
     /// If the Json value is an Object, returns the associated TreeMap.
     /// Returns None otherwise.
-    pub fn as_object<'a>(&'a self) -> Option<&'a TreeMap<string::String, Value>> {
+    pub fn as_object<'a>(&'a self) -> Option<&'a TreeMap<String, Value>> {
         match *self {
             Value::Object(ref map) => Some(map),
             _ => None
@@ -304,7 +304,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
 enum State {
     Value(Value),
     Array(vec::MoveItems<Value>),
-    Object(tree_map::MoveEntries<string::String, Value>),
+    Object(tree_map::MoveEntries<String, Value>),
     End,
 }
 
@@ -580,7 +580,7 @@ impl<'a> ToJson for &'a str {
     fn to_json(&self) -> Value { Value::String(self.to_string()) }
 }
 
-impl ToJson for string::String {
+impl ToJson for String {
     fn to_json(&self) -> Value { Value::String((*self).clone()) }
 }
 
@@ -628,7 +628,7 @@ impl<A:ToJson> ToJson for Vec<A> {
     }
 }
 
-impl<A:ToJson> ToJson for TreeMap<string::String, A> {
+impl<A:ToJson> ToJson for TreeMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = TreeMap::new();
         for (key, value) in self.iter() {
@@ -638,7 +638,7 @@ impl<A:ToJson> ToJson for TreeMap<string::String, A> {
     }
 }
 
-impl<A:ToJson> ToJson for HashMap<string::String, A> {
+impl<A:ToJson> ToJson for HashMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = TreeMap::new();
         for (key, value) in self.iter() {
