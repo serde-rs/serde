@@ -8,7 +8,7 @@ use serde2::de;
 use serde2::de::{Deserialize, Deserializer};
 
 #[deriving(Show)]
-enum Token {
+pub enum Token {
     Null,
     Int(int),
     String(string::String),
@@ -32,7 +32,7 @@ struct MyDeserializer<Iter> {
 }
 
 impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
-    fn new(tokens: Iter) -> MyDeserializer<Iter> {
+    pub fn new(tokens: Iter) -> MyDeserializer<Iter> {
         MyDeserializer {
             tokens: tokens,
             peeked: None,
@@ -193,10 +193,9 @@ struct MyMapVisitor {
 impl<
     Iter: Iterator<Token>,
 > de::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor {
-    fn visit<
+    fn visit_key<
         K: Deserialize<MyDeserializer<Iter>, Error>,
-        V: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<(K, V)>, Error> {
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<K>, Error> {
         match d.peek() {
             Some(&Token::End) => {
                 d.next();
@@ -205,15 +204,18 @@ impl<
             Some(_) => {
                 self.len -= 1;
 
-                let key = try!(Deserialize::deserialize(d));
-                let value = try!(Deserialize::deserialize(d));
-
-                Ok(Some((key, value)))
+                Ok(Some(try!(Deserialize::deserialize(d))))
             }
             None => {
                 Err(d.syntax_error())
             }
         }
+    }
+
+    fn visit_value<
+        V: Deserialize<MyDeserializer<Iter>, Error>,
+    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<V, Error> {
+        Ok(try!(Deserialize::deserialize(d)))
     }
 
     fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
@@ -326,7 +328,7 @@ mod json {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-fn main() {
+pub fn main() {
     let tokens = vec!(
         Token::SeqStart(2),
         Token::Int(1),

@@ -1,5 +1,5 @@
 use std::f64;
-use std::io::{IoError, MemWriter};
+use std::io::IoError;
 use std::io;
 use std::num::{Float, FPNaN, FPInfinite};
 
@@ -23,7 +23,7 @@ impl<W: io::Writer> Writer<W> {
 
     /// Unwrap the Writer from the Serializer.
     #[inline]
-    pub fn unwrap(self) -> W {
+    pub fn into_inner(self) -> W {
         self.writer
     }
 }
@@ -234,10 +234,10 @@ fn fmt_f64_or_null<W: io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError>
 pub fn to_vec<
     T: ser::Serialize,
 >(value: &T) -> Result<Vec<u8>, IoError> {
-    let writer = MemWriter::with_capacity(1024);
+    let writer = Vec::with_capacity(128);
     let mut writer = Writer::new(writer);
     try!(writer.visit(value));
-    Ok(writer.unwrap().unwrap())
+    Ok(writer.into_inner())
 }
 
 #[inline]

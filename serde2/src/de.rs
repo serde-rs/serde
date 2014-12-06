@@ -1,6 +1,5 @@
 use std::collections::{HashMap, TreeMap};
 use std::hash::Hash;
-use std::num;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -39,11 +38,35 @@ pub trait Visitor<S: Deserializer<E>, R, E> {
         self.visit_i64(state, v as i64)
     }
 
+    fn visit_i8(&mut self, state: &mut S, v: i8) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
+    }
+
+    fn visit_i16(&mut self, state: &mut S, v: i16) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
+    }
+
+    fn visit_i32(&mut self, state: &mut S, v: i32) -> Result<R, E> {
+        self.visit_i64(state, v as i64)
+    }
+
     fn visit_i64(&mut self, state: &mut S, _v: i64) -> Result<R, E> {
         Err(state.syntax_error())
     }
 
     fn visit_uint(&mut self, state: &mut S, v: uint) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
+    }
+
+    fn visit_u8(&mut self, state: &mut S, v: u8) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
+    }
+
+    fn visit_u16(&mut self, state: &mut S, v: u16) -> Result<R, E> {
+        self.visit_u64(state, v as u64)
+    }
+
+    fn visit_u32(&mut self, state: &mut S, v: u32) -> Result<R, E> {
         self.visit_u64(state, v as u64)
     }
 
@@ -109,7 +132,23 @@ pub trait MapVisitor<S, E> {
     fn visit<
         K: Deserialize<S, E>,
         V: Deserialize<S, E>,
-    >(&mut self, state: &mut S) -> Result<Option<(K, V)>, E>;
+    >(&mut self, state: &mut S) -> Result<Option<(K, V)>, E> {
+        match try!(self.visit_key(state)) {
+            Some(key) => {
+                let value = try!(self.visit_value(state));
+                Ok(Some((key, value)))
+            }
+            None => Ok(None)
+        }
+    }
+
+    fn visit_key<
+        K: Deserialize<S, E>,
+    >(&mut self, state: &mut S) -> Result<Option<K>, E>;
+
+    fn visit_value<
+        V: Deserialize<S, E>,
+    >(&mut self, state: &mut S) -> Result<V, E>;
 
     fn end(&mut self, state: &mut S) -> Result<(), E>;
 
@@ -167,9 +206,9 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserialize_num_method {
-    ($dst_ty:ty, $src_ty:ty, $method:ident) => {
-        fn $method(&mut self, state: &mut S, v: $src_ty) -> Result<$dst_ty, E> {
-            match num::cast(v) {
+    ($src_ty:ty, $method:ident, $from_method:ident) => {
+        fn $method(&mut self, state: &mut S, v: $src_ty) -> Result<T, E> {
+            match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
                 None => Err(state.syntax_error()),
             }
@@ -177,31 +216,56 @@ macro_rules! impl_deserialize_num_method {
     }
 }
 
+#[inline]
+pub fn deserialize_from_primitive<
+    S: Deserializer<E>,
+    E,
+    T: Deserialize<S, E> + FromPrimitive
+>(state: &mut S) -> Result<T, E> {
+    struct Visitor;
+
+    impl<
+        S: Deserializer<E>,
+        E,
+        T: Deserialize<S, E> + FromPrimitive
+    > self::Visitor<S, T, E> for Visitor {
+        impl_deserialize_num_method!(int, visit_int, from_int)
+        impl_deserialize_num_method!(i8, visit_i8, from_i8)
+        impl_deserialize_num_method!(i16, visit_i16, from_i16)
+        impl_deserialize_num_method!(i32, visit_i32, from_i32)
+        impl_deserialize_num_method!(i64, visit_i64, from_i64)
+        impl_deserialize_num_method!(uint, visit_uint, from_uint)
+        impl_deserialize_num_method!(u8, visit_u8, from_u8)
+        impl_deserialize_num_method!(u16, visit_u16, from_u16)
+        impl_deserialize_num_method!(u32, visit_u32, from_u32)
+        impl_deserialize_num_method!(u64, visit_u64, from_u64)
+        impl_deserialize_num_method!(f32, visit_f32, from_f32)
+        impl_deserialize_num_method!(f64, visit_f64, from_f64)
+    }
+
+    state.visit(&mut Visitor)
+}
+
 macro_rules! impl_deserialize_num {
     ($ty:ty) => {
         impl<S: Deserializer<E>, E> Deserialize<S, E> for $ty {
             #[inline]
             fn deserialize(state: &mut S) -> Result<$ty, E> {
-                struct Visitor;
-
-                impl<S: Deserializer<E>, E> self::Visitor<S, $ty, E> for Visitor {
-                    impl_deserialize_num_method!($ty, int, visit_int)
-                    impl_deserialize_num_method!($ty, i64, visit_i64)
-                    impl_deserialize_num_method!($ty, uint, visit_uint)
-                    impl_deserialize_num_method!($ty, u64, visit_u64)
-                    impl_deserialize_num_method!($ty, f32, visit_f32)
-                    impl_deserialize_num_method!($ty, f64, visit_f64)
-                }
-
-                state.visit(&mut Visitor)
+                deserialize_from_primitive(state)
             }
         }
     }
 }
 
 impl_deserialize_num!(int)
+impl_deserialize_num!(i8)
+impl_deserialize_num!(i16)
+impl_deserialize_num!(i32)
 impl_deserialize_num!(i64)
 impl_deserialize_num!(uint)
+impl_deserialize_num!(u8)
+impl_deserialize_num!(u16)
+impl_deserialize_num!(u32)
 impl_deserialize_num!(u64)
 impl_deserialize_num!(f32)
 impl_deserialize_num!(f64)

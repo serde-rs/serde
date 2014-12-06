@@ -16,6 +16,8 @@ use serde2::json::ser::escape_str;
 use serde2::json;
 use serde2::ser::{Serialize, Serializer};
 use serde2::ser;
+use serde2::de::{Deserialize, Deserializer};
+use serde2::de;
 
 use serialize::Encodable;
 
@@ -32,6 +34,69 @@ struct Http {
     user_agent: String,
     referer: String,
     request_uri: String,
+}
+
+impl<
+    S: Deserializer<E>,
+    E,
+> Deserialize<S, E> for Http {
+    fn deserialize(state: &mut S) -> Result<Http, E> {
+        struct Visitor;
+
+        impl<
+            S: Deserializer<E>,
+            E,
+        > de::Visitor<S, Http, E> for Visitor {
+            fn visit_map<
+                Visitor: de::MapVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<Http, E> {
+                let mut protocol = None;
+                let mut status = None;
+                let mut host_status = None;
+                let mut up_status = None;
+                let mut method = None;
+                let mut content_type = None;
+                let mut user_agent = None;
+                let mut referer = None;
+                let mut request_uri = None;
+
+                loop {
+                    match try!(visitor.visit_key(state)) {
+                        Some(s) => {
+                            let s: String = s;
+                            match s.as_slice() {
+                                "protocol" => { protocol = Some(try!(visitor.visit_value(state))); }
+                                "status" => { status = Some(try!(visitor.visit_value(state))); }
+                                "host_status" => { host_status = Some(try!(visitor.visit_value(state))); }
+                                "up_status" => { up_status = Some(try!(visitor.visit_value(state))); }
+                                "method" => { method = Some(try!(visitor.visit_value(state))); }
+                                "content_type" => { content_type = Some(try!(visitor.visit_value(state))); }
+                                "user_agent" => { user_agent = Some(try!(visitor.visit_value(state))); }
+                                "referer" => { referer = Some(try!(visitor.visit_value(state))); }
+                                "request_uri" => { request_uri = Some(try!(visitor.visit_value(state))); }
+                                _ => panic!(),
+                            }
+                        }
+                        None => { break; }
+                    }
+                }
+
+                Ok(Http {
+                    protocol: protocol.unwrap(),
+                    status: status.unwrap(),
+                    host_status: host_status.unwrap(),
+                    up_status: up_status.unwrap(),
+                    method: method.unwrap(),
+                    content_type: content_type.unwrap(),
+                    user_agent: user_agent.unwrap(),
+                    referer: referer.unwrap(),
+                    request_uri: request_uri.unwrap(),
+                })
+            }
+        }
+
+        state.visit(&mut Visitor)
+    }
 }
 
 #[deriving(Show, PartialEq, FromPrimitive)]
@@ -68,14 +133,12 @@ impl ser::Serialize for HttpProtocol {
     }
 }
 
-/*
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpProtocol {
+impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for HttpProtocol {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
-        d.expect_from_primitive(token)
+    fn deserialize(state: &mut S) -> Result<HttpProtocol, E> {
+        de::deserialize_from_primitive(state)
     }
 }
-*/
 
 #[deriving(Show, PartialEq, FromPrimitive)]
 enum HttpMethod {
@@ -119,14 +182,12 @@ impl ser::Serialize for HttpMethod {
     }
 }
 
-/*
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpMethod {
+impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for HttpMethod {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
-        d.expect_from_primitive(token)
+    fn deserialize(state: &mut S) -> Result<HttpMethod, E> {
+        de::deserialize_from_primitive(state)
     }
 }
-*/
 
 #[deriving(Show, PartialEq, FromPrimitive)]
 enum CacheStatus {
@@ -163,14 +224,12 @@ impl ser::Serialize for CacheStatus {
     }
 }
 
-/*
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for CacheStatus {
+impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for CacheStatus {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
-        d.expect_from_primitive(token)
+    fn deserialize(state: &mut S) -> Result<CacheStatus, E> {
+        de::deserialize_from_primitive(state)
     }
 }
-*/
 
 #[deriving(Show, PartialEq, Encodable, Decodable)]
 #[deriving_serialize]
@@ -180,6 +239,54 @@ struct Origin {
     port: u32,
     hostname: String,
     protocol: OriginProtocol,
+}
+
+impl<
+    S: Deserializer<E>,
+    E,
+> Deserialize<S, E> for Origin {
+    fn deserialize(state: &mut S) -> Result<Origin, E> {
+        struct Visitor;
+
+        impl<
+            S: Deserializer<E>,
+            E,
+        > de::Visitor<S, Origin, E> for Visitor {
+            fn visit_map<
+                Visitor: de::MapVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<Origin, E> {
+                let mut ip = None;
+                let mut port = None;
+                let mut hostname = None;
+                let mut protocol = None;
+
+                loop {
+                    match try!(visitor.visit_key(state)) {
+                        Some(s) => {
+                            let s: String = s;
+                            match s.as_slice() {
+                                "ip" => { ip = Some(try!(visitor.visit_value(state))); }
+                                "port" => { port = Some(try!(visitor.visit_value(state))); }
+                                "hostname" => { hostname = Some(try!(visitor.visit_value(state))); }
+                                "protocol" => { protocol = Some(try!(visitor.visit_value(state))); }
+                                _ => panic!(),
+                            }
+                        }
+                        None => { break; }
+                    }
+                }
+
+                Ok(Origin {
+                    ip: ip.unwrap(),
+                    port: port.unwrap(),
+                    hostname: hostname.unwrap(),
+                    protocol: protocol.unwrap(),
+                })
+            }
+        }
+
+        state.visit(&mut Visitor)
+    }
 }
 
 #[deriving(Show, PartialEq, FromPrimitive)]
@@ -216,14 +323,12 @@ impl ser::Serialize for OriginProtocol {
     }
 }
 
-/*
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for OriginProtocol {
+impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for OriginProtocol {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
-        d.expect_from_primitive(token)
+    fn deserialize(state: &mut S) -> Result<OriginProtocol, E> {
+        de::deserialize_from_primitive(state)
     }
 }
-*/
 
 #[deriving(Show, PartialEq, FromPrimitive)]
 enum ZonePlan {
@@ -261,14 +366,12 @@ impl ser::Serialize for ZonePlan {
     }
 }
 
-/*
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for ZonePlan {
+impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for ZonePlan {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
-        d.expect_from_primitive(token)
+    fn deserialize(state: &mut S) -> Result<ZonePlan, E> {
+        de::deserialize_from_primitive(state)
     }
 }
-*/
 
 #[deriving(Show, PartialEq, FromPrimitive)]
 enum Country {
@@ -557,14 +660,12 @@ impl ser::Serialize for Country {
     }
 }
 
-/*
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Country {
+impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for Country {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<Country, E> {
-        d.expect_from_primitive(token)
+    fn deserialize(state: &mut S) -> Result<Country, E> {
+        de::deserialize_from_primitive(state)
     }
 }
-*/
 
 #[deriving(Show, PartialEq, Encodable, Decodable)]
 #[deriving_serialize]
@@ -582,6 +683,78 @@ struct Log {
     remote_ip: String,
     bytes_dlv: u64,
     ray_id: String,
+}
+
+impl<
+    S: Deserializer<E>,
+    E,
+> Deserialize<S, E> for Log {
+    fn deserialize(state: &mut S) -> Result<Log, E> {
+        struct Visitor;
+
+        impl<
+            S: Deserializer<E>,
+            E,
+        > de::Visitor<S, Log, E> for Visitor {
+            fn visit_map<
+                Visitor: de::MapVisitor<S, E>,
+            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<Log, E> {
+                let mut timestamp = None;
+                let mut zone_id = None;
+                let mut zone_plan = None;
+                let mut http = None;
+                let mut origin = None;
+                let mut country = None;
+                let mut cache_status = None;
+                let mut server_ip = None;
+                let mut server_name = None;
+                let mut remote_ip = None;
+                let mut bytes_dlv = None;
+                let mut ray_id = None;
+
+                loop {
+                    match try!(visitor.visit_key(state)) {
+                        Some(s) => {
+                            let s: String = s;
+                            match s.as_slice() {
+                                "timestamp" => { timestamp = Some(try!(visitor.visit_value(state))); }
+                                "zone_id" => { zone_id = Some(try!(visitor.visit_value(state))); }
+                                "zone_plan" => { zone_plan = Some(try!(visitor.visit_value(state))); }
+                                "http" => { http = Some(try!(visitor.visit_value(state))); }
+                                "origin" => { origin = Some(try!(visitor.visit_value(state))); }
+                                "country" => { country = Some(try!(visitor.visit_value(state))); }
+                                "cache_status" => { cache_status = Some(try!(visitor.visit_value(state))); }
+                                "server_ip" => { server_ip = Some(try!(visitor.visit_value(state))); }
+                                "server_name" => { server_name = Some(try!(visitor.visit_value(state))); }
+                                "remote_ip" => { remote_ip = Some(try!(visitor.visit_value(state))); }
+                                "bytes_dlv" => { bytes_dlv = Some(try!(visitor.visit_value(state))); }
+                                "ray_id" => { ray_id = Some(try!(visitor.visit_value(state))); }
+                                _ => panic!(),
+                            }
+                        }
+                        None => { break; }
+                    }
+                }
+
+                Ok(Log {
+                    timestamp: timestamp.unwrap(),
+                    zone_id: zone_id.unwrap(),
+                    zone_plan: zone_plan.unwrap(),
+                    http: http.unwrap(),
+                    origin: origin.unwrap(),
+                    country: country.unwrap(),
+                    cache_status: cache_status.unwrap(),
+                    server_ip: server_ip.unwrap(),
+                    server_name: server_name.unwrap(),
+                    remote_ip: remote_ip.unwrap(),
+                    bytes_dlv: bytes_dlv.unwrap(),
+                    ray_id: ray_id.unwrap(),
+                })
+            }
+        }
+
+        state.visit(&mut Visitor)
+    }
 }
 
 impl Log {
@@ -769,7 +942,7 @@ fn test_serializer_vec() {
     let mut serializer = json::Writer::new(wr);
     serializer.visit(&log).unwrap();
 
-    let json = serializer.unwrap();
+    let json = serializer.into_inner();
     assert_eq!(json.as_slice(), JSON_STR.as_bytes());
 }
 
@@ -786,7 +959,7 @@ fn bench_serializer_vec(b: &mut Bencher) {
 
         let mut serializer = json::Writer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
-        let _json = serializer.unwrap();
+        let _json = serializer.into_inner();
     });
 }
 
@@ -1115,5 +1288,14 @@ fn bench_manual_my_mem_writer1_escape(b: &mut Bencher) {
         wr.buf.clear();
 
         manual_escape(&mut wr, &log);
+    });
+}
+
+#[bench]
+fn bench_deserializer(b: &mut Bencher) {
+    b.bytes = JSON_STR.len() as u64;
+
+    b.iter(|| {
+        let _log: Log = json::from_str(JSON_STR).unwrap();
     });
 }
