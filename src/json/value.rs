@@ -21,7 +21,7 @@ pub enum Value {
     Integer(i64),
     Floating(f64),
     String(string::String),
-    List(Vec<Value>),
+    Array(Vec<Value>),
     Object(TreeMap<string::String, Value>),
 }
 
@@ -107,16 +107,16 @@ impl Value {
         }
     }
 
-    /// Returns true if the Json value is a List. Returns false otherwise.
-    pub fn is_list<'a>(&'a self) -> bool {
-        self.as_list().is_some()
+    /// Returns true if the Json value is a Array. Returns false otherwise.
+    pub fn is_array<'a>(&'a self) -> bool {
+        self.as_array().is_some()
     }
 
-    /// If the Json value is a List, returns the associated vector.
+    /// If the Json value is a Array, returns the associated vector.
     /// Returns None otherwise.
-    pub fn as_list<'a>(&'a self) -> Option<&'a Vec<Value>> {
+    pub fn as_array<'a>(&'a self) -> Option<&'a Vec<Value>> {
         match *self {
-            Value::List(ref list) => Some(list),
+            Value::Array(ref array) => Some(array),
             _ => None
         }
     }
@@ -243,7 +243,7 @@ impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for Value {
             Value::String(ref v) => {
                 v.serialize(s)
             }
-            Value::List(ref v) => {
+            Value::Array(ref v) => {
                 v.serialize(s)
             }
             Value::Object(ref v) => {
@@ -277,8 +277,8 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
             Token::Option(false) => Ok(Value::Null),
             Token::Option(true) => de::Deserialize::deserialize(d),
             Token::TupleStart(_) | Token::SeqStart(_) => {
-                let list = try!(de::Deserialize::deserialize_token(d, token));
-                Ok(Value::List(list))
+                let array = try!(de::Deserialize::deserialize_token(d, token));
+                Ok(Value::Array(array))
             }
             Token::StructStart(_, _) | Token::MapStart(_) => {
                 let object = try!(de::Deserialize::deserialize_token(d, token));
@@ -288,7 +288,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
                 let token = Token::SeqStart(len);
                 let fields: Vec<Value> = try!(de::Deserialize::deserialize_token(d, token));
                 let mut object = TreeMap::new();
-                object.insert(name.to_string(), Value::List(fields));
+                object.insert(name.to_string(), Value::Array(fields));
                 Ok(Value::Object(object))
             }
             Token::End => {
@@ -303,7 +303,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
 
 enum State {
     Value(Value),
-    List(vec::MoveItems<Value>),
+    Array(vec::MoveItems<Value>),
     Object(tree_map::MoveEntries<string::String, Value>),
     End,
 }
@@ -333,9 +333,9 @@ impl Iterator<Result<Token, Error>> for Deserializer {
                         Value::Integer(x) => Token::I64(x),
                         Value::Floating(x) => Token::F64(x),
                         Value::String(x) => Token::String(x),
-                        Value::List(x) => {
+                        Value::Array(x) => {
                             let len = x.len();
-                            self.stack.push(State::List(x.into_iter()));
+                            self.stack.push(State::Array(x.into_iter()));
                             Token::SeqStart(len)
                         }
                         Value::Object(x) => {
@@ -347,10 +347,10 @@ impl Iterator<Result<Token, Error>> for Deserializer {
 
                     return Some(Ok(token));
                 }
-                Some(State::List(mut iter)) => {
+                Some(State::Array(mut iter)) => {
                     match iter.next() {
                         Some(value) => {
-                            self.stack.push(State::List(iter));
+                            self.stack.push(State::Array(iter));
                             self.stack.push(State::Value(value));
                             // loop around.
                         }
@@ -441,11 +441,11 @@ impl de::Deserializer<Error> for Deserializer {
                 };
 
                 let (variant, fields) = match iter.next() {
-                    Some((variant, Value::List(fields))) => (variant, fields),
+                    Some((variant, Value::Array(fields))) => (variant, fields),
                     Some((key, value)) => {
                         return Err(
                             Error::ExpectedError(
-                                "List".to_string(),
+                                "Array".to_string(),
                                 format!("{} => {}", key, value)
                             )
                         );
@@ -608,12 +608,12 @@ macro_rules! impl_to_json_tuple {
 
                 let ($(ref $name,)*) = *self;
 
-                let mut list = Vec::with_capacity(len);
+                let mut array = Vec::with_capacity(len);
                 $(
-                    list.push($name.to_json());
+                    array.push($name.to_json());
                  )*
 
-                Value::List(list)
+                Value::Array(array)
             }
         }
         peel_to_json_tuple!($($name,)*)
@@ -624,7 +624,7 @@ impl_to_json_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 impl<A:ToJson> ToJson for Vec<A> {
     fn to_json(&self) -> Value {
-        Value::List(self.iter().map(|elt| elt.to_json()).collect())
+        Value::Array(self.iter().map(|elt| elt.to_json()).collect())
     }
 }
 

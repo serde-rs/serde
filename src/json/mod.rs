@@ -292,7 +292,7 @@ fn main() {
 
 */
 
-pub use self::builder::{ListBuilder, ObjectBuilder};
+pub use self::builder::{ArrayBuilder, ObjectBuilder};
 pub use self::de::{
     Parser,
     from_str,

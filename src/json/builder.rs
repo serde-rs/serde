@@ -13,31 +13,31 @@ use std::str::StrAllocating;
 
 use json::value::{ToJson, Value};
 
-pub struct ListBuilder {
-    list: Vec<Value>,
+pub struct ArrayBuilder {
+    array: Vec<Value>,
 }
 
-impl ListBuilder {
-    pub fn new() -> ListBuilder {
-        ListBuilder { list: Vec::new() }
+impl ArrayBuilder {
+    pub fn new() -> ArrayBuilder {
+        ArrayBuilder { array: Vec::new() }
     }
 
     pub fn unwrap(self) -> Value {
-        Value::List(self.list)
+        Value::Array(self.array)
     }
 
-    pub fn push<T: ToJson>(self, value: T) -> ListBuilder {
+    pub fn push<T: ToJson>(self, value: T) -> ArrayBuilder {
         let mut builder = self;
-        builder.list.push(value.to_json());
+        builder.array.push(value.to_json());
         builder
     }
 
-    pub fn push_list(self, f: |ListBuilder| -> ListBuilder) -> ListBuilder {
-        let builder = ListBuilder::new();
+    pub fn push_array(self, f: |ArrayBuilder| -> ArrayBuilder) -> ArrayBuilder {
+        let builder = ArrayBuilder::new();
         self.push(f(builder).unwrap())
     }
 
-    pub fn push_object(self, f: |ObjectBuilder| -> ObjectBuilder) -> ListBuilder {
+    pub fn push_object(self, f: |ObjectBuilder| -> ObjectBuilder) -> ArrayBuilder {
         let builder = ObjectBuilder::new();
         self.push(f(builder).unwrap())
     }
@@ -62,8 +62,8 @@ impl ObjectBuilder {
         builder
     }
 
-    pub fn insert_list<S: StrAllocating>(self, key: S, f: |ListBuilder| -> ListBuilder) -> ObjectBuilder {
-        let builder = ListBuilder::new();
+    pub fn insert_array<S: StrAllocating>(self, key: S, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
+        let builder = ArrayBuilder::new();
         self.insert(key.into_string(), f(builder).unwrap())
     }
 
@@ -78,26 +78,26 @@ mod tests {
     use std::collections::TreeMap;
 
     use json::value::Value;
-    use super::{ListBuilder, ObjectBuilder};
+    use super::{ArrayBuilder, ObjectBuilder};
 
     #[test]
-    fn test_list_builder() {
-        let value = ListBuilder::new().unwrap();
-        assert_eq!(value, Value::List(Vec::new()));
+    fn test_array_builder() {
+        let value = ArrayBuilder::new().unwrap();
+        assert_eq!(value, Value::Array(Vec::new()));
 
-        let value = ListBuilder::new()
+        let value = ArrayBuilder::new()
             .push(1i)
             .push(2i)
             .push(3i)
             .unwrap();
-        assert_eq!(value, Value::List(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))));
+        assert_eq!(value, Value::Array(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))));
 
-        let value = ListBuilder::new()
-            .push_list(|bld| bld.push(1i).push(2i).push(3i))
+        let value = ArrayBuilder::new()
+            .push_array(|bld| bld.push(1i).push(2i).push(3i))
             .unwrap();
-        assert_eq!(value, Value::List(vec!(Value::List(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))))));
+        assert_eq!(value, Value::Array(vec!(Value::Array(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))))));
 
-        let value = ListBuilder::new()
+        let value = ArrayBuilder::new()
             .push_object(|bld|
                 bld
                     .insert("a".to_string(), 1i)
@@ -107,7 +107,7 @@ mod tests {
         let mut map = TreeMap::new();
         map.insert("a".to_string(), Value::Integer(1));
         map.insert("b".to_string(), Value::Integer(2));
-        assert_eq!(value, Value::List(vec!(Value::Object(map))));
+        assert_eq!(value, Value::Array(vec!(Value::Object(map))));
     }
 
     #[test]
