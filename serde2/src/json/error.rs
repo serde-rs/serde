@@ -2,6 +2,8 @@ use std::error;
 use std::fmt;
 use std::io;
 
+use de;
+
 /// The errors that can arise while parsing a JSON stream.
 #[deriving(Clone, PartialEq)]
 pub enum ErrorCode {
@@ -122,5 +124,15 @@ impl error::Error for Error {
 impl error::FromError<io::IoError> for Error {
     fn from_error(error: io::IoError) -> Error {
         Error::IoError(error)
+    }
+}
+
+impl de::Error for Error {
+    fn syntax_error() -> Error {
+        Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)
+    }
+
+    fn end_of_stream_error() -> Error {
+        Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 0, 0)
     }
 }

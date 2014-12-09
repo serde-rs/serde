@@ -387,14 +387,6 @@ impl<Iter: Iterator<u8>> Deserializer<Error> for Parser<Iter> {
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
         self.parse_value(visitor)
     }
-
-    fn syntax_error(&mut self) -> Error {
-        Error::SyntaxError(ErrorCode::ExpectedSomeValue, self.line, self.col)
-    }
-
-    fn end_of_stream_error(&mut self) -> Error {
-        Error::SyntaxError(ErrorCode::EOFWhileParsingValue, self.line, self.col)
-    }
 }
 
 struct SeqVisitor {

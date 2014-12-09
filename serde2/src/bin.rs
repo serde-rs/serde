@@ -24,6 +24,16 @@ enum Error {
     EndOfStreamError,
 }
 
+impl de::Error for Error {
+    fn syntax_error() -> Error {
+        Error::SyntaxError
+    }
+
+    fn end_of_stream_error() -> Error {
+        Error::EndOfStreamError
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 struct MyDeserializer<Iter> {
@@ -63,6 +73,8 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
         R,
         V: de::Visitor<MyDeserializer<Iter>, R, Error>,
     >(&mut self, visitor: &mut V) -> Result<R, Error> {
+        use serde2::de::Error;
+
         match self.next() {
             Some(Token::Null) => {
                 visitor.visit_null(self)
@@ -85,10 +97,10 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
                 visitor.visit_map(self, MyMapVisitor { len: len })
             }
             Some(Token::End) => {
-                Err(self.syntax_error())
+                Err(Error::syntax_error())
             }
             None => {
-                Err(self.end_of_stream_error())
+                Err(Error::end_of_stream_error())
             }
         }
     }
@@ -116,14 +128,6 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
                 })
             }
         }
-    }
-
-    fn syntax_error(&mut self) -> Error {
-        Error::SyntaxError
-    }
-
-    fn end_of_stream_error(&mut self) -> Error {
-        Error::EndOfStreamError
     }
 }
 
@@ -157,6 +161,8 @@ impl<
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
+        use serde2::de::Error;
+
         match d.peek() {
             Some(&Token::End) => {
                 d.next();
@@ -168,16 +174,18 @@ impl<
                 Ok(Some(value))
             }
             None => {
-                Err(d.syntax_error())
+                Err(Error::syntax_error())
             }
         }
     }
 
     fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
+        use serde2::de::Error;
+
         match d.next() {
             Some(Token::End) => Ok(()),
-            Some(_) => Err(d.syntax_error()),
-            None => Err(d.end_of_stream_error()),
+            Some(_) => Err(Error::syntax_error()),
+            None => Err(Error::end_of_stream_error()),
         }
     }
 
@@ -196,6 +204,8 @@ impl<
     fn visit_key<
         K: Deserialize<MyDeserializer<Iter>, Error>,
     >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<K>, Error> {
+        use serde2::de::Error;
+
         match d.peek() {
             Some(&Token::End) => {
                 d.next();
@@ -207,7 +217,7 @@ impl<
                 Ok(Some(try!(Deserialize::deserialize(d))))
             }
             None => {
-                Err(d.syntax_error())
+                Err(Error::syntax_error())
             }
         }
     }
@@ -219,10 +229,12 @@ impl<
     }
 
     fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
+        use serde2::de::Error;
+
         match d.next() {
             Some(Token::End) => Ok(()),
-            Some(_) => Err(d.syntax_error()),
-            None => Err(d.end_of_stream_error()),
+            Some(_) => Err(Error::syntax_error()),
+            None => Err(Error::end_of_stream_error()),
         }
     }
 
@@ -249,14 +261,14 @@ mod json {
 
     impl<
         D: de::Deserializer<E>,
-        E,
+        E: de::Error,
     > de::Deserialize<D, E> for Value {
         fn deserialize(d: &mut D) -> Result<Value, E> {
             struct Visitor;
 
             impl<
                 D: de::Deserializer<E>,
-                E,
+                E: de::Error,
             > de::Visitor<D, Value, E> for Visitor {
                 fn visit_null(&mut self, _d: &mut D) -> Result<Value, E> {
                     Ok(Value::Null)
