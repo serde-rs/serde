@@ -94,29 +94,30 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
         match self.ch_or_null() {
             b'n' => {
                 try!(self.parse_ident(b"ull"));
-                visitor.visit_null(self)
+                visitor.visit_null()
             }
             b't' => {
                 try!(self.parse_ident(b"rue"));
-                visitor.visit_bool(self, true)
+                visitor.visit_bool(true)
             }
             b'f' => {
                 try!(self.parse_ident(b"alse"));
-                visitor.visit_bool(self, false)
+                visitor.visit_bool(false)
             }
             b'0' ... b'9' | b'-' => self.parse_number(visitor),
             b'"' => {
                 try!(self.parse_string());
-                let s = String::from_utf8(self.buf.clone()).unwrap();
-                visitor.visit_string(self, s)
+                //let s = String::from_utf8(self.buf.clone()).unwrap();
+                let s = str::from_utf8(self.buf.as_slice()).unwrap();
+                visitor.visit_str(s)
             }
             b'[' => {
                 self.bump();
-                visitor.visit_seq(self, SeqVisitor { first: true })
+                visitor.visit_seq(SeqVisitor { parser: self, first: true })
             }
             b'{' => {
                 self.bump();
-                visitor.visit_map(self, MapVisitor { first: true })
+                visitor.visit_map(MapVisitor { parser: self, first: true })
             }
             _ => {
                 Err(self.error(ErrorCode::ExpectedSomeValue))
@@ -160,9 +161,9 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
                 res = try!(self.parse_exponent(res));
             }
 
-            visitor.visit_f64(self, neg * res)
+            visitor.visit_f64(neg * res)
         } else {
-            visitor.visit_i64(self, neg * res)
+            visitor.visit_i64(neg * res)
         }
     }
 
@@ -389,114 +390,116 @@ impl<Iter: Iterator<u8>> Deserializer<Error> for Parser<Iter> {
     }
 }
 
-struct SeqVisitor {
+struct SeqVisitor<'a, Iter: 'a> {
+    parser: &'a mut Parser<Iter>,
     first: bool,
 }
 
-impl<Iter: Iterator<u8>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor {
+impl<'a, Iter: Iterator<u8>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor<'a, Iter> {
     fn visit<
         T: de::Deserialize<Parser<Iter>, Error>,
-    >(&mut self, d: &mut Parser<Iter>) -> Result<Option<T>, Error> {
-        d.parse_whitespace();
+    >(&mut self) -> Result<Option<T>, Error> {
+        self.parser.parse_whitespace();
 
-        if d.ch_is(b']') {
-            d.bump();
+        if self.parser.ch_is(b']') {
+            self.parser.bump();
             return Ok(None);
         }
 
         if self.first {
             self.first = false;
         } else {
-            if d.ch_is(b',') {
-                d.bump();
-            } else if d.eof() {
-                return Err(d.error(ErrorCode::EOFWhileParsingList));
+            if self.parser.ch_is(b',') {
+                self.parser.bump();
+            } else if self.parser.eof() {
+                return Err(self.parser.error(ErrorCode::EOFWhileParsingList));
             } else {
-                return Err(d.error(ErrorCode::ExpectedListCommaOrEnd));
+                return Err(self.parser.error(ErrorCode::ExpectedListCommaOrEnd));
             }
         }
 
-        let value = try!(de::Deserialize::deserialize(d));
+        let value = try!(de::Deserialize::deserialize(self.parser));
         Ok(Some(value))
     }
 
-    fn end(&mut self, d: &mut Parser<Iter>) -> Result<(), Error> {
-        if d.ch_is(b']') {
-            d.bump();
+    fn end(&mut self) -> Result<(), Error> {
+        if self.parser.ch_is(b']') {
+            self.parser.bump();
             Ok(())
-        } else if d.eof() {
-            Err(d.error(ErrorCode::EOFWhileParsingList))
+        } else if self.parser.eof() {
+            Err(self.parser.error(ErrorCode::EOFWhileParsingList))
         } else {
-            Err(d.error(ErrorCode::TrailingCharacters))
+            Err(self.parser.error(ErrorCode::TrailingCharacters))
         }
     }
 }
 
-struct MapVisitor {
+struct MapVisitor<'a, Iter: 'a> {
+    parser: &'a mut Parser<Iter>,
     first: bool,
 }
 
-impl<Iter: Iterator<u8>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor {
+impl<'a, Iter: Iterator<u8>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor<'a, Iter> {
     fn visit_key<
         K: de::Deserialize<Parser<Iter>, Error>,
-    >(&mut self, d: &mut Parser<Iter>) -> Result<Option<K>, Error> {
-        d.parse_whitespace();
+    >(&mut self) -> Result<Option<K>, Error> {
+        self.parser.parse_whitespace();
 
-        if d.ch_is(b'}') {
-            d.bump();
+        if self.parser.ch_is(b'}') {
+            self.parser.bump();
             return Ok(None);
         }
 
         if self.first {
             self.first = false;
         } else {
-            if d.ch_is(b',') {
-                d.bump();
-                d.parse_whitespace();
-            } else if d.eof() {
-                return Err(d.error(ErrorCode::EOFWhileParsingObject));
+            if self.parser.ch_is(b',') {
+                self.parser.bump();
+                self.parser.parse_whitespace();
+            } else if self.parser.eof() {
+                return Err(self.parser.error(ErrorCode::EOFWhileParsingObject));
             } else {
-                return Err(d.error(ErrorCode::ExpectedObjectCommaOrEnd));
+                return Err(self.parser.error(ErrorCode::ExpectedObjectCommaOrEnd));
             }
         }
 
-        if d.eof() {
-            return Err(d.error(ErrorCode::EOFWhileParsingValue));
+        if self.parser.eof() {
+            return Err(self.parser.error(ErrorCode::EOFWhileParsingValue));
         }
 
-        if !d.ch_is(b'"') {
-            return Err(d.error(ErrorCode::KeyMustBeAString));
+        if !self.parser.ch_is(b'"') {
+            return Err(self.parser.error(ErrorCode::KeyMustBeAString));
         }
 
-        Ok(Some(try!(de::Deserialize::deserialize(d))))
+        Ok(Some(try!(de::Deserialize::deserialize(self.parser))))
     }
 
     fn visit_value<
         V: de::Deserialize<Parser<Iter>, Error>,
-    >(&mut self, d: &mut Parser<Iter>) -> Result<V, Error> {
-        d.parse_whitespace();
+    >(&mut self) -> Result<V, Error> {
+        self.parser.parse_whitespace();
 
-        if d.ch_is(b':') {
-            d.bump();
-        } else if d.eof() {
-            return Err(d.error(ErrorCode::EOFWhileParsingObject));
+        if self.parser.ch_is(b':') {
+            self.parser.bump();
+        } else if self.parser.eof() {
+            return Err(self.parser.error(ErrorCode::EOFWhileParsingObject));
         } else {
-            return Err(d.error(ErrorCode::ExpectedColon));
+            return Err(self.parser.error(ErrorCode::ExpectedColon));
         }
 
-        d.parse_whitespace();
+        self.parser.parse_whitespace();
 
-        Ok(try!(de::Deserialize::deserialize(d)))
+        Ok(try!(de::Deserialize::deserialize(self.parser)))
     }
 
-    fn end(&mut self, d: &mut Parser<Iter>) -> Result<(), Error> {
-        if d.ch_is(b']') {
-            d.bump();
+    fn end(&mut self) -> Result<(), Error> {
+        if self.parser.ch_is(b']') {
+            self.parser.bump();
             Ok(())
-        } else if d.eof() {
-            Err(d.error(ErrorCode::EOFWhileParsingList))
+        } else if self.parser.eof() {
+            Err(self.parser.error(ErrorCode::EOFWhileParsingList))
         } else {
-            Err(d.error(ErrorCode::TrailingCharacters))
+            Err(self.parser.error(ErrorCode::TrailingCharacters))
         }
     }
 }

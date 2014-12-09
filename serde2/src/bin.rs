@@ -77,24 +77,22 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
 
         match self.next() {
             Some(Token::Null) => {
-                visitor.visit_null(self)
+                visitor.visit_null()
             }
             Some(Token::Int(v)) => {
-                visitor.visit_int(self, v)
+                visitor.visit_int(v)
             }
             Some(Token::String(v)) => {
-                visitor.visit_string(self, v)
+                visitor.visit_string(v)
             }
             Some(Token::Option(is_some)) => {
-                visitor.visit_option(self, MyOptionVisitor {
-                    is_some: is_some,
-                })
+                visitor.visit_option(MyOptionVisitor { d: self, is_some: is_some })
             }
             Some(Token::SeqStart(len)) => {
-                visitor.visit_seq(self, MySeqVisitor { len: len })
+                visitor.visit_seq(MySeqVisitor { d: self, len: len })
             }
             Some(Token::MapStart(len)) => {
-                visitor.visit_map(self, MyMapVisitor { len: len })
+                visitor.visit_map(MyMapVisitor { d: self, len: len })
             }
             Some(Token::End) => {
                 Err(Error::syntax_error())
@@ -112,18 +110,21 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
         match self.peek() {
             Some(&Token::Null) => {
                 self.next();
-                visitor.visit_option(self, MyOptionVisitor {
+                visitor.visit_option(MyOptionVisitor {
+                    d: self,
                     is_some: false,
                 })
             }
             Some(&Token::Option(is_some)) => {
                 self.next();
-                visitor.visit_option(self, MyOptionVisitor {
+                visitor.visit_option(MyOptionVisitor {
+                    d: self,
                     is_some: is_some,
                 })
             }
             _ => {
-                visitor.visit_option(self, MyOptionVisitor {
+                visitor.visit_option(MyOptionVisitor {
+                    d: self,
                     is_some: true,
                 })
             }
@@ -131,19 +132,21 @@ impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
     }
 }
 
-struct MyOptionVisitor {
+struct MyOptionVisitor<'a, Iter: 'a> {
+    d: &'a mut MyDeserializer<Iter>,
     is_some: bool,
 }
 
 impl<
+    'a,
     Iter: Iterator<Token>,
-> de::OptionVisitor<MyDeserializer<Iter>, Error> for MyOptionVisitor {
+> de::OptionVisitor<MyDeserializer<Iter>, Error> for MyOptionVisitor<'a, Iter> {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
+    >(&mut self) -> Result<option::Option<T>, Error> {
         if self.is_some {
             self.is_some = false;
-            let value = try!(Deserialize::deserialize(d));
+            let value = try!(Deserialize::deserialize(self.d));
             Ok(Some(value))
         } else {
             Ok(None)
@@ -151,26 +154,28 @@ impl<
     }
 }
 
-struct MySeqVisitor {
+struct MySeqVisitor<'a, Iter: 'a> {
+    d: &'a mut MyDeserializer<Iter>,
     len: uint,
 }
 
 impl<
+    'a,
     Iter: Iterator<Token>,
-> de::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor {
+> de::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor<'a, Iter> {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<T>, Error> {
+    >(&mut self) -> Result<option::Option<T>, Error> {
         use serde2::de::Error;
 
-        match d.peek() {
+        match self.d.peek() {
             Some(&Token::End) => {
-                d.next();
+                self.d.next();
                 Ok(None)
             }
             Some(_) => {
                 self.len -= 1;
-                let value = try!(Deserialize::deserialize(d));
+                let value = try!(Deserialize::deserialize(self.d));
                 Ok(Some(value))
             }
             None => {
@@ -179,42 +184,44 @@ impl<
         }
     }
 
-    fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
+    fn end(&mut self) -> Result<(), Error> {
         use serde2::de::Error;
 
-        match d.next() {
+        match self.d.next() {
             Some(Token::End) => Ok(()),
             Some(_) => Err(Error::syntax_error()),
             None => Err(Error::end_of_stream_error()),
         }
     }
 
-    fn size_hint(&self, _d: &mut MyDeserializer<Iter>) -> (uint, option::Option<uint>) {
+    fn size_hint(&self) -> (uint, option::Option<uint>) {
         (self.len, Some(self.len))
     }
 }
 
-struct MyMapVisitor {
+struct MyMapVisitor<'a, Iter: 'a> {
+    d: &'a mut MyDeserializer<Iter>,
     len: uint,
 }
 
 impl<
+    'a,
     Iter: Iterator<Token>,
-> de::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor {
+> de::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor<'a, Iter> {
     fn visit_key<
         K: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<option::Option<K>, Error> {
+    >(&mut self) -> Result<option::Option<K>, Error> {
         use serde2::de::Error;
 
-        match d.peek() {
+        match self.d.peek() {
             Some(&Token::End) => {
-                d.next();
+                self.d.next();
                 Ok(None)
             }
             Some(_) => {
                 self.len -= 1;
 
-                Ok(Some(try!(Deserialize::deserialize(d))))
+                Ok(Some(try!(Deserialize::deserialize(self.d))))
             }
             None => {
                 Err(Error::syntax_error())
@@ -224,21 +231,21 @@ impl<
 
     fn visit_value<
         V: Deserialize<MyDeserializer<Iter>, Error>,
-    >(&mut self, d: &mut MyDeserializer<Iter>) -> Result<V, Error> {
-        Ok(try!(Deserialize::deserialize(d)))
+    >(&mut self) -> Result<V, Error> {
+        Ok(try!(Deserialize::deserialize(self.d)))
     }
 
-    fn end(&mut self, d: &mut MyDeserializer<Iter>) -> Result<(), Error> {
+    fn end(&mut self) -> Result<(), Error> {
         use serde2::de::Error;
 
-        match d.next() {
+        match self.d.next() {
             Some(Token::End) => Ok(()),
             Some(_) => Err(Error::syntax_error()),
             None => Err(Error::end_of_stream_error()),
         }
     }
 
-    fn size_hint(&self, _d: &mut MyDeserializer<Iter>) -> (uint, option::Option<uint>) {
+    fn size_hint(&self) -> (uint, option::Option<uint>) {
         (self.len, Some(self.len))
     }
 }
@@ -270,11 +277,11 @@ mod json {
                 D: de::Deserializer<E>,
                 E: de::Error,
             > de::Visitor<D, Value, E> for Visitor {
-                fn visit_null(&mut self, _d: &mut D) -> Result<Value, E> {
+                fn visit_null(&mut self) -> Result<Value, E> {
                     Ok(Value::Null)
                 }
 
-                fn visit_int(&mut self, _d: &mut D, v: int) -> Result<Value, E> {
+                fn visit_int(&mut self, v: int) -> Result<Value, E> {
                     Ok(Value::Int(v))
                 }
 
@@ -286,8 +293,8 @@ mod json {
 
                 fn visit_option<
                     Visitor: de::OptionVisitor<D, E>,
-                >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
-                    match try!(visitor.visit(d)) {
+                >(&mut self, mut visitor: Visitor) -> Result<Value, E> {
+                    match try!(visitor.visit()) {
                         Some(value) => Ok(value),
                         None => Ok(Value::Null),
                     }
@@ -295,12 +302,12 @@ mod json {
 
                 fn visit_seq<
                     Visitor: de::SeqVisitor<D, E>,
-                >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
-                    let (len, _) = visitor.size_hint(d);
+                >(&mut self, mut visitor: Visitor) -> Result<Value, E> {
+                    let (len, _) = visitor.size_hint();
                     let mut values = Vec::with_capacity(len);
 
                     loop {
-                        match try!(visitor.visit(d)) {
+                        match try!(visitor.visit()) {
                             Some(value) => {
                                 values.push(value);
                             }
@@ -315,11 +322,11 @@ mod json {
 
                 fn visit_map<
                     Visitor: de::MapVisitor<D, E>,
-                >(&mut self, d: &mut D, mut visitor: Visitor) -> Result<Value, E> {
+                >(&mut self, mut visitor: Visitor) -> Result<Value, E> {
                     let mut values = TreeMap::new();
 
                     loop {
-                        match try!(visitor.visit(d)) {
+                        match try!(visitor.visit()) {
                             Some((key, value)) => {
                                 values.insert(key, value);
                             }

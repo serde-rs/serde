@@ -38,18 +38,18 @@ struct Http {
 
 impl<
     S: Deserializer<E>,
-    E,
-> Deserialize<S, E> for Http {
+    E: de::Error,
+> de::Deserialize<S, E> for Http {
     fn deserialize(state: &mut S) -> Result<Http, E> {
         struct Visitor;
 
         impl<
             S: Deserializer<E>,
-            E,
+            E: de::Error,
         > de::Visitor<S, Http, E> for Visitor {
             fn visit_map<
                 Visitor: de::MapVisitor<S, E>,
-            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<Http, E> {
+            >(&mut self, mut visitor: Visitor) -> Result<Http, E> {
                 let mut protocol = None;
                 let mut status = None;
                 let mut host_status = None;
@@ -61,19 +61,19 @@ impl<
                 let mut request_uri = None;
 
                 loop {
-                    match try!(visitor.visit_key(state)) {
+                    match try!(visitor.visit_key()) {
                         Some(s) => {
                             let s: String = s;
                             match s.as_slice() {
-                                "protocol" => { protocol = Some(try!(visitor.visit_value(state))); }
-                                "status" => { status = Some(try!(visitor.visit_value(state))); }
-                                "host_status" => { host_status = Some(try!(visitor.visit_value(state))); }
-                                "up_status" => { up_status = Some(try!(visitor.visit_value(state))); }
-                                "method" => { method = Some(try!(visitor.visit_value(state))); }
-                                "content_type" => { content_type = Some(try!(visitor.visit_value(state))); }
-                                "user_agent" => { user_agent = Some(try!(visitor.visit_value(state))); }
-                                "referer" => { referer = Some(try!(visitor.visit_value(state))); }
-                                "request_uri" => { request_uri = Some(try!(visitor.visit_value(state))); }
+                                "protocol" => { protocol = Some(try!(visitor.visit_value())); }
+                                "status" => { status = Some(try!(visitor.visit_value())); }
+                                "host_status" => { host_status = Some(try!(visitor.visit_value())); }
+                                "up_status" => { up_status = Some(try!(visitor.visit_value())); }
+                                "method" => { method = Some(try!(visitor.visit_value())); }
+                                "content_type" => { content_type = Some(try!(visitor.visit_value())); }
+                                "user_agent" => { user_agent = Some(try!(visitor.visit_value())); }
+                                "referer" => { referer = Some(try!(visitor.visit_value())); }
+                                "request_uri" => { request_uri = Some(try!(visitor.visit_value())); }
                                 _ => panic!(),
                             }
                         }
@@ -133,7 +133,10 @@ impl ser::Serialize for HttpProtocol {
     }
 }
 
-impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for HttpProtocol {
+impl<
+    S: de::Deserializer<E>,
+    E: de::Error,
+> de::Deserialize<S, E> for HttpProtocol {
     #[inline]
     fn deserialize(state: &mut S) -> Result<HttpProtocol, E> {
         de::deserialize_from_primitive(state)
@@ -182,7 +185,10 @@ impl ser::Serialize for HttpMethod {
     }
 }
 
-impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for HttpMethod {
+impl<
+    S: de::Deserializer<E>,
+    E: de::Error,
+> de::Deserialize<S, E> for HttpMethod {
     #[inline]
     fn deserialize(state: &mut S) -> Result<HttpMethod, E> {
         de::deserialize_from_primitive(state)
@@ -224,7 +230,7 @@ impl ser::Serialize for CacheStatus {
     }
 }
 
-impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for CacheStatus {
+impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for CacheStatus {
     #[inline]
     fn deserialize(state: &mut S) -> Result<CacheStatus, E> {
         de::deserialize_from_primitive(state)
@@ -243,32 +249,32 @@ struct Origin {
 
 impl<
     S: Deserializer<E>,
-    E,
+    E: de::Error,
 > Deserialize<S, E> for Origin {
     fn deserialize(state: &mut S) -> Result<Origin, E> {
         struct Visitor;
 
         impl<
             S: Deserializer<E>,
-            E,
+            E: de::Error,
         > de::Visitor<S, Origin, E> for Visitor {
             fn visit_map<
                 Visitor: de::MapVisitor<S, E>,
-            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<Origin, E> {
+            >(&mut self, mut visitor: Visitor) -> Result<Origin, E> {
                 let mut ip = None;
                 let mut port = None;
                 let mut hostname = None;
                 let mut protocol = None;
 
                 loop {
-                    match try!(visitor.visit_key(state)) {
+                    match try!(visitor.visit_key()) {
                         Some(s) => {
                             let s: String = s;
                             match s.as_slice() {
-                                "ip" => { ip = Some(try!(visitor.visit_value(state))); }
-                                "port" => { port = Some(try!(visitor.visit_value(state))); }
-                                "hostname" => { hostname = Some(try!(visitor.visit_value(state))); }
-                                "protocol" => { protocol = Some(try!(visitor.visit_value(state))); }
+                                "ip" => { ip = Some(try!(visitor.visit_value())); }
+                                "port" => { port = Some(try!(visitor.visit_value())); }
+                                "hostname" => { hostname = Some(try!(visitor.visit_value())); }
+                                "protocol" => { protocol = Some(try!(visitor.visit_value())); }
                                 _ => panic!(),
                             }
                         }
@@ -323,7 +329,7 @@ impl ser::Serialize for OriginProtocol {
     }
 }
 
-impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for OriginProtocol {
+impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for OriginProtocol {
     #[inline]
     fn deserialize(state: &mut S) -> Result<OriginProtocol, E> {
         de::deserialize_from_primitive(state)
@@ -366,7 +372,7 @@ impl ser::Serialize for ZonePlan {
     }
 }
 
-impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for ZonePlan {
+impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for ZonePlan {
     #[inline]
     fn deserialize(state: &mut S) -> Result<ZonePlan, E> {
         de::deserialize_from_primitive(state)
@@ -660,7 +666,7 @@ impl ser::Serialize for Country {
     }
 }
 
-impl<S: de::Deserializer<E>, E> de::Deserialize<S, E> for Country {
+impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for Country {
     #[inline]
     fn deserialize(state: &mut S) -> Result<Country, E> {
         de::deserialize_from_primitive(state)
@@ -687,18 +693,18 @@ struct Log {
 
 impl<
     S: Deserializer<E>,
-    E,
+    E: de::Error,
 > Deserialize<S, E> for Log {
     fn deserialize(state: &mut S) -> Result<Log, E> {
         struct Visitor;
 
         impl<
             S: Deserializer<E>,
-            E,
+            E: de::Error,
         > de::Visitor<S, Log, E> for Visitor {
             fn visit_map<
                 Visitor: de::MapVisitor<S, E>,
-            >(&mut self, state: &mut S, mut visitor: Visitor) -> Result<Log, E> {
+            >(&mut self, mut visitor: Visitor) -> Result<Log, E> {
                 let mut timestamp = None;
                 let mut zone_id = None;
                 let mut zone_plan = None;
@@ -713,22 +719,22 @@ impl<
                 let mut ray_id = None;
 
                 loop {
-                    match try!(visitor.visit_key(state)) {
+                    match try!(visitor.visit_key()) {
                         Some(s) => {
                             let s: String = s;
                             match s.as_slice() {
-                                "timestamp" => { timestamp = Some(try!(visitor.visit_value(state))); }
-                                "zone_id" => { zone_id = Some(try!(visitor.visit_value(state))); }
-                                "zone_plan" => { zone_plan = Some(try!(visitor.visit_value(state))); }
-                                "http" => { http = Some(try!(visitor.visit_value(state))); }
-                                "origin" => { origin = Some(try!(visitor.visit_value(state))); }
-                                "country" => { country = Some(try!(visitor.visit_value(state))); }
-                                "cache_status" => { cache_status = Some(try!(visitor.visit_value(state))); }
-                                "server_ip" => { server_ip = Some(try!(visitor.visit_value(state))); }
-                                "server_name" => { server_name = Some(try!(visitor.visit_value(state))); }
-                                "remote_ip" => { remote_ip = Some(try!(visitor.visit_value(state))); }
-                                "bytes_dlv" => { bytes_dlv = Some(try!(visitor.visit_value(state))); }
-                                "ray_id" => { ray_id = Some(try!(visitor.visit_value(state))); }
+                                "timestamp" => { timestamp = Some(try!(visitor.visit_value())); }
+                                "zone_id" => { zone_id = Some(try!(visitor.visit_value())); }
+                                "zone_plan" => { zone_plan = Some(try!(visitor.visit_value())); }
+                                "http" => { http = Some(try!(visitor.visit_value())); }
+                                "origin" => { origin = Some(try!(visitor.visit_value())); }
+                                "country" => { country = Some(try!(visitor.visit_value())); }
+                                "cache_status" => { cache_status = Some(try!(visitor.visit_value())); }
+                                "server_ip" => { server_ip = Some(try!(visitor.visit_value())); }
+                                "server_name" => { server_name = Some(try!(visitor.visit_value())); }
+                                "remote_ip" => { remote_ip = Some(try!(visitor.visit_value())); }
+                                "bytes_dlv" => { bytes_dlv = Some(try!(visitor.visit_value())); }
+                                "ray_id" => { ray_id = Some(try!(visitor.visit_value())); }
                                 _ => panic!(),
                             }
                         }
