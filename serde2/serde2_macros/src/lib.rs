@@ -1,6 +1,3 @@
-#![crate_type = "dylib"]
-#![license = "MIT/ASL2"]
-
 #![feature(plugin_registrar, quote)]
 
 extern crate syntax;
