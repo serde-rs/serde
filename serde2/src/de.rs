@@ -84,7 +84,7 @@ pub trait Visitor<S: Deserializer<E>, R, E: Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_str(&mut self, _v: &str) -> Result<R, E> {
+    fn visit_str<'a>(&'a mut self, _v: &'a str) -> Result<R, E> {
         Err(Error::syntax_error())
     }
 
@@ -294,7 +294,7 @@ impl<
             S: Deserializer<E>,
             E: Error,
         > self::Visitor<S, String, E> for Visitor {
-            fn visit_str(&mut self, v: &str) -> Result<String, E> {
+            fn visit_str<'a>(&'a mut self, v: &'a str) -> Result<String, E> {
                 Ok(v.to_string())
             }
 

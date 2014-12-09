@@ -21,6 +21,51 @@ use serde2::de;
 
 use serialize::Encodable;
 
+enum HttpField {
+    Protocol,
+    Status,
+    HostStatus,
+    UpStatus,
+    Method,
+    ContentType,
+    UserAgent,
+    Referer,
+    RequestUri,
+}
+
+impl<
+    S: Deserializer<E>,
+    E: de::Error,
+> de::Deserialize<S, E> for HttpField {
+    fn deserialize(state: &mut S) -> Result<HttpField, E> {
+        struct Visitor;
+
+        impl<
+            'a,
+            S: de::Deserializer<E>,
+            E: de::Error,
+        > de::Visitor<S, HttpField, E> for Visitor {
+            fn visit_str(&mut self, value: &str) -> Result<HttpField, E> {
+                let x = match value {
+                    "protocol" => HttpField::Protocol,
+                    "status" => HttpField::Status,
+                    "host_status" => HttpField::HostStatus,
+                    "up_status" => HttpField::UpStatus,
+                    "method" => HttpField::Method,
+                    "content_type" => HttpField::ContentType,
+                    "user_agent" => HttpField::UserAgent,
+                    "referer" => HttpField::Referer,
+                    "request_uri" => HttpField::RequestUri,
+                    _ => panic!(),
+                };
+                Ok(x)
+            }
+        }
+
+        state.visit(&mut Visitor)
+    }
+}
+
 #[deriving(Show, PartialEq, Encodable, Decodable)]
 #[deriving_serialize]
 //#[deriving_deserialize]
@@ -35,7 +80,6 @@ struct Http {
     referer: String,
     request_uri: String,
 }
-
 impl<
     S: Deserializer<E>,
     E: de::Error,
@@ -62,19 +106,17 @@ impl<
 
                 loop {
                     match try!(visitor.visit_key()) {
-                        Some(s) => {
-                            let s: String = s;
-                            match s.as_slice() {
-                                "protocol" => { protocol = Some(try!(visitor.visit_value())); }
-                                "status" => { status = Some(try!(visitor.visit_value())); }
-                                "host_status" => { host_status = Some(try!(visitor.visit_value())); }
-                                "up_status" => { up_status = Some(try!(visitor.visit_value())); }
-                                "method" => { method = Some(try!(visitor.visit_value())); }
-                                "content_type" => { content_type = Some(try!(visitor.visit_value())); }
-                                "user_agent" => { user_agent = Some(try!(visitor.visit_value())); }
-                                "referer" => { referer = Some(try!(visitor.visit_value())); }
-                                "request_uri" => { request_uri = Some(try!(visitor.visit_value())); }
-                                _ => panic!(),
+                        Some(field) => {
+                            match field {
+                                HttpField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
+                                HttpField::Status => { status = Some(try!(visitor.visit_value())); }
+                                HttpField::HostStatus => { host_status = Some(try!(visitor.visit_value())); }
+                                HttpField::UpStatus => { up_status = Some(try!(visitor.visit_value())); }
+                                HttpField::Method => { method = Some(try!(visitor.visit_value())); }
+                                HttpField::ContentType => { content_type = Some(try!(visitor.visit_value())); }
+                                HttpField::UserAgent => { user_agent = Some(try!(visitor.visit_value())); }
+                                HttpField::Referer => { referer = Some(try!(visitor.visit_value())); }
+                                HttpField::RequestUri => { request_uri = Some(try!(visitor.visit_value())); }
                             }
                         }
                         None => { break; }
@@ -237,6 +279,41 @@ impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for CacheStatus
     }
 }
 
+enum OriginField {
+    Ip,
+    Port,
+    Hostname,
+    Protocol,
+}
+
+impl<
+    S: Deserializer<E>,
+    E: de::Error,
+> de::Deserialize<S, E> for OriginField {
+    fn deserialize(state: &mut S) -> Result<OriginField, E> {
+        struct Visitor;
+
+        impl<
+            'a,
+            S: de::Deserializer<E>,
+            E: de::Error,
+        > de::Visitor<S, OriginField, E> for Visitor {
+            fn visit_str(&mut self, value: &str) -> Result<OriginField, E> {
+                let x = match value {
+                    "ip" => OriginField::Ip,
+                    "port" => OriginField::Port,
+                    "hostname" => OriginField::Hostname,
+                    "protocol" => OriginField::Protocol,
+                    _ => panic!(),
+                };
+                Ok(x)
+            }
+        }
+
+        state.visit(&mut Visitor)
+    }
+}
+
 #[deriving(Show, PartialEq, Encodable, Decodable)]
 #[deriving_serialize]
 //#[deriving_deserialize]
@@ -268,14 +345,12 @@ impl<
 
                 loop {
                     match try!(visitor.visit_key()) {
-                        Some(s) => {
-                            let s: String = s;
-                            match s.as_slice() {
-                                "ip" => { ip = Some(try!(visitor.visit_value())); }
-                                "port" => { port = Some(try!(visitor.visit_value())); }
-                                "hostname" => { hostname = Some(try!(visitor.visit_value())); }
-                                "protocol" => { protocol = Some(try!(visitor.visit_value())); }
-                                _ => panic!(),
+                        Some(field) => {
+                            match field {
+                                OriginField::Ip => { ip = Some(try!(visitor.visit_value())); }
+                                OriginField::Port => { port = Some(try!(visitor.visit_value())); }
+                                OriginField::Hostname => { hostname = Some(try!(visitor.visit_value())); }
+                                OriginField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
                             }
                         }
                         None => { break; }
@@ -673,6 +748,57 @@ impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for Country {
     }
 }
 
+enum LogField {
+    Timestamp,
+    ZoneId,
+    ZonePlan,
+    Http,
+    Origin,
+    Country,
+    CacheStatus,
+    ServerIp,
+    ServerName,
+    RemoteIp,
+    BytesDlv,
+    RayId,
+}
+
+impl<
+    S: Deserializer<E>,
+    E: de::Error,
+> de::Deserialize<S, E> for LogField {
+    fn deserialize(state: &mut S) -> Result<LogField, E> {
+        struct Visitor;
+
+        impl<
+            'a,
+            S: de::Deserializer<E>,
+            E: de::Error,
+        > de::Visitor<S, LogField, E> for Visitor {
+            fn visit_str(&mut self, value: &str) -> Result<LogField, E> {
+                let x = match value {
+                    "timestamp" => LogField::Timestamp,
+                    "zone_id" => LogField::ZoneId,
+                    "zone_plan" => LogField::ZonePlan,
+                    "http" => LogField::Http,
+                    "origin" => LogField::Origin,
+                    "country" => LogField::Country,
+                    "cache_status" => LogField::CacheStatus,
+                    "server_ip" => LogField::ServerIp,
+                    "server_name" => LogField::ServerName,
+                    "remote_ip" => LogField::RemoteIp,
+                    "bytes_dlv" => LogField::BytesDlv,
+                    "ray_id" => LogField::RayId,
+                    _ => panic!(),
+                };
+                Ok(x)
+            }
+        }
+
+        state.visit(&mut Visitor)
+    }
+}
+
 #[deriving(Show, PartialEq, Encodable, Decodable)]
 #[deriving_serialize]
 //#[deriving_deserialize]
@@ -720,22 +846,20 @@ impl<
 
                 loop {
                     match try!(visitor.visit_key()) {
-                        Some(s) => {
-                            let s: String = s;
-                            match s.as_slice() {
-                                "timestamp" => { timestamp = Some(try!(visitor.visit_value())); }
-                                "zone_id" => { zone_id = Some(try!(visitor.visit_value())); }
-                                "zone_plan" => { zone_plan = Some(try!(visitor.visit_value())); }
-                                "http" => { http = Some(try!(visitor.visit_value())); }
-                                "origin" => { origin = Some(try!(visitor.visit_value())); }
-                                "country" => { country = Some(try!(visitor.visit_value())); }
-                                "cache_status" => { cache_status = Some(try!(visitor.visit_value())); }
-                                "server_ip" => { server_ip = Some(try!(visitor.visit_value())); }
-                                "server_name" => { server_name = Some(try!(visitor.visit_value())); }
-                                "remote_ip" => { remote_ip = Some(try!(visitor.visit_value())); }
-                                "bytes_dlv" => { bytes_dlv = Some(try!(visitor.visit_value())); }
-                                "ray_id" => { ray_id = Some(try!(visitor.visit_value())); }
-                                _ => panic!(),
+                        Some(field) => {
+                            match field {
+                                LogField::Timestamp => { timestamp = Some(try!(visitor.visit_value())); }
+                                LogField::ZoneId => { zone_id = Some(try!(visitor.visit_value())); }
+                                LogField::ZonePlan => { zone_plan = Some(try!(visitor.visit_value())); }
+                                LogField::Http => { http = Some(try!(visitor.visit_value())); }
+                                LogField::Origin => { origin = Some(try!(visitor.visit_value())); }
+                                LogField::Country => { country = Some(try!(visitor.visit_value())); }
+                                LogField::CacheStatus => { cache_status = Some(try!(visitor.visit_value())); }
+                                LogField::ServerIp => { server_ip = Some(try!(visitor.visit_value())); }
+                                LogField::ServerName => { server_name = Some(try!(visitor.visit_value())); }
+                                LogField::RemoteIp => { remote_ip = Some(try!(visitor.visit_value())); }
+                                LogField::BytesDlv => { bytes_dlv = Some(try!(visitor.visit_value())); }
+                                LogField::RayId => { ray_id = Some(try!(visitor.visit_value())); }
                             }
                         }
                         None => { break; }
