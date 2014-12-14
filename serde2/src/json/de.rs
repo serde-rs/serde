@@ -638,8 +638,8 @@ mod tests {
             ("\"\\n\"", "\n".to_string()),
             ("\"\\r\"", "\r".to_string()),
             ("\"\\t\"", "\t".to_string()),
-            ("\"\\u12ab\"", "\u12ab".to_string()),
-            ("\"\\uAB12\"", "\uAB12".to_string()),
+            ("\"\\u12ab\"", "\u{12ab}".to_string()),
+            ("\"\\uAB12\"", "\u{AB12}".to_string()),
         ]);
     }
 

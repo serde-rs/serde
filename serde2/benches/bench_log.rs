@@ -141,7 +141,7 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, FromPrimitive)]
+#[deriving(Copy, Show, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -185,7 +185,7 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, FromPrimitive)]
+#[deriving(Copy, Show, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -237,7 +237,7 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, FromPrimitive)]
+#[deriving(Copy, Show, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -370,7 +370,7 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, FromPrimitive)]
+#[deriving(Copy, Show, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -411,7 +411,7 @@ impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for OriginProto
     }
 }
 
-#[deriving(Show, PartialEq, FromPrimitive)]
+#[deriving(Copy, Show, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -454,7 +454,7 @@ impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for ZonePlan {
     }
 }
 
-#[deriving(Show, PartialEq, FromPrimitive)]
+#[deriving(Copy, Show, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,

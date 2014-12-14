@@ -5,7 +5,7 @@ use std::io;
 use de;
 
 /// The errors that can arise while parsing a JSON stream.
-#[deriving(Clone, PartialEq)]
+#[deriving(Copy, Clone, PartialEq)]
 pub enum ErrorCode {
     EOFWhileParsingList,
     EOFWhileParsingObject,
