@@ -3,7 +3,6 @@ use std::fmt;
 use std::io::{ByRefWriter, IoResult};
 use std::io;
 use std::str;
-use std::string;
 use std::vec;
 
 use de::{mod, Token, TokenKind};

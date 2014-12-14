@@ -1,6 +1,5 @@
 #![crate_name = "serde_macros"]
 #![crate_type = "dylib"]
-#![license = "MIT/ASL2"]
 
 #![feature(plugin_registrar, quote)]
 

@@ -77,7 +77,7 @@ impl Token {
     }
 }
 
-#[deriving(Clone, PartialEq, Eq)]
+#[deriving(Copy, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     NullKind,
     BoolKind,
@@ -854,6 +854,7 @@ impl_deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 /// Helper struct that will ignore tokens while taking in consideration
 /// recursive structures.
+#[deriving(Copy)]
 pub struct IgnoreTokens;
 
 impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {

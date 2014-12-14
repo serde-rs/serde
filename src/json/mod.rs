@@ -371,14 +371,14 @@ mod tests {
                 Animal::Dog => {
                     Value::Object(
                         treemap!(
-                            "Dog".to_string() => Value::List(vec!())
+                            "Dog".to_string() => Value::Array(vec!())
                         )
                     )
                 }
                 Animal::Frog(ref x0, ref x1) => {
                     Value::Object(
                         treemap!(
-                            "Frog".to_string() => Value::List(vec!(x0.to_json(), x1.to_json()))
+                            "Frog".to_string() => Value::Array(vec!(x0.to_json(), x1.to_json()))
                         )
                     )
                 }
@@ -533,19 +533,19 @@ mod tests {
             ),
         ]);
 
-        let long_test_list = Value::List(vec![
+        let long_test_list = Value::Array(vec![
             Value::Boolean(false),
             Value::Null,
-            Value::List(vec![Value::String("foo\nbar".to_string()), Value::Floating(3.5)])]);
+            Value::Array(vec![Value::String("foo\nbar".to_string()), Value::Floating(3.5)])]);
 
         test_encode_ok(&[
             (long_test_list, "[false,null,[\"foo\\nbar\",3.5]]"),
         ]);
 
-        let long_test_list = Value::List(vec![
+        let long_test_list = Value::Array(vec![
             Value::Boolean(false),
             Value::Null,
-            Value::List(vec![Value::String("foo\nbar".to_string()), Value::Floating(3.5)])]);
+            Value::Array(vec![Value::String("foo\nbar".to_string()), Value::Floating(3.5)])]);
 
         test_pretty_encode_ok(&[
             (
@@ -602,7 +602,7 @@ mod tests {
         ]);
 
         let complex_obj = Value::Object(treemap!(
-            "b".to_string() => Value::List(vec!(
+            "b".to_string() => Value::Array(vec!(
                 Value::Object(treemap!("c".to_string() => Value::String("\x0c\r".to_string()))),
                 Value::Object(treemap!("d".to_string() => Value::String("".to_string())))
             ))
@@ -920,8 +920,8 @@ mod tests {
             ("\"\\n\"", "\n".to_string()),
             ("\"\\r\"", "\r".to_string()),
             ("\"\\t\"", "\t".to_string()),
-            ("\"\\u12ab\"", "\u12ab".to_string()),
-            ("\"\\uAB12\"", "\uAB12".to_string()),
+            ("\"\\u12ab\"", "\u{12ab}".to_string()),
+            ("\"\\uAB12\"", "\u{AB12}".to_string()),
         ]);
     }
 
@@ -935,8 +935,8 @@ mod tests {
             "\n".to_string(),
             "\r".to_string(),
             "\t".to_string(),
-            "\u12ab".to_string(),
-            "\uAB12".to_string(),
+            "\u{12ab}".to_string(),
+            "\u{AB12}".to_string(),
         ]);
     }
 
@@ -1272,15 +1272,15 @@ mod tests {
     }
 
     #[test]
-    fn test_is_list() {
+    fn test_is_array() {
         let json_value: Value = from_str("[1, 2, 3]").unwrap();
-        assert!(json_value.is_list());
+        assert!(json_value.is_array());
     }
 
     #[test]
-    fn test_as_list() {
+    fn test_as_array() {
         let json_value: Value = from_str("[1, 2, 3]").unwrap();
-        let json_list = json_value.as_list();
+        let json_list = json_value.as_array();
         let expected_length = 3;
         assert!(json_list.is_some() && json_list.unwrap().len() == expected_length);
     }
@@ -1776,7 +1776,7 @@ mod bench {
                 "b".to_string() => Value::Null,
                 "c".to_string() => Value::Floating(3.1415),
                 "d".to_string() => Value::String("Hello world".to_string()),
-                "e".to_string() => Value::List(vec!(
+                "e".to_string() => Value::Array(vec!(
                     Value::Integer(1),
                     Value::Integer(2),
                     Value::Integer(3)
@@ -1784,7 +1784,7 @@ mod bench {
             )));
         }
         list.push(Value::Object(TreeMap::new()));
-        Value::List(list)
+        Value::Array(list)
     }
 
     fn bench_encoder(b: &mut Bencher, count: uint) {
