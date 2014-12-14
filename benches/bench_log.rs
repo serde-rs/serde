@@ -1563,11 +1563,9 @@ fn bench_deserializers(b: &mut Bencher) {
 
     b.bytes = s.len() as u64;
 
-    //b.iter(|| {
-        for _ in range(0i, 10000) {
+    for _ in range(0i, 10000) {
         let _log: Log = json::from_str(s).unwrap();
-        }
-    //});
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
