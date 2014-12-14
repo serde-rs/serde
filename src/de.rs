@@ -204,11 +204,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
     #[inline]
     fn expect_token(&mut self) -> Result<Token, E> {
-        match self.next() {
-            Some(Ok(token)) => Ok(token),
-            Some(Err(err)) => Err(err),
-            None => Err(self.end_of_stream_error()),
-        }
+        self.next().unwrap_or_else(|| Err(self.end_of_stream_error()))
     }
 
     #[inline]
@@ -1216,10 +1212,7 @@ mod tests {
     impl<Iter: Iterator<Token>> Iterator<Result<Token, Error>> for TokenDeserializer<Iter> {
         #[inline]
         fn next(&mut self) -> option::Option<Result<Token, Error>> {
-            match self.tokens.next() {
-                None => None,
-                Some(token) => Some(Ok(token)),
-            }
+            self.tokens.next().map(|token| Ok(token))
         }
     }
 
