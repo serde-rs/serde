@@ -1624,3 +1624,43 @@ fn bench_iter_manual_iter_deserializers(b: &mut Bencher) {
         let _ = manual_iter_deserialize(JSON_STR.bytes());
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+#[test]
+fn test_iter_manual_reader_as_iter_deserializer() {
+    use std::io::extensions::Bytes;
+
+    let iter = Bytes::new(&mut JSON_STR.as_bytes())
+        .map(|x| x.unwrap());
+
+    let log = manual_iter_deserialize(iter);
+
+    assert_eq!(log, Log::new());
+}
+
+#[bench]
+fn bench_iter_manual_reader_as_iter_deserializer(b: &mut Bencher) {
+    use std::io::extensions::Bytes;
+
+    b.bytes = JSON_STR.len() as u64;
+
+    b.iter(|| {
+        let iter = Bytes::new(&mut JSON_STR.as_bytes())
+            .map(|x| x.unwrap());
+
+        let _ = manual_iter_deserialize(iter);
+    });
+}
+
+#[bench]
+fn bench_iter_manual_reader_as_iter_deserializers(b: &mut Bencher) {
+    b.bytes = JSON_STR.len() as u64;
+
+    for _ in range(0i, 10000) {
+        let iter = Bytes::new(&mut JSON_STR.as_bytes())
+            .map(|x| x.unwrap());
+
+        let _ = manual_iter_deserialize(iter);
+    }
+}
