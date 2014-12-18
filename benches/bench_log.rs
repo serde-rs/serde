@@ -750,6 +750,24 @@ fn bench_serializer_vec(b: &mut Bencher) {
     });
 }
 
+#[bench]
+fn bench_serializer_slice(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log);
+    b.bytes = json.len() as u64;
+
+    let mut buf = [0, .. 1024];
+
+    b.iter(|| {
+        for item in buf.iter_mut(){ *item = 0; }
+        let mut wr = std::io::BufWriter::new(&mut buf);
+
+        let mut serializer = json::Serializer::new(wr.by_ref());
+        log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap();
+    });
+}
+
 #[test]
 fn test_serializer_my_mem_writer0() {
     let log = Log::new();

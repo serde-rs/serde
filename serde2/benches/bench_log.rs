@@ -1093,6 +1093,87 @@ fn bench_serializer_vec(b: &mut Bencher) {
     });
 }
 
+#[bench]
+fn bench_serializer_slice(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log).unwrap();
+    b.bytes = json.len() as u64;
+
+    let mut buf = [0, .. 1024];
+
+    b.iter(|| {
+        for item in buf.iter_mut(){ *item = 0; }
+        let mut wr = std::io::BufWriter::new(&mut buf);
+
+        let mut serializer = json::Writer::new(wr.by_ref());
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
+    });
+}
+
+#[test]
+fn test_serializer_my_mem_writer0() {
+    let log = Log::new();
+
+    let mut wr = MyMemWriter0::with_capacity(1024);
+
+    {
+        let mut serializer = json::Writer::new(wr.by_ref());
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
+    }
+
+    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
+}
+
+#[bench]
+fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log).unwrap();
+    b.bytes = json.len() as u64;
+
+    let mut wr = MyMemWriter0::with_capacity(1024);
+
+    b.iter(|| {
+        wr.buf.clear();
+
+        let mut serializer = json::Writer::new(wr.by_ref());
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
+    });
+}
+
+#[test]
+fn test_serializer_my_mem_writer1() {
+    let log = Log::new();
+
+    let mut wr = MyMemWriter1::with_capacity(1024);
+
+    {
+        let mut serializer = json::Writer::new(wr.by_ref());
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
+    }
+
+    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
+}
+
+#[bench]
+fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
+    let log = Log::new();
+    let json = json::to_vec(&log).unwrap();
+    b.bytes = json.len() as u64;
+
+    let mut wr = MyMemWriter1::with_capacity(1024);
+
+    b.iter(|| {
+        wr.buf.clear();
+
+        let mut serializer = json::Writer::new(wr.by_ref());
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
+    });
+}
 
 #[bench]
 fn bench_copy(b: &mut Bencher) {
@@ -1104,7 +1185,7 @@ fn bench_copy(b: &mut Bencher) {
     });
 }
 
-fn manual_no_escape<W: Writer>(wr: &mut W, log: &Log) {
+fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str("{\"timestamp\":").unwrap();
     (write!(wr, "{}", log.timestamp)).unwrap();
     wr.write_str(",\"zone_id\":").unwrap();
@@ -1161,7 +1242,7 @@ fn manual_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str("}").unwrap();
 }
 
-fn manual_escape<W: Writer>(wr: &mut W, log: &Log) {
+fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str("{").unwrap();
     escape_str(wr, "timestamp").unwrap();
     wr.write_str(":").unwrap();
@@ -1267,157 +1348,157 @@ fn manual_escape<W: Writer>(wr: &mut W, log: &Log) {
 }
 
 #[test]
-fn test_manual_vec_no_escape() {
+fn test_manual_serialize_vec_no_escape() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_no_escape(&mut wr, &log);
+    manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
 #[bench]
-fn bench_manual_vec_no_escape(b: &mut Bencher) {
+fn bench_manual_serialize_vec_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_no_escape(&mut wr, &log);
+    manual_serialize_no_escape(&mut wr, &log);
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
         wr.clear();
-        manual_no_escape(&mut wr, &log);
+        manual_serialize_no_escape(&mut wr, &log);
     });
 }
 
 #[test]
-fn test_manual_vec_escape() {
+fn test_manual_serialize_vec_escape() {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_escape(&mut wr, &log);
+    manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
 #[bench]
-fn bench_manual_vec_escape(b: &mut Bencher) {
+fn bench_manual_serialize_vec_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
-    manual_escape(&mut wr, &log);
+    manual_serialize_escape(&mut wr, &log);
     b.bytes = wr.len() as u64;
 
     b.iter(|| {
         wr.clear();
 
-        manual_escape(&mut wr, &log);
+        manual_serialize_escape(&mut wr, &log);
     });
 }
 
 #[test]
-fn test_manual_my_mem_writer0_no_escape() {
+fn test_manual_serialize_my_mem_writer0_no_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1000);
-    manual_no_escape(&mut wr, &log);
+    manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
 #[bench]
-fn bench_manual_my_mem_writer0_no_escape(b: &mut Bencher) {
+fn bench_manual_serialize_my_mem_writer0_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    manual_no_escape(&mut wr, &log);
+    manual_serialize_no_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
         wr.buf.clear();
 
-        manual_no_escape(&mut wr, &log);
+        manual_serialize_no_escape(&mut wr, &log);
     });
 }
 
 #[test]
-fn test_manual_my_mem_writer0_escape() {
+fn test_manual_serialize_my_mem_writer0_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    manual_escape(&mut wr, &log);
+    manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
 #[bench]
-fn bench_manual_my_mem_writer0_escape(b: &mut Bencher) {
+fn bench_manual_serialize_my_mem_writer0_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter0::with_capacity(1024);
-    manual_escape(&mut wr, &log);
+    manual_serialize_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
         wr.buf.clear();
 
-        manual_escape(&mut wr, &log);
+        manual_serialize_escape(&mut wr, &log);
     });
 }
 
 #[test]
-fn test_manual_my_mem_writer1_no_escape() {
+fn test_manual_serialize_my_mem_writer1_no_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_no_escape(&mut wr, &log);
+    manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
 #[bench]
-fn bench_manual_my_mem_writer1_no_escape(b: &mut Bencher) {
+fn bench_manual_serialize_my_mem_writer1_no_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_no_escape(&mut wr, &log);
+    manual_serialize_no_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
         wr.buf.clear();
 
-        manual_no_escape(&mut wr, &log);
+        manual_serialize_no_escape(&mut wr, &log);
     });
 }
 
 #[test]
-fn test_manual_my_mem_writer1_escape() {
+fn test_manual_serialize_my_mem_writer1_escape() {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_escape(&mut wr, &log);
+    manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
     assert_eq!(JSON_STR, json.as_slice());
 }
 
 #[bench]
-fn bench_manual_my_mem_writer1_escape(b: &mut Bencher) {
+fn bench_manual_serialize_my_mem_writer1_escape(b: &mut Bencher) {
     let log = Log::new();
 
     let mut wr = MyMemWriter1::with_capacity(1024);
-    manual_escape(&mut wr, &log);
+    manual_serialize_escape(&mut wr, &log);
     b.bytes = wr.buf.len() as u64;
 
     b.iter(|| {
         wr.buf.clear();
 
-        manual_escape(&mut wr, &log);
+        manual_serialize_escape(&mut wr, &log);
     });
 }
 
