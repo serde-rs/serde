@@ -23,7 +23,7 @@ use syntax::ast::{
 use syntax::ast;
 use syntax::attr;
 use syntax::codemap::Span;
-use syntax::ext::base::{ExtCtxt, Decorator};
+use syntax::ext::base::{ExtCtxt, Decorator, ItemDecorator};
 use syntax::ext::build::AstBuilder;
 use syntax::ext::deriving::generic::{
     EnumMatching,
@@ -113,7 +113,7 @@ fn expand_deriving_serialize(cx: &mut ExtCtxt,
             })
     };
 
-    trait_def.expand(cx, mitem, item, push)
+    trait_def.expand(cx, mitem, item, |item| push(item))
 }
 
 fn serialize_substructure(cx: &ExtCtxt,
@@ -244,7 +244,7 @@ pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
             })
     };
 
-    trait_def.expand(cx, mitem, item, push)
+    trait_def.expand(cx, mitem, item, |item| push(item))
 }
 
 fn deserialize_substructure(cx: &mut ExtCtxt,

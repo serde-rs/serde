@@ -13,7 +13,7 @@ use syntax::ast::{
 };
 use syntax::ast;
 use syntax::codemap::Span;
-use syntax::ext::base::{ExtCtxt, Decorator};
+use syntax::ext::base::{ExtCtxt, Decorator, ItemDecorator};
 use syntax::ext::build::AstBuilder;
 use syntax::ext::deriving::generic::{
     EnumMatching,
@@ -58,12 +58,13 @@ pub fn plugin_registrar(reg: &mut Registry) {
         */
 }
 
-fn expand_deriving_serialize(cx: &mut ExtCtxt,
+fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
                                 sp: Span,
                                 mitem: &MetaItem,
                                 item: &Item,
-                                push: |P<ast::Item>|) {
-
+                                push: |P<ast::Item>|) //where
+        //F: FnOnce(P<ast::Item>)
+{
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
 
@@ -129,7 +130,7 @@ fn expand_deriving_serialize(cx: &mut ExtCtxt,
         ]
     };
 
-    trait_def.expand(cx, mitem, item, push)
+    trait_def.expand(cx, mitem, item, |item| push(item))
 }
 
 fn serialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<Expr> {

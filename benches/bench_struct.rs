@@ -139,29 +139,40 @@ mod decoder {
         }
 
         // Compound types:
-        fn read_enum<T>(&mut self, _name: &str, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
 
-        fn read_enum_variant<T>(&mut self,
-                                _names: &[&str],
-                                _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
-                                -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_enum_variant_arg<T>(&mut self,
-                                    _a_idx: uint,
-                                    _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                    -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
 
-        fn read_enum_struct_variant<T>(&mut self,
-                                       _names: &[&str],
-                                       _f: |&mut OuterDecoder, uint| -> Result<T, Error>)
-                                       -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_enum_struct_variant_field<T>(&mut self,
-                                             _f_name: &str,
-                                             _f_idx: uint,
-                                             _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                             -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
+
+        fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
+
+        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
 
         #[inline]
-        fn read_struct<T>(&mut self, s_name: &str, _len: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_struct<T, F>(&mut self, s_name: &str, _len: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
             match self.stack.pop() {
                 Some(OuterState(Outer { inner })) => {
                     if s_name == "Outer" {
@@ -191,7 +202,9 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_struct_field<T>(&mut self, f_name: &str, _f_idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_struct_field<T, F>(&mut self, f_name: &str, _f_idx: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
             match self.stack.pop() {
                 Some(FieldState(name)) => {
                     if f_name == name {
@@ -204,22 +217,35 @@ mod decoder {
             }
         }
 
-        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_tuple<T, F>(&mut self, _len: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
 
-        fn read_tuple_struct<T>(&mut self,
-                                _s_name: &str,
-                                _len: uint,
-                                _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_tuple_struct_arg<T>(&mut self,
-                                    _a_idx: uint,
-                                    _f: |&mut OuterDecoder| -> Result<T, Error>)
-                                    -> Result<T, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_tuple_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
+
+        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
+
+        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError("".to_string()))
+        }
 
         // Specialized types:
         #[inline]
-        fn read_option<T>(&mut self, f: |&mut OuterDecoder, bool| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_option<T, F>(&mut self, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder, bool) -> Result<T, Error>,
+        {
             match self.stack.pop() {
                 Some(OptionState(b)) => f(self, b),
                 _ => Err(Error::SyntaxError("expected OptionState".to_string())),
@@ -227,7 +253,9 @@ mod decoder {
         }
 
         #[inline]
-        fn read_seq<T>(&mut self, f: |&mut OuterDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+        {
             match self.stack.pop() {
                 Some(VecState(value)) => {
                     let len = value.len();
@@ -240,12 +268,16 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_seq_elt<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
             f(self)
         }
 
         #[inline]
-        fn read_map<T>(&mut self, f: |&mut OuterDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_map<T, F>(&mut self, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+        {
             match self.stack.pop() {
                 Some(MapState(map)) => {
                     let len = map.len();
@@ -267,11 +299,16 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_map_elt_key<T>(&mut self, _idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_map_elt_key<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
             f(self)
         }
+
         #[inline]
-        fn read_map_elt_val<T>(&mut self, _idx: uint, f: |&mut OuterDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_map_elt_val<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        {
             f(self)
         }
     }

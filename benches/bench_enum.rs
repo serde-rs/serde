@@ -100,7 +100,9 @@ mod decoder {
 
         // Compound types:
         #[inline]
-        fn read_enum<T>(&mut self, name: &str, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_enum<T, F>(&mut self, name: &str, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
             match self.stack.pop() {
                 Some(AnimalState(animal)) => {
                     self.stack.push(AnimalState(animal));
@@ -115,7 +117,9 @@ mod decoder {
         }
 
         #[inline]
-        fn read_enum_variant<T>(&mut self, names: &[&str], f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_enum_variant<T, F>(&mut self, names: &[&str], f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+        {
             let name = match self.stack.pop() {
                 Some(AnimalState(Dog)) => "Dog",
                 Some(AnimalState(Frog(x0, x1))) => {
@@ -133,56 +137,100 @@ mod decoder {
 
             f(self, idx)
         }
+
         #[inline]
-        fn read_enum_variant_arg<T>(&mut self, _a_idx: uint, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
             f(self)
         }
-        fn read_enum_struct_variant<T>(&mut self,
-                                       _names: &[&str],
-                                       _f: |&mut AnimalDecoder, uint| -> Result<T, Error>)
-                                       -> Result<T, Error> { Err(SyntaxError) }
-        fn read_enum_struct_variant_field<T>(&mut self,
-                                             _f_name: &str,
-                                             _f_idx: uint,
-                                             _f: |&mut AnimalDecoder| -> Result<T, Error>)
-                                             -> Result<T, Error> { Err(SyntaxError) }
 
-        fn read_struct<T>(&mut self, _s_name: &str, _len: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>)
-                          -> Result<T, Error> { Err(SyntaxError) }
-        fn read_struct_field<T>(&mut self,
-                                _f_name: &str,
-                                _f_idx: uint,
-                                _f: |&mut AnimalDecoder| -> Result<T, Error>)
-                                -> Result<T, Error> { Err(SyntaxError) }
+        fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
 
-        fn read_tuple<T>(&mut self, _len: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
-        fn read_tuple_arg<T>(&mut self, _a_idx: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
 
-        fn read_tuple_struct<T>(&mut self,
-                                _s_name: &str,
-                                _len: uint,
-                                _f: |&mut AnimalDecoder| -> Result<T, Error>)
-                                -> Result<T, Error> { Err(SyntaxError) }
-        fn read_tuple_struct_arg<T>(&mut self,
-                                    _a_idx: uint,
-                                    _f: |&mut AnimalDecoder| -> Result<T, Error>)
-                                    -> Result<T, Error> { Err(SyntaxError) }
+        fn read_struct<T, F>(&mut self, _s_name: &str, _len: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
+
+        fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
+
+        fn read_tuple<T, F>(&mut self, _len: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
+
+        fn read_tuple_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
+
+        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
+
+        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(Error::SyntaxError)
+        }
 
         // Specialized types:
-        fn read_option<T>(&mut self, _f: |&mut AnimalDecoder, bool| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder, bool) -> Result<T, Error>,
+        {
+            Err(SyntaxError)
+        }
 
         #[inline]
-        fn read_seq<T>(&mut self, f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+        {
             f(self, 3)
         }
+
         #[inline]
-        fn read_seq_elt<T>(&mut self, _idx: uint, f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> {
+        fn read_seq_elt<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
             f(self)
         }
 
-        fn read_map<T>(&mut self, _f: |&mut AnimalDecoder, uint| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
-        fn read_map_elt_key<T>(&mut self, _idx: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
-        fn read_map_elt_val<T>(&mut self, _idx: uint, _f: |&mut AnimalDecoder| -> Result<T, Error>) -> Result<T, Error> { Err(SyntaxError) }
+        fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+        {
+            Err(SyntaxError)
+        }
+
+        fn read_map_elt_key<T, F>(&mut self, _idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(SyntaxError)
+        }
+
+        fn read_map_elt_val<T, F>(&mut self, _idx: uint, _f: F) -> Result<T, Error> where
+            F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
+        {
+            Err(SyntaxError)
+        }
     }
 }
 

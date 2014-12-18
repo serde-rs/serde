@@ -10,6 +10,7 @@ extern crate test;
 
 use std::io;
 use std::io::ByRefWriter;
+use std::io::extensions::Bytes;
 use test::Bencher;
 
 use serde::de;
@@ -776,6 +777,7 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
 
         let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap();
     });
 }
 
@@ -806,6 +808,7 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
 
         let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
+        let _json = serializer.unwrap();
     });
 }
 
@@ -1629,9 +1632,8 @@ fn bench_iter_manual_iter_deserializers(b: &mut Bencher) {
 
 #[test]
 fn test_iter_manual_reader_as_iter_deserializer() {
-    use std::io::extensions::Bytes;
-
-    let iter = Bytes::new(&mut JSON_STR.as_bytes())
+    let mut rdr = JSON_STR.as_bytes();
+    let iter = Bytes::new(&mut rdr)
         .map(|x| x.unwrap());
 
     let log = manual_iter_deserialize(iter);
@@ -1641,12 +1643,11 @@ fn test_iter_manual_reader_as_iter_deserializer() {
 
 #[bench]
 fn bench_iter_manual_reader_as_iter_deserializer(b: &mut Bencher) {
-    use std::io::extensions::Bytes;
-
     b.bytes = JSON_STR.len() as u64;
 
     b.iter(|| {
-        let iter = Bytes::new(&mut JSON_STR.as_bytes())
+        let mut rdr = JSON_STR.as_bytes();
+        let iter = Bytes::new(&mut rdr)
             .map(|x| x.unwrap());
 
         let _ = manual_iter_deserialize(iter);
@@ -1658,7 +1659,8 @@ fn bench_iter_manual_reader_as_iter_deserializers(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
     for _ in range(0i, 10000) {
-        let iter = Bytes::new(&mut JSON_STR.as_bytes())
+        let mut rdr = JSON_STR.as_bytes();
+        let iter = Bytes::new(&mut rdr)
             .map(|x| x.unwrap());
 
         let _ = manual_iter_deserialize(iter);
