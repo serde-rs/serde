@@ -176,20 +176,20 @@ macro_rules! impl_visit {
     }
 }
 
-impl_visit!(bool, visit_bool)
-impl_visit!(int, visit_int)
-impl_visit!(i8, visit_i8)
-impl_visit!(i16, visit_i16)
-impl_visit!(i32, visit_i32)
-impl_visit!(i64, visit_i64)
-impl_visit!(uint, visit_uint)
-impl_visit!(u8, visit_u8)
-impl_visit!(u16, visit_u16)
-impl_visit!(u32, visit_u32)
-impl_visit!(u64, visit_u64)
-impl_visit!(f32, visit_f32)
-impl_visit!(f64, visit_f64)
-impl_visit!(char, visit_char)
+impl_visit!(bool, visit_bool);
+impl_visit!(int, visit_int);
+impl_visit!(i8, visit_i8);
+impl_visit!(i16, visit_i16);
+impl_visit!(i32, visit_i32);
+impl_visit!(i64, visit_i64);
+impl_visit!(uint, visit_uint);
+impl_visit!(u8, visit_u8);
+impl_visit!(u16, visit_u16);
+impl_visit!(u32, visit_u32);
+impl_visit!(u64, visit_u64);
+impl_visit!(f32, visit_f32);
+impl_visit!(f64, visit_f64);
+impl_visit!(char, visit_char);
 
 ///////////////////////////////////////////////////////////////////////////////
 
