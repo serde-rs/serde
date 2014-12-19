@@ -673,22 +673,22 @@ macro_rules! impl_deserialize {
     }
 }
 
-impl_deserialize!(bool, expect_bool)
-impl_deserialize!(int, expect_num)
-impl_deserialize!(i8, expect_num)
-impl_deserialize!(i16, expect_num)
-impl_deserialize!(i32, expect_num)
-impl_deserialize!(i64, expect_num)
-impl_deserialize!(uint, expect_num)
-impl_deserialize!(u8, expect_num)
-impl_deserialize!(u16, expect_num)
-impl_deserialize!(u32, expect_num)
-impl_deserialize!(u64, expect_num)
-impl_deserialize!(f32, expect_num)
-impl_deserialize!(f64, expect_num)
-impl_deserialize!(char, expect_char)
-impl_deserialize!(&'static str, expect_str)
-impl_deserialize!(string::String, expect_string)
+impl_deserialize!(bool, expect_bool);
+impl_deserialize!(int, expect_num);
+impl_deserialize!(i8, expect_num);
+impl_deserialize!(i16, expect_num);
+impl_deserialize!(i32, expect_num);
+impl_deserialize!(i64, expect_num);
+impl_deserialize!(uint, expect_num);
+impl_deserialize!(u8, expect_num);
+impl_deserialize!(u16, expect_num);
+impl_deserialize!(u32, expect_num);
+impl_deserialize!(u64, expect_num);
+impl_deserialize!(f32, expect_num);
+impl_deserialize!(f64, expect_num);
+impl_deserialize!(char, expect_char);
+impl_deserialize!(&'static str, expect_str);
+impl_deserialize!(string::String, expect_string);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -804,7 +804,7 @@ impl<
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! peel {
-    ($name:ident, $($other:ident,)*) => (impl_deserialize_tuple!($($other,)*))
+    ($name:ident, $($other:ident,)*) => ( impl_deserialize_tuple!($($other,)*); )
 }
 
 macro_rules! impl_deserialize_tuple {
@@ -840,7 +840,7 @@ macro_rules! impl_deserialize_tuple {
                 Ok(result)
             }
         }
-        peel!($($name,)*)
+        peel!($($name,)*);
     }
 }
 
@@ -1276,7 +1276,7 @@ mod tests {
         vec!(Token::Char('c')) => 'c': char,
         vec!(Token::Str("abc")) => "abc": &str,
         vec!(Token::String("abc".to_string())) => "abc".to_string(): string::String
-    ])
+    ]);
 
     test_value!(test_tuples, [
         vec!(
@@ -1306,7 +1306,7 @@ mod tests {
                 Token::End,
             Token::End,
         ) => ((), (), (5, "a")): ((), (), (int, &'static str))
-    ])
+    ]);
 
     test_value!(test_options, [
         vec!(Token::Option(false)) => None: option::Option<int>,
@@ -1315,7 +1315,7 @@ mod tests {
             Token::Option(true),
             Token::Int(5),
         ) => Some(5): option::Option<int>
-    ])
+    ]);
 
     test_value!(test_structs, [
         vec!(
@@ -1356,7 +1356,7 @@ mod tests {
                 },
             ),
         }: Outer
-    ])
+    ]);
 
     test_value!(test_enums, [
         vec!(
@@ -1370,7 +1370,7 @@ mod tests {
                 Token::Int(349),
             Token::End,
         ) => Animal::Frog("Henry".to_string(), 349): Animal
-    ])
+    ]);
 
     test_value!(test_vecs, [
         vec!(
@@ -1410,7 +1410,7 @@ mod tests {
                 Token::End,
             Token::End,
         ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)): Vec<Vec<int>>
-    ])
+    ]);
 
     test_value!(test_treemaps, [
         vec!(
@@ -1428,5 +1428,5 @@ mod tests {
             Token::End,
         ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, string::
         String>
-    ])
+    ]);
 }

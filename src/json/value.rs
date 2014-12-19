@@ -584,7 +584,7 @@ impl ToJson for String {
 }
 
 macro_rules! peel_to_json_tuple {
-    ($name:ident, $($other:ident,)*) => (impl_to_json_tuple!($($other,)*))
+    ($name:ident, $($other:ident,)*) => ( impl_to_json_tuple!($($other,)*); )
 }
 
 macro_rules! impl_to_json_tuple {
@@ -615,7 +615,7 @@ macro_rules! impl_to_json_tuple {
                 Value::Array(array)
             }
         }
-        peel_to_json_tuple!($($name,)*)
+        peel_to_json_tuple!($($name,)*);
     }
 }
 
