@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
+use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
 use std::hash::Hash;
 use std::num;
 use std::rc::Rc;
@@ -770,9 +770,9 @@ impl<
     E,
     K: Deserialize<D, E> + Ord,
     V: Deserialize<D, E>
-> Deserialize<D, E> for TreeMap<K, V> {
+> Deserialize<D, E> for BTreeMap<K, V> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
+    fn deserialize_token(d: &mut D, token: Token) -> Result<BTreeMap<K, V>, E> {
         d.expect_map(token)
     }
 }
@@ -794,9 +794,9 @@ impl<
     D: Deserializer<E>,
     E,
     T: Deserialize<D, E> + Ord
-> Deserialize<D, E> for TreeSet<T> {
+> Deserialize<D, E> for BTreeSet<T> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<TreeSet<T>, E> {
+    fn deserialize_token(d: &mut D, token: Token) -> Result<BTreeSet<T>, E> {
         d.expect_seq(token)
     }
 }

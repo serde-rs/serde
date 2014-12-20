@@ -1,4 +1,4 @@
-use std::collections::{HashMap, TreeMap, tree_map};
+use std::collections::{HashMap, BTreeMap, btree_map};
 use std::fmt;
 use std::io::{ByRefWriter, IoResult};
 use std::io;
@@ -21,7 +21,7 @@ pub enum Value {
     Floating(f64),
     String(String),
     Array(Vec<Value>),
-    Object(TreeMap<String, Value>),
+    Object(BTreeMap<String, Value>),
 }
 
 impl Value {
@@ -99,7 +99,7 @@ impl Value {
 
     /// If the Json value is an Object, returns the associated TreeMap.
     /// Returns None otherwise.
-    pub fn as_object<'a>(&'a self) -> Option<&'a TreeMap<String, Value>> {
+    pub fn as_object<'a>(&'a self) -> Option<&'a BTreeMap<String, Value>> {
         match *self {
             Value::Object(ref map) => Some(map),
             _ => None
@@ -286,7 +286,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
             Token::EnumStart(_, name, len) => {
                 let token = Token::SeqStart(len);
                 let fields: Vec<Value> = try!(de::Deserialize::deserialize_token(d, token));
-                let mut object = TreeMap::new();
+                let mut object = BTreeMap::new();
                 object.insert(name.to_string(), Value::Array(fields));
                 Ok(Value::Object(object))
             }
@@ -303,7 +303,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
 enum State {
     Value(Value),
     Array(vec::MoveItems<Value>),
-    Object(tree_map::MoveEntries<String, Value>),
+    Object(btree_map::MoveEntries<String, Value>),
     End,
 }
 
@@ -627,9 +627,9 @@ impl<A:ToJson> ToJson for Vec<A> {
     }
 }
 
-impl<A:ToJson> ToJson for TreeMap<String, A> {
+impl<A:ToJson> ToJson for BTreeMap<String, A> {
     fn to_json(&self) -> Value {
-        let mut d = TreeMap::new();
+        let mut d = BTreeMap::new();
         for (key, value) in self.iter() {
             d.insert((*key).clone(), value.to_json());
         }
@@ -639,7 +639,7 @@ impl<A:ToJson> ToJson for TreeMap<String, A> {
 
 impl<A:ToJson> ToJson for HashMap<String, A> {
     fn to_json(&self) -> Value {
-        let mut d = TreeMap::new();
+        let mut d = BTreeMap::new();
         for (key, value) in self.iter() {
             d.insert((*key).clone(), value.to_json());
         }

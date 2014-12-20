@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 use std::str::StrAllocating;
 
 use json::value::{ToJson, Value};
@@ -44,12 +44,12 @@ impl ArrayBuilder {
 }
 
 pub struct ObjectBuilder {
-    object: TreeMap<String, Value>,
+    object: BTreeMap<String, Value>,
 }
 
 impl ObjectBuilder {
     pub fn new() -> ObjectBuilder {
-        ObjectBuilder { object: TreeMap::new() }
+        ObjectBuilder { object: BTreeMap::new() }
     }
 
     pub fn unwrap(self) -> Value {

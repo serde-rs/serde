@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
+use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
 use std::hash::Hash;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -239,7 +239,7 @@ impl<
     E,
     K: Serialize<S, E> + Ord,
     V: Serialize<S, E>
-> Serialize<S, E> for TreeMap<K, V> {
+> Serialize<S, E> for BTreeMap<K, V> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_map(self.iter())
@@ -263,7 +263,7 @@ impl<
     S: Serializer<E>,
     E,
     T: Serialize<S, E> + Ord
-> Serialize<S, E> for TreeSet<T> {
+> Serialize<S, E> for BTreeSet<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_seq(self.iter())
