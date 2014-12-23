@@ -12,6 +12,8 @@ extern crate serde_macros;
 #[cfg(test)]
 extern crate serialize;
 
+extern crate unicode;
+
 pub use de::{Deserializer, Deserialize};
 pub use ser::{Serializer, Serialize};
 
