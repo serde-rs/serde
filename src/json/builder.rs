@@ -75,7 +75,7 @@ impl ObjectBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
 
     use json::value::Value;
     use super::{ArrayBuilder, ObjectBuilder};
@@ -104,7 +104,7 @@ mod tests {
                     .insert("b".to_string(), 2i))
             .unwrap();
 
-        let mut map = TreeMap::new();
+        let mut map = BTreeMap::new();
         map.insert("a".to_string(), Value::Integer(1));
         map.insert("b".to_string(), Value::Integer(2));
         assert_eq!(value, Value::Array(vec!(Value::Object(map))));
@@ -113,14 +113,14 @@ mod tests {
     #[test]
     fn test_object_builder() {
         let value = ObjectBuilder::new().unwrap();
-        assert_eq!(value, Value::Object(TreeMap::new()));
+        assert_eq!(value, Value::Object(BTreeMap::new()));
 
         let value = ObjectBuilder::new()
             .insert("a".to_string(), 1i)
             .insert("b".to_string(), 2i)
             .unwrap();
 
-        let mut map = TreeMap::new();
+        let mut map = BTreeMap::new();
         map.insert("a".to_string(), Value::Integer(1));
         map.insert("b".to_string(), Value::Integer(2));
         assert_eq!(value, Value::Object(map));

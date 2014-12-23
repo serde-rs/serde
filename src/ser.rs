@@ -317,7 +317,7 @@ impl_serialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, TreeMap};
+    use std::collections::{HashMap, BTreeMap};
 
     use std::{option, string};
 
@@ -825,7 +825,7 @@ mod tests {
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
 
-        let mut map = TreeMap::new();
+        let mut map = BTreeMap::new();
         map.insert(5i, "a".to_string());
         map.insert(6i, "b".to_string());
 

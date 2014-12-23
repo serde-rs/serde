@@ -1067,7 +1067,7 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for GatherTokens {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
     use std::{option, string};
     use serialize::Decoder;
 
@@ -1075,7 +1075,7 @@ mod tests {
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
-            let mut _m = ::std::collections::TreeMap::new();
+            let mut _m = ::std::collections::BTreeMap::new();
             $(_m.insert($k, $v);)*
             _m
         })
@@ -1087,7 +1087,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: TreeMap<string::String, option::Option<char>>,
+        c: BTreeMap<string::String, option::Option<char>>,
     }
 
     impl<
@@ -1416,7 +1416,7 @@ mod tests {
         vec!(
             Token::MapStart(0),
             Token::End,
-        ) => treemap!(): TreeMap<int, string::String>,
+        ) => treemap!(): BTreeMap<int, string::String>,
 
         vec!(
             Token::MapStart(2),
@@ -1426,7 +1426,7 @@ mod tests {
                 Token::Int(6),
                 Token::String("b".to_string()),
             Token::End,
-        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, string::
+        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): BTreeMap<int, string::
         String>
     ]);
 }
