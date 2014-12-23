@@ -1,4 +1,4 @@
-use std::collections::{HashMap, TreeMap};
+use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -472,8 +472,8 @@ impl<
     V: Deserialize<S, E>,
     S: Deserializer<E>,
     E: Error,
-> Deserialize<S, E> for TreeMap<K, V> {
-    fn deserialize(state: &mut S) -> Result<TreeMap<K, V>, E> {
+> Deserialize<S, E> for BTreeMap<K, V> {
+    fn deserialize(state: &mut S) -> Result<BTreeMap<K, V>, E> {
         struct Visitor;
 
         impl<
@@ -481,11 +481,11 @@ impl<
             V: Deserialize<S, E>,
             S: Deserializer<E>,
             E: Error,
-        > self::Visitor<S, TreeMap<K, V>, E> for Visitor {
+        > self::Visitor<S, BTreeMap<K, V>, E> for Visitor {
             fn visit_map<
                 Visitor: MapVisitor<S, E>,
-            >(&mut self, mut visitor: Visitor) -> Result<TreeMap<K, V>, E> {
-                let mut values = TreeMap::new();
+            >(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, E> {
+                let mut values = BTreeMap::new();
 
                 loop {
                     match try!(visitor.visit()) {

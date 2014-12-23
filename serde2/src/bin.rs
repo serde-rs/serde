@@ -253,7 +253,7 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 mod json {
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
     use serde2::de;
 
     #[deriving(Show)]
@@ -263,7 +263,7 @@ mod json {
         Int(int),
         //String(String),
         List(Vec<Value>),
-        Map(TreeMap<String, Value>),
+        Map(BTreeMap<String, Value>),
     }
 
     impl<
@@ -323,7 +323,7 @@ mod json {
                 fn visit_map<
                     Visitor: de::MapVisitor<D, E>,
                 >(&mut self, mut visitor: Visitor) -> Result<Value, E> {
-                    let mut values = TreeMap::new();
+                    let mut values = BTreeMap::new();
 
                     loop {
                         match try!(visitor.visit()) {
@@ -500,7 +500,7 @@ pub fn main() {
 
 
 /*
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 use serde::{Serialize, GatherTokens};
 use serde::json;
 
@@ -578,7 +578,7 @@ fn main() {
 
     ////
 
-    let mut value = TreeMap::new();
+    let mut value = BTreeMap::new();
     value.insert("a", 1i);
     value.insert("b", 2);
     value.insert("c", 3);

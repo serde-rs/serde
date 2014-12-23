@@ -529,7 +529,7 @@ pub fn from_str<
 mod tests {
     use std::str;
     use std::fmt::Show;
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
 
     use de::Deserialize;
     use super::{Parser, from_str};
@@ -537,7 +537,7 @@ mod tests {
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
-            let mut _m = TreeMap::new();
+            let mut _m = BTreeMap::new();
             $(_m.insert($k, $v);)*
             _m
         })
@@ -694,7 +694,7 @@ mod tests {
 
     #[test]
     fn test_parse_object() {
-        test_parse_err::<TreeMap<String, int>>(vec![
+        test_parse_err::<BTreeMap<String, int>>(vec![
             ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
             ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
             ("{1", Error::SyntaxError(ErrorCode::KeyMustBeAString, 1, 2)),

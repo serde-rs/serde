@@ -1,4 +1,4 @@
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -491,7 +491,7 @@ impl<
 impl<
     K: Serialize + Ord,
     V: Serialize,
-> Serialize for TreeMap<K, V> {
+> Serialize for BTreeMap<K, V> {
     #[inline]
     fn visit<
         S,
