@@ -9,7 +9,6 @@
 // except according to those terms.
 
 use std::collections::BTreeMap;
-use std::str::StrAllocating;
 
 use json::value::{ToJson, Value};
 
@@ -56,20 +55,20 @@ impl ObjectBuilder {
         Value::Object(self.object)
     }
 
-    pub fn insert<K: StrAllocating, V: ToJson>(self, key: K, value: V) -> ObjectBuilder {
+    pub fn insert<V: ToJson>(self, key: String, value: V) -> ObjectBuilder {
         let mut builder = self;
-        builder.object.insert(key.into_string(), value.to_json());
+        builder.object.insert(key, value.to_json());
         builder
     }
 
-    pub fn insert_array<S: StrAllocating>(self, key: S, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
+    pub fn insert_array(self, key: String, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
         let builder = ArrayBuilder::new();
-        self.insert(key.into_string(), f(builder).unwrap())
+        self.insert(key, f(builder).unwrap())
     }
 
-    pub fn insert_object<S: StrAllocating>(self, key: S, f: |ObjectBuilder| -> ObjectBuilder) -> ObjectBuilder {
+    pub fn insert_object(self, key: String, f: |ObjectBuilder| -> ObjectBuilder) -> ObjectBuilder {
         let builder = ObjectBuilder::new();
-        self.insert(key.into_string(), f(builder).unwrap())
+        self.insert(key, f(builder).unwrap())
     }
 }
 
