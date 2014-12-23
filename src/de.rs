@@ -288,10 +288,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_char(&mut self, token: Token) -> Result<char, E> {
         match token {
             Token::Char(value) => Ok(value),
-            Token::Str(value) if value.char_len() == 1 => {
+            Token::Str(value) if value.chars().count() == 1 => {
                 Ok(value.char_at(0))
             }
-            Token::String(ref value) if value.as_slice().char_len() == 1 => {
+            Token::String(ref value) if value.as_slice().chars().count() == 1 => {
                 Ok(value.as_slice().char_at(0))
             }
             token => {
