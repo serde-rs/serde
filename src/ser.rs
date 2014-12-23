@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
+use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
 use std::hash::Hash;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -130,20 +130,20 @@ macro_rules! impl_serialize {
     }
 }
 
-impl_serialize!(bool, serialize_bool)
-impl_serialize!(int, serialize_int)
-impl_serialize!(i8, serialize_i8)
-impl_serialize!(i16, serialize_i16)
-impl_serialize!(i32, serialize_i32)
-impl_serialize!(i64, serialize_i64)
-impl_serialize!(uint, serialize_uint)
-impl_serialize!(u8, serialize_u8)
-impl_serialize!(u16, serialize_u16)
-impl_serialize!(u32, serialize_u32)
-impl_serialize!(u64, serialize_u64)
-impl_serialize!(f32, serialize_f32)
-impl_serialize!(f64, serialize_f64)
-impl_serialize!(char, serialize_char)
+impl_serialize!(bool, serialize_bool);
+impl_serialize!(int, serialize_int);
+impl_serialize!(i8, serialize_i8);
+impl_serialize!(i16, serialize_i16);
+impl_serialize!(i32, serialize_i32);
+impl_serialize!(i64, serialize_i64);
+impl_serialize!(uint, serialize_uint);
+impl_serialize!(u8, serialize_u8);
+impl_serialize!(u16, serialize_u16);
+impl_serialize!(u32, serialize_u32);
+impl_serialize!(u64, serialize_u64);
+impl_serialize!(f32, serialize_f32);
+impl_serialize!(f64, serialize_f64);
+impl_serialize!(char, serialize_char);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -179,9 +179,9 @@ macro_rules! impl_serialize_box {
     }
 }
 
-impl_serialize_box!(&'a T)
-impl_serialize_box!(Box<T>)
-impl_serialize_box!(Rc<T>)
+impl_serialize_box!(&'a T);
+impl_serialize_box!(Box<T>);
+impl_serialize_box!(Rc<T>);
 
 impl<
     S: Serializer<E>,
@@ -239,7 +239,7 @@ impl<
     E,
     K: Serialize<S, E> + Ord,
     V: Serialize<S, E>
-> Serialize<S, E> for TreeMap<K, V> {
+> Serialize<S, E> for BTreeMap<K, V> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_map(self.iter())
@@ -263,7 +263,7 @@ impl<
     S: Serializer<E>,
     E,
     T: Serialize<S, E> + Ord
-> Serialize<S, E> for TreeSet<T> {
+> Serialize<S, E> for BTreeSet<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
         s.serialize_seq(self.iter())
@@ -273,7 +273,7 @@ impl<
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! peel {
-    ($name:ident, $($other:ident,)*) => (impl_serialize_tuple!($($other,)*))
+    ($name:ident, $($other:ident,)*) => ( impl_serialize_tuple!($($other,)*);  )
 }
 
 macro_rules! impl_serialize_tuple {
@@ -307,7 +307,7 @@ macro_rules! impl_serialize_tuple {
                 s.serialize_tuple_end()
             }
         }
-        peel!($($name,)*)
+        peel!($($name,)*);
     }
 }
 
@@ -317,7 +317,7 @@ impl_serialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, TreeMap};
+    use std::collections::{HashMap, BTreeMap};
 
     use std::{option, string};
 
@@ -825,7 +825,7 @@ mod tests {
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
 
-        let mut map = TreeMap::new();
+        let mut map = BTreeMap::new();
         map.insert(5i, "a".to_string());
         map.insert(6i, "b".to_string());
 

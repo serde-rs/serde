@@ -1,4 +1,4 @@
-use std::collections::{HashMap, TreeMap};
+use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -237,18 +237,18 @@ pub fn deserialize_from_primitive<
         E: Error,
         T: Deserialize<S, E> + FromPrimitive
     > self::Visitor<S, T, E> for Visitor {
-        impl_deserialize_num_method!(int, visit_int, from_int)
-        impl_deserialize_num_method!(i8, visit_i8, from_i8)
-        impl_deserialize_num_method!(i16, visit_i16, from_i16)
-        impl_deserialize_num_method!(i32, visit_i32, from_i32)
-        impl_deserialize_num_method!(i64, visit_i64, from_i64)
-        impl_deserialize_num_method!(uint, visit_uint, from_uint)
-        impl_deserialize_num_method!(u8, visit_u8, from_u8)
-        impl_deserialize_num_method!(u16, visit_u16, from_u16)
-        impl_deserialize_num_method!(u32, visit_u32, from_u32)
-        impl_deserialize_num_method!(u64, visit_u64, from_u64)
-        impl_deserialize_num_method!(f32, visit_f32, from_f32)
-        impl_deserialize_num_method!(f64, visit_f64, from_f64)
+        impl_deserialize_num_method!(int, visit_int, from_int);
+        impl_deserialize_num_method!(i8, visit_i8, from_i8);
+        impl_deserialize_num_method!(i16, visit_i16, from_i16);
+        impl_deserialize_num_method!(i32, visit_i32, from_i32);
+        impl_deserialize_num_method!(i64, visit_i64, from_i64);
+        impl_deserialize_num_method!(uint, visit_uint, from_uint);
+        impl_deserialize_num_method!(u8, visit_u8, from_u8);
+        impl_deserialize_num_method!(u16, visit_u16, from_u16);
+        impl_deserialize_num_method!(u32, visit_u32, from_u32);
+        impl_deserialize_num_method!(u64, visit_u64, from_u64);
+        impl_deserialize_num_method!(f32, visit_f32, from_f32);
+        impl_deserialize_num_method!(f64, visit_f64, from_f64);
     }
 
     state.visit(&mut Visitor)
@@ -268,18 +268,18 @@ macro_rules! impl_deserialize_num {
     }
 }
 
-impl_deserialize_num!(int)
-impl_deserialize_num!(i8)
-impl_deserialize_num!(i16)
-impl_deserialize_num!(i32)
-impl_deserialize_num!(i64)
-impl_deserialize_num!(uint)
-impl_deserialize_num!(u8)
-impl_deserialize_num!(u16)
-impl_deserialize_num!(u32)
-impl_deserialize_num!(u64)
-impl_deserialize_num!(f32)
-impl_deserialize_num!(f64)
+impl_deserialize_num!(int);
+impl_deserialize_num!(i8);
+impl_deserialize_num!(i16);
+impl_deserialize_num!(i32);
+impl_deserialize_num!(i64);
+impl_deserialize_num!(uint);
+impl_deserialize_num!(u8);
+impl_deserialize_num!(u16);
+impl_deserialize_num!(u32);
+impl_deserialize_num!(u64);
+impl_deserialize_num!(f32);
+impl_deserialize_num!(f64);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -377,14 +377,14 @@ impl<
 
 macro_rules! peel {
     ($name:ident, $($other:ident,)*) => {
-        impl_deserialize_tuple!($($other,)*)
+        impl_deserialize_tuple!($($other,)*);
     }
 }
 
 macro_rules! impl_deserialize_tuple {
     () => {};
     ( $($name:ident,)+ ) => {
-        peel!($($name,)*)
+        peel!($($name,)*);
 
         impl<
             S: Deserializer<E>,
@@ -472,8 +472,8 @@ impl<
     V: Deserialize<S, E>,
     S: Deserializer<E>,
     E: Error,
-> Deserialize<S, E> for TreeMap<K, V> {
-    fn deserialize(state: &mut S) -> Result<TreeMap<K, V>, E> {
+> Deserialize<S, E> for BTreeMap<K, V> {
+    fn deserialize(state: &mut S) -> Result<BTreeMap<K, V>, E> {
         struct Visitor;
 
         impl<
@@ -481,11 +481,11 @@ impl<
             V: Deserialize<S, E>,
             S: Deserializer<E>,
             E: Error,
-        > self::Visitor<S, TreeMap<K, V>, E> for Visitor {
+        > self::Visitor<S, BTreeMap<K, V>, E> for Visitor {
             fn visit_map<
                 Visitor: MapVisitor<S, E>,
-            >(&mut self, mut visitor: Visitor) -> Result<TreeMap<K, V>, E> {
-                let mut values = TreeMap::new();
+            >(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, E> {
+                let mut values = BTreeMap::new();
 
                 loop {
                     match try!(visitor.visit()) {

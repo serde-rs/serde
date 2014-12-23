@@ -34,7 +34,7 @@ mod decoder {
 
     pub struct IntDecoder {
         len: uint,
-        iter: vec::MoveItems<int>,
+        iter: vec::IntoIter<int>,
     }
 
     impl IntDecoder {
@@ -186,7 +186,7 @@ mod decoder {
 
     pub struct U8Decoder {
         len: uint,
-        iter: vec::MoveItems<u8>,
+        iter: vec::IntoIter<u8>,
     }
 
     impl U8Decoder {
@@ -359,7 +359,7 @@ mod deserializer {
     pub struct IntDeserializer {
         state: State,
         len: uint,
-        iter: vec::MoveItems<int>,
+        iter: vec::IntoIter<int>,
     }
 
     impl IntDeserializer {
@@ -431,7 +431,7 @@ mod deserializer {
     pub struct U8Deserializer {
         state: State,
         len: uint,
-        iter: vec::MoveItems<u8>,
+        iter: vec::IntoIter<u8>,
     }
 
     impl U8Deserializer {

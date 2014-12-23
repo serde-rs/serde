@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::{HashMap, HashSet, TreeMap, TreeSet};
+use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
 use std::hash::Hash;
 use std::num;
 use std::rc::Rc;
@@ -288,10 +288,10 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
     fn expect_char(&mut self, token: Token) -> Result<char, E> {
         match token {
             Token::Char(value) => Ok(value),
-            Token::Str(value) if value.char_len() == 1 => {
+            Token::Str(value) if value.chars().count() == 1 => {
                 Ok(value.char_at(0))
             }
-            Token::String(ref value) if value.as_slice().char_len() == 1 => {
+            Token::String(ref value) if value.as_slice().chars().count() == 1 => {
                 Ok(value.as_slice().char_at(0))
             }
             token => {
@@ -673,22 +673,22 @@ macro_rules! impl_deserialize {
     }
 }
 
-impl_deserialize!(bool, expect_bool)
-impl_deserialize!(int, expect_num)
-impl_deserialize!(i8, expect_num)
-impl_deserialize!(i16, expect_num)
-impl_deserialize!(i32, expect_num)
-impl_deserialize!(i64, expect_num)
-impl_deserialize!(uint, expect_num)
-impl_deserialize!(u8, expect_num)
-impl_deserialize!(u16, expect_num)
-impl_deserialize!(u32, expect_num)
-impl_deserialize!(u64, expect_num)
-impl_deserialize!(f32, expect_num)
-impl_deserialize!(f64, expect_num)
-impl_deserialize!(char, expect_char)
-impl_deserialize!(&'static str, expect_str)
-impl_deserialize!(string::String, expect_string)
+impl_deserialize!(bool, expect_bool);
+impl_deserialize!(int, expect_num);
+impl_deserialize!(i8, expect_num);
+impl_deserialize!(i16, expect_num);
+impl_deserialize!(i32, expect_num);
+impl_deserialize!(i64, expect_num);
+impl_deserialize!(uint, expect_num);
+impl_deserialize!(u8, expect_num);
+impl_deserialize!(u16, expect_num);
+impl_deserialize!(u32, expect_num);
+impl_deserialize!(u64, expect_num);
+impl_deserialize!(f32, expect_num);
+impl_deserialize!(f64, expect_num);
+impl_deserialize!(char, expect_char);
+impl_deserialize!(&'static str, expect_str);
+impl_deserialize!(string::String, expect_string);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -770,9 +770,9 @@ impl<
     E,
     K: Deserialize<D, E> + Ord,
     V: Deserialize<D, E>
-> Deserialize<D, E> for TreeMap<K, V> {
+> Deserialize<D, E> for BTreeMap<K, V> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<TreeMap<K, V>, E> {
+    fn deserialize_token(d: &mut D, token: Token) -> Result<BTreeMap<K, V>, E> {
         d.expect_map(token)
     }
 }
@@ -794,9 +794,9 @@ impl<
     D: Deserializer<E>,
     E,
     T: Deserialize<D, E> + Ord
-> Deserialize<D, E> for TreeSet<T> {
+> Deserialize<D, E> for BTreeSet<T> {
     #[inline]
-    fn deserialize_token(d: &mut D, token: Token) -> Result<TreeSet<T>, E> {
+    fn deserialize_token(d: &mut D, token: Token) -> Result<BTreeSet<T>, E> {
         d.expect_seq(token)
     }
 }
@@ -804,7 +804,7 @@ impl<
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! peel {
-    ($name:ident, $($other:ident,)*) => (impl_deserialize_tuple!($($other,)*))
+    ($name:ident, $($other:ident,)*) => ( impl_deserialize_tuple!($($other,)*); )
 }
 
 macro_rules! impl_deserialize_tuple {
@@ -840,7 +840,7 @@ macro_rules! impl_deserialize_tuple {
                 Ok(result)
             }
         }
-        peel!($($name,)*)
+        peel!($($name,)*);
     }
 }
 
@@ -1067,7 +1067,7 @@ impl<D: Deserializer<E>, E> Deserialize<D, E> for GatherTokens {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
     use std::{option, string};
     use serialize::Decoder;
 
@@ -1075,7 +1075,7 @@ mod tests {
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
-            let mut _m = ::std::collections::TreeMap::new();
+            let mut _m = ::std::collections::BTreeMap::new();
             $(_m.insert($k, $v);)*
             _m
         })
@@ -1087,7 +1087,7 @@ mod tests {
     struct Inner {
         a: (),
         b: uint,
-        c: TreeMap<string::String, option::Option<char>>,
+        c: BTreeMap<string::String, option::Option<char>>,
     }
 
     impl<
@@ -1276,7 +1276,7 @@ mod tests {
         vec!(Token::Char('c')) => 'c': char,
         vec!(Token::Str("abc")) => "abc": &str,
         vec!(Token::String("abc".to_string())) => "abc".to_string(): string::String
-    ])
+    ]);
 
     test_value!(test_tuples, [
         vec!(
@@ -1306,7 +1306,7 @@ mod tests {
                 Token::End,
             Token::End,
         ) => ((), (), (5, "a")): ((), (), (int, &'static str))
-    ])
+    ]);
 
     test_value!(test_options, [
         vec!(Token::Option(false)) => None: option::Option<int>,
@@ -1315,7 +1315,7 @@ mod tests {
             Token::Option(true),
             Token::Int(5),
         ) => Some(5): option::Option<int>
-    ])
+    ]);
 
     test_value!(test_structs, [
         vec!(
@@ -1356,7 +1356,7 @@ mod tests {
                 },
             ),
         }: Outer
-    ])
+    ]);
 
     test_value!(test_enums, [
         vec!(
@@ -1370,7 +1370,7 @@ mod tests {
                 Token::Int(349),
             Token::End,
         ) => Animal::Frog("Henry".to_string(), 349): Animal
-    ])
+    ]);
 
     test_value!(test_vecs, [
         vec!(
@@ -1410,13 +1410,13 @@ mod tests {
                 Token::End,
             Token::End,
         ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)): Vec<Vec<int>>
-    ])
+    ]);
 
     test_value!(test_treemaps, [
         vec!(
             Token::MapStart(0),
             Token::End,
-        ) => treemap!(): TreeMap<int, string::String>,
+        ) => treemap!(): BTreeMap<int, string::String>,
 
         vec!(
             Token::MapStart(2),
@@ -1426,7 +1426,7 @@ mod tests {
                 Token::Int(6),
                 Token::String("b".to_string()),
             Token::End,
-        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): TreeMap<int, string::
+        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): BTreeMap<int, string::
         String>
-    ])
+    ]);
 }

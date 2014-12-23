@@ -28,7 +28,7 @@ pub enum Error {
 
 mod decoder {
     use std::collections::HashMap;
-    use std::collections::hash_map::MoveEntries;
+    use std::collections::hash_map::IntoIter;
     use serialize;
 
     use super::Error;
@@ -42,7 +42,7 @@ mod decoder {
 
     pub struct IntDecoder {
         len: uint,
-        iter: MoveEntries<String, int>,
+        iter: IntoIter<String, int>,
         stack: Vec<Value>,
     }
 
@@ -216,7 +216,7 @@ mod decoder {
 
 mod deserializer {
     use std::collections::HashMap;
-    use std::collections::hash_map::MoveEntries;
+    use std::collections::hash_map::IntoIter;
 
     use super::Error;
     use super::Error::{EndOfStream, SyntaxError};
@@ -235,7 +235,7 @@ mod deserializer {
     pub struct IntDeserializer {
         stack: Vec<State>,
         len: uint,
-        iter: MoveEntries<String, int>,
+        iter: IntoIter<String, int>,
     }
 
     impl IntDeserializer {

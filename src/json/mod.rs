@@ -106,7 +106,7 @@ the API provide writer to serialize them into a stream or a string ...
 
 When using `ToJson` the `Serialize` trait implementation is not mandatory.
 
-A basic `ToJson` example using a TreeMap of attribute name / attribute value:
+A basic `ToJson` example using a BTreeMap of attribute name / attribute value:
 
 
 ```rust
@@ -115,7 +115,7 @@ A basic `ToJson` example using a TreeMap of attribute name / attribute value:
 extern crate serde_macros;
 extern crate serde;
 
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 use serde::json::{ToJson, Value};
 
 pub struct MyStruct  {
@@ -125,7 +125,7 @@ pub struct MyStruct  {
 
 impl ToJson for MyStruct {
     fn to_json( &self ) -> Value {
-        let mut d = TreeMap::new();
+        let mut d = BTreeMap::new();
         d.insert("attr1".to_string(), self.attr1.to_json());
         d.insert("attr2".to_string(), self.attr2.to_json());
         d.to_json()
@@ -157,8 +157,8 @@ pub struct MyStruct  {
 impl ToJson for MyStruct {
     fn to_json( &self ) -> Value {
         ObjectBuilder::new()
-            .insert("attr1", &self.attr1)
-            .insert("attr2", &self.attr2)
+            .insert("attr1".to_string(), &self.attr1)
+            .insert("attr2".to_string(), &self.attr2)
             .unwrap()
     }
 }
@@ -265,9 +265,9 @@ pub struct TestStruct1  {
 impl ToJson for TestStruct1 {
     fn to_json( &self ) -> json::Value {
         json::builder::ObjectBuilder::new()
-            .insert("data_int", &self.data_int)
-            .insert("data_str", &self.data_str)
-            .insert("data_vector", &self.data_vector)
+            .insert("data_int".to_string(), &self.data_int)
+            .insert("data_str".to_string(), &self.data_str)
+            .insert("data_vector".to_string(), &self.data_vector)
             .unwrap()
     }
 }
@@ -281,7 +281,7 @@ fn main() {
         data_vector: vec![2,3,4,5],
     };
     let json: json::Value = test.to_json();
-    let json_str: String = json.to_string().into_string();
+    let json_str: String = json.to_string();
 
     // Deserialize like before.
 
@@ -322,7 +322,7 @@ mod tests {
     use std::io;
     use std::str;
     use std::string;
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
 
     use de;
     use ser::{Serialize, Serializer};
@@ -351,7 +351,7 @@ mod tests {
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
-            let mut _m = ::std::collections::TreeMap::new();
+            let mut _m = ::std::collections::BTreeMap::new();
             $(_m.insert($k, $v);)*
             _m
         })
@@ -1002,7 +1002,7 @@ mod tests {
 
     #[test]
     fn test_parse_object() {
-        test_parse_err::<TreeMap<string::String, int>>(&[
+        test_parse_err::<BTreeMap<string::String, int>>(&[
             ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
             ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
@@ -1171,7 +1171,7 @@ mod tests {
 
     #[test]
     fn test_multiline_errors() {
-        test_parse_err::<TreeMap<string::String, string::String>>(&[
+        test_parse_err::<BTreeMap<string::String, string::String>>(&[
             ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3u, 8u)),
         ]);
     }
@@ -1267,7 +1267,7 @@ mod tests {
     fn test_as_object() {
         let json_value: Value = from_str("{}").unwrap();
         let json_object = json_value.as_object();
-        let map = TreeMap::<string::String, Value>::new();
+        let map = BTreeMap::<string::String, Value>::new();
         assert_eq!(json_object, Some(&map));
     }
 
@@ -1698,7 +1698,7 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
     use std::string;
     use serialize;
     use test::Bencher;
@@ -1709,7 +1709,7 @@ mod bench {
 
     macro_rules! treemap {
         ($($k:expr => $v:expr),*) => ({
-            let mut _m = ::std::collections::TreeMap::new();
+            let mut _m = ::std::collections::BTreeMap::new();
             $(_m.insert($k, $v);)*
             _m
         })
@@ -1764,7 +1764,7 @@ mod bench {
                 ))
             )));
         }
-        list.push(Json::Object(TreeMap::new()));
+        list.push(Json::Object(BTreeMap::new()));
         Json::Array(list)
     }
 
@@ -1783,7 +1783,7 @@ mod bench {
                 ))
             )));
         }
-        list.push(Value::Object(TreeMap::new()));
+        list.push(Value::Object(BTreeMap::new()));
         Value::Array(list)
     }
 

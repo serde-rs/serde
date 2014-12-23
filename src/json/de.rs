@@ -1,6 +1,6 @@
 use std::str;
 use std::num::Float;
-use std::str::ScalarValue;
+use unicode::str::Utf16Item;
 use std::char;
 
 use de;
@@ -379,8 +379,8 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
                                 }
 
                                 let buf = &[n1, try!(self.decode_hex_escape())];
-                                match str::utf16_items(buf.as_slice()).next() {
-                                    Some(ScalarValue(c)) => c,
+                                match ::unicode::str::utf16_items(buf.as_slice()).next() {
+                                    Some(Utf16Item::ScalarValue(c)) => c,
                                     _ => {
                                         return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
                                     }

@@ -8,8 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::TreeMap;
-use std::str::StrAllocating;
+use std::collections::BTreeMap;
 
 use ser::{mod, Serialize};
 use json::value::{mod, Value};
@@ -46,39 +45,39 @@ impl ArrayBuilder {
 }
 
 pub struct ObjectBuilder {
-    object: TreeMap<String, Value>,
+    object: BTreeMap<String, Value>,
 }
 
 impl ObjectBuilder {
     pub fn new() -> ObjectBuilder {
-        ObjectBuilder { object: TreeMap::new() }
+        ObjectBuilder { object: BTreeMap::new() }
     }
 
     pub fn unwrap(self) -> Value {
         Value::Object(self.object)
     }
 
-    pub fn insert<K: StrAllocating, V: ser::Serialize>(mut self, k: K, v: V) -> ObjectBuilder {
-        self.object.insert(k.into_string(), value::to_value(&v));
+    pub fn insert<V: ser::Serialize>(mut self, k: String, v: V) -> ObjectBuilder {
+        self.object.insert(k, value::to_value(&v));
         self
     }
 
-    pub fn insert_array<S: StrAllocating>(mut self, key: S, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
+    pub fn insert_array(mut self, key: String, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
         let builder = ArrayBuilder::new();
-        self.object.insert(key.into_string(), f(builder).unwrap());
+        self.object.insert(key, f(builder).unwrap());
         self
     }
 
-    pub fn insert_object<S: StrAllocating>(mut self, key: S, f: |ObjectBuilder| -> ObjectBuilder) -> ObjectBuilder {
+    pub fn insert_object(mut self, key: String, f: |ObjectBuilder| -> ObjectBuilder) -> ObjectBuilder {
         let builder = ObjectBuilder::new();
-        self.object.insert(key.into_string(), f(builder).unwrap());
+        self.object.insert(key, f(builder).unwrap());
         self
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::TreeMap;
+    use std::collections::BTreeMap;
 
     use json::value::Value;
     use super::{ArrayBuilder, ObjectBuilder};
@@ -107,7 +106,7 @@ mod tests {
                     .insert("b".to_string(), 2i))
             .unwrap();
 
-        let mut map = TreeMap::new();
+        let mut map = BTreeMap::new();
         map.insert("a".to_string(), Value::I64(1));
         map.insert("b".to_string(), Value::I64(2));
         assert_eq!(value, Value::Array(vec!(Value::Object(map))));
@@ -116,14 +115,14 @@ mod tests {
     #[test]
     fn test_object_builder() {
         let value = ObjectBuilder::new().unwrap();
-        assert_eq!(value, Value::Object(TreeMap::new()));
+        assert_eq!(value, Value::Object(BTreeMap::new()));
 
         let value = ObjectBuilder::new()
             .insert("a".to_string(), 1i)
             .insert("b".to_string(), 2i)
             .unwrap();
 
-        let mut map = TreeMap::new();
+        let mut map = BTreeMap::new();
         map.insert("a".to_string(), Value::I64(1));
         map.insert("b".to_string(), Value::I64(2));
         assert_eq!(value, Value::Object(map));

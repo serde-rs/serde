@@ -1,4 +1,4 @@
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
 
@@ -12,7 +12,7 @@ pub enum Value {
     F64(f64),
     String(String),
     Array(Vec<Value>),
-    Object(TreeMap<String, Value>),
+    Object(BTreeMap<String, Value>),
 }
 
 impl ser::Serialize for Value {
@@ -77,7 +77,7 @@ pub fn to_value<
 enum State {
     Value(Value),
     Array(Vec<Value>),
-    Object(TreeMap<String, Value>),
+    Object(BTreeMap<String, Value>),
 }
 
 pub struct Writer {
@@ -203,7 +203,7 @@ impl ser::Visitor<Writer, (), ()> for Visitor {
     fn visit_map<
         V: ser::MapVisitor<Writer, (), ()>
     >(&self, state: &mut Writer, mut visitor: V) -> Result<(), ()> {
-        let values = TreeMap::new();
+        let values = BTreeMap::new();
 
         state.state.push(State::Object(values));
 
