@@ -302,8 +302,8 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
 
 enum State {
     Value(Value),
-    Array(vec::MoveItems<Value>),
-    Object(btree_map::MoveEntries<String, Value>),
+    Array(vec::IntoIter<Value>),
+    Object(btree_map::IntoIter<String, Value>),
     End,
 }
 
