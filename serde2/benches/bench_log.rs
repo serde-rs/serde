@@ -932,7 +932,7 @@ macro_rules! likely(
             unsafe { expect(x as u8, 1) != 0 }
         }
     }
-)
+);
 
 macro_rules! unlikely(
     ($val:expr) => {
@@ -945,7 +945,7 @@ macro_rules! unlikely(
             unsafe { expect(x as u8, 0) != 0 }
         }
     }
-)
+);
 
 struct MyMemWriter0 {
     buf: Vec<u8>,
