@@ -1,6 +1,6 @@
 use std::f64;
 use std::io::{mod, ByRefWriter, IoError};
-use std::num::{Float, FPNaN, FPInfinite};
+use std::num::{Float, FpCategory};
 use std::str::Utf8Error;
 
 use ser;
@@ -225,7 +225,7 @@ pub fn escape_char<W: io::Writer>(wr: &mut W, value: char) -> Result<(), IoError
 
 fn fmt_f64_or_null<W: io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError> {
     match value.classify() {
-        FPNaN | FPInfinite => wr.write_str("null"),
+        FpCategory::Nan | FpCategory::Infinite => wr.write_str("null"),
         _ => wr.write_str(f64::to_str_digits(value, 6).as_slice()),
     }
 }
