@@ -1,7 +1,7 @@
 use std::f64;
 use std::io::{mod, ByRefWriter, IoError};
 use std::num::{Float, FpCategory};
-use std::str::Utf8Error;
+use std::string::FromUtf8Error;
 
 use ser;
 use ser::Serializer;
@@ -252,7 +252,7 @@ pub fn to_vec<
 #[inline]
 pub fn to_string<
     T: ser::Serialize,
->(value: &T) -> Result<Result<String, (Vec<u8>, Utf8Error)>, IoError> {
+>(value: &T) -> Result<Result<String, FromUtf8Error>, IoError> {
     let vec = try!(to_vec(value));
     Ok(String::from_utf8(vec))
 }

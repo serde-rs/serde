@@ -2,7 +2,7 @@ use std::f32;
 use std::f64;
 use std::num::{Float, FpCategory};
 use std::io::{IoError, IoResult};
-use std::str::Utf8Error;
+use std::string::FromUtf8Error;
 
 use ser::Serialize;
 use ser;
@@ -600,7 +600,7 @@ pub fn to_vec<
 #[inline]
 pub fn to_string<
     T: Serialize<Serializer<Vec<u8>>, IoError>
->(value: &T) -> Result<String, (Vec<u8>, Utf8Error)> {
+>(value: &T) -> Result<String, FromUtf8Error> {
     let buf = to_vec(value);
     String::from_utf8(buf)
 }
@@ -629,7 +629,7 @@ pub fn to_pretty_vec<
 /// Encode the specified struct into a json `String` buffer.
 pub fn to_pretty_string<
     T: Serialize<PrettySerializer<Vec<u8>>, IoError>
->(value: &T) -> Result<String, (Vec<u8>, Utf8Error)> {
+>(value: &T) -> Result<String, FromUtf8Error> {
     let buf = to_pretty_vec(value);
     String::from_utf8(buf)
 }
