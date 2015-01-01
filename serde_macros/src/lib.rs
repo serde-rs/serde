@@ -83,10 +83,10 @@ fn expand_deriving_serialize(cx: &mut ExtCtxt,
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
-            bounds: vec!(("__S", None, vec!(Path::new_(
+            bounds: vec!(("__S", vec!(Path::new_(
                             vec!("serde", "ser", "Serializer"), None,
                             vec!(box Literal(Path::new_local("__E"))), true))),
-                         ("__E", None, vec!()))
+                         ("__E", vec!()))
         },
         methods: vec!(
             MethodDef {
@@ -209,10 +209,10 @@ pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
-            bounds: vec!(("__D", None, vec!(Path::new_(
+            bounds: vec!(("__D", vec!(Path::new_(
                             vec!("serde", "de", "Deserializer"), None,
                             vec!(box Literal(Path::new_local("__E"))), true))),
-                         ("__E", None, vec!()))
+                         ("__E", vec!()))
         },
         methods: vec!(
             MethodDef {

@@ -80,12 +80,11 @@ fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
                 generics: LifetimeBounds {
                     lifetimes: Vec::new(),
                     bounds: vec![
-                        ("__S", None, vec![]),
-                        ("__R", None, vec![]),
-                        ("__E", None, vec![]),
+                        ("__S", vec![]),
+                        ("__R", vec![]),
+                        ("__E", vec![]),
                         (
                             "__V",
-                            None,
                             vec![
                                 Path::new_(
                                     vec!["serde2", "ser", "Visitor"],
