@@ -1,7 +1,7 @@
 use std::f64;
 use std::io::{mod, ByRefWriter, IoError};
-use std::num::{Float, FPNaN, FPInfinite};
-use std::str::Utf8Error;
+use std::num::{Float, FpCategory};
+use std::string::FromUtf8Error;
 
 use ser;
 use ser::Serializer;
@@ -225,7 +225,7 @@ pub fn escape_char<W: io::Writer>(wr: &mut W, value: char) -> Result<(), IoError
 
 fn fmt_f64_or_null<W: io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError> {
     match value.classify() {
-        FPNaN | FPInfinite => wr.write_str("null"),
+        FpCategory::Nan | FpCategory::Infinite => wr.write_str("null"),
         _ => wr.write_str(f64::to_str_digits(value, 6).as_slice()),
     }
 }
@@ -252,7 +252,7 @@ pub fn to_vec<
 #[inline]
 pub fn to_string<
     T: ser::Serialize,
->(value: &T) -> Result<Result<String, (Vec<u8>, Utf8Error)>, IoError> {
+>(value: &T) -> Result<Result<String, FromUtf8Error>, IoError> {
     let vec = try!(to_vec(value));
     Ok(String::from_utf8(vec))
 }

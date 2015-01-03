@@ -1,7 +1,7 @@
 #![crate_name = "serde_macros"]
 #![crate_type = "dylib"]
 
-#![feature(plugin_registrar, quote)]
+#![feature(plugin_registrar, quote, unboxed_closures)]
 
 extern crate syntax;
 extern crate rustc;
@@ -70,7 +70,7 @@ fn expand_deriving_serialize(cx: &mut ExtCtxt,
                              sp: Span,
                              mitem: &MetaItem,
                              item: &Item,
-                             push: |P<ast::Item>|) {
+                             mut push: Box<FnMut(P<ast::Item>)>) {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
 
@@ -83,10 +83,10 @@ fn expand_deriving_serialize(cx: &mut ExtCtxt,
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
-            bounds: vec!(("__S", None, vec!(Path::new_(
+            bounds: vec!(("__S", vec!(Path::new_(
                             vec!("serde", "ser", "Serializer"), None,
                             vec!(box Literal(Path::new_local("__E"))), true))),
-                         ("__E", None, vec!()))
+                         ("__E", vec!()))
         },
         methods: vec!(
             MethodDef {
@@ -113,7 +113,7 @@ fn expand_deriving_serialize(cx: &mut ExtCtxt,
             })
     };
 
-    trait_def.expand(cx, mitem, item, |item| push(item))
+    trait_def.expand(cx, mitem, item, |item| push.call_mut((item,)))
 }
 
 fn serialize_substructure(cx: &ExtCtxt,
@@ -199,7 +199,7 @@ pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
                                    span: Span,
                                    mitem: &MetaItem,
                                    item: &Item,
-                                   push: |P<Item>|) {
+                                   mut push: Box<FnMut(P<Item>)>) {
     let trait_def = TraitDef {
         span: span,
         attributes: Vec::new(),
@@ -209,10 +209,10 @@ pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
-            bounds: vec!(("__D", None, vec!(Path::new_(
+            bounds: vec!(("__D", vec!(Path::new_(
                             vec!("serde", "de", "Deserializer"), None,
                             vec!(box Literal(Path::new_local("__E"))), true))),
-                         ("__E", None, vec!()))
+                         ("__E", vec!()))
         },
         methods: vec!(
             MethodDef {
@@ -244,7 +244,7 @@ pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
             })
     };
 
-    trait_def.expand(cx, mitem, item, |item| push(item))
+    trait_def.expand(cx, mitem, item, |item| push.call_mut((item,)))
 }
 
 fn deserialize_substructure(cx: &mut ExtCtxt,

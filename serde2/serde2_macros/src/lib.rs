@@ -1,4 +1,4 @@
-#![feature(plugin_registrar, quote)]
+#![feature(plugin_registrar, quote, unboxed_closures)]
 
 extern crate syntax;
 extern crate rustc;
@@ -62,8 +62,7 @@ fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
                                 sp: Span,
                                 mitem: &MetaItem,
                                 item: &Item,
-                                push: |P<ast::Item>|) //where
-        //F: FnOnce(P<ast::Item>)
+                                mut push: Box<FnMut(P<ast::Item>)>)
 {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
@@ -80,12 +79,11 @@ fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
                 generics: LifetimeBounds {
                     lifetimes: Vec::new(),
                     bounds: vec![
-                        ("__S", None, vec![]),
-                        ("__R", None, vec![]),
-                        ("__E", None, vec![]),
+                        ("__S", vec![]),
+                        ("__R", vec![]),
+                        ("__E", vec![]),
                         (
                             "__V",
-                            None,
                             vec![
                                 Path::new_(
                                     vec!["serde2", "ser", "Visitor"],
@@ -130,7 +128,7 @@ fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
         ]
     };
 
-    trait_def.expand(cx, mitem, item, |item| push(item))
+    trait_def.expand(cx, mitem, item, |item| push.call_mut((item,)))
 }
 
 fn serialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<Expr> {
