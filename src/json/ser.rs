@@ -45,7 +45,7 @@ pub fn escape_str<W: Writer>(wr: &mut W, v: &str) -> IoResult<()> {
 }
 
 fn escape_char<W: Writer>(wr: &mut W, v: char) -> IoResult<()> {
-    let buf = &mut [0, .. 4];
+    let buf = &mut [0; 4];
     v.encode_utf8(buf);
     escape_bytes(wr, buf)
 }
@@ -66,7 +66,7 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
 
 fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
     const LEN: uint = 16;
-    const BUF: &'static [u8, ..LEN] = &[b' ', ..LEN];
+    const BUF: &'static [u8; LEN] = &[b' '; LEN];
 
     while n >= LEN {
         try!(wr.write(BUF));
@@ -81,7 +81,7 @@ fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
 }
 
 /*
-#[deriving(Show)]
+#[derive(Show)]
 enum SerializerState {
     ValueState,
     TupleState,
@@ -287,7 +287,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     #[inline]
     fn serialize_seq<
         T: Serialize<Serializer<W>, IoError>,
-        Iter: Iterator<T>
+        Iter: Iterator<Item=T>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
         let mut first = true;
@@ -307,7 +307,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     fn serialize_map<
         K: Serialize<Serializer<W>, IoError>,
         V: Serialize<Serializer<W>, IoError>,
-        Iter: Iterator<(K, V)>
+        Iter: Iterator<Item=(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
         let mut first = true;
@@ -541,7 +541,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     #[inline]
     fn serialize_seq<
         T: Serialize<PrettySerializer<W>, IoError>,
-        Iter: Iterator<T>
+        Iter: Iterator<Item=T>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
 
@@ -558,7 +558,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     fn serialize_map<
         K: Serialize<PrettySerializer<W>, IoError>,
         V: Serialize<PrettySerializer<W>, IoError>,
-        Iter: Iterator<(K, V)>
+        Iter: Iterator<Item=(K, V)>
     >(&mut self, mut iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
 

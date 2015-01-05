@@ -55,12 +55,12 @@ of values to and from JSON via the serialization API.
 To be able to serialize a piece of data, it must implement the `serde::Serialize` trait.
 To be able to deserialize a piece of data, it must implement the `serde::Deserialize` trait.
 The Rust compiler provides an annotation to automatically generate
-the code for these traits: `#[deriving_serialize]` and `#[deriving_deserialize]`.
+the code for these traits: `#[derive_serialize]` and `#[derive_deserialize]`.
 
 To serialize using `Serialize`:
 
 ```rust
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 #[phase(plugin)]
 extern crate serde_macros;
 extern crate serde;
@@ -69,7 +69,7 @@ use std::io::ByRefWriter;
 use serde::json;
 use serde::Serialize;
 
-#[deriving_serialize]
+#[derive_serialize]
 pub struct TestStruct   {
     data_str: String,
 }
@@ -110,7 +110,7 @@ A basic `ToJson` example using a BTreeMap of attribute name / attribute value:
 
 
 ```rust
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 #[phase(plugin)]
 extern crate serde_macros;
 extern crate serde;
@@ -142,7 +142,7 @@ fn main() {
 Or you can use the helper type `ObjectBuilder`:
 
 ```rust
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 #[phase(plugin)]
 extern crate serde_macros;
 extern crate serde;
@@ -173,7 +173,7 @@ fn main() {
 To deserialize a JSON string using `Deserialize` trait:
 
 ```rust
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 #[phase(plugin)]
 extern crate serde_macros;
 extern crate serde;
@@ -181,7 +181,7 @@ extern crate serde;
 use serde::json;
 use serde::Deserialize;
 
-#[deriving_deserialize]
+#[derive_deserialize]
 pub struct MyStruct  {
      attr1: u8,
      attr2: String,
@@ -205,15 +205,15 @@ Create a struct called `TestStruct1` and serialize and deserialize it to and fro
 using the serialization API, using the derived serialization code.
 
 ```rust
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 #[phase(plugin)]
 extern crate serde_macros;
 extern crate serde;
 
 use serde::json;
 
-#[deriving_serialize]
-#[deriving_deserialize]
+#[derive_serialize]
+#[derive_deserialize]
 pub struct TestStruct1  {
     data_int: u8,
     data_str: String,
@@ -245,7 +245,7 @@ This example use the ToJson impl to deserialize the JSON string.
 Example of `ToJson` trait implementation for TestStruct1.
 
 ```rust
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 #[phase(plugin)]
 extern crate serde_macros;
 extern crate serde;
@@ -254,8 +254,8 @@ use serde::json::ToJson;
 use serde::json;
 use serde::Deserialize;
 
-#[deriving_serialize]   // generate Serialize impl
-#[deriving_deserialize] // generate Deserialize impl
+#[derive_serialize]   // generate Serialize impl
+#[derive_deserialize] // generate Deserialize impl
 pub struct TestStruct1  {
     data_int: u8,
     data_str: String,
@@ -357,9 +357,9 @@ mod tests {
         })
     }
 
-    #[deriving(PartialEq, Show)]
-    #[deriving_serialize]
-    #[deriving_deserialize]
+    #[derive(PartialEq, Show)]
+    #[derive_serialize]
+    #[derive_deserialize]
     enum Animal {
         Dog,
         Frog(String, Vec<int>)
@@ -386,9 +386,9 @@ mod tests {
         }
     }
 
-    #[deriving(PartialEq, Show)]
-    #[deriving_serialize]
-    #[deriving_deserialize]
+    #[derive(PartialEq, Show)]
+    #[derive_serialize]
+    #[derive_deserialize]
     struct Inner {
         a: (),
         b: uint,
@@ -407,9 +407,9 @@ mod tests {
         }
     }
 
-    #[deriving(PartialEq, Show)]
-    #[deriving_serialize]
-    #[deriving_deserialize]
+    #[derive(PartialEq, Show)]
+    #[derive_serialize]
+    #[derive_deserialize]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -1103,9 +1103,9 @@ mod tests {
             ("\"jodhpurs\"", Some("jodhpurs".to_string())),
         ]);
 
-        #[deriving(PartialEq, Show)]
-        #[deriving_serialize]
-        #[deriving_deserialize]
+        #[derive(PartialEq, Show)]
+        #[derive_serialize]
+        #[derive_deserialize]
         struct Foo {
             x: Option<int>,
         }
@@ -1177,23 +1177,23 @@ mod tests {
     }
 
     /*
-    #[deriving(Decodable)]
+    #[derive(Decodable)]
     struct DecodeStruct {
         x: f64,
         y: bool,
         z: String,
         w: Vec<DecodeStruct>
     }
-    #[deriving(Decodable)]
+    #[derive(Decodable)]
     enum DecodeEnum {
         A(f64),
         B(String)
     }
-    fn check_err<T: Decodable<Decoder, DecoderError>>(to_parse: &'static str,
+    fn check_err<T: RustcDecodable<Decoder, DecoderError>>(to_parse: &'static str,
                                                       expected: DecoderError) {
         let res: DecodeResult<T> = match from_str(to_parse) {
             Err(e) => Err(ParseError(e)),
-            Ok(json) => Decodable::decode(&mut Decoder::new(json))
+            Ok(json) => RustcDecodable::decode(&mut Decoder::new(json))
         };
         match res {
             Ok(_) => panic!("`{}` parsed & decoded ok, expecting error `{}`",
@@ -1792,7 +1792,7 @@ mod bench {
         let json = encoder_json(count);
 
         b.iter(|| {
-            assert_eq!(json.to_string(), src);
+            assert_eq!(json.pretty().to_string(), src);
         });
     }
 
@@ -1801,7 +1801,7 @@ mod bench {
         let json = encoder_json(count);
 
         b.iter(|| {
-            assert_eq!(json.to_pretty_str(), src);
+            assert_eq!(json.pretty().to_string(), src);
         });
     }
 

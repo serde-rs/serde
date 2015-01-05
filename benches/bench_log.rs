@@ -1,16 +1,17 @@
-#![feature(phase, macro_rules)]
+#![feature(phase, macro_rules, old_orphan_check)]
 #![allow(non_camel_case_types)]
 
 #[phase(plugin)]
 extern crate serde_macros;
 
 extern crate serde;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
-use std::io;
 use std::io::ByRefWriter;
 use std::io::extensions::Bytes;
+use std::io;
+use std::num::FromPrimitive;
 use test::Bencher;
 
 use serde::de;
@@ -19,11 +20,11 @@ use serde::json;
 use serde::ser::Serialize;
 use serde::ser;
 
-use serialize::Encodable;
+use rustc_serialize::Encodable;
 
-#[deriving(Show, PartialEq, Encodable, Decodable)]
-#[deriving_serialize]
-#[deriving_deserialize]
+#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive_serialize]
+#[derive_deserialize]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -36,20 +37,20 @@ struct Http {
     request_uri: String,
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
     HTTP11,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for HttpProtocol {
+impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for HttpProtocol {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for HttpProtocol {
+impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for HttpProtocol {
     fn decode(d: &mut D) -> Result<HttpProtocol, E> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
@@ -72,7 +73,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpProtocol {
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -87,13 +88,13 @@ enum HttpMethod {
     PATCH,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for HttpMethod {
+impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for HttpMethod {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for HttpMethod {
+impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for HttpMethod {
     fn decode(d: &mut D) -> Result<HttpMethod, E> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
@@ -116,7 +117,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpMethod {
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -124,13 +125,13 @@ enum CacheStatus {
     Hit,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for CacheStatus {
+impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for CacheStatus {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for CacheStatus {
+impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for CacheStatus {
     fn decode(d: &mut D) -> Result<CacheStatus, E> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
@@ -153,9 +154,9 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for CacheStatus {
     }
 }
 
-#[deriving(Show, PartialEq, Encodable, Decodable)]
-#[deriving_serialize]
-#[deriving_deserialize]
+#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive_serialize]
+#[derive_deserialize]
 struct Origin {
     ip: String,
     port: u32,
@@ -163,20 +164,20 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
     HTTPS,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for OriginProtocol {
+impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for OriginProtocol {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for OriginProtocol {
+impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for OriginProtocol {
     fn decode(d: &mut D) -> Result<OriginProtocol, E> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
@@ -199,7 +200,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for OriginProtocol {
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -208,13 +209,13 @@ enum ZonePlan {
     ENT,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for ZonePlan {
+impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for ZonePlan {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for ZonePlan {
+impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for ZonePlan {
     fn decode(d: &mut D) -> Result<ZonePlan, E> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
@@ -237,7 +238,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for ZonePlan {
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -497,13 +498,13 @@ enum Country {
 	ZW,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for Country {
+impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for Country {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for Country {
+impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for Country {
     fn decode(d: &mut D) -> Result<Country, E> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
@@ -526,9 +527,9 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Country {
     }
 }
 
-#[deriving(Show, PartialEq, Encodable, Decodable)]
-#[deriving_serialize]
-#[deriving_deserialize]
+#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive_serialize]
+#[derive_deserialize]
 struct Log {
     timestamp: i64,
     zone_id: u32,
@@ -669,14 +670,14 @@ const JSON_STR: &'static str = r#"{"timestamp":2837513946597,"zone_id":123456,"z
 
 #[test]
 fn test_encoder() {
-    use serialize::Encodable;
+    use rustc_serialize::Encodable;
 
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
 
     {
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     }
 
@@ -690,7 +691,7 @@ fn bench_encoder(b: &mut Bencher) {
     let mut wr = Vec::with_capacity(1024);
 
     {
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     }
 
@@ -699,7 +700,7 @@ fn bench_encoder(b: &mut Bencher) {
     b.iter(|| {
         wr.clear();
 
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     });
 }
@@ -756,7 +757,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
     let json = json::to_vec(&log);
     b.bytes = json.len() as u64;
 
-    let mut buf = [0, .. 1024];
+    let mut buf = [0; 1024];
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }
@@ -1259,20 +1260,24 @@ fn bench_direct_my_mem_writer1(b: &mut Bencher) {
 
 #[test]
 fn test_decoder() {
-    let json = serialize::json::from_str(JSON_STR).unwrap();
-    let mut decoder = serialize::json::Decoder::new(json);
-    let log: Log = serialize::Decodable::decode(&mut decoder).unwrap();
+    use rustc_serialize::json::Json;
+
+    let json = Json::from_str(JSON_STR).unwrap();
+    let mut decoder = rustc_serialize::json::Decoder::new(json);
+    let log: Log = rustc_serialize::Decodable::decode(&mut decoder).unwrap();
     assert_eq!(log, Log::new());
 }
 
 #[bench]
 fn bench_decoder(b: &mut Bencher) {
+    use rustc_serialize::json::Json;
+
     b.bytes = JSON_STR.len() as u64;
 
     b.iter(|| {
-        let json = serialize::json::from_str(JSON_STR).unwrap();
-        let mut decoder = serialize::json::Decoder::new(json);
-        let _log: Log = serialize::Decodable::decode(&mut decoder).unwrap();
+        let json = Json::from_str(JSON_STR).unwrap();
+        let mut decoder = rustc_serialize::json::Decoder::new(json);
+        let _log: Log = rustc_serialize::Decodable::decode(&mut decoder).unwrap();
     });
 }
 
@@ -1350,7 +1355,7 @@ fn manual_reader_string<R: Reader>(rdr: &mut R, buf: &mut [u8], key: &[u8]) -> S
 
 #[inline]
 fn manual_reader_deserialize<R: Reader>(rdr: &mut R) -> Log {
-    let mut buf = [0, .. 128];
+    let mut buf = [0; 128];
 
     manual_reader_ignore(rdr, &mut buf, b"{");
     let timestamp = manual_reader_int(rdr, &mut buf, b"timestamp");
@@ -1426,7 +1431,7 @@ fn manual_reader_deserialize<R: Reader>(rdr: &mut R) -> Log {
 //////////////////////////////////////////////////////////////////////////////
 
 #[inline]
-fn manual_iter_ignore<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
+fn manual_iter_ignore<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
     let buf = buf.slice_mut(0, key.len());
 
     for idx in range(0, key.len()) {
@@ -1436,7 +1441,7 @@ fn manual_iter_ignore<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
 }
 
 #[inline]
-fn manual_iter_field<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
+fn manual_iter_field<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
     let b = rdr.next().unwrap();
     assert_eq!(b, b'"');
 
@@ -1450,7 +1455,7 @@ fn manual_iter_field<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
 }
 
 #[inline]
-fn manual_iter_int<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> i64 {
+fn manual_iter_int<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> i64 {
     manual_iter_field(rdr.by_ref(), buf, key);
 
     let mut res = 0;
@@ -1470,7 +1475,7 @@ fn manual_iter_int<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> i
 }
 
 #[inline]
-fn manual_iter_string<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> String {
+fn manual_iter_string<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> String {
     manual_iter_field(rdr.by_ref(), buf, key);
     manual_iter_ignore(rdr.by_ref(), buf, b"\"");
 
@@ -1493,8 +1498,8 @@ fn manual_iter_string<R: Iterator<u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -
 }
 
 #[inline]
-fn manual_iter_deserialize<R: Iterator<u8>>(mut rdr: R) -> Log {
-    let mut buf = [0u8, .. 128];
+fn manual_iter_deserialize<R: Iterator<Item=u8>>(mut rdr: R) -> Log {
+    let mut buf = [0u8; 128];
 
     manual_iter_ignore(rdr.by_ref(), &mut buf, b"{");
     let timestamp = manual_iter_int(rdr.by_ref(), &mut buf, b"timestamp");

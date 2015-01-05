@@ -8,5 +8,8 @@ license = "MIT/Apache-2.0"
 name = "serde"
 path = "src/lib.rs"
 
+[dependencies]
+rustc-serialize = "*"
+
 [dependencies.serde_macros]
 path = "serde_macros/"

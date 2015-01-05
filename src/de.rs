@@ -10,13 +10,14 @@
 
 use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
 use std::hash::Hash;
-use std::num;
-use std::rc::Rc;
+use std::iter::FromIterator;
+use std::num::{self, FromPrimitive};
 use std::option;
+use std::rc::Rc;
 use std::string;
 use std::sync::Arc;
 
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 pub enum Token {
     Null,
     Bool(bool),
@@ -77,7 +78,7 @@ impl Token {
     }
 }
 
-#[deriving(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     NullKind,
     BoolKind,
@@ -176,7 +177,7 @@ macro_rules! to_result {
     }
 }
 
-pub trait Deserializer<E>: Iterator<Result<Token, E>> {
+pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     /// Called when a `Deserialize` expected more tokens, but the
     /// `Deserializer` was empty.
     fn end_of_stream_error(&mut self) -> E;
@@ -196,11 +197,13 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
         T: Deserialize<Self, E>
     >(&mut self, field: &'static str) -> Result<T, E>;
 
+    /*
     /// Called when a `Deserialize` has decided to not consume this token.
     fn ignore_field(&mut self, _token: Token) -> Result<(), E> {
         let _: IgnoreTokens = try!(Deserialize::deserialize(self));
         Ok(())
     }
+    */
 
     #[inline]
     fn expect_token(&mut self) -> Result<Token, E> {
@@ -584,7 +587,7 @@ pub trait Deserializer<E>: Iterator<Result<Token, E>> {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct SeqDeserializer<'a, D: 'a, E: 'a> {
+struct SeqDeserializer<'a, D: 'a, E: 'a, T> {
     d: &'a mut D,
     len: uint,
     err: &'a mut Option<E>,
@@ -595,7 +598,9 @@ impl<
     D: Deserializer<E>,
     E,
     T: Deserialize<D, E>
-> Iterator<T> for SeqDeserializer<'a, D, E> {
+> Iterator for SeqDeserializer<'a, D, E, T> {
+    type Item = T;
+
     #[inline]
     fn next(&mut self) -> option::Option<T> {
         match self.d.expect_seq_elt_or_end() {
@@ -618,7 +623,7 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct MapDeserializer<'a, D:'a, E: 'a> {
+struct MapDeserializer<'a, D:'a, E: 'a, K, V> {
     d: &'a mut D,
     len: uint,
     err: &'a mut option::Option<E>,
@@ -630,7 +635,9 @@ impl<
     E,
     K: Deserialize<D, E>,
     V: Deserialize<D, E>
-> Iterator<(K, V)> for MapDeserializer<'a, D, E> {
+> Iterator for MapDeserializer<'a, D, E, K, V> {
+    type Item = (K, V);
+
     #[inline]
     fn next(&mut self) -> option::Option<(K, V)> {
         match self.d.expect_map_elt_or_end() {
@@ -650,7 +657,7 @@ impl<
 
 //////////////////////////////////////////////////////////////////////////////
 
-pub trait Deserialize<D: Deserializer<E>, E> {
+pub trait Deserialize<D: Deserializer<E>, E>: Sized {
     #[inline]
     fn deserialize(d: &mut D) -> Result<Self, E> {
         let token = try!(d.expect_token());
@@ -850,7 +857,7 @@ impl_deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 
 /// Helper struct that will ignore tokens while taking in consideration
 /// recursive structures.
-#[deriving(Copy)]
+#[derive(Copy)]
 pub struct IgnoreTokens;
 
 impl<D: Deserializer<E>, E> Deserialize<D, E> for IgnoreTokens {
@@ -1083,7 +1090,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show, Decodable)]
+    #[derive(Clone, PartialEq, Show, RustcDecodable)]
     struct Inner {
         a: (),
         b: uint,
@@ -1125,7 +1132,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show, Decodable)]
+    #[derive(Clone, PartialEq, Show, RustcDecodable)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -1158,7 +1165,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show, Decodable)]
+    #[derive(Clone, PartialEq, Show, RustcDecodable)]
     enum Animal {
         Dog,
         Frog(string::String, int)
@@ -1185,7 +1192,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Show)]
+    #[derive(Show)]
     enum Error {
         EndOfStream,
         SyntaxError(Vec<TokenKind>),
@@ -1200,7 +1207,7 @@ mod tests {
         tokens: Iter,
     }
 
-    impl<Iter: Iterator<Token>> TokenDeserializer<Iter> {
+    impl<Iter: Iterator<Item=Token>> TokenDeserializer<Iter> {
         #[inline]
         fn new(tokens: Iter) -> TokenDeserializer<Iter> {
             TokenDeserializer {
@@ -1209,14 +1216,16 @@ mod tests {
         }
     }
 
-    impl<Iter: Iterator<Token>> Iterator<Result<Token, Error>> for TokenDeserializer<Iter> {
+    impl<Iter: Iterator<Item=Token>> Iterator for TokenDeserializer<Iter> {
+        type Item = Result<Token, Error>;
+
         #[inline]
         fn next(&mut self) -> option::Option<Result<Token, Error>> {
             self.tokens.next().map(|token| Ok(token))
         }
     }
 
-    impl<Iter: Iterator<Token>> Deserializer<Error> for TokenDeserializer<Iter> {
+    impl<Iter: Iterator<Item=Token>> Deserializer<Error> for TokenDeserializer<Iter> {
         fn end_of_stream_error(&mut self) -> Error {
             Error::EndOfStream
         }

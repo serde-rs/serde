@@ -1,22 +1,22 @@
-#![feature(phase)]
+#![feature(associated_types, phase)]
 
 #[phase(plugin)]
 extern crate serde_macros;
 
 extern crate serde;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
 use std::fmt::Show;
 use test::Bencher;
 
-use serialize::{Decoder, Decodable};
+use rustc_serialize::{Decoder, Decodable};
 
 use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -27,7 +27,7 @@ pub enum Error {
 
 mod decoder {
     use std::vec;
-    use serialize;
+    use rustc_serialize;
 
     use super::Error;
     use super::Error::{EndOfStream, SyntaxError, OtherError};
@@ -47,7 +47,7 @@ mod decoder {
         }
     }
 
-    impl serialize::Decoder<Error> for IntDecoder {
+    impl rustc_serialize::Decoder<Error> for IntDecoder {
         fn error(&mut self, msg: &str) -> Error {
             OtherError(msg.to_string())
         }
@@ -199,7 +199,7 @@ mod decoder {
         }
     }
 
-    impl serialize::Decoder<Error> for U8Decoder {
+    impl rustc_serialize::Decoder<Error> for U8Decoder {
         fn error(&mut self, msg: &str) -> Error {
             OtherError(msg.to_string())
         }
@@ -349,7 +349,7 @@ mod deserializer {
 
     use serde::de;
 
-    #[deriving(PartialEq, Show)]
+    #[derive(PartialEq, Show)]
     enum State {
         StartState,
         SepOrEndState,
@@ -373,7 +373,9 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<de::Token, Error>> for IntDeserializer {
+    impl Iterator for IntDeserializer {
+        type Item = Result<de::Token, Error>;
+
         #[inline]
         fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.state {
@@ -445,7 +447,9 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<de::Token, Error>> for U8Deserializer {
+    impl Iterator for U8Deserializer {
+        type Item = Result<de::Token, Error>;
+
         #[inline]
         fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.state {

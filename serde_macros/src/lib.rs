@@ -58,15 +58,15 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
-        token::intern("deriving_serialize"),
-        Decorator(box expand_deriving_serialize));
+        token::intern("derive_serialize"),
+        Decorator(box expand_derive_serialize));
 
     reg.register_syntax_extension(
-        token::intern("deriving_deserialize"),
-        Decorator(box expand_deriving_deserialize));
+        token::intern("derive_deserialize"),
+        Decorator(box expand_derive_deserialize));
 }
 
-fn expand_deriving_serialize(cx: &mut ExtCtxt,
+fn expand_derive_serialize(cx: &mut ExtCtxt,
                              sp: Span,
                              mitem: &MetaItem,
                              item: &Item,
@@ -191,11 +191,11 @@ fn serialize_substructure(cx: &ExtCtxt,
             })
         }
 
-        _ => cx.bug("expected Struct or EnumMatching in deriving_serialize")
+        _ => cx.bug("expected Struct or EnumMatching in derive_serialize")
     }
 }
 
-pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
+pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                                    span: Span,
                                    mitem: &MetaItem,
                                    item: &Item,
@@ -274,7 +274,7 @@ fn deserialize_substructure(cx: &mut ExtCtxt,
                 deserializer,
                 token)
         }
-        _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserialize)")
+        _ => cx.bug("expected StaticEnum or StaticStruct in derive(Deserialize)")
     }
 }
 
@@ -486,8 +486,9 @@ fn deserialize_static_fields(
     }
 }
 
-fn find_serial_name<'a, I: Iterator<&'a Attribute>>(mut iterator: I)
-                    -> Option<token::InternedString> {
+fn find_serial_name<'a, I>(mut iterator: I) -> Option<token::InternedString> where
+    I: Iterator<Item=&'a Attribute>
+{
     for at in iterator {
         match at.node.value.node {
             MetaNameValue(ref at_name, ref value) => {

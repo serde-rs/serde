@@ -1,12 +1,12 @@
-#![feature(phase)]
+#![feature(phase, old_orphan_check)]
 
 extern crate serde;
 #[phase(plugin)]
 extern crate serde_macros;
 
-#[deriving(PartialEq, Show)]
-#[deriving_serialize]
-#[deriving_deserialize]
+#[derive(PartialEq, Show)]
+#[derive_serialize]
+#[derive_deserialize]
 struct Test {
     #[serial_name = "$schema"]
     schema: String,

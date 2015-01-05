@@ -1,4 +1,4 @@
-#![feature(phase)]
+#![feature(associated_types, phase)]
 
 #[phase(plugin)]
 extern crate serde_macros;
@@ -17,7 +17,7 @@ use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -224,7 +224,7 @@ mod deserializer {
 
     use serde::de;
 
-    #[deriving(PartialEq, Show)]
+    #[derive(PartialEq, Show)]
     enum State {
         StartState,
         KeyOrEndState,
@@ -249,7 +249,9 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<de::Token, Error>> for IntDeserializer {
+    impl Iterator for IntDeserializer {
+        type Item = Result<de::Token, Error>;
+
         #[inline]
         fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.stack.pop() {

@@ -5,7 +5,7 @@ use std::io;
 use de::{Token, TokenKind};
 
 /// The errors that can arise while parsing a JSON stream.
-#[deriving(Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ErrorCode {
     ConversionError(Token),
     EOFWhileParsingList,
@@ -78,7 +78,7 @@ impl fmt::Show for ErrorCode {
     }
 }
 
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, uint, uint),

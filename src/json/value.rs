@@ -5,7 +5,7 @@ use std::io;
 use std::str;
 use std::vec;
 
-use de::{mod, Token, TokenKind};
+use de::{self, Token, TokenKind};
 use ser::Serialize;
 use ser;
 
@@ -13,7 +13,7 @@ use super::ser::{Serializer, PrettySerializer};
 use super::error::{Error, ErrorCode};
 
 /// Represents a JSON value
-#[deriving(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub enum Value {
     Null,
     Boolean(bool),
@@ -207,19 +207,21 @@ impl Value {
     }
 }
 
-struct WriterFormatter<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
+struct WriterFormatter<'a, 'b: 'a> {
+    inner: &'a mut fmt::Formatter<'b>,
+}
 
 impl<'a, 'b> Writer for WriterFormatter<'a, 'b> {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
-        let WriterFormatter(ref mut f) = *self;
-        f.write(buf).map_err(|_| io::IoError::last_error())
+        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| io::IoError::last_error())
     }
 }
 
 impl fmt::Show for Value {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.to_writer(WriterFormatter(f)).map_err(|_| fmt::Error)
+        let wr = WriterFormatter { inner: f };
+        self.to_writer(wr).map_err(|_| fmt::Error)
     }
 }
 
@@ -320,7 +322,9 @@ impl Deserializer {
     }
 }
 
-impl Iterator<Result<Token, Error>> for Deserializer {
+impl Iterator for Deserializer {
+    type Item = Result<Token, Error>;
+
     #[inline]
     fn next(&mut self) -> Option<Result<Token, Error>> {
         loop {

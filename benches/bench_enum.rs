@@ -1,15 +1,15 @@
-#![feature(phase)]
+#![feature(associated_types, phase, old_orphan_check)]
 
 #[phase(plugin)]
 extern crate serde_macros;
 
 extern crate serde;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
 use test::Bencher;
 
-use serialize::{Decoder, Decodable};
+use rustc_serialize::{Decoder, Decodable};
 
 use serde::de::{Deserializer, Deserialize};
 
@@ -17,8 +17,8 @@ use Animal::{Dog, Frog};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Clone, PartialEq, Show, Decodable)]
-#[deriving_deserialize]
+#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive_deserialize]
 enum Animal {
     Dog,
     Frog(String, int)
@@ -26,7 +26,7 @@ enum Animal {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -36,7 +36,7 @@ pub enum Error {
 //////////////////////////////////////////////////////////////////////////////
 
 mod decoder {
-    use serialize::Decoder;
+    use rustc_serialize::Decoder;
 
     use super::{Animal, Error};
     use super::Animal::{Dog, Frog};
@@ -265,7 +265,9 @@ mod deserializer {
         }
     }
 
-    impl Iterator<Result<de::Token, Error>> for AnimalDeserializer {
+    impl Iterator for AnimalDeserializer {
+        type Item = Result<de::Token, Error>;
+
         #[inline]
         fn next(&mut self) -> Option<Result<de::Token, Error>> {
             match self.stack.pop() {

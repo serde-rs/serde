@@ -7,7 +7,7 @@ use de;
 
 use super::error::{Error, ErrorCode};
 
-#[deriving(PartialEq, Show)]
+#[derive(PartialEq, Show)]
 enum State {
     // Parse a value.
     Value,
@@ -37,7 +37,9 @@ pub struct Parser<Iter> {
     buf: Vec<u8>,
 }
 
-impl<Iter: Iterator<u8>> Iterator<Result<de::Token, Error>> for Parser<Iter> {
+impl<Iter: Iterator<Item=u8>> Iterator for Parser<Iter> {
+    type Item = Result<de::Token, Error>;
+
     #[inline]
     fn next(&mut self) -> Option<Result<de::Token, Error>> {
         let state = match self.state_stack.pop() {
@@ -80,7 +82,7 @@ impl<Iter: Iterator<u8>> Iterator<Result<de::Token, Error>> for Parser<Iter> {
     }
 }
 
-impl<Iter: Iterator<u8>> Parser<Iter> {
+impl<Iter: Iterator<Item=u8>> Parser<Iter> {
     /// Creates the JSON parser.
     #[inline]
     pub fn new(rdr: Iter) -> Parser<Iter> {
@@ -395,7 +397,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
                             }
                         };
 
-                        let buf = &mut [0u8, .. 4];
+                        let buf = &mut [0u8; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
                         self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
                     }
@@ -515,7 +517,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 }
 
-impl<Iter: Iterator<u8>> de::Deserializer<Error> for Parser<Iter> {
+impl<Iter: Iterator<Item=u8>> de::Deserializer<Error> for Parser<Iter> {
     fn end_of_stream_error(&mut self) -> Error {
         Error::SyntaxError(ErrorCode::EOFWhileParsingValue, self.line, self.col)
     }
@@ -635,7 +637,7 @@ impl<Iter: Iterator<u8>> de::Deserializer<Error> for Parser<Iter> {
 
 /// Decodes a json value from an `Iterator<u8>`.
 pub fn from_iter<
-    Iter: Iterator<u8>,
+    Iter: Iterator<Item=u8>,
     T: de::Deserialize<Parser<Iter>, Error>
 >(iter: Iter) -> Result<T, Error> {
     let mut parser = Parser::new(iter);

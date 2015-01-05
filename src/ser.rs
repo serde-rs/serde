@@ -101,13 +101,13 @@ pub trait Serializer<E> {
 
     fn serialize_seq<
         T: Serialize<Self, E>,
-        Iter: Iterator<T>
+        Iter: Iterator<Item=T>
     >(&mut self, iter: Iter) -> Result<(), E>;
 
     fn serialize_map<
         K: Serialize<Self, E>,
         V: Serialize<Self, E>,
-        Iter: Iterator<(K, V)>
+        Iter: Iterator<Item=(K, V)>
     >(&mut self, iter: Iter) -> Result<(), E>;
 }
 
@@ -327,8 +327,8 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show, Decodable)]
-    #[deriving_serialize]
+    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive_serialize]
     struct Inner {
         a: (),
         b: uint,
@@ -337,16 +337,16 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show, Decodable)]
-    #[deriving_serialize]
+    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive_serialize]
     struct Outer {
         inner: Vec<Inner>,
     }
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show, Decodable)]
-    #[deriving_serialize]
+    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive_serialize]
     enum Animal {
         Dog,
         Frog(String, int)
@@ -354,7 +354,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[deriving(Clone, PartialEq, Show)]
+    #[derive(Clone, PartialEq, Show)]
     pub enum Token<'a> {
         Null,
         Bool(bool),
@@ -394,7 +394,7 @@ mod tests {
         MapEnd,
     }
 
-    #[deriving(Show)]
+    #[derive(Show)]
     #[allow(dead_code)]
     enum Error {
         EndOfStream,
@@ -407,7 +407,7 @@ mod tests {
         iter: Iter,
     }
 
-    impl<'a, Iter: Iterator<Token<'a>>> AssertSerializer<Iter> {
+    impl<'a, Iter: Iterator<Item=Token<'a>>> AssertSerializer<Iter> {
         fn new(iter: Iter) -> AssertSerializer<Iter> {
             AssertSerializer {
                 iter: iter,
@@ -426,7 +426,7 @@ mod tests {
         }
     }
 
-    impl<'a, Iter: Iterator<Token<'a>>> Serializer<Error> for AssertSerializer<Iter> {
+    impl<'a, Iter: Iterator<Item=Token<'a>>> Serializer<Error> for AssertSerializer<Iter> {
         fn serialize_null(&mut self) -> Result<(), Error> {
             self.serialize(Token::Null)
         }
@@ -550,7 +550,7 @@ mod tests {
 
         fn serialize_seq<
             T: Serialize<AssertSerializer<Iter>, Error>,
-            SeqIter: Iterator<T>
+            SeqIter: Iterator<Item=T>
         >(&mut self, mut iter: SeqIter) -> Result<(), Error> {
             let (len, _) = iter.size_hint();
             try!(self.serialize(Token::SeqStart(len)));
@@ -563,7 +563,7 @@ mod tests {
         fn serialize_map<
             K: Serialize<AssertSerializer<Iter>, Error>,
             V: Serialize<AssertSerializer<Iter>, Error>,
-            MapIter: Iterator<(K, V)>
+            MapIter: Iterator<Item=(K, V)>
         >(&mut self, mut iter: MapIter) -> Result<(), Error> {
             let (len, _) = iter.size_hint();
             try!(self.serialize(Token::MapStart(len)));

@@ -2,6 +2,8 @@
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
 
+#![feature(associated_types, old_orphan_check)]
+
 // test harness access
 #[cfg(test)]
 extern crate test;
@@ -12,6 +14,7 @@ extern crate serde_macros;
 #[cfg(test)]
 extern crate serialize;
 
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate unicode;
 
 pub use de::{Deserializer, Deserialize};
