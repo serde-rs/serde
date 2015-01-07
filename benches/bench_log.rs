@@ -1,7 +1,7 @@
-#![feature(phase, macro_rules, old_orphan_check)]
+#![feature(plugin)]
 #![allow(non_camel_case_types)]
 
-#[phase(plugin)]
+#[plugin]
 extern crate serde_macros;
 
 extern crate serde;
@@ -44,14 +44,14 @@ enum HttpProtocol {
     HTTP11,
 }
 
-impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for HttpProtocol {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for HttpProtocol {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for HttpProtocol {
-    fn decode(d: &mut D) -> Result<HttpProtocol, E> {
+impl rustc_serialize::Decodable for HttpProtocol {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -88,14 +88,14 @@ enum HttpMethod {
     PATCH,
 }
 
-impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for HttpMethod {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for HttpMethod {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for HttpMethod {
-    fn decode(d: &mut D) -> Result<HttpMethod, E> {
+impl rustc_serialize::Decodable for HttpMethod {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -125,14 +125,14 @@ enum CacheStatus {
     Hit,
 }
 
-impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for CacheStatus {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for CacheStatus {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for CacheStatus {
-    fn decode(d: &mut D) -> Result<CacheStatus, E> {
+impl rustc_serialize::Decodable for CacheStatus {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<CacheStatus, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -171,14 +171,14 @@ enum OriginProtocol {
     HTTPS,
 }
 
-impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for OriginProtocol {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for OriginProtocol {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for OriginProtocol {
-    fn decode(d: &mut D) -> Result<OriginProtocol, E> {
+impl rustc_serialize::Decodable for OriginProtocol {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OriginProtocol, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -209,14 +209,14 @@ enum ZonePlan {
     ENT,
 }
 
-impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for ZonePlan {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for ZonePlan {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for ZonePlan {
-    fn decode(d: &mut D) -> Result<ZonePlan, E> {
+impl rustc_serialize::Decodable for ZonePlan {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<ZonePlan, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -498,14 +498,14 @@ enum Country {
 	ZW,
 }
 
-impl<S: rustc_serialize::Encoder<E>, E> rustc_serialize::Encodable<S, E> for Country {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for Country {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: rustc_serialize::Decoder<E>, E> rustc_serialize::Decodable<D, E> for Country {
-    fn decode(d: &mut D) -> Result<Country, E> {
+impl rustc_serialize::Decodable for Country {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Country, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),

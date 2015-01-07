@@ -10,5 +10,8 @@ name = "serde2"
 name = "serde2"
 path = "src/bin.rs"
 
+[dependencies]
+rustc-serialize = "*"
+
 [dependencies.serde2_macros]
 path = "serde2_macros/"

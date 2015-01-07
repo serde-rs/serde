@@ -31,12 +31,16 @@ impl ArrayBuilder {
         builder
     }
 
-    pub fn push_array(self, f: |ArrayBuilder| -> ArrayBuilder) -> ArrayBuilder {
+    pub fn push_array<F>(self, f: F) -> ArrayBuilder where
+        F: FnOnce(ArrayBuilder) -> ArrayBuilder
+    {
         let builder = ArrayBuilder::new();
         self.push(f(builder).unwrap())
     }
 
-    pub fn push_object(self, f: |ObjectBuilder| -> ObjectBuilder) -> ArrayBuilder {
+    pub fn push_object<F>(self, f: F) -> ArrayBuilder where
+        F: FnOnce(ObjectBuilder) -> ObjectBuilder
+    {
         let builder = ObjectBuilder::new();
         self.push(f(builder).unwrap())
     }
@@ -61,12 +65,16 @@ impl ObjectBuilder {
         builder
     }
 
-    pub fn insert_array(self, key: String, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
+    pub fn insert_array<F>(self, key: String, f: F) -> ObjectBuilder where
+        F: FnOnce(ArrayBuilder) -> ArrayBuilder
+    {
         let builder = ArrayBuilder::new();
         self.insert(key, f(builder).unwrap())
     }
 
-    pub fn insert_object(self, key: String, f: |ObjectBuilder| -> ObjectBuilder) -> ObjectBuilder {
+    pub fn insert_object<F>(self, key: String, f: F) -> ObjectBuilder where
+        F: FnOnce(ObjectBuilder) -> ObjectBuilder
+    {
         let builder = ObjectBuilder::new();
         self.insert(key, f(builder).unwrap())
     }

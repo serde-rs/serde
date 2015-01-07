@@ -48,17 +48,17 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
-        token::intern("deriving_serialize"),
-        Decorator(box expand_deriving_serialize));
+        token::intern("derive_serialize"),
+        Decorator(box expand_derive_serialize));
 
     /*
     reg.register_syntax_extension(
-        token::intern("deriving_deserialize"),
-        ItemDecorator(box expand_deriving_deserialize));
+        token::intern("derive_deserialize"),
+        ItemDecorator(box expand_derive_deserialize));
         */
 }
 
-fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
+fn expand_derive_serialize<>(cx: &mut ExtCtxt,
                                 sp: Span,
                                 mitem: &MetaItem,
                                 item: &Item,
@@ -121,7 +121,7 @@ fn expand_deriving_serialize<>(cx: &mut ExtCtxt,
                     )
                 ),
                 attributes: attrs,
-                combine_substructure: combine_substructure(|a, b, c| {
+                combine_substructure: combine_substructure(box |a, b, c| {
                     serialize_substructure(a, b, c)
                 }),
             }
@@ -148,7 +148,7 @@ fn serialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<
             serialize_enum(cx, span, state, visitor, substr.type_ident, variant, fields)
         }
 
-        _ => cx.bug("expected Struct or EnumMatching in deriving_serialize")
+        _ => cx.bug("expected Struct or EnumMatching in derive_serialize")
     }
 }
 
@@ -261,7 +261,7 @@ fn serialize_enum(cx: &ExtCtxt,
 }
 
 /*
-pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
+pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                                       span: Span,
                                       mitem: &MetaItem,
                                       item: &Item,
@@ -304,7 +304,7 @@ pub fn expand_deriving_deserialize(cx: &mut ExtCtxt,
                     )
                 ),
                 attributes: Vec::new(),
-                combine_substructure: combine_substructure(|a, b, c| {
+                combine_substructure: combine_substructure(box |a, b, c| {
                     deserialize_substructure(a, b, c)
                 }),
             })
@@ -337,7 +337,7 @@ fn deserialize_substructure(cx: &mut ExtCtxt, span: Span,
                 deserializer,
                 token)
         }
-        _ => cx.bug("expected StaticEnum or StaticStruct in deriving(Deserialize)")
+        _ => cx.bug("expected StaticEnum or StaticStruct in derive(Deserialize)")
     }
 }
 

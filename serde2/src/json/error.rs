@@ -5,7 +5,7 @@ use std::io;
 use de;
 
 /// The errors that can arise while parsing a JSON stream.
-#[deriving(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum ErrorCode {
     EOFWhileParsingList,
     EOFWhileParsingObject,
@@ -75,7 +75,7 @@ impl fmt::Show for ErrorCode {
     }
 }
 
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, uint, uint),

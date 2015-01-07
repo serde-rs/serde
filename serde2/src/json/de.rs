@@ -15,7 +15,7 @@ pub struct Parser<Iter> {
     buf: Vec<u8>,
 }
 
-impl<Iter: Iterator<u8>> Parser<Iter> {
+impl<Iter: Iterator<Item=u8>> Parser<Iter> {
     /// Creates the JSON parser.
     #[inline]
     pub fn new(rdr: Iter) -> Parser<Iter> {
@@ -353,7 +353,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
                             }
                         };
 
-                        let buf = &mut [0u8, .. 4];
+                        let buf = &mut [0; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
                         self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
                     }
@@ -380,7 +380,7 @@ impl<Iter: Iterator<u8>> Parser<Iter> {
     }
 }
 
-impl<Iter: Iterator<u8>> Deserializer<Error> for Parser<Iter> {
+impl<Iter: Iterator<Item=u8>> Deserializer<Error> for Parser<Iter> {
     #[inline]
     fn visit<
         R,
@@ -395,7 +395,7 @@ struct SeqVisitor<'a, Iter: 'a> {
     first: bool,
 }
 
-impl<'a, Iter: Iterator<u8>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor<'a, Iter> {
+impl<'a, Iter: Iterator<Item=u8>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor<'a, Iter> {
     fn visit<
         T: de::Deserialize<Parser<Iter>, Error>,
     >(&mut self) -> Result<Option<T>, Error> {
@@ -439,7 +439,7 @@ struct MapVisitor<'a, Iter: 'a> {
     first: bool,
 }
 
-impl<'a, Iter: Iterator<u8>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor<'a, Iter> {
+impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor<'a, Iter> {
     fn visit_key<
         K: de::Deserialize<Parser<Iter>, Error>,
     >(&mut self) -> Result<Option<K>, Error> {
@@ -506,7 +506,7 @@ impl<'a, Iter: Iterator<u8>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor<
 
 /// Decodes a json value from an `Iterator<u8>`.
 pub fn from_iter<
-    Iter: Iterator<u8>,
+    Iter: Iterator<Item=u8>,
     T: de::Deserialize<Parser<Iter>, Error>
 >(iter: Iter) -> Result<T, Error> {
     let mut parser = Parser::new(iter);

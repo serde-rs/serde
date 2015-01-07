@@ -107,7 +107,7 @@ fn expand_derive_serialize(cx: &mut ExtCtxt,
                     )
                 ),
                 attributes: attrs,
-                combine_substructure: combine_substructure(|a, b, c| {
+                combine_substructure: combine_substructure(box |a, b, c| {
                     serialize_substructure(a, b, c, item)
                 }),
             })
@@ -238,7 +238,7 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                     )
                 ),
                 attributes: Vec::new(),
-                combine_substructure: combine_substructure(|a, b, c| {
+                combine_substructure: combine_substructure(box |a, b, c| {
                     deserialize_substructure(a, b, c)
                 }),
             })
@@ -415,7 +415,7 @@ fn deserialize_enum(
                 path,
                 serial_names.as_slice(),
                 parts,
-                |cx, _, _| {
+                |&: cx, _, _| {
                     quote_expr!(cx, try!($deserializer.expect_enum_elt()))
                 }
             );
@@ -441,14 +441,14 @@ fn deserialize_enum(
 /// Create a deserializer for a single enum variant/struct:
 /// - `outer_pat_ident` is the name of this enum variant/struct
 /// - `getarg` should retrieve the `uint`-th field with name `&str`.
-fn deserialize_static_fields(
+fn deserialize_static_fields<F>(
     cx: &ExtCtxt,
     span: Span,
     outer_pat_path: ast::Path,
     serial_names: &[Option<token::InternedString>],
     fields: &StaticFields,
-    getarg: |&ExtCtxt, Span, token::InternedString| -> P<Expr>
-) -> P<Expr> {
+    getarg: F
+) -> P<Expr> where F: Fn(&ExtCtxt, Span, token::InternedString) -> P<Expr> {
     match *fields {
         Unnamed(ref fields) => {
             let path_expr = cx.expr_path(outer_pat_path);

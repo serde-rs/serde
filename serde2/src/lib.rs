@@ -1,5 +1,3 @@
-#![feature(macro_rules)]
-
 extern crate unicode;
 
 pub use ser::{Serialize, Serializer};

@@ -60,8 +60,8 @@ the code for these traits: `#[derive_serialize]` and `#[derive_deserialize]`.
 To serialize using `Serialize`:
 
 ```rust
-#![feature(phase, old_orphan_check)]
-#[phase(plugin)]
+#![feature(plugin)]
+#[plugin]
 extern crate serde_macros;
 extern crate serde;
 
@@ -110,8 +110,8 @@ A basic `ToJson` example using a BTreeMap of attribute name / attribute value:
 
 
 ```rust
-#![feature(phase, old_orphan_check)]
-#[phase(plugin)]
+#![feature(plugin)]
+#[plugin]
 extern crate serde_macros;
 extern crate serde;
 
@@ -142,8 +142,8 @@ fn main() {
 Or you can use the helper type `ObjectBuilder`:
 
 ```rust
-#![feature(phase, old_orphan_check)]
-#[phase(plugin)]
+#![feature(plugin)]
+#[plugin]
 extern crate serde_macros;
 extern crate serde;
 
@@ -173,8 +173,8 @@ fn main() {
 To deserialize a JSON string using `Deserialize` trait:
 
 ```rust
-#![feature(phase, old_orphan_check)]
-#[phase(plugin)]
+#![feature(plugin)]
+#[plugin]
 extern crate serde_macros;
 extern crate serde;
 
@@ -205,8 +205,8 @@ Create a struct called `TestStruct1` and serialize and deserialize it to and fro
 using the serialization API, using the derived serialization code.
 
 ```rust
-#![feature(phase, old_orphan_check)]
-#[phase(plugin)]
+#![feature(plugin)]
+#[plugin]
 extern crate serde_macros;
 extern crate serde;
 
@@ -245,8 +245,8 @@ This example use the ToJson impl to deserialize the JSON string.
 Example of `ToJson` trait implementation for TestStruct1.
 
 ```rust
-#![feature(phase, old_orphan_check)]
-#[phase(plugin)]
+#![feature(plugin)]
+#[plugin]
 extern crate serde_macros;
 extern crate serde;
 
@@ -1792,7 +1792,7 @@ mod bench {
         let json = encoder_json(count);
 
         b.iter(|| {
-            assert_eq!(json.pretty().to_string(), src);
+            assert_eq!(json.to_string(), src);
         });
     }
 

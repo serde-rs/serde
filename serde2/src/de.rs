@@ -1,5 +1,6 @@
 use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
+use std::num::FromPrimitive;
 
 ///////////////////////////////////////////////////////////////////////////////
 

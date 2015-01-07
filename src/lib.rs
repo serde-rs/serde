@@ -1,14 +1,12 @@
-#![feature(macro_rules, phase)]
+#![feature(plugin)]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
-
-#![feature(associated_types, old_orphan_check)]
 
 // test harness access
 #[cfg(test)]
 extern crate test;
 
-#[phase(plugin)]
+#[plugin]
 extern crate serde_macros;
 
 #[cfg(test)]

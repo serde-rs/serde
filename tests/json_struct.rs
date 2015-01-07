@@ -1,7 +1,7 @@
-#![feature(phase, old_orphan_check)]
+#![feature(plugin)]
 
 extern crate serde;
-#[phase(plugin)]
+#[plugin]
 extern crate serde_macros;
 
 #[derive(PartialEq, Show)]

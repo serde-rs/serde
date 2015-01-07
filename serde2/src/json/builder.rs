@@ -10,8 +10,8 @@
 
 use std::collections::BTreeMap;
 
-use ser::{mod, Serialize};
-use json::value::{mod, Value};
+use ser::{self, Serialize};
+use json::value::{self, Value};
 
 pub struct ArrayBuilder {
     array: Vec<Value>,
@@ -31,13 +31,17 @@ impl ArrayBuilder {
         self
     }
 
-    pub fn push_array(mut self, f: |ArrayBuilder| -> ArrayBuilder) -> ArrayBuilder {
+    pub fn push_array<F>(mut self, f: F) -> ArrayBuilder where
+        F: FnOnce(ArrayBuilder) -> ArrayBuilder
+    {
         let builder = ArrayBuilder::new();
         self.array.push(f(builder).unwrap());
         self
     }
 
-    pub fn push_object(mut self, f: |ObjectBuilder| -> ObjectBuilder) -> ArrayBuilder {
+    pub fn push_object<F>(mut self, f: F) -> ArrayBuilder where
+        F: FnOnce(ObjectBuilder) -> ObjectBuilder
+    {
         let builder = ObjectBuilder::new();
         self.array.push(f(builder).unwrap());
         self
@@ -62,13 +66,17 @@ impl ObjectBuilder {
         self
     }
 
-    pub fn insert_array(mut self, key: String, f: |ArrayBuilder| -> ArrayBuilder) -> ObjectBuilder {
+    pub fn insert_array<F>(mut self, key: String, f: F) -> ObjectBuilder where
+        F: FnOnce(ArrayBuilder) -> ArrayBuilder
+    {
         let builder = ArrayBuilder::new();
         self.object.insert(key, f(builder).unwrap());
         self
     }
 
-    pub fn insert_object(mut self, key: String, f: |ObjectBuilder| -> ObjectBuilder) -> ObjectBuilder {
+    pub fn insert_object<F>(mut self, key: String, f: F) -> ObjectBuilder where
+        F: FnOnce(ObjectBuilder) -> ObjectBuilder
+    {
         let builder = ObjectBuilder::new();
         self.object.insert(key, f(builder).unwrap());
         self

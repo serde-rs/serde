@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
+use std::str;
 
-use ser::{mod, Serializer};
+use ser::{self, Serializer};
 
-#[deriving(PartialEq)]
+#[derive(PartialEq)]
 pub enum Value {
     Null,
     Bool(bool),
@@ -49,19 +50,20 @@ impl ser::Serialize for Value {
     }
 }
 
-struct WriterFormatter<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
+struct WriterFormatter<'a, 'b: 'a> {
+    inner: &'a mut fmt::Formatter<'b>,
+}
 
 impl<'a, 'b> io::Writer for WriterFormatter<'a, 'b> {
     fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
-        let WriterFormatter(ref mut f) = *self;
-        f.write(buf).map_err(|_| io::IoError::last_error())
+        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| io::IoError::last_error())
     }
 }
 
 impl fmt::Show for Value {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut wr = WriterFormatter(f);
+        let mut wr = WriterFormatter { inner: f };
         super::ser::to_writer(&mut wr, self).map_err(|_| fmt::Error)
     }
 }

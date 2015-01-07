@@ -224,7 +224,7 @@ pub struct SeqIteratorVisitor<Iter> {
     first: bool,
 }
 
-impl<T, Iter: Iterator<T>> SeqIteratorVisitor<Iter> {
+impl<T, Iter: Iterator<Item=T>> SeqIteratorVisitor<Iter> {
     #[inline]
     pub fn new(iter: Iter) -> SeqIteratorVisitor<Iter> {
         SeqIteratorVisitor {
@@ -236,7 +236,7 @@ impl<T, Iter: Iterator<T>> SeqIteratorVisitor<Iter> {
 
 impl<
     T: Serialize,
-    Iter: Iterator<T>,
+    Iter: Iterator<Item=T>,
     S,
     R,
     E,
@@ -281,10 +281,15 @@ impl<
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// FIXME(rust #19630) Remove this work-around
+macro_rules! e {
+    ($e:expr) => { $e }
+}
+
 macro_rules! tuple_impls {
     ($(
         ($($T:ident),+) {
-            $($state:pat => $method:ident,)+
+            $($state:pat => $idx:tt,)+
         }
     )+) => {
         $(
@@ -317,8 +322,10 @@ macro_rules! tuple_impls {
                                 $(
                                     $state => {
                                         self.state += 1;
-                                        let value = self.tuple.$method();
-                                        let value = try!(visitor.visit_seq_elt(state, true, value));
+                                        let value = try!(visitor.visit_seq_elt(
+                                            state,
+                                            true,
+                                            &e!(self.tuple.$idx)));
                                         Ok(Some(value))
                                     }
                                 )+
@@ -341,101 +348,101 @@ macro_rules! tuple_impls {
 
 tuple_impls! {
     (T0) {
-        0 => ref0,
+        0 => 0,
     }
     (T0, T1) {
-        0 => ref0,
-        1 => ref1,
+        0 => 0,
+        1 => 1,
     }
     (T0, T1, T2, T3) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
     }
     (T0, T1, T2, T3, T4) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
     }
     (T0, T1, T2, T3, T4, T5) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
     }
     (T0, T1, T2, T3, T4, T5, T6) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
-        6 => ref6,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
+        6 => 6,
     }
     (T0, T1, T2, T3, T4, T5, T6, T7) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
-        6 => ref6,
-        7 => ref7,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
+        6 => 6,
+        7 => 7,
     }
     (T0, T1, T2, T3, T4, T5, T6, T7, T8) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
-        6 => ref6,
-        7 => ref7,
-        8 => ref8,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
+        6 => 6,
+        7 => 7,
+        8 => 8,
     }
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
-        6 => ref6,
-        7 => ref7,
-        8 => ref8,
-        9 => ref9,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
+        6 => 6,
+        7 => 7,
+        8 => 8,
+        9 => 9,
     }
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
-        6 => ref6,
-        7 => ref7,
-        8 => ref8,
-        9 => ref9,
-        10 => ref10,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
+        6 => 6,
+        7 => 7,
+        8 => 8,
+        9 => 9,
+        10 => 10,
     }
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) {
-        0 => ref0,
-        1 => ref1,
-        2 => ref2,
-        3 => ref3,
-        4 => ref4,
-        5 => ref5,
-        6 => ref6,
-        7 => ref7,
-        8 => ref8,
-        9 => ref9,
-        10 => ref10,
-        11 => ref11,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 4,
+        5 => 5,
+        6 => 6,
+        7 => 7,
+        8 => 8,
+        9 => 9,
+        10 => 10,
+        11 => 11,
     }
 }
 
@@ -446,7 +453,7 @@ pub struct MapIteratorVisitor<Iter> {
     first: bool,
 }
 
-impl<K, V, Iter: Iterator<(K, V)>> MapIteratorVisitor<Iter> {
+impl<K, V, Iter: Iterator<Item=(K, V)>> MapIteratorVisitor<Iter> {
     #[inline]
     pub fn new(iter: Iter) -> MapIteratorVisitor<Iter> {
         MapIteratorVisitor {
@@ -459,7 +466,7 @@ impl<K, V, Iter: Iterator<(K, V)>> MapIteratorVisitor<Iter> {
 impl<
     K: Serialize,
     V: Serialize,
-    Iter: Iterator<(K, V)>,
+    Iter: Iterator<Item=(K, V)>,
     S,
     R,
     E,

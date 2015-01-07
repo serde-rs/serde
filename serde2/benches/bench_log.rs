@@ -1,15 +1,16 @@
-#![feature(phase, macro_rules)]
+#![feature(plugin)]
 #![allow(non_camel_case_types)]
 
-#[phase(plugin)]
+#[plugin]
 extern crate serde2_macros;
 
 extern crate serde2;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
 use std::io;
 use std::io::ByRefWriter;
+use std::num::FromPrimitive;
 use test::Bencher;
 
 use serde2::json::ser::escape_str;
@@ -19,7 +20,7 @@ use serde2::ser;
 use serde2::de::{Deserialize, Deserializer};
 use serde2::de;
 
-use serialize::Encodable;
+use rustc_serialize::Encodable;
 
 enum HttpField {
     Protocol,
@@ -66,9 +67,9 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, Encodable, Decodable)]
-#[deriving_serialize]
-//#[deriving_deserialize]
+#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive_serialize]
+//#[derive_deserialize]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -141,21 +142,21 @@ impl<
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
     HTTP11,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for HttpProtocol {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for HttpProtocol {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for HttpProtocol {
-    fn decode(d: &mut D) -> Result<HttpProtocol, E> {
+impl rustc_serialize::Decodable for HttpProtocol {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -185,7 +186,7 @@ impl<
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -200,14 +201,14 @@ enum HttpMethod {
     PATCH,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for HttpMethod {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for HttpMethod {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for HttpMethod {
-    fn decode(d: &mut D) -> Result<HttpMethod, E> {
+impl rustc_serialize::Decodable for HttpMethod {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -237,7 +238,7 @@ impl<
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -245,14 +246,14 @@ enum CacheStatus {
     Hit,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for CacheStatus {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for CacheStatus {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for CacheStatus {
-    fn decode(d: &mut D) -> Result<CacheStatus, E> {
+impl rustc_serialize::Decodable for CacheStatus {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<CacheStatus, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -314,9 +315,9 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, Encodable, Decodable)]
-#[deriving_serialize]
-//#[deriving_deserialize]
+#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive_serialize]
+//#[derive_deserialize]
 struct Origin {
     ip: String,
     port: u32,
@@ -370,21 +371,21 @@ impl<
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
     HTTPS,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for OriginProtocol {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for OriginProtocol {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for OriginProtocol {
-    fn decode(d: &mut D) -> Result<OriginProtocol, E> {
+impl rustc_serialize::Decodable for OriginProtocol {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OriginProtocol, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -411,7 +412,7 @@ impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for OriginProto
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -420,14 +421,14 @@ enum ZonePlan {
     ENT,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for ZonePlan {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for ZonePlan {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for ZonePlan {
-    fn decode(d: &mut D) -> Result<ZonePlan, E> {
+impl rustc_serialize::Decodable for ZonePlan {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<ZonePlan, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -454,7 +455,7 @@ impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for ZonePlan {
     }
 }
 
-#[deriving(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Show, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -714,14 +715,14 @@ enum Country {
 	ZW,
 }
 
-impl<S: serialize::Encoder<E>, E> serialize::Encodable<S, E> for Country {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl rustc_serialize::Encodable for Country {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         (*self as uint).encode(s)
     }
 }
 
-impl<D: ::serialize::Decoder<E>, E> serialize::Decodable<D, E> for Country {
-    fn decode(d: &mut D) -> Result<Country, E> {
+impl rustc_serialize::Decodable for Country {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Country, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_uint())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
@@ -799,9 +800,9 @@ impl<
     }
 }
 
-#[deriving(Show, PartialEq, Encodable, Decodable)]
-#[deriving_serialize]
-//#[deriving_deserialize]
+#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive_serialize]
+//#[derive_deserialize]
 struct Log {
     timestamp: i64,
     zone_id: u32,
@@ -1012,14 +1013,14 @@ const JSON_STR: &'static str = r#"{"timestamp":2837513946597,"zone_id":123456,"z
 
 #[test]
 fn test_encoder() {
-    use serialize::Encodable;
+    use rustc_serialize::Encodable;
 
     let log = Log::new();
 
     let mut wr = Vec::with_capacity(1024);
 
     {
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     }
 
@@ -1033,7 +1034,7 @@ fn bench_encoder(b: &mut Bencher) {
     let mut wr = Vec::with_capacity(1024);
 
     {
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     }
 
@@ -1042,7 +1043,7 @@ fn bench_encoder(b: &mut Bencher) {
     b.iter(|| {
         wr.clear();
 
-        let mut encoder = serialize::json::Encoder::new(&mut wr as &mut Writer);
+        let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     });
 }
@@ -1099,7 +1100,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
     let json = json::to_vec(&log).unwrap();
     b.bytes = json.len() as u64;
 
-    let mut buf = [0, .. 1024];
+    let mut buf = [0; 1024];
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }

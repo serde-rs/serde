@@ -1,6 +1,6 @@
-#![feature(associated_types, phase)]
+#![feature(plugin)]
 
-#[phase(plugin)]
+#[plugin]
 extern crate serde_macros;
 
 extern crate serde;
@@ -16,7 +16,7 @@ use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Show)]
+#[derive(PartialEq, Show)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -47,7 +47,9 @@ mod decoder {
         }
     }
 
-    impl rustc_serialize::Decoder<Error> for IntDecoder {
+    impl rustc_serialize::Decoder for IntDecoder {
+        type Error = Error;
+
         fn error(&mut self, msg: &str) -> Error {
             OtherError(msg.to_string())
         }
@@ -199,7 +201,9 @@ mod decoder {
         }
     }
 
-    impl rustc_serialize::Decoder<Error> for U8Decoder {
+    impl rustc_serialize::Decoder for U8Decoder {
+        type Error = Error;
+
         fn error(&mut self, msg: &str) -> Error {
             OtherError(msg.to_string())
         }
@@ -508,13 +512,12 @@ mod deserializer {
 //////////////////////////////////////////////////////////////////////////////
 
 fn run_decoder<
-    D: Decoder<E>,
-    E: Show,
-    T: Clone + PartialEq + Show + Decodable<D, E>
+    D: Decoder<Error=Error>,
+    T: Clone + PartialEq + Show + Decodable
 >(mut d: D, value: T) {
-    let v: T = Decodable::decode(&mut d).unwrap();
+    let v = Decodable::decode(&mut d);
 
-    assert_eq!(value, v);
+    assert_eq!(Ok(value), v);
 }
 
 fn run_deserializer<

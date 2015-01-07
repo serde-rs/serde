@@ -7,7 +7,7 @@ use std::string;
 use serde2::de;
 use serde2::de::{Deserialize, Deserializer};
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Token {
     Null,
     Int(int),
@@ -18,7 +18,7 @@ pub enum Token {
     End,
 }
 
-#[deriving(Show)]
+#[derive(Show)]
 enum Error {
     SyntaxError,
     EndOfStreamError,
@@ -41,7 +41,7 @@ struct MyDeserializer<Iter> {
     peeked: option::Option<Token>,
 }
 
-impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
+impl<Iter: Iterator<Item=Token>> MyDeserializer<Iter> {
     pub fn new(tokens: Iter) -> MyDeserializer<Iter> {
         MyDeserializer {
             tokens: tokens,
@@ -68,7 +68,7 @@ impl<Iter: Iterator<Token>> MyDeserializer<Iter> {
     }
 }
 
-impl<Iter: Iterator<Token>> Deserializer<Error> for MyDeserializer<Iter> {
+impl<Iter: Iterator<Item=Token>> Deserializer<Error> for MyDeserializer<Iter> {
     fn visit<
         R,
         V: de::Visitor<MyDeserializer<Iter>, R, Error>,
@@ -139,7 +139,7 @@ struct MyOptionVisitor<'a, Iter: 'a> {
 
 impl<
     'a,
-    Iter: Iterator<Token>,
+    Iter: Iterator<Item=Token>,
 > de::OptionVisitor<MyDeserializer<Iter>, Error> for MyOptionVisitor<'a, Iter> {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>,
@@ -161,7 +161,7 @@ struct MySeqVisitor<'a, Iter: 'a> {
 
 impl<
     'a,
-    Iter: Iterator<Token>,
+    Iter: Iterator<Item=Token>,
 > de::SeqVisitor<MyDeserializer<Iter>, Error> for MySeqVisitor<'a, Iter> {
     fn visit<
         T: Deserialize<MyDeserializer<Iter>, Error>
@@ -206,7 +206,7 @@ struct MyMapVisitor<'a, Iter: 'a> {
 
 impl<
     'a,
-    Iter: Iterator<Token>,
+    Iter: Iterator<Item=Token>,
 > de::MapVisitor<MyDeserializer<Iter>, Error> for MyMapVisitor<'a, Iter> {
     fn visit_key<
         K: Deserialize<MyDeserializer<Iter>, Error>,
@@ -256,7 +256,7 @@ mod json {
     use std::collections::BTreeMap;
     use serde2::de;
 
-    #[deriving(Show)]
+    #[derive(Show)]
     pub enum Value {
         Null,
         //Bool(bool),

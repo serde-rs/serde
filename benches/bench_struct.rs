@@ -1,6 +1,6 @@
-#![feature(associated_types, phase, old_orphan_check)]
+#![feature(plugin)]
 
-#[phase(plugin)]
+#[plugin]
 extern crate serde_macros;
 
 extern crate serde;
@@ -91,7 +91,9 @@ mod decoder {
         }
     }
 
-    impl Decoder<Error> for OuterDecoder {
+    impl Decoder for OuterDecoder {
+        type Error = Error;
+
         fn error(&mut self, msg: &str) -> Error {
             Error::OtherError(msg.to_string())
         }
