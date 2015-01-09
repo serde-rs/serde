@@ -30,7 +30,19 @@ pub trait Visitor {
     type Value;
     type Error;
 
-    fn visit_null(&mut self) -> Result<Self::Value, Self::Error>;
+    fn visit_unit(&mut self) -> Result<Self::Value, Self::Error>;
+
+    #[inline]
+    fn visit_named_unit(&mut self, _name: &str) -> Result<Self::Value, Self::Error> {
+        self.visit_unit()
+    }
+
+    #[inline]
+    fn visit_enum_unit(&mut self,
+                       _name: &str,
+                       _variant: &str) -> Result<Self::Value, Self::Error> {
+        self.visit_unit()
+    }
 
     fn visit_bool(&mut self, v: bool) -> Result<Self::Value, Self::Error>;
 
@@ -178,17 +190,6 @@ pub trait MapVisitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl Serialize for () {
-    #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        visitor.visit_null()
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 macro_rules! impl_visit {
     ($ty:ty, $method:ident) => {
         impl Serialize for $ty {
@@ -331,6 +332,17 @@ impl<T, S, H> Serialize for HashSet<T, S>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+impl Serialize for () {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_unit()
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 // FIXME(rust #19630) Remove this work-around
 macro_rules! e {
     ($e:expr) => { $e }
@@ -343,10 +355,20 @@ macro_rules! tuple_impls {
         }
     )+) => {
         $(
-            struct $TupleVisitor<'a, $($T: 'a),+> {
+            pub struct $TupleVisitor<'a, $($T: 'a),+> {
                 tuple: &'a ($($T,)+),
                 state: u8,
                 first: bool,
+            }
+
+            impl<'a, $($T: 'a),+> $TupleVisitor<'a, $($T),+> {
+                pub fn new(tuple: &'a ($($T,)+)) -> $TupleVisitor<'a, $($T),+> {
+                    $TupleVisitor {
+                        tuple: tuple,
+                        state: 0,
+                        first: true,
+                    }
+                }
             }
 
             impl<
@@ -363,10 +385,7 @@ macro_rules! tuple_impls {
                         $(
                             $state => {
                                 self.state += 1;
-                                let value = try!(visitor.visit_seq_elt(
-                                    first,
-                                    &e!(self.tuple.$idx)));
-                                Ok(Some(value))
+                                Ok(Some(try!(visitor.visit_seq_elt(first, &e!(self.tuple.$idx)))))
                             }
                         )+
                         _ => {
@@ -385,11 +404,7 @@ macro_rules! tuple_impls {
             > Serialize for ($($T,)+) {
                 #[inline]
                 fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-                    visitor.visit_seq($TupleVisitor {
-                        tuple: self,
-                        state: 0,
-                        first: true,
-                    })
+                    visitor.visit_seq($TupleVisitor::new(self))
                 }
             }
         )+
@@ -629,7 +644,6 @@ mod tests {
 
     #[derive(Clone, PartialEq, Show)]
     pub enum Token<'a> {
-        Null,
         Bool(bool),
         Isize(isize),
         I8(i8),
@@ -648,6 +662,10 @@ mod tests {
 
         Option(bool),
 
+        Unit,
+        NamedUnit(&'a str),
+        EnumUnit(&'a str, &'a str),
+
         SeqStart(usize),
         NamedSeqStart(&'a str, usize),
         EnumSeqStart(&'a str, &'a str, usize),
@@ -656,7 +674,7 @@ mod tests {
 
         MapStart(usize),
         NamedMapStart(&'a str, usize),
-        EnumMapStart(&'a str, usize),
+        EnumMapStart(&'a str, &'a str, usize),
         MapSep(bool),
         MapEnd,
     }
@@ -670,6 +688,26 @@ mod tests {
             AssertSerializer {
                 iter: values.into_iter(),
             }
+        }
+
+        fn visit_sequence<V>(&mut self, mut visitor: V) -> Result<(), ()>
+            where V: SeqVisitor
+        {
+            while let Some(()) = try!(visitor.visit(self)) { }
+
+            assert_eq!(self.iter.next(), Some(Token::SeqEnd));
+
+            Ok(())
+        }
+
+        fn visit_mapping<V>(&mut self, mut visitor: V) -> Result<(), ()>
+            where V: MapVisitor
+        {
+            while let Some(()) = try!(visitor.visit(self)) { }
+
+            assert_eq!(self.iter.next(), Some(Token::MapEnd));
+
+            Ok(())
         }
     }
 
@@ -686,8 +724,18 @@ mod tests {
         type Value = ();
         type Error = ();
 
-        fn visit_null(&mut self) -> Result<(), ()> {
-            assert_eq!(self.iter.next(), Some(Token::Null));
+        fn visit_unit(&mut self) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Unit));
+            Ok(())
+        }
+
+        fn visit_named_unit(&mut self, name: &str) -> Result<(), ()> {
+            assert_eq!(self.iter.next().unwrap(), Token::NamedUnit(name));
+            Ok(())
+        }
+
+        fn visit_enum_unit(&mut self, name: &str, variant: &str) -> Result<(), ()> {
+            assert_eq!(self.iter.next().unwrap(), Token::EnumUnit(name, variant));
             Ok(())
         }
 
@@ -766,32 +814,37 @@ mod tests {
             Ok(())
         }
 
-        fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), ()>
+        fn visit_seq<V>(&mut self, visitor: V) -> Result<(), ()>
             where V: SeqVisitor
         {
             let (len, _) = visitor.size_hint();
 
             assert_eq!(self.iter.next(), Some(Token::SeqStart(len)));
 
-            while let Some(()) = try!(visitor.visit(self)) { }
-
-            assert_eq!(self.iter.next(), Some(Token::SeqEnd));
-
-            Ok(())
+            self.visit_sequence(visitor)
         }
 
-        fn visit_named_seq<V>(&mut self, name: &str, mut visitor: V) -> Result<(), ()>
+        fn visit_named_seq<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
             where V: SeqVisitor
         {
             let (len, _) = visitor.size_hint();
 
             assert_eq!(self.iter.next().unwrap(), Token::NamedSeqStart(name, len));
 
-            while let Some(()) = try!(visitor.visit(self)) { }
+            self.visit_sequence(visitor)
+        }
 
-            assert_eq!(self.iter.next(), Some(Token::SeqEnd));
+        fn visit_enum_seq<V>(&mut self,
+                             name: &str,
+                             variant: &str,
+                             visitor: V) -> Result<(), ()>
+            where V: SeqVisitor
+        {
+            let (len, _) = visitor.size_hint();
 
-            Ok(())
+            assert_eq!(self.iter.next().unwrap(), Token::EnumSeqStart(name, variant, len));
+
+            self.visit_sequence(visitor)
         }
 
         fn visit_seq_elt<T>(&mut self, first: bool, value: T) -> Result<(), ()>
@@ -801,18 +854,37 @@ mod tests {
             value.visit(self)
         }
 
-        fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), ()>
+        fn visit_map<V>(&mut self, visitor: V) -> Result<(), ()>
             where V: MapVisitor
         {
             let (len, _) = visitor.size_hint();
 
             assert_eq!(self.iter.next(), Some(Token::MapStart(len)));
 
-            while let Some(()) = try!(visitor.visit(self)) { }
+            self.visit_mapping(visitor)
+        }
 
-            assert_eq!(self.iter.next(), Some(Token::MapEnd));
+        fn visit_named_map<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+            where V: MapVisitor
+        {
+            let (len, _) = visitor.size_hint();
 
-            Ok(())
+            assert_eq!(self.iter.next().unwrap(), Token::NamedMapStart(name, len));
+
+            self.visit_mapping(visitor)
+        }
+
+        fn visit_enum_map<V>(&mut self,
+                             name: &str,
+                             variant: &str,
+                             visitor: V) -> Result<(), ()>
+            where V: MapVisitor
+        {
+            let (len, _) = visitor.size_hint();
+
+            assert_eq!(self.iter.next().unwrap(), Token::EnumMapStart(name, variant, len));
+
+            self.visit_mapping(visitor)
         }
 
         fn visit_map_elt<K, V>(&mut self,
@@ -826,6 +898,152 @@ mod tests {
 
             try!(key.visit(self));
             value.visit(self)
+        }
+    }
+
+    struct NamedUnit;
+
+    impl Serialize for NamedUnit {
+        fn visit<
+            V: Visitor,
+        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+            visitor.visit_named_unit("NamedUnit")
+        }
+    }
+
+    struct NamedSeq(i32, i32, i32);
+
+    impl Serialize for NamedSeq {
+        fn visit<
+            V: Visitor,
+        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+            visitor.visit_named_seq("NamedSeq", NamedSeqVisitor {
+                tuple: self,
+                state: 0,
+            })
+        }
+    }
+
+    struct NamedSeqVisitor<'a> {
+        tuple: &'a NamedSeq,
+        state: u8,
+    }
+
+    impl<'a> SeqVisitor for NamedSeqVisitor<'a> {
+        fn visit<
+            V: Visitor,
+        >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+            match self.state {
+                0 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_seq_elt(true, &self.tuple.0))))
+                }
+                1 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_seq_elt(false, &self.tuple.1))))
+                }
+                2 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_seq_elt(false, &self.tuple.2))))
+                }
+                _ => Ok(None)
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (3, Some(3))
+        }
+    }
+
+    enum Enum {
+        Unit,
+        Unnamed(i32, i32),
+        Named { a: i32, b: i32 },
+    }
+
+    impl Serialize for Enum {
+        fn visit<
+            V: Visitor,
+        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+            match *self {
+                Enum::Unit => {
+                    visitor.visit_enum_unit("Enum", "Unit")
+                }
+                Enum::Unnamed(ref a, ref b) => {
+                    visitor.visit_enum_seq("Enum", "Unnamed", UnnamedVisitor {
+                        a: a,
+                        b: b,
+                        state: 0,
+                    })
+                }
+                Enum::Named { ref a, ref b } => {
+                    visitor.visit_enum_map("Enum", "Named", NamedVisitor {
+                        a: a,
+                        b: b,
+                        state: 0,
+                    })
+                }
+            }
+        }
+    }
+
+    struct UnnamedVisitor<'a> {
+        a: &'a i32,
+        b: &'a i32,
+        state: u8,
+    }
+
+    impl<'a> SeqVisitor for UnnamedVisitor<'a> {
+        fn visit<
+            V: Visitor,
+        >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+            match self.state {
+                0 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_seq_elt(true, self.a))))
+                }
+                1 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_seq_elt(false, self.b))))
+                }
+                _ => {
+                    Ok(None)
+                }
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (2, Some(2))
+        }
+    }
+
+    struct NamedVisitor<'a> {
+        a: &'a i32,
+        b: &'a i32,
+        state: u8,
+    }
+
+    impl<'a> MapVisitor for NamedVisitor<'a> {
+        fn visit<
+            V: Visitor,
+        >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+            match self.state {
+                0 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_map_elt(true, "a", self.a))))
+                }
+                1 => {
+                    self.state += 1;
+                    Ok(Some(try!(visitor.visit_map_elt(false, "b", self.b))))
+                }
+                _ => {
+                    Ok(None)
+                }
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (2, Some(2))
         }
     }
 
@@ -879,8 +1097,8 @@ mod tests {
     }
 
     declare_tests! {
-        test_null {
-            () => vec![Token::Null],
+        test_unit {
+            () => vec![Token::Unit],
         }
         test_bool {
             true => vec![Token::Bool(true)],
@@ -1017,33 +1235,44 @@ mod tests {
                 Token::MapEnd,
             ],
         }
-    }
-
-    struct Empty;
-
-    struct EmptyVisitor;
-
-    impl SeqVisitor for EmptyVisitor {
-        fn visit<
-            V: Visitor,
-        >(&mut self, _visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
-            Ok(None)
+        test_named_unit {
+            NamedUnit => vec![Token::NamedUnit("NamedUnit")],
         }
-    }
+        test_named_seq {
+            NamedSeq(1, 2, 3) => vec![
+                Token::NamedSeqStart("NamedSeq", 3),
+                    Token::SeqSep(true),
+                    Token::I32(1),
 
-    impl Serialize for Empty {
-        fn visit<
-            V: Visitor,
-        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-            visitor.visit_named_seq("Empty", EmptyVisitor)
-        }
-    }
+                    Token::SeqSep(false),
+                    Token::I32(2),
 
-    declare_test! {
-        test_empty_struct {
-            Empty => vec![
-                Token::NamedSeqStart("Empty", 0),
+                    Token::SeqSep(false),
+                    Token::I32(3),
                 Token::SeqEnd,
+            ],
+        }
+        test_enum {
+            Enum::Unit => vec![Token::EnumUnit("Enum", "Unit")],
+            Enum::Unnamed(1, 2) => vec![
+                Token::EnumSeqStart("Enum", "Unnamed", 2),
+                    Token::SeqSep(true),
+                    Token::I32(1),
+
+                    Token::SeqSep(false),
+                    Token::I32(2),
+                Token::SeqEnd,
+            ],
+            Enum::Named { a: 1, b: 2 } => vec![
+                Token::EnumMapStart("Enum", "Named", 2),
+                    Token::MapSep(true),
+                    Token::Str("a"),
+                    Token::I32(1),
+
+                    Token::MapSep(false),
+                    Token::Str("b"),
+                    Token::I32(2),
+                Token::MapEnd,
             ],
         }
     }
