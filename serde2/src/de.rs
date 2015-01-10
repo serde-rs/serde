@@ -1130,8 +1130,8 @@ mod tests {
     #[derive(PartialEq, Show)]
     enum Enum {
         Unit,
-        Unnamed(i32, i32, i32),
-        Named { a: i32, b: i32, c: i32 }
+        Seq(i32, i32, i32),
+        Map { a: i32, b: i32, c: i32 }
     }
 
     impl Deserialize for Enum {
@@ -1159,16 +1159,16 @@ mod tests {
                     try!(visitor.visit_unit());
                     Ok(Enum::Unit)
                 }
-                "Unnamed" => visitor.visit_seq(&mut EnumUnnamedVisitor),
-                "Named" => visitor.visit_map(&mut EnumNamedVisitor),
+                "Seq" => visitor.visit_seq(&mut EnumSeqVisitor),
+                "Map" => visitor.visit_map(&mut EnumMapVisitor),
                 _ => Err(super::Error::syntax_error()),
             }
         }
     }
 
-    struct EnumUnnamedVisitor;
+    struct EnumSeqVisitor;
 
-    impl super::EnumSeqVisitor for EnumUnnamedVisitor {
+    impl super::EnumSeqVisitor for EnumSeqVisitor {
         type Value = Enum;
 
         fn visit<
@@ -1191,13 +1191,13 @@ mod tests {
 
             try!(visitor.end());
 
-            Ok(Enum::Unnamed(a, b, c))
+            Ok(Enum::Seq(a, b, c))
         }
     }
 
-    struct EnumNamedVisitor;
+    struct EnumMapVisitor;
 
-    impl super::EnumMapVisitor for EnumNamedVisitor {
+    impl super::EnumMapVisitor for EnumMapVisitor {
         type Value = Enum;
 
         fn visit<
@@ -1209,45 +1209,45 @@ mod tests {
 
             while let Some(key) = try!(visitor.visit_key()) {
                 match key {
-                    EnumNamedField::A => { a = Some(try!(visitor.visit_value())); }
-                    EnumNamedField::B => { b = Some(try!(visitor.visit_value())); }
-                    EnumNamedField::C => { c = Some(try!(visitor.visit_value())); }
+                    EnumMapField::A => { a = Some(try!(visitor.visit_value())); }
+                    EnumMapField::B => { b = Some(try!(visitor.visit_value())); }
+                    EnumMapField::C => { c = Some(try!(visitor.visit_value())); }
                 }
             }
 
             match (a, b, c) {
-                (Some(a), Some(b), Some(c)) => Ok(Enum::Named { a: a, b: b, c: c }),
+                (Some(a), Some(b), Some(c)) => Ok(Enum::Map { a: a, b: b, c: c }),
                 _ => Err(super::Error::syntax_error()),
             }
         }
     }
 
-    enum EnumNamedField {
+    enum EnumMapField {
         A,
         B,
         C,
     }
 
-    impl Deserialize for EnumNamedField {
+    impl Deserialize for EnumMapField {
         fn deserialize<
             S: Deserializer,
-        >(state: &mut S) -> Result<EnumNamedField, S::Error> {
-            state.visit(&mut EnumNamedFieldVisitor)
+        >(state: &mut S) -> Result<EnumMapField, S::Error> {
+            state.visit(&mut EnumMapFieldVisitor)
         }
     }
 
-    struct EnumNamedFieldVisitor;
+    struct EnumMapFieldVisitor;
 
-    impl Visitor for EnumNamedFieldVisitor {
-        type Value = EnumNamedField;
+    impl Visitor for EnumMapFieldVisitor {
+        type Value = EnumMapField;
 
         fn visit_str<
             E: super::Error,
-        >(&mut self, value: &str) -> Result<EnumNamedField, E> {
+        >(&mut self, value: &str) -> Result<EnumMapField, E> {
             match value {
-                "a" => Ok(EnumNamedField::A),
-                "b" => Ok(EnumNamedField::B),
-                "c" => Ok(EnumNamedField::C),
+                "a" => Ok(EnumMapField::A),
+                "b" => Ok(EnumMapField::B),
+                "c" => Ok(EnumMapField::C),
                 _ => Err(super::Error::syntax_error()),
             }
         }
@@ -1510,9 +1510,9 @@ mod tests {
                 Token::EnumEnd,
             ],
         }
-        test_enum_unnamed {
-            Enum::Unnamed(1, 2, 3) => vec![
-                Token::EnumStart("Enum", "Unnamed"),
+        test_enum_seq {
+            Enum::Seq(1, 2, 3) => vec![
+                Token::EnumStart("Enum", "Seq"),
                     Token::SeqStart(3),
                         Token::SeqSep(true),
                         Token::I32(1),
@@ -1526,9 +1526,9 @@ mod tests {
                 Token::EnumEnd,
             ],
         }
-        test_enum_named {
-            Enum::Named { a: 1, b: 2, c: 3 } => vec![
-                Token::EnumStart("Enum", "Named"),
+        test_enum_map {
+            Enum::Map { a: 1, b: 2, c: 3 } => vec![
+                Token::EnumStart("Enum", "Map"),
                     Token::MapStart(3),
                         Token::MapSep(true),
                         Token::Str("a"),

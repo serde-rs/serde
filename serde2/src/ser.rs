@@ -957,8 +957,8 @@ mod tests {
 
     enum Enum {
         Unit,
-        Unnamed(i32, i32),
-        Named { a: i32, b: i32 },
+        Seq(i32, i32),
+        Map { a: i32, b: i32 },
     }
 
     impl Serialize for Enum {
@@ -969,15 +969,15 @@ mod tests {
                 Enum::Unit => {
                     visitor.visit_enum_unit("Enum", "Unit")
                 }
-                Enum::Unnamed(ref a, ref b) => {
-                    visitor.visit_enum_seq("Enum", "Unnamed", UnnamedVisitor {
+                Enum::Seq(ref a, ref b) => {
+                    visitor.visit_enum_seq("Enum", "Seq", EnumSeqVisitor {
                         a: a,
                         b: b,
                         state: 0,
                     })
                 }
-                Enum::Named { ref a, ref b } => {
-                    visitor.visit_enum_map("Enum", "Named", NamedVisitor {
+                Enum::Map { ref a, ref b } => {
+                    visitor.visit_enum_map("Enum", "Map", EnumMapVisitor {
                         a: a,
                         b: b,
                         state: 0,
@@ -987,13 +987,13 @@ mod tests {
         }
     }
 
-    struct UnnamedVisitor<'a> {
+    struct EnumSeqVisitor<'a> {
         a: &'a i32,
         b: &'a i32,
         state: u8,
     }
 
-    impl<'a> SeqVisitor for UnnamedVisitor<'a> {
+    impl<'a> SeqVisitor for EnumSeqVisitor<'a> {
         fn visit<
             V: Visitor,
         >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
@@ -1017,13 +1017,13 @@ mod tests {
         }
     }
 
-    struct NamedVisitor<'a> {
+    struct EnumMapVisitor<'a> {
         a: &'a i32,
         b: &'a i32,
         state: u8,
     }
 
-    impl<'a> MapVisitor for NamedVisitor<'a> {
+    impl<'a> MapVisitor for EnumMapVisitor<'a> {
         fn visit<
             V: Visitor,
         >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
@@ -1249,8 +1249,8 @@ mod tests {
         }
         test_enum {
             Enum::Unit => vec![Token::EnumUnit("Enum", "Unit")],
-            Enum::Unnamed(1, 2) => vec![
-                Token::EnumSeqStart("Enum", "Unnamed", 2),
+            Enum::Seq(1, 2) => vec![
+                Token::EnumSeqStart("Enum", "Seq", 2),
                     Token::SeqSep(true),
                     Token::I32(1),
 
@@ -1258,8 +1258,8 @@ mod tests {
                     Token::I32(2),
                 Token::SeqEnd,
             ],
-            Enum::Named { a: 1, b: 2 } => vec![
-                Token::EnumMapStart("Enum", "Named", 2),
+            Enum::Map { a: 1, b: 2 } => vec![
+                Token::EnumMapStart("Enum", "Map", 2),
                     Token::MapSep(true),
                     Token::Str("a"),
                     Token::I32(1),
