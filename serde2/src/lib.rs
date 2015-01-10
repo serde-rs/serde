@@ -5,5 +5,5 @@ extern crate unicode;
 //pub use ser::GatherTokens;
 
 pub mod ser;
-//pub mod de;
+pub mod de;
 //pub mod json;

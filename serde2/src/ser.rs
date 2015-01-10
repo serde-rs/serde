@@ -1047,6 +1047,19 @@ mod tests {
         }
     }
 
+    macro_rules! btreemap {
+        () => {
+            BTreeMap::new()
+        };
+        ($($key:expr => $value:expr),+) => {
+            {
+                let mut map = BTreeMap::new();
+                $(map.insert($key, $value);)+
+                map
+            }
+        }
+    }
+
     macro_rules! declare_test {
         ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
             #[test]
@@ -1070,28 +1083,10 @@ mod tests {
         }
     }
 
-    macro_rules! btreemap {
-        () => {
-            BTreeMap::new()
-        };
-        ($($key:expr => $value:expr),+) => {
-            {
-                let mut map = BTreeMap::new();
-                $(map.insert($key, $value);)+
-                map
-            }
-        }
-    }
-
     macro_rules! declare_tests {
         ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
             $(
                 declare_test!($name { $($value => $tokens,)+ });
-            )+
-        };
-        ($($name:ident { $($value:expr: $ty:ty => $tokens:expr,)+ })+) => {
-            $(
-                declare_test!($($name { $($value:$ty => $tokens,)+ })+);
             )+
         }
     }

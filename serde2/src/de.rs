@@ -1,7 +1,9 @@
+/*
 use std::collections::{HashMap, BTreeMap};
 use std::collections::hash_map::Hasher;
 use std::hash::Hash;
 use std::num::FromPrimitive;
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -11,19 +13,18 @@ pub trait Error {
     fn end_of_stream_error() -> Self;
 }
 
-pub trait Deserialize<S: Deserializer> {
-    type Visitor: Visitor<S, Self>;
-
-    fn deserialize(state: &mut S) -> Result<Self, S::Error>;
+pub trait Deserialize {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<Self, S::Error>;
 }
 
 pub trait Deserializer {
     type Error: Error;
 
     fn visit<
-        R,
-        V: Visitor<Self, R>,
-    >(&mut self, visitor: &mut V) -> Result<R, Self::Error>;
+        V: Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Self::Error>;
 
     /*
     fn visit_option<
@@ -35,8 +36,12 @@ pub trait Deserializer {
     */
 }
 
-pub trait Visitor<S: Deserializer, R> {
-    fn visit_null(&mut self) -> Result<R, S::Error> {
+pub trait Visitor {
+    type Value;
+
+    fn visit_unit<
+        E: Error,
+    >(&mut self) -> Result<Self::Value, E> {
         Err(Error::syntax_error())
     }
 
@@ -106,13 +111,15 @@ pub trait Visitor<S: Deserializer, R> {
     >(&mut self, _visitor: V) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
+    */
 
     fn visit_seq<
-        V: SeqVisitor<S, E>,
-    >(&mut self, _visitor: V) -> Result<R, S::Error> {
+        V: SeqVisitor,
+    >(&mut self, _visitor: V) -> Result<Self::Value, V::Error> {
         Err(Error::syntax_error())
     }
 
+    /*
     fn visit_map<
         V: MapVisitor<S, E>,
     >(&mut self, _visitor: V) -> Result<R, S::Error> {
@@ -127,13 +134,16 @@ pub trait OptionVisitor<S, E> {
         T: Deserialize<S, E>,
     >(&mut self) -> Result<Option<T>, E>;
 }
+*/
 
-pub trait SeqVisitor<S, E> {
+pub trait SeqVisitor {
+    type Error: Error;
+
     fn visit<
-        T: Deserialize<S, E>,
-    >(&mut self) -> Result<Option<T>, E>;
+        T: Deserialize,
+    >(&mut self) -> Result<Option<T>, Self::Error>;
 
-    fn end(&mut self) -> Result<(), E>;
+    fn end(&mut self) -> Result<(), Self::Error>;
 
     #[inline]
     fn size_hint(&self) -> (uint, Option<uint>) {
@@ -141,6 +151,7 @@ pub trait SeqVisitor<S, E> {
     }
 }
 
+/*
 pub trait MapVisitor<S, E> {
     fn visit<
         K: Deserialize<S, E>,
@@ -176,10 +187,12 @@ pub trait MapVisitor<S, E> {
 
 struct UnitVisitor;
 
-impl<
-    S: Deserializer,
-> Visitor<S, ()> for UnitVisitor {
-    fn visit_null(&mut self) -> Result<(), S::Error> {
+impl Visitor for UnitVisitor {
+    type Value = ();
+
+    fn visit_unit<
+        E: Error,
+    >(&mut self) -> Result<(), E> {
         Ok(())
     }
 
@@ -193,12 +206,10 @@ impl<
     */
 }
 
-impl<
-    S: Deserializer,
-> Deserialize<S> for () {
-    type Visitor = UnitVisitor;
-
-    fn deserialize(state: &mut S) -> Result<(), S::Error> {
+impl Deserialize for () {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<(), S::Error> {
         state.visit(&mut UnitVisitor)
     }
 }
@@ -349,45 +360,36 @@ impl<
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+*/
 
-impl<
-    T: Deserialize<S, E>,
-    S: Deserializer<E>,
-    E: Error,
-> Deserialize<S, E> for Vec<T> {
-    fn deserialize(state: &mut S) -> Result<Vec<T>, E> {
-        struct Visitor;
+struct VecVisitor<T>;
 
-        impl<
-            T: Deserialize<S, E>,
-            S: Deserializer<E>,
-            E: Error,
-        > self::Visitor<S, Vec<T>, E> for Visitor {
-            fn visit_seq<
-                V: SeqVisitor<S, E>,
-            >(&mut self, mut visitor: V) -> Result<Vec<T>, E> {
-                let (len, _) = visitor.size_hint();
-                let mut values = Vec::with_capacity(len);
+impl<T: Deserialize> Visitor for VecVisitor<T> {
+    type Value = Vec<T>;
 
-                loop {
-                    match try!(visitor.visit()) {
-                        Some(value) => {
-                            values.push(value);
-                        }
-                        None => {
-                            break;
-                        }
-                    }
-                }
+    fn visit_seq<
+        V: SeqVisitor,
+    >(&mut self, mut visitor: V) -> Result<Vec<T>, V::Error> {
+        let (len, _) = visitor.size_hint();
+        let mut values = Vec::with_capacity(len);
 
-                Ok(values)
-            }
+        while let Some(value) = try!(visitor.visit()) {
+            values.push(value);
         }
 
-        state.visit(&mut Visitor)
+        Ok(values)
     }
 }
 
+impl<T: Deserialize> Deserialize for Vec<T> {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<Vec<T>, S::Error> {
+        state.visit(&mut VecVisitor)
+    }
+}
+
+/*
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! peel {
@@ -521,3 +523,142 @@ impl<
     }
 }
 */
+
+#[cfg(test)]
+mod tests {
+    use super::{Deserialize, Deserializer, Visitor};
+    use std::vec;
+
+    enum Token {
+        Unit,
+        SeqStart(uint),
+        SeqSep,
+        SeqEnd,
+    }
+
+    struct TokenDeserializer {
+        tokens: vec::IntoIter<Token>,
+    }
+
+    impl TokenDeserializer {
+        fn new(tokens: Vec<Token>) -> TokenDeserializer {
+            TokenDeserializer {
+                tokens: tokens.into_iter(),
+            }
+        }
+    }
+
+    #[derive(Copy, PartialEq, Show)]
+    enum Error {
+        SyntaxError,
+        EndOfStreamError,
+    }
+
+    impl super::Error for Error {
+        fn syntax_error() -> Error { Error::SyntaxError }
+
+        fn end_of_stream_error() -> Error { Error::EndOfStreamError }
+    }
+
+    impl Deserializer for TokenDeserializer {
+        type Error = Error;
+
+        fn visit<
+            V: Visitor,
+        >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+            match self.tokens.next() {
+                Some(Token::Unit) => visitor.visit_unit(),
+                Some(Token::SeqStart(len)) => {
+                    visitor.visit_seq(TokenDeserializerSeqVisitor {
+                        de: self,
+                        len: len,
+                    })
+                }
+                Some(Token::SeqSep) | Some(Token::SeqEnd) => {
+                    Err(Error::SyntaxError)
+                }
+                None => Err(Error::EndOfStreamError),
+            }
+        }
+    }
+
+    struct TokenDeserializerSeqVisitor<'a> {
+        de: &'a mut TokenDeserializer,
+        len: uint,
+    }
+
+    impl<'a> super::SeqVisitor for TokenDeserializerSeqVisitor<'a> {
+        type Error = Error;
+
+        fn visit<
+            T: Deserialize,
+        >(&mut self) -> Result<Option<T>, Error> {
+            match self.de.tokens.next() {
+                Some(Token::SeqSep) => {
+                    self.len -= 1;
+                    Ok(Some(try!(Deserialize::deserialize(self.de))))
+                }
+                Some(Token::SeqEnd) => Ok(None),
+                Some(_) => Err(Error::SyntaxError),
+                None => Err(Error::EndOfStreamError),
+            }
+        }
+
+        fn end(&mut self) -> Result<(), Error> {
+            match self.de.tokens.next() {
+                Some(Token::SeqEnd) => Ok(()),
+                Some(_) => Err(Error::SyntaxError),
+                None => Err(Error::EndOfStreamError),
+            }
+        }
+
+        fn size_hint(&self) -> (uint, Option<uint>) {
+            (self.len, Some(self.len))
+        }
+    }
+
+    macro_rules! declare_test {
+        ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
+            #[test]
+            fn $name() {
+                $(
+                    let mut de = TokenDeserializer::new($tokens);
+                    let value: Result<_, Error> = Deserialize::deserialize(&mut de);
+                    assert_eq!(value, Ok($value));
+                )+
+            }
+        }
+    }
+
+    macro_rules! declare_tests {
+        ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
+            $(
+                declare_test!($name { $($value => $tokens,)+ });
+            )+
+        }
+    }
+
+    declare_tests! {
+        test_unit {
+            () => vec![Token::Unit],
+        }
+        test_vec {
+            Vec::<()>::new() => vec![
+                Token::SeqStart(0),
+                Token::SeqEnd,
+            ],
+            vec![(), (), ()] => vec![
+                Token::SeqStart(3),
+                    Token::SeqSep,
+                    Token::Unit,
+
+                    Token::SeqSep,
+                    Token::Unit,
+
+                    Token::SeqSep,
+                    Token::Unit,
+                Token::SeqEnd,
+            ],
+        }
+    }
+}
