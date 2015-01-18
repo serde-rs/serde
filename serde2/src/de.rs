@@ -508,7 +508,7 @@ impl<
 
 struct VecVisitor<T>;
 
-impl<T: Deserialize> Visitor for VecVisitor<T> {
+impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     type Value = Vec<T>;
 
     fn visit_seq<
