@@ -10,8 +10,8 @@ use super::error::{Error, ErrorCode};
 pub struct Parser<Iter> {
     rdr: Iter,
     ch: Option<u8>,
-    line: uint,
-    col: uint,
+    line: usize,
+    col: usize,
     buf: Vec<u8>,
 }
 
@@ -82,9 +82,8 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
     #[inline]
     fn parse_value<
-        R,
-        V: de::Visitor<Parser<Iter>, R, Error>,
-    >(&mut self, visitor: &mut V) -> Result<R, Error> {
+        V: de::Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
         self.parse_whitespace();
 
         if self.eof() {
@@ -94,7 +93,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         match self.ch_or_null() {
             b'n' => {
                 try!(self.parse_ident(b"ull"));
-                visitor.visit_null()
+                visitor.visit_unit()
             }
             b't' => {
                 try!(self.parse_ident(b"rue"));
@@ -107,7 +106,6 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             b'0' ... b'9' | b'-' => self.parse_number(visitor),
             b'"' => {
                 try!(self.parse_string());
-                //let s = String::from_utf8(self.buf.clone()).unwrap();
                 let s = str::from_utf8(self.buf.as_slice()).unwrap();
                 visitor.visit_str(s)
             }
@@ -137,9 +135,8 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
     #[inline]
     fn parse_number<
-        R,
-        V: de::Visitor<Parser<Iter>, R, Error>,
-    >(&mut self, visitor: &mut V) -> Result<R, Error> {
+        V: de::Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
         let mut neg = 1;
 
         if self.ch_is(b'-') {
@@ -217,7 +214,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
                     dec /= 10.0;
-                    res += (((c as int) - (b'0' as int)) as f64) * dec;
+                    res += (((c as u64) - (b'0' as u64)) as f64) * dec;
                     self.bump();
                 }
                 _ => break,
@@ -231,7 +228,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
         self.bump();
 
-        let mut exp = 0u;
+        let mut exp = 0;
         let mut neg_exp = false;
 
         if self.ch_is(b'+') {
@@ -250,7 +247,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
                     exp *= 10;
-                    exp += (c as uint) - (b'0' as uint);
+                    exp += (c as i32) - (b'0' as i32);
 
                     self.bump();
                 }
@@ -258,7 +255,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             }
         }
 
-        let exp: f64 = 10_f64.powi(exp as i32);
+        let exp: f64 = 10_f64.powi(exp);
         if neg_exp {
             res /= exp;
         } else {
@@ -270,9 +267,9 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
     #[inline]
     fn decode_hex_escape(&mut self) -> Result<u16, Error> {
-        let mut i = 0u;
+        let mut i = 0;
         let mut n = 0u16;
-        while i < 4u && !self.eof() {
+        while i < 4 && !self.eof() {
             self.bump();
             n = match self.ch_or_null() {
                 c @ b'0' ... b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
@@ -285,11 +282,11 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                 _ => { return Err(self.error(ErrorCode::InvalidEscape)); }
             };
 
-            i += 1u;
+            i += 1;
         }
 
         // Error out if we didn't parse 4 digits.
-        if i != 4u {
+        if i != 4 {
             return Err(self.error(ErrorCode::InvalidEscape));
         }
 
@@ -380,12 +377,13 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
     }
 }
 
-impl<Iter: Iterator<Item=u8>> Deserializer<Error> for Parser<Iter> {
+impl<Iter: Iterator<Item=u8>> Deserializer for Parser<Iter> {
+    type Error = Error;
+
     #[inline]
     fn visit<
-        R,
-        V: de::Visitor<Parser<Iter>, R, Error>,
-    >(&mut self, visitor: &mut V) -> Result<R, Error> {
+        V: de::Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
         self.parse_value(visitor)
     }
 }
@@ -395,9 +393,11 @@ struct SeqVisitor<'a, Iter: 'a> {
     first: bool,
 }
 
-impl<'a, Iter: Iterator<Item=u8>> de::SeqVisitor<Parser<Iter>, Error> for SeqVisitor<'a, Iter> {
+impl<'a, Iter: Iterator<Item=u8>> de::SeqVisitor for SeqVisitor<'a, Iter> {
+    type Error = Error;
+
     fn visit<
-        T: de::Deserialize<Parser<Iter>, Error>,
+        T: de::Deserialize,
     >(&mut self) -> Result<Option<T>, Error> {
         self.parser.parse_whitespace();
 
@@ -439,9 +439,11 @@ struct MapVisitor<'a, Iter: 'a> {
     first: bool,
 }
 
-impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor<Parser<Iter>, Error> for MapVisitor<'a, Iter> {
+impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor for MapVisitor<'a, Iter> {
+    type Error = Error;
+
     fn visit_key<
-        K: de::Deserialize<Parser<Iter>, Error>,
+        K: de::Deserialize,
     >(&mut self) -> Result<Option<K>, Error> {
         self.parser.parse_whitespace();
 
@@ -475,7 +477,7 @@ impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor<Parser<Iter>, Error> for MapVis
     }
 
     fn visit_value<
-        V: de::Deserialize<Parser<Iter>, Error>,
+        V: de::Deserialize,
     >(&mut self) -> Result<V, Error> {
         self.parser.parse_whitespace();
 
@@ -505,10 +507,10 @@ impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor<Parser<Iter>, Error> for MapVis
 }
 
 /// Decodes a json value from an `Iterator<u8>`.
-pub fn from_iter<
-    Iter: Iterator<Item=u8>,
-    T: de::Deserialize<Parser<Iter>, Error>
->(iter: Iter) -> Result<T, Error> {
+pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
+    where I: Iterator<Item=u8>,
+          T: de::Deserialize
+{
     let mut parser = Parser::new(iter);
     let value = try!(de::Deserialize::deserialize(&mut parser));
 
@@ -518,14 +520,12 @@ pub fn from_iter<
 }
 
 /// Decodes a json value from a string
-pub fn from_str<
-    'a,
-    T: de::Deserialize<Parser<str::Bytes<'a>>, Error>
->(s: &'a str) -> Result<T, Error> {
+pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
+    where T: de::Deserialize
+{
     from_iter(s.bytes())
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use std::str;
@@ -544,10 +544,9 @@ mod tests {
         })
     }
 
-    fn test_parse_ok<
-        'a,
-        T: PartialEq + Show + Deserialize<Parser<str::Bytes<'a>>, Error>,
-    >(errors: Vec<(&'a str, T)>) {
+    fn test_parse_ok<'a, T>(errors: Vec<(&'a str, T)>)
+        where T: PartialEq + Show + Deserialize,
+    {
         for (s, value) in errors.into_iter() {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v, Ok(value));
@@ -559,10 +558,9 @@ mod tests {
         }
     }
 
-    fn test_parse_err<
-        'a,
-        T: PartialEq + Show + Deserialize<Parser<str::Bytes<'a>>, Error>
-    >(errors: Vec<(&'a str, Error)>) {
+    fn test_parse_err<'a, T>(errors: Vec<(&'a str, Error)>)
+        where T: PartialEq + Show + Deserialize
+    {
         for (s, err) in errors.into_iter() {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v, Err(err));
@@ -668,12 +666,12 @@ mod tests {
         ]);
 
         test_parse_ok(vec![
-            ("[3,1]", vec![3i, 1]),
-            ("[ 3 , 1 ]", vec![3i, 1]),
+            ("[3,1]", vec![3, 1]),
+            ("[ 3 , 1 ]", vec![3, 1]),
         ]);
 
         test_parse_ok(vec![
-            ("[[3], [1, 2]]", vec![vec![3i], vec![1, 2]]),
+            ("[[3], [1, 2]]", vec![vec![3], vec![1, 2]]),
         ]);
 
         test_parse_ok(vec![
@@ -695,7 +693,7 @@ mod tests {
 
     #[test]
     fn test_parse_object() {
-        test_parse_err::<BTreeMap<String, int>>(vec![
+        test_parse_err::<BTreeMap<String, i32>>(vec![
             ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
             ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
             ("{1", Error::SyntaxError(ErrorCode::KeyMustBeAString, 1, 2)),
@@ -715,28 +713,27 @@ mod tests {
             ("{ }", treemap!()),
             (
                 "{\"a\":3}",
-                treemap!("a".to_string() => 3i)
+                treemap!("a".to_string() => 3)
             ),
             (
                 "{ \"a\" : 3 }",
-                treemap!("a".to_string() => 3i)
+                treemap!("a".to_string() => 3)
             ),
             (
                 "{\"a\":3,\"b\":4}",
-                treemap!("a".to_string() => 3i, "b".to_string() => 4)
+                treemap!("a".to_string() => 3, "b".to_string() => 4)
             ),
             (
                 "{ \"a\" : 3 , \"b\" : 4 }",
-                treemap!("a".to_string() => 3i, "b".to_string() => 4),
+                treemap!("a".to_string() => 3, "b".to_string() => 4),
             ),
         ]);
 
         test_parse_ok(vec![
             (
                 "{\"a\": {\"b\": 3, \"c\": 4}}",
-                treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4i)),
+                treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
             ),
         ]);
     }
 }
-*/

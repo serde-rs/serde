@@ -8,8 +8,8 @@ pub use self::de::from_str;
 
 /*
 pub mod builder;
-pub mod de;
 */
+pub mod de;
 pub mod error;
 pub mod ser;
 //pub mod value;
