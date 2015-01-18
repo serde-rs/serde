@@ -586,10 +586,7 @@ impl<K, V, S, H> Serialize for HashMap<K, V, S>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<
-    'a,
-    T: Serialize,
-> Serialize for &'a T {
+impl<'a, T> Serialize for &'a T where T: Serialize {
     #[inline]
     fn visit<
         V: Visitor,
@@ -598,10 +595,7 @@ impl<
     }
 }
 
-impl<
-    'a,
-    T: Serialize,
-> Serialize for Box<T> {
+impl<'a, T> Serialize for Box<T> where T: Serialize {
     #[inline]
     fn visit<
         V: Visitor,

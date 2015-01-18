@@ -1,6 +1,5 @@
 use std::collections::{HashMap, BTreeMap};
-use std::collections::hash_map::Hasher;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::num::FromPrimitive;
 use std::str;
 
@@ -595,11 +594,12 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct HashMapVisitor<K, V>;
+struct HashMapVisitor<K, V, H>;
 
-impl<K, V> Visitor for HashMapVisitor<K, V>
-    where K: Deserialize + Eq + Hash,
-          V: Deserialize
+impl<K, V, H> Visitor for HashMapVisitor<K, V, H>
+    where K: Deserialize + Eq + Hash<H>,
+          V: Deserialize,
+          H: Hasher,
 {
     type Value = HashMap<K, V>;
 
