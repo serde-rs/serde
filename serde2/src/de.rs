@@ -123,7 +123,7 @@ pub trait Visitor {
         // The unwraps in here should be safe.
         let mut s = &mut [0; 4];
         let len = v.encode_utf8(s).unwrap();
-        self.visit_str(str::from_utf8(s.slice_to(len)).unwrap())
+        self.visit_str(str::from_utf8(&s[..len]).unwrap())
     }
 
     fn visit_str<
@@ -136,7 +136,7 @@ pub trait Visitor {
     fn visit_string<
         E: Error,
     >(&mut self, v: String) -> Result<Self::Value, E> {
-        self.visit_str(v.as_slice())
+        self.visit_str(&v[])
     }
 
     fn visit_unit<
@@ -1310,28 +1310,28 @@ mod tests {
             false => vec![Token::Bool(false)],
         }
         test_isize {
-            0i => vec![Token::Isize(0)],
-            0i => vec![Token::I8(0)],
-            0i => vec![Token::I16(0)],
-            0i => vec![Token::I32(0)],
-            0i => vec![Token::I64(0)],
-            0i => vec![Token::Usize(0)],
-            0i => vec![Token::U8(0)],
-            0i => vec![Token::U16(0)],
-            0i => vec![Token::U32(0)],
-            0i => vec![Token::U64(0)],
-            0i => vec![Token::F32(0.)],
-            0i => vec![Token::F64(0.)],
+            0is => vec![Token::Isize(0)],
+            0is => vec![Token::I8(0)],
+            0is => vec![Token::I16(0)],
+            0is => vec![Token::I32(0)],
+            0is => vec![Token::I64(0)],
+            0is => vec![Token::Usize(0)],
+            0is => vec![Token::U8(0)],
+            0is => vec![Token::U16(0)],
+            0is => vec![Token::U32(0)],
+            0is => vec![Token::U64(0)],
+            0is => vec![Token::F32(0.)],
+            0is => vec![Token::F64(0.)],
         }
-        test_isizes {
-            0i => vec![Token::Isize(0)],
+        test_ints {
+            0is => vec![Token::Isize(0)],
             0i8 => vec![Token::I8(0)],
             0i16 => vec![Token::I16(0)],
             0i32 => vec![Token::I32(0)],
             0i64 => vec![Token::I64(0)],
         }
-        test_usizes {
-            0u => vec![Token::Usize(0)],
+        test_uints {
+            0us => vec![Token::Usize(0)],
             0u8 => vec![Token::U8(0)],
             0u16 => vec![Token::U16(0)],
             0u32 => vec![Token::U32(0)],
