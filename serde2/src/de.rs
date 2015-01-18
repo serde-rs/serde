@@ -11,108 +11,117 @@ pub trait Error {
     fn end_of_stream_error() -> Self;
 }
 
-pub trait Deserialize<S, E> {
-    fn deserialize(state: &mut S) -> Result<Self, E>;
+pub trait Deserialize<S: Deserializer> {
+    type Visitor: Visitor<S, Self>;
+
+    fn deserialize(state: &mut S) -> Result<Self, S::Error>;
 }
 
-pub trait Deserializer<E> {
+pub trait Deserializer {
+    type Error: Error;
+
     fn visit<
         R,
-        V: Visitor<Self, R, E>,
-    >(&mut self, visitor: &mut V) -> Result<R, E>;
+        V: Visitor<Self, R>,
+    >(&mut self, visitor: &mut V) -> Result<R, Self::Error>;
 
+    /*
     fn visit_option<
         R,
         V: Visitor<Self, R, E>,
-    >(&mut self, visitor: &mut V) -> Result<R, E> {
+    >(&mut self, visitor: &mut V) -> Result<R, S::Error> {
         self.visit(visitor)
     }
+    */
 }
 
-pub trait Visitor<S: Deserializer<E>, R, E: Error> {
-    fn visit_null(&mut self) -> Result<R, E> {
+pub trait Visitor<S: Deserializer, R> {
+    fn visit_null(&mut self) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_bool(&mut self, _v: bool) -> Result<R, E> {
+/*
+    fn visit_bool(&mut self, _v: bool) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_int(&mut self, v: int) -> Result<R, E> {
+    fn visit_int(&mut self, v: int) -> Result<R, S::Error> {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i8(&mut self, v: i8) -> Result<R, E> {
+    fn visit_i8(&mut self, v: i8) -> Result<R, S::Error> {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i16(&mut self, v: i16) -> Result<R, E> {
+    fn visit_i16(&mut self, v: i16) -> Result<R, S::Error> {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i32(&mut self, v: i32) -> Result<R, E> {
+    fn visit_i32(&mut self, v: i32) -> Result<R, S::Error> {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i64(&mut self, _v: i64) -> Result<R, E> {
+    fn visit_i64(&mut self, _v: i64) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_uint(&mut self, v: uint) -> Result<R, E> {
+    fn visit_uint(&mut self, v: uint) -> Result<R, S::Error> {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u8(&mut self, v: u8) -> Result<R, E> {
+    fn visit_u8(&mut self, v: u8) -> Result<R, S::Error> {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u16(&mut self, v: u16) -> Result<R, E> {
+    fn visit_u16(&mut self, v: u16) -> Result<R, S::Error> {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u32(&mut self, v: u32) -> Result<R, E> {
+    fn visit_u32(&mut self, v: u32) -> Result<R, S::Error> {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u64(&mut self, _v: u64) -> Result<R, E> {
+    fn visit_u64(&mut self, _v: u64) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_f32(&mut self, v: f32) -> Result<R, E> {
+    fn visit_f32(&mut self, v: f32) -> Result<R, S::Error> {
         self.visit_f64(v as f64)
     }
 
-    fn visit_f64(&mut self, _v: f64) -> Result<R, E> {
+    fn visit_f64(&mut self, _v: f64) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_str<'a>(&'a mut self, _v: &'a str) -> Result<R, E> {
+    fn visit_str<'a>(&'a mut self, _v: &'a str) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
-    fn visit_string(&mut self, v: String) -> Result<R, E> {
+    fn visit_string(&mut self, v: String) -> Result<R, S::Error> {
         self.visit_str(v.as_slice())
     }
 
     fn visit_option<
         V: OptionVisitor<S, E>,
-    >(&mut self, _visitor: V) -> Result<R, E> {
+    >(&mut self, _visitor: V) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
     fn visit_seq<
         V: SeqVisitor<S, E>,
-    >(&mut self, _visitor: V) -> Result<R, E> {
+    >(&mut self, _visitor: V) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
 
     fn visit_map<
         V: MapVisitor<S, E>,
-    >(&mut self, _visitor: V) -> Result<R, E> {
+    >(&mut self, _visitor: V) -> Result<R, S::Error> {
         Err(Error::syntax_error())
     }
+    */
 }
 
+/*
 pub trait OptionVisitor<S, E> {
     fn visit<
         T: Deserialize<S, E>,
@@ -163,34 +172,38 @@ pub trait MapVisitor<S, E> {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+*/
+
+struct UnitVisitor;
 
 impl<
-    S: Deserializer<E>,
-    E: Error,
-> Deserialize<S, E> for () {
-    fn deserialize(state: &mut S) -> Result<(), E> {
-        struct Visitor;
+    S: Deserializer,
+> Visitor<S, ()> for UnitVisitor {
+    fn visit_null(&mut self) -> Result<(), S::Error> {
+        Ok(())
+    }
 
-        impl<
-            S: Deserializer<E>,
-            E: Error,
-        > self::Visitor<S, (), E> for Visitor {
-            fn visit_null(&mut self) -> Result<(), E> {
-                Ok(())
-            }
+    /*
+    fn visit_seq<
+        V: SeqVisitor<S, E>,
+    >(&mut self, mut visitor: V) -> Result<(), E> {
+        try!(visitor.end());
+        Ok(())
+    }
+    */
+}
 
-            fn visit_seq<
-                V: SeqVisitor<S, E>,
-            >(&mut self, mut visitor: V) -> Result<(), E> {
-                try!(visitor.end());
-                Ok(())
-            }
-        }
+impl<
+    S: Deserializer,
+> Deserialize<S> for () {
+    type Visitor = UnitVisitor;
 
-        state.visit(&mut Visitor)
+    fn deserialize(state: &mut S) -> Result<(), S::Error> {
+        state.visit(&mut UnitVisitor)
     }
 }
 
+/*
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
@@ -507,3 +520,4 @@ impl<
         state.visit(&mut Visitor)
     }
 }
+*/

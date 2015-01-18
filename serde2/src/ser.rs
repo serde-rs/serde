@@ -1,145 +1,177 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::hash_state::HashState;
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
+use std::str;
+use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serialize {
     fn visit<
-        S,
-        R,
-        E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E>;
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Serializer<S, R, E> {
+pub trait Serializer {
+    type Value;
+    type Error;
+
     fn visit<
         T: Serialize,
-    >(&mut self, value: &T) -> Result<R, E>;
+    >(&mut self, value: &T) -> Result<Self::Value, Self::Error>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Visitor<S, R, E> {
-    fn visit_null(&self, state: &mut S) -> Result<R, E>;
+pub trait Visitor {
+    type Value;
+    type Error;
 
-    fn visit_bool(&self, state: &mut S, v: bool) -> Result<R, E>;
+    fn visit_null(&mut self) -> Result<Self::Value, Self::Error>;
+
+    fn visit_bool(&mut self, v: bool) -> Result<Self::Value, Self::Error>;
 
     #[inline]
-    fn visit_int(&self, state: &mut S, v: int) -> Result<R, E> {
-        self.visit_i64(state, v as i64)
+    fn visit_isize(&mut self, v: isize) -> Result<Self::Value, Self::Error> {
+        self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i8(&self, state: &mut S, v: i8) -> Result<R, E> {
-        self.visit_i64(state, v as i64)
+    fn visit_i8(&mut self, v: i8) -> Result<Self::Value, Self::Error> {
+        self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i16(&self, state: &mut S, v: i16) -> Result<R, E> {
-        self.visit_i64(state, v as i64)
+    fn visit_i16(&mut self, v: i16) -> Result<Self::Value, Self::Error> {
+        self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i32(&self, state: &mut S, v: i32) -> Result<R, E> {
-        self.visit_i64(state, v as i64)
+    fn visit_i32(&mut self, v: i32) -> Result<Self::Value, Self::Error> {
+        self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i64(&self, state: &mut S, v: i64) -> Result<R, E>;
+    fn visit_i64(&mut self, v: i64) -> Result<Self::Value, Self::Error>;
 
     #[inline]
-    fn visit_uint(&self, state: &mut S, v: uint) -> Result<R, E> {
-        self.visit_u64(state, v as u64)
+    fn visit_usize(&mut self, v: usize) -> Result<Self::Value, Self::Error> {
+        self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u8(&self, state: &mut S, v: u8) -> Result<R, E> {
-        self.visit_u64(state, v as u64)
+    fn visit_u8(&mut self, v: u8) -> Result<Self::Value, Self::Error> {
+        self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u16(&self, state: &mut S, v: u16) -> Result<R, E> {
-        self.visit_u64(state, v as u64)
+    fn visit_u16(&mut self, v: u16) -> Result<Self::Value, Self::Error> {
+        self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u32(&self, state: &mut S, v: u32) -> Result<R, E> {
-        self.visit_u64(state, v as u64)
+    fn visit_u32(&mut self, v: u32) -> Result<Self::Value, Self::Error> {
+        self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u64(&self, state: &mut S, v: u64) -> Result<R, E>;
+    fn visit_u64(&mut self, v: u64) -> Result<Self::Value, Self::Error>;
 
     #[inline]
-    fn visit_f32(&self, state: &mut S, v: f32) -> Result<R, E> {
-        self.visit_f64(state, v as f64)
+    fn visit_f32(&mut self, v: f32) -> Result<Self::Value, Self::Error> {
+        self.visit_f64(v as f64)
     }
 
-    fn visit_f64(&self, state: &mut S, v: f64) -> Result<R, E>;
-
-    fn visit_char(&self, state: &mut S, value: char) -> Result<R, E>;
-
-    fn visit_str(&self, state: &mut S, value: &str) -> Result<R, E>;
-
-    fn visit_seq<
-        V: SeqVisitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E>;
+    fn visit_f64(&mut self, v: f64) -> Result<Self::Value, Self::Error>;
 
     #[inline]
-    fn visit_named_seq<
-        V: SeqVisitor<S, R, E>,
-    >(&self, state: &mut S, _name: &'static str, visitor: V) -> Result<R, E> {
-        self.visit_seq(state, visitor)
+    fn visit_char(&mut self, v: char) -> Result<Self::Value, Self::Error> {
+        // The unwraps in here should be safe.
+        let mut s = &mut [0; 4];
+        let len = v.encode_utf8(s).unwrap();
+        self.visit_str(str::from_utf8(s.slice_to(len)).unwrap())
+    }
+
+    fn visit_str(&mut self, value: &str) -> Result<Self::Value, Self::Error>;
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<Self::Value, Self::Error>
+        where V: SeqVisitor;
+
+    #[inline]
+    fn visit_named_seq<V>(&mut self,
+                          _name: &'static str,
+                          visitor: V) -> Result<Self::Value, Self::Error>
+        where V: SeqVisitor,
+    {
+        self.visit_seq(visitor)
     }
 
     #[inline]
-    fn visit_enum<
-        V: SeqVisitor<S, R, E>,
-    >(&self, state: &mut S, _name: &'static str, _variant: &'static str, visitor: V) -> Result<R, E> {
-        self.visit_seq(state, visitor)
+    fn visit_enum_seq<V>(&mut self,
+                         _name: &'static str,
+                         _variant: &'static str,
+                         visitor: V) -> Result<Self::Value, Self::Error>
+        where V: SeqVisitor,
+    {
+        self.visit_seq(visitor)
     }
 
-    fn visit_seq_elt<
-        T: Serialize,
-    >(&self, state: &mut S, first: bool, value: T) -> Result<R, E>;
+    fn visit_seq_elt<T>(&mut self,
+                        first: bool,
+                        value: T) -> Result<Self::Value, Self::Error>
+        where T: Serialize;
 
-    fn visit_map<
-        V: MapVisitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E>;
+    fn visit_map<V>(&mut self, visitor: V) -> Result<Self::Value, Self::Error>
+        where V: MapVisitor;
 
     #[inline]
-    fn visit_named_map<
-        V: MapVisitor<S, R, E>,
-    >(&self, state: &mut S, _name: &'static str, visitor: V) -> Result<R, E> {
-        self.visit_map(state, visitor)
+    fn visit_named_map<V>(&mut self,
+                          _name: &'static str,
+                          visitor: V) -> Result<Self::Value, Self::Error>
+        where V: MapVisitor,
+    {
+        self.visit_map(visitor)
     }
 
-    fn visit_map_elt<
-        K: Serialize,
-        V: Serialize,
-    >(&self, state: &mut S, first: bool, key: K, value: V) -> Result<R, E>;
+    #[inline]
+    fn visit_enum_map<V>(&mut self,
+                          _name: &'static str,
+                          _variant: &'static str,
+                          visitor: V) -> Result<Self::Value, Self::Error>
+        where V: MapVisitor,
+    {
+        self.visit_map(visitor)
+    }
+
+    fn visit_map_elt<K, V>(&mut self,
+                           first: bool,
+                           key: K,
+                           value: V) -> Result<Self::Value, Self::Error>
+        where K: Serialize,
+              V: Serialize;
 }
 
-pub trait SeqVisitor<S, R, E> {
+pub trait SeqVisitor {
     fn visit<
-        V: Visitor<S, R, E>,
-    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E>;
+        V: Visitor,
+    >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>;
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
     }
 }
 
-pub trait MapVisitor<S, R, E> {
+pub trait MapVisitor {
     fn visit<
-        V: Visitor<S, R, E>,
-    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E>;
+        V: Visitor,
+    >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>;
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
     }
 }
@@ -149,12 +181,9 @@ pub trait MapVisitor<S, R, E> {
 impl Serialize for () {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_null(state)
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_null()
     }
 }
 
@@ -165,24 +194,21 @@ macro_rules! impl_visit {
         impl Serialize for $ty {
             #[inline]
             fn visit<
-                S,
-                R,
-                E,
-                V: Visitor<S, R, E>,
-            >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-                visitor.$method(state, *self)
+                V: Visitor,
+            >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+                visitor.$method(*self)
             }
         }
     }
 }
 
 impl_visit!(bool, visit_bool);
-impl_visit!(int, visit_int);
+impl_visit!(isize, visit_isize);
 impl_visit!(i8, visit_i8);
 impl_visit!(i16, visit_i16);
 impl_visit!(i32, visit_i32);
 impl_visit!(i64, visit_i64);
-impl_visit!(uint, visit_uint);
+impl_visit!(usize, visit_usize);
 impl_visit!(u8, visit_u8);
 impl_visit!(u16, visit_u16);
 impl_visit!(u32, visit_u32);
@@ -196,24 +222,18 @@ impl_visit!(char, visit_char);
 impl<'a> Serialize for &'a str {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_str(state, *self)
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_str(*self)
     }
 }
 
 impl Serialize for String {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_str(state, self.as_slice())
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        self.as_slice().visit(visitor)
     }
 }
 
@@ -237,20 +257,17 @@ impl<T, Iter: Iterator<Item=T>> SeqIteratorVisitor<Iter> {
 impl<
     T: Serialize,
     Iter: Iterator<Item=T>,
-    S,
-    R,
-    E,
-> SeqVisitor<S, R, E> for SeqIteratorVisitor<Iter> {
+> SeqVisitor for SeqIteratorVisitor<Iter> {
     #[inline]
     fn visit<
-        V: Visitor<S, R, E>,
-    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
+        V: Visitor,
+    >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
         let first = self.first;
         self.first = false;
 
         match self.iter.next() {
             Some(value) => {
-                let value = try!(visitor.visit_seq_elt(state, first, value));
+                let value = try!(visitor.visit_seq_elt(first, value));
                 Ok(Some(value))
             }
             None => Ok(None),
@@ -258,7 +275,7 @@ impl<
     }
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
 }
@@ -266,16 +283,49 @@ impl<
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
+    'a,
+    T: Serialize,
+> Serialize for &'a [T] {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
+    }
+}
+
+impl<
     T: Serialize,
 > Serialize for Vec<T> {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_seq(state, SeqIteratorVisitor::new(self.iter()))
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        self.as_slice().visit(visitor)
+    }
+}
+
+impl<
+    T: Serialize,
+> Serialize for BTreeSet<T> {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
+    }
+}
+
+impl<T, S, H> Serialize for HashSet<T, S>
+    where T: Serialize + Eq + Hash<H>,
+          S: HashState<Hasher=H>,
+          H: Hasher<Output=u64>,
+{
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
     }
 }
 
@@ -288,57 +338,57 @@ macro_rules! e {
 
 macro_rules! tuple_impls {
     ($(
-        ($($T:ident),+) {
+        $TupleVisitor:ident ($len:expr, $($T:ident),+) {
             $($state:pat => $idx:tt,)+
         }
     )+) => {
         $(
+            struct $TupleVisitor<'a, $($T: 'a),+> {
+                tuple: &'a ($($T,)+),
+                state: u8,
+                first: bool,
+            }
+
+            impl<
+                'a,
+                $($T: Serialize),+
+            > SeqVisitor for $TupleVisitor<'a, $($T),+> {
+                fn visit<
+                    V: Visitor,
+                >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+                    let first = self.first;
+                    self.first = false;
+
+                    match self.state {
+                        $(
+                            $state => {
+                                self.state += 1;
+                                let value = try!(visitor.visit_seq_elt(
+                                    first,
+                                    &e!(self.tuple.$idx)));
+                                Ok(Some(value))
+                            }
+                        )+
+                        _ => {
+                            Ok(None)
+                        }
+                    }
+                }
+
+                fn size_hint(&self) -> (usize, Option<usize>) {
+                    ($len, Some($len))
+                }
+            }
+
             impl<
                 $($T: Serialize),+
             > Serialize for ($($T,)+) {
                 #[inline]
-                fn visit<
-                    S,
-                    R,
-                    E,
-                    V: Visitor<S, R, E>,
-                >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-                    struct Visitor<'a, $($T: 'a),+> {
-                        state: uint,
-                        tuple: &'a ($($T,)+),
-                    }
-
-                    impl<
-                        'a,
-                        S,
-                        R,
-                        E,
-                        $($T: Serialize),+
-                    > SeqVisitor<S, R, E> for Visitor<'a, $($T),+> {
-                        fn visit<
-                            V: self::Visitor<S, R, E>,
-                        >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
-                            match self.state {
-                                $(
-                                    $state => {
-                                        self.state += 1;
-                                        let value = try!(visitor.visit_seq_elt(
-                                            state,
-                                            true,
-                                            &e!(self.tuple.$idx)));
-                                        Ok(Some(value))
-                                    }
-                                )+
-                                _ => {
-                                    Ok(None)
-                                }
-                            }
-                        }
-                    }
-
-                    visitor.visit_seq(state, Visitor {
-                        state: 0,
+                fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+                    visitor.visit_seq($TupleVisitor {
                         tuple: self,
+                        state: 0,
+                        first: true,
                     })
                 }
             }
@@ -347,27 +397,32 @@ macro_rules! tuple_impls {
 }
 
 tuple_impls! {
-    (T0) {
+    TupleVisitor1 (1, T0) {
         0 => 0,
     }
-    (T0, T1) {
+    TupleVisitor2 (2, T0, T1) {
         0 => 0,
         1 => 1,
     }
-    (T0, T1, T2, T3) {
+    TupleVisitor3 (3, T0, T1, T2) {
+        0 => 0,
+        1 => 1,
+        2 => 2,
+    }
+    TupleVisitor4 (4, T0, T1, T2, T3) {
         0 => 0,
         1 => 1,
         2 => 2,
         3 => 3,
     }
-    (T0, T1, T2, T3, T4) {
+    TupleVisitor5 (5, T0, T1, T2, T3, T4) {
         0 => 0,
         1 => 1,
         2 => 2,
         3 => 3,
         4 => 4,
     }
-    (T0, T1, T2, T3, T4, T5) {
+    TupleVisitor6 (6, T0, T1, T2, T3, T4, T5) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -375,7 +430,7 @@ tuple_impls! {
         4 => 4,
         5 => 5,
     }
-    (T0, T1, T2, T3, T4, T5, T6) {
+    TupleVisitor7 (7, T0, T1, T2, T3, T4, T5, T6) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -384,7 +439,7 @@ tuple_impls! {
         5 => 5,
         6 => 6,
     }
-    (T0, T1, T2, T3, T4, T5, T6, T7) {
+    TupleVisitor8 (8, T0, T1, T2, T3, T4, T5, T6, T7) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -394,7 +449,7 @@ tuple_impls! {
         6 => 6,
         7 => 7,
     }
-    (T0, T1, T2, T3, T4, T5, T6, T7, T8) {
+    TupleVisitor9 (9, T0, T1, T2, T3, T4, T5, T6, T7, T8) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -405,7 +460,7 @@ tuple_impls! {
         7 => 7,
         8 => 8,
     }
-    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) {
+    TupleVisitor10 (10, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -417,7 +472,7 @@ tuple_impls! {
         8 => 8,
         9 => 9,
     }
-    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) {
+    TupleVisitor11 (11, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -430,7 +485,7 @@ tuple_impls! {
         9 => 9,
         10 => 10,
     }
-    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) {
+    TupleVisitor12 (12, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) {
         0 => 0,
         1 => 1,
         2 => 2,
@@ -467,20 +522,17 @@ impl<
     K: Serialize,
     V: Serialize,
     Iter: Iterator<Item=(K, V)>,
-    S,
-    R,
-    E,
-> MapVisitor<S, R, E> for MapIteratorVisitor<Iter> {
+> MapVisitor for MapIteratorVisitor<Iter> {
     #[inline]
     fn visit<
-        VS: Visitor<S, R, E>,
-    >(&mut self, state: &mut S, visitor: VS) -> Result<Option<R>, E> {
+        V_: Visitor,
+    >(&mut self, visitor: &mut V_) -> Result<Option<V_::Value>, V_::Error> {
         let first = self.first;
         self.first = false;
 
         match self.iter.next() {
             Some((key, value)) => {
-                let value = try!(visitor.visit_map_elt(state, first, key, value));
+                let value = try!(visitor.visit_map_elt(first, key, value));
                 Ok(Some(value))
             }
             None => Ok(None)
@@ -488,25 +540,32 @@ impl<
     }
 
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
+    fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<
-    K: Serialize + Ord,
-    V: Serialize,
-> Serialize for BTreeMap<K, V> {
+impl<K, V> Serialize for BTreeMap<K, V>
+    where K: Serialize + Ord,
+          V: Serialize,
+{
     #[inline]
-    fn visit<
-        S,
-        R,
-        E,
-        VS: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: VS) -> Result<R, E> {
-        visitor.visit_map(state, MapIteratorVisitor::new(self.iter()))
+    fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<V_::Value, V_::Error> {
+        visitor.visit_map(MapIteratorVisitor::new(self.iter()))
+    }
+}
+
+impl<K, V, S, H> Serialize for HashMap<K, V, S>
+    where K: Serialize + Eq + Hash<H>,
+          V: Serialize,
+          S: HashState<Hasher=H>,
+          H: Hasher<Output=u64>,
+{
+    #[inline]
+    fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<V_::Value, V_::Error> {
+        visitor.visit_map(MapIteratorVisitor::new(self.iter()))
     }
 }
 
@@ -518,11 +577,474 @@ impl<
 > Serialize for &'a T {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        (**self).visit(state, visitor)
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        (**self).visit(visitor)
+    }
+}
+
+impl<
+    'a,
+    T: Serialize,
+> Serialize for Box<T> {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        (**self).visit(visitor)
+    }
+}
+
+impl<
+    'a,
+    T: Serialize,
+> Serialize for Rc<T> {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        (**self).visit(visitor)
+    }
+}
+
+impl<
+    'a,
+    T: Serialize,
+> Serialize for Arc<T> {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        (**self).visit(visitor)
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::{Serialize, Serializer, Visitor, SeqVisitor, MapVisitor};
+    use std::vec;
+    use std::collections::BTreeMap;
+
+    #[derive(Clone, PartialEq, Show)]
+    pub enum Token<'a> {
+        Null,
+        Bool(bool),
+        Isize(isize),
+        I8(i8),
+        I16(i16),
+        I32(i32),
+        I64(i64),
+        Usize(usize),
+        U8(u8),
+        U16(u16),
+        U32(u32),
+        U64(u64),
+        F32(f32),
+        F64(f64),
+        Char(char),
+        Str(&'a str),
+
+        Option(bool),
+
+        SeqStart(usize),
+        NamedSeqStart(&'a str, usize),
+        EnumSeqStart(&'a str, &'a str, usize),
+        SeqSep(bool),
+        SeqEnd,
+
+        MapStart(usize),
+        NamedMapStart(&'a str, usize),
+        EnumMapStart(&'a str, usize),
+        MapSep(bool),
+        MapEnd,
+    }
+
+    struct AssertSerializer<'a> {
+        iter: vec::IntoIter<Token<'a>>,
+    }
+
+    impl<'a> AssertSerializer<'a> {
+        fn new(values: Vec<Token<'a>>) -> AssertSerializer {
+            AssertSerializer {
+                iter: values.into_iter(),
+            }
+        }
+    }
+
+    impl<'a> Serializer for AssertSerializer<'a> {
+        type Value = ();
+        type Error = ();
+
+        fn visit<T: Serialize>(&mut self, value: &T) -> Result<(), ()> {
+            value.visit(self)
+        }
+    }
+
+    impl<'a> Visitor for AssertSerializer<'a> {
+        type Value = ();
+        type Error = ();
+
+        fn visit_null(&mut self) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Null));
+            Ok(())
+        }
+
+        fn visit_bool(&mut self, v: bool) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Bool(v)));
+            Ok(())
+        }
+
+        fn visit_isize(&mut self, v: isize) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Isize(v)));
+            Ok(())
+        }
+
+        fn visit_i8(&mut self, v: i8) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::I8(v)));
+            Ok(())
+        }
+
+        fn visit_i16(&mut self, v: i16) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::I16(v)));
+            Ok(())
+        }
+
+        fn visit_i32(&mut self, v: i32) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::I32(v)));
+            Ok(())
+        }
+
+        fn visit_i64(&mut self, v: i64) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::I64(v)));
+            Ok(())
+        }
+
+        fn visit_usize(&mut self, v: usize) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Usize(v)));
+            Ok(())
+        }
+
+        fn visit_u8(&mut self, v: u8) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::U8(v)));
+            Ok(())
+        }
+
+        fn visit_u16(&mut self, v: u16) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::U16(v)));
+            Ok(())
+        }
+
+        fn visit_u32(&mut self, v: u32) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::U32(v)));
+            Ok(())
+        }
+
+        fn visit_u64(&mut self, v: u64) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::U64(v)));
+            Ok(())
+        }
+
+        fn visit_f32(&mut self, v: f32) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::F32(v)));
+            Ok(())
+        }
+
+        fn visit_f64(&mut self, v: f64) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::F64(v)));
+            Ok(())
+        }
+
+        fn visit_char(&mut self, v: char) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Char(v)));
+            Ok(())
+        }
+
+        fn visit_str(&mut self, v: &str) -> Result<(), ()> {
+            assert_eq!(self.iter.next().unwrap(), Token::Str(v));
+            Ok(())
+        }
+
+        fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), ()>
+            where V: SeqVisitor
+        {
+            let (len, _) = visitor.size_hint();
+
+            assert_eq!(self.iter.next(), Some(Token::SeqStart(len)));
+
+            while let Some(()) = try!(visitor.visit(self)) { }
+
+            assert_eq!(self.iter.next(), Some(Token::SeqEnd));
+
+            Ok(())
+        }
+
+        fn visit_named_seq<V>(&mut self, name: &str, mut visitor: V) -> Result<(), ()>
+            where V: SeqVisitor
+        {
+            let (len, _) = visitor.size_hint();
+
+            assert_eq!(self.iter.next().unwrap(), Token::NamedSeqStart(name, len));
+
+            while let Some(()) = try!(visitor.visit(self)) { }
+
+            assert_eq!(self.iter.next(), Some(Token::SeqEnd));
+
+            Ok(())
+        }
+
+        fn visit_seq_elt<T>(&mut self, first: bool, value: T) -> Result<(), ()>
+            where T: Serialize
+        {
+            assert_eq!(self.iter.next(), Some(Token::SeqSep(first)));
+            value.visit(self)
+        }
+
+        fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), ()>
+            where V: MapVisitor
+        {
+            let (len, _) = visitor.size_hint();
+
+            assert_eq!(self.iter.next(), Some(Token::MapStart(len)));
+
+            while let Some(()) = try!(visitor.visit(self)) { }
+
+            assert_eq!(self.iter.next(), Some(Token::MapEnd));
+
+            Ok(())
+        }
+
+        fn visit_map_elt<K, V>(&mut self,
+                               first: bool,
+                               key: K,
+                               value: V) -> Result<(), ()>
+            where K: Serialize,
+                  V: Serialize,
+        {
+            assert_eq!(self.iter.next(), Some(Token::MapSep(first)));
+
+            try!(key.visit(self));
+            value.visit(self)
+        }
+    }
+
+    macro_rules! declare_test {
+        ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
+            #[test]
+            fn $name() {
+                $(
+                    let mut ser = AssertSerializer::new($tokens);
+                    assert_eq!(ser.visit(&$value), Ok(()));
+                )+
+            }
+        };
+
+        ($name:ident { $($value:expr : $ty:ty => $tokens:expr,)+ }) => {
+            #[test]
+            fn $name() {
+                $(
+                    let mut ser = AssertSerializer::new($tokens);
+                    let v:$ty = $value;
+                    assert_eq!(ser.visit(&v), Ok(()));
+                )+
+            }
+        }
+    }
+
+    macro_rules! btreemap {
+        () => {
+            BTreeMap::new()
+        };
+        ($($key:expr => $value:expr),+) => {
+            {
+                let mut map = BTreeMap::new();
+                $(map.insert($key, $value);)+
+                map
+            }
+        }
+    }
+
+    macro_rules! declare_tests {
+        ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
+            $(
+                declare_test!($name { $($value => $tokens,)+ });
+            )+
+        };
+        ($($name:ident { $($value:expr: $ty:ty => $tokens:expr,)+ })+) => {
+            $(
+                declare_test!($($name { $($value:$ty => $tokens,)+ })+);
+            )+
+        }
+    }
+
+    declare_tests! {
+        test_null {
+            () => vec![Token::Null],
+        }
+        test_bool {
+            true => vec![Token::Bool(true)],
+            false => vec![Token::Bool(false)],
+        }
+        test_isizes {
+            0i => vec![Token::Isize(0)],
+            0i8 => vec![Token::I8(0)],
+            0i16 => vec![Token::I16(0)],
+            0i32 => vec![Token::I32(0)],
+            0i64 => vec![Token::I64(0)],
+        }
+        test_usizes {
+            0u => vec![Token::Usize(0)],
+            0u8 => vec![Token::U8(0)],
+            0u16 => vec![Token::U16(0)],
+            0u32 => vec![Token::U32(0)],
+            0u64 => vec![Token::U64(0)],
+        }
+        test_floats {
+            0f32 => vec![Token::F32(0.)],
+            0f64 => vec![Token::F64(0.)],
+        }
+        test_char {
+            'a' => vec![Token::Char('a')],
+        }
+        test_str {
+            "abc" => vec![Token::Str("abc")],
+            "abc".to_string() => vec![Token::Str("abc")],
+        }
+        test_slice {
+            [0].slice_to(0) => vec![
+                Token::SeqStart(0),
+                Token::SeqEnd,
+            ],
+            [1, 2, 3].as_slice() => vec![
+                Token::SeqStart(3),
+                    Token::SeqSep(true),
+                    Token::I32(1),
+
+                    Token::SeqSep(false),
+                    Token::I32(2),
+
+                    Token::SeqSep(false),
+                    Token::I32(3),
+                Token::SeqEnd,
+            ],
+        }
+        test_vec {
+            Vec::<isize>::new() => vec![
+                Token::SeqStart(0),
+                Token::SeqEnd,
+            ],
+            vec![vec![], vec![1], vec![2, 3]] => vec![
+                Token::SeqStart(3),
+                    Token::SeqSep(true),
+                    Token::SeqStart(0),
+                    Token::SeqEnd,
+
+                    Token::SeqSep(false),
+                    Token::SeqStart(1),
+                        Token::SeqSep(true),
+                        Token::I32(1),
+                    Token::SeqEnd,
+
+                    Token::SeqSep(false),
+                    Token::SeqStart(2),
+                        Token::SeqSep(true),
+                        Token::I32(2),
+
+                        Token::SeqSep(false),
+                        Token::I32(3),
+                    Token::SeqEnd,
+                Token::SeqEnd,
+            ],
+        }
+        test_tuple {
+            (1,) => vec![
+                Token::SeqStart(1),
+                    Token::SeqSep(true),
+                    Token::I32(1),
+                Token::SeqEnd,
+            ],
+            (1, 2, 3) => vec![
+                Token::SeqStart(3),
+                    Token::SeqSep(true),
+                    Token::I32(1),
+
+                    Token::SeqSep(false),
+                    Token::I32(2),
+
+                    Token::SeqSep(false),
+                    Token::I32(3),
+                Token::SeqEnd,
+            ],
+        }
+        test_btreemap {
+            btreemap![1 => 2] => vec![
+                Token::MapStart(1),
+                    Token::MapSep(true),
+                    Token::I32(1),
+                    Token::I32(2),
+                Token::MapEnd,
+            ],
+            btreemap![1 => 2, 3 => 4] => vec![
+                Token::MapStart(2),
+                    Token::MapSep(true),
+                    Token::I32(1),
+                    Token::I32(2),
+
+                    Token::MapSep(false),
+                    Token::I32(3),
+                    Token::I32(4),
+                Token::MapEnd,
+            ],
+            btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => vec![
+                Token::MapStart(2),
+                    Token::MapSep(true),
+                    Token::I32(1),
+                    Token::MapStart(0),
+                    Token::MapEnd,
+
+                    Token::MapSep(false),
+                    Token::I32(2),
+                    Token::MapStart(2),
+                        Token::MapSep(true),
+                        Token::I32(3),
+                        Token::I32(4),
+
+                        Token::MapSep(false),
+                        Token::I32(5),
+                        Token::I32(6),
+                    Token::MapEnd,
+                Token::MapEnd,
+            ],
+        }
+    }
+
+    struct Empty;
+
+    struct EmptyVisitor;
+
+    impl SeqVisitor for EmptyVisitor {
+        fn visit<
+            V: Visitor,
+        >(&mut self, _visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+            Ok(None)
+        }
+    }
+
+    impl Serialize for Empty {
+        fn visit<
+            V: Visitor,
+        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+            visitor.visit_named_seq("Empty", EmptyVisitor)
+        }
+    }
+
+    declare_test! {
+        test_empty_struct {
+            Empty => vec![
+                Token::NamedSeqStart("Empty", 0),
+                Token::SeqEnd,
+            ],
+        }
     }
 }
