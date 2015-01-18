@@ -56,13 +56,13 @@ mod decoder {
 
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
-        fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
+        fn read_usize(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
         fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
         fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
         fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
         fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError) }
         #[inline]
-        fn read_int(&mut self) -> Result<int, Error> {
+        fn read_isize(&mut self) -> Result<int, Error> {
             match self.iter.next() {
                 Some(value) => Ok(value),
                 None => Err(EndOfStream),
@@ -210,7 +210,7 @@ mod decoder {
 
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
-        fn read_uint(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
+        fn read_usize(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
         fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
         fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
         fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
@@ -222,7 +222,7 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_int(&mut self) -> Result<int, Error> { Err(SyntaxError) }
+        fn read_isize(&mut self) -> Result<int, Error> { Err(SyntaxError) }
         fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError) }
         fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError) }
         fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError) }

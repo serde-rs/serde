@@ -3,6 +3,7 @@ use std::fmt;
 use std::io::{ByRefWriter, IoResult};
 use std::io;
 use std::str;
+use std::string::ToString;
 use std::vec;
 
 use de::{self, Token, TokenKind};
@@ -204,6 +205,14 @@ impl Value {
             Value::Null => Some(()),
             _ => None
         }
+    }
+}
+
+impl ToString for Value {
+    fn to_string(&self) -> String {
+        let mut wr = Vec::new();
+        self.to_writer(wr.by_ref()).unwrap();
+        str::from_utf8(wr.as_slice()).unwrap().to_string()
     }
 }
 
@@ -449,7 +458,7 @@ impl de::Deserializer<Error> for Deserializer {
                         return Err(
                             Error::ExpectedError(
                                 "Array".to_string(),
-                                format!("{} => {}", key, value)
+                                format!("{:?} => {:?}", key, value)
                             )
                         );
                     }
@@ -464,7 +473,7 @@ impl de::Deserializer<Error> for Deserializer {
                         return Err(
                             Error::ExpectedError(
                                 "None".to_string(),
-                                format!("{} => {}", key, value)
+                                format!("{:?} => {:?}", key, value)
                             )
                         );
                     }
@@ -483,7 +492,7 @@ impl de::Deserializer<Error> for Deserializer {
                 return Err(
                     Error::ExpectedError(
                         "String or Object".to_string(),
-                        format!("{}", token)
+                        format!("{:?}", token)
                     )
                 );
             }

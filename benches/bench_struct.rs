@@ -107,7 +107,7 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_uint(&mut self) -> Result<uint, Error> {
+        fn read_usize(&mut self) -> Result<uint, Error> {
             match self.stack.pop() {
                 Some(UintState(value)) => Ok(value),
                 _ => Err(Error::SyntaxError("UintState".to_string())),
@@ -117,7 +117,7 @@ mod decoder {
         fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_int(&mut self) -> Result<int, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_isize(&mut self) -> Result<int, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError("".to_string())) }
@@ -440,17 +440,17 @@ mod deserializer {
 
         #[inline]
         fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
-            Error::SyntaxError(format!("expected {}, found {}", expected, token))
+            Error::SyntaxError(format!("expected {:?}, found {:?}", expected, token))
         }
 
         #[inline]
         fn unexpected_name_error(&mut self, token: de::Token) -> Error {
-            Error::UnexpectedName(format!("found {}", token))
+            Error::UnexpectedName(format!("found {:?}", token))
         }
 
         #[inline]
         fn conversion_error(&mut self, token: de::Token) -> Error {
-            Error::UnexpectedName(format!("found {}", token))
+            Error::UnexpectedName(format!("found {:?}", token))
         }
 
         #[inline]

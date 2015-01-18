@@ -1,4 +1,5 @@
 use std::collections::{HashMap, BTreeMap};
+use std::collections::hash_map::Hasher;
 use std::hash::Hash;
 use std::num::FromPrimitive;
 
@@ -429,7 +430,7 @@ impl_deserialize_tuple! { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, }
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<
-    K: Deserialize<S, E> + Eq + Hash,
+    K: Deserialize<S, E> + Eq + Hash<Hasher>,
     V: Deserialize<S, E>,
     S: Deserializer<E>,
     E: Error,
@@ -438,7 +439,7 @@ impl<
         struct Visitor;
 
         impl<
-            K: Deserialize<S, E> + Eq + Hash,
+            K: Deserialize<S, E> + Eq + Hash<Hasher>,
             V: Deserialize<S, E>,
             S: Deserializer<E>,
             E: Error,

@@ -473,8 +473,8 @@ impl<
 > MapVisitor<S, R, E> for MapIteratorVisitor<Iter> {
     #[inline]
     fn visit<
-        V: Visitor<S, R, E>,
-    >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
+        VS: Visitor<S, R, E>,
+    >(&mut self, state: &mut S, visitor: VS) -> Result<Option<R>, E> {
         let first = self.first;
         self.first = false;
 
@@ -504,8 +504,8 @@ impl<
         S,
         R,
         E,
-        V: Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
+        VS: Visitor<S, R, E>,
+    >(&self, state: &mut S, visitor: VS) -> Result<R, E> {
         visitor.visit_map(state, MapIteratorVisitor::new(self.iter()))
     }
 }

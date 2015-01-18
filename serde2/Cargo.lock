@@ -2,13 +2,13 @@
 name = "serde2"
 version = "0.1.0"
 dependencies = [
- "rustc-serialize 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde2_macros 0.1.0",
 ]
 
 [[package]]
 name = "rustc-serialize"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]

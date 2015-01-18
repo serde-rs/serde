@@ -59,11 +59,11 @@ use rustc::plugin::Registry;
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
         token::intern("derive_serialize"),
-        Decorator(box expand_derive_serialize));
+        Decorator(Box::new(expand_derive_serialize)));
 
     reg.register_syntax_extension(
         token::intern("derive_deserialize"),
-        Decorator(box expand_derive_deserialize));
+        Decorator(Box::new(expand_derive_deserialize)));
 }
 
 fn expand_derive_serialize(cx: &mut ExtCtxt,
@@ -78,14 +78,14 @@ fn expand_derive_serialize(cx: &mut ExtCtxt,
         span: sp,
         attributes: vec!(),
         path: Path::new_(vec!("serde", "ser", "Serialize"), None,
-                         vec!(box Literal(Path::new_local("__S")),
-                              box Literal(Path::new_local("__E"))), true),
+                         vec!(Box::new(Literal(Path::new_local("__S"))),
+                              Box::new(Literal(Path::new_local("__E")))), true),
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
             bounds: vec!(("__S", vec!(Path::new_(
                             vec!("serde", "ser", "Serializer"), None,
-                            vec!(box Literal(Path::new_local("__E"))), true))),
+                            vec!(Box::new(Literal(Path::new_local("__E")))), true))),
                          ("__E", vec!()))
         },
         methods: vec!(
@@ -93,23 +93,23 @@ fn expand_derive_serialize(cx: &mut ExtCtxt,
                 name: "serialize",
                 generics: LifetimeBounds::empty(),
                 explicit_self: borrowed_explicit_self(),
-                args: vec!(Ptr(box Literal(Path::new_local("__S")),
+                args: vec!(Ptr(Box::new(Literal(Path::new_local("__S"))),
                             Borrowed(None, MutMutable))),
                 ret_ty: Literal(
                     Path::new_(
                         vec!("std", "result", "Result"),
                         None,
                         vec!(
-                            box Tuple(Vec::new()),
-                            box Literal(Path::new_local("__E"))
+                            Box::new(Tuple(Vec::new())),
+                            Box::new(Literal(Path::new_local("__E")))
                         ),
                         true
                     )
                 ),
                 attributes: attrs,
-                combine_substructure: combine_substructure(box |a, b, c| {
+                combine_substructure: combine_substructure(Box::new( |a, b, c| {
                     serialize_substructure(a, b, c, item)
-                }),
+                })),
             })
     };
 
@@ -204,14 +204,14 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
         span: span,
         attributes: Vec::new(),
         path: Path::new_(vec!("serde", "de", "Deserialize"), None,
-                         vec!(box Literal(Path::new_local("__D")),
-                              box Literal(Path::new_local("__E"))), true),
+                         vec!(Box::new(Literal(Path::new_local("__D"))),
+                              Box::new(Literal(Path::new_local("__E")))), true),
         additional_bounds: Vec::new(),
         generics: LifetimeBounds {
             lifetimes: Vec::new(),
             bounds: vec!(("__D", vec!(Path::new_(
                             vec!("serde", "de", "Deserializer"), None,
-                            vec!(box Literal(Path::new_local("__E"))), true))),
+                            vec!(Box::new(Literal(Path::new_local("__E")))), true))),
                          ("__E", vec!()))
         },
         methods: vec!(
@@ -221,7 +221,7 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                 explicit_self: None,
                 args: vec!(
                     Ptr(
-                        box Literal(Path::new_local("__D")),
+                        Box::new(Literal(Path::new_local("__D"))),
                         Borrowed(None, MutMutable)
                     ),
                     Literal(Path::new(vec!("serde", "de", "Token"))),
@@ -231,16 +231,16 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                         vec!("std", "result", "Result"),
                         None,
                         vec!(
-                            box Self,
-                            box Literal(Path::new_local("__E"))
+                            Box::new(Self),
+                            Box::new(Literal(Path::new_local("__E")))
                         ),
                         true
                     )
                 ),
                 attributes: Vec::new(),
-                combine_substructure: combine_substructure(box |a, b, c| {
+                combine_substructure: combine_substructure(Box::new(|a, b, c| {
                     deserialize_substructure(a, b, c)
-                }),
+                })),
             })
     };
 

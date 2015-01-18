@@ -9,6 +9,7 @@
 // except according to those terms.
 
 use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
+use std::collections::hash_map::Hasher;
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::num::{self, FromPrimitive};
@@ -706,7 +707,7 @@ impl<
 > Deserialize<D, E> for Box<T> {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<Box<T>, E> {
-        Ok(box try!(Deserialize::deserialize_token(d, token)))
+        Ok(Box::new(try!(Deserialize::deserialize_token(d, token))))
     }
 }
 
@@ -763,7 +764,7 @@ impl<
 impl<
     D: Deserializer<E>,
     E,
-    K: Deserialize<D, E> + Eq + Hash,
+    K: Deserialize<D, E> + Eq + Hash<Hasher>,
     V: Deserialize<D, E>
 > Deserialize<D, E> for HashMap<K, V> {
     #[inline]
@@ -789,7 +790,7 @@ impl<
 impl<
     D: Deserializer<E>,
     E,
-    T: Deserialize<D, E> + Eq + Hash
+    T: Deserialize<D, E> + Eq + Hash<Hasher>
 > Deserialize<D, E> for HashSet<T> {
     #[inline]
     fn deserialize_token(d: &mut D, token: Token) -> Result<HashSet<T>, E> {
@@ -1253,7 +1254,7 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////////
 
     macro_rules! test_value {
-        ($name:ident, [$($tokens:expr => $value:expr: $ty:ty),*]) => {
+        ($name:ident, [$($tokens:expr => $value:expr, $ty:ty),*]) => {
             #[test]
             fn $name() {
                 $(
@@ -1267,31 +1268,31 @@ mod tests {
     }
 
     test_value!(test_primitives, [
-        vec!(Token::Null) => (): (),
-        vec!(Token::Bool(true)) => true: bool,
-        vec!(Token::Bool(false)) => false: bool,
-        vec!(Token::Int(5)) => 5: int,
-        vec!(Token::I8(5)) => 5: i8,
-        vec!(Token::I16(5)) => 5: i16,
-        vec!(Token::I32(5)) => 5: i32,
-        vec!(Token::I64(5)) => 5: i64,
-        vec!(Token::Uint(5)) => 5: uint,
-        vec!(Token::U8(5)) => 5: u8,
-        vec!(Token::U16(5)) => 5: u16,
-        vec!(Token::U32(5)) => 5: u32,
-        vec!(Token::U64(5)) => 5: u64,
-        vec!(Token::F32(5.0)) => 5.0: f32,
-        vec!(Token::F64(5.0)) => 5.0: f64,
-        vec!(Token::Char('c')) => 'c': char,
-        vec!(Token::Str("abc")) => "abc": &str,
-        vec!(Token::String("abc".to_string())) => "abc".to_string(): string::String
+        vec!(Token::Null) => (), (),
+        vec!(Token::Bool(true)) => true, bool,
+        vec!(Token::Bool(false)) => false, bool,
+        vec!(Token::Int(5)) => 5, int,
+        vec!(Token::I8(5)) => 5, i8,
+        vec!(Token::I16(5)) => 5, i16,
+        vec!(Token::I32(5)) => 5, i32,
+        vec!(Token::I64(5)) => 5, i64,
+        vec!(Token::Uint(5)) => 5, uint,
+        vec!(Token::U8(5)) => 5, u8,
+        vec!(Token::U16(5)) => 5, u16,
+        vec!(Token::U32(5)) => 5, u32,
+        vec!(Token::U64(5)) => 5, u64,
+        vec!(Token::F32(5.0)) => 5.0, f32,
+        vec!(Token::F64(5.0)) => 5.0, f64,
+        vec!(Token::Char('c')) => 'c', char,
+        vec!(Token::Str("abc")) => "abc", &str,
+        vec!(Token::String("abc".to_string())) => "abc".to_string(), string::String
     ]);
 
     test_value!(test_tuples, [
         vec!(
             Token::TupleStart(0),
             Token::End,
-        ) => (): (),
+        ) => (), (),
 
         vec!(
             Token::TupleStart(2),
@@ -1299,7 +1300,7 @@ mod tests {
 
                 Token::Str("a"),
             Token::End,
-        ) => (5, "a"): (int, &'static str),
+        ) => (5, "a"), (int, &'static str),
 
         vec!(
             Token::TupleStart(3),
@@ -1314,16 +1315,16 @@ mod tests {
                     Token::Str("a"),
                 Token::End,
             Token::End,
-        ) => ((), (), (5, "a")): ((), (), (int, &'static str))
+        ) => ((), (), (5, "a")), ((), (), (int, &'static str))
     ]);
 
     test_value!(test_options, [
-        vec!(Token::Option(false)) => None: option::Option<int>,
+        vec!(Token::Option(false)) => None, option::Option<int>,
 
         vec!(
             Token::Option(true),
             Token::Int(5),
-        ) => Some(5): option::Option<int>
+        ) => Some(5), option::Option<int>
     ]);
 
     test_value!(test_structs, [
@@ -1333,7 +1334,7 @@ mod tests {
                 Token::SeqStart(0),
                 Token::End,
             Token::End,
-        ) => Outer { inner: vec!() }: Outer,
+        ) => Outer { inner: vec!() }, Outer,
 
         vec!(
             Token::StructStart("Outer", 1),
@@ -1364,28 +1365,28 @@ mod tests {
                     c: treemap!("abc".to_string() => Some('c')),
                 },
             ),
-        }: Outer
+        }, Outer
     ]);
 
     test_value!(test_enums, [
         vec!(
             Token::EnumStart("Animal", "Dog", 0),
             Token::End,
-        ) => Animal::Dog: Animal,
+        ) => Animal::Dog, Animal,
 
         vec!(
             Token::EnumStart("Animal", "Frog", 2),
                 Token::String("Henry".to_string()),
                 Token::Int(349),
             Token::End,
-        ) => Animal::Frog("Henry".to_string(), 349): Animal
+        ) => Animal::Frog("Henry".to_string(), 349), Animal
     ]);
 
     test_value!(test_vecs, [
         vec!(
             Token::SeqStart(0),
             Token::End,
-        ) => vec!(): Vec<int>,
+        ) => vec!(), Vec<int>,
 
         vec!(
             Token::SeqStart(3),
@@ -1395,7 +1396,7 @@ mod tests {
 
                 Token::Int(7),
             Token::End,
-        ) => vec!(5, 6, 7): Vec<int>,
+        ) => vec!(5, 6, 7), Vec<int>,
 
 
         vec!(
@@ -1418,14 +1419,14 @@ mod tests {
                     Token::Int(6),
                 Token::End,
             Token::End,
-        ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)): Vec<Vec<int>>
+        ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)), Vec<Vec<int>>
     ]);
 
     test_value!(test_treemaps, [
         vec!(
             Token::MapStart(0),
             Token::End,
-        ) => treemap!(): BTreeMap<int, string::String>,
+        ) => treemap!(), BTreeMap<int, string::String>,
 
         vec!(
             Token::MapStart(2),
@@ -1435,7 +1436,7 @@ mod tests {
                 Token::Int(6),
                 Token::String("b".to_string()),
             Token::End,
-        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()): BTreeMap<int, string::
+        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()), BTreeMap<int, string::
         String>
     ]);
 }

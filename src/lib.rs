@@ -1,4 +1,5 @@
 #![feature(plugin)]
+#![allow(unstable)]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
 
