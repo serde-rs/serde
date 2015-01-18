@@ -111,7 +111,6 @@ pub trait Visitor {
 
     fn visit_none(&mut self) -> Result<Self::Value, Self::Error>;
 
-    #[inline]
     fn visit_some<V>(&mut self, value: V) -> Result<Self::Value, Self::Error>
         where V: Serialize;
 

@@ -6,4 +6,4 @@ extern crate unicode;
 
 pub mod ser;
 pub mod de;
-//pub mod json;
+pub mod json;

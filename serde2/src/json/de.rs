@@ -525,6 +525,7 @@ pub fn from_str<
     from_iter(s.bytes())
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use std::str;
@@ -738,3 +739,4 @@ mod tests {
         ]);
     }
 }
+*/

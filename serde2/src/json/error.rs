@@ -78,7 +78,7 @@ impl fmt::Show for ErrorCode {
 #[derive(Clone, PartialEq, Show)]
 pub enum Error {
     /// msg, line, col
-    SyntaxError(ErrorCode, uint, uint),
+    SyntaxError(ErrorCode, usize, usize),
     IoError(io::IoError),
     /*
     ExpectedError(String, String),

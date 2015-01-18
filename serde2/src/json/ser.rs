@@ -28,152 +28,162 @@ impl<W: io::Writer> Writer<W> {
     }
 }
 
-impl<W: io::Writer> ser::Serializer<W, (), IoError> for Writer<W> {
+impl<W: io::Writer> ser::Serializer for Writer<W> {
+    type Value = ();
+    type Error = IoError;
+
     #[inline]
     fn visit<
         T: ser::Serialize,
     >(&mut self, value: &T) -> Result<(), IoError> {
-        value.visit(&mut self.writer, Visitor)
+        value.visit(&mut Visitor { writer: &mut self.writer })
     }
 }
 
-struct Visitor;
+struct Visitor<'a, W: 'a> {
+    writer: &'a mut W,
+}
 
-impl<W: io::Writer> ser::Visitor<W, (), IoError> for Visitor {
+impl<'a, W: io::Writer> ser::Visitor for Visitor<'a, W> {
+    type Value = ();
+    type Error = IoError;
+
     #[inline]
-    fn visit_null(&self, writer: &mut W) -> Result<(), IoError> {
-        writer.write_str("null")
+    fn visit_unit(&mut self) -> Result<(), IoError> {
+        self.writer.write_str("null")
     }
 
     #[inline]
-    fn visit_bool(&self, writer: &mut W, value: bool) -> Result<(), IoError> {
+    fn visit_bool(&mut self, value: bool) -> Result<(), IoError> {
         if value {
-            writer.write_str("true")
+            self.writer.write_str("true")
         } else {
-            writer.write_str("false")
+            self.writer.write_str("false")
         }
     }
 
     #[inline]
-    fn visit_int(&self, writer: &mut W, value: int) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_isize(&mut self, value: isize) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_i8(&self, writer: &mut W, value: i8) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_i8(&mut self, value: i8) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_i16(&self, writer: &mut W, value: i16) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_i16(&mut self, value: i16) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_i32(&self, writer: &mut W, value: i32) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_i32(&mut self, value: i32) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_i64(&self, writer: &mut W, value: i64) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_i64(&mut self, value: i64) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_uint(&self, writer: &mut W, value: uint) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_usize(&mut self, value: usize) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_u8(&self, writer: &mut W, value: u8) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_u8(&mut self, value: u8) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_u16(&self, writer: &mut W, value: u16) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_u16(&mut self, value: u16) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_u32(&self, writer: &mut W, value: u32) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_u32(&mut self, value: u32) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_u64(&self, writer: &mut W, value: u64) -> Result<(), IoError> {
-        write!(writer, "{}", value)
+    fn visit_u64(&mut self, value: u64) -> Result<(), IoError> {
+        write!(self.writer, "{}", value)
     }
 
     #[inline]
-    fn visit_f64(&self, writer: &mut W, value: f64) -> Result<(), IoError> {
-        fmt_f64_or_null(writer, value)
+    fn visit_f64(&mut self, value: f64) -> Result<(), IoError> {
+        fmt_f64_or_null(self.writer, value)
     }
 
     #[inline]
-    fn visit_char(&self, writer: &mut W, v: char) -> Result<(), IoError> {
-        escape_char(writer, v)
+    fn visit_char(&mut self, v: char) -> Result<(), IoError> {
+        escape_char(self.writer, v)
     }
 
     #[inline]
-    fn visit_str(&self, writer: &mut W, value: &str) -> Result<(), IoError> {
-        escape_str(writer, value)
+    fn visit_str(&mut self, value: &str) -> Result<(), IoError> {
+        escape_str(self.writer, value)
     }
 
     #[inline]
-    fn visit_seq<
-        V: ser::SeqVisitor<W, (), IoError>
-    >(&self, writer: &mut W, mut visitor: V) -> Result<(), IoError> {
-        try!(writer.write_str("["));
-
-        loop {
-            match try!(visitor.visit(writer, Visitor)) {
-                Some(()) => { }
-                None => { break; }
-            }
-        }
-
-        writer.write_str("]")
+    fn visit_none(&mut self) -> Result<(), IoError> {
+        self.visit_unit()
     }
 
     #[inline]
-    fn visit_seq_elt<
-        T: ser::Serialize,
-    >(&self, writer: &mut W, first: bool, value: T) -> Result<(), IoError> {
+    fn visit_some<V>(&mut self, value: V) -> Result<(), IoError>
+        where V: ser::Serialize
+    {
+        value.visit(self)
+    }
+
+    #[inline]
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), IoError>
+        where V: ser::SeqVisitor,
+    {
+        try!(self.writer.write_str("["));
+
+        while let Some(()) = try!(visitor.visit(self)) { }
+
+        self.writer.write_str("]")
+    }
+
+    #[inline]
+    fn visit_seq_elt<T>(&mut self, first: bool, value: T) -> Result<(), IoError>
+        where T: ser::Serialize,
+    {
         if !first {
-            try!(writer.write_str(","));
+            try!(self.writer.write_str(","));
         }
 
-        value.visit(writer, Visitor)
+        value.visit(self)
     }
 
     #[inline]
-    fn visit_map<
-        V: ser::MapVisitor<W, (), IoError>
-    >(&self, writer: &mut W, mut visitor: V) -> Result<(), IoError> {
-        try!(writer.write_str("{{"));
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), IoError>
+        where V: ser::MapVisitor,
+    {
+        try!(self.writer.write_str("{{"));
 
-        loop {
-            match try!(visitor.visit(writer, Visitor)) {
-                Some(()) => { }
-                None => { break; }
-            }
-        }
+        while let Some(()) = try!(visitor.visit(self)) { }
 
-        writer.write_str("}}")
+        self.writer.write_str("}}")
     }
 
     #[inline]
-    fn visit_map_elt<
-        K: ser::Serialize,
-        V: ser::Serialize,
-    >(&self, writer: &mut W, first: bool, key: K, value: V) -> Result<(), IoError> {
+    fn visit_map_elt<K, V>(&mut self, first: bool, key: K, value: V) -> Result<(), IoError>
+        where K: ser::Serialize,
+              V: ser::Serialize,
+    {
         if !first {
-            try!(writer.write_str(","));
+            try!(self.writer.write_str(","));
         }
 
-        try!(key.visit(writer, Visitor));
-        try!(writer.write_str(":"));
-        value.visit(writer, Visitor)
+        try!(key.visit(self));
+        try!(self.writer.write_str(":"));
+        value.visit(self)
     }
 }
 
@@ -231,28 +241,28 @@ fn fmt_f64_or_null<W: io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError>
 }
 
 #[inline]
-pub fn to_writer<
-    W: io::Writer,
-    T: ser::Serialize,
->(wr: &mut W, value: &T) -> Result<(), IoError> {
+pub fn to_writer<W, T>(wr: &mut W, value: &T) -> Result<(), IoError>
+    where W: io::Writer,
+          T: ser::Serialize,
+{
     let mut wr = Writer::new(wr.by_ref());
     try!(wr.visit(value));
     Ok(())
 }
 
 #[inline]
-pub fn to_vec<
-    T: ser::Serialize,
->(value: &T) -> Result<Vec<u8>, IoError> {
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>, IoError>
+    where T: ser::Serialize,
+{
     let mut wr = Vec::with_capacity(128);
     to_writer(&mut wr, value).unwrap();
     Ok(wr)
 }
 
 #[inline]
-pub fn to_string<
-    T: ser::Serialize,
->(value: &T) -> Result<Result<String, FromUtf8Error>, IoError> {
+pub fn to_string<T>(value: &T) -> Result<Result<String, FromUtf8Error>, IoError>
+    where T: ser::Serialize,
+{
     let vec = try!(to_vec(value));
     Ok(String::from_utf8(vec))
 }
