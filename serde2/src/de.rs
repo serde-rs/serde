@@ -1,5 +1,6 @@
+use std::collections::hash_map::Hasher;
 use std::collections::{HashMap, BTreeMap};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::num::FromPrimitive;
 use std::str;
 
@@ -594,19 +595,18 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct HashMapVisitor<K, V, H>;
+struct HashMapVisitor<K, V>;
 
-impl<K, V, H> Visitor for HashMapVisitor<K, V, H>
-    where K: Deserialize + Eq + Hash<H>,
+impl<K, V> Visitor for HashMapVisitor<K, V>
+    where K: Deserialize + Eq + Hash<Hasher>,
           V: Deserialize,
-          H: Hasher,
 {
     type Value = HashMap<K, V>;
 
     #[inline]
     fn visit_map<
-        Visitor: MapVisitor,
-    >(&mut self, mut visitor: Visitor) -> Result<HashMap<K, V>, Visitor::Error> {
+        V_: MapVisitor,
+    >(&mut self, mut visitor: V_) -> Result<HashMap<K, V>, V_::Error> {
         let (len, _) = visitor.size_hint();
         let mut values = HashMap::with_capacity(len);
 
@@ -618,16 +618,18 @@ impl<K, V, H> Visitor for HashMapVisitor<K, V, H>
     }
 }
 
-impl<
-    K: Deserialize + Eq + Hash,
-    V: Deserialize,
-> Deserialize for HashMap<K, V> {
+impl<K, V> Deserialize for HashMap<K, V>
+    where K: Deserialize + Eq + Hash<Hasher>,
+          V: Deserialize,
+{
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<HashMap<K, V>, S::Error> {
+        S_: Deserializer,
+    >(state: &mut S_) -> Result<HashMap<K, V>, S_::Error> {
         state.visit(&mut HashMapVisitor)
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 struct BTreeMapVisitor<K, V>;
 
