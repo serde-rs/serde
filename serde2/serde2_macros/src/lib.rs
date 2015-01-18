@@ -79,34 +79,14 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
                 generics: LifetimeBounds {
                     lifetimes: Vec::new(),
                     bounds: vec![
-                        ("__S", vec![]),
-                        ("__R", vec![]),
-                        ("__E", vec![]),
-                        (
-                            "__V",
-                            vec![
-                                Path::new_(
-                                    vec!["serde2", "ser", "Visitor"],
-                                    None,
-                                    vec![
-                                        Box::new(Literal(Path::new_local("__S"))),
-                                        Box::new(Literal(Path::new_local("__R"))),
-                                        Box::new(Literal(Path::new_local("__E"))),
-                                    ],
-                                    true
-                                ),
-                            ],
-                        ),
+                        ("__V", vec![Path::new(vec!["serde2", "ser", "Visitor"])]),
                     ]
                 },
                 explicit_self: borrowed_explicit_self(),
                 args: vec![
                     Ptr(
-                        Box::new(Literal(Path::new_local("__S"))),
-                        Borrowed(None, MutMutable)
-                    ),
-                    Literal(
-                        Path::new_local("__V"),
+                        Box::new(Literal(Path::new_local("__V"))),
+                        Borrowed(None, MutMutable),
                     ),
                 ],
                 ret_ty: Literal(
@@ -114,8 +94,14 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
                         vec!("std", "result", "Result"),
                         None,
                         vec![
-                            Box::new(Literal(Path::new_local("__R"))),
-                            Box::new(Literal(Path::new_local("__E"))),
+                            Box::new(Literal(Path::new_(vec!["__V", "Value"],
+                                                        None,
+                                                        vec![],
+                                                        false))),
+                            Box::new(Literal(Path::new_(vec!["__V", "Error"],
+                                                        None,
+                                                        vec![],
+                                                        false))),
                         ],
                         true
                     )
@@ -132,20 +118,19 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
 }
 
 fn serialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<Expr> {
-    let state = substr.nonself_args[0].clone();
-    let visitor = substr.nonself_args[1].clone();
+    let visitor = substr.nonself_args[0].clone();
 
     match *substr.fields {
         Struct(ref fields) => {
             if fields.is_empty() {
                 serialize_tuple_struct(cx)
             } else {
-                serialize_struct(cx, span, state, visitor, substr.type_ident, fields)
+                serialize_struct(cx, span, visitor, substr.type_ident, fields)
             }
         }
 
         EnumMatching(_idx, variant, ref fields) => {
-            serialize_enum(cx, span, state, visitor, substr.type_ident, variant, fields)
+            serialize_enum(cx, span, visitor, substr.type_ident, variant, fields)
         }
 
         _ => cx.bug("expected Struct or EnumMatching in derive_serialize")
@@ -159,7 +144,6 @@ fn serialize_tuple_struct(cx: &ExtCtxt) -> P<Expr> {
 
 fn serialize_struct(cx: &ExtCtxt,
                     span: Span,
-                    state: P<Expr>,
                     visitor: P<Expr>,
                     type_ident: Ident,
                     fields: &Vec<FieldInfo>) -> P<Expr> {
@@ -181,10 +165,12 @@ fn serialize_struct(cx: &ExtCtxt,
             let name = name.unwrap();
             let expr = cx.expr_str(span, token::get_ident(name));
 
+            let i = i as u32;
+
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(visitor.visit_map_elt(state, $first, $expr, &self.value.$name));
+                    let v = try!(visitor.visit_map_elt($first, $expr, &self.value.$name));
                     Ok(Some(v))
                 }
             )
@@ -193,20 +179,15 @@ fn serialize_struct(cx: &ExtCtxt,
 
     quote_expr!(cx, {
         struct Visitor<'a> {
-            state: uint,
+            state: u32,
             value: &'a $type_ident,
         }
 
-        impl<
-            'a,
-            S,
-            R,
-            E,
-        > ::serde2::ser::MapVisitor<S, R, E> for Visitor<'a> {
+        impl<'a> ::serde2::ser::MapVisitor for Visitor<'a> {
             #[inline]
             fn visit<
-                V: ::serde2::ser::Visitor<S, R, E>,
-            >(&mut self, state: &mut S, visitor: V) -> Result<Option<R>, E> {
+                V: ::serde2::ser::Visitor,
+            >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
                 match self.state {
                     $arms
                     _ => Ok(None),
@@ -214,13 +195,13 @@ fn serialize_struct(cx: &ExtCtxt,
             }
 
             #[inline]
-            fn size_hint(&self) -> (uint, Option<uint>) {
-                let size = $len - self.state;
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                let size = $len - (self.state as usize);
                 (size, Some(size))
             }
         }
 
-        $visitor.visit_named_map($state, $type_name, Visitor {
+        $visitor.visit_named_map($type_name, Visitor {
             value: self,
             state: 0,
         })
@@ -229,7 +210,6 @@ fn serialize_struct(cx: &ExtCtxt,
 
 fn serialize_enum(cx: &ExtCtxt,
                   span: Span,
-                  state: P<Expr>,
                   visitor: P<Expr>,
                   type_ident: Ident,
                   variant: &ast::Variant,
@@ -248,15 +228,15 @@ fn serialize_enum(cx: &ExtCtxt,
         .map(|&FieldInfo { ref self_, .. }| {
             quote_stmt!(
                 cx,
-                try!($visitor.serialize_enum_elt($state, &$self_))
+                try!($visitor.serialize_enum_elt(&$self_))
             )
         })
         .collect();
 
     quote_expr!(cx, {
-        try!($visitor.serialize_enum_start($state, $type_name, $variant_name, $len));
+        try!($visitor.serialize_enum_start($type_name, $variant_name, $len));
         $stmts
-        $visitor.serialize_enum_end($state)
+        $visitor.serialize_enum_end()
     })
 }
 
@@ -553,7 +533,7 @@ fn deserialize_enum(
 
 /// Create a deserializer for a single enum variant/struct:
 /// - `outer_pat_ident` is the name of this enum variant/struct
-/// - `getarg` should retrieve the `uint`-th field with name `&str`.
+/// - `getarg` should retrieve the `u32`-th field with name `&str`.
 fn deserialize_static_fields(
     cx: &ExtCtxt,
     span: Span,

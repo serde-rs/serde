@@ -67,7 +67,7 @@ impl de::Deserialize for HttpField {
 }
 
 #[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
-//#[derive_serialize]
+#[derive_serialize]
 //#[derive_deserialize]
 struct Http {
     protocol: HttpProtocol,
@@ -299,7 +299,7 @@ impl de::Deserialize for OriginField {
 }
 
 #[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
-//#[derive_serialize]
+#[derive_serialize]
 //#[derive_deserialize]
 struct Origin {
     ip: String,
@@ -773,7 +773,7 @@ impl de::Deserialize for LogField {
 }
 
 #[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
-//#[derive_serialize]
+#[derive_serialize]
 //#[derive_deserialize]
 struct Log {
     timestamp: i64,
@@ -887,7 +887,6 @@ impl Log {
     }
 }
 
-/*
 macro_rules! likely(
     ($val:expr) => {
         {
@@ -1477,4 +1476,3 @@ fn bench_deserializer(b: &mut Bencher) {
         let _log: Log = json::from_str(JSON_STR).unwrap();
     });
 }
-*/
