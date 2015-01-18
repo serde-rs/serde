@@ -19,32 +19,29 @@ pub enum Value {
 impl ser::Serialize for Value {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, s: &mut S, visitor: V) -> Result<R, E> {
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
         match *self {
             Value::Null => {
-                visitor.visit_null(s)
+                visitor.visit_unit()
             }
             Value::Bool(v) => {
-                visitor.visit_bool(s, v)
+                visitor.visit_bool(v)
             }
             Value::I64(v) => {
-                visitor.visit_i64(s, v)
+                visitor.visit_i64(v)
             }
             Value::F64(v) => {
-                visitor.visit_f64(s, v)
+                visitor.visit_f64(v)
             }
             Value::String(ref v) => {
-                visitor.visit_str(s, v.as_slice())
+                visitor.visit_str(v.as_slice())
             }
             Value::Array(ref v) => {
-                v.visit(s, visitor)
+                v.visit(visitor)
             }
             Value::Object(ref v) => {
-                v.visit(s, visitor)
+                v.visit(visitor)
             }
         }
     }
@@ -68,9 +65,7 @@ impl fmt::Show for Value {
     }
 }
 
-pub fn to_value<
-    T: ser::Serialize,
->(value: &T) -> Value {
+pub fn to_value<T>(value: &T) -> Value where T: ser::Serialize {
     let mut writer = Writer::new();
     writer.visit(value).unwrap();
     writer.unwrap()
@@ -101,64 +96,81 @@ impl Writer {
     }
 }
 
-impl ser::Serializer<Writer, (), ()> for Writer {
+impl ser::Serializer for Writer {
+    type Value = ();
+    type Error = ();
+
     #[inline]
     fn visit<
         T: ser::Serialize,
     >(&mut self, value: &T) -> Result<(), ()> {
-        value.visit(self, Visitor)
+        try!(value.visit(self));
+        Ok(())
     }
 }
 
-struct Visitor;
+impl ser::Visitor for Writer {
+    type Value = ();
+    type Error = ();
 
-impl ser::Visitor<Writer, (), ()> for Visitor {
     #[inline]
-    fn visit_null(&self, state: &mut Writer) -> Result<(), ()> {
-        state.state.push(State::Value(Value::Null));
+    fn visit_unit(&mut self) -> Result<(), ()> {
+        self.state.push(State::Value(Value::Null));
         Ok(())
     }
 
     #[inline]
-    fn visit_bool(&self, state: &mut Writer, value: bool) -> Result<(), ()> {
-        state.state.push(State::Value(Value::Bool(value)));
+    fn visit_bool(&mut self, value: bool) -> Result<(), ()> {
+        self.state.push(State::Value(Value::Bool(value)));
         Ok(())
     }
 
     #[inline]
-    fn visit_i64(&self, state: &mut Writer, value: i64) -> Result<(), ()> {
-        state.state.push(State::Value(Value::I64(value)));
+    fn visit_i64(&mut self, value: i64) -> Result<(), ()> {
+        self.state.push(State::Value(Value::I64(value)));
         Ok(())
     }
 
     #[inline]
-    fn visit_u64(&self, state: &mut Writer, value: u64) -> Result<(), ()> {
-        state.state.push(State::Value(Value::I64(value as i64)));
+    fn visit_u64(&mut self, value: u64) -> Result<(), ()> {
+        self.state.push(State::Value(Value::I64(value as i64)));
         Ok(())
     }
 
     #[inline]
-    fn visit_f64(&self, state: &mut Writer, value: f64) -> Result<(), ()> {
-        state.state.push(State::Value(Value::F64(value as f64)));
+    fn visit_f64(&mut self, value: f64) -> Result<(), ()> {
+        self.state.push(State::Value(Value::F64(value as f64)));
         Ok(())
     }
 
     #[inline]
-    fn visit_char(&self, state: &mut Writer, value: char) -> Result<(), ()> {
-        state.state.push(State::Value(Value::String(value.to_string())));
+    fn visit_char(&mut self, value: char) -> Result<(), ()> {
+        self.state.push(State::Value(Value::String(value.to_string())));
         Ok(())
     }
 
     #[inline]
-    fn visit_str(&self, state: &mut Writer, value: &str) -> Result<(), ()> {
-        state.state.push(State::Value(Value::String(value.to_string())));
+    fn visit_str(&mut self, value: &str) -> Result<(), ()> {
+        self.state.push(State::Value(Value::String(value.to_string())));
         Ok(())
     }
 
     #[inline]
-    fn visit_seq<
-        V: ser::SeqVisitor<Writer, (), ()>
-    >(&self, state: &mut Writer, mut visitor: V) -> Result<(), ()> {
+    fn visit_none(&mut self) -> Result<(), ()> {
+        self.visit_unit()
+    }
+
+    #[inline]
+    fn visit_some<
+        V: ser::Serialize,
+    >(&mut self, value: V) -> Result<(), ()> {
+        value.visit(self)
+    }
+
+    #[inline]
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), ()>
+        where V: ser::SeqVisitor,
+    {
         let len = match visitor.size_hint() {
             (_, Some(len)) => len,
             (len, None) => len,
@@ -166,17 +178,14 @@ impl ser::Visitor<Writer, (), ()> for Visitor {
 
         let values = Vec::with_capacity(len);
 
-        state.state.push(State::Array(values));
+        self.state.push(State::Array(values));
 
-        loop {
-            match try!(visitor.visit(state, Visitor)) {
-                Some(()) => { }
-                None => { break; }
+        while let Some(()) = try!(visitor.visit(self)) { }
+
+        match self.state.pop().unwrap() {
+            State::Array(values) => {
+                self.state.push(State::Value(Value::Array(values)));
             }
-        }
-
-        match state.state.pop().unwrap() {
-            State::Array(values) => { state.state.push(State::Value(Value::Array(values))); }
             _ => panic!(),
         }
 
@@ -184,16 +193,17 @@ impl ser::Visitor<Writer, (), ()> for Visitor {
     }
 
     #[inline]
-    fn visit_seq_elt<
-        T: ser::Serialize,
-    >(&self, state: &mut Writer, _first: bool, value: T) -> Result<(), ()> {
-        try!(value.visit(state, Visitor));
-        let value = match state.state.pop().unwrap() {
+    fn visit_seq_elt<T>(&mut self, _first: bool, value: T) -> Result<(), ()>
+        where T: ser::Serialize,
+    {
+        try!(value.visit(self));
+
+        let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
             _ => panic!(),
         };
 
-        match *state.state.last_mut().unwrap() {
+        match *self.state.last_mut().unwrap() {
             State::Array(ref mut values) => { values.push(value); }
             _ => panic!(),
         }
@@ -202,22 +212,19 @@ impl ser::Visitor<Writer, (), ()> for Visitor {
     }
 
     #[inline]
-    fn visit_map<
-        V: ser::MapVisitor<Writer, (), ()>
-    >(&self, state: &mut Writer, mut visitor: V) -> Result<(), ()> {
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), ()>
+        where V: ser::MapVisitor,
+    {
         let values = BTreeMap::new();
 
-        state.state.push(State::Object(values));
+        self.state.push(State::Object(values));
 
-        loop {
-            match try!(visitor.visit(state, Visitor)) {
-                Some(()) => { }
-                None => { break; }
+        while let Some(()) = try!(visitor.visit(self)) { }
+
+        match self.state.pop().unwrap() {
+            State::Object(values) => {
+                self.state.push(State::Value(Value::Object(values)));
             }
-        }
-
-        match state.state.pop().unwrap() {
-            State::Object(values) => { state.state.push(State::Value(Value::Object(values))); }
             _ => panic!(),
         }
 
@@ -225,24 +232,24 @@ impl ser::Visitor<Writer, (), ()> for Visitor {
     }
 
     #[inline]
-    fn visit_map_elt<
-        K: ser::Serialize,
-        V: ser::Serialize,
-    >(&self, state: &mut Writer, _first: bool, key: K, value: V) -> Result<(), ()> {
-        try!(key.visit(state, Visitor));
-        try!(value.visit(state, Visitor));
+    fn visit_map_elt<K, V>(&mut self, _first: bool, key: K, value: V) -> Result<(), ()>
+        where K: ser::Serialize,
+              V: ser::Serialize,
+    {
+        try!(key.visit(self));
+        try!(value.visit(self));
 
-        let key = match state.state.pop().unwrap() {
+        let key = match self.state.pop().unwrap() {
             State::Value(Value::String(value)) => value,
             _ => panic!(),
         };
 
-        let value = match state.state.pop().unwrap() {
+        let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
             _ => panic!(),
         };
 
-        match *state.state.last_mut().unwrap() {
+        match *self.state.last_mut().unwrap() {
             State::Object(ref mut values) => { values.insert(key, value); }
             _ => panic!(),
         }
