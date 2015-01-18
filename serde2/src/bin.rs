@@ -357,7 +357,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<Vec<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("vec:           {}", v);
+    println!("vec:           {:?}", v);
 
     ////
 
@@ -370,7 +370,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<(int, int), Error> = Deserialize::deserialize(&mut state);
-    println!("tuple:         {}", v);
+    println!("tuple:         {:?}", v);
 
     ////
 
@@ -383,7 +383,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("value:         {}", v);
+    println!("value:         {:?}", v);
 
     ////
 
@@ -394,7 +394,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony:       {}", v);
+    println!("optiony:       {:?}", v);
 
     ////
 
@@ -404,7 +404,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony:       {}", v);
+    println!("optiony:       {:?}", v);
 
     ////
 
@@ -415,7 +415,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony value: {}", v);
+    println!("optiony value: {:?}", v);
 
     ////
 
@@ -425,7 +425,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("optiony value: {}", v);
+    println!("optiony value: {:?}", v);
 
     ////
 
@@ -435,7 +435,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("option:        {}", v);
+    println!("option:        {:?}", v);
 
     ////
 
@@ -445,7 +445,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<option::Option<int>, Error> = Deserialize::deserialize(&mut state);
-    println!("option:        {}", v);
+    println!("option:        {:?}", v);
 
     ////
 
@@ -455,7 +455,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("option value:  {}", v);
+    println!("option value:  {:?}", v);
 
     ////
 
@@ -465,7 +465,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("option value:  {}", v);
+    println!("option value:  {:?}", v);
 
     ////
 
@@ -480,7 +480,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<HashMap<string::String, int>, Error> = Deserialize::deserialize(&mut state);
-    println!("{}", v);
+    println!("{:?}", v);
 
     ////
 
@@ -495,7 +495,7 @@ pub fn main() {
     let mut state = MyDeserializer::new(tokens.into_iter());
 
     let v: Result<json::Value, Error> = Deserialize::deserialize(&mut state);
-    println!("{}", v);
+    println!("{:?}", v);
 }
 
 
@@ -560,9 +560,9 @@ fn main() {
 
     let mut s = GatherTokens::new();
     value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
+    println!("tokens: {:?}", s.unwrap());
 
-    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
+    println!("json:   {:?}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -571,9 +571,9 @@ fn main() {
 
     let mut s = GatherTokens::new();
     value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
+    println!("tokens: {:?}", s.unwrap());
 
-    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
+    println!("json:   {:?}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -585,25 +585,25 @@ fn main() {
 
     let mut s = GatherTokens::new();
     value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
+    println!("tokens: {:?}", s.unwrap());
 
-    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
+    println!("json:   {:?}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
 
     /*
-    println!("{}", to_format_vec(&5i));
-    println!("{}", to_format_string(&5i));
+    println!("{:?}", to_format_vec(&5i));
+    println!("{:?}", to_format_string(&5i));
     */
 
     let value = Foo { x: 1, y: 2, z: "abc" };
 
     let mut s = GatherTokens::new();
     value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
+    println!("tokens: {:?}", s.unwrap());
 
-    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
+    println!("json:   {:?}", json::to_string(&value).unwrap().unwrap());
     println!("");
 
     ////
@@ -612,9 +612,9 @@ fn main() {
 
     let mut s = GatherTokens::new();
     value.serialize(&mut s);
-    println!("tokens: {}", s.unwrap());
+    println!("tokens: {:?}", s.unwrap());
 
-    println!("json:   {}", json::to_string(&value).unwrap().unwrap());
+    println!("json:   {:?}", json::to_string(&value).unwrap().unwrap());
     println!("");
 }
 */

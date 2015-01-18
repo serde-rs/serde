@@ -52,7 +52,7 @@ impl rustc_serialize::Encodable for HttpProtocol {
 
 impl rustc_serialize::Decodable for HttpProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_uint())) {
+        match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }
@@ -96,7 +96,7 @@ impl rustc_serialize::Encodable for HttpMethod {
 
 impl rustc_serialize::Decodable for HttpMethod {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_uint())) {
+        match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }
@@ -133,7 +133,7 @@ impl rustc_serialize::Encodable for CacheStatus {
 
 impl rustc_serialize::Decodable for CacheStatus {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<CacheStatus, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_uint())) {
+        match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }
@@ -179,7 +179,7 @@ impl rustc_serialize::Encodable for OriginProtocol {
 
 impl rustc_serialize::Decodable for OriginProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OriginProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_uint())) {
+        match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }
@@ -217,7 +217,7 @@ impl rustc_serialize::Encodable for ZonePlan {
 
 impl rustc_serialize::Decodable for ZonePlan {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<ZonePlan, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_uint())) {
+        match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }
@@ -506,7 +506,7 @@ impl rustc_serialize::Encodable for Country {
 
 impl rustc_serialize::Decodable for Country {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Country, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_uint())) {
+        match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }

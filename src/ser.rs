@@ -9,6 +9,7 @@
 // except according to those terms.
 
 use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet};
+use std::collections::hash_map::Hasher;
 use std::hash::Hash;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -225,7 +226,7 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    K: Serialize<S, E> + Eq + Hash,
+    K: Serialize<S, E> + Eq + Hash<Hasher>,
     V: Serialize<S, E>
 > Serialize<S, E> for HashMap<K, V> {
     #[inline]
@@ -251,7 +252,7 @@ impl<
 impl<
     S: Serializer<E>,
     E,
-    T: Serialize<S, E> + Eq + Hash
+    T: Serialize<S, E> + Eq + Hash<Hasher>
 > Serialize<S, E> for HashSet<T> {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {

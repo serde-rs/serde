@@ -84,7 +84,7 @@ fn main() {
         let mut serializer = json::Serializer::new(wr.by_ref());
         match to_serialize_object.serialize(&mut serializer) {
             Ok(()) => (),
-            Err(e) => panic!("json serialization error: {}", e),
+            Err(e) => panic!("json serialization error: {:?}", e),
         }
     }
 }
@@ -192,7 +192,7 @@ fn main() {
     let mut parser = json::Parser::new(json_str_to_deserialize.bytes());
     let deserialized_object: MyStruct = match Deserialize::deserialize(&mut parser) {
         Ok(v) => v,
-        Err(e) => panic!("Decoding error: {}", e)
+        Err(e) => panic!("Decoding error: {:?}", e)
     };
 }
 ```
@@ -234,7 +234,7 @@ fn main() {
 
     let deserialized_object: TestStruct1 = match json::from_str(serialized_str.as_slice()) {
         Ok(deserialized_object) => deserialized_object,
-        Err(e) => panic!("json deserialization error: {}", e),
+        Err(e) => panic!("json deserialization error: {:?}", e),
     };
 }
 ```
@@ -1918,7 +1918,7 @@ mod bench {
                 match parser.next() {
                     None => return,
                     Some(Ok(_)) => { }
-                    Some(Err(err)) => { panic!("error: {}", err); }
+                    Some(Err(err)) => { panic!("error: {:?}", err); }
                 }
             }
         });

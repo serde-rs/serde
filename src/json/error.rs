@@ -43,7 +43,7 @@ pub enum ErrorCode {
 impl fmt::Show for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {}", token),
+            ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {:?}", token),
             ErrorCode::EOFWhileParsingList => "EOF While parsing list".fmt(f),
             ErrorCode::EOFWhileParsingObject => "EOF While parsing object".fmt(f),
             ErrorCode::EOFWhileParsingString => "EOF While parsing string".fmt(f),
@@ -60,7 +60,7 @@ impl fmt::Show for ErrorCode {
             ErrorCode::ExpectedObjectCommaOrEnd => "expected `,` or `}`".fmt(f),
             ErrorCode::ExpectedSomeIdent => "expected ident".fmt(f),
             ErrorCode::ExpectedSomeValue => "expected value".fmt(f),
-            ErrorCode::ExpectedTokens(ref token, tokens) => write!(f, "expected {}, found {}", tokens, token),
+            ErrorCode::ExpectedTokens(ref token, tokens) => write!(f, "expected {:?}, found {:?}", tokens, token),
             ErrorCode::InvalidEscape => "invalid escape".fmt(f),
             ErrorCode::InvalidNumber => "invalid number".fmt(f),
             ErrorCode::InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
@@ -71,7 +71,7 @@ impl fmt::Show for ErrorCode {
             ErrorCode::NotUtf8 => "contents not utf-8".fmt(f),
             ErrorCode::TrailingCharacters => "trailing characters".fmt(f),
             ErrorCode::UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
-            ErrorCode::UnexpectedName(ref name) => write!(f, "unexpected name {}", name),
+            ErrorCode::UnexpectedName(ref name) => write!(f, "unexpected name {:?}", name),
             ErrorCode::UnknownVariant => "unknown variant".fmt(f),
             ErrorCode::UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
         }
@@ -102,17 +102,17 @@ impl error::Error for Error {
     fn detail(&self) -> Option<String> {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                Some(format!("{} at line {} column {}", code, line, col))
+                Some(format!("{:?} at line {:?} column {:?}", code, line, col))
             }
             Error::IoError(ref error) => error.detail(),
             Error::ExpectedError(ref expected, ref found) => {
-                Some(format!("expected {}, found {}", expected, found))
+                Some(format!("expected {:?}, found {:?}", expected, found))
             }
             Error::MissingFieldError(ref field) => {
-                Some(format!("missing field {}", field))
+                Some(format!("missing field {:?}", field))
             }
             Error::UnknownVariantError(ref variant) => {
-                Some(format!("unknown variant {}", variant))
+                Some(format!("unknown variant {:?}", variant))
             }
         }
     }

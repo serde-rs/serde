@@ -103,7 +103,7 @@ impl error::Error for Error {
     fn detail(&self) -> Option<String> {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                Some(format!("{} at line {} column {}", code, line, col))
+                Some(format!("{:?} at line {:?} column {:?}", code, line, col))
             }
             Error::IoError(ref error) => error.detail(),
             /*
