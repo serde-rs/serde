@@ -109,6 +109,12 @@ pub trait Visitor {
 
     fn visit_str(&mut self, value: &str) -> Result<Self::Value, Self::Error>;
 
+    fn visit_none(&mut self) -> Result<Self::Value, Self::Error>;
+
+    #[inline]
+    fn visit_some<V>(&mut self, value: V) -> Result<Self::Value, Self::Error>
+        where V: Serialize;
+
     fn visit_seq<V>(&mut self, visitor: V) -> Result<Self::Value, Self::Error>
         where V: SeqVisitor;
 
@@ -240,6 +246,20 @@ impl Serialize for String {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+impl<T> Serialize for Option<T> where T: Serialize {
+    #[inline]
+    fn visit<
+        V: Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        match *self {
+            Some(ref value) => visitor.visit_some(value),
+            None => visitor.visit_none(),
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 pub struct SeqIteratorVisitor<Iter> {
     iter: Iter,
     first: bool,
@@ -306,9 +326,7 @@ impl<
     }
 }
 
-impl<
-    T: Serialize,
-> Serialize for BTreeSet<T> {
+impl<T> Serialize for BTreeSet<T> where T: Serialize {
     #[inline]
     fn visit<
         V: Visitor,
@@ -323,9 +341,7 @@ impl<T, S, H> Serialize for HashSet<T, S>
           H: Hasher<Output=u64>,
 {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
         visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
     }
 }
@@ -533,11 +549,11 @@ impl<K, V, Iter: Iterator<Item=(K, V)>> MapIteratorVisitor<Iter> {
     }
 }
 
-impl<
-    K: Serialize,
-    V: Serialize,
-    Iter: Iterator<Item=(K, V)>,
-> MapVisitor for MapIteratorVisitor<Iter> {
+impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
+    where K: Serialize,
+          V: Serialize,
+          I: Iterator<Item=(K, V)>,
+{
     #[inline]
     fn visit<
         V_: Visitor,
@@ -807,6 +823,19 @@ mod tests {
             assert_eq!(self.iter.next().unwrap(), Token::Str(v));
             Ok(())
         }
+
+        fn visit_none(&mut self) -> Result<(), ()> {
+            assert_eq!(self.iter.next(), Some(Token::Option(false)));
+            Ok(())
+        }
+
+        fn visit_some<V>(&mut self, value: V) -> Result<(), ()>
+            where V: Serialize,
+        {
+            assert_eq!(self.iter.next(), Some(Token::Option(true)));
+            value.visit(self)
+        }
+
 
         fn visit_seq<V>(&mut self, visitor: V) -> Result<(), ()>
             where V: SeqVisitor
@@ -1106,6 +1135,13 @@ mod tests {
         test_str {
             "abc" => vec![Token::Str("abc")],
             "abc".to_string() => vec![Token::Str("abc")],
+        }
+        test_option {
+            None::<i32> => vec![Token::Option(false)],
+            Some(1) => vec![
+                Token::Option(true),
+                Token::I32(1),
+            ],
         }
         test_slice {
             &[0][..0] => vec![

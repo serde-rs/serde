@@ -25,14 +25,17 @@ pub trait Deserializer {
         V: Visitor,
     >(&mut self, visitor: &mut V) -> Result<V::Value, Self::Error>;
 
-    /*
+    /// The `visit_option` method allows a `Deserialize` type to inform the
+    /// `Deserializer` that it's expecting an optional value. This allows
+    /// deserializers that encode an optional value as a nullable value to
+    /// convert the null value into a `None`, and a regular value as
+    /// `Some(value)`.
+    #[inline]
     fn visit_option<
-        R,
-        V: Visitor<Self, R, E>,
-    >(&mut self, visitor: &mut V) -> Result<R, S::Error> {
+        V: Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Self::Error> {
         self.visit(visitor)
     }
-    */
 }
 
 pub trait Visitor {
@@ -152,22 +155,17 @@ pub trait Visitor {
         self.visit_unit()
     }
 
-    /*
-    #[inline]
-    fn visit_enum_unit<
+    fn visit_none<
         E: Error,
-    >(&mut self, _name: &str, _variant: &str) -> Result<Self::Value, E> {
-        self.visit_unit()
-    }
-    */
-
-    /*
-    fn visit_option<
-        V: OptionVisitor<S, E>,
-    >(&mut self, _visitor: V) -> Result<Self::Value, E> {
+    >(&mut self) -> Result<Self::Value, E> {
         Err(Error::syntax_error())
     }
-    */
+
+    fn visit_some<
+        S: Deserializer,
+    >(&mut self, _state: &mut S) -> Result<Self::Value, S::Error> {
+        Err(Error::syntax_error())
+    }
 
     fn visit_seq<
         V: SeqVisitor,
@@ -202,14 +200,6 @@ pub trait Visitor {
         Err(Error::syntax_error())
     }
 }
-
-/*
-pub trait OptionVisitor<S, E> {
-    fn visit<
-        T: Deserialize<S, E>,
-    >(&mut self) -> Result<Option<T>, E>;
-}
-*/
 
 pub trait SeqVisitor {
     type Error: Error;
@@ -476,35 +466,39 @@ impl Deserialize for String {
     }
 }
 
-/*
 ///////////////////////////////////////////////////////////////////////////////
 
+struct OptionVisitor<T>;
+
 impl<
-    T: Deserialize<S, E>,
-    S: Deserializer<E>,
-    E: Error,
-> Deserialize<S, E> for Option<T> {
-    fn deserialize(state: &mut S) -> Result<Option<T>, E> {
-        struct Visitor;
+    T: Deserialize,
+> Visitor for OptionVisitor<T> {
+    type Value = Option<T>;
 
-        impl<
-            T: Deserialize<S, E>,
-            S: Deserializer<E>,
-            E: Error,
-        > self::Visitor<S, Option<T>, E> for Visitor {
-            fn visit_option<
-                V: OptionVisitor<S, E>,
-            >(&mut self, mut visitor: V) -> Result<Option<T>, E> {
-                visitor.visit()
-            }
-        }
+    #[inline]
+    fn visit_none<
+        E: Error,
+    >(&mut self) -> Result<Option<T>, E> {
+        Ok(None)
+    }
 
-        state.visit_option(&mut Visitor)
+    #[inline]
+    fn visit_some<
+        S: Deserializer,
+    >(&mut self, state: &mut S) -> Result<Option<T>, S::Error> {
+        Ok(Some(try!(Deserialize::deserialize(state))))
+    }
+}
+
+impl<T> Deserialize for Option<T> where T: Deserialize {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<Option<T>, S::Error> {
+        state.visit_option(&mut OptionVisitor)
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-*/
 
 struct VecVisitor<T>;
 
@@ -668,6 +662,7 @@ impl<
 mod tests {
     use super::{Deserialize, Deserializer, Visitor};
     use std::collections::BTreeMap;
+    use std::iter;
     use std::vec;
 
     #[derive(Show)]
@@ -689,6 +684,8 @@ mod tests {
         Str(&'a str),
         String(String),
 
+        Option(bool),
+
         Unit,
         NamedUnit(&'a str),
 
@@ -707,13 +704,13 @@ mod tests {
     }
 
     struct TokenDeserializer<'a> {
-        tokens: vec::IntoIter<Token<'a>>,
+        tokens: iter::Peekable<Token<'a>, vec::IntoIter<Token<'a>>>,
     }
 
     impl<'a> TokenDeserializer<'a> {
         fn new(tokens: Vec<Token<'a>>) -> TokenDeserializer<'a> {
             TokenDeserializer {
-                tokens: tokens.into_iter(),
+                tokens: tokens.into_iter().peekable(),
             }
         }
     }
@@ -753,6 +750,8 @@ mod tests {
                 Some(Token::Char(v)) => visitor.visit_char(v),
                 Some(Token::Str(v)) => visitor.visit_str(v),
                 Some(Token::String(v)) => visitor.visit_string(v),
+                Some(Token::Option(false)) => visitor.visit_none(),
+                Some(Token::Option(true)) => visitor.visit_some(self),
                 Some(Token::Unit) => visitor.visit_unit(),
                 Some(Token::NamedUnit(name)) => visitor.visit_named_unit(name),
                 Some(Token::SeqStart(len)) => {
@@ -789,6 +788,30 @@ mod tests {
                     })
                 }
                 Some(_) => Err(Error::SyntaxError),
+                None => Err(Error::EndOfStreamError),
+            }
+        }
+
+        /// Hook into `Option` deserializing so we can treat `Unit` as a
+        /// `None`, or a regular value as `Some(value)`.
+        #[inline]
+        fn visit_option<
+            V: Visitor,
+        >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+            match self.tokens.peek() {
+                Some(&Token::Option(false)) => {
+                    self.tokens.next();
+                    visitor.visit_none()
+                }
+                Some(&Token::Option(true)) => {
+                    self.tokens.next();
+                    visitor.visit_some(self)
+                }
+                Some(&Token::Unit) => {
+                    self.tokens.next();
+                    visitor.visit_none()
+                }
+                Some(_) => visitor.visit_some(self),
                 None => Err(Error::EndOfStreamError),
             }
         }
@@ -1294,17 +1317,6 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////
 
     declare_tests! {
-        test_unit {
-            () => vec![Token::Unit],
-            () => vec![
-                Token::SeqStart(0),
-                Token::SeqEnd,
-            ],
-            () => vec![
-                Token::NamedSeqStart("Anything", 0),
-                Token::SeqEnd,
-            ],
-        }
         test_bool {
             true => vec![Token::Bool(true)],
             false => vec![Token::Bool(false)],
@@ -1350,6 +1362,26 @@ mod tests {
             "abc".to_string() => vec![Token::Str("abc")],
             "abc".to_string() => vec![Token::String("abc".to_string())],
             "a".to_string() => vec![Token::Char('a')],
+        }
+        test_option {
+            None::<i32> => vec![Token::Unit],
+            None::<i32> => vec![Token::Option(false)],
+            Some(1) => vec![Token::I32(1)],
+            Some(1) => vec![
+                Token::Option(true),
+                Token::I32(1),
+            ],
+        }
+        test_unit {
+            () => vec![Token::Unit],
+            () => vec![
+                Token::SeqStart(0),
+                Token::SeqEnd,
+            ],
+            () => vec![
+                Token::NamedSeqStart("Anything", 0),
+                Token::SeqEnd,
+            ],
         }
         test_named_unit {
             NamedUnit => vec![Token::Unit],
