@@ -351,7 +351,7 @@ macro_rules! impl_deserialize_num_method {
     }
 }
 
-struct PrimitiveVisitor<T>;
+pub struct PrimitiveVisitor<T>;
 
 impl<
     T: Deserialize + FromPrimitive

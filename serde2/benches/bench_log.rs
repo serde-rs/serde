@@ -34,19 +34,18 @@ enum HttpField {
     RequestUri,
 }
 
-impl<
-    S: Deserializer<E>,
-    E: de::Error,
-> de::Deserialize<S, E> for HttpField {
-    fn deserialize(state: &mut S) -> Result<HttpField, E> {
+impl de::Deserialize for HttpField {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<HttpField, S::Error> {
         struct Visitor;
 
-        impl<
-            'a,
-            S: de::Deserializer<E>,
-            E: de::Error,
-        > de::Visitor<S, HttpField, E> for Visitor {
-            fn visit_str(&mut self, value: &str) -> Result<HttpField, E> {
+        impl de::Visitor for Visitor {
+            type Value = HttpField;
+
+            fn visit_str<
+                E: de::Error,
+            >(&mut self, value: &str) -> Result<HttpField, E> {
                 let x = match value {
                     "protocol" => HttpField::Protocol,
                     "status" => HttpField::Status,
@@ -68,7 +67,7 @@ impl<
 }
 
 #[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
-#[derive_serialize]
+//#[derive_serialize]
 //#[derive_deserialize]
 struct Http {
     protocol: HttpProtocol,
@@ -81,20 +80,19 @@ struct Http {
     referer: String,
     request_uri: String,
 }
-impl<
-    S: Deserializer<E>,
-    E: de::Error,
-> de::Deserialize<S, E> for Http {
-    fn deserialize(state: &mut S) -> Result<Http, E> {
+
+impl de::Deserialize for Http {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<Http, S::Error> {
         struct Visitor;
 
-        impl<
-            S: Deserializer<E>,
-            E: de::Error,
-        > de::Visitor<S, Http, E> for Visitor {
+        impl de::Visitor for Visitor {
+            type Value = Http;
+
             fn visit_map<
-                Visitor: de::MapVisitor<S, E>,
-            >(&mut self, mut visitor: Visitor) -> Result<Http, E> {
+                V: de::MapVisitor,
+            >(&mut self, mut visitor: V) -> Result<Http, V::Error> {
                 let mut protocol = None;
                 let mut status = None;
                 let mut host_status = None;
@@ -105,22 +103,17 @@ impl<
                 let mut referer = None;
                 let mut request_uri = None;
 
-                loop {
-                    match try!(visitor.visit_key()) {
-                        Some(field) => {
-                            match field {
-                                HttpField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
-                                HttpField::Status => { status = Some(try!(visitor.visit_value())); }
-                                HttpField::HostStatus => { host_status = Some(try!(visitor.visit_value())); }
-                                HttpField::UpStatus => { up_status = Some(try!(visitor.visit_value())); }
-                                HttpField::Method => { method = Some(try!(visitor.visit_value())); }
-                                HttpField::ContentType => { content_type = Some(try!(visitor.visit_value())); }
-                                HttpField::UserAgent => { user_agent = Some(try!(visitor.visit_value())); }
-                                HttpField::Referer => { referer = Some(try!(visitor.visit_value())); }
-                                HttpField::RequestUri => { request_uri = Some(try!(visitor.visit_value())); }
-                            }
-                        }
-                        None => { break; }
+                while let Some(key) = try!(visitor.visit_key()) {
+                    match key {
+                        HttpField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
+                        HttpField::Status => { status = Some(try!(visitor.visit_value())); }
+                        HttpField::HostStatus => { host_status = Some(try!(visitor.visit_value())); }
+                        HttpField::UpStatus => { up_status = Some(try!(visitor.visit_value())); }
+                        HttpField::Method => { method = Some(try!(visitor.visit_value())); }
+                        HttpField::ContentType => { content_type = Some(try!(visitor.visit_value())); }
+                        HttpField::UserAgent => { user_agent = Some(try!(visitor.visit_value())); }
+                        HttpField::Referer => { referer = Some(try!(visitor.visit_value())); }
+                        HttpField::RequestUri => { request_uri = Some(try!(visitor.visit_value())); }
                     }
                 }
 
@@ -151,15 +144,15 @@ enum HttpProtocol {
 
 impl rustc_serialize::Encodable for HttpProtocol {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for HttpProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -167,22 +160,18 @@ impl rustc_serialize::Decodable for HttpProtocol {
 impl ser::Serialize for HttpProtocol {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_uint(state, *self as uint)
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<
-    S: de::Deserializer<E>,
-    E: de::Error,
-> de::Deserialize<S, E> for HttpProtocol {
+impl de::Deserialize for HttpProtocol {
     #[inline]
-    fn deserialize(state: &mut S) -> Result<HttpProtocol, E> {
-        de::deserialize_from_primitive(state)
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<HttpProtocol, S::Error> {
+        state.visit(&mut de::PrimitiveVisitor)
     }
 }
 
@@ -203,15 +192,15 @@ enum HttpMethod {
 
 impl rustc_serialize::Encodable for HttpMethod {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for HttpMethod {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -219,22 +208,18 @@ impl rustc_serialize::Decodable for HttpMethod {
 impl ser::Serialize for HttpMethod {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_uint(state, *self as uint)
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<
-    S: de::Deserializer<E>,
-    E: de::Error,
-> de::Deserialize<S, E> for HttpMethod {
+impl de::Deserialize for HttpMethod {
     #[inline]
-    fn deserialize(state: &mut S) -> Result<HttpMethod, E> {
-        de::deserialize_from_primitive(state)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<HttpMethod, S::Error> {
+        state.visit(&mut de::PrimitiveVisitor)
     }
 }
 
@@ -248,13 +233,13 @@ enum CacheStatus {
 
 impl rustc_serialize::Encodable for CacheStatus {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for CacheStatus {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<CacheStatus, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from uint")),
         }
@@ -264,19 +249,18 @@ impl rustc_serialize::Decodable for CacheStatus {
 impl ser::Serialize for CacheStatus {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_uint(state, *self as uint)
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for CacheStatus {
+impl de::Deserialize for CacheStatus {
     #[inline]
-    fn deserialize(state: &mut S) -> Result<CacheStatus, E> {
-        de::deserialize_from_primitive(state)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<CacheStatus, S::Error> {
+        state.visit(&mut de::PrimitiveVisitor)
     }
 }
 
@@ -287,19 +271,18 @@ enum OriginField {
     Protocol,
 }
 
-impl<
-    S: Deserializer<E>,
-    E: de::Error,
-> de::Deserialize<S, E> for OriginField {
-    fn deserialize(state: &mut S) -> Result<OriginField, E> {
+impl de::Deserialize for OriginField {
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<OriginField, S::Error> {
         struct Visitor;
 
-        impl<
-            'a,
-            S: de::Deserializer<E>,
-            E: de::Error,
-        > de::Visitor<S, OriginField, E> for Visitor {
-            fn visit_str(&mut self, value: &str) -> Result<OriginField, E> {
+        impl de::Visitor for Visitor {
+            type Value = OriginField;
+
+            fn visit_str<
+                E: de::Error,
+            >(&mut self, value: &str) -> Result<OriginField, E> {
                 let x = match value {
                     "ip" => OriginField::Ip,
                     "port" => OriginField::Port,
@@ -316,7 +299,7 @@ impl<
 }
 
 #[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
-#[derive_serialize]
+//#[derive_serialize]
 //#[derive_deserialize]
 struct Origin {
     ip: String,
@@ -325,36 +308,29 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-impl<
-    S: Deserializer<E>,
-    E: de::Error,
-> Deserialize<S, E> for Origin {
-    fn deserialize(state: &mut S) -> Result<Origin, E> {
+impl Deserialize for Origin {
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<Origin, S::Error> {
         struct Visitor;
 
-        impl<
-            S: Deserializer<E>,
-            E: de::Error,
-        > de::Visitor<S, Origin, E> for Visitor {
+        impl de::Visitor for Visitor {
+            type Value = Origin;
+
             fn visit_map<
-                Visitor: de::MapVisitor<S, E>,
-            >(&mut self, mut visitor: Visitor) -> Result<Origin, E> {
+                V: de::MapVisitor,
+            >(&mut self, mut visitor: V) -> Result<Origin, V::Error> {
                 let mut ip = None;
                 let mut port = None;
                 let mut hostname = None;
                 let mut protocol = None;
 
-                loop {
-                    match try!(visitor.visit_key()) {
-                        Some(field) => {
-                            match field {
-                                OriginField::Ip => { ip = Some(try!(visitor.visit_value())); }
-                                OriginField::Port => { port = Some(try!(visitor.visit_value())); }
-                                OriginField::Hostname => { hostname = Some(try!(visitor.visit_value())); }
-                                OriginField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
-                            }
-                        }
-                        None => { break; }
+                while let Some(key) = try!(visitor.visit_key()) {
+                    match key {
+                        OriginField::Ip => { ip = Some(try!(visitor.visit_value())); }
+                        OriginField::Port => { port = Some(try!(visitor.visit_value())); }
+                        OriginField::Hostname => { hostname = Some(try!(visitor.visit_value())); }
+                        OriginField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
                     }
                 }
 
@@ -380,15 +356,15 @@ enum OriginProtocol {
 
 impl rustc_serialize::Encodable for OriginProtocol {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for OriginProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OriginProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -396,19 +372,18 @@ impl rustc_serialize::Decodable for OriginProtocol {
 impl ser::Serialize for OriginProtocol {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_uint(state, *self as uint)
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for OriginProtocol {
+impl de::Deserialize for OriginProtocol {
     #[inline]
-    fn deserialize(state: &mut S) -> Result<OriginProtocol, E> {
-        de::deserialize_from_primitive(state)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<OriginProtocol, S::Error> {
+        state.visit(&mut de::PrimitiveVisitor)
     }
 }
 
@@ -423,15 +398,15 @@ enum ZonePlan {
 
 impl rustc_serialize::Encodable for ZonePlan {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for ZonePlan {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<ZonePlan, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -439,19 +414,18 @@ impl rustc_serialize::Decodable for ZonePlan {
 impl ser::Serialize for ZonePlan {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_uint(state, *self as uint)
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for ZonePlan {
+impl de::Deserialize for ZonePlan {
     #[inline]
-    fn deserialize(state: &mut S) -> Result<ZonePlan, E> {
-        de::deserialize_from_primitive(state)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<ZonePlan, S::Error> {
+        state.visit(&mut de::PrimitiveVisitor)
     }
 }
 
@@ -717,15 +691,15 @@ enum Country {
 
 impl rustc_serialize::Encodable for Country {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for Country {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Country, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -733,19 +707,18 @@ impl rustc_serialize::Decodable for Country {
 impl ser::Serialize for Country {
     #[inline]
     fn visit<
-        S,
-        R,
-        E,
-        V: ser::Visitor<S, R, E>,
-    >(&self, state: &mut S, visitor: V) -> Result<R, E> {
-        visitor.visit_uint(state, *self as uint)
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<S: de::Deserializer<E>, E: de::Error> de::Deserialize<S, E> for Country {
+impl de::Deserialize for Country {
     #[inline]
-    fn deserialize(state: &mut S) -> Result<Country, E> {
-        de::deserialize_from_primitive(state)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<Country, S::Error> {
+        state.visit(&mut de::PrimitiveVisitor)
     }
 }
 
@@ -764,19 +737,18 @@ enum LogField {
     RayId,
 }
 
-impl<
-    S: Deserializer<E>,
-    E: de::Error,
-> de::Deserialize<S, E> for LogField {
-    fn deserialize(state: &mut S) -> Result<LogField, E> {
+impl de::Deserialize for LogField {
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<LogField, S::Error> {
         struct Visitor;
 
-        impl<
-            'a,
-            S: de::Deserializer<E>,
-            E: de::Error,
-        > de::Visitor<S, LogField, E> for Visitor {
-            fn visit_str(&mut self, value: &str) -> Result<LogField, E> {
+        impl de::Visitor for Visitor {
+            type Value = LogField;
+
+            fn visit_str<
+                E: de::Error,
+            >(&mut self, value: &str) -> Result<LogField, E> {
                 let x = match value {
                     "timestamp" => LogField::Timestamp,
                     "zone_id" => LogField::ZoneId,
@@ -801,7 +773,7 @@ impl<
 }
 
 #[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
-#[derive_serialize]
+//#[derive_serialize]
 //#[derive_deserialize]
 struct Log {
     timestamp: i64,
@@ -818,20 +790,18 @@ struct Log {
     ray_id: String,
 }
 
-impl<
-    S: Deserializer<E>,
-    E: de::Error,
-> Deserialize<S, E> for Log {
-    fn deserialize(state: &mut S) -> Result<Log, E> {
+impl Deserialize for Log {
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<Log, S::Error> {
         struct Visitor;
 
-        impl<
-            S: Deserializer<E>,
-            E: de::Error,
-        > de::Visitor<S, Log, E> for Visitor {
+        impl de::Visitor for Visitor {
+            type Value = Log;
+
             fn visit_map<
-                Visitor: de::MapVisitor<S, E>,
-            >(&mut self, mut visitor: Visitor) -> Result<Log, E> {
+                V: de::MapVisitor,
+            >(&mut self, mut visitor: V) -> Result<Log, V::Error> {
                 let mut timestamp = None;
                 let mut zone_id = None;
                 let mut zone_plan = None;
@@ -845,25 +815,20 @@ impl<
                 let mut bytes_dlv = None;
                 let mut ray_id = None;
 
-                loop {
-                    match try!(visitor.visit_key()) {
-                        Some(field) => {
-                            match field {
-                                LogField::Timestamp => { timestamp = Some(try!(visitor.visit_value())); }
-                                LogField::ZoneId => { zone_id = Some(try!(visitor.visit_value())); }
-                                LogField::ZonePlan => { zone_plan = Some(try!(visitor.visit_value())); }
-                                LogField::Http => { http = Some(try!(visitor.visit_value())); }
-                                LogField::Origin => { origin = Some(try!(visitor.visit_value())); }
-                                LogField::Country => { country = Some(try!(visitor.visit_value())); }
-                                LogField::CacheStatus => { cache_status = Some(try!(visitor.visit_value())); }
-                                LogField::ServerIp => { server_ip = Some(try!(visitor.visit_value())); }
-                                LogField::ServerName => { server_name = Some(try!(visitor.visit_value())); }
-                                LogField::RemoteIp => { remote_ip = Some(try!(visitor.visit_value())); }
-                                LogField::BytesDlv => { bytes_dlv = Some(try!(visitor.visit_value())); }
-                                LogField::RayId => { ray_id = Some(try!(visitor.visit_value())); }
-                            }
-                        }
-                        None => { break; }
+                while let Some(key) = try!(visitor.visit_key()) {
+                    match key {
+                        LogField::Timestamp => { timestamp = Some(try!(visitor.visit_value())); }
+                        LogField::ZoneId => { zone_id = Some(try!(visitor.visit_value())); }
+                        LogField::ZonePlan => { zone_plan = Some(try!(visitor.visit_value())); }
+                        LogField::Http => { http = Some(try!(visitor.visit_value())); }
+                        LogField::Origin => { origin = Some(try!(visitor.visit_value())); }
+                        LogField::Country => { country = Some(try!(visitor.visit_value())); }
+                        LogField::CacheStatus => { cache_status = Some(try!(visitor.visit_value())); }
+                        LogField::ServerIp => { server_ip = Some(try!(visitor.visit_value())); }
+                        LogField::ServerName => { server_name = Some(try!(visitor.visit_value())); }
+                        LogField::RemoteIp => { remote_ip = Some(try!(visitor.visit_value())); }
+                        LogField::BytesDlv => { bytes_dlv = Some(try!(visitor.visit_value())); }
+                        LogField::RayId => { ray_id = Some(try!(visitor.visit_value())); }
                     }
                 }
 
@@ -922,6 +887,7 @@ impl Log {
     }
 }
 
+/*
 macro_rules! likely(
     ($val:expr) => {
         {
@@ -1511,3 +1477,4 @@ fn bench_deserializer(b: &mut Bencher) {
         let _log: Log = json::from_str(JSON_STR).unwrap();
     });
 }
+*/
