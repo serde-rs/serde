@@ -283,7 +283,7 @@ mod decoder {
             match self.stack.pop() {
                 Some(MapState(map)) => {
                     let len = map.len();
-                    for (key, value) in map.into_iter() {
+                    for (key, value) in map {
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));
@@ -404,7 +404,7 @@ mod deserializer {
                 Some(MapState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
-                    for (key, value) in value.into_iter() {
+                    for (key, value) in value {
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));

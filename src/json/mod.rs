@@ -427,7 +427,7 @@ mod tests {
     fn test_encode_ok<
         T: PartialEq + Debug + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, old_io::IoError>
     >(errors: &[(T, &str)]) {
-        for &(ref value, out) in errors.iter() {
+        for &(ref value, out) in errors {
             let out = out.to_string();
 
             let s = super::to_string(value).unwrap();
@@ -441,7 +441,7 @@ mod tests {
     fn test_pretty_encode_ok<
         T: PartialEq + Debug + ToJson + ser::Serialize<super::PrettySerializer<Vec<u8>>, old_io::IoError>
     >(errors: &[(T, &str)]) {
-        for &(ref value, out) in errors.iter() {
+        for &(ref value, out) in errors {
             let out = out.to_string();
 
             let s = super::to_pretty_string(value).unwrap();
@@ -778,7 +778,7 @@ mod tests {
         'a,
         T: Debug + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, Error)]) {
-        for &(s, ref err) in errors.iter() {
+        for &(s, ref err) in errors {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v.unwrap_err(), *err);
         }
@@ -788,7 +788,7 @@ mod tests {
         'a,
         T: PartialEq + Debug + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, T)]) {
-        for &(s, ref value) in errors.iter() {
+        for &(s, ref value) in errors {
             let v: T = from_str(s).unwrap();
             assert_eq!(v, *value);
 
@@ -800,7 +800,7 @@ mod tests {
     fn test_json_deserialize_ok<
         T: PartialEq + Debug + ToJson + de::Deserialize<value::Deserializer, Error>
     >(errors: &[T]) {
-        for value in errors.iter() {
+        for value in errors {
             let v: T = from_json(value.to_json()).unwrap();
             assert_eq!(v, *value);
 

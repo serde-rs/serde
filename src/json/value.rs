@@ -60,7 +60,7 @@ impl Value {
     /// Otherwise, it will return the Json value associated with the final key.
     pub fn find_path<'a>(&'a self, keys: &[&String]) -> Option<&'a Value>{
         let mut target = self;
-        for key in keys.iter() {
+        for key in keys {
             match target.find(*key) {
                 Some(t) => { target = t; },
                 None => return None
@@ -79,7 +79,7 @@ impl Value {
                     Some(json_value) => Some(json_value),
                     None => {
                         let mut value : Option<&'a Value> = None;
-                        for (_, v) in map.iter() {
+                        for (_, v) in map {
                             value = v.search(key);
                             if value.is_some() {
                                 break;
@@ -643,7 +643,7 @@ impl<A:ToJson> ToJson for Vec<A> {
 impl<A:ToJson> ToJson for BTreeMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = BTreeMap::new();
-        for (key, value) in self.iter() {
+        for (key, value) in self {
             d.insert((*key).clone(), value.to_json());
         }
         Value::Object(d)
@@ -653,7 +653,7 @@ impl<A:ToJson> ToJson for BTreeMap<String, A> {
 impl<A:ToJson> ToJson for HashMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = BTreeMap::new();
-        for (key, value) in self.iter() {
+        for (key, value) in self {
             d.insert((*key).clone(), value.to_json());
         }
         Value::Object(d)

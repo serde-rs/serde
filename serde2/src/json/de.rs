@@ -547,7 +547,7 @@ mod tests {
     fn test_parse_ok<'a, T>(errors: Vec<(&'a str, T)>)
         where T: PartialEq + Debug + Deserialize,
     {
-        for (s, value) in errors.into_iter() {
+        for (s, value) in errors {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v, Ok(value));
 
@@ -561,7 +561,7 @@ mod tests {
     fn test_parse_err<'a, T>(errors: Vec<(&'a str, Error)>)
         where T: PartialEq + Debug + Deserialize
     {
-        for (s, err) in errors.into_iter() {
+        for (s, err) in errors {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v, Err(err));
         }
