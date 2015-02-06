@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, io)]
 #![allow(non_camel_case_types)]
 
 #[plugin]
