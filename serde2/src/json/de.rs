@@ -528,12 +528,11 @@ pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
 
 #[cfg(test)]
 mod tests {
-    use std::str;
     use std::fmt::Debug;
     use std::collections::BTreeMap;
 
     use de::Deserialize;
-    use super::{Parser, from_str};
+    use super::from_str;
     use super::super::error::{Error, ErrorCode};
 
     macro_rules! treemap {

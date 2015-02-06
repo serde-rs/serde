@@ -704,7 +704,7 @@ mod tests {
     }
 
     struct TokenDeserializer<'a> {
-        tokens: iter::Peekable<Token<'a>, vec::IntoIter<Token<'a>>>,
+        tokens: iter::Peekable<vec::IntoIter<Token<'a>>>,
     }
 
     impl<'a> TokenDeserializer<'a> {
