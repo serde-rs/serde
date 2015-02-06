@@ -315,7 +315,7 @@ fn deserialize_substructure(cx: &mut ExtCtxt, span: Span,
                 cx,
                 span,
                 substr.type_ident,
-                fields.as_slice(),
+                &fields,
                 deserializer,
                 token)
         }
@@ -460,7 +460,7 @@ fn deserialize_struct_from_map(
             {
                 let key = match token {
                     ::serde2::de::Str(s) => s,
-                    ::serde2::de::String(ref s) => s.as_slice(),
+                    ::serde2::de::String(ref s) => &s,
                     token => {
                         let expected_tokens = [
                             ::serde2::de::StrKind,
@@ -552,7 +552,7 @@ fn deserialize_static_fields(
                     getarg(
                         cx,
                         span,
-                        token::intern_and_get_ident(format!("_field{}", i).as_slice())
+                        token::intern_and_get_ident(&format!("_field{}", i))
                     )
                 }).collect();
 

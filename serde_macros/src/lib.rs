@@ -143,7 +143,7 @@ fn serialize_substructure(cx: &ExtCtxt,
                         let name = match (serial_name, name) {
                             (Some(serial), _) => serial.clone(),
                             (None, Some(id)) => token::get_ident(id),
-                            (None, None) => token::intern_and_get_ident(format!("_field{}", i).as_slice()),
+                            (None, None) => token::intern_and_get_ident(&format!("_field{}", i)),
                         };
 
                         let name = cx.expr_str(span, name);
@@ -261,7 +261,7 @@ fn deserialize_substructure(cx: &mut ExtCtxt,
                 cx,
                 span,
                 substr.type_ident,
-                definition.fields.as_slice(),
+                &definition.fields,
                 fields,
                 deserializer.clone(),
                 token)
@@ -271,8 +271,8 @@ fn deserialize_substructure(cx: &mut ExtCtxt,
                 cx,
                 span,
                 substr.type_ident,
-                definition.variants.as_slice(),
-                fields.as_slice(),
+                &definition.variants,
+                &fields,
                 deserializer,
                 token)
         }
@@ -300,7 +300,7 @@ fn deserialize_struct(
     let field_idents: Vec<ast::Ident> = fields.iter()
         .enumerate()
         .map(|(idx, _)| {
-            cx.ident_of(format!("field{}", idx).as_slice())
+            cx.ident_of(&format!("field{}", idx))
         })
         .collect();
 
@@ -415,7 +415,7 @@ fn deserialize_enum(
                 cx,
                 span,
                 path,
-                serial_names.as_slice(),
+                &serial_names,
                 parts,
                 |&: cx, _, _| {
                     quote_expr!(cx, try!($deserializer.expect_enum_elt()))
@@ -461,7 +461,7 @@ fn deserialize_static_fields<F>(
                     getarg(
                         cx,
                         span,
-                        token::intern_and_get_ident(format!("_field{}", i).as_slice())
+                        token::intern_and_get_ident(&format!("_field{}", i))
                     )
                 }).collect();
 

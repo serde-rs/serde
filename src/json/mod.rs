@@ -232,7 +232,7 @@ fn main() {
 
     // To deserialize use the `json::from_str` function.
 
-    let deserialized_object: TestStruct1 = match json::from_str(serialized_str.as_slice()) {
+    let deserialized_object: TestStruct1 = match json::from_str(&serialized_str) {
         Ok(deserialized_object) => deserialized_object,
         Err(e) => panic!("json deserialization error: {:?}", e),
     };
@@ -1379,7 +1379,7 @@ mod tests {
             hm.serialize(&mut serializer).unwrap();
         }
         let bytes = mem_buf.unwrap();
-        let json_str = from_utf8(bytes.as_slice()).unwrap();
+        let json_str = from_utf8(&bytes).unwrap();
         let _json_value: Value = from_str(json_str).unwrap();
     }
     #[test]
@@ -1394,7 +1394,7 @@ mod tests {
             hm.serialize(&mut serializer).unwrap()
         }
         let bytes = mem_buf.unwrap();
-        let json_str = from_utf8(bytes.as_slice()).unwrap();
+        let json_str = from_utf8(&bytes).unwrap();
         let _json_value: Value = from_str(json_str).unwrap();
     }
 
@@ -1419,7 +1419,7 @@ mod tests {
                 None => { break; }
             };
             let (ref expected_evt, ref expected_stack) = expected[i];
-            if !parser.stack().is_equal_to(expected_stack.as_slice()) {
+            if !parser.stack().is_equal_to(&expected_stack) {
                 panic!("Parser stack is not equal to {}", expected_stack);
             }
             assert_eq!(&evt, expected_evt);
@@ -1827,7 +1827,7 @@ mod bench {
         let src = json_str(count);
         let json = encoder_json(count);
         b.iter(|| {
-            assert_eq!(json, serialize::json::from_str(src.as_slice()).unwrap());
+            assert_eq!(json, serialize::json::from_str(&src).unwrap());
         });
     }
 
@@ -1835,7 +1835,7 @@ mod bench {
         let src = json_str(count);
         let json = encoder_json(count);
         b.iter(|| {
-            assert_eq!(json, serialize::json::from_str(src.as_slice()).unwrap());
+            assert_eq!(json, serialize::json::from_str(&src).unwrap());
         });
     }
 

@@ -43,7 +43,7 @@ impl Value {
     pub fn to_pretty_string(&self) -> String {
         let mut wr = Vec::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
-        str::from_utf8(wr.as_slice()).unwrap().to_string()
+        str::from_utf8(&wr).unwrap().to_string()
     }
 
      /// If the Json value is an Object, returns the value associated with the provided key.
@@ -130,7 +130,7 @@ impl Value {
     /// Returns None otherwise.
     pub fn as_string<'a>(&'a self) -> Option<&'a str> {
         match *self {
-            Value::String(ref s) => Some(s.as_slice()),
+            Value::String(ref s) => Some(&s),
             _ => None
         }
     }
@@ -212,7 +212,7 @@ impl ToString for Value {
     fn to_string(&self) -> String {
         let mut wr = Vec::new();
         self.to_writer(wr.by_ref()).unwrap();
-        str::from_utf8(wr.as_slice()).unwrap().to_string()
+        str::from_utf8(&wr).unwrap().to_string()
     }
 }
 

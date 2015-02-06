@@ -35,7 +35,7 @@ impl ser::Serialize for Value {
                 visitor.visit_f64(v)
             }
             Value::String(ref v) => {
-                visitor.visit_str(v.as_slice())
+                visitor.visit_str(&v)
             }
             Value::Array(ref v) => {
                 v.visit(visitor)

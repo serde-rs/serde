@@ -26,6 +26,6 @@ fn test_json_struct() {
     let s = serde::json::to_string(&input).unwrap();
     assert_eq!(s.as_slice(), r#"{"$schema":"a","title":"b","type":3}"#);
 
-    let output: Test = serde::json::from_str(s.as_slice()).unwrap();
+    let output: Test = serde::json::from_str(&s).unwrap();
     assert_eq!(input, output);
 }

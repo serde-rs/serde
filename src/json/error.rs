@@ -93,7 +93,7 @@ impl error::Error for Error {
         match *self {
             Error::SyntaxError(..) => "syntax error",
             Error::IoError(ref error) => error.description(),
-            Error::ExpectedError(ref expected, _) => expected.as_slice(),
+            Error::ExpectedError(ref expected, _) => &expected,
             Error::MissingFieldError(_) => "missing field",
             Error::UnknownVariantError(_) => "unknown variant",
         }

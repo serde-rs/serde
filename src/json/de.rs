@@ -381,7 +381,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                                 }
 
                                 let buf = &[n1, try!(self.decode_hex_escape())];
-                                match ::unicode::str::utf16_items(buf.as_slice()).next() {
+                                match ::unicode::str::utf16_items(buf).next() {
                                     Some(Utf16Item::ScalarValue(c)) => c,
                                     _ => {
                                         return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
@@ -410,7 +410,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                 match ch {
                     b'"' => {
                         self.bump();
-                        return Ok(str::from_utf8(self.buf.as_slice()).unwrap());
+                        return Ok(str::from_utf8(&self.buf).unwrap());
                     }
                     b'\\' => {
                         escape = true;

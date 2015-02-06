@@ -937,19 +937,19 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "content_type").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.content_type.as_slice()).unwrap();
+    escape_str(wr, &log.http.content_type).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "user_agent").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.user_agent.as_slice()).unwrap();
+    escape_str(wr, &log.http.user_agent).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "referer").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.referer.as_slice()).unwrap();
+    escape_str(wr, &log.http.referer).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "request_uri").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.request_uri.as_slice()).unwrap();
+    escape_str(wr, &log.http.request_uri).unwrap();
 
     wr.write_str("},").unwrap();
     escape_str(wr, "origin").unwrap();
@@ -957,7 +957,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
 
     escape_str(wr, "ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.origin.ip.as_slice()).unwrap();
+    escape_str(wr, &log.origin.ip).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "port").unwrap();
     wr.write_str(":").unwrap();
@@ -965,7 +965,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "hostname").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.origin.hostname.as_slice()).unwrap();
+    escape_str(wr, &log.origin.hostname).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
@@ -982,15 +982,15 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "server_ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.server_ip.as_slice()).unwrap();
+    escape_str(wr, &log.server_ip).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "server_name").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.server_name.as_slice()).unwrap();
+    escape_str(wr, &log.server_name).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "remote_ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.remote_ip.as_slice()).unwrap();
+    escape_str(wr, &log.remote_ip).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "bytes_dlv").unwrap();
     wr.write_str(":").unwrap();
@@ -999,7 +999,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "ray_id").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.ray_id.as_slice()).unwrap();
+    escape_str(wr, &log.ray_id).unwrap();
     wr.write_str("}").unwrap();
 }
 
@@ -1172,11 +1172,11 @@ fn direct<W: Writer>(wr: &mut W, log: &Log) {
     serializer.serialize_struct_elt("origin", &log.origin).unwrap();
     serializer.serialize_struct_elt("country", &(log.country as usize)).unwrap();
     serializer.serialize_struct_elt("cache_status", &(log.cache_status as usize)).unwrap();
-    serializer.serialize_struct_elt("server_ip", &log.server_ip.as_slice()).unwrap();
-    serializer.serialize_struct_elt("server_name", &log.server_name.as_slice()).unwrap();
-    serializer.serialize_struct_elt("remote_ip", &log.remote_ip.as_slice()).unwrap();
+    serializer.serialize_struct_elt("server_ip", &log.server_ip).unwrap();
+    serializer.serialize_struct_elt("server_name", &log.server_name).unwrap();
+    serializer.serialize_struct_elt("remote_ip", &log.remote_ip).unwrap();
     serializer.serialize_struct_elt("bytes_dlv", &log.bytes_dlv).unwrap();
-    serializer.serialize_struct_elt("ray_id", &log.ray_id.as_slice()).unwrap();
+    serializer.serialize_struct_elt("ray_id", &log.ray_id).unwrap();
 
     serializer.serialize_struct_end().unwrap();
 }

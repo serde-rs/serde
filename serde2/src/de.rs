@@ -139,7 +139,7 @@ pub trait Visitor {
     fn visit_string<
         E: Error,
     >(&mut self, v: String) -> Result<Self::Value, E> {
-        self.visit_str(&v[])
+        self.visit_str(&v)
     }
 
     fn visit_unit<
