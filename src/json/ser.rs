@@ -288,7 +288,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     fn serialize_seq<
         T: Serialize<Serializer<W>, IoError>,
         Iter: Iterator<Item=T>
-    >(&mut self, mut iter: Iter) -> IoResult<()> {
+    >(&mut self, iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
         let mut first = true;
         for elt in iter {
@@ -308,7 +308,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
         K: Serialize<Serializer<W>, IoError>,
         V: Serialize<Serializer<W>, IoError>,
         Iter: Iterator<Item=(K, V)>
-    >(&mut self, mut iter: Iter) -> IoResult<()> {
+    >(&mut self, iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
         let mut first = true;
         for (key, value) in iter {
@@ -542,7 +542,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     fn serialize_seq<
         T: Serialize<PrettySerializer<W>, IoError>,
         Iter: Iterator<Item=T>
-    >(&mut self, mut iter: Iter) -> IoResult<()> {
+    >(&mut self, iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("["));
 
         self.first = true;
@@ -559,7 +559,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
         K: Serialize<PrettySerializer<W>, IoError>,
         V: Serialize<PrettySerializer<W>, IoError>,
         Iter: Iterator<Item=(K, V)>
-    >(&mut self, mut iter: Iter) -> IoResult<()> {
+    >(&mut self, iter: Iter) -> IoResult<()> {
         try!(self.wr.write_str("{"));
 
         self.first = true;

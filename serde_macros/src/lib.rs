@@ -488,7 +488,7 @@ fn deserialize_static_fields<F>(
     }
 }
 
-fn find_serial_name<'a, I>(mut iterator: I) -> Option<token::InternedString> where
+fn find_serial_name<'a, I>(iterator: I) -> Option<token::InternedString> where
     I: Iterator<Item=&'a Attribute>
 {
     for at in iterator {

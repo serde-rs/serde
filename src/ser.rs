@@ -552,7 +552,7 @@ mod tests {
         fn serialize_seq<
             T: Serialize<AssertSerializer<Iter>, Error>,
             SeqIter: Iterator<Item=T>
-        >(&mut self, mut iter: SeqIter) -> Result<(), Error> {
+        >(&mut self, iter: SeqIter) -> Result<(), Error> {
             let (len, _) = iter.size_hint();
             try!(self.serialize(Token::SeqStart(len)));
             for elt in iter {
@@ -565,7 +565,7 @@ mod tests {
             K: Serialize<AssertSerializer<Iter>, Error>,
             V: Serialize<AssertSerializer<Iter>, Error>,
             MapIter: Iterator<Item=(K, V)>
-        >(&mut self, mut iter: MapIter) -> Result<(), Error> {
+        >(&mut self, iter: MapIter) -> Result<(), Error> {
             let (len, _) = iter.size_hint();
             try!(self.serialize(Token::MapStart(len)));
             for (key, value) in iter {
