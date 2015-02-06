@@ -40,7 +40,7 @@ pub enum ErrorCode {
     UnrecognizedHex,
 }
 
-impl fmt::Show for ErrorCode {
+impl fmt::Debug for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {:?}", token),
@@ -78,7 +78,7 @@ impl fmt::Show for ErrorCode {
     }
 }
 
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),

@@ -318,7 +318,7 @@ pub mod error;
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Show;
+    use std::fmt::Debug;
     use std::io;
     use std::str;
     use std::string;
@@ -357,7 +357,7 @@ mod tests {
         })
     }
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     #[derive_serialize]
     #[derive_deserialize]
     enum Animal {
@@ -386,7 +386,7 @@ mod tests {
         }
     }
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     #[derive_serialize]
     #[derive_deserialize]
     struct Inner {
@@ -407,7 +407,7 @@ mod tests {
         }
     }
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     #[derive_serialize]
     #[derive_deserialize]
     struct Outer {
@@ -425,7 +425,7 @@ mod tests {
     }
 
     fn test_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, io::IoError>
+        T: PartialEq + Debug + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -439,7 +439,7 @@ mod tests {
     }
 
     fn test_pretty_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serialize<super::PrettySerializer<Vec<u8>>, io::IoError>
+        T: PartialEq + Debug + ToJson + ser::Serialize<super::PrettySerializer<Vec<u8>>, old_io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
@@ -776,7 +776,7 @@ mod tests {
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
-        T: Show + de::Deserialize<Parser<str::Bytes<'a>>, Error>
+        T: Debug + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, Error)]) {
         for &(s, ref err) in errors.iter() {
             let v: Result<T, Error> = from_str(s);
@@ -786,7 +786,7 @@ mod tests {
 
     fn test_parse_ok<
         'a,
-        T: PartialEq + Show + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, Error>
+        T: PartialEq + Debug + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, T)]) {
         for &(s, ref value) in errors.iter() {
             let v: T = from_str(s).unwrap();
@@ -798,7 +798,7 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserialize<value::Deserializer, Error>
+        T: PartialEq + Debug + ToJson + de::Deserialize<value::Deserializer, Error>
     >(errors: &[T]) {
         for value in errors.iter() {
             let v: T = from_json(value.to_json()).unwrap();
@@ -1103,7 +1103,7 @@ mod tests {
             ("\"jodhpurs\"", Some("jodhpurs".to_string())),
         ]);
 
-        #[derive(PartialEq, Show)]
+        #[derive(PartialEq, Debug)]
         #[derive_serialize]
         #[derive_deserialize]
         struct Foo {

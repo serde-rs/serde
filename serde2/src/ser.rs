@@ -651,7 +651,7 @@ mod tests {
     use std::vec;
     use std::collections::BTreeMap;
 
-    #[derive(Clone, PartialEq, Show)]
+    #[derive(Clone, PartialEq, Debug)]
     pub enum Token<'a> {
         Bool(bool),
         Isize(isize),

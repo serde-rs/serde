@@ -22,7 +22,7 @@ use serde::ser;
 
 use rustc_serialize::Encodable;
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Http {
@@ -37,7 +37,7 @@ struct Http {
     request_uri: String,
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -73,7 +73,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpProtocol {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -117,7 +117,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpMethod {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -154,7 +154,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for CacheStatus {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Origin {
@@ -164,7 +164,7 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -200,7 +200,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for OriginProtocol {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -238,7 +238,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for ZonePlan {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -527,7 +527,7 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Country {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Log {

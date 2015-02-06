@@ -4,7 +4,7 @@ extern crate serde;
 #[plugin]
 extern crate serde_macros;
 
-#[derive(PartialEq, Show)]
+#[derive(PartialEq, Debug)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Test {

@@ -328,7 +328,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive(Clone, PartialEq, Debug, RustcDecodable)]
     #[derive_serialize]
     struct Inner {
         a: (),
@@ -338,7 +338,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive(Clone, PartialEq, Debug, RustcDecodable)]
     #[derive_serialize]
     struct Outer {
         inner: Vec<Inner>,
@@ -346,7 +346,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive(Clone, PartialEq, Debug, RustcDecodable)]
     #[derive_serialize]
     enum Animal {
         Dog,
@@ -355,7 +355,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show)]
+    #[derive(Clone, PartialEq, Debug)]
     pub enum Token<'a> {
         Null,
         Bool(bool),
@@ -395,7 +395,7 @@ mod tests {
         MapEnd,
     }
 
-    #[derive(Show)]
+    #[derive(Debug)]
     #[allow(dead_code)]
     enum Error {
         EndOfStream,

@@ -57,7 +57,7 @@ impl<'a, 'b> io::Writer for WriterFormatter<'a, 'b> {
     }
 }
 
-impl fmt::Show for Value {
+impl fmt::Debug for Value {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut wr = WriterFormatter { inner: f };

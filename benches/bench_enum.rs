@@ -17,7 +17,7 @@ use Animal::{Dog, Frog};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
 enum Animal {
     Dog,
@@ -26,7 +26,7 @@ enum Animal {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Error {
     EndOfStream,
     SyntaxError,

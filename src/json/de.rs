@@ -7,7 +7,7 @@ use de;
 
 use super::error::{Error, ErrorCode};
 
-#[derive(PartialEq, Show)]
+#[derive(PartialEq, Debug)]
 enum State {
     // Parse a value.
     Value,

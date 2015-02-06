@@ -18,7 +18,7 @@ use std::rc::Rc;
 use std::string;
 use std::sync::Arc;
 
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Token {
     Null,
     Bool(bool),
@@ -138,7 +138,7 @@ static COMPOUND_TOKEN_KINDS: &'static [TokenKind] = &[
     TokenKind::MapStartKind,
 ];
 
-impl ::std::fmt::Show for TokenKind {
+impl ::std::fmt::Debug for TokenKind {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match *self {
             TokenKind::NullKind => "Null".fmt(f),
@@ -1091,7 +1091,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive(Clone, PartialEq, Debug, RustcDecodable)]
     struct Inner {
         a: (),
         b: usize,
@@ -1133,7 +1133,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive(Clone, PartialEq, Debug, RustcDecodable)]
     struct Outer {
         inner: Vec<Inner>,
     }
@@ -1166,7 +1166,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Clone, PartialEq, Show, RustcDecodable)]
+    #[derive(Clone, PartialEq, Debug, RustcDecodable)]
     enum Animal {
         Dog,
         Frog(string::String, isize)
@@ -1193,7 +1193,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////////
 
-    #[derive(Show)]
+    #[derive(Debug)]
     enum Error {
         EndOfStream,
         SyntaxError(Vec<TokenKind>),

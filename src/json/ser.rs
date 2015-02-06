@@ -81,7 +81,7 @@ fn spaces<W: Writer>(wr: &mut W, mut n: usize) -> IoResult<()> {
 }
 
 /*
-#[derive(Show)]
+#[derive(Debug)]
 enum SerializerState {
     ValueState,
     TupleState,

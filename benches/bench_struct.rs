@@ -16,7 +16,7 @@ use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
 struct Inner {
     a: (),
@@ -26,7 +26,7 @@ struct Inner {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
 struct Outer {
     inner: Vec<Inner>,
@@ -34,7 +34,7 @@ struct Outer {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Error {
     EndOfStream,
     SyntaxError(String),
@@ -63,7 +63,7 @@ mod decoder {
         OptionState,
     };
 
-    #[derive(Show)]
+    #[derive(Debug)]
     enum State {
         OuterState(Outer),
         InnerState(Inner),
@@ -339,7 +339,7 @@ mod deserializer {
         EndState,
     };
 
-    #[derive(Show)]
+    #[derive(Debug)]
     enum State {
         OuterState(Outer),
         InnerState(Inner),

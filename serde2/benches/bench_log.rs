@@ -66,7 +66,7 @@ impl de::Deserialize for HttpField {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 //#[derive_deserialize]
 struct Http {
@@ -135,7 +135,7 @@ impl de::Deserialize for Http {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -175,7 +175,7 @@ impl de::Deserialize for HttpProtocol {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -223,7 +223,7 @@ impl de::Deserialize for HttpMethod {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -298,7 +298,7 @@ impl de::Deserialize for OriginField {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 //#[derive_deserialize]
 struct Origin {
@@ -347,7 +347,7 @@ impl Deserialize for Origin {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -387,7 +387,7 @@ impl de::Deserialize for OriginProtocol {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -429,7 +429,7 @@ impl de::Deserialize for ZonePlan {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -772,7 +772,7 @@ impl de::Deserialize for LogField {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 //#[derive_deserialize]
 struct Log {

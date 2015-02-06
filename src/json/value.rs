@@ -226,7 +226,7 @@ impl<'a, 'b> Writer for WriterFormatter<'a, 'b> {
     }
 }
 
-impl fmt::Show for Value {
+impl fmt::Debug for Value {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let wr = WriterFormatter { inner: f };

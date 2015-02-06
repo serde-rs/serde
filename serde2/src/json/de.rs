@@ -529,7 +529,7 @@ pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
 #[cfg(test)]
 mod tests {
     use std::str;
-    use std::fmt::Show;
+    use std::fmt::Debug;
     use std::collections::BTreeMap;
 
     use de::Deserialize;
@@ -545,7 +545,7 @@ mod tests {
     }
 
     fn test_parse_ok<'a, T>(errors: Vec<(&'a str, T)>)
-        where T: PartialEq + Show + Deserialize,
+        where T: PartialEq + Debug + Deserialize,
     {
         for (s, value) in errors.into_iter() {
             let v: Result<T, Error> = from_str(s);
@@ -559,7 +559,7 @@ mod tests {
     }
 
     fn test_parse_err<'a, T>(errors: Vec<(&'a str, Error)>)
-        where T: PartialEq + Show + Deserialize
+        where T: PartialEq + Debug + Deserialize
     {
         for (s, err) in errors.into_iter() {
             let v: Result<T, Error> = from_str(s);

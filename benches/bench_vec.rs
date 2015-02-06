@@ -7,7 +7,7 @@ extern crate serde;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
-use std::fmt::Show;
+use std::fmt::Debug;
 use test::Bencher;
 
 use rustc_serialize::{Decoder, Decodable};
@@ -16,7 +16,7 @@ use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(PartialEq, Show)]
+#[derive(PartialEq, Debug)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -353,7 +353,7 @@ mod deserializer {
 
     use serde::de;
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     enum State {
         StartState,
         SepOrEndState,
@@ -513,7 +513,7 @@ mod deserializer {
 
 fn run_decoder<
     D: Decoder<Error=Error>,
-    T: Clone + PartialEq + Show + Decodable
+    T: Clone + PartialEq + Debug + Decodable
 >(mut d: D, value: T) {
     let v = Decodable::decode(&mut d);
 
@@ -522,8 +522,8 @@ fn run_decoder<
 
 fn run_deserializer<
     D: Deserializer<E>,
-    E: Show,
-    T: Clone + PartialEq + Show + Deserialize<D, E>
+    E: Debug,
+    T: Clone + PartialEq + Debug + Deserialize<D, E>
 >(mut d: D, value: T) {
     let v: T = Deserialize::deserialize(&mut d).unwrap();
 
