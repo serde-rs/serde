@@ -1700,7 +1700,7 @@ mod tests {
 mod bench {
     use std::collections::BTreeMap;
     use std::string;
-    use serialize;
+    use rustc_serialize as serialize;
     use test::Bencher;
 
     use de::Token;
@@ -1748,7 +1748,7 @@ mod bench {
     }
 
     fn encoder_json(count: usize) -> serialize::json::Json {
-        use serialize::json::Json;
+        use rustc_serialize::json::Json;
 
         let mut list = vec!();
         for _ in range(0, count) {
@@ -1827,7 +1827,7 @@ mod bench {
         let src = json_str(count);
         let json = encoder_json(count);
         b.iter(|| {
-            assert_eq!(json, serialize::json::from_str(&src).unwrap());
+            assert_eq!(json, serialize::json::Json::from_str(&src).unwrap());
         });
     }
 
@@ -1835,7 +1835,7 @@ mod bench {
         let src = json_str(count);
         let json = encoder_json(count);
         b.iter(|| {
-            assert_eq!(json, serialize::json::from_str(&src).unwrap());
+            assert_eq!(json, serialize::json::Json::from_str(&src).unwrap());
         });
     }
 
@@ -1843,7 +1843,7 @@ mod bench {
         let src = json_str(count);
 
         b.iter( || {
-            use serialize::json::{Parser, JsonEvent, StackElement};
+            use rustc_serialize::json::{Parser, JsonEvent, StackElement};
 
             let mut parser = Parser::new(src.chars());
             assert_eq!(parser.next(), Some(JsonEvent::ArrayStart));
