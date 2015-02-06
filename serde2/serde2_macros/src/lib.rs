@@ -1,4 +1,4 @@
-#![feature(plugin_registrar, quote, unboxed_closures)]
+#![feature(plugin_registrar, quote, unboxed_closures, rustc_private)]
 
 extern crate syntax;
 extern crate rustc;
@@ -73,6 +73,7 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
         path: Path::new(vec!["serde2", "ser", "Serialize"]),
         additional_bounds: Vec::new(),
         generics: LifetimeBounds::empty(),
+        associated_types: vec![],
         methods: vec![
             MethodDef {
                 name: "visit",
@@ -260,6 +261,7 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                             vec!(Box::new(Literal(Path::new_local("__E")))), true))),
                          ("__E", None, vec!()))
         },
+        associated_types: vec![],
         methods: vec!(
             MethodDef {
                 name: "deserialize_token",

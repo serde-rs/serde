@@ -1,7 +1,7 @@
 #![crate_name = "serde_macros"]
 #![crate_type = "dylib"]
 
-#![feature(plugin_registrar, quote, unboxed_closures)]
+#![feature(plugin_registrar, quote, unboxed_closures, rustc_private)]
 
 extern crate syntax;
 extern crate rustc;
@@ -110,7 +110,8 @@ fn expand_derive_serialize(cx: &mut ExtCtxt,
                 combine_substructure: combine_substructure(Box::new( |a, b, c| {
                     serialize_substructure(a, b, c, item)
                 })),
-            })
+            }),
+        associated_types: vec!()
     };
 
     trait_def.expand(cx, mitem, item, |item| push.call_mut((item,)))
@@ -241,7 +242,8 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                 combine_substructure: combine_substructure(Box::new(|a, b, c| {
                     deserialize_substructure(a, b, c)
                 })),
-            })
+            }),
+        associated_types: vec!()
     };
 
     trait_def.expand(cx, mitem, item, |item| push.call_mut((item,)))
