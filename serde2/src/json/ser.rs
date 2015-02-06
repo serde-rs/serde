@@ -206,7 +206,7 @@ pub fn escape_bytes<W: io::Writer>(wr: &mut W, bytes: &[u8]) -> Result<(), IoErr
         };
 
         if start < i {
-            try!(wr.write(bytes.slice(start, i)));
+            try!(wr.write(&bytes[start..i]));
         }
 
         try!(wr.write_str(escaped));
@@ -215,7 +215,7 @@ pub fn escape_bytes<W: io::Writer>(wr: &mut W, bytes: &[u8]) -> Result<(), IoErr
     }
 
     if start != bytes.len() {
-        try!(wr.write(bytes.slice_from(start)));
+        try!(wr.write(&bytes[start..]));
     }
 
     wr.write_str("\"")

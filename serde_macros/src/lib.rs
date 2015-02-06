@@ -293,7 +293,7 @@ fn deserialize_struct(
 
     let fields = match *fields {
         Unnamed(_) => panic!(),
-        Named(ref fields) => fields.as_slice(),
+        Named(ref fields) => &fields[],
     };
 
     // Convert each field into a unique ident.

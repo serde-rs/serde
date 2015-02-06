@@ -989,7 +989,7 @@ fn test_encoder() {
         log.encode(&mut encoder).unwrap();
     }
 
-    assert_eq!(wr.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&wr[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1039,7 +1039,7 @@ fn test_serializer_vec() {
     serializer.visit(&log).unwrap();
 
     let json = serializer.into_inner();
-    assert_eq!(json.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&json[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1089,7 +1089,7 @@ fn test_serializer_my_mem_writer0() {
         let _json = serializer.into_inner();
     }
 
-    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1121,7 +1121,7 @@ fn test_serializer_my_mem_writer1() {
         let _json = serializer.into_inner();
     }
 
-    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1321,7 +1321,7 @@ fn test_manual_serialize_vec_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1346,7 +1346,7 @@ fn test_manual_serialize_vec_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1372,7 +1372,7 @@ fn test_manual_serialize_my_mem_writer0_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1398,7 +1398,7 @@ fn test_manual_serialize_my_mem_writer0_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1424,7 +1424,7 @@ fn test_manual_serialize_my_mem_writer1_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1450,7 +1450,7 @@ fn test_manual_serialize_my_mem_writer1_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]

@@ -399,7 +399,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
                         let buf = &mut [0u8; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
-                        self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
+                        self.buf.extend(buf[..len].iter().map(|b| *b));
                     }
                     _ => {
                         return Err(self.error(ErrorCode::InvalidEscape));
@@ -580,7 +580,7 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer<Error> for Parser<Iter> {
             _ => { return Err(self.error(ErrorCode::ExpectedEnumToken)); }
         }
 
-        match variants.iter().position(|v| *v == variant.as_slice()) {
+        match variants.iter().position(|v| *v == &variant[]) {
             Some(idx) => Ok(idx),
             None => Err(self.error(ErrorCode::UnknownVariant)),
         }
@@ -631,7 +631,7 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer<Error> for Parser<Iter> {
             None => { return Ok(None); }
         };
 
-        Ok(Some(fields.iter().position(|field| *field == s.as_slice())))
+        Ok(Some(fields.iter().position(|field| *field == &s[])))
     }
 }
 

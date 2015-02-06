@@ -498,7 +498,7 @@ impl de::Deserializer<Error> for Deserializer {
             }
         };
 
-        match variants.iter().position(|v| *v == variant.as_slice()) {
+        match variants.iter().position(|v| *v == &variant[]) {
             Some(idx) => Ok(idx),
             None => Err(Error::UnknownVariantError(variant)),
         }

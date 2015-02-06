@@ -239,7 +239,7 @@ impl Serialize for String {
     fn visit<
         V: Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        self.as_slice().visit(visitor)
+        (&self[]).visit(visitor)
     }
 }
 
@@ -321,7 +321,7 @@ impl<
     fn visit<
         V: Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        self.as_slice().visit(visitor)
+        (&self[]).visit(visitor)
     }
 }
 

@@ -295,8 +295,8 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
             Token::Str(value) if value.chars().count() == 1 => {
                 Ok(value.char_at(0))
             }
-            Token::String(ref value) if value.as_slice().chars().count() == 1 => {
-                Ok(value.as_slice().char_at(0))
+            Token::String(ref value) if value[].chars().count() == 1 => {
+                Ok(value[].char_at(0))
             }
             token => {
                 static EXPECTED_TOKENS: &'static [TokenKind] = &[
@@ -410,7 +410,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
                 Ok(Some(fields.iter().position(|field| *field == n)))
             }
             Token::String(n) => {
-                Ok(Some(fields.iter().position(|field| *field == n.as_slice())))
+                Ok(Some(fields.iter().position(|field| *field == &n[])))
             }
             token => {
                 Err(self.syntax_error(token, STR_TOKEN_KINDS))

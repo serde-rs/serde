@@ -352,7 +352,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
                         let buf = &mut [0; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
-                        self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
+                        self.buf.extend(buf[..len].iter().map(|b| *b));
                     }
                     _ => {
                         return Err(self.error(ErrorCode::InvalidEscape));

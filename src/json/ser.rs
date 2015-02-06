@@ -25,7 +25,7 @@ fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> IoResult<()> {
         };
 
         if start < i {
-            try!(wr.write(bytes.slice(start, i)));
+            try!(wr.write(&bytes[start..i]));
         }
 
         try!(wr.write_str(escaped));
@@ -34,7 +34,7 @@ fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> IoResult<()> {
     }
 
     if start != bytes.len() {
-        try!(wr.write(bytes.slice_from(start)));
+        try!(wr.write(&bytes[start..]));
     }
 
     wr.write_str("\"")
@@ -74,7 +74,7 @@ fn spaces<W: Writer>(wr: &mut W, mut n: usize) -> IoResult<()> {
     }
 
     if n > 0 {
-        wr.write(BUF.slice_to(n))
+        wr.write(&BUF[..n])
     } else {
         Ok(())
     }

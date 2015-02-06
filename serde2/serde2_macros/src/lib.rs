@@ -402,7 +402,7 @@ fn deserialize_struct_from_map(
 ) -> P<ast::Expr> {
     let fields = match *fields {
         Unnamed(_) => fail!(),
-        Named(ref fields) => fields.as_slice(),
+        Named(ref fields) => &fields[],
     };
 
     // Declare each field.

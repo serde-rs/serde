@@ -158,7 +158,7 @@ impl<'a, S: Serializer<E>, E> Serialize<S, E> for &'a str {
 impl<S: Serializer<E>, E> Serialize<S, E> for String {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        self.as_slice().serialize(s)
+        (&self[]).serialize(s)
     }
 }
 
