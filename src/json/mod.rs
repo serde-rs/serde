@@ -1266,8 +1266,8 @@ mod tests {
     #[test]
     fn test_as_object() {
         let json_value: Value = from_str("{}").unwrap();
-        let json_object = json_value.as_object();
         let map = BTreeMap::<string::String, Value>::new();
+        let json_object = json_value.as_object();
         assert_eq!(json_object, Some(&map));
     }
 
