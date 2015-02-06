@@ -22,12 +22,12 @@ use std::sync::Arc;
 pub enum Token {
     Null,
     Bool(bool),
-    Int(int),
+    Isize(isize),
     I8(i8),
     I16(i16),
     I32(i32),
     I64(i64),
-    Uint(uint),
+    Usize(usize),
     U8(u8),
     U16(u16),
     U32(u32),
@@ -39,11 +39,11 @@ pub enum Token {
     String(String),
     Option(bool),
 
-    TupleStart(uint),
-    StructStart(&'static str, uint),
-    EnumStart(&'static str, &'static str, uint),
-    SeqStart(uint),
-    MapStart(uint),
+    TupleStart(usize),
+    StructStart(&'static str, usize),
+    EnumStart(&'static str, &'static str, usize),
+    SeqStart(usize),
+    MapStart(usize),
 
     End,
 }
@@ -53,12 +53,12 @@ impl Token {
         match *self {
             Token::Null => TokenKind::NullKind,
             Token::Bool(_) => TokenKind::BoolKind,
-            Token::Int(_) => TokenKind::IntKind,
+            Token::Isize(_) => TokenKind::IsizeKind,
             Token::I8(_) => TokenKind::I8Kind,
             Token::I16(_) => TokenKind::I16Kind,
             Token::I32(_) => TokenKind::I32Kind,
             Token::I64(_) => TokenKind::I64Kind,
-            Token::Uint(_) => TokenKind::UintKind,
+            Token::Usize(_) => TokenKind::UsizeKind,
             Token::U8(_) => TokenKind::U8Kind,
             Token::U16(_) => TokenKind::U16Kind,
             Token::U32(_) => TokenKind::U32Kind,
@@ -83,12 +83,12 @@ impl Token {
 pub enum TokenKind {
     NullKind,
     BoolKind,
-    IntKind,
+    IsizeKind,
     I8Kind,
     I16Kind,
     I32Kind,
     I64Kind,
-    UintKind,
+    UsizeKind,
     U8Kind,
     U16Kind,
     U32Kind,
@@ -110,12 +110,12 @@ pub enum TokenKind {
 }
 
 static PRIMITIVE_TOKEN_KINDS: &'static [TokenKind] = &[
-    TokenKind::IntKind,
+    TokenKind::IsizeKind,
     TokenKind::I8Kind,
     TokenKind::I16Kind,
     TokenKind::I32Kind,
     TokenKind::I64Kind,
-    TokenKind::UintKind,
+    TokenKind::UsizeKind,
     TokenKind::U8Kind,
     TokenKind::U16Kind,
     TokenKind::U32Kind,
@@ -143,12 +143,12 @@ impl ::std::fmt::Show for TokenKind {
         match *self {
             TokenKind::NullKind => "Null".fmt(f),
             TokenKind::BoolKind => "Bool".fmt(f),
-            TokenKind::IntKind => "Int".fmt(f),
+            TokenKind::IsizeKind => "Isize".fmt(f),
             TokenKind::I8Kind => "I8".fmt(f),
             TokenKind::I16Kind => "I16".fmt(f),
             TokenKind::I32Kind => "I32".fmt(f),
             TokenKind::I64Kind => "I64".fmt(f),
-            TokenKind::UintKind => "Uint".fmt(f),
+            TokenKind::UsizeKind => "Usize".fmt(f),
             TokenKind::U8Kind => "U8".fmt(f),
             TokenKind::U16Kind => "U16".fmt(f),
             TokenKind::U32Kind => "U32".fmt(f),
@@ -253,12 +253,12 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     #[inline]
     fn expect_num<T: num::NumCast>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Token::Int(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::Isize(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::I8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::I16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::I32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::I64(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
-            Token::Uint(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
+            Token::Usize(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::U8(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::U16(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
             Token::U32(x) => to_result!(num::cast(x), self.syntax_error(token, PRIMITIVE_TOKEN_KINDS)),
@@ -272,12 +272,12 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     #[inline]
     fn expect_from_primitive<T: FromPrimitive>(&mut self, token: Token) -> Result<T, E> {
         match token {
-            Token::Int(x) => to_result!(num::from_int(x), self.conversion_error(token)),
+            Token::Isize(x) => to_result!(num::from_int(x), self.conversion_error(token)),
             Token::I8(x) => to_result!(num::from_i8(x), self.conversion_error(token)),
             Token::I16(x) => to_result!(num::from_i16(x), self.conversion_error(token)),
             Token::I32(x) => to_result!(num::from_i32(x), self.conversion_error(token)),
             Token::I64(x) => to_result!(num::from_i64(x), self.conversion_error(token)),
-            Token::Uint(x) => to_result!(num::from_uint(x), self.conversion_error(token)),
+            Token::Usize(x) => to_result!(num::from_uint(x), self.conversion_error(token)),
             Token::U8(x) => to_result!(num::from_u8(x), self.conversion_error(token)),
             Token::U16(x) => to_result!(num::from_u16(x), self.conversion_error(token)),
             Token::U32(x) => to_result!(num::from_u32(x), self.conversion_error(token)),
@@ -345,7 +345,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     }
 
     #[inline]
-    fn expect_tuple_start(&mut self, token: Token) -> Result<uint, E> {
+    fn expect_tuple_start(&mut self, token: Token) -> Result<usize, E> {
         match token {
             Token::TupleStart(len) => Ok(len),
             Token::SeqStart(len) => Ok(len),
@@ -401,7 +401,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     #[inline]
     fn expect_struct_field_or_end(&mut self,
                                   fields: &'static [&'static str]
-                                 ) -> Result<option::Option<option::Option<uint>>, E> {
+                                 ) -> Result<option::Option<option::Option<usize>>, E> {
         match try!(self.expect_token()) {
             Token::End => {
                 Ok(None)
@@ -439,7 +439,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     }
 
     #[inline]
-    fn expect_enum_start(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<uint, E> {
+    fn expect_enum_start(&mut self, token: Token, name: &str, variants: &[&str]) -> Result<usize, E> {
         match token {
             Token::EnumStart(n, v, _) => {
                 if name == n {
@@ -481,7 +481,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     }
 
     #[inline]
-    fn expect_seq_start(&mut self, token: Token) -> Result<uint, E> {
+    fn expect_seq_start(&mut self, token: Token) -> Result<usize, E> {
         match token {
             Token::TupleStart(len) => Ok(len),
             Token::SeqStart(len) => Ok(len),
@@ -533,7 +533,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
     }
 
     #[inline]
-    fn expect_map_start(&mut self, token: Token) -> Result<uint, E> {
+    fn expect_map_start(&mut self, token: Token) -> Result<usize, E> {
         match token {
             Token::MapStart(len) => Ok(len),
             _ => {
@@ -590,7 +590,7 @@ pub trait Deserializer<E>: Iterator<Item=Result<Token, E>> + Sized {
 
 struct SeqDeserializer<'a, D: 'a, E: 'a, T> {
     d: &'a mut D,
-    len: uint,
+    len: usize,
     err: &'a mut Option<E>,
 }
 
@@ -617,7 +617,7 @@ impl<
     }
 
     #[inline]
-    fn size_hint(&self) -> (uint, option::Option<uint>) {
+    fn size_hint(&self) -> (usize, option::Option<usize>) {
         (self.len, Some(self.len))
     }
 }
@@ -626,7 +626,7 @@ impl<
 
 struct MapDeserializer<'a, D:'a, E: 'a, K, V> {
     d: &'a mut D,
-    len: uint,
+    len: usize,
     err: &'a mut option::Option<E>,
 }
 
@@ -651,7 +651,7 @@ impl<
     }
 
     #[inline]
-    fn size_hint(&self) -> (uint, option::Option<uint>) {
+    fn size_hint(&self) -> (usize, option::Option<usize>) {
         (self.len, Some(self.len))
     }
 }
@@ -682,12 +682,12 @@ macro_rules! impl_deserialize {
 }
 
 impl_deserialize!(bool, expect_bool);
-impl_deserialize!(int, expect_num);
+impl_deserialize!(isize, expect_num);
 impl_deserialize!(i8, expect_num);
 impl_deserialize!(i16, expect_num);
 impl_deserialize!(i32, expect_num);
 impl_deserialize!(i64, expect_num);
-impl_deserialize!(uint, expect_num);
+impl_deserialize!(usize, expect_num);
 impl_deserialize!(u8, expect_num);
 impl_deserialize!(u16, expect_num);
 impl_deserialize!(u32, expect_num);
@@ -1094,7 +1094,7 @@ mod tests {
     #[derive(Clone, PartialEq, Show, RustcDecodable)]
     struct Inner {
         a: (),
-        b: uint,
+        b: usize,
         c: BTreeMap<string::String, option::Option<char>>,
     }
 
@@ -1169,7 +1169,7 @@ mod tests {
     #[derive(Clone, PartialEq, Show, RustcDecodable)]
     enum Animal {
         Dog,
-        Frog(string::String, int)
+        Frog(string::String, isize)
     }
 
     impl<D: Deserializer<E>, E> Deserialize<D, E> for Animal {
@@ -1271,12 +1271,12 @@ mod tests {
         vec!(Token::Null) => (), (),
         vec!(Token::Bool(true)) => true, bool,
         vec!(Token::Bool(false)) => false, bool,
-        vec!(Token::Int(5)) => 5, int,
+        vec!(Token::Isize(5)) => 5, isize,
         vec!(Token::I8(5)) => 5, i8,
         vec!(Token::I16(5)) => 5, i16,
         vec!(Token::I32(5)) => 5, i32,
         vec!(Token::I64(5)) => 5, i64,
-        vec!(Token::Uint(5)) => 5, uint,
+        vec!(Token::Usize(5)) => 5, usize,
         vec!(Token::U8(5)) => 5, u8,
         vec!(Token::U16(5)) => 5, u16,
         vec!(Token::U32(5)) => 5, u32,
@@ -1296,11 +1296,11 @@ mod tests {
 
         vec!(
             Token::TupleStart(2),
-                Token::Int(5),
+                Token::Isize(5),
 
                 Token::Str("a"),
             Token::End,
-        ) => (5, "a"), (int, &'static str),
+        ) => (5, "a"), (isize, &'static str),
 
         vec!(
             Token::TupleStart(3),
@@ -1310,21 +1310,21 @@ mod tests {
                 Token::End,
 
                 Token::TupleStart(2),
-                    Token::Int(5),
+                    Token::Isize(5),
 
                     Token::Str("a"),
                 Token::End,
             Token::End,
-        ) => ((), (), (5, "a")), ((), (), (int, &'static str))
+        ) => ((), (), (5, "a")), ((), (), (isize, &'static str))
     ]);
 
     test_value!(test_options, [
-        vec!(Token::Option(false)) => None, option::Option<int>,
+        vec!(Token::Option(false)) => None, option::Option<isize>,
 
         vec!(
             Token::Option(true),
-            Token::Int(5),
-        ) => Some(5), option::Option<int>
+            Token::Isize(5),
+        ) => Some(5), option::Option<isize>
     ]);
 
     test_value!(test_structs, [
@@ -1345,7 +1345,7 @@ mod tests {
                         Token::Null,
 
                         Token::Str("b"),
-                        Token::Uint(5),
+                        Token::Usize(5),
 
                         Token::Str("c"),
                         Token::MapStart(1),
@@ -1377,7 +1377,7 @@ mod tests {
         vec!(
             Token::EnumStart("Animal", "Frog", 2),
                 Token::String("Henry".to_string()),
-                Token::Int(349),
+                Token::Isize(349),
             Token::End,
         ) => Animal::Frog("Henry".to_string(), 349), Animal
     ]);
@@ -1386,57 +1386,57 @@ mod tests {
         vec!(
             Token::SeqStart(0),
             Token::End,
-        ) => vec!(), Vec<int>,
+        ) => vec!(), Vec<isize>,
 
         vec!(
             Token::SeqStart(3),
-                Token::Int(5),
+                Token::Isize(5),
 
-                Token::Int(6),
+                Token::Isize(6),
 
-                Token::Int(7),
+                Token::Isize(7),
             Token::End,
-        ) => vec!(5, 6, 7), Vec<int>,
+        ) => vec!(5, 6, 7), Vec<isize>,
 
 
         vec!(
             Token::SeqStart(3),
                 Token::SeqStart(1),
-                    Token::Int(1),
+                    Token::Isize(1),
                 Token::End,
 
                 Token::SeqStart(2),
-                    Token::Int(2),
+                    Token::Isize(2),
 
-                    Token::Int(3),
+                    Token::Isize(3),
                 Token::End,
 
                 Token::SeqStart(3),
-                    Token::Int(4),
+                    Token::Isize(4),
 
-                    Token::Int(5),
+                    Token::Isize(5),
 
-                    Token::Int(6),
+                    Token::Isize(6),
                 Token::End,
             Token::End,
-        ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)), Vec<Vec<int>>
+        ) => vec!(vec!(1), vec!(2, 3), vec!(4, 5, 6)), Vec<Vec<isize>>
     ]);
 
     test_value!(test_treemaps, [
         vec!(
             Token::MapStart(0),
             Token::End,
-        ) => treemap!(), BTreeMap<int, string::String>,
+        ) => treemap!(), BTreeMap<isize, string::String>,
 
         vec!(
             Token::MapStart(2),
-                Token::Int(5),
+                Token::Isize(5),
                 Token::String("a".to_string()),
 
-                Token::Int(6),
+                Token::Isize(6),
                 Token::String("b".to_string()),
             Token::End,
-        ) => treemap!(5i => "a".to_string(), 6i => "b".to_string()), BTreeMap<int, string::
+        ) => treemap!(5is => "a".to_string(), 6is => "b".to_string()), BTreeMap<isize, string::
         String>
     ]);
 }

@@ -22,7 +22,7 @@ pub trait Serializer<E> {
     fn serialize_bool(&mut self, v: bool) -> Result<(), E>;
 
     #[inline]
-    fn serialize_int(&mut self, v: int) -> Result<(), E> {
+    fn serialize_isize(&mut self, v: isize) -> Result<(), E> {
         self.serialize_i64(v as i64)
     }
 
@@ -45,7 +45,7 @@ pub trait Serializer<E> {
     fn serialize_i64(&mut self, v: i64) -> Result<(), E>;
 
     #[inline]
-    fn serialize_uint(&mut self, v: uint) -> Result<(), E> {
+    fn serialize_usize(&mut self, v: usize) -> Result<(), E> {
         self.serialize_u64(v as u64)
     }
 
@@ -78,19 +78,19 @@ pub trait Serializer<E> {
 
     fn serialize_str(&mut self, v: &str) -> Result<(), E>;
 
-    fn serialize_tuple_start(&mut self, len: uint) -> Result<(), E>;
+    fn serialize_tuple_start(&mut self, len: usize) -> Result<(), E>;
     fn serialize_tuple_elt<
         T: Serialize<Self, E>
     >(&mut self, v: &T) -> Result<(), E>;
     fn serialize_tuple_end(&mut self) -> Result<(), E>;
 
-    fn serialize_struct_start(&mut self, name: &str, len: uint) -> Result<(), E>;
+    fn serialize_struct_start(&mut self, name: &str, len: usize) -> Result<(), E>;
     fn serialize_struct_elt<
         T: Serialize<Self, E>
     >(&mut self, name: &str, v: &T) -> Result<(), E>;
     fn serialize_struct_end(&mut self) -> Result<(), E>;
 
-    fn serialize_enum_start(&mut self, name: &str, variant: &str, len: uint) -> Result<(), E>;
+    fn serialize_enum_start(&mut self, name: &str, variant: &str, len: usize) -> Result<(), E>;
     fn serialize_enum_elt<
         T: Serialize<Self, E>
     >(&mut self, v: &T) -> Result<(), E>;
@@ -132,12 +132,12 @@ macro_rules! impl_serialize {
 }
 
 impl_serialize!(bool, serialize_bool);
-impl_serialize!(int, serialize_int);
+impl_serialize!(isize, serialize_isize);
 impl_serialize!(i8, serialize_i8);
 impl_serialize!(i16, serialize_i16);
 impl_serialize!(i32, serialize_i32);
 impl_serialize!(i64, serialize_i64);
-impl_serialize!(uint, serialize_uint);
+impl_serialize!(usize, serialize_usize);
 impl_serialize!(u8, serialize_u8);
 impl_serialize!(u16, serialize_u16);
 impl_serialize!(u32, serialize_u32);
@@ -332,7 +332,7 @@ mod tests {
     #[derive_serialize]
     struct Inner {
         a: (),
-        b: uint,
+        b: usize,
         c: HashMap<string::String, option::Option<char>>,
     }
 
@@ -350,7 +350,7 @@ mod tests {
     #[derive_serialize]
     enum Animal {
         Dog,
-        Frog(String, int)
+        Frog(String, isize)
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -359,12 +359,12 @@ mod tests {
     pub enum Token<'a> {
         Null,
         Bool(bool),
-        Int(int),
+        Isize(isize),
         I8(i8),
         I16(i16),
         I32(i32),
         I64(i64),
-        Uint(uint),
+        Usize(usize),
         U8(u8),
         U16(u16),
         U32(u32),
@@ -374,24 +374,24 @@ mod tests {
         Char(char),
         Str(&'a str),
 
-        TupleStart(uint),
+        TupleStart(usize),
         TupleSep,
         TupleEnd,
 
-        StructStart(&'a str, uint),
+        StructStart(&'a str, usize),
         StructSep(&'a str),
         StructEnd,
 
-        EnumStart(&'a str, &'a str, uint),
+        EnumStart(&'a str, &'a str, usize),
         EnumSep,
         EnumEnd,
 
         Option(bool),
 
-        SeqStart(uint),
+        SeqStart(usize),
         SeqEnd,
 
-        MapStart(uint),
+        MapStart(usize),
         MapEnd,
     }
 
@@ -434,8 +434,8 @@ mod tests {
         fn serialize_bool(&mut self, v: bool) -> Result<(), Error> {
             self.serialize(Token::Bool(v))
         }
-        fn serialize_int(&mut self, v: int) -> Result<(), Error> {
-            self.serialize(Token::Int(v))
+        fn serialize_isize(&mut self, v: isize) -> Result<(), Error> {
+            self.serialize(Token::Isize(v))
         }
 
         fn serialize_i8(&mut self, v: i8) -> Result<(), Error> {
@@ -454,8 +454,8 @@ mod tests {
             self.serialize(Token::I64(v))
         }
 
-        fn serialize_uint(&mut self, v: uint) -> Result<(), Error> {
-            self.serialize(Token::Uint(v))
+        fn serialize_usize(&mut self, v: usize) -> Result<(), Error> {
+            self.serialize(Token::Usize(v))
         }
 
         fn serialize_u8(&mut self, v: u8) -> Result<(), Error> {
@@ -490,7 +490,7 @@ mod tests {
             self.serialize(Token::Str(v))
         }
 
-        fn serialize_tuple_start(&mut self, len: uint) -> Result<(), Error> {
+        fn serialize_tuple_start(&mut self, len: usize) -> Result<(), Error> {
             self.serialize(Token::TupleStart(len))
         }
 
@@ -505,7 +505,7 @@ mod tests {
             self.serialize(Token::TupleEnd)
         }
 
-        fn serialize_struct_start(&mut self, name: &str, len: uint) -> Result<(), Error> {
+        fn serialize_struct_start(&mut self, name: &str, len: usize) -> Result<(), Error> {
             self.serialize(Token::StructStart(name, len))
         }
 
@@ -520,7 +520,7 @@ mod tests {
             self.serialize(Token::StructEnd)
         }
 
-        fn serialize_enum_start(&mut self, name: &str, variant: &str, len: uint) -> Result<(), Error> {
+        fn serialize_enum_start(&mut self, name: &str, variant: &str, len: usize) -> Result<(), Error> {
             self.serialize(Token::EnumStart(name, variant, len))
         }
 
@@ -581,10 +581,10 @@ mod tests {
     #[test]
     fn test_tokens_int() {
         let tokens = vec!(
-            Token::Int(5)
+            Token::Isize(5)
         );
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        5i.serialize(&mut serializer).unwrap();
+        5is.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -617,7 +617,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        None::<int>.serialize(&mut serializer).unwrap();
+        None::<isize>.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -625,11 +625,11 @@ mod tests {
     fn test_tokens_option_some() {
         let tokens = vec!(
             Token::Option(true),
-            Token::Int(5),
+            Token::Isize(5),
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        Some(5i).serialize(&mut serializer).unwrap();
+        Some(5is).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -638,7 +638,7 @@ mod tests {
         let tokens = vec!(
             Token::TupleStart(2),
                 Token::TupleSep,
-                Token::Int(5),
+                Token::Isize(5),
 
                 Token::TupleSep,
                 Token::Str("a"),
@@ -646,7 +646,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        (5i, "a").serialize(&mut serializer).unwrap();
+        (5is, "a").serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -663,7 +663,7 @@ mod tests {
                 Token::TupleSep,
                 Token::TupleStart(2),
                     Token::TupleSep,
-                    Token::Int(5),
+                    Token::Isize(5),
 
                     Token::TupleSep,
                     Token::Str("a"),
@@ -672,7 +672,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        ((), (), (5i, "a")).serialize(&mut serializer).unwrap();
+        ((), (), (5is, "a")).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -702,7 +702,7 @@ mod tests {
                         Token::Null,
 
                         Token::StructSep("b"),
-                        Token::Uint(5),
+                        Token::Usize(5),
 
                         Token::StructSep("c"),
                         Token::MapStart(1),
@@ -749,7 +749,7 @@ mod tests {
                 Token::Str("Henry"),
 
                 Token::EnumSep,
-                Token::Int(349),
+                Token::Isize(349),
             Token::EnumEnd,
         );
 
@@ -766,7 +766,7 @@ mod tests {
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        let v: Vec<int> = vec!();
+        let v: Vec<isize> = vec!();
         v.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
@@ -775,14 +775,14 @@ mod tests {
     fn test_tokens_vec() {
         let tokens = vec!(
             Token::SeqStart(3),
-                Token::Int(5),
-                Token::Int(6),
-                Token::Int(7),
+                Token::Isize(5),
+                Token::Isize(6),
+                Token::Isize(7),
             Token::SeqEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        (vec!(5i, 6, 7)).serialize(&mut serializer).unwrap();
+        (vec!(5is, 6, 7)).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -791,24 +791,24 @@ mod tests {
         let tokens = vec!(
             Token::SeqStart(3),
                 Token::SeqStart(1),
-                    Token::Int(1),
+                    Token::Isize(1),
                 Token::SeqEnd,
 
                 Token::SeqStart(2),
-                    Token::Int(2),
-                    Token::Int(3),
+                    Token::Isize(2),
+                    Token::Isize(3),
                 Token::SeqEnd,
 
                 Token::SeqStart(3),
-                    Token::Int(4),
-                    Token::Int(5),
-                    Token::Int(6),
+                    Token::Isize(4),
+                    Token::Isize(5),
+                    Token::Isize(6),
                 Token::SeqEnd,
             Token::SeqEnd,
         );
 
         let mut serializer = AssertSerializer::new(tokens.into_iter());
-        (vec!(vec!(1i), vec!(2, 3), vec!(4, 5, 6))).serialize(&mut serializer).unwrap();
+        (vec!(vec!(1is), vec!(2, 3), vec!(4, 5, 6))).serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);
     }
 
@@ -816,10 +816,10 @@ mod tests {
     fn test_tokens_treemap() {
         let tokens = vec!(
             Token::MapStart(2),
-                Token::Int(5),
+                Token::Isize(5),
                 Token::Str("a"),
 
-                Token::Int(6),
+                Token::Isize(6),
                 Token::Str("b"),
             Token::MapEnd,
         );
@@ -827,8 +827,8 @@ mod tests {
         let mut serializer = AssertSerializer::new(tokens.into_iter());
 
         let mut map = BTreeMap::new();
-        map.insert(5i, "a".to_string());
-        map.insert(6i, "b".to_string());
+        map.insert(5is, "a".to_string());
+        map.insert(6is, "b".to_string());
 
         map.serialize(&mut serializer).unwrap();
         assert_eq!(serializer.iter.next(), None);

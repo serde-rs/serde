@@ -64,8 +64,8 @@ fn fmt_f64_or_null<W: Writer>(wr: &mut W, v: f64) -> IoResult<()> {
     }
 }
 
-fn spaces<W: Writer>(wr: &mut W, mut n: uint) -> IoResult<()> {
-    const LEN: uint = 16;
+fn spaces<W: Writer>(wr: &mut W, mut n: usize) -> IoResult<()> {
+    const LEN: usize = 16;
     const BUF: &'static [u8; LEN] = &[b' '; LEN];
 
     while n >= LEN {
@@ -128,7 +128,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_int(&mut self, v: int) -> IoResult<()> {
+    fn serialize_isize(&mut self, v: isize) -> IoResult<()> {
         write!(&mut self.wr, "{}", v)
     }
 
@@ -153,7 +153,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_uint(&mut self, v: uint) -> IoResult<()> {
+    fn serialize_usize(&mut self, v: usize) -> IoResult<()> {
         write!(&mut self.wr, "{}", v)
     }
 
@@ -198,7 +198,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_start(&mut self, _len: uint) -> IoResult<()> {
+    fn serialize_tuple_start(&mut self, _len: usize) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("[")
     }
@@ -221,7 +221,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> IoResult<()> {
+    fn serialize_struct_start(&mut self, _name: &str, _len: usize) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("{")
     }
@@ -246,7 +246,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> IoResult<()> {
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: usize) -> IoResult<()> {
         self.first = true;
         try!(self.wr.write_str("{"));
         try!(self.serialize_str(variant));
@@ -329,7 +329,7 @@ impl<W: Writer> ser::Serializer<IoError> for Serializer<W> {
 /// compact data
 pub struct PrettySerializer<W> {
     wr: W,
-    indent: uint,
+    indent: usize,
     first: bool,
 }
 
@@ -391,7 +391,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_int(&mut self, v: int) -> IoResult<()> {
+    fn serialize_isize(&mut self, v: isize) -> IoResult<()> {
         write!(&mut self.wr, "{}", v)
     }
 
@@ -416,7 +416,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_uint(&mut self, v: uint) -> IoResult<()> {
+    fn serialize_usize(&mut self, v: usize) -> IoResult<()> {
         write!(&mut self.wr, "{}", v)
     }
 
@@ -461,7 +461,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_tuple_start(&mut self, _len: uint) -> IoResult<()> {
+    fn serialize_tuple_start(&mut self, _len: usize) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("[")
     }
@@ -480,7 +480,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_struct_start(&mut self, _name: &str, _len: uint) -> IoResult<()> {
+    fn serialize_struct_start(&mut self, _name: &str, _len: usize) -> IoResult<()> {
         self.first = true;
         self.wr.write_str("{")
     }
@@ -501,7 +501,7 @@ impl<W: Writer> ser::Serializer<IoError> for PrettySerializer<W> {
     }
 
     #[inline]
-    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: uint) -> IoResult<()> {
+    fn serialize_enum_start(&mut self, _name: &str, variant: &str, _len: usize) -> IoResult<()> {
         self.first = true;
         try!(self.wr.write_str("{"));
         try!(self.serialize_sep());

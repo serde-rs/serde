@@ -12,7 +12,7 @@ struct Test {
     schema: String,
     title: String,
     #[serial_name = "type"]
-    ty: int
+    ty: isize
 }
 
 #[test]

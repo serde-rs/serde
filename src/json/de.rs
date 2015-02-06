@@ -30,8 +30,8 @@ enum State {
 pub struct Parser<Iter> {
     rdr: Iter,
     ch: Option<u8>,
-    line: uint,
-    col: uint,
+    line: usize,
+    col: usize,
     // A state machine is kept to make it possible to interupt and resume parsing.
     state_stack: Vec<State>,
     buf: Vec<u8>,
@@ -261,7 +261,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
                     dec /= 10.0;
-                    res += (((c as int) - (b'0' as int)) as f64) * dec;
+                    res += (((c as isize) - (b'0' as isize)) as f64) * dec;
                     self.bump();
                 }
                 _ => break,
@@ -275,7 +275,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
         self.bump();
 
-        let mut exp = 0u;
+        let mut exp = 0us;
         let mut neg_exp = false;
 
         if self.ch_is(b'+') {
@@ -294,7 +294,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
                     exp *= 10;
-                    exp += (c as uint) - (b'0' as uint);
+                    exp += (c as usize) - (b'0' as usize);
 
                     self.bump();
                 }
@@ -314,9 +314,9 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
     #[inline]
     fn decode_hex_escape(&mut self) -> Result<u16, Error> {
-        let mut i = 0u;
+        let mut i = 0us;
         let mut n = 0u16;
-        while i < 4u && !self.eof() {
+        while i < 4us && !self.eof() {
             self.bump();
             n = match self.ch_or_null() {
                 c @ b'0' ... b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
@@ -329,11 +329,11 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                 _ => { return Err(self.error(ErrorCode::InvalidEscape)); }
             };
 
-            i += 1u;
+            i += 1us;
         }
 
         // Error out if we didn't parse 4 digits.
-        if i != 4u {
+        if i != 4us {
             return Err(self.error(ErrorCode::InvalidEscape));
         }
 
@@ -562,7 +562,7 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer<Error> for Parser<Iter> {
     fn expect_enum_start(&mut self,
                          token: de::Token,
                          _name: &str,
-                         variants: &[&str]) -> Result<uint, Error> {
+                         variants: &[&str]) -> Result<usize, Error> {
         match token {
             de::Token::MapStart(_) => { }
             _ => { return Err(self.error(ErrorCode::ExpectedEnumMapStart)); }
@@ -615,7 +615,7 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer<Error> for Parser<Iter> {
     #[inline]
     fn expect_struct_field_or_end(&mut self,
                                   fields: &'static [&'static str]
-                                 ) -> Result<Option<Option<uint>>, Error> {
+                                 ) -> Result<Option<Option<usize>>, Error> {
         let result = match self.state_stack.pop() {
             Some(State::ObjectStart) => {
                 try!(self.parse_object_start())

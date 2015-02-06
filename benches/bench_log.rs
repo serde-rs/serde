@@ -46,7 +46,7 @@ enum HttpProtocol {
 
 impl rustc_serialize::Encodable for HttpProtocol {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as usize).encode(s)
     }
 }
 
@@ -62,7 +62,7 @@ impl rustc_serialize::Decodable for HttpProtocol {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpProtocol {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_uint(*self as uint)
+        s.serialize_usize(*self as usize)
     }
 }
 
@@ -90,7 +90,7 @@ enum HttpMethod {
 
 impl rustc_serialize::Encodable for HttpMethod {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as usize).encode(s)
     }
 }
 
@@ -98,7 +98,7 @@ impl rustc_serialize::Decodable for HttpMethod {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from usize")),
         }
     }
 }
@@ -106,7 +106,7 @@ impl rustc_serialize::Decodable for HttpMethod {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpMethod {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_uint(*self as uint)
+        s.serialize_usize(*self as usize)
     }
 }
 
@@ -127,7 +127,7 @@ enum CacheStatus {
 
 impl rustc_serialize::Encodable for CacheStatus {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as usize).encode(s)
     }
 }
 
@@ -135,7 +135,7 @@ impl rustc_serialize::Decodable for CacheStatus {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<CacheStatus, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from usize")),
         }
     }
 }
@@ -143,7 +143,7 @@ impl rustc_serialize::Decodable for CacheStatus {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for CacheStatus {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_uint(*self as uint)
+        s.serialize_usize(*self as usize)
     }
 }
 
@@ -173,7 +173,7 @@ enum OriginProtocol {
 
 impl rustc_serialize::Encodable for OriginProtocol {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as usize).encode(s)
     }
 }
 
@@ -181,7 +181,7 @@ impl rustc_serialize::Decodable for OriginProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OriginProtocol, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from usize")),
         }
     }
 }
@@ -189,7 +189,7 @@ impl rustc_serialize::Decodable for OriginProtocol {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for OriginProtocol {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_uint(*self as uint)
+        s.serialize_usize(*self as usize)
     }
 }
 
@@ -211,7 +211,7 @@ enum ZonePlan {
 
 impl rustc_serialize::Encodable for ZonePlan {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as usize).encode(s)
     }
 }
 
@@ -219,7 +219,7 @@ impl rustc_serialize::Decodable for ZonePlan {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<ZonePlan, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from usize")),
         }
     }
 }
@@ -227,7 +227,7 @@ impl rustc_serialize::Decodable for ZonePlan {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for ZonePlan {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_uint(*self as uint)
+        s.serialize_usize(*self as usize)
     }
 }
 
@@ -500,7 +500,7 @@ enum Country {
 
 impl rustc_serialize::Encodable for Country {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as uint).encode(s)
+        (*self as usize).encode(s)
     }
 }
 
@@ -508,7 +508,7 @@ impl rustc_serialize::Decodable for Country {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Country, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from usize")),
         }
     }
 }
@@ -516,7 +516,7 @@ impl rustc_serialize::Decodable for Country {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for Country {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_uint(*self as uint)
+        s.serialize_usize(*self as usize)
     }
 }
 
@@ -610,7 +610,7 @@ struct MyMemWriter0 {
 }
 
 impl MyMemWriter0 {
-    pub fn with_capacity(cap: uint) -> MyMemWriter0 {
+    pub fn with_capacity(cap: usize) -> MyMemWriter0 {
         MyMemWriter0 {
             buf: Vec::with_capacity(cap)
         }
@@ -631,7 +631,7 @@ struct MyMemWriter1 {
 }
 
 impl MyMemWriter1 {
-    pub fn with_capacity(cap: uint) -> MyMemWriter1 {
+    pub fn with_capacity(cap: usize) -> MyMemWriter1 {
         MyMemWriter1 {
             buf: Vec::with_capacity(cap)
         }
@@ -652,7 +652,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
         dst.set_len(dst_len + src_len);
 
         ::std::ptr::copy_nonoverlapping_memory(
-            dst.as_mut_ptr().offset(dst_len as int),
+            dst.as_mut_ptr().offset(dst_len as isize),
             src.as_ptr(),
             src_len);
     }
@@ -847,10 +847,10 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",\"zone_id\":").unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",\"zone_plan\":").unwrap();
-    (write!(wr, "{}", log.zone_plan as uint)).unwrap();
+    (write!(wr, "{}", log.zone_plan as usize)).unwrap();
 
     wr.write_str(",\"http\":{\"protocol\":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as usize)).unwrap();
     wr.write_str(",\"status\":").unwrap();
     (write!(wr, "{}", log.http.status)).unwrap();
     wr.write_str(",\"host_status\":").unwrap();
@@ -858,7 +858,7 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",\"up_status\":").unwrap();
     (write!(wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",\"method\":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as usize)).unwrap();
     wr.write_str(",\"content_type\":").unwrap();
     (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
     wr.write_str(",\"user_agent\":").unwrap();
@@ -878,12 +878,12 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
 
     wr.write_str(",\"protocol\":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
     wr.write_str("},\"country\":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as usize)).unwrap();
     wr.write_str(",\"cache_status\":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as usize)).unwrap();
     wr.write_str(",\"server_ip\":").unwrap();
     (write!(wr, "\"{}\"", log.server_ip)).unwrap();
     wr.write_str(",\"server_name\":").unwrap();
@@ -910,14 +910,14 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "zone_plan").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+    (write!(wr, "{}", log.zone_plan as isize)).unwrap();
 
     wr.write_str(",").unwrap();
     escape_str(wr, "http").unwrap();
     wr.write_str(":{").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "status").unwrap();
     wr.write_str(":").unwrap();
@@ -933,7 +933,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "method").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "content_type").unwrap();
     wr.write_str(":").unwrap();
@@ -969,16 +969,16 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
     wr.write_str("},").unwrap();
     escape_str(wr, "country").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "cache_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "server_ip").unwrap();
     wr.write_str(":").unwrap();
@@ -1167,11 +1167,11 @@ fn direct<W: Writer>(wr: &mut W, log: &Log) {
 
     serializer.serialize_struct_elt("timestamp", &log.timestamp).unwrap();
     serializer.serialize_struct_elt("zone_id", &log.zone_id).unwrap();
-    serializer.serialize_struct_elt("zone_plan", &(log.zone_plan as uint)).unwrap();
+    serializer.serialize_struct_elt("zone_plan", &(log.zone_plan as usize)).unwrap();
     serializer.serialize_struct_elt("http", &log.http).unwrap();
     serializer.serialize_struct_elt("origin", &log.origin).unwrap();
-    serializer.serialize_struct_elt("country", &(log.country as uint)).unwrap();
-    serializer.serialize_struct_elt("cache_status", &(log.cache_status as uint)).unwrap();
+    serializer.serialize_struct_elt("country", &(log.country as usize)).unwrap();
+    serializer.serialize_struct_elt("cache_status", &(log.cache_status as usize)).unwrap();
     serializer.serialize_struct_elt("server_ip", &log.server_ip.as_slice()).unwrap();
     serializer.serialize_struct_elt("server_name", &log.server_name.as_slice()).unwrap();
     serializer.serialize_struct_elt("remote_ip", &log.remote_ip.as_slice()).unwrap();
@@ -1589,7 +1589,7 @@ fn bench_deserializers(b: &mut Bencher) {
 
     b.bytes = s.len() as u64;
 
-    for _ in range(0i, 10000) {
+    for _ in range(0is, 10000) {
         let _log: Log = json::from_str(s).unwrap();
     }
 }
@@ -1618,7 +1618,7 @@ fn bench_reader_manual_reader_deserializer(b: &mut Bencher) {
 fn bench_reader_manual_reader_deserializers(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
-    for _ in range(0i, 100000) {
+    for _ in range(0is, 100000) {
         let mut rdr = JSON_STR.as_bytes();
         let _ = manual_reader_deserialize(&mut rdr);
     }
@@ -1646,7 +1646,7 @@ fn bench_iter_manual_iter_deserializer(b: &mut Bencher) {
 fn bench_iter_manual_iter_deserializers(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
-    for _ in range(0i, 10000) {
+    for _ in range(0is, 10000) {
         let _ = manual_iter_deserialize(JSON_STR.bytes());
     }
 }
@@ -1681,7 +1681,7 @@ fn bench_iter_manual_reader_as_iter_deserializer(b: &mut Bencher) {
 fn bench_iter_manual_reader_as_iter_deserializers(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
-    for _ in range(0i, 10000) {
+    for _ in range(0is, 10000) {
         let mut rdr = JSON_STR.as_bytes();
         let iter = Bytes::new(&mut rdr)
             .map(|x| x.unwrap());

@@ -269,12 +269,12 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
         match token {
             Token::Null => Ok(Value::Null),
             Token::Bool(x) => Ok(Value::Boolean(x)),
-            Token::Int(x) => Ok(Value::Integer(x as i64)),
+            Token::Isize(x) => Ok(Value::Integer(x as i64)),
             Token::I8(x) => Ok(Value::Integer(x as i64)),
             Token::I16(x) => Ok(Value::Integer(x as i64)),
             Token::I32(x) => Ok(Value::Integer(x as i64)),
             Token::I64(x) => Ok(Value::Integer(x)),
-            Token::Uint(x) => Ok(Value::Integer(x as i64)),
+            Token::Usize(x) => Ok(Value::Integer(x as i64)),
             Token::U8(x) => Ok(Value::Integer(x as i64)),
             Token::U16(x) => Ok(Value::Integer(x as i64)),
             Token::U32(x) => Ok(Value::Integer(x as i64)),
@@ -439,7 +439,7 @@ impl de::Deserializer<Error> for Deserializer {
     fn expect_enum_start(&mut self,
                          token: Token,
                          _name: &str,
-                         variants: &[&str]) -> Result<uint, Error> {
+                         variants: &[&str]) -> Result<usize, Error> {
         let variant = match token {
             Token::MapStart(_) => {
                 let state = match self.stack.pop() {
@@ -536,7 +536,7 @@ impl ToJson for Value {
     fn to_json(&self) -> Value { (*self).clone() }
 }
 
-impl ToJson for int {
+impl ToJson for isize {
     fn to_json(&self) -> Value { Value::Integer(*self as i64) }
 }
 
@@ -556,7 +556,7 @@ impl ToJson for i64 {
     fn to_json(&self) -> Value { Value::Integer(*self as i64) }
 }
 
-impl ToJson for uint {
+impl ToJson for usize {
     fn to_json(&self) -> Value { Value::Integer(*self as i64) }
 }
 

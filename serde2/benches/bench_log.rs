@@ -918,7 +918,7 @@ struct MyMemWriter0 {
 }
 
 impl MyMemWriter0 {
-    pub fn with_capacity(cap: uint) -> MyMemWriter0 {
+    pub fn with_capacity(cap: usize) -> MyMemWriter0 {
         MyMemWriter0 {
             buf: Vec::with_capacity(cap)
         }
@@ -939,7 +939,7 @@ struct MyMemWriter1 {
 }
 
 impl MyMemWriter1 {
-    pub fn with_capacity(cap: uint) -> MyMemWriter1 {
+    pub fn with_capacity(cap: usize) -> MyMemWriter1 {
         MyMemWriter1 {
             buf: Vec::with_capacity(cap)
         }
@@ -960,7 +960,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
         dst.set_len(dst_len + src_len);
 
         ::std::ptr::copy_nonoverlapping_memory(
-            dst.as_mut_ptr().offset(dst_len as int),
+            dst.as_mut_ptr().offset(dst_len as isize),
             src.as_ptr(),
             src_len);
     }
@@ -1157,10 +1157,10 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",\"zone_id\":").unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",\"zone_plan\":").unwrap();
-    (write!(wr, "{}", log.zone_plan as uint)).unwrap();
+    (write!(wr, "{}", log.zone_plan as usize)).unwrap();
 
     wr.write_str(",\"http\":{\"protocol\":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as usize)).unwrap();
     wr.write_str(",\"status\":").unwrap();
     (write!(wr, "{}", log.http.status)).unwrap();
     wr.write_str(",\"host_status\":").unwrap();
@@ -1168,7 +1168,7 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",\"up_status\":").unwrap();
     (write!(wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",\"method\":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as usize)).unwrap();
     wr.write_str(",\"content_type\":").unwrap();
     (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
     wr.write_str(",\"user_agent\":").unwrap();
@@ -1188,12 +1188,12 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
 
     wr.write_str(",\"protocol\":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
     wr.write_str("},\"country\":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as usize)).unwrap();
     wr.write_str(",\"cache_status\":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as usize)).unwrap();
     wr.write_str(",\"server_ip\":").unwrap();
     (write!(wr, "\"{}\"", log.server_ip)).unwrap();
     wr.write_str(",\"server_name\":").unwrap();
@@ -1220,14 +1220,14 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "zone_plan").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+    (write!(wr, "{}", log.zone_plan as isize)).unwrap();
 
     wr.write_str(",").unwrap();
     escape_str(wr, "http").unwrap();
     wr.write_str(":{").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "status").unwrap();
     wr.write_str(":").unwrap();
@@ -1243,7 +1243,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "method").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "content_type").unwrap();
     wr.write_str(":").unwrap();
@@ -1279,16 +1279,16 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
     wr.write_str("},").unwrap();
     escape_str(wr, "country").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "cache_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "server_ip").unwrap();
     wr.write_str(":").unwrap();
