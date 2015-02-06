@@ -91,7 +91,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::SyntaxError(..) => "syntax error",
-            Error::IoError(ref error) => error.description(),
+            Error::IoError(_) => "input/output error",
             /*
             Error::ExpectedError(ref expected, _) => &expected,
             Error::MissingFieldError(_) => "missing field",
@@ -100,12 +100,15 @@ impl error::Error for Error {
         }
     }
 
-    fn detail(&self) -> Option<String> {
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                Some(format!("{:?} at line {:?} column {:?}", code, line, col))
+                write!(fmt, "{:?} at line {:?} column {:?}", code, line, col)
             }
-            Error::IoError(ref error) => error.detail(),
+            Error::IoError(ref error) => fmt::Display::fmt(error, fmt),
             /*
             Error::ExpectedError(ref expected, ref found) => {
                 Some(format!("expected {}, found {}", expected, found))

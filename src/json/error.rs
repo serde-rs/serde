@@ -92,27 +92,29 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::SyntaxError(..) => "syntax error",
-            Error::IoError(ref error) => error.description(),
+            Error::IoError(_) => "Input/Output error",
             Error::ExpectedError(ref expected, _) => &expected,
             Error::MissingFieldError(_) => "missing field",
             Error::UnknownVariantError(_) => "unknown variant",
         }
     }
+}
 
-    fn detail(&self) -> Option<String> {
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                Some(format!("{:?} at line {:?} column {:?}", code, line, col))
+                write!(fmt, "{:?} at line {:?} column {:?}", code, line, col)
             }
-            Error::IoError(ref error) => error.detail(),
+            Error::IoError(ref error) => fmt::Display::fmt(error, fmt),
             Error::ExpectedError(ref expected, ref found) => {
-                Some(format!("expected {:?}, found {:?}", expected, found))
+                write!(fmt, "expected {:?}, found {:?}", expected, found)
             }
             Error::MissingFieldError(ref field) => {
-                Some(format!("missing field {:?}", field))
+                write!(fmt, "missing field {:?}", field)
             }
             Error::UnknownVariantError(ref variant) => {
-                Some(format!("unknown variant {:?}", variant))
+                write!(fmt, "unknown variant {:?}", variant)
             }
         }
     }
