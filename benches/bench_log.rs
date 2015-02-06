@@ -674,21 +674,21 @@ fn test_encoder() {
 
     let log = Log::new();
 
-    let mut wr = Vec::with_capacity(1024);
+    let mut wr = String::with_capacity(1024);
 
     {
         let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     }
 
-    assert_eq!(&wr[], JSON_STR.as_bytes());
+    assert_eq!(&wr[], JSON_STR);
 }
 
 #[bench]
 fn bench_encoder(b: &mut Bencher) {
     let log = Log::new();
 
-    let mut wr = Vec::with_capacity(1024);
+    let mut wr = String::with_capacity(1024);
 
     {
         let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
@@ -731,7 +731,7 @@ fn test_serializer_vec() {
     log.serialize(&mut serializer).unwrap();
 
     let json = serializer.unwrap();
-    assert_eq!(json.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&json[], JSON_STR.as_bytes());
 }
 
 #[bench]
