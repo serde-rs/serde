@@ -285,7 +285,7 @@ fn main() {
 
     // Deserialize like before.
 
-    let mut parser = json::Parser::new(json_str.as_slice().bytes());
+    let mut parser = json::Parser::new(json_str.bytes());
     let deserialized: TestStruct1 = Deserialize::deserialize(&mut parser).unwrap();
 }
 ```
@@ -1845,7 +1845,7 @@ mod bench {
         b.iter( || {
             use serialize::json::{Parser, JsonEvent, StackElement};
 
-            let mut parser = Parser::new(src.as_slice().chars());
+            let mut parser = Parser::new(src.chars());
             assert_eq!(parser.next(), Some(JsonEvent::ArrayStart));
             for _ in range(0, count) {
                 assert_eq!(parser.next(), Some(JsonEvent::ObjectStart));
@@ -1882,7 +1882,7 @@ mod bench {
         let src = json_str(count);
 
         b.iter( || {
-            let mut parser = Parser::new(src.as_slice().bytes());
+            let mut parser = Parser::new(src.bytes());
 
             assert_eq!(parser.next(), Some(Ok(Token::SeqStart(0))));
             for _ in range(0, count) {

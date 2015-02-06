@@ -533,7 +533,7 @@ pub trait ToJson {
 }
 
 impl ToJson for Value {
-    fn to_json(&self) -> Value { (*self).clone() }
+    fn to_json(&self) -> Value { self.clone() }
 }
 
 impl ToJson for isize {
@@ -593,7 +593,7 @@ impl<'a> ToJson for &'a str {
 }
 
 impl ToJson for String {
-    fn to_json(&self) -> Value { Value::String((*self).clone()) }
+    fn to_json(&self) -> Value { Value::String(self.clone()) }
 }
 
 macro_rules! peel_to_json_tuple {
@@ -644,7 +644,7 @@ impl<A:ToJson> ToJson for BTreeMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = BTreeMap::new();
         for (key, value) in self {
-            d.insert((*key).clone(), value.to_json());
+            d.insert(key.clone(), value.to_json());
         }
         Value::Object(d)
     }
@@ -654,7 +654,7 @@ impl<A:ToJson> ToJson for HashMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = BTreeMap::new();
         for (key, value) in self {
-            d.insert((*key).clone(), value.to_json());
+            d.insert(key.clone(), value.to_json());
         }
         Value::Object(d)
     }
