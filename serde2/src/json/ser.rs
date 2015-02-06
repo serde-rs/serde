@@ -1,5 +1,5 @@
 use std::f64;
-use std::io::{self, ByRefWriter, IoError};
+use std::old_io::{self, ByRefWriter, IoError};
 use std::num::{Float, FpCategory};
 use std::string::FromUtf8Error;
 
@@ -11,7 +11,7 @@ pub struct Writer<W> {
     writer: W,
 }
 
-impl<W: io::Writer> Writer<W> {
+impl<W: old_io::Writer> Writer<W> {
     /// Creates a new JSON visitr whose output will be written to the writer
     /// specified.
     #[inline]
@@ -28,7 +28,7 @@ impl<W: io::Writer> Writer<W> {
     }
 }
 
-impl<W: io::Writer> ser::Serializer for Writer<W> {
+impl<W: old_io::Writer> ser::Serializer for Writer<W> {
     type Value = ();
     type Error = IoError;
 
@@ -44,7 +44,7 @@ struct Visitor<'a, W: 'a> {
     writer: &'a mut W,
 }
 
-impl<'a, W: io::Writer> ser::Visitor for Visitor<'a, W> {
+impl<'a, W: old_io::Writer> ser::Visitor for Visitor<'a, W> {
     type Value = ();
     type Error = IoError;
 
@@ -188,7 +188,7 @@ impl<'a, W: io::Writer> ser::Visitor for Visitor<'a, W> {
 }
 
 #[inline]
-pub fn escape_bytes<W: io::Writer>(wr: &mut W, bytes: &[u8]) -> Result<(), IoError> {
+pub fn escape_bytes<W: old_io::Writer>(wr: &mut W, bytes: &[u8]) -> Result<(), IoError> {
     try!(wr.write_str("\""));
 
     let mut start = 0;
@@ -206,7 +206,7 @@ pub fn escape_bytes<W: io::Writer>(wr: &mut W, bytes: &[u8]) -> Result<(), IoErr
         };
 
         if start < i {
-            try!(wr.write(&bytes[start..i]));
+            try!(wr.write_all(&bytes[start..i]));
         }
 
         try!(wr.write_str(escaped));
@@ -215,34 +215,34 @@ pub fn escape_bytes<W: io::Writer>(wr: &mut W, bytes: &[u8]) -> Result<(), IoErr
     }
 
     if start != bytes.len() {
-        try!(wr.write(&bytes[start..]));
+        try!(wr.write_all(&bytes[start..]));
     }
 
     wr.write_str("\"")
 }
 
 #[inline]
-pub fn escape_str<W: io::Writer>(wr: &mut W, value: &str) -> Result<(), IoError> {
+pub fn escape_str<W: old_io::Writer>(wr: &mut W, value: &str) -> Result<(), IoError> {
     escape_bytes(wr, value.as_bytes())
 }
 
 #[inline]
-pub fn escape_char<W: io::Writer>(wr: &mut W, value: char) -> Result<(), IoError> {
+pub fn escape_char<W: old_io::Writer>(wr: &mut W, value: char) -> Result<(), IoError> {
     let mut buf = &mut [0; 4];
     value.encode_utf8(buf);
     escape_bytes(wr, buf)
 }
 
-fn fmt_f64_or_null<W: io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError> {
+fn fmt_f64_or_null<W: old_io::Writer>(wr: &mut W, value: f64) -> Result<(), IoError> {
     match value.classify() {
         FpCategory::Nan | FpCategory::Infinite => wr.write_str("null"),
-        _ => wr.write_str(f64::to_str_digits(value, 6).as_slice()),
+        _ => wr.write_str(&f64::to_str_digits(value, 6)),
     }
 }
 
 #[inline]
 pub fn to_writer<W, T>(wr: &mut W, value: &T) -> Result<(), IoError>
-    where W: io::Writer,
+    where W: old_io::Writer,
           T: ser::Serialize,
 {
     let mut wr = Writer::new(wr.by_ref());

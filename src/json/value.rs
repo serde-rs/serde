@@ -1,7 +1,7 @@
 use std::collections::{HashMap, BTreeMap, btree_map};
 use std::fmt;
-use std::io::{ByRefWriter, IoResult};
-use std::io;
+use std::old_io::{ByRefWriter, IoResult};
+use std::old_io;
 use std::str;
 use std::string::ToString;
 use std::vec;
@@ -221,8 +221,8 @@ struct WriterFormatter<'a, 'b: 'a> {
 }
 
 impl<'a, 'b> Writer for WriterFormatter<'a, 'b> {
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| io::IoError::last_error())
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
+        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| old_io::IoError::last_error())
     }
 }
 

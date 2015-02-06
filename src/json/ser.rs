@@ -1,7 +1,7 @@
 use std::f32;
 use std::f64;
 use std::num::{Float, FpCategory};
-use std::io::{IoError, IoResult};
+use std::old_io::{IoError, IoResult};
 use std::string::FromUtf8Error;
 
 use ser::Serialize;
@@ -25,7 +25,7 @@ fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> IoResult<()> {
         };
 
         if start < i {
-            try!(wr.write(&bytes[start..i]));
+            try!(wr.write_all(&bytes[start..i]));
         }
 
         try!(wr.write_str(escaped));
@@ -34,7 +34,7 @@ fn escape_bytes<W: Writer>(wr: &mut W, bytes: &[u8]) -> IoResult<()> {
     }
 
     if start != bytes.len() {
-        try!(wr.write(&bytes[start..]));
+        try!(wr.write_all(&bytes[start..]));
     }
 
     wr.write_str("\"")
@@ -69,12 +69,12 @@ fn spaces<W: Writer>(wr: &mut W, mut n: usize) -> IoResult<()> {
     const BUF: &'static [u8; LEN] = &[b' '; LEN];
 
     while n >= LEN {
-        try!(wr.write(BUF));
+        try!(wr.write_all(BUF));
         n -= LEN;
     }
 
     if n > 0 {
-        wr.write(&BUF[..n])
+        wr.write_all(&BUF[..n])
     } else {
         Ok(())
     }

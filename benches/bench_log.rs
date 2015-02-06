@@ -8,9 +8,9 @@ extern crate serde;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
-use std::io::ByRefWriter;
-use std::io::extensions::Bytes;
-use std::io;
+use std::old_io::ByRefWriter;
+use std::old_io::extensions::Bytes;
+use std::old_io;
 use std::num::FromPrimitive;
 use test::Bencher;
 
@@ -620,7 +620,7 @@ impl MyMemWriter0 {
 
 impl Writer for MyMemWriter0 {
     #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
         self.buf.push_all(buf);
         Ok(())
     }
@@ -660,7 +660,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
 
 impl Writer for MyMemWriter1 {
     #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
         push_all_bytes(&mut self.buf, buf);
         Ok(())
     }
@@ -761,7 +761,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }
-        let mut wr = std::io::BufWriter::new(&mut buf);
+        let mut wr = std::old_io::BufWriter::new(&mut buf);
 
         let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();

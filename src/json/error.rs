@@ -1,6 +1,6 @@
 use std::error;
 use std::fmt;
-use std::io;
+use std::old_io;
 
 use de::{Token, TokenKind};
 
@@ -82,7 +82,7 @@ impl fmt::Debug for ErrorCode {
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),
-    IoError(io::IoError),
+    IoError(old_io::IoError),
     ExpectedError(String, String),
     MissingFieldError(String),
     UnknownVariantError(String),
@@ -118,8 +118,8 @@ impl error::Error for Error {
     }
 }
 
-impl error::FromError<io::IoError> for Error {
-    fn from_error(error: io::IoError) -> Error {
+impl error::FromError<old_io::IoError> for Error {
+    fn from_error(error: old_io::IoError) -> Error {
         Error::IoError(error)
     }
 }

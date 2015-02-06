@@ -65,7 +65,7 @@ To serialize using `Serialize`:
 extern crate serde_macros;
 extern crate serde;
 
-use std::io::ByRefWriter;
+use std::old_io::ByRefWriter;
 use serde::json;
 use serde::Serialize;
 
@@ -319,7 +319,7 @@ pub mod error;
 #[cfg(test)]
 mod tests {
     use std::fmt::Debug;
-    use std::io;
+    use std::old_io;
     use std::str;
     use std::string;
     use std::collections::BTreeMap;
@@ -425,7 +425,7 @@ mod tests {
     }
 
     fn test_encode_ok<
-        T: PartialEq + Debug + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, io::IoError>
+        T: PartialEq + Debug + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, old_io::IoError>
     >(errors: &[(T, &str)]) {
         for &(ref value, out) in errors.iter() {
             let out = out.to_string();
