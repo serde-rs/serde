@@ -65,7 +65,7 @@ To serialize using `Serialize`:
 extern crate serde_macros;
 extern crate serde;
 
-use std::io::ByRefWriter;
+use std::old_io::ByRefWriter;
 use serde::json;
 use serde::Serialize;
 
@@ -232,7 +232,7 @@ fn main() {
 
     // To deserialize use the `json::from_str` function.
 
-    let deserialized_object: TestStruct1 = match json::from_str(serialized_str.as_slice()) {
+    let deserialized_object: TestStruct1 = match json::from_str(&serialized_str) {
         Ok(deserialized_object) => deserialized_object,
         Err(e) => panic!("json deserialization error: {:?}", e),
     };
@@ -285,7 +285,7 @@ fn main() {
 
     // Deserialize like before.
 
-    let mut parser = json::Parser::new(json_str.as_slice().bytes());
+    let mut parser = json::Parser::new(json_str.bytes());
     let deserialized: TestStruct1 = Deserialize::deserialize(&mut parser).unwrap();
 }
 ```
@@ -318,8 +318,8 @@ pub mod error;
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Show;
-    use std::io;
+    use std::fmt::Debug;
+    use std::old_io;
     use std::str;
     use std::string;
     use std::collections::BTreeMap;
@@ -357,12 +357,12 @@ mod tests {
         })
     }
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     #[derive_serialize]
     #[derive_deserialize]
     enum Animal {
         Dog,
-        Frog(String, Vec<int>)
+        Frog(String, Vec<isize>)
     }
 
     impl ToJson for Animal {
@@ -386,12 +386,12 @@ mod tests {
         }
     }
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     #[derive_serialize]
     #[derive_deserialize]
     struct Inner {
         a: (),
-        b: uint,
+        b: usize,
         c: Vec<string::String>,
     }
 
@@ -407,7 +407,7 @@ mod tests {
         }
     }
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     #[derive_serialize]
     #[derive_deserialize]
     struct Outer {
@@ -425,9 +425,9 @@ mod tests {
     }
 
     fn test_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, io::IoError>
+        T: PartialEq + Debug + ToJson + ser::Serialize<super::Serializer<Vec<u8>>, old_io::IoError>
     >(errors: &[(T, &str)]) {
-        for &(ref value, out) in errors.iter() {
+        for &(ref value, out) in errors {
             let out = out.to_string();
 
             let s = super::to_string(value).unwrap();
@@ -439,9 +439,9 @@ mod tests {
     }
 
     fn test_pretty_encode_ok<
-        T: PartialEq + Show + ToJson + ser::Serialize<super::PrettySerializer<Vec<u8>>, io::IoError>
+        T: PartialEq + Debug + ToJson + ser::Serialize<super::PrettySerializer<Vec<u8>>, old_io::IoError>
     >(errors: &[(T, &str)]) {
-        for &(ref value, out) in errors.iter() {
+        for &(ref value, out) in errors {
             let out = out.to_string();
 
             let s = super::to_pretty_string(value).unwrap();
@@ -464,9 +464,9 @@ mod tests {
     #[test]
     fn test_write_i64() {
         let tests = &[
-            (3i, "3"),
-            (-2i, "-2"),
-            (-1234i, "-1234"),
+            (3is, "3"),
+            (-2is, "-2"),
+            (-1234is, "-1234"),
         ];
         test_encode_ok(tests);
         test_pretty_encode_ok(tests);
@@ -643,14 +643,14 @@ mod tests {
     fn test_write_tuple() {
         test_encode_ok(&[
             (
-                (5i,),
+                (5is,),
                 "[5]",
             ),
         ]);
 
         test_pretty_encode_ok(&[
             (
-                (5i,),
+                (5is,),
                 concat!(
                     "[\n",
                     "  5\n",
@@ -661,14 +661,14 @@ mod tests {
 
         test_encode_ok(&[
             (
-                (5i, (6i, "abc")),
+                (5is, (6is, "abc")),
                 "[5,[6,\"abc\"]]",
             ),
         ]);
 
         test_pretty_encode_ok(&[
             (
-                (5i, (6i, "abc")),
+                (5is, (6is, "abc")),
                 concat!(
                     "[\n",
                     "  5,\n",
@@ -776,9 +776,9 @@ mod tests {
     // FIXME (#5527): these could be merged once UFCS is finished.
     fn test_parse_err<
         'a,
-        T: Show + de::Deserialize<Parser<str::Bytes<'a>>, Error>
+        T: Debug + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, Error)]) {
-        for &(s, ref err) in errors.iter() {
+        for &(s, ref err) in errors {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v.unwrap_err(), *err);
         }
@@ -786,9 +786,9 @@ mod tests {
 
     fn test_parse_ok<
         'a,
-        T: PartialEq + Show + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, Error>
+        T: PartialEq + Debug + ToJson + de::Deserialize<Parser<str::Bytes<'a>>, Error>
     >(errors: &[(&'a str, T)]) {
-        for &(s, ref value) in errors.iter() {
+        for &(s, ref value) in errors {
             let v: T = from_str(s).unwrap();
             assert_eq!(v, *value);
 
@@ -798,9 +798,9 @@ mod tests {
     }
 
     fn test_json_deserialize_ok<
-        T: PartialEq + Show + ToJson + de::Deserialize<value::Deserializer, Error>
+        T: PartialEq + Debug + ToJson + de::Deserialize<value::Deserializer, Error>
     >(errors: &[T]) {
-        for value in errors.iter() {
+        for value in errors {
             let v: T = from_json(value.to_json()).unwrap();
             assert_eq!(v, *value);
 
@@ -964,19 +964,19 @@ mod tests {
         ]);
 
         test_parse_ok(&[
-            ("[3,1]", vec!(3i, 1)),
-            ("[ 3 , 1 ]", vec!(3i, 1)),
+            ("[3,1]", vec!(3is, 1)),
+            ("[ 3 , 1 ]", vec!(3is, 1)),
         ]);
 
         test_parse_ok(&[
-            ("[[3], [1, 2]]", vec!(vec!(3i), vec!(1, 2))),
+            ("[[3], [1, 2]]", vec!(vec!(3is), vec!(1, 2))),
         ]);
 
         let v: () = from_str("[]").unwrap();
         assert_eq!(v, ());
 
         test_parse_ok(&[
-            ("[1, 2, 3]", (1u, 2u, 3u)),
+            ("[1, 2, 3]", (1us, 2us, 3us)),
         ]);
     }
 
@@ -992,17 +992,17 @@ mod tests {
         ]);
 
         test_json_deserialize_ok(&[
-            vec!(3i, 1),
+            vec!(3is, 1),
         ]);
 
         test_json_deserialize_ok(&[
-            vec!(vec!(3i), vec!(1, 2)),
+            vec!(vec!(3is), vec!(1, 2)),
         ]);
     }
 
     #[test]
     fn test_parse_object() {
-        test_parse_err::<BTreeMap<string::String, int>>(&[
+        test_parse_err::<BTreeMap<string::String, isize>>(&[
             ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
             ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
             ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
@@ -1022,26 +1022,26 @@ mod tests {
             ("{ }", treemap!()),
             (
                 "{\"a\":3}",
-                treemap!("a".to_string() => 3i)
+                treemap!("a".to_string() => 3is)
             ),
             (
                 "{ \"a\" : 3 }",
-                treemap!("a".to_string() => 3i)
+                treemap!("a".to_string() => 3is)
             ),
             (
                 "{\"a\":3,\"b\":4}",
-                treemap!("a".to_string() => 3i, "b".to_string() => 4)
+                treemap!("a".to_string() => 3is, "b".to_string() => 4)
             ),
             (
                 "{ \"a\" : 3 , \"b\" : 4 }",
-                treemap!("a".to_string() => 3i, "b".to_string() => 4),
+                treemap!("a".to_string() => 3is, "b".to_string() => 4),
             ),
         ]);
 
         test_parse_ok(&[
             (
                 "{\"a\": {\"b\": 3, \"c\": 4}}",
-                treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4i)),
+                treemap!("a".to_string() => treemap!("b".to_string() => 3is, "c".to_string() => 4is)),
             ),
         ]);
     }
@@ -1050,12 +1050,12 @@ mod tests {
     fn test_json_deserialize_object() {
         test_json_deserialize_ok(&[
             treemap!(),
-            treemap!("a".to_string() => 3i),
-            treemap!("a".to_string() => 3i, "b".to_string() => 4),
+            treemap!("a".to_string() => 3is),
+            treemap!("a".to_string() => 3is, "b".to_string() => 4),
         ]);
 
         test_json_deserialize_ok(&[
-            treemap!("a".to_string() => treemap!("b".to_string() => 3i, "c".to_string() => 4)),
+            treemap!("a".to_string() => treemap!("b".to_string() => 3is, "c".to_string() => 4)),
         ]);
     }
 
@@ -1103,11 +1103,11 @@ mod tests {
             ("\"jodhpurs\"", Some("jodhpurs".to_string())),
         ]);
 
-        #[derive(PartialEq, Show)]
+        #[derive(PartialEq, Debug)]
         #[derive_serialize]
         #[derive_deserialize]
         struct Foo {
-            x: Option<int>,
+            x: Option<isize>,
         }
 
         let value: Foo = from_str("{}").unwrap();
@@ -1172,7 +1172,7 @@ mod tests {
     #[test]
     fn test_multiline_errors() {
         test_parse_err::<BTreeMap<string::String, string::String>>(&[
-            ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3u, 8u)),
+            ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3us, 8us)),
         ]);
     }
 
@@ -1266,8 +1266,8 @@ mod tests {
     #[test]
     fn test_as_object() {
         let json_value: Value = from_str("{}").unwrap();
-        let json_object = json_value.as_object();
         let map = BTreeMap::<string::String, Value>::new();
+        let json_object = json_value.as_object();
         assert_eq!(json_object, Some(&map));
     }
 
@@ -1371,7 +1371,7 @@ mod tests {
     fn test_encode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
         use std::collections::HashMap;
-        let mut hm: HashMap<uint, bool> = HashMap::new();
+        let mut hm: HashMap<usize, bool> = HashMap::new();
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
         {
@@ -1379,14 +1379,14 @@ mod tests {
             hm.serialize(&mut serializer).unwrap();
         }
         let bytes = mem_buf.unwrap();
-        let json_str = from_utf8(bytes.as_slice()).unwrap();
+        let json_str = from_utf8(&bytes).unwrap();
         let _json_value: Value = from_str(json_str).unwrap();
     }
     #[test]
     fn test_prettyencode_hashmap_with_numeric_key() {
         use std::str::from_utf8;
         use std::collections::HashMap;
-        let mut hm: HashMap<uint, bool> = HashMap::new();
+        let mut hm: HashMap<usize, bool> = HashMap::new();
         hm.insert(1, true);
         let mut mem_buf = MemWriter::new();
         {
@@ -1394,7 +1394,7 @@ mod tests {
             hm.serialize(&mut serializer).unwrap()
         }
         let bytes = mem_buf.unwrap();
-        let json_str = from_utf8(bytes.as_slice()).unwrap();
+        let json_str = from_utf8(&bytes).unwrap();
         let _json_value: Value = from_str(json_str).unwrap();
     }
 
@@ -1402,7 +1402,7 @@ mod tests {
     fn test_hashmap_with_numeric_key_can_handle_double_quote_delimited_key() {
         use std::collections::HashMap;
         let json_str = "{\"1\":true}";
-        let map: HashMap<uint, bool> = from_str(json_str).unwrap();
+        let map: HashMap<usize, bool> = from_str(json_str).unwrap();
         let mut m = HashMap::new();
         m.insert(1u, true);
         assert_eq!(map, m);
@@ -1419,7 +1419,7 @@ mod tests {
                 None => { break; }
             };
             let (ref expected_evt, ref expected_stack) = expected[i];
-            if !parser.stack().is_equal_to(expected_stack.as_slice()) {
+            if !parser.stack().is_equal_to(&expected_stack) {
                 panic!("Parser stack is not equal to {}", expected_stack);
             }
             assert_eq!(&evt, expected_evt);
@@ -1700,7 +1700,7 @@ mod tests {
 mod bench {
     use std::collections::BTreeMap;
     use std::string;
-    use serialize;
+    use rustc_serialize as serialize;
     use test::Bencher;
 
     use de::Token;
@@ -1715,7 +1715,7 @@ mod bench {
         })
     }
 
-    fn json_str(count: uint) -> string::String {
+    fn json_str(count: usize) -> string::String {
         let mut src = "[".to_string();
         for _ in range(0, count) {
             src.push_str(r#"{"a":true,"b":null,"c":3.1415,"d":"Hello world","e":[1,2,3]},"#);
@@ -1724,7 +1724,7 @@ mod bench {
         src
     }
 
-    fn pretty_json_str(count: uint) -> string::String {
+    fn pretty_json_str(count: usize) -> string::String {
         let mut src = "[\n".to_string();
         for _ in range(0, count) {
             src.push_str(
@@ -1747,8 +1747,8 @@ mod bench {
         src
     }
 
-    fn encoder_json(count: uint) -> serialize::json::Json {
-        use serialize::json::Json;
+    fn encoder_json(count: usize) -> serialize::json::Json {
+        use rustc_serialize::json::Json;
 
         let mut list = vec!();
         for _ in range(0, count) {
@@ -1768,7 +1768,7 @@ mod bench {
         Json::Array(list)
     }
 
-    fn serializer_json(count: uint) -> Value {
+    fn serializer_json(count: usize) -> Value {
         let mut list = vec!();
         for _ in range(0, count) {
             list.push(Value::Object(treemap!(
@@ -1787,7 +1787,7 @@ mod bench {
         Value::Array(list)
     }
 
-    fn bench_encoder(b: &mut Bencher, count: uint) {
+    fn bench_encoder(b: &mut Bencher, count: usize) {
         let src = json_str(count);
         let json = encoder_json(count);
 
@@ -1796,7 +1796,7 @@ mod bench {
         });
     }
 
-    fn bench_encoder_pretty(b: &mut Bencher, count: uint) {
+    fn bench_encoder_pretty(b: &mut Bencher, count: usize) {
         let src = pretty_json_str(count);
         let json = encoder_json(count);
 
@@ -1805,7 +1805,7 @@ mod bench {
         });
     }
 
-    fn bench_serializer(b: &mut Bencher, count: uint) {
+    fn bench_serializer(b: &mut Bencher, count: usize) {
         let src = json_str(count);
         let json = serializer_json(count);
 
@@ -1814,7 +1814,7 @@ mod bench {
         });
     }
 
-    fn bench_serializer_pretty(b: &mut Bencher, count: uint) {
+    fn bench_serializer_pretty(b: &mut Bencher, count: usize) {
         let src = pretty_json_str(count);
         let json = serializer_json(count);
 
@@ -1823,29 +1823,29 @@ mod bench {
         });
     }
 
-    fn bench_decoder(b: &mut Bencher, count: uint) {
+    fn bench_decoder(b: &mut Bencher, count: usize) {
         let src = json_str(count);
         let json = encoder_json(count);
         b.iter(|| {
-            assert_eq!(json, serialize::json::from_str(src.as_slice()).unwrap());
+            assert_eq!(json, serialize::json::Json::from_str(&src).unwrap());
         });
     }
 
-    fn bench_deserializer(b: &mut Bencher, count: uint) {
+    fn bench_deserializer(b: &mut Bencher, count: usize) {
         let src = json_str(count);
         let json = encoder_json(count);
         b.iter(|| {
-            assert_eq!(json, serialize::json::from_str(src.as_slice()).unwrap());
+            assert_eq!(json, serialize::json::Json::from_str(&src).unwrap());
         });
     }
 
-    fn bench_decoder_streaming(b: &mut Bencher, count: uint) {
+    fn bench_decoder_streaming(b: &mut Bencher, count: usize) {
         let src = json_str(count);
 
         b.iter( || {
-            use serialize::json::{Parser, JsonEvent, StackElement};
+            use rustc_serialize::json::{Parser, JsonEvent, StackElement};
 
-            let mut parser = Parser::new(src.as_slice().chars());
+            let mut parser = Parser::new(src.chars());
             assert_eq!(parser.next(), Some(JsonEvent::ArrayStart));
             for _ in range(0, count) {
                 assert_eq!(parser.next(), Some(JsonEvent::ObjectStart));
@@ -1878,11 +1878,11 @@ mod bench {
         });
     }
 
-    fn bench_deserializer_streaming(b: &mut Bencher, count: uint) {
+    fn bench_deserializer_streaming(b: &mut Bencher, count: usize) {
         let src = json_str(count);
 
         b.iter( || {
-            let mut parser = Parser::new(src.as_slice().bytes());
+            let mut parser = Parser::new(src.bytes());
 
             assert_eq!(parser.next(), Some(Ok(Token::SeqStart(0))));
             for _ in range(0, count) {

@@ -139,7 +139,7 @@ pub trait Visitor {
     fn visit_string<
         E: Error,
     >(&mut self, v: String) -> Result<Self::Value, E> {
-        self.visit_str(&v[])
+        self.visit_str(&v)
     }
 
     fn visit_unit<
@@ -665,7 +665,7 @@ mod tests {
     use std::iter;
     use std::vec;
 
-    #[derive(Show)]
+    #[derive(Debug)]
     enum Token<'a> {
         Bool(bool),
         Isize(isize),
@@ -704,7 +704,7 @@ mod tests {
     }
 
     struct TokenDeserializer<'a> {
-        tokens: iter::Peekable<Token<'a>, vec::IntoIter<Token<'a>>>,
+        tokens: iter::Peekable<vec::IntoIter<Token<'a>>>,
     }
 
     impl<'a> TokenDeserializer<'a> {
@@ -715,7 +715,7 @@ mod tests {
         }
     }
 
-    #[derive(Copy, PartialEq, Show)]
+    #[derive(Copy, PartialEq, Debug)]
     enum Error {
         SyntaxError,
         EndOfStreamError,
@@ -973,7 +973,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////
 
-    #[derive(Copy, PartialEq, Show)]
+    #[derive(Copy, PartialEq, Debug)]
     struct NamedUnit;
 
     impl Deserialize for NamedUnit {
@@ -1015,7 +1015,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     struct NamedSeq(i32, i32, i32);
 
     impl Deserialize for NamedSeq {
@@ -1067,7 +1067,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     struct NamedMap {
         a: i32,
         b: i32,
@@ -1152,7 +1152,7 @@ mod tests {
 
     //////////////////////////////////////////////////////////////////////////
 
-    #[derive(PartialEq, Show)]
+    #[derive(PartialEq, Debug)]
     enum Enum {
         Unit,
         Seq(i32, i32, i32),

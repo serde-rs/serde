@@ -1,7 +1,7 @@
 use std::collections::{HashMap, BTreeMap, btree_map};
 use std::fmt;
-use std::io::{ByRefWriter, IoResult};
-use std::io;
+use std::old_io::{ByRefWriter, IoResult};
+use std::old_io;
 use std::str;
 use std::string::ToString;
 use std::vec;
@@ -43,7 +43,7 @@ impl Value {
     pub fn to_pretty_string(&self) -> String {
         let mut wr = Vec::new();
         self.to_pretty_writer(wr.by_ref()).unwrap();
-        str::from_utf8(wr.as_slice()).unwrap().to_string()
+        str::from_utf8(&wr).unwrap().to_string()
     }
 
      /// If the Json value is an Object, returns the value associated with the provided key.
@@ -60,7 +60,7 @@ impl Value {
     /// Otherwise, it will return the Json value associated with the final key.
     pub fn find_path<'a>(&'a self, keys: &[&String]) -> Option<&'a Value>{
         let mut target = self;
-        for key in keys.iter() {
+        for key in keys {
             match target.find(*key) {
                 Some(t) => { target = t; },
                 None => return None
@@ -79,7 +79,7 @@ impl Value {
                     Some(json_value) => Some(json_value),
                     None => {
                         let mut value : Option<&'a Value> = None;
-                        for (_, v) in map.iter() {
+                        for (_, v) in map {
                             value = v.search(key);
                             if value.is_some() {
                                 break;
@@ -130,7 +130,7 @@ impl Value {
     /// Returns None otherwise.
     pub fn as_string<'a>(&'a self) -> Option<&'a str> {
         match *self {
-            Value::String(ref s) => Some(s.as_slice()),
+            Value::String(ref s) => Some(&s),
             _ => None
         }
     }
@@ -212,7 +212,7 @@ impl ToString for Value {
     fn to_string(&self) -> String {
         let mut wr = Vec::new();
         self.to_writer(wr.by_ref()).unwrap();
-        str::from_utf8(wr.as_slice()).unwrap().to_string()
+        str::from_utf8(&wr).unwrap().to_string()
     }
 }
 
@@ -221,12 +221,12 @@ struct WriterFormatter<'a, 'b: 'a> {
 }
 
 impl<'a, 'b> Writer for WriterFormatter<'a, 'b> {
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| io::IoError::last_error())
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
+        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| old_io::IoError::last_error())
     }
 }
 
-impl fmt::Show for Value {
+impl fmt::Debug for Value {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let wr = WriterFormatter { inner: f };
@@ -269,12 +269,12 @@ impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Value {
         match token {
             Token::Null => Ok(Value::Null),
             Token::Bool(x) => Ok(Value::Boolean(x)),
-            Token::Int(x) => Ok(Value::Integer(x as i64)),
+            Token::Isize(x) => Ok(Value::Integer(x as i64)),
             Token::I8(x) => Ok(Value::Integer(x as i64)),
             Token::I16(x) => Ok(Value::Integer(x as i64)),
             Token::I32(x) => Ok(Value::Integer(x as i64)),
             Token::I64(x) => Ok(Value::Integer(x)),
-            Token::Uint(x) => Ok(Value::Integer(x as i64)),
+            Token::Usize(x) => Ok(Value::Integer(x as i64)),
             Token::U8(x) => Ok(Value::Integer(x as i64)),
             Token::U16(x) => Ok(Value::Integer(x as i64)),
             Token::U32(x) => Ok(Value::Integer(x as i64)),
@@ -439,7 +439,7 @@ impl de::Deserializer<Error> for Deserializer {
     fn expect_enum_start(&mut self,
                          token: Token,
                          _name: &str,
-                         variants: &[&str]) -> Result<uint, Error> {
+                         variants: &[&str]) -> Result<usize, Error> {
         let variant = match token {
             Token::MapStart(_) => {
                 let state = match self.stack.pop() {
@@ -498,7 +498,7 @@ impl de::Deserializer<Error> for Deserializer {
             }
         };
 
-        match variants.iter().position(|v| *v == variant.as_slice()) {
+        match variants.iter().position(|v| *v == &variant[]) {
             Some(idx) => Ok(idx),
             None => Err(Error::UnknownVariantError(variant)),
         }
@@ -533,10 +533,10 @@ pub trait ToJson {
 }
 
 impl ToJson for Value {
-    fn to_json(&self) -> Value { (*self).clone() }
+    fn to_json(&self) -> Value { self.clone() }
 }
 
-impl ToJson for int {
+impl ToJson for isize {
     fn to_json(&self) -> Value { Value::Integer(*self as i64) }
 }
 
@@ -556,7 +556,7 @@ impl ToJson for i64 {
     fn to_json(&self) -> Value { Value::Integer(*self as i64) }
 }
 
-impl ToJson for uint {
+impl ToJson for usize {
     fn to_json(&self) -> Value { Value::Integer(*self as i64) }
 }
 
@@ -593,7 +593,7 @@ impl<'a> ToJson for &'a str {
 }
 
 impl ToJson for String {
-    fn to_json(&self) -> Value { Value::String((*self).clone()) }
+    fn to_json(&self) -> Value { Value::String(self.clone()) }
 }
 
 macro_rules! peel_to_json_tuple {
@@ -643,8 +643,8 @@ impl<A:ToJson> ToJson for Vec<A> {
 impl<A:ToJson> ToJson for BTreeMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = BTreeMap::new();
-        for (key, value) in self.iter() {
-            d.insert((*key).clone(), value.to_json());
+        for (key, value) in self {
+            d.insert(key.clone(), value.to_json());
         }
         Value::Object(d)
     }
@@ -653,8 +653,8 @@ impl<A:ToJson> ToJson for BTreeMap<String, A> {
 impl<A:ToJson> ToJson for HashMap<String, A> {
     fn to_json(&self) -> Value {
         let mut d = BTreeMap::new();
-        for (key, value) in self.iter() {
-            d.insert((*key).clone(), value.to_json());
+        for (key, value) in self {
+            d.insert(key.clone(), value.to_json());
         }
         Value::Object(d)
     }

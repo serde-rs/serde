@@ -1,6 +1,6 @@
 use std::error;
 use std::fmt;
-use std::io;
+use std::old_io;
 
 use de;
 
@@ -37,7 +37,7 @@ pub enum ErrorCode {
     UnrecognizedHex,
 }
 
-impl fmt::Show for ErrorCode {
+impl fmt::Debug for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             //ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {}", token),
@@ -75,11 +75,11 @@ impl fmt::Show for ErrorCode {
     }
 }
 
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),
-    IoError(io::IoError),
+    IoError(old_io::IoError),
     /*
     ExpectedError(String, String),
     MissingFieldError(String),
@@ -91,21 +91,24 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::SyntaxError(..) => "syntax error",
-            Error::IoError(ref error) => error.description(),
+            Error::IoError(_) => "input/output error",
             /*
-            Error::ExpectedError(ref expected, _) => expected.as_slice(),
+            Error::ExpectedError(ref expected, _) => &expected,
             Error::MissingFieldError(_) => "missing field",
             Error::UnknownVariantError(_) => "unknown variant",
             */
         }
     }
 
-    fn detail(&self) -> Option<String> {
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                Some(format!("{:?} at line {:?} column {:?}", code, line, col))
+                write!(fmt, "{:?} at line {:?} column {:?}", code, line, col)
             }
-            Error::IoError(ref error) => error.detail(),
+            Error::IoError(ref error) => fmt::Display::fmt(error, fmt),
             /*
             Error::ExpectedError(ref expected, ref found) => {
                 Some(format!("expected {}, found {}", expected, found))
@@ -121,8 +124,8 @@ impl error::Error for Error {
     }
 }
 
-impl error::FromError<io::IoError> for Error {
-    fn from_error(error: io::IoError) -> Error {
+impl error::FromError<old_io::IoError> for Error {
+    fn from_error(error: old_io::IoError) -> Error {
         Error::IoError(error)
     }
 }

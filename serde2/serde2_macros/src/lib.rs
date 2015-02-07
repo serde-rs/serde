@@ -1,4 +1,4 @@
-#![feature(plugin_registrar, quote, unboxed_closures)]
+#![feature(plugin_registrar, quote, unboxed_closures, rustc_private)]
 
 extern crate syntax;
 extern crate rustc;
@@ -73,6 +73,7 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
         path: Path::new(vec!["serde2", "ser", "Serialize"]),
         additional_bounds: Vec::new(),
         generics: LifetimeBounds::empty(),
+        associated_types: vec![],
         methods: vec![
             MethodDef {
                 name: "visit",
@@ -260,6 +261,7 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                             vec!(Box::new(Literal(Path::new_local("__E")))), true))),
                          ("__E", None, vec!()))
         },
+        associated_types: vec![],
         methods: vec!(
             MethodDef {
                 name: "deserialize_token",
@@ -313,7 +315,7 @@ fn deserialize_substructure(cx: &mut ExtCtxt, span: Span,
                 cx,
                 span,
                 substr.type_ident,
-                fields.as_slice(),
+                &fields,
                 deserializer,
                 token)
         }
@@ -400,7 +402,7 @@ fn deserialize_struct_from_map(
 ) -> P<ast::Expr> {
     let fields = match *fields {
         Unnamed(_) => fail!(),
-        Named(ref fields) => fields.as_slice(),
+        Named(ref fields) => &fields[],
     };
 
     // Declare each field.
@@ -458,7 +460,7 @@ fn deserialize_struct_from_map(
             {
                 let key = match token {
                     ::serde2::de::Str(s) => s,
-                    ::serde2::de::String(ref s) => s.as_slice(),
+                    ::serde2::de::String(ref s) => &s,
                     token => {
                         let expected_tokens = [
                             ::serde2::de::StrKind,
@@ -550,7 +552,7 @@ fn deserialize_static_fields(
                     getarg(
                         cx,
                         span,
-                        token::intern_and_get_ident(format!("_field{}", i).as_slice())
+                        token::intern_and_get_ident(&format!("_field{}", i))
                     )
                 }).collect();
 

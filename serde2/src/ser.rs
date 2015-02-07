@@ -239,7 +239,7 @@ impl Serialize for String {
     fn visit<
         V: Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        self.as_slice().visit(visitor)
+        (&self[]).visit(visitor)
     }
 }
 
@@ -321,7 +321,7 @@ impl<
     fn visit<
         V: Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        self.as_slice().visit(visitor)
+        (&self[]).visit(visitor)
     }
 }
 
@@ -651,7 +651,7 @@ mod tests {
     use std::vec;
     use std::collections::BTreeMap;
 
-    #[derive(Clone, PartialEq, Show)]
+    #[derive(Clone, PartialEq, Debug)]
     pub enum Token<'a> {
         Bool(bool),
         Isize(isize),

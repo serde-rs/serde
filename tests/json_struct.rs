@@ -4,7 +4,7 @@ extern crate serde;
 #[plugin]
 extern crate serde_macros;
 
-#[derive(PartialEq, Show)]
+#[derive(PartialEq, Debug)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Test {
@@ -12,7 +12,7 @@ struct Test {
     schema: String,
     title: String,
     #[serial_name = "type"]
-    ty: int
+    ty: isize
 }
 
 #[test]
@@ -24,8 +24,8 @@ fn test_json_struct() {
     };
 
     let s = serde::json::to_string(&input).unwrap();
-    assert_eq!(s.as_slice(), r#"{"$schema":"a","title":"b","type":3}"#);
+    assert_eq!(&s[], r#"{"$schema":"a","title":"b","type":3}"#);
 
-    let output: Test = serde::json::from_str(s.as_slice()).unwrap();
+    let output: Test = serde::json::from_str(&s).unwrap();
     assert_eq!(input, output);
 }

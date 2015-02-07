@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt;
-use std::io;
+use std::old_io;
 use std::str;
 
 use ser::{self, Serializer};
@@ -35,7 +35,7 @@ impl ser::Serialize for Value {
                 visitor.visit_f64(v)
             }
             Value::String(ref v) => {
-                visitor.visit_str(v.as_slice())
+                visitor.visit_str(&v)
             }
             Value::Array(ref v) => {
                 v.visit(visitor)
@@ -51,13 +51,13 @@ struct WriterFormatter<'a, 'b: 'a> {
     inner: &'a mut fmt::Formatter<'b>,
 }
 
-impl<'a, 'b> io::Writer for WriterFormatter<'a, 'b> {
-    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
-        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| io::IoError::last_error())
+impl<'a, 'b> old_io::Writer for WriterFormatter<'a, 'b> {
+    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
+        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| old_io::IoError::last_error())
     }
 }
 
-impl fmt::Show for Value {
+impl fmt::Debug for Value {
     /// Serializes a json value into a string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut wr = WriterFormatter { inner: f };

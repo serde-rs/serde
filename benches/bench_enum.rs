@@ -17,16 +17,16 @@ use Animal::{Dog, Frog};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
 enum Animal {
     Dog,
-    Frog(String, int)
+    Frog(String, isize)
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -41,11 +41,11 @@ mod decoder {
     use super::{Animal, Error};
     use super::Animal::{Dog, Frog};
     use super::Error::{SyntaxError, OtherError};
-    use self::State::{AnimalState, IntState, StringState};
+    use self::State::{AnimalState, IsizeState, StringState};
 
     enum State {
         AnimalState(Animal),
-        IntState(int),
+        IsizeState(isize),
         StringState(String),
     }
 
@@ -72,15 +72,15 @@ mod decoder {
 
         // Primitive types:
         fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
-        fn read_usize(&mut self) -> Result<uint, Error> { Err(SyntaxError) }
+        fn read_usize(&mut self) -> Result<usize, Error> { Err(SyntaxError) }
         fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
         fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
         fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
         fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError) }
         #[inline]
-        fn read_isize(&mut self) -> Result<int, Error> {
+        fn read_isize(&mut self) -> Result<isize, Error> {
             match self.stack.pop() {
-                Some(IntState(x)) => Ok(x),
+                Some(IsizeState(x)) => Ok(x),
                 _ => Err(SyntaxError),
             }
         }
@@ -120,12 +120,12 @@ mod decoder {
 
         #[inline]
         fn read_enum_variant<T, F>(&mut self, names: &[&str], f: F) -> Result<T, Error> where
-            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
             let name = match self.stack.pop() {
                 Some(AnimalState(Dog)) => "Dog",
                 Some(AnimalState(Frog(x0, x1))) => {
-                    self.stack.push(IntState(x1));
+                    self.stack.push(IsizeState(x1));
                     self.stack.push(StringState(x0));
                     "Frog"
                 }
@@ -141,55 +141,55 @@ mod decoder {
         }
 
         #[inline]
-        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: uint, f: F) -> Result<T, Error> where
+        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             f(self)
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_struct<T, F>(&mut self, _s_name: &str, _len: uint, _f: F) -> Result<T, Error> where
+        fn read_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_tuple<T, F>(&mut self, _len: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_tuple_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
-        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
@@ -204,31 +204,31 @@ mod decoder {
 
         #[inline]
         fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
             f(self, 3)
         }
 
         #[inline]
-        fn read_seq_elt<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+        fn read_seq_elt<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             f(self)
         }
 
         fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut AnimalDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
             Err(SyntaxError)
         }
 
-        fn read_map_elt_key<T, F>(&mut self, _idx: uint, _f: F) -> Result<T, Error> where
+        fn read_map_elt_key<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(SyntaxError)
         }
 
-        fn read_map_elt_val<T, F>(&mut self, _idx: uint, _f: F) -> Result<T, Error> where
+        fn read_map_elt_val<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             Err(SyntaxError)
@@ -242,13 +242,13 @@ mod deserializer {
     use super::{Animal, Error};
     use super::Animal::{Dog, Frog};
     use super::Error::{EndOfStream, SyntaxError};
-    use self::State::{AnimalState, IntState, StringState, EndState};
+    use self::State::{AnimalState, IsizeState, StringState, EndState};
 
     use serde::de;
 
     enum State {
         AnimalState(Animal),
-        IntState(int),
+        IsizeState(isize),
         StringState(String),
         EndState,
 
@@ -279,12 +279,12 @@ mod deserializer {
                 }
                 Some(AnimalState(Frog(x0, x1))) => {
                     self.stack.push(EndState);
-                    self.stack.push(IntState(x1));
+                    self.stack.push(IsizeState(x1));
                     self.stack.push(StringState(x0));
                     Some(Ok(de::Token::EnumStart("Animal", "Frog", 2)))
                 }
-                Some(IntState(x)) => {
-                    Some(Ok(de::Token::Int(x)))
+                Some(IsizeState(x)) => {
+                    Some(Ok(de::Token::Isize(x)))
                 }
                 Some(StringState(x)) => {
                     Some(Ok(de::Token::String(x)))

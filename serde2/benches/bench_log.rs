@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, io)]
 #![allow(non_camel_case_types)]
 
 #[plugin]
@@ -8,8 +8,8 @@ extern crate serde2;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
-use std::io;
-use std::io::ByRefWriter;
+use std::old_io;
+use std::old_io::ByRefWriter;
 use std::num::FromPrimitive;
 use test::Bencher;
 
@@ -66,7 +66,7 @@ impl de::Deserialize for HttpField {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 //#[derive_deserialize]
 struct Http {
@@ -135,7 +135,7 @@ impl de::Deserialize for Http {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -175,7 +175,7 @@ impl de::Deserialize for HttpProtocol {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -223,7 +223,7 @@ impl de::Deserialize for HttpMethod {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -298,7 +298,7 @@ impl de::Deserialize for OriginField {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 //#[derive_deserialize]
 struct Origin {
@@ -347,7 +347,7 @@ impl Deserialize for Origin {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -387,7 +387,7 @@ impl de::Deserialize for OriginProtocol {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -429,7 +429,7 @@ impl de::Deserialize for ZonePlan {
     }
 }
 
-#[derive(Copy, Show, PartialEq, FromPrimitive)]
+#[derive(Copy, Debug, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
@@ -772,7 +772,7 @@ impl de::Deserialize for LogField {
     }
 }
 
-#[derive(Show, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 //#[derive_deserialize]
 struct Log {
@@ -918,7 +918,7 @@ struct MyMemWriter0 {
 }
 
 impl MyMemWriter0 {
-    pub fn with_capacity(cap: uint) -> MyMemWriter0 {
+    pub fn with_capacity(cap: usize) -> MyMemWriter0 {
         MyMemWriter0 {
             buf: Vec::with_capacity(cap)
         }
@@ -928,7 +928,7 @@ impl MyMemWriter0 {
 
 impl Writer for MyMemWriter0 {
     #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
         self.buf.push_all(buf);
         Ok(())
     }
@@ -939,7 +939,7 @@ struct MyMemWriter1 {
 }
 
 impl MyMemWriter1 {
-    pub fn with_capacity(cap: uint) -> MyMemWriter1 {
+    pub fn with_capacity(cap: usize) -> MyMemWriter1 {
         MyMemWriter1 {
             buf: Vec::with_capacity(cap)
         }
@@ -960,7 +960,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
         dst.set_len(dst_len + src_len);
 
         ::std::ptr::copy_nonoverlapping_memory(
-            dst.as_mut_ptr().offset(dst_len as int),
+            dst.as_mut_ptr().offset(dst_len as isize),
             src.as_ptr(),
             src_len);
     }
@@ -968,7 +968,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
 
 impl Writer for MyMemWriter1 {
     #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
         push_all_bytes(&mut self.buf, buf);
         Ok(())
     }
@@ -982,21 +982,21 @@ fn test_encoder() {
 
     let log = Log::new();
 
-    let mut wr = Vec::with_capacity(1024);
+    let mut wr = String::with_capacity(1024);
 
     {
         let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
         log.encode(&mut encoder).unwrap();
     }
 
-    assert_eq!(wr.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&wr[], JSON_STR);
 }
 
 #[bench]
 fn bench_encoder(b: &mut Bencher) {
     let log = Log::new();
 
-    let mut wr = Vec::with_capacity(1024);
+    let mut wr = String::with_capacity(1024);
 
     {
         let mut encoder = rustc_serialize::json::Encoder::new(&mut wr);
@@ -1039,7 +1039,7 @@ fn test_serializer_vec() {
     serializer.visit(&log).unwrap();
 
     let json = serializer.into_inner();
-    assert_eq!(json.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&json[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1069,7 +1069,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }
-        let mut wr = std::io::BufWriter::new(&mut buf);
+        let mut wr = std::old_io::BufWriter::new(&mut buf);
 
         let mut serializer = json::Writer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
@@ -1089,7 +1089,7 @@ fn test_serializer_my_mem_writer0() {
         let _json = serializer.into_inner();
     }
 
-    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1121,7 +1121,7 @@ fn test_serializer_my_mem_writer1() {
         let _json = serializer.into_inner();
     }
 
-    assert_eq!(wr.buf.as_slice(), JSON_STR.as_bytes());
+    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -1157,10 +1157,10 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",\"zone_id\":").unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
     wr.write_str(",\"zone_plan\":").unwrap();
-    (write!(wr, "{}", log.zone_plan as uint)).unwrap();
+    (write!(wr, "{}", log.zone_plan as usize)).unwrap();
 
     wr.write_str(",\"http\":{\"protocol\":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as usize)).unwrap();
     wr.write_str(",\"status\":").unwrap();
     (write!(wr, "{}", log.http.status)).unwrap();
     wr.write_str(",\"host_status\":").unwrap();
@@ -1168,7 +1168,7 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",\"up_status\":").unwrap();
     (write!(wr, "{}", log.http.up_status)).unwrap();
     wr.write_str(",\"method\":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as usize)).unwrap();
     wr.write_str(",\"content_type\":").unwrap();
     (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
     wr.write_str(",\"user_agent\":").unwrap();
@@ -1188,12 +1188,12 @@ fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
     (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
 
     wr.write_str(",\"protocol\":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
     wr.write_str("},\"country\":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as usize)).unwrap();
     wr.write_str(",\"cache_status\":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as usize)).unwrap();
     wr.write_str(",\"server_ip\":").unwrap();
     (write!(wr, "\"{}\"", log.server_ip)).unwrap();
     wr.write_str(",\"server_name\":").unwrap();
@@ -1220,14 +1220,14 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "zone_plan").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.zone_plan as int)).unwrap();
+    (write!(wr, "{}", log.zone_plan as isize)).unwrap();
 
     wr.write_str(",").unwrap();
     escape_str(wr, "http").unwrap();
     wr.write_str(":{").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.http.protocol as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "status").unwrap();
     wr.write_str(":").unwrap();
@@ -1243,23 +1243,23 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "method").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.http.method as uint)).unwrap();
+    (write!(wr, "{}", log.http.method as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "content_type").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.content_type.as_slice()).unwrap();
+    escape_str(wr, &log.http.content_type).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "user_agent").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.user_agent.as_slice()).unwrap();
+    escape_str(wr, &log.http.user_agent).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "referer").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.referer.as_slice()).unwrap();
+    escape_str(wr, &log.http.referer).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "request_uri").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.http.request_uri.as_slice()).unwrap();
+    escape_str(wr, &log.http.request_uri).unwrap();
 
     wr.write_str("},").unwrap();
     escape_str(wr, "origin").unwrap();
@@ -1267,7 +1267,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
 
     escape_str(wr, "ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.origin.ip.as_slice()).unwrap();
+    escape_str(wr, &log.origin.ip).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "port").unwrap();
     wr.write_str(":").unwrap();
@@ -1275,32 +1275,32 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "hostname").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.origin.hostname.as_slice()).unwrap();
+    escape_str(wr, &log.origin.hostname).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "protocol").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.origin.protocol as uint)).unwrap();
+    (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
     wr.write_str("},").unwrap();
     escape_str(wr, "country").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.country as uint)).unwrap();
+    (write!(wr, "{}", log.country as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "cache_status").unwrap();
     wr.write_str(":").unwrap();
-    (write!(wr, "{}", log.cache_status as uint)).unwrap();
+    (write!(wr, "{}", log.cache_status as usize)).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "server_ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.server_ip.as_slice()).unwrap();
+    escape_str(wr, &log.server_ip).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "server_name").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.server_name.as_slice()).unwrap();
+    escape_str(wr, &log.server_name).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "remote_ip").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.remote_ip.as_slice()).unwrap();
+    escape_str(wr, &log.remote_ip).unwrap();
     wr.write_str(",").unwrap();
     escape_str(wr, "bytes_dlv").unwrap();
     wr.write_str(":").unwrap();
@@ -1309,7 +1309,7 @@ fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
     wr.write_str(",").unwrap();
     escape_str(wr, "ray_id").unwrap();
     wr.write_str(":").unwrap();
-    escape_str(wr, log.ray_id.as_slice()).unwrap();
+    escape_str(wr, &log.ray_id).unwrap();
     wr.write_str("}").unwrap();
 }
 
@@ -1321,7 +1321,7 @@ fn test_manual_serialize_vec_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1346,7 +1346,7 @@ fn test_manual_serialize_vec_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1372,7 +1372,7 @@ fn test_manual_serialize_my_mem_writer0_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1398,7 +1398,7 @@ fn test_manual_serialize_my_mem_writer0_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1424,7 +1424,7 @@ fn test_manual_serialize_my_mem_writer1_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]
@@ -1450,7 +1450,7 @@ fn test_manual_serialize_my_mem_writer1_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, json.as_slice());
+    assert_eq!(JSON_STR, &json[]);
 }
 
 #[bench]

@@ -93,22 +93,22 @@ mod tests {
         assert_eq!(value, Value::Array(Vec::new()));
 
         let value = ArrayBuilder::new()
-            .push(1i)
-            .push(2i)
-            .push(3i)
+            .push(1is)
+            .push(2is)
+            .push(3is)
             .unwrap();
         assert_eq!(value, Value::Array(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))));
 
         let value = ArrayBuilder::new()
-            .push_array(|bld| bld.push(1i).push(2i).push(3i))
+            .push_array(|bld| bld.push(1is).push(2is).push(3is))
             .unwrap();
         assert_eq!(value, Value::Array(vec!(Value::Array(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))))));
 
         let value = ArrayBuilder::new()
             .push_object(|bld|
                 bld
-                    .insert("a".to_string(), 1i)
-                    .insert("b".to_string(), 2i))
+                    .insert("a".to_string(), 1is)
+                    .insert("b".to_string(), 2is))
             .unwrap();
 
         let mut map = BTreeMap::new();
@@ -123,8 +123,8 @@ mod tests {
         assert_eq!(value, Value::Object(BTreeMap::new()));
 
         let value = ObjectBuilder::new()
-            .insert("a".to_string(), 1i)
-            .insert("b".to_string(), 2i)
+            .insert("a".to_string(), 1is)
+            .insert("b".to_string(), 2is)
             .unwrap();
 
         let mut map = BTreeMap::new();

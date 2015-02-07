@@ -106,7 +106,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             b'0' ... b'9' | b'-' => self.parse_number(visitor),
             b'"' => {
                 try!(self.parse_string());
-                let s = str::from_utf8(self.buf.as_slice()).unwrap();
+                let s = str::from_utf8(&self.buf).unwrap();
                 visitor.visit_str(s)
             }
             b'[' => {
@@ -334,7 +334,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                                 }
 
                                 let buf = &[n1, try!(self.decode_hex_escape())];
-                                match ::unicode::str::utf16_items(buf.as_slice()).next() {
+                                match ::unicode::str::utf16_items(buf).next() {
                                     Some(Utf16Item::ScalarValue(c)) => c,
                                     _ => {
                                         return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
@@ -352,7 +352,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
                         let buf = &mut [0; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
-                        self.buf.extend(buf.slice_to(len).iter().map(|b| *b));
+                        self.buf.extend(buf[..len].iter().map(|b| *b));
                     }
                     _ => {
                         return Err(self.error(ErrorCode::InvalidEscape));
@@ -528,12 +528,11 @@ pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
 
 #[cfg(test)]
 mod tests {
-    use std::str;
-    use std::fmt::Show;
+    use std::fmt::Debug;
     use std::collections::BTreeMap;
 
     use de::Deserialize;
-    use super::{Parser, from_str};
+    use super::from_str;
     use super::super::error::{Error, ErrorCode};
 
     macro_rules! treemap {
@@ -545,9 +544,9 @@ mod tests {
     }
 
     fn test_parse_ok<'a, T>(errors: Vec<(&'a str, T)>)
-        where T: PartialEq + Show + Deserialize,
+        where T: PartialEq + Debug + Deserialize,
     {
-        for (s, value) in errors.into_iter() {
+        for (s, value) in errors {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v, Ok(value));
 
@@ -559,9 +558,9 @@ mod tests {
     }
 
     fn test_parse_err<'a, T>(errors: Vec<(&'a str, Error)>)
-        where T: PartialEq + Show + Deserialize
+        where T: PartialEq + Debug + Deserialize
     {
-        for (s, err) in errors.into_iter() {
+        for (s, err) in errors {
             let v: Result<T, Error> = from_str(s);
             assert_eq!(v, Err(err));
         }

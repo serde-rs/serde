@@ -1,3 +1,5 @@
+#![feature(io)]
+
 extern crate unicode;
 
 //pub use ser::{Serialize, Serializer};

@@ -16,17 +16,17 @@ use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
 struct Inner {
     a: (),
-    b: uint,
+    b: usize,
     c: HashMap<String, Option<char>>,
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Show, RustcDecodable)]
+#[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
 struct Outer {
     inner: Vec<Inner>,
@@ -34,7 +34,7 @@ struct Outer {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Error {
     EndOfStream,
     SyntaxError(String),
@@ -54,7 +54,7 @@ mod decoder {
         OuterState,
         InnerState,
         NullState,
-        UintState,
+        UsizeState,
         CharState,
         StringState,
         FieldState,
@@ -63,12 +63,12 @@ mod decoder {
         OptionState,
     };
 
-    #[derive(Show)]
+    #[derive(Debug)]
     enum State {
         OuterState(Outer),
         InnerState(Inner),
         NullState,
-        UintState(uint),
+        UsizeState(usize),
         CharState(char),
         StringState(String),
         FieldState(&'static str),
@@ -107,9 +107,9 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_usize(&mut self) -> Result<uint, Error> {
+        fn read_usize(&mut self) -> Result<usize, Error> {
             match self.stack.pop() {
-                Some(UintState(value)) => Ok(value),
+                Some(UsizeState(value)) => Ok(value),
                 _ => Err(Error::SyntaxError("UintState".to_string())),
             }
         }
@@ -117,7 +117,7 @@ mod decoder {
         fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_isize(&mut self) -> Result<int, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError("".to_string())) }
         fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError("".to_string())) }
@@ -148,31 +148,31 @@ mod decoder {
         }
 
         fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
-        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
-        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
         #[inline]
-        fn read_struct<T, F>(&mut self, s_name: &str, _len: uint, f: F) -> Result<T, Error> where
+        fn read_struct<T, F>(&mut self, s_name: &str, _len: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
@@ -190,7 +190,7 @@ mod decoder {
                         self.stack.push(MapState(c));
                         self.stack.push(FieldState("c"));
 
-                        self.stack.push(UintState(b));
+                        self.stack.push(UsizeState(b));
                         self.stack.push(FieldState("b"));
 
                         self.stack.push(NullState);
@@ -204,7 +204,7 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_struct_field<T, F>(&mut self, f_name: &str, _f_idx: uint, f: F) -> Result<T, Error> where
+        fn read_struct_field<T, F>(&mut self, f_name: &str, _f_idx: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
@@ -219,25 +219,25 @@ mod decoder {
             }
         }
 
-        fn read_tuple<T, F>(&mut self, _len: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
-        fn read_tuple_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
-        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
         }
 
-        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: uint, _f: F) -> Result<T, Error> where
+        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError("".to_string()))
@@ -256,7 +256,7 @@ mod decoder {
 
         #[inline]
         fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(VecState(value)) => {
@@ -270,7 +270,7 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_seq_elt<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+        fn read_seq_elt<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             f(self)
@@ -278,12 +278,12 @@ mod decoder {
 
         #[inline]
         fn read_map<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, uint) -> Result<T, Error>,
+            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(MapState(map)) => {
                     let len = map.len();
-                    for (key, value) in map.into_iter() {
+                    for (key, value) in map {
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));
@@ -301,14 +301,14 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_map_elt_key<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+        fn read_map_elt_key<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             f(self)
         }
 
         #[inline]
-        fn read_map_elt_val<T, F>(&mut self, _idx: uint, f: F) -> Result<T, Error> where
+        fn read_map_elt_val<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             f(self)
@@ -329,23 +329,23 @@ mod deserializer {
         InnerState,
         FieldState,
         NullState,
-        UintState,
+        UsizeState,
         CharState,
         StringState,
         OptionState,
-        //TupleState(uint),
+        //TupleState(usize),
         VecState,
         MapState,
         EndState,
     };
 
-    #[derive(Show)]
+    #[derive(Debug)]
     enum State {
         OuterState(Outer),
         InnerState(Inner),
         FieldState(&'static str),
         NullState,
-        UintState(uint),
+        UsizeState(usize),
         CharState(char),
         StringState(String),
         OptionState(bool),
@@ -385,7 +385,7 @@ mod deserializer {
                     self.stack.push(MapState(c));
                     self.stack.push(FieldState("c"));
 
-                    self.stack.push(UintState(b));
+                    self.stack.push(UsizeState(b));
                     self.stack.push(FieldState("b"));
 
                     self.stack.push(NullState);
@@ -404,7 +404,7 @@ mod deserializer {
                 Some(MapState(value)) => {
                     self.stack.push(EndState);
                     let len = value.len();
-                    for (key, value) in value.into_iter() {
+                    for (key, value) in value {
                         match value {
                             Some(c) => {
                                 self.stack.push(CharState(c));
@@ -420,7 +420,7 @@ mod deserializer {
                 }
                 //Some(TupleState(len)) => Some(Ok(de::Token::TupleStart(len))),
                 Some(NullState) => Some(Ok(de::Token::Null)),
-                Some(UintState(x)) => Some(Ok(de::Token::Uint(x))),
+                Some(UsizeState(x)) => Some(Ok(de::Token::Usize(x))),
                 Some(CharState(x)) => Some(Ok(de::Token::Char(x))),
                 Some(StringState(x)) => Some(Ok(de::Token::String(x))),
                 Some(OptionState(x)) => Some(Ok(de::Token::Option(x))),
