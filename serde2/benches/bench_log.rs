@@ -1469,6 +1469,19 @@ fn bench_manual_serialize_my_mem_writer1_escape(b: &mut Bencher) {
 }
 
 #[bench]
+fn bench_decoder(b: &mut Bencher) {
+    use rustc_serialize::json::Json;
+
+    b.bytes = JSON_STR.len() as u64;
+
+    b.iter(|| {
+        let json = Json::from_str(JSON_STR).unwrap();
+        let mut decoder = rustc_serialize::json::Decoder::new(json);
+        let _log: Log = rustc_serialize::Decodable::decode(&mut decoder).unwrap();
+    });
+}
+
+#[bench]
 fn bench_deserializer(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 

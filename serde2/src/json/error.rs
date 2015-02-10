@@ -39,6 +39,8 @@ pub enum ErrorCode {
 
 impl fmt::Debug for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use std::fmt::Debug;
+
         match *self {
             //ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {}", token),
             ErrorCode::EOFWhileParsingList => "EOF While parsing list".fmt(f),
@@ -91,12 +93,19 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::SyntaxError(..) => "syntax error",
-            Error::IoError(_) => "input/output error",
+            Error::IoError(ref error) => error.description().as_slice(),
             /*
             Error::ExpectedError(ref expected, _) => &expected,
             Error::MissingFieldError(_) => "missing field",
             Error::UnknownVariantError(_) => "unknown variant",
             */
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            Error::IoError(ref error) => Some(error),
+            _ => None,
         }
     }
 

@@ -67,7 +67,7 @@ impl fmt::Debug for Value {
 
 pub fn to_value<T>(value: &T) -> Value where T: ser::Serialize {
     let mut writer = Writer::new();
-    writer.visit(value).unwrap();
+    writer.visit(value).ok().unwrap();
     writer.unwrap()
 }
 
