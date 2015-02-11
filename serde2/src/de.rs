@@ -201,6 +201,13 @@ pub trait Visitor {
     >(&mut self, _name: &str, _variant: &str, _visitor: V) -> Result<Self::Value, V::Error> {
         Err(Error::syntax_error())
     }
+
+    #[inline]
+    fn visit_variant<
+        V: EnumVisitor,
+    >(&mut self, _name: &str, _visitor: V) -> Result<Self::Value, V::Error> {
+        Err(Error::syntax_error())
+    }
 }
 
 pub trait SeqVisitor {
@@ -1177,11 +1184,17 @@ mod tests {
         fn visit_enum<
             V: super::EnumVisitor,
         >(&mut self, name: &str, variant: &str, mut visitor: V) -> Result<Enum, V::Error> {
-            if name != "Enum" {
-                return Err(super::Error::syntax_error());
+            if name == "Enum" {
+                self.visit_variant(variant, visitor)
+            } else {
+                Err(super::Error::syntax_error());
             }
+        }
 
-            match variant {
+        fn visit_variant<
+            V: super::EnumVisitor,
+        >(&mut self, name: &str, mut visitor: V) -> Result<Enum, V::Error> {
+            match name {
                 "Unit" => {
                     try!(visitor.visit_unit());
                     Ok(Enum::Unit)
