@@ -10,6 +10,8 @@ pub trait Error {
     fn syntax_error() -> Self;
 
     fn end_of_stream_error() -> Self;
+
+    fn missing_field_error(&'static str) -> Self;
 }
 
 pub trait Deserialize {

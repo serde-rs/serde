@@ -84,7 +84,9 @@ pub enum Error {
     IoError(old_io::IoError),
     /*
     ExpectedError(String, String),
-    MissingFieldError(String),
+    */
+    MissingFieldError(&'static str),
+    /*
     UnknownVariantError(String),
     */
 }
@@ -96,7 +98,9 @@ impl error::Error for Error {
             Error::IoError(ref error) => error.description().as_slice(),
             /*
             Error::ExpectedError(ref expected, _) => &expected,
+            */
             Error::MissingFieldError(_) => "missing field",
+            /*
             Error::UnknownVariantError(_) => "unknown variant",
             */
         }
@@ -115,16 +119,18 @@ impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                write!(fmt, "{:?} at line {:?} column {:?}", code, line, col)
+                write!(fmt, "{:?} at line {} column {}", code, line, col)
             }
             Error::IoError(ref error) => fmt::Display::fmt(error, fmt),
             /*
             Error::ExpectedError(ref expected, ref found) => {
                 Some(format!("expected {}, found {}", expected, found))
             }
+            */
             Error::MissingFieldError(ref field) => {
-                Some(format!("missing field {}", field))
+                write!(fmt, "missing field {}", field)
             }
+            /*
             Error::UnknownVariantError(ref variant) => {
                 Some(format!("unknown variant {}", variant))
             }
@@ -146,5 +152,9 @@ impl de::Error for Error {
 
     fn end_of_stream_error() -> Error {
         Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 0, 0)
+    }
+
+    fn missing_field_error(field: &'static str) -> Error {
+        Error::MissingFieldError(field)
     }
 }
