@@ -66,7 +66,7 @@ impl de::Deserialize for HttpField {
 
 #[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
-//#[derive_deserialize]
+#[derive_deserialize]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -77,60 +77,6 @@ struct Http {
     user_agent: String,
     referer: String,
     request_uri: String,
-}
-
-impl de::Deserialize for Http {
-    fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<Http, S::Error> {
-        struct Visitor;
-
-        impl de::Visitor for Visitor {
-            type Value = Http;
-
-            fn visit_map<
-                V: de::MapVisitor,
-            >(&mut self, mut visitor: V) -> Result<Http, V::Error> {
-                let mut protocol = None;
-                let mut status = None;
-                let mut host_status = None;
-                let mut up_status = None;
-                let mut method = None;
-                let mut content_type = None;
-                let mut user_agent = None;
-                let mut referer = None;
-                let mut request_uri = None;
-
-                while let Some(key) = try!(visitor.visit_key()) {
-                    match key {
-                        HttpField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
-                        HttpField::Status => { status = Some(try!(visitor.visit_value())); }
-                        HttpField::HostStatus => { host_status = Some(try!(visitor.visit_value())); }
-                        HttpField::UpStatus => { up_status = Some(try!(visitor.visit_value())); }
-                        HttpField::Method => { method = Some(try!(visitor.visit_value())); }
-                        HttpField::ContentType => { content_type = Some(try!(visitor.visit_value())); }
-                        HttpField::UserAgent => { user_agent = Some(try!(visitor.visit_value())); }
-                        HttpField::Referer => { referer = Some(try!(visitor.visit_value())); }
-                        HttpField::RequestUri => { request_uri = Some(try!(visitor.visit_value())); }
-                    }
-                }
-
-                Ok(Http {
-                    protocol: protocol.unwrap(),
-                    status: status.unwrap(),
-                    host_status: host_status.unwrap(),
-                    up_status: up_status.unwrap(),
-                    method: method.unwrap(),
-                    content_type: content_type.unwrap(),
-                    user_agent: user_agent.unwrap(),
-                    referer: referer.unwrap(),
-                    request_uri: request_uri.unwrap(),
-                })
-            }
-        }
-
-        state.visit(&mut Visitor)
-    }
 }
 
 #[derive(Copy, Debug, PartialEq, FromPrimitive)]
@@ -298,51 +244,12 @@ impl de::Deserialize for OriginField {
 
 #[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
-//#[derive_deserialize]
+#[derive_deserialize]
 struct Origin {
     ip: String,
     port: u32,
     hostname: String,
     protocol: OriginProtocol,
-}
-
-impl Deserialize for Origin {
-    fn deserialize<
-        S: de::Deserializer,
-    >(state: &mut S) -> Result<Origin, S::Error> {
-        struct Visitor;
-
-        impl de::Visitor for Visitor {
-            type Value = Origin;
-
-            fn visit_map<
-                V: de::MapVisitor,
-            >(&mut self, mut visitor: V) -> Result<Origin, V::Error> {
-                let mut ip = None;
-                let mut port = None;
-                let mut hostname = None;
-                let mut protocol = None;
-
-                while let Some(key) = try!(visitor.visit_key()) {
-                    match key {
-                        OriginField::Ip => { ip = Some(try!(visitor.visit_value())); }
-                        OriginField::Port => { port = Some(try!(visitor.visit_value())); }
-                        OriginField::Hostname => { hostname = Some(try!(visitor.visit_value())); }
-                        OriginField::Protocol => { protocol = Some(try!(visitor.visit_value())); }
-                    }
-                }
-
-                Ok(Origin {
-                    ip: ip.unwrap(),
-                    port: port.unwrap(),
-                    hostname: hostname.unwrap(),
-                    protocol: protocol.unwrap(),
-                })
-            }
-        }
-
-        state.visit(&mut Visitor)
-    }
 }
 
 #[derive(Copy, Debug, PartialEq, FromPrimitive)]
@@ -772,7 +679,7 @@ impl de::Deserialize for LogField {
 
 #[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
-//#[derive_deserialize]
+#[derive_deserialize]
 struct Log {
     timestamp: i64,
     zone_id: u32,
@@ -786,69 +693,6 @@ struct Log {
     remote_ip: String,
     bytes_dlv: u64,
     ray_id: String,
-}
-
-impl Deserialize for Log {
-    fn deserialize<
-        S: de::Deserializer,
-    >(state: &mut S) -> Result<Log, S::Error> {
-        struct Visitor;
-
-        impl de::Visitor for Visitor {
-            type Value = Log;
-
-            fn visit_map<
-                V: de::MapVisitor,
-            >(&mut self, mut visitor: V) -> Result<Log, V::Error> {
-                let mut timestamp = None;
-                let mut zone_id = None;
-                let mut zone_plan = None;
-                let mut http = None;
-                let mut origin = None;
-                let mut country = None;
-                let mut cache_status = None;
-                let mut server_ip = None;
-                let mut server_name = None;
-                let mut remote_ip = None;
-                let mut bytes_dlv = None;
-                let mut ray_id = None;
-
-                while let Some(key) = try!(visitor.visit_key()) {
-                    match key {
-                        LogField::Timestamp => { timestamp = Some(try!(visitor.visit_value())); }
-                        LogField::ZoneId => { zone_id = Some(try!(visitor.visit_value())); }
-                        LogField::ZonePlan => { zone_plan = Some(try!(visitor.visit_value())); }
-                        LogField::Http => { http = Some(try!(visitor.visit_value())); }
-                        LogField::Origin => { origin = Some(try!(visitor.visit_value())); }
-                        LogField::Country => { country = Some(try!(visitor.visit_value())); }
-                        LogField::CacheStatus => { cache_status = Some(try!(visitor.visit_value())); }
-                        LogField::ServerIp => { server_ip = Some(try!(visitor.visit_value())); }
-                        LogField::ServerName => { server_name = Some(try!(visitor.visit_value())); }
-                        LogField::RemoteIp => { remote_ip = Some(try!(visitor.visit_value())); }
-                        LogField::BytesDlv => { bytes_dlv = Some(try!(visitor.visit_value())); }
-                        LogField::RayId => { ray_id = Some(try!(visitor.visit_value())); }
-                    }
-                }
-
-                Ok(Log {
-                    timestamp: timestamp.unwrap(),
-                    zone_id: zone_id.unwrap(),
-                    zone_plan: zone_plan.unwrap(),
-                    http: http.unwrap(),
-                    origin: origin.unwrap(),
-                    country: country.unwrap(),
-                    cache_status: cache_status.unwrap(),
-                    server_ip: server_ip.unwrap(),
-                    server_name: server_name.unwrap(),
-                    remote_ip: remote_ip.unwrap(),
-                    bytes_dlv: bytes_dlv.unwrap(),
-                    ray_id: ray_id.unwrap(),
-                })
-            }
-        }
-
-        state.visit(&mut Visitor)
-    }
 }
 
 impl Log {
