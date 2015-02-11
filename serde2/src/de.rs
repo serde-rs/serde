@@ -728,12 +728,17 @@ mod tests {
     enum Error {
         SyntaxError,
         EndOfStreamError,
+        MissingFieldError(&'static str),
     }
 
     impl super::Error for Error {
         fn syntax_error() -> Error { Error::SyntaxError }
 
         fn end_of_stream_error() -> Error { Error::EndOfStreamError }
+
+        fn missing_field_error(field: &'static str) -> Error {
+            Error::MissingFieldError(field)
+        }
     }
 
     impl<'a> Deserializer for TokenDeserializer<'a> {
@@ -1183,11 +1188,11 @@ mod tests {
 
         fn visit_enum<
             V: super::EnumVisitor,
-        >(&mut self, name: &str, variant: &str, mut visitor: V) -> Result<Enum, V::Error> {
+        >(&mut self, name: &str, variant: &str, visitor: V) -> Result<Enum, V::Error> {
             if name == "Enum" {
                 self.visit_variant(variant, visitor)
             } else {
-                Err(super::Error::syntax_error());
+                Err(super::Error::syntax_error())
             }
         }
 

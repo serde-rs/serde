@@ -1,8 +1,6 @@
-#![feature(plugin, io)]
+#![feature(collections, core, io, plugin, test)]
 #![allow(non_camel_case_types)]
-
-#[plugin]
-extern crate serde2_macros;
+#![plugin(serde2_macros)]
 
 extern crate serde2;
 extern crate "rustc-serialize" as rustc_serialize;

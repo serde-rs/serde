@@ -95,7 +95,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::SyntaxError(..) => "syntax error",
-            Error::IoError(ref error) => error.description().as_slice(),
+            Error::IoError(ref error) => error.description(),
             /*
             Error::ExpectedError(ref expected, _) => &expected,
             */

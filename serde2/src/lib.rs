@@ -1,4 +1,4 @@
-#![feature(io)]
+#![feature(core, io, std_misc, unicode)]
 
 extern crate unicode;
 
