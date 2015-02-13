@@ -9,7 +9,6 @@ use syntax::ast::{
     Item,
     Expr,
     MutMutable,
-    //LitNil,
 };
 use syntax::ast;
 use syntax::codemap::{Span, respan};
@@ -34,7 +33,6 @@ use syntax::ext::deriving::generic::ty::{
     LifetimeBounds,
     Ty,
     Path,
-    //Tuple,
     borrowed_explicit_self,
 };
 use syntax::parse::token;

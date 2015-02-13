@@ -30,20 +30,6 @@ pub trait Visitor {
     type Value;
     type Error;
 
-    fn visit_unit(&mut self) -> Result<Self::Value, Self::Error>;
-
-    #[inline]
-    fn visit_named_unit(&mut self, _name: &str) -> Result<Self::Value, Self::Error> {
-        self.visit_unit()
-    }
-
-    #[inline]
-    fn visit_enum_unit(&mut self,
-                       _name: &str,
-                       _variant: &str) -> Result<Self::Value, Self::Error> {
-        self.visit_unit()
-    }
-
     fn visit_bool(&mut self, v: bool) -> Result<Self::Value, Self::Error>;
 
     #[inline]
@@ -108,6 +94,20 @@ pub trait Visitor {
     }
 
     fn visit_str(&mut self, value: &str) -> Result<Self::Value, Self::Error>;
+
+    fn visit_unit(&mut self) -> Result<Self::Value, Self::Error>;
+
+    #[inline]
+    fn visit_named_unit(&mut self, _name: &str) -> Result<Self::Value, Self::Error> {
+        self.visit_unit()
+    }
+
+    #[inline]
+    fn visit_enum_unit(&mut self,
+                       _name: &str,
+                       _variant: &str) -> Result<Self::Value, Self::Error> {
+        self.visit_unit()
+    }
 
     fn visit_none(&mut self) -> Result<Self::Value, Self::Error>;
 
