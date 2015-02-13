@@ -1,8 +1,7 @@
 #![feature(plugin)]
+#![plugin(serde_macros)]
 
 extern crate serde;
-#[plugin]
-extern crate serde_macros;
 
 #[derive(PartialEq, Debug)]
 #[derive_serialize]

@@ -488,13 +488,13 @@ fn deserialize_static_fields<F>(
     }
 }
 
-fn find_serial_name<'a, I>(mut iterator: I) -> Option<token::InternedString> where
+fn find_serial_name<'a, I>(iterator: I) -> Option<token::InternedString> where
     I: Iterator<Item=&'a Attribute>
 {
     for at in iterator {
         match at.node.value.node {
             MetaNameValue(ref at_name, ref value) => {
-                match (at_name.get(), &value.node) {
+                match (&at_name[], &value.node) {
                     ("serial_name", &LitStr(ref string, _)) => {
                         attr::mark_used(at);
                         return Some(string.clone());

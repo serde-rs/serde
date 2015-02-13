@@ -1,7 +1,5 @@
-#![feature(plugin)]
-
-#[plugin]
-extern crate serde_macros;
+#![feature(plugin, test)]
+#![plugin(serde_macros)]
 
 extern crate serde;
 extern crate "rustc-serialize" as rustc_serialize;

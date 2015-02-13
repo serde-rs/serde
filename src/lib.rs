@@ -1,18 +1,6 @@
-#![feature(plugin, io)]
-#![crate_type = "dylib"]
-#![crate_type = "rlib"]
+#![feature(collections, core, hash, io, std_misc, plugin, unicode)]
+#![plugin(serde_macros)]
 
-// test harness access
-#[cfg(test)]
-extern crate test;
-
-#[plugin]
-extern crate serde_macros;
-
-#[cfg(test)]
-extern crate serialize;
-
-extern crate "rustc-serialize" as rustc_serialize;
 extern crate unicode;
 
 pub use de::{Deserializer, Deserialize};
