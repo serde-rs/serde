@@ -6,9 +6,7 @@ extern crate serde;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
-use std::old_io::ByRefWriter;
-use std::old_io::extensions::Bytes;
-use std::old_io;
+use std::io::{self, ReadExt, WriteExt};
 use std::num::FromPrimitive;
 use test::Bencher;
 
@@ -616,10 +614,15 @@ impl MyMemWriter0 {
 }
 
 
-impl Writer for MyMemWriter0 {
+impl io::Write for MyMemWriter0 {
     #[inline]
-    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.buf.push_all(buf);
+        Ok(buf.len())
+    }
+
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
@@ -656,10 +659,15 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
     }
 }
 
-impl Writer for MyMemWriter1 {
+impl io::Write for MyMemWriter1 {
     #[inline]
-    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         push_all_bytes(&mut self.buf, buf);
+        Ok(buf.len())
+    }
+
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
@@ -759,7 +767,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }
-        let mut wr = std::old_io::BufWriter::new(&mut buf);
+        let mut wr = &mut buf[];
 
         let mut serializer = json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
@@ -839,166 +847,166 @@ fn bench_copy(b: &mut Bencher) {
     });
 }
 
-fn manual_serialize_no_escape<W: Writer>(wr: &mut W, log: &Log) {
-    wr.write_str("{\"timestamp\":").unwrap();
+fn manual_serialize_no_escape<W: io::Write>(wr: &mut W, log: &Log) {
+    (write!(wr, "{{\"timestamp\":")).unwrap();
     (write!(wr, "{}", log.timestamp)).unwrap();
-    wr.write_str(",\"zone_id\":").unwrap();
+    (write!(wr, ",\"zone_id\":")).unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
-    wr.write_str(",\"zone_plan\":").unwrap();
+    (write!(wr, ",\"zone_plan\":")).unwrap();
     (write!(wr, "{}", log.zone_plan as usize)).unwrap();
 
-    wr.write_str(",\"http\":{\"protocol\":").unwrap();
+    (write!(wr, ",\"http\":{{\"protocol\":")).unwrap();
     (write!(wr, "{}", log.http.protocol as usize)).unwrap();
-    wr.write_str(",\"status\":").unwrap();
+    (write!(wr, ",\"status\":")).unwrap();
     (write!(wr, "{}", log.http.status)).unwrap();
-    wr.write_str(",\"host_status\":").unwrap();
+    (write!(wr, ",\"host_status\":")).unwrap();
     (write!(wr, "{}", log.http.host_status)).unwrap();
-    wr.write_str(",\"up_status\":").unwrap();
+    (write!(wr, ",\"up_status\":")).unwrap();
     (write!(wr, "{}", log.http.up_status)).unwrap();
-    wr.write_str(",\"method\":").unwrap();
+    (write!(wr, ",\"method\":")).unwrap();
     (write!(wr, "{}", log.http.method as usize)).unwrap();
-    wr.write_str(",\"content_type\":").unwrap();
+    (write!(wr, ",\"content_type\":")).unwrap();
     (write!(wr, "\"{}\"", log.http.content_type)).unwrap();
-    wr.write_str(",\"user_agent\":").unwrap();
+    (write!(wr, ",\"user_agent\":")).unwrap();
     (write!(wr, "\"{}\"", log.http.user_agent)).unwrap();
-    wr.write_str(",\"referer\":").unwrap();
+    (write!(wr, ",\"referer\":")).unwrap();
     (write!(wr, "\"{}\"", log.http.referer)).unwrap();
-    wr.write_str(",\"request_uri\":").unwrap();
+    (write!(wr, ",\"request_uri\":")).unwrap();
     (write!(wr, "\"{}\"", log.http.request_uri)).unwrap();
 
-    wr.write_str("},\"origin\":{").unwrap();
+    (write!(wr, "}},\"origin\":{{")).unwrap();
 
-    wr.write_str("\"ip\":").unwrap();
+    (write!(wr, "\"ip\":")).unwrap();
     (write!(wr, "\"{}\"", log.origin.ip)).unwrap();
-    wr.write_str(",\"port\":").unwrap();
+    (write!(wr, ",\"port\":")).unwrap();
     (write!(wr, "{}", log.origin.port)).unwrap();
-    wr.write_str(",\"hostname\":").unwrap();
+    (write!(wr, ",\"hostname\":")).unwrap();
     (write!(wr, "\"{}\"", log.origin.hostname)).unwrap();
 
-    wr.write_str(",\"protocol\":").unwrap();
+    (write!(wr, ",\"protocol\":")).unwrap();
     (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
-    wr.write_str("},\"country\":").unwrap();
+    (write!(wr, "}},\"country\":")).unwrap();
     (write!(wr, "{}", log.country as usize)).unwrap();
-    wr.write_str(",\"cache_status\":").unwrap();
+    (write!(wr, ",\"cache_status\":")).unwrap();
     (write!(wr, "{}", log.cache_status as usize)).unwrap();
-    wr.write_str(",\"server_ip\":").unwrap();
+    (write!(wr, ",\"server_ip\":")).unwrap();
     (write!(wr, "\"{}\"", log.server_ip)).unwrap();
-    wr.write_str(",\"server_name\":").unwrap();
+    (write!(wr, ",\"server_name\":")).unwrap();
     (write!(wr, "\"{}\"", log.server_name)).unwrap();
-    wr.write_str(",\"remote_ip\":").unwrap();
+    (write!(wr, ",\"remote_ip\":")).unwrap();
     (write!(wr, "\"{}\"", log.remote_ip)).unwrap();
-    wr.write_str(",\"bytes_dlv\":").unwrap();
+    (write!(wr, ",\"bytes_dlv\":")).unwrap();
     (write!(wr, "{}", log.bytes_dlv)).unwrap();
 
-    wr.write_str(",\"ray_id\":").unwrap();
+    (write!(wr, ",\"ray_id\":")).unwrap();
     (write!(wr, "\"{}\"", log.ray_id)).unwrap();
-    wr.write_str("}").unwrap();
+    (write!(wr, "}}")).unwrap();
 }
 
-fn manual_serialize_escape<W: Writer>(wr: &mut W, log: &Log) {
-    wr.write_str("{").unwrap();
+fn manual_serialize_escape<W: io::Write>(wr: &mut W, log: &Log) {
+    (write!(wr, "{{")).unwrap();
     escape_str(wr, "timestamp").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.timestamp)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "zone_id").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.zone_id)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "zone_plan").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.zone_plan as isize)).unwrap();
 
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "http").unwrap();
-    wr.write_str(":{").unwrap();
+    (write!(wr, ":{{")).unwrap();
     escape_str(wr, "protocol").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.http.protocol as usize)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "status").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.http.status)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "host_status").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.http.host_status)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "up_status").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.http.up_status)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "method").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.http.method as usize)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "content_type").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.http.content_type).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "user_agent").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.http.user_agent).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "referer").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.http.referer).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "request_uri").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.http.request_uri).unwrap();
 
-    wr.write_str("},").unwrap();
+    (write!(wr, "}},")).unwrap();
     escape_str(wr, "origin").unwrap();
-    wr.write_str(":{").unwrap();
+    (write!(wr, ":{{")).unwrap();
 
     escape_str(wr, "ip").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.origin.ip).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "port").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.origin.port)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "hostname").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.origin.hostname).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "protocol").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.origin.protocol as usize)).unwrap();
 
-    wr.write_str("},").unwrap();
+    (write!(wr, "}},")).unwrap();
     escape_str(wr, "country").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.country as usize)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "cache_status").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.cache_status as usize)).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "server_ip").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.server_ip).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "server_name").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.server_name).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "remote_ip").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.remote_ip).unwrap();
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "bytes_dlv").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     (write!(wr, "{}", log.bytes_dlv)).unwrap();
 
-    wr.write_str(",").unwrap();
+    (write!(wr, ",")).unwrap();
     escape_str(wr, "ray_id").unwrap();
-    wr.write_str(":").unwrap();
+    (write!(wr, ":")).unwrap();
     escape_str(wr, &log.ray_id).unwrap();
-    wr.write_str("}").unwrap();
+    (write!(wr, "}}")).unwrap();
 }
 
 #[test]
@@ -1156,7 +1164,7 @@ fn bench_manual_serialize_my_mem_writer1_escape(b: &mut Bencher) {
     });
 }
 
-fn direct<W: Writer>(wr: &mut W, log: &Log) {
+fn direct<W: io::Write>(wr: &mut W, log: &Log) {
     use serde::ser::Serializer;
 
     let mut serializer = json::Serializer::new(wr.by_ref());
@@ -1653,9 +1661,8 @@ fn bench_iter_manual_iter_deserializers(b: &mut Bencher) {
 
 #[test]
 fn test_iter_manual_reader_as_iter_deserializer() {
-    let mut rdr = JSON_STR.as_bytes();
-    let iter = Bytes::new(&mut rdr)
-        .map(|x| x.unwrap());
+    let rdr = JSON_STR.as_bytes();
+    let iter = rdr.bytes().map(|x| x.unwrap());
 
     let log = manual_iter_deserialize(iter);
 
@@ -1667,9 +1674,8 @@ fn bench_iter_manual_reader_as_iter_deserializer(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
     b.iter(|| {
-        let mut rdr = JSON_STR.as_bytes();
-        let iter = Bytes::new(&mut rdr)
-            .map(|x| x.unwrap());
+        let rdr = JSON_STR.as_bytes();
+        let iter = rdr.bytes().map(|x| x.unwrap());
 
         let _ = manual_iter_deserialize(iter);
     });
@@ -1680,9 +1686,8 @@ fn bench_iter_manual_reader_as_iter_deserializers(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
     for _ in range(0is, 10000) {
-        let mut rdr = JSON_STR.as_bytes();
-        let iter = Bytes::new(&mut rdr)
-            .map(|x| x.unwrap());
+        let rdr = JSON_STR.as_bytes();
+        let iter = rdr.bytes().map(|x| x.unwrap());
 
         let _ = manual_iter_deserialize(iter);
     }

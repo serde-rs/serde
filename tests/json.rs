@@ -7,7 +7,7 @@ extern crate test;
 extern crate serde;
 
 use std::fmt::Debug;
-use std::old_io;
+use std::io;
 use std::str;
 use std::string;
 use std::collections::BTreeMap;
@@ -113,7 +113,7 @@ impl ToJson for Outer {
 }
 
 fn test_encode_ok<
-    T: PartialEq + Debug + ToJson + ser::Serialize<json::Serializer<Vec<u8>>, old_io::IoError>
+    T: PartialEq + Debug + ToJson + ser::Serialize<json::Serializer<Vec<u8>>, io::Error>
 >(errors: &[(T, &str)]) {
     for &(ref value, out) in errors {
         let out = out.to_string();
@@ -127,7 +127,7 @@ fn test_encode_ok<
 }
 
 fn test_pretty_encode_ok<
-    T: PartialEq + Debug + ToJson + ser::Serialize<json::PrettySerializer<Vec<u8>>, old_io::IoError>
+    T: PartialEq + Debug + ToJson + ser::Serialize<json::PrettySerializer<Vec<u8>>, io::Error>
 >(errors: &[(T, &str)]) {
     for &(ref value, out) in errors {
         let out = out.to_string();

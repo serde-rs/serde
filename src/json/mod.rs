@@ -65,7 +65,7 @@ To serialize using `Serialize`:
 
 extern crate serde;
 
-use std::old_io::ByRefWriter;
+use std::io::WriteExt;
 use serde::json;
 use serde::Serialize;
 

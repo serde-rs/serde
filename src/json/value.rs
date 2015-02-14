@@ -1,7 +1,6 @@
 use std::collections::{HashMap, BTreeMap, btree_map};
 use std::fmt;
-use std::old_io::{ByRefWriter, IoResult};
-use std::old_io;
+use std::io::{self, WriteExt};
 use std::str;
 use std::string::ToString;
 use std::vec;
@@ -27,14 +26,14 @@ pub enum Value {
 
 impl Value {
     /// Serializes a json value into an io::writer.  Uses a single line.
-    pub fn to_writer<W: Writer>(&self, wr: W) -> IoResult<()> {
+    pub fn to_writer<W: io::Write>(&self, wr: W) -> io::Result<()> {
         let mut serializer = Serializer::new(wr);
         self.serialize(&mut serializer)
     }
 
     /// Serializes a json value into an io::writer.
     /// Pretty-prints in a more readable format.
-    pub fn to_pretty_writer<W: Writer>(&self, wr: W) -> IoResult<()> {
+    pub fn to_pretty_writer<W: io::Write>(&self, wr: W) -> io::Result<()> {
         let mut serializer = PrettySerializer::new(wr);
         self.serialize(&mut serializer)
     }
@@ -220,9 +219,16 @@ struct WriterFormatter<'a, 'b: 'a> {
     inner: &'a mut fmt::Formatter<'b>,
 }
 
-impl<'a, 'b> Writer for WriterFormatter<'a, 'b> {
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| old_io::IoError::last_error())
+impl<'a, 'b> io::Write for WriterFormatter<'a, 'b> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self.inner.write_str(str::from_utf8(buf).unwrap()) {
+            Ok(_) => Ok(buf.len()),
+            Err(_) => Err(io::Error::last_os_error()),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
 
