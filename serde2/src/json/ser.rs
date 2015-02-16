@@ -165,11 +165,11 @@ impl<'a, W: old_io::Writer> ser::Visitor for Visitor<'a, W> {
     fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), IoError>
         where V: ser::MapVisitor,
     {
-        try!(self.writer.write_str("{{"));
+        try!(self.writer.write_str("{"));
 
         while let Some(()) = try!(visitor.visit(self)) { }
 
-        self.writer.write_str("}}")
+        self.writer.write_str("}")
     }
 
     #[inline]
