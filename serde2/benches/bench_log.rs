@@ -20,50 +20,6 @@ use serde2::de;
 
 use rustc_serialize::Encodable;
 
-enum HttpField {
-    Protocol,
-    Status,
-    HostStatus,
-    UpStatus,
-    Method,
-    ContentType,
-    UserAgent,
-    Referer,
-    RequestUri,
-}
-
-impl de::Deserialize for HttpField {
-    fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<HttpField, S::Error> {
-        struct Visitor;
-
-        impl de::Visitor for Visitor {
-            type Value = HttpField;
-
-            fn visit_str<
-                E: de::Error,
-            >(&mut self, value: &str) -> Result<HttpField, E> {
-                let x = match value {
-                    "protocol" => HttpField::Protocol,
-                    "status" => HttpField::Status,
-                    "host_status" => HttpField::HostStatus,
-                    "up_status" => HttpField::UpStatus,
-                    "method" => HttpField::Method,
-                    "content_type" => HttpField::ContentType,
-                    "user_agent" => HttpField::UserAgent,
-                    "referer" => HttpField::Referer,
-                    "request_uri" => HttpField::RequestUri,
-                    _ => panic!(),
-                };
-                Ok(x)
-            }
-        }
-
-        state.visit(&mut Visitor)
-    }
-}
-
 #[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 #[derive_deserialize]
@@ -205,40 +161,6 @@ impl de::Deserialize for CacheStatus {
         S: de::Deserializer,
     >(state: &mut S) -> Result<CacheStatus, S::Error> {
         state.visit(&mut de::PrimitiveVisitor)
-    }
-}
-
-enum OriginField {
-    Ip,
-    Port,
-    Hostname,
-    Protocol,
-}
-
-impl de::Deserialize for OriginField {
-    fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<OriginField, S::Error> {
-        struct Visitor;
-
-        impl de::Visitor for Visitor {
-            type Value = OriginField;
-
-            fn visit_str<
-                E: de::Error,
-            >(&mut self, value: &str) -> Result<OriginField, E> {
-                let x = match value {
-                    "ip" => OriginField::Ip,
-                    "port" => OriginField::Port,
-                    "hostname" => OriginField::Hostname,
-                    "protocol" => OriginField::Protocol,
-                    _ => panic!(),
-                };
-                Ok(x)
-            }
-        }
-
-        state.visit(&mut Visitor)
     }
 }
 
@@ -627,56 +549,6 @@ impl de::Deserialize for Country {
     }
 }
 
-enum LogField {
-    Timestamp,
-    ZoneId,
-    ZonePlan,
-    Http,
-    Origin,
-    Country,
-    CacheStatus,
-    ServerIp,
-    ServerName,
-    RemoteIp,
-    BytesDlv,
-    RayId,
-}
-
-impl de::Deserialize for LogField {
-    fn deserialize<
-        S: de::Deserializer,
-    >(state: &mut S) -> Result<LogField, S::Error> {
-        struct Visitor;
-
-        impl de::Visitor for Visitor {
-            type Value = LogField;
-
-            fn visit_str<
-                E: de::Error,
-            >(&mut self, value: &str) -> Result<LogField, E> {
-                let x = match value {
-                    "timestamp" => LogField::Timestamp,
-                    "zone_id" => LogField::ZoneId,
-                    "zone_plan" => LogField::ZonePlan,
-                    "http" => LogField::Http,
-                    "origin" => LogField::Origin,
-                    "country" => LogField::Country,
-                    "cache_status" => LogField::CacheStatus,
-                    "server_ip" => LogField::ServerIp,
-                    "server_name" => LogField::ServerName,
-                    "remote_ip" => LogField::RemoteIp,
-                    "bytes_dlv" => LogField::BytesDlv,
-                    "ray_id" => LogField::RayId,
-                    _ => panic!(),
-                };
-                Ok(x)
-            }
-        }
-
-        state.visit(&mut Visitor)
-    }
-}
-
 #[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 #[derive_serialize]
 #[derive_deserialize]
@@ -790,7 +662,7 @@ impl MyMemWriter1 {
 
 // LLVM isn't yet able to lower `Vec::push_all` into a memcpy, so this helps
 // MemWriter eke out that last bit of performance.
-//#[inline(always)]
+#[inline]
 fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
     let dst_len = dst.len();
     let src_len = src.len();
