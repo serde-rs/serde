@@ -272,7 +272,7 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                         vec!["std", "result", "Result"],
                         None,
                         vec![
-                            Box::new(Ty::Self),
+                            Box::new(Ty::Self_),
                             Box::new(Ty::Literal(Path::new_(vec!["__S", "Error"],
                                                             None,
                                                             vec![],

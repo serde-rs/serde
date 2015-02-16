@@ -16,8 +16,8 @@ pub trait Error {
 
 pub trait Deserialize {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<Self, S::Error>;
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<Self, D::Error>;
 }
 
 pub trait Deserializer {
@@ -164,8 +164,8 @@ pub trait Visitor {
     }
 
     fn visit_some<
-        S: Deserializer,
-    >(&mut self, _state: &mut S) -> Result<Self::Value, S::Error> {
+        D: Deserializer,
+    >(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error> {
         Err(Error::syntax_error())
     }
 
@@ -316,9 +316,9 @@ impl Visitor for UnitVisitor {
 
 impl Deserialize for () {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<(), S::Error> {
-        state.visit(&mut UnitVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<(), D::Error> {
+        deserializer.visit(&mut UnitVisitor)
     }
 }
 
@@ -338,9 +338,9 @@ impl Visitor for BoolVisitor {
 
 impl Deserialize for bool {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<bool, S::Error> {
-        state.visit(&mut BoolVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<bool, D::Error> {
+        deserializer.visit(&mut BoolVisitor)
     }
 }
 
@@ -386,9 +386,9 @@ macro_rules! impl_deserialize_num {
         impl Deserialize for $ty {
             #[inline]
             fn deserialize<
-                S: Deserializer,
-            >(state: &mut S) -> Result<$ty, S::Error> {
-                state.visit(&mut PrimitiveVisitor)
+                D: Deserializer,
+            >(deserializer: &mut D) -> Result<$ty, D::Error> {
+                deserializer.visit(&mut PrimitiveVisitor)
             }
         }
     }
@@ -441,9 +441,9 @@ impl Visitor for CharVisitor {
 impl Deserialize for char {
     #[inline]
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<char, S::Error> {
-        state.visit(&mut CharVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<char, D::Error> {
+        deserializer.visit(&mut CharVisitor)
     }
 }
 
@@ -469,9 +469,9 @@ impl Visitor for StringVisitor {
 
 impl Deserialize for String {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<String, S::Error> {
-        state.visit(&mut StringVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<String, D::Error> {
+        deserializer.visit(&mut StringVisitor)
     }
 }
 
@@ -493,17 +493,17 @@ impl<
 
     #[inline]
     fn visit_some<
-        S: Deserializer,
-    >(&mut self, state: &mut S) -> Result<Option<T>, S::Error> {
-        Ok(Some(try!(Deserialize::deserialize(state))))
+        D: Deserializer,
+    >(&mut self, deserializer: &mut D) -> Result<Option<T>, D::Error> {
+        Ok(Some(try!(Deserialize::deserialize(deserializer))))
     }
 }
 
 impl<T> Deserialize for Option<T> where T: Deserialize {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<Option<T>, S::Error> {
-        state.visit_option(&mut OptionVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<Option<T>, D::Error> {
+        deserializer.visit_option(&mut OptionVisitor)
     }
 }
 
@@ -530,9 +530,9 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
 
 impl<T: Deserialize> Deserialize for Vec<T> {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<Vec<T>, S::Error> {
-        state.visit(&mut VecVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<Vec<T>, D::Error> {
+        deserializer.visit(&mut VecVisitor)
     }
 }
 
@@ -572,9 +572,9 @@ macro_rules! tuple_impls {
             > Deserialize for ($($name,)+) {
                 #[inline]
                 fn deserialize<
-                    S: Deserializer,
-                >(state: &mut S) -> Result<($($name,)+), S::Error> {
-                    state.visit(&mut $visitor)
+                    D: Deserializer,
+                >(deserializer: &mut D) -> Result<($($name,)+), D::Error> {
+                    deserializer.visit(&mut $visitor)
                 }
             }
         )+
@@ -626,9 +626,9 @@ impl<K, V> Deserialize for HashMap<K, V>
           V: Deserialize,
 {
     fn deserialize<
-        S_: Deserializer,
-    >(state: &mut S_) -> Result<HashMap<K, V>, S_::Error> {
-        state.visit(&mut HashMapVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error> {
+        deserializer.visit(&mut HashMapVisitor)
     }
 }
 
@@ -661,9 +661,9 @@ impl<
     V: Deserialize,
 > Deserialize for BTreeMap<K, V> {
     fn deserialize<
-        S: Deserializer,
-    >(state: &mut S) -> Result<BTreeMap<K, V>, S::Error> {
-        state.visit(&mut BTreeMapVisitor)
+        D: Deserializer,
+    >(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error> {
+        deserializer.visit(&mut BTreeMapVisitor)
     }
 }
 
@@ -992,9 +992,9 @@ mod tests {
 
     impl Deserialize for NamedUnit {
         fn deserialize<
-            S: Deserializer,
-        >(state: &mut S) -> Result<NamedUnit, S::Error> {
-            state.visit(&mut NamedUnitVisitor)
+            D: Deserializer,
+        >(deserializer: &mut D) -> Result<NamedUnit, D::Error> {
+            deserializer.visit(&mut NamedUnitVisitor)
         }
     }
 
@@ -1034,9 +1034,9 @@ mod tests {
 
     impl Deserialize for NamedSeq {
         fn deserialize<
-            S: Deserializer,
-        >(state: &mut S) -> Result<NamedSeq, S::Error> {
-            state.visit(&mut NamedSeqVisitor)
+            D: Deserializer,
+        >(deserializer: &mut D) -> Result<NamedSeq, D::Error> {
+            deserializer.visit(&mut NamedSeqVisitor)
         }
     }
 
@@ -1090,9 +1090,9 @@ mod tests {
 
     impl Deserialize for NamedMap {
         fn deserialize<
-            S: Deserializer,
-        >(state: &mut S) -> Result<NamedMap, S::Error> {
-            state.visit(&mut NamedMapVisitor)
+            D: Deserializer,
+        >(deserializer: &mut D) -> Result<NamedMap, D::Error> {
+            deserializer.visit(&mut NamedMapVisitor)
         }
     }
 
@@ -1141,9 +1141,9 @@ mod tests {
 
     impl Deserialize for NamedMapField {
         fn deserialize<
-            S: Deserializer,
-        >(state: &mut S) -> Result<NamedMapField, S::Error> {
-            state.visit(&mut NamedMapFieldVisitor)
+            D: Deserializer,
+        >(deserializer: &mut D) -> Result<NamedMapField, D::Error> {
+            deserializer.visit(&mut NamedMapFieldVisitor)
         }
     }
 
@@ -1175,9 +1175,9 @@ mod tests {
 
     impl Deserialize for Enum {
         fn deserialize<
-            S: Deserializer,
-        >(state: &mut S) -> Result<Enum, S::Error> {
-            state.visit(&mut EnumVisitor)
+            D: Deserializer,
+        >(deserializer: &mut D) -> Result<Enum, D::Error> {
+            deserializer.visit(&mut EnumVisitor)
         }
     }
 
@@ -1275,9 +1275,9 @@ mod tests {
 
     impl Deserialize for EnumMapField {
         fn deserialize<
-            S: Deserializer,
-        >(state: &mut S) -> Result<EnumMapField, S::Error> {
-            state.visit(&mut EnumMapFieldVisitor)
+            D: Deserializer,
+        >(deserializer: &mut D) -> Result<EnumMapField, D::Error> {
+            deserializer.visit(&mut EnumMapFieldVisitor)
         }
     }
 
