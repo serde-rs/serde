@@ -45,7 +45,7 @@ use syntax::ext::deriving::generic::ty::{
     Literal,
     Path,
     Ptr,
-    Self,
+    Self_,
     Tuple,
     borrowed_explicit_self,
 };
@@ -232,7 +232,7 @@ pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
                         vec!("std", "result", "Result"),
                         None,
                         vec!(
-                            Box::new(Self),
+                            Box::new(Self_),
                             Box::new(Literal(Path::new_local("__E")))
                         ),
                         true
