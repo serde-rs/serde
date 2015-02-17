@@ -19,9 +19,8 @@ pub trait Serializer {
     type Value;
     type Error;
 
-    fn visit<
-        T: Serialize,
-    >(&mut self, value: &T) -> Result<Self::Value, Self::Error>;
+    fn visit<T>(&mut self, value: &T) -> Result<Self::Value, Self::Error>
+        where T: Serialize;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

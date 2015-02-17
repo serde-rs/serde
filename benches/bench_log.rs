@@ -50,7 +50,7 @@ impl rustc_serialize::Decodable for HttpProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
         match FromPrimitive::from_uint(try!(d.read_usize())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from uint")),
+            None => Err(d.error("cannot convert from usize")),
         }
     }
 }
@@ -58,7 +58,7 @@ impl rustc_serialize::Decodable for HttpProtocol {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpProtocol {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_usize(*self as usize)
+        s.serialize_u8(*self as u8)
     }
 }
 
@@ -102,7 +102,7 @@ impl rustc_serialize::Decodable for HttpMethod {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpMethod {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_usize(*self as usize)
+        s.serialize_u8(*self as u8)
     }
 }
 
@@ -123,15 +123,15 @@ enum CacheStatus {
 
 impl rustc_serialize::Encodable for CacheStatus {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as usize).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for CacheStatus {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<CacheStatus, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from usize")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -169,15 +169,15 @@ enum OriginProtocol {
 
 impl rustc_serialize::Encodable for OriginProtocol {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as usize).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for OriginProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OriginProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from usize")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -185,7 +185,7 @@ impl rustc_serialize::Decodable for OriginProtocol {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for OriginProtocol {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_usize(*self as usize)
+        s.serialize_u8(*self as u8)
     }
 }
 
@@ -207,15 +207,15 @@ enum ZonePlan {
 
 impl rustc_serialize::Encodable for ZonePlan {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as usize).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for ZonePlan {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<ZonePlan, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from usize")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -223,7 +223,7 @@ impl rustc_serialize::Decodable for ZonePlan {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for ZonePlan {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_usize(*self as usize)
+        s.serialize_u8(*self as u8)
     }
 }
 
@@ -496,15 +496,15 @@ enum Country {
 
 impl rustc_serialize::Encodable for Country {
     fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        (*self as usize).encode(s)
+        (*self as u8).encode(s)
     }
 }
 
 impl rustc_serialize::Decodable for Country {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Country, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_u8(try!(d.read_u8())) {
             Some(value) => Ok(value),
-            None => Err(d.error("cannot convert from usize")),
+            None => Err(d.error("cannot convert from u8")),
         }
     }
 }
@@ -512,7 +512,7 @@ impl rustc_serialize::Decodable for Country {
 impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for Country {
     #[inline]
     fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_usize(*self as usize)
+        s.serialize_u8(*self as u8)
     }
 }
 

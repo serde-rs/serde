@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt;
-use std::old_io;
+use std::io;
 use std::str;
 
 use ser::{self, Serializer};
@@ -51,9 +51,16 @@ struct WriterFormatter<'a, 'b: 'a> {
     inner: &'a mut fmt::Formatter<'b>,
 }
 
-impl<'a, 'b> old_io::Writer for WriterFormatter<'a, 'b> {
-    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
-        self.inner.write_str(str::from_utf8(buf).unwrap()).map_err(|_| old_io::IoError::last_error())
+impl<'a, 'b> io::Write for WriterFormatter<'a, 'b> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self.inner.write_str(str::from_utf8(buf).unwrap()) {
+            Ok(_) => Ok(buf.len()),
+            Err(_) => Err(io::Error::last_os_error()),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
 
