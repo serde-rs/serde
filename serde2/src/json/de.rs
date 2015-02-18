@@ -32,6 +32,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
 
     #[inline]
     pub fn end(&mut self) -> Result<(), Error> {
+        self.parse_whitespace();
         if self.eof() {
             Ok(())
         } else {
@@ -733,6 +734,16 @@ mod tests {
                 "{\"a\": {\"b\": 3, \"c\": 4}}",
                 treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
             ),
+        ]);
+    }
+
+    #[test]
+    fn test_parse_trailing_whitespace() {
+        test_parse_ok(vec![
+            ("[1, 2] ", vec![1, 2]),
+            ("[1, 2]\n", vec![1, 2]),
+            ("[1, 2]\t", vec![1, 2]),
+            ("[1, 2]\t \n", vec![1, 2]),
         ]);
     }
 }
