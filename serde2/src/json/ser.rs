@@ -3,31 +3,31 @@ use std::io;
 use std::num::{Float, FpCategory};
 use std::string::FromUtf8Error;
 
-use ser::{self, Serializer};
+use ser;
 
 /// A structure for implementing serialization to JSON.
-pub struct Writer<W> {
+pub struct Serializer<W> {
     writer: W,
 }
 
-impl<W: io::Write> Writer<W> {
+impl<W: io::Write> Serializer<W> {
     /// Creates a new JSON visitr whose output will be written to the writer
     /// specified.
     #[inline]
-    pub fn new(writer: W) -> Writer<W> {
-        Writer {
+    pub fn new(writer: W) -> Serializer<W> {
+        Serializer {
             writer: writer,
         }
     }
 
-    /// Unwrap the Writer from the Serializer.
+    /// Unwrap the `Writer` from the `Serializer`.
     #[inline]
     pub fn into_inner(self) -> W {
         self.writer
     }
 }
 
-impl<W: io::Write> ser::Serializer for Writer<W> {
+impl<W: io::Write> ser::Serializer for Serializer<W> {
     type Value = ();
     type Error = io::Error;
 
@@ -278,8 +278,8 @@ pub fn to_writer<W, T>(writer: &mut W, value: &T) -> io::Result<()>
     where W: io::Write,
           T: ser::Serialize,
 {
-    let mut writer = Writer::new(writer);
-    try!(writer.visit(value));
+    let mut ser = Serializer::new(writer);
+    try!(ser::Serializer::visit(&mut ser, value));
     Ok(())
 }
 

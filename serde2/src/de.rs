@@ -213,9 +213,8 @@ pub trait Visitor {
 pub trait SeqVisitor {
     type Error: Error;
 
-    fn visit<
-        T: Deserialize,
-    >(&mut self) -> Result<Option<T>, Self::Error>;
+    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
+        where T: Deserialize;
 
     fn end(&mut self) -> Result<(), Self::Error>;
 
@@ -229,10 +228,10 @@ pub trait MapVisitor {
     type Error: Error;
 
     #[inline]
-    fn visit<
-        K: Deserialize,
-        V: Deserialize,
-    >(&mut self) -> Result<Option<(K, V)>, Self::Error> {
+    fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
+        where K: Deserialize,
+              V: Deserialize,
+    {
         match try!(self.visit_key()) {
             Some(key) => {
                 let value = try!(self.visit_value());
@@ -242,13 +241,11 @@ pub trait MapVisitor {
         }
     }
 
-    fn visit_key<
-        K: Deserialize,
-    >(&mut self) -> Result<Option<K>, Self::Error>;
+    fn visit_key<K>(&mut self) -> Result<Option<K>, Self::Error>
+        where K: Deserialize;
 
-    fn visit_value<
-        V: Deserialize,
-    >(&mut self) -> Result<V, Self::Error>;
+    fn visit_value<V>(&mut self) -> Result<V, Self::Error>
+        where V: Deserialize;
 
     fn end(&mut self) -> Result<(), Self::Error>;
 

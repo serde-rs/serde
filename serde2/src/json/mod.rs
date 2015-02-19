@@ -1,8 +1,7 @@
-pub use self::ser::Writer;
-pub use self::ser::{to_vec, to_string};
-pub use self::ser::escape_str;
-
-pub use self::de::from_str;
+pub use self::de::{Deserializer, from_str};
+pub use self::error::{Error, ErrorCode};
+pub use self::ser::{Serializer, to_vec, to_string, escape_str};
+pub use self::value::{Value, to_value, from_value};
 
 pub mod builder;
 pub mod de;

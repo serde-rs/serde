@@ -52,12 +52,13 @@ pub fn plugin_registrar(reg: &mut Registry) {
         Decorator(Box::new(expand_derive_deserialize)));
 }
 
-fn expand_derive_serialize<>(cx: &mut ExtCtxt,
-                                sp: Span,
-                                mitem: &MetaItem,
-                                item: &Item,
-                                mut push: Box<FnMut(P<ast::Item>)>)
-{
+fn expand_derive_serialize(
+    cx: &mut ExtCtxt,
+    sp: Span,
+    mitem: &MetaItem,
+    item: &Item,
+    mut push: Box<FnMut(P<ast::Item>)>
+) {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
 
@@ -103,7 +104,7 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
                 ),
                 attributes: attrs,
                 combine_substructure: combine_substructure(Box::new(|a, b, c| {
-                    serialize_substructure(a, b, c)
+                    serialize_substructure(a, b, c, item)
                 })),
             }
         ]
@@ -112,11 +113,14 @@ fn expand_derive_serialize<>(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, |item| push(item))
 }
 
-fn serialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<Expr> {
+fn serialize_substructure(cx: &ExtCtxt,
+                          span: Span,
+                          substr: &Substructure,
+                          item: &Item) -> P<Expr> {
     let visitor = substr.nonself_args[0].clone();
 
-    match *substr.fields {
-        Struct(ref fields) => {
+    match (&item.node, &*substr.fields) {
+        (&ast::ItemStruct(..), &Struct(ref fields)) => {
             if fields.is_empty() {
                 serialize_tuple_struct(cx)
             } else {
@@ -124,8 +128,14 @@ fn serialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> P<
             }
         }
 
-        EnumMatching(_idx, variant, ref fields) => {
-            serialize_enum(cx, span, visitor, substr.type_ident, variant, fields)
+        (&ast::ItemEnum(_, ref generics), &EnumMatching(_idx, variant, ref fields)) => {
+            serialize_enum(cx,
+                           span,
+                           visitor,
+                           substr.type_ident,
+                           variant,
+                           &fields[],
+                           generics)
         }
 
         _ => cx.bug("expected Struct or EnumMatching in derive_serialize")
@@ -141,8 +151,7 @@ fn serialize_struct(cx: &ExtCtxt,
                     span: Span,
                     visitor: P<Expr>,
                     type_ident: Ident,
-                    fields: &Vec<FieldInfo>) -> P<Expr> {
-
+                    fields: &[FieldInfo]) -> P<Expr> {
     let type_name = cx.expr_str(
         span,
         token::get_ident(type_ident));
@@ -203,44 +212,258 @@ fn serialize_struct(cx: &ExtCtxt,
     })
 }
 
-fn serialize_enum(cx: &ExtCtxt,
-                  span: Span,
-                  visitor: P<Expr>,
-                  type_ident: Ident,
-                  variant: &ast::Variant,
-                  fields: &Vec<FieldInfo>) -> P<Expr> {
-    let type_name = cx.expr_str(
-        span,
-        token::get_ident(type_ident)
+
+
+
+fn serialize_enum(
+    cx: &ExtCtxt,
+    span: Span,
+    visitor: P<Expr>,
+    type_ident: Ident,
+    variant: &ast::Variant,
+    fields: &[FieldInfo],
+    generics: &ast::Generics,
+) -> P<Expr> {
+    let type_name = cx.expr_str(span, token::get_ident(type_ident));
+    let variant_ident = variant.node.name;
+    let variant_name = cx.expr_str(span, token::get_ident(variant_ident));
+
+    if fields.is_empty() {
+        quote_expr!(cx,
+            ::serde2::ser::Visitor::visit_enum_unit(
+                $visitor,
+                $type_name,
+                $variant_name)
+        )
+    } else {
+        serialize_variant(
+                cx,
+                span,
+                visitor,
+                type_name,
+                variant_name,
+                generics,
+                variant,
+                fields)
+    }
+}
+
+
+fn serialize_variant(
+    cx: &ExtCtxt,
+    span: Span,
+    visitor: P<ast::Expr>,
+    type_name: P<ast::Expr>,
+    variant_name: P<ast::Expr>,
+    generics: &ast::Generics,
+    variant: &ast::Variant,
+    fields: &[FieldInfo],
+) -> P<Expr> {
+    // We'll take a reference to the values in the variant, so we need a new lifetime.
+    let lifetimes = generics.lifetimes.iter()
+        .map(|lifetime_def| lifetime_def.lifetime.clone())
+        .collect();
+
+    let mut generics = generics.clone();
+    generics.lifetimes.push(
+        cx.lifetime_def(
+            span,
+            cx.name_of("'__a"),
+            lifetimes
+        )
     );
-    let variant_name = cx.expr_str(
-        span,
-        token::get_ident(variant.node.name)
-    );
+
+    let (
+        trait_name,
+        visitor_method_name,
+        tys,
+    ): (Ident, Ident, Vec<P<ast::Ty>>) = match variant.node.kind {
+        ast::TupleVariantKind(ref args) => {
+            (
+                cx.ident_of("SeqVisitor"),
+                cx.ident_of("visit_enum_seq"),
+                args.iter()
+                    .map(|arg| arg.ty.clone())
+                    .collect()
+            )
+        }
+
+        ast::StructVariantKind(ref struct_def) => {
+            (
+                cx.ident_of("SeqVisitor"),
+                cx.ident_of("visit_enum_seq"),
+                struct_def.fields.iter()
+                    .map(|field| field.node.ty.clone())
+                    .collect()
+            )
+        }
+    };
+
     let len = fields.len();
 
-    let stmts: Vec<P<ast::Stmt>> = fields.iter()
-        .map(|&FieldInfo { ref self_, .. }| {
-            quote_stmt!(
-                cx,
-                try!($visitor.serialize_enum_elt(&$self_))
+    let visitor_field_names: Vec<ast::Ident> = (0 .. len)
+        .map(|i| token::str_to_ident(&format!("field{}", i)))
+        .collect();
+
+    let mut visitor_fields = vec![
+        respan(
+            span,
+            ast::StructField_ {
+                kind: ast::NamedField(
+                    cx.ident_of("state"),
+                    ast::Visibility::Inherited,
+                ),
+                id: ast::DUMMY_NODE_ID,
+                ty: cx.ty_ident(span, cx.ident_of("u32")),
+                attrs: Vec::new(),
+            }
+        ),
+    ];
+
+    visitor_fields.extend(
+        visitor_field_names.iter()
+            .zip(tys.iter())
+            .map(|(name, ty)| {
+                respan(
+                    span,
+                    ast::StructField_ {
+                        kind: ast::NamedField(
+                            *name,
+                            ast::Visibility::Inherited,
+                        ),
+                        id: ast::DUMMY_NODE_ID,
+                        ty: cx.ty_rptr(
+                            span,
+                            ty.clone(),
+                            Some(cx.lifetime(span, cx.name_of("'__a"))),
+                            ast::MutImmutable,
+                        ),
+                        attrs: Vec::new(),
+                    }
+                )
+            })
+    );
+
+    let visitor_ident = cx.ident_of("__Visitor");
+
+    let visitor_struct = cx.item_struct_poly(
+        span,
+        visitor_ident,
+        ast::StructDef {
+            fields: visitor_fields,
+            ctor_id: None,
+        },
+        generics,
+    );
+
+    let mut visitor_field_exprs = vec![
+        cx.field_imm(
+            span,
+            cx.ident_of("state"),
+            quote_expr!(cx, 0),
+        ),
+    ];
+
+    visitor_field_exprs.extend(
+        visitor_field_names.iter()
+            .zip(fields.iter())
+            .map(|(name, field)| {
+                let e = cx.expr_addr_of(
+                    span,
+                    field.self_.clone(),
+                );
+
+                cx.field_imm(span, *name, e)
+            })
+    );
+
+    let visitor_expr = cx.expr_struct(
+        span,
+        cx.path_ident(span, visitor_ident),
+        visitor_field_exprs);
+
+    let mut first = true;
+
+    let visitor_arms: Vec<ast::Arm> = visitor_field_names.iter()
+        .zip(fields.iter())
+        .enumerate()
+        .map(|(state, (name, field))| {
+            let field_expr = cx.expr_field_access(
+                span,
+                cx.expr_self(span),
+                *name,
+            );
+
+            let visit_expr = match field.name {
+                Some(real_name) => {
+                    let real_name = cx.expr_str(span, token::get_ident(real_name));
+                    quote_expr!(cx,
+                        ::serde2::ser::Visitor::visit_map_elt(
+                            visitor,
+                            $first,
+                            $real_name,
+                            $field_expr,
+                        )
+                    )
+                }
+                None => {
+                    quote_expr!(cx,
+                        ::serde2::ser::Visitor::visit_seq_elt(
+                            visitor,
+                            $first,
+                            $field_expr,
+                        )
+                    )
+                }
+            };
+
+            first = false;
+
+            let state = state as u32;
+
+            quote_arm!(cx,
+                $state => {
+                    self.state += 1;
+                    Ok(Some(try!($visit_expr)))
+                }
             )
         })
         .collect();
 
     quote_expr!(cx, {
-        try!($visitor.serialize_enum_start($type_name, $variant_name, $len));
-        $stmts
-        $visitor.serialize_enum_end()
+        $visitor_struct
+
+        impl<'__a> ::serde2::ser::$trait_name for __Visitor<'__a> {
+            fn visit<
+                V: ::serde2::ser::Visitor,
+            >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+                match self.state {
+                    $visitor_arms
+                    _ => Ok(None),
+                }
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                ($len - self.state as usize, Some($len - self.state as usize))
+            }
+        }
+
+        ::serde2::ser::Visitor::$visitor_method_name(
+            $visitor,
+            $type_name,
+            $variant_name,
+            $visitor_expr,
+        )
     })
 }
 
-pub fn expand_derive_deserialize(cx: &mut ExtCtxt,
-                                 sp: Span,
-                                 mitem: &MetaItem,
-                                 item: &Item,
-                                 mut push: Box<FnMut(P<ast::Item>)>)
-{
+pub fn expand_derive_deserialize(
+    cx: &mut ExtCtxt,
+    sp: Span,
+    mitem: &MetaItem,
+    item: &Item,
+    mut push: Box<FnMut(P<ast::Item>)>
+) {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
 

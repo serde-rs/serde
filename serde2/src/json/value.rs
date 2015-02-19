@@ -1,9 +1,12 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, btree_map};
 use std::fmt;
 use std::io;
 use std::str;
+use std::vec;
 
-use ser::{self, Serializer};
+use de;
+use ser;
+use super::error::Error;
 
 #[derive(PartialEq)]
 pub enum Value {
@@ -22,27 +25,13 @@ impl ser::Serialize for Value {
         V: ser::Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
         match *self {
-            Value::Null => {
-                visitor.visit_unit()
-            }
-            Value::Bool(v) => {
-                visitor.visit_bool(v)
-            }
-            Value::I64(v) => {
-                visitor.visit_i64(v)
-            }
-            Value::F64(v) => {
-                visitor.visit_f64(v)
-            }
-            Value::String(ref v) => {
-                visitor.visit_str(&v)
-            }
-            Value::Array(ref v) => {
-                v.visit(visitor)
-            }
-            Value::Object(ref v) => {
-                v.visit(visitor)
-            }
+            Value::Null => visitor.visit_unit(),
+            Value::Bool(v) => visitor.visit_bool(v),
+            Value::I64(v) => visitor.visit_i64(v),
+            Value::F64(v) => visitor.visit_f64(v),
+            Value::String(ref v) => visitor.visit_str(&v),
+            Value::Array(ref v) => v.visit(visitor),
+            Value::Object(ref v) => v.visit(visitor),
         }
     }
 }
@@ -72,25 +61,19 @@ impl fmt::Debug for Value {
     }
 }
 
-pub fn to_value<T>(value: &T) -> Value where T: ser::Serialize {
-    let mut writer = Writer::new();
-    writer.visit(value).ok().unwrap();
-    writer.unwrap()
-}
-
 enum State {
     Value(Value),
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
 }
 
-pub struct Writer {
+pub struct Serializer {
     state: Vec<State>,
 }
 
-impl Writer {
-    pub fn new() -> Writer {
-        Writer {
+impl Serializer {
+    pub fn new() -> Serializer {
+        Serializer {
             state: Vec::with_capacity(4),
         }
     }
@@ -103,7 +86,7 @@ impl Writer {
     }
 }
 
-impl ser::Serializer for Writer {
+impl ser::Serializer for Serializer {
     type Value = ();
     type Error = ();
 
@@ -116,7 +99,7 @@ impl ser::Serializer for Writer {
     }
 }
 
-impl ser::Visitor for Writer {
+impl ser::Visitor for Serializer {
     type Value = ();
     type Error = ();
 
@@ -263,4 +246,164 @@ impl ser::Visitor for Writer {
 
         Ok(())
     }
+}
+
+pub struct Deserializer {
+    value: Option<Value>,
+}
+
+impl Deserializer {
+    /// Creates a new deserializer instance for deserializing the specified JSON value.
+    pub fn new(value: Value) -> Deserializer {
+        Deserializer {
+            value: Some(value),
+        }
+    }
+}
+
+impl de::Deserializer for Deserializer {
+    type Error = Error;
+
+    #[inline]
+    fn visit<
+        V: de::Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+        let value = match self.value.take() {
+            Some(value) => value,
+            None => { return Err(de::Error::end_of_stream_error()); }
+        };
+
+        match value {
+            Value::Null => visitor.visit_unit(),
+            Value::Bool(v) => visitor.visit_bool(v),
+            Value::I64(v) => visitor.visit_i64(v),
+            Value::F64(v) => visitor.visit_f64(v),
+            Value::String(v) => visitor.visit_string(v),
+            Value::Array(v) => {
+                let len = v.len();
+                visitor.visit_seq(SeqDeserializer {
+                    de: self,
+                    iter: v.into_iter(),
+                    len: len,
+                })
+            }
+            Value::Object(v) => {
+                let len = v.len();
+                visitor.visit_map(MapDeserializer {
+                    de: self,
+                    iter: v.into_iter(),
+                    value: None,
+                    len: len,
+                })
+            }
+        }
+    }
+
+    #[inline]
+    fn visit_option<
+        V: de::Visitor,
+    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+        match self.value {
+            Some(Value::Null) => visitor.visit_none(),
+            Some(_) => visitor.visit_some(self),
+            None => Err(de::Error::end_of_stream_error()),
+        }
+    }
+}
+
+struct SeqDeserializer<'a> {
+    de: &'a mut Deserializer,
+    iter: vec::IntoIter<Value>,
+    len: usize,
+}
+
+impl<'a> de::SeqVisitor for SeqDeserializer<'a> {
+    type Error = Error;
+
+    fn visit<T>(&mut self) -> Result<Option<T>, Error>
+        where T: de::Deserialize
+    {
+        match self.iter.next() {
+            Some(value) => {
+                self.len -= 1;
+                self.de.value = Some(value);
+                Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn end(&mut self) -> Result<(), Error> {
+        if self.len == 0 {
+            Ok(())
+        } else {
+            Err(de::Error::end_of_stream_error())
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+
+struct MapDeserializer<'a> {
+    de: &'a mut Deserializer,
+    iter: btree_map::IntoIter<String, Value>,
+    value: Option<Value>,
+    len: usize,
+}
+
+impl<'a> de::MapVisitor for MapDeserializer<'a> {
+    type Error = Error;
+
+    fn visit_key<T>(&mut self) -> Result<Option<T>, Error>
+        where T: de::Deserialize
+    {
+        match self.iter.next() {
+            Some((key, value)) => {
+                self.len -= 1;
+                self.value = Some(value);
+                self.de.value = Some(Value::String(key));
+                Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn visit_value<T>(&mut self) -> Result<T, Error>
+        where T: de::Deserialize
+    {
+        let value = self.value.take().unwrap();
+        self.de.value = Some(value);
+        Ok(try!(de::Deserialize::deserialize(self.de)))
+    }
+
+    fn end(&mut self) -> Result<(), Error> {
+        if self.len == 0 {
+            Ok(())
+        } else {
+            Err(de::Error::end_of_stream_error())
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+
+/// Shortcut function to encode a `T` into a JSON `Value`
+pub fn to_value<T>(value: &T) -> Value
+    where T: ser::Serialize
+{
+    let mut ser = Serializer::new();
+    ser::Serializer::visit(&mut ser, value).ok().unwrap();
+    ser.unwrap()
+}
+
+/// Shortcut function to decode a JSON `Value` into a `T`
+pub fn from_value<T>(value: Value) -> Result<T, Error>
+    where T: de::Deserialize
+{
+    let mut de = Deserializer::new(value);
+    de::Deserialize::deserialize(&mut de)
 }

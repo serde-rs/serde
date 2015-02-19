@@ -2,9 +2,8 @@
 
 extern crate unicode;
 
-//pub use ser::{Serialize, Serializer};
-//pub use ser::{Visitor, VisitorState};
-//pub use ser::GatherTokens;
+pub use ser::{Serialize, Serializer};
+pub use de::{Deserialize, Deserializer, Error};
 
 pub mod ser;
 pub mod de;
