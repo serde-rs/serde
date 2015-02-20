@@ -6,9 +6,12 @@ extern crate rustc;
 use syntax::ast::{
     Ident,
     MetaItem,
+    MetaItem_,
     Item,
     Expr,
     MutMutable,
+    StructDef,
+    EnumDef,
 };
 use syntax::ast;
 use syntax::ast_util;
@@ -607,7 +610,7 @@ fn deserialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> 
     let state = substr.nonself_args[0].clone();
 
     match *substr.fields {
-        StaticStruct(_, ref fields) => {
+        StaticStruct(ref struct_def, ref fields) => {
             deserialize_struct(
                 cx,
                 span,
@@ -615,15 +618,17 @@ fn deserialize_substructure(cx: &ExtCtxt, span: Span, substr: &Substructure) -> 
                 substr.type_ident,
                 cx.path(span, vec![substr.type_ident]),
                 fields,
-                state)
+                state,
+                struct_def)
         }
-        StaticEnum(_, ref fields) => {
+        StaticEnum(ref enum_def, ref fields) => {
             deserialize_enum(
                 cx,
                 span,
                 substr.type_ident,
                 &fields,
-                state)
+                state,
+                enum_def)
         }
         _ => cx.bug("expected StaticEnum or StaticStruct in derive(Deserialize)")
     }
@@ -637,6 +642,7 @@ fn deserialize_struct(
     struct_path: ast::Path,
     fields: &StaticFields,
     state: P<ast::Expr>,
+    struct_def: &StructDef
 ) -> P<ast::Expr> {
     match *fields {
         Unnamed(ref fields) => {
@@ -644,16 +650,16 @@ fn deserialize_struct(
                 deserialize_struct_empty_fields(
                     cx,
                     span,
-                    type_ident, 
-                    struct_ident, 
+                    type_ident,
+                    struct_ident,
                     struct_path,
                     state)
             } else {
                 deserialize_struct_unnamed_fields(
                     cx,
                     span,
-                    type_ident, 
-                    struct_ident, 
+                    type_ident,
+                    struct_ident,
                     struct_path,
                     &fields[],
                     state)
@@ -663,11 +669,12 @@ fn deserialize_struct(
             deserialize_struct_named_fields(
                 cx,
                 span,
-                type_ident, 
-                struct_ident, 
+                type_ident,
+                struct_ident,
                 struct_path,
                 &fields[],
-                state)
+                state,
+                struct_def)
         }
     }
 }
@@ -803,6 +810,7 @@ fn deserialize_struct_named_fields(
     struct_path: ast::Path,
     fields: &[(Ident, Span)],
     state: P<ast::Expr>,
+    struct_def: &StructDef,
 ) -> P<ast::Expr> {
     let struct_name = cx.expr_str(span, token::get_ident(struct_ident));
 
@@ -824,6 +832,7 @@ fn deserialize_struct_named_fields(
         struct_path,
         &field_names[],
         fields,
+        struct_def
     );
 
     quote_expr!(cx, {
@@ -931,18 +940,49 @@ fn declare_map_field_deserializer(
     ]
 }
 
+
+fn default_value(field: &ast::StructField) -> bool {
+    field.node.attrs.iter()
+        .any(|sa|
+             if let MetaItem_::MetaList(ref n, ref vals) = sa.node.value.node {
+                 if n == &"serde" {
+                     vals.iter()
+                         .map(|mi|
+                              if let MetaItem_::MetaWord(ref n) = mi.node {
+                                  n == &"default"
+                              } else {
+                                  false
+                              })
+                         .any(|x| x)
+                 } else {
+                     false
+                 }
+             }
+             else {
+                 false
+             })
+}
+
 fn declare_visit_map(
     cx: &ExtCtxt,
     span: Span,
     struct_path: ast::Path,
     field_names: &[Ident],
     fields: &[(Ident, Span)],
+    struct_def: &StructDef,
 ) -> P<ast::Expr> {
 
     // Declare each field.
     let let_values: Vec<P<ast::Stmt>> = field_names.iter()
-        .map(|field| {
-            quote_stmt!(cx, let mut $field = None;)
+        .zip(struct_def.fields.iter())
+        .map(|(field, sf)| {
+            if default_value(sf) {
+                quote_stmt!(
+                    cx,
+                    let mut $field = Some(::std::default::Default::default());)
+            } else {
+                quote_stmt!(cx, let mut $field = None;)
+            }
         })
         .collect();
 
@@ -1001,12 +1041,14 @@ fn deserialize_enum(
     type_ident: Ident,
     fields: &[(Ident, Span, StaticFields)],
     state: P<ast::Expr>,
+    enum_def: &EnumDef,
 ) -> P<ast::Expr> {
     let type_name = cx.expr_str(span, token::get_ident(type_ident));
 
     // Match arms to extract a variant from a string
     let variant_arms: Vec<ast::Arm> = fields.iter()
-        .map(|&(name, span, ref fields)| {
+        .zip(enum_def.variants.iter())
+        .map(|(&(name, span, ref fields), variant_ptr)| {
             let value = deserialize_enum_variant(
                 cx,
                 span,
@@ -1014,6 +1056,7 @@ fn deserialize_enum(
                 name,
                 fields,
                 cx.expr_ident(span, cx.ident_of("visitor")),
+                variant_ptr,
             );
 
             let s = cx.expr_str(span, token::get_ident(name));
@@ -1058,6 +1101,7 @@ fn deserialize_enum_variant(
     variant_ident: Ident,
     fields: &StaticFields,
     state: P<ast::Expr>,
+    variant_ptr: &P<ast::Variant>,
 ) -> P<ast::Expr> {
     let variant_path = cx.path(span, vec![type_ident, variant_ident]);
 
@@ -1119,6 +1163,10 @@ fn deserialize_enum_variant(
                 variant_path,
                 &field_names[],
                 fields,
+                match variant_ptr.node.kind {
+                    ast::VariantKind::StructVariantKind(ref sd) => &*sd,
+                    _ => panic!("Mismatched enum types")
+                },
             );
 
             quote_expr!(cx, {
