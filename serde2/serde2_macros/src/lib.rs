@@ -6,6 +6,7 @@ extern crate rustc;
 use syntax::ast::{
     Ident,
     MetaItem,
+    MetaItem_,
     Item,
     Expr,
     MutMutable,
@@ -854,24 +855,23 @@ fn declare_map_field_deserializer(
 fn default_value(field: &ast::StructField) -> bool {
     field.node.attrs.iter()
         .any(|sa|
-             match &sa.node.value.node {
-                 &ast::MetaItem_::MetaList(ref n, ref vals) => {
-                     if n == &"serde" {
-                         vals.iter()
-                             .map(|mi|
-                                  match &mi.node {
-                                      &ast::MetaItem_::MetaWord(ref n) => {
-                                          n == &"default"
-                                      },
-                                      _ => false
-                                  })
-                             .any(|x| x)
-                     } else {
-                         false
-                     }
-                 },
-                 _ => false
-             } )
+             if let MetaItem_::MetaList(ref n, ref vals) = sa.node.value.node {
+                 if n == &"serde" {
+                     vals.iter()
+                         .map(|mi|
+                              if let MetaItem_::MetaWord(ref n) = mi.node {
+                                  n == &"default"
+                              } else {
+                                  false
+                              })
+                         .any(|x| x)
+                 } else {
+                     false
+                 }
+             }
+             else {
+                 false
+             })
 }
 
 fn declare_visit_map(
