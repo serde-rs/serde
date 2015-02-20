@@ -11,6 +11,7 @@ use syntax::ast::{
     MutMutable,
 };
 use syntax::ast;
+use syntax::ast_util;
 use syntax::codemap::{Span, respan};
 use syntax::ext::base::{ExtCtxt, Decorator, ItemDecorator};
 use syntax::ext::build::AstBuilder;
@@ -36,6 +37,7 @@ use syntax::ext::deriving::generic::ty::{
     borrowed_explicit_self,
 };
 use syntax::parse::token;
+use syntax::owned_slice::OwnedSlice;
 use syntax::ptr::P;
 
 use rustc::plugin::Registry;
@@ -64,7 +66,7 @@ fn expand_derive_serialize(
 
     let trait_def = TraitDef {
         span: sp,
-        attributes: vec!(),
+        attributes: vec![],
         path: Path::new(vec!["serde2", "ser", "Serialize"]),
         additional_bounds: Vec::new(),
         generics: LifetimeBounds::empty(),
@@ -248,7 +250,6 @@ fn serialize_enum(
     }
 }
 
-
 fn serialize_variant(
     cx: &ExtCtxt,
     span: Span,
@@ -259,19 +260,55 @@ fn serialize_variant(
     variant: &ast::Variant,
     fields: &[FieldInfo],
 ) -> P<Expr> {
-    // We'll take a reference to the values in the variant, so we need a new lifetime.
-    let lifetimes = generics.lifetimes.iter()
-        .map(|lifetime_def| lifetime_def.lifetime.clone())
+    let mut generics = generics.clone();
+
+    // We need to constrain all the lifetimes to the lifetime of the visitor.
+    let visitor_lifetime = cx.lifetime(span, cx.name_of("'__a"));
+
+    generics.lifetimes =
+        Some(ast::LifetimeDef {
+            lifetime: visitor_lifetime,
+            bounds: vec![],
+        }).into_iter().chain(generics.lifetimes.iter()
+            .map(|lifetime_def| {
+                let mut bounds = lifetime_def.bounds.clone();
+                bounds.push(visitor_lifetime.clone());
+
+                ast::LifetimeDef {
+                    lifetime: lifetime_def.lifetime.clone(),
+                    bounds: bounds,
+                }
+            })
+        ).collect();
+
+    let serialize_path = cx.path_global(
+        span,
+        vec![
+            cx.ident_of("serde2"),
+            cx.ident_of("ser"),
+            cx.ident_of("Serialize"),
+        ],
+    );
+
+    // Make sure all the type parameters are constrained by the visitor lifetime.
+    let ty_params = generics.ty_params.iter()
+        .map(|ty_param| {
+            let serialize_bound = cx.typarambound(serialize_path.clone());
+            let visitor_bound = ast::RegionTyParamBound(visitor_lifetime.clone());
+
+            let mut bounds = ty_param.bounds.clone().into_vec();
+            bounds.push(serialize_bound);
+            bounds.push(visitor_bound);
+
+            cx.typaram(
+                ty_param.span,
+                ty_param.ident,
+                OwnedSlice::from_vec(bounds),
+                None)
+        })
         .collect();
 
-    let mut generics = generics.clone();
-    generics.lifetimes.push(
-        cx.lifetime_def(
-            span,
-            cx.name_of("'__a"),
-            lifetimes
-        )
-    );
+    generics.ty_params = OwnedSlice::from_vec(ty_params);
 
     let (
         trait_name,
@@ -353,7 +390,7 @@ fn serialize_variant(
             fields: visitor_fields,
             ctor_id: None,
         },
-        generics,
+        generics.clone(),
     );
 
     let mut visitor_field_exprs = vec![
@@ -430,23 +467,75 @@ fn serialize_variant(
         })
         .collect();
 
+    let trait_path = cx.path_global(
+        span, 
+        vec![
+            cx.ident_of("serde2"),
+            cx.ident_of("ser"),
+            trait_name,
+        ],
+    );
+
+    let trait_ref = cx.trait_ref(trait_path);
+    let opt_trait_ref = Some(trait_ref);
+
+    let self_ty = cx.ty_path(
+        cx.path_all(
+            span,
+            false,
+            vec![cx.ident_of("__Visitor")],
+            generics.lifetimes.iter()
+                .map(|lifetime| lifetime.lifetime)
+                .collect(),
+            generics.ty_params.iter()
+                .map(|ty_param| cx.ty_ident(span, ty_param.ident))
+                .collect(),
+            vec![],
+        ),
+    );
+
+    let impl_ident = ast_util::impl_pretty_name(&opt_trait_ref, &self_ty);
+
+    let methods = vec![
+        ast::MethodImplItem(
+            quote_method!(cx,
+                fn visit<
+                    V: ::serde2::ser::Visitor,
+                >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+                    match self.state {
+                        $visitor_arms
+                        _ => Ok(None),
+                    }
+                }
+            )
+        ),
+
+        ast::MethodImplItem(
+            quote_method!(cx,
+                fn size_hint(&self) -> (usize, Option<usize>) {
+                    ($len - self.state as usize, Some($len - self.state as usize))
+                }
+            )
+        ),
+    ];
+
+    let visitor_impl = cx.item(
+        span,
+        impl_ident,
+        vec![],
+        ast::ItemImpl(
+            ast::Unsafety::Normal,
+            ast::ImplPolarity::Positive,
+            generics,
+            opt_trait_ref,
+            self_ty,
+            methods,
+        ),
+    );
+
     quote_expr!(cx, {
         $visitor_struct
-
-        impl<'__a> ::serde2::ser::$trait_name for __Visitor<'__a> {
-            fn visit<
-                V: ::serde2::ser::Visitor,
-            >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
-                match self.state {
-                    $visitor_arms
-                    _ => Ok(None),
-                }
-            }
-
-            fn size_hint(&self) -> (usize, Option<usize>) {
-                ($len - self.state as usize, Some($len - self.state as usize))
-            }
-        }
+        $visitor_impl
 
         ::serde2::ser::Visitor::$visitor_method_name(
             $visitor,
