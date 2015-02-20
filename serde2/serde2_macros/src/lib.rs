@@ -125,11 +125,12 @@ fn serialize_substructure(cx: &ExtCtxt,
     let visitor = substr.nonself_args[0].clone();
 
     match (&item.node, &*substr.fields) {
-        (&ast::ItemStruct(..), &Struct(ref fields)) => {
+        (&ast::ItemStruct(ref struct_def, _), &Struct(ref fields)) => {
             if fields.is_empty() {
                 serialize_tuple_struct(cx)
             } else {
-                serialize_struct(cx, span, visitor, substr.type_ident, fields)
+                serialize_struct(
+                    cx, span, visitor, substr.type_ident, fields, struct_def)
             }
         }
 
@@ -156,15 +157,21 @@ fn serialize_struct(cx: &ExtCtxt,
                     span: Span,
                     visitor: P<Expr>,
                     type_ident: Ident,
-                    fields: &[FieldInfo]) -> P<Expr> {
+                    fields: &[FieldInfo],
+                    struct_def: &StructDef) -> P<Expr> {
     let type_name = cx.expr_str(
         span,
         token::get_ident(type_ident));
     let len = fields.len();
 
+    let aliases : Vec<Option<&ast::Lit>> = struct_def.fields.iter()
+        .map(field_alias)
+        .collect();
+
     let arms: Vec<ast::Arm> = fields.iter()
+        .zip(aliases.iter())
         .enumerate()
-        .map(|(i, &FieldInfo { name, span, .. })| {
+        .map(|(i, (&FieldInfo { name, span, .. }, alias_lit ))| {
             let first = if i == 0 {
                 quote_expr!(cx, true)
             } else {
@@ -172,7 +179,13 @@ fn serialize_struct(cx: &ExtCtxt,
             };
 
             let name = name.unwrap();
-            let expr = cx.expr_str(span, token::get_ident(name));
+            let expr = match alias_lit {
+                &Some(lit) => {
+                    let lit = (*lit).clone();
+                    cx.expr_lit(lit.span, lit.node)
+                },
+                &None => cx.expr_str(span, token::get_ident(name)),
+            };
 
             let i = i as u32;
 
@@ -824,6 +837,7 @@ fn deserialize_struct_named_fields(
         span,
         &field_names[],
         fields,
+        struct_def,
     );
 
     let visit_map_expr = declare_visit_map(
@@ -866,11 +880,39 @@ fn deserialize_struct_named_fields(
     })
 }
 
+fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
+    field.node.attrs.iter()
+        .find(|sa|
+              if let MetaItem_::MetaList(ref n, _) = sa.node.value.node {
+                  n == &"serde"
+              } else {
+                  false
+              })
+        .and_then(|sa|
+                  if let MetaItem_::MetaList(_, ref vals) = sa.node.value.node {
+                      vals.iter()
+                          .fold(None,
+                                |v, mi|
+                                if let MetaItem_::MetaNameValue(ref n, ref lit) = mi.node {
+                                    if n == &"alias" {
+                                        Some(lit)
+                                    } else {
+                                        v
+                                    }
+                                } else {
+                                    v
+                                })
+                  } else {
+                      None
+                  })
+}
+
 fn declare_map_field_deserializer(
     cx: &ExtCtxt,
     span: Span,
     field_names: &[ast::Ident],
     fields: &[(Ident, Span)],
+    struct_def: &StructDef,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
     let field_variants: Vec<P<ast::Variant>> = field_names.iter()
@@ -893,13 +935,24 @@ fn declare_map_field_deserializer(
         token::str_to_ident("__Field"),
         ast::EnumDef { variants: field_variants });
 
+    // Get aliases
+    let aliases : Vec<Option<&ast::Lit>> = struct_def.fields.iter()
+        .map(field_alias)
+        .collect();
+
     // Match arms to extract a field from a string
     let field_arms: Vec<ast::Arm> = fields.iter()
         .zip(field_names.iter())
-        .map(|(&(name, span), field)| {
-            let s = cx.expr_str(span, token::get_ident(name));
-            quote_arm!(cx, $s => Ok(__Field::$field),)
-        })
+        .zip(aliases.iter())
+        .map(|((&(name, span), field), alias_lit)| {
+            let s = match alias_lit {
+                &None => cx.expr_str(span, token::get_ident(name)) ,
+                &Some(lit) =>{
+                    let lit = (*lit).clone();
+                    cx.expr_lit(lit.span, lit.node)
+                },
+            };
+            quote_arm!(cx, $s => Ok(__Field::$field),)})
         .collect();
 
     vec![
@@ -1155,6 +1208,10 @@ fn deserialize_enum_variant(
                 span,
                 &field_names[],
                 fields,
+                match variant_ptr.node.kind {
+                    ast::VariantKind::StructVariantKind(ref sd) => &*sd,
+                    _ => panic!("Mismatched enum types")
+                },
             );
 
             let visit_map_expr = declare_visit_map(
