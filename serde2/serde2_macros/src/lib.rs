@@ -57,7 +57,7 @@ fn expand_derive_serialize(
     sp: Span,
     mitem: &MetaItem,
     item: &Item,
-    mut push: Box<FnMut(P<ast::Item>)>
+    push: &mut FnMut(P<ast::Item>)
 ) {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));
@@ -462,7 +462,7 @@ pub fn expand_derive_deserialize(
     sp: Span,
     mitem: &MetaItem,
     item: &Item,
-    mut push: Box<FnMut(P<ast::Item>)>
+    push: &mut FnMut(P<ast::Item>)
 ) {
     let inline = cx.meta_word(sp, token::InternedString::new("inline"));
     let attrs = vec!(cx.attribute(sp, inline));

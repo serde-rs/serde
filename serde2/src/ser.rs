@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::collections::hash_state::HashState;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
@@ -238,7 +238,7 @@ impl Serialize for String {
     fn visit<
         V: Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        (&self[]).visit(visitor)
+        (&self[..]).visit(visitor)
     }
 }
 
@@ -320,7 +320,7 @@ impl<
     fn visit<
         V: Visitor,
     >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-        (&self[]).visit(visitor)
+        (&self[..]).visit(visitor)
     }
 }
 
@@ -333,10 +333,9 @@ impl<T> Serialize for BTreeSet<T> where T: Serialize {
     }
 }
 
-impl<T, S, H> Serialize for HashSet<T, S>
-    where T: Serialize + Eq + Hash<H>,
-          S: HashState<Hasher=H>,
-          H: Hasher<Output=u64>,
+impl<T, S> Serialize for HashSet<T, S>
+    where T: Serialize + Eq + Hash,
+          S: HashState,
 {
     #[inline]
     fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
@@ -586,11 +585,10 @@ impl<K, V> Serialize for BTreeMap<K, V>
     }
 }
 
-impl<K, V, S, H> Serialize for HashMap<K, V, S>
-    where K: Serialize + Eq + Hash<H>,
+impl<K, V, S> Serialize for HashMap<K, V, S>
+    where K: Serialize + Eq + Hash,
           V: Serialize,
-          S: HashState<Hasher=H>,
-          H: Hasher<Output=u64>,
+          S: HashState,
 {
     #[inline]
     fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<V_::Value, V_::Error> {

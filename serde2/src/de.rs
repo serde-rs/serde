@@ -1,4 +1,4 @@
-use std::collections::hash_map::Hasher;
+use std::marker::PhantomData;
 use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
 use std::num::FromPrimitive;
@@ -357,7 +357,9 @@ macro_rules! impl_deserialize_num_method {
     }
 }
 
-pub struct PrimitiveVisitor<T>;
+pub struct PrimitiveVisitor<T> {
+    marker: PhantomData<T>,
+}
 
 impl<
     T: Deserialize + FromPrimitive
@@ -385,7 +387,7 @@ macro_rules! impl_deserialize_num {
             fn deserialize<
                 D: Deserializer,
             >(deserializer: &mut D) -> Result<$ty, D::Error> {
-                deserializer.visit(&mut PrimitiveVisitor)
+                deserializer.visit(&mut PrimitiveVisitor { marker: PhantomData })
             }
         }
     }
@@ -474,7 +476,9 @@ impl Deserialize for String {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct OptionVisitor<T>;
+struct OptionVisitor<T> {
+    marker: PhantomData<T>,
+}
 
 impl<
     T: Deserialize,
@@ -500,13 +504,15 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<Option<T>, D::Error> {
-        deserializer.visit_option(&mut OptionVisitor)
+        deserializer.visit_option(&mut OptionVisitor { marker: PhantomData })
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct VecVisitor<T>;
+struct VecVisitor<T> {
+    marker: PhantomData<T>,
+}
 
 impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     type Value = Vec<T>;
@@ -529,7 +535,7 @@ impl<T: Deserialize> Deserialize for Vec<T> {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<Vec<T>, D::Error> {
-        deserializer.visit(&mut VecVisitor)
+        deserializer.visit(&mut VecVisitor { marker: PhantomData })
     }
 }
 
@@ -539,7 +545,9 @@ macro_rules! tuple_impls {
     () => {};
     ($($visitor:ident => ($($name:ident),+),)+) => {
         $(
-            struct $visitor<$($name,)+>;
+            struct $visitor<$($name,)+> {
+                marker: PhantomData<($($name,)+)>,
+            }
 
             impl<
                 $($name: Deserialize,)+
@@ -571,7 +579,7 @@ macro_rules! tuple_impls {
                 fn deserialize<
                     D: Deserializer,
                 >(deserializer: &mut D) -> Result<($($name,)+), D::Error> {
-                    deserializer.visit(&mut $visitor)
+                    deserializer.visit(&mut $visitor { marker: PhantomData })
                 }
             }
         )+
@@ -595,10 +603,12 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct HashMapVisitor<K, V>;
+struct HashMapVisitor<K, V> {
+    marker: PhantomData<HashMap<K, V>>,
+}
 
 impl<K, V> Visitor for HashMapVisitor<K, V>
-    where K: Deserialize + Eq + Hash<Hasher>,
+    where K: Deserialize + Eq + Hash,
           V: Deserialize,
 {
     type Value = HashMap<K, V>;
@@ -619,19 +629,21 @@ impl<K, V> Visitor for HashMapVisitor<K, V>
 }
 
 impl<K, V> Deserialize for HashMap<K, V>
-    where K: Deserialize + Eq + Hash<Hasher>,
+    where K: Deserialize + Eq + Hash,
           V: Deserialize,
 {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error> {
-        deserializer.visit(&mut HashMapVisitor)
+        deserializer.visit(&mut HashMapVisitor { marker: PhantomData })
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct BTreeMapVisitor<K, V>;
+struct BTreeMapVisitor<K, V> {
+    marker: PhantomData<BTreeMap<K, V>>,
+}
 
 impl<K, V> Visitor for BTreeMapVisitor<K, V>
     where K: Deserialize + Ord,
@@ -660,7 +672,7 @@ impl<
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error> {
-        deserializer.visit(&mut BTreeMapVisitor)
+        deserializer.visit(&mut BTreeMapVisitor { marker: PhantomData })
     }
 }
 
@@ -1339,28 +1351,28 @@ mod tests {
             false => vec![Token::Bool(false)],
         }
         test_isize {
-            0is => vec![Token::Isize(0)],
-            0is => vec![Token::I8(0)],
-            0is => vec![Token::I16(0)],
-            0is => vec![Token::I32(0)],
-            0is => vec![Token::I64(0)],
-            0is => vec![Token::Usize(0)],
-            0is => vec![Token::U8(0)],
-            0is => vec![Token::U16(0)],
-            0is => vec![Token::U32(0)],
-            0is => vec![Token::U64(0)],
-            0is => vec![Token::F32(0.)],
-            0is => vec![Token::F64(0.)],
+            0isize => vec![Token::Isize(0)],
+            0isize => vec![Token::I8(0)],
+            0isize => vec![Token::I16(0)],
+            0isize => vec![Token::I32(0)],
+            0isize => vec![Token::I64(0)],
+            0isize => vec![Token::Usize(0)],
+            0isize => vec![Token::U8(0)],
+            0isize => vec![Token::U16(0)],
+            0isize => vec![Token::U32(0)],
+            0isize => vec![Token::U64(0)],
+            0isize => vec![Token::F32(0.)],
+            0isize => vec![Token::F64(0.)],
         }
         test_ints {
-            0is => vec![Token::Isize(0)],
+            0isize => vec![Token::Isize(0)],
             0i8 => vec![Token::I8(0)],
             0i16 => vec![Token::I16(0)],
             0i32 => vec![Token::I32(0)],
             0i64 => vec![Token::I64(0)],
         }
         test_uints {
-            0us => vec![Token::Usize(0)],
+            0usize => vec![Token::Usize(0)],
             0u8 => vec![Token::U8(0)],
             0u16 => vec![Token::U16(0)],
             0u32 => vec![Token::U32(0)],
