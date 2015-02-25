@@ -3,9 +3,11 @@
 
 extern crate serde2;
 
+/*
 trait Trait {
     type Type;
 }
+*/
 
 #[derive_serialize]
 //#[derive_deserialize]
