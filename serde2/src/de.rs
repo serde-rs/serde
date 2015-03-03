@@ -361,6 +361,15 @@ pub struct PrimitiveVisitor<T> {
     marker: PhantomData<T>,
 }
 
+impl<T> PrimitiveVisitor<T> {
+    #[inline]
+    pub fn new() -> Self {
+        PrimitiveVisitor {
+            marker: PhantomData,
+        }
+    }
+}
+
 impl<
     T: Deserialize + FromPrimitive
 > self::Visitor for PrimitiveVisitor<T> {
@@ -387,7 +396,7 @@ macro_rules! impl_deserialize_num {
             fn deserialize<
                 D: Deserializer,
             >(deserializer: &mut D) -> Result<$ty, D::Error> {
-                deserializer.visit(&mut PrimitiveVisitor { marker: PhantomData })
+                deserializer.visit(&mut PrimitiveVisitor::new())
             }
         }
     }

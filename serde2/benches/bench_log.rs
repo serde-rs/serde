@@ -10,12 +10,10 @@ use std::io::{self, ReadExt, WriteExt};
 use std::num::FromPrimitive;
 use test::Bencher;
 
-use serde2::de::{Deserialize, Deserializer};
-use serde2::de;
+use serde2::de::{self, Deserialize, Deserializer};
 use serde2::json::ser::escape_str;
 use serde2::json;
-use serde2::ser::{Serialize, Serializer};
-use serde2::ser;
+use serde2::ser::{self, Serialize, Serializer};
 
 use rustc_serialize::Encodable;
 
@@ -70,7 +68,7 @@ impl de::Deserialize for HttpProtocol {
     fn deserialize<
         S: Deserializer,
     >(state: &mut S) -> Result<HttpProtocol, S::Error> {
-        state.visit(&mut de::PrimitiveVisitor)
+        state.visit(&mut de::PrimitiveVisitor::new())
     }
 }
 
@@ -118,7 +116,7 @@ impl de::Deserialize for HttpMethod {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<HttpMethod, S::Error> {
-        state.visit(&mut de::PrimitiveVisitor)
+        state.visit(&mut de::PrimitiveVisitor::new())
     }
 }
 
@@ -159,7 +157,7 @@ impl de::Deserialize for CacheStatus {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<CacheStatus, S::Error> {
-        state.visit(&mut de::PrimitiveVisitor)
+        state.visit(&mut de::PrimitiveVisitor::new())
     }
 }
 
@@ -209,7 +207,7 @@ impl de::Deserialize for OriginProtocol {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<OriginProtocol, S::Error> {
-        state.visit(&mut de::PrimitiveVisitor)
+        state.visit(&mut de::PrimitiveVisitor::new())
     }
 }
 
@@ -251,7 +249,7 @@ impl de::Deserialize for ZonePlan {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<ZonePlan, S::Error> {
-        state.visit(&mut de::PrimitiveVisitor)
+        state.visit(&mut de::PrimitiveVisitor::new())
     }
 }
 
@@ -544,7 +542,7 @@ impl de::Deserialize for Country {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<Country, S::Error> {
-        state.visit(&mut de::PrimitiveVisitor)
+        state.visit(&mut de::PrimitiveVisitor::new())
     }
 }
 
@@ -677,7 +675,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
         // we would have failed if `reserve` overflowed.
         dst.set_len(dst_len + src_len);
 
-        ::std::ptr::copy_nonoverlapping_memory(
+        ::std::ptr::copy_nonoverlapping(
             dst.as_mut_ptr().offset(dst_len as isize),
             src.as_ptr(),
             src_len);
@@ -712,7 +710,7 @@ fn test_encoder() {
         log.encode(&mut encoder).unwrap();
     }
 
-    assert_eq!(&wr[], JSON_STR);
+    assert_eq!(&wr, &JSON_STR);
 }
 
 #[bench]
@@ -758,11 +756,11 @@ fn bench_serializer(b: &mut Bencher) {
 fn test_serializer_vec() {
     let log = Log::new();
     let wr = Vec::with_capacity(1024);
-    let mut serializer = json::Writer::new(wr);
+    let mut serializer = json::Serializer::new(wr);
     serializer.visit(&log).unwrap();
 
     let json = serializer.into_inner();
-    assert_eq!(&json[], JSON_STR.as_bytes());
+    assert_eq!(&json, &JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -776,7 +774,7 @@ fn bench_serializer_vec(b: &mut Bencher) {
     b.iter(|| {
         wr.clear();
 
-        let mut serializer = json::Writer::new(wr.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
         let _json = serializer.into_inner();
     });
@@ -792,9 +790,9 @@ fn bench_serializer_slice(b: &mut Bencher) {
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }
-        let mut wr = &mut buf[];
+        let mut wr = &mut buf[..];
 
-        let mut serializer = json::Writer::new(wr.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
         let _json = serializer.into_inner();
     });
@@ -807,12 +805,12 @@ fn test_serializer_my_mem_writer0() {
     let mut wr = MyMemWriter0::with_capacity(1024);
 
     {
-        let mut serializer = json::Writer::new(wr.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
         let _json = serializer.into_inner();
     }
 
-    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
+    assert_eq!(&wr.buf, &JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -826,7 +824,7 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
     b.iter(|| {
         wr.buf.clear();
 
-        let mut serializer = json::Writer::new(wr.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
         let _json = serializer.into_inner();
     });
@@ -839,12 +837,12 @@ fn test_serializer_my_mem_writer1() {
     let mut wr = MyMemWriter1::with_capacity(1024);
 
     {
-        let mut serializer = json::Writer::new(wr.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
         let _json = serializer.into_inner();
     }
 
-    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
+    assert_eq!(&wr.buf, &JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -858,7 +856,7 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
     b.iter(|| {
         wr.buf.clear();
 
-        let mut serializer = json::Writer::new(wr.by_ref());
+        let mut serializer = json::Serializer::new(wr.by_ref());
         serializer.visit(&log).unwrap();
         let _json = serializer.into_inner();
     });
@@ -1044,7 +1042,7 @@ fn test_manual_serialize_vec_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1069,7 +1067,7 @@ fn test_manual_serialize_vec_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1095,7 +1093,7 @@ fn test_manual_serialize_my_mem_writer0_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1121,7 +1119,7 @@ fn test_manual_serialize_my_mem_writer0_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1147,7 +1145,7 @@ fn test_manual_serialize_my_mem_writer1_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1173,7 +1171,7 @@ fn test_manual_serialize_my_mem_writer1_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]

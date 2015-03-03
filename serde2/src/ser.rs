@@ -1108,14 +1108,14 @@ mod tests {
             false => vec![Token::Bool(false)],
         }
         test_isizes {
-            0is => vec![Token::Isize(0)],
+            0isize => vec![Token::Isize(0)],
             0i8 => vec![Token::I8(0)],
             0i16 => vec![Token::I16(0)],
             0i32 => vec![Token::I32(0)],
             0i64 => vec![Token::I64(0)],
         }
         test_usizes {
-            0us => vec![Token::Usize(0)],
+            0usize => vec![Token::Usize(0)],
             0u8 => vec![Token::U8(0)],
             0u16 => vec![Token::U16(0)],
             0u32 => vec![Token::U32(0)],
@@ -1144,7 +1144,7 @@ mod tests {
                 Token::SeqStart(0),
                 Token::SeqEnd,
             ],
-            &[1, 2, 3][] => vec![
+            &[1, 2, 3][..] => vec![
                 Token::SeqStart(3),
                     Token::SeqSep(true),
                     Token::I32(1),

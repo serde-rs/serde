@@ -1,6 +1,6 @@
 use std::error;
 use std::fmt;
-use std::old_io;
+use std::io;
 
 use de;
 
@@ -81,7 +81,7 @@ impl fmt::Debug for ErrorCode {
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),
-    IoError(old_io::IoError),
+    IoError(io::Error),
     /*
     ExpectedError(String, String),
     */
@@ -139,8 +139,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::FromError<old_io::IoError> for Error {
-    fn from_error(error: old_io::IoError) -> Error {
+impl error::FromError<io::Error> for Error {
+    fn from_error(error: io::Error) -> Error {
         Error::IoError(error)
     }
 }

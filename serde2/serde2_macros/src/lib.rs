@@ -140,7 +140,7 @@ fn serialize_substructure(cx: &ExtCtxt,
                            visitor,
                            substr.type_ident,
                            variant,
-                           &fields[],
+                           &fields,
                            generics)
         }
 
@@ -510,7 +510,7 @@ fn serialize_variant(
         ),
     );
 
-    let impl_ident = ast_util::impl_pretty_name(&opt_trait_ref, &self_ty);
+    let impl_ident = ast_util::impl_pretty_name(&opt_trait_ref, Some(&self_ty));
 
     let methods = vec![
         ast::MethodImplItem(
@@ -674,7 +674,7 @@ fn deserialize_struct(
                     type_ident,
                     struct_ident,
                     struct_path,
-                    &fields[],
+                    &fields,
                     state)
             }
         }
@@ -685,7 +685,7 @@ fn deserialize_struct(
                 type_ident,
                 struct_ident,
                 struct_path,
-                &fields[],
+                &fields,
                 state,
                 struct_def)
         }
@@ -752,7 +752,7 @@ fn deserialize_struct_unnamed_fields(
         cx,
         span,
         struct_path,
-        &field_names[],
+        &field_names,
     );
 
     quote_expr!(cx, {
@@ -835,7 +835,7 @@ fn deserialize_struct_named_fields(
     let field_deserializer = declare_map_field_deserializer(
         cx,
         span,
-        &field_names[],
+        &field_names,
         fields,
         struct_def,
     );
@@ -844,7 +844,7 @@ fn deserialize_struct_named_fields(
         cx,
         span,
         struct_path,
-        &field_names[],
+        &field_names,
         fields,
         struct_def
     );
@@ -1177,7 +1177,7 @@ fn deserialize_enum_variant(
                     cx,
                     span,
                     variant_path,
-                    &field_names[],
+                    &field_names,
                 );
 
                 quote_expr!(cx, {
@@ -1206,7 +1206,7 @@ fn deserialize_enum_variant(
             let field_deserializer = declare_map_field_deserializer(
                 cx,
                 span,
-                &field_names[],
+                &field_names,
                 fields,
                 match variant_ptr.node.kind {
                     ast::VariantKind::StructVariantKind(ref sd) => &*sd,
@@ -1218,7 +1218,7 @@ fn deserialize_enum_variant(
                 cx,
                 span,
                 variant_path,
-                &field_names[],
+                &field_names,
                 fields,
                 match variant_ptr.node.kind {
                     ast::VariantKind::StructVariantKind(ref sd) => &*sd,
