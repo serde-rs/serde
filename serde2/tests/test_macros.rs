@@ -31,4 +31,6 @@ enum Enum<'a, A: 'a, B: /* Trait + */ 'a, C> where C: /* Trait + */ 'a {
     },
 }
 
-fn main() {}
+#[test]
+fn test() {
+}

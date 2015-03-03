@@ -83,7 +83,7 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
     #[inline]
     fn parse_value<
         V: de::Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
         self.parse_whitespace();
 
         if self.eof() {
@@ -142,7 +142,7 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
     #[inline]
     fn parse_number<
         V: de::Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
         let mut neg = 1;
 
         if self.ch_is(b'-') {
@@ -389,7 +389,7 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer for Deserializer<Iter> {
     #[inline]
     fn visit<
         V: de::Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+    >(&mut self, visitor: V) -> Result<V::Value, Error> {
         self.parse_value(visitor)
     }
 }

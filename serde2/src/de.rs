@@ -25,7 +25,7 @@ pub trait Deserializer {
 
     fn visit<
         V: Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Self::Error>;
+    >(&mut self, visitor: V) -> Result<V::Value, Self::Error>;
 
     /// The `visit_option` method allows a `Deserialize` type to inform the
     /// `Deserializer` that it's expecting an optional value. This allows
@@ -35,7 +35,7 @@ pub trait Deserializer {
     #[inline]
     fn visit_option<
         V: Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Self::Error> {
+    >(&mut self, visitor: V) -> Result<V::Value, Self::Error> {
         self.visit(visitor)
     }
 }
@@ -264,13 +264,13 @@ pub trait EnumVisitor {
 
     fn visit_seq<
         V: EnumSeqVisitor,
-    >(&mut self, _visitor: &mut V) -> Result<V::Value, Self::Error> {
+    >(&mut self, _visitor: V) -> Result<V::Value, Self::Error> {
         Err(Error::syntax_error())
     }
 
     fn visit_map<
         V: EnumMapVisitor,
-    >(&mut self, _visitor: &mut V) -> Result<V::Value, Self::Error> {
+    >(&mut self, _visitor: V) -> Result<V::Value, Self::Error> {
         Err(Error::syntax_error())
     }
 }
@@ -315,7 +315,7 @@ impl Deserialize for () {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<(), D::Error> {
-        deserializer.visit(&mut UnitVisitor)
+        deserializer.visit(UnitVisitor)
     }
 }
 
@@ -337,7 +337,7 @@ impl Deserialize for bool {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<bool, D::Error> {
-        deserializer.visit(&mut BoolVisitor)
+        deserializer.visit(BoolVisitor)
     }
 }
 
@@ -396,7 +396,7 @@ macro_rules! impl_deserialize_num {
             fn deserialize<
                 D: Deserializer,
             >(deserializer: &mut D) -> Result<$ty, D::Error> {
-                deserializer.visit(&mut PrimitiveVisitor::new())
+                deserializer.visit(PrimitiveVisitor::new())
             }
         }
     }
@@ -451,7 +451,7 @@ impl Deserialize for char {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<char, D::Error> {
-        deserializer.visit(&mut CharVisitor)
+        deserializer.visit(CharVisitor)
     }
 }
 
@@ -479,7 +479,7 @@ impl Deserialize for String {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<String, D::Error> {
-        deserializer.visit(&mut StringVisitor)
+        deserializer.visit(StringVisitor)
     }
 }
 
@@ -513,7 +513,7 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<Option<T>, D::Error> {
-        deserializer.visit_option(&mut OptionVisitor { marker: PhantomData })
+        deserializer.visit_option(OptionVisitor { marker: PhantomData })
     }
 }
 
@@ -526,6 +526,7 @@ struct VecVisitor<T> {
 impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     type Value = Vec<T>;
 
+    #[inline]
     fn visit_seq<
         V: SeqVisitor,
     >(&mut self, mut visitor: V) -> Result<Vec<T>, V::Error> {
@@ -544,7 +545,7 @@ impl<T: Deserialize> Deserialize for Vec<T> {
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<Vec<T>, D::Error> {
-        deserializer.visit(&mut VecVisitor { marker: PhantomData })
+        deserializer.visit(VecVisitor { marker: PhantomData })
     }
 }
 
@@ -588,7 +589,7 @@ macro_rules! tuple_impls {
                 fn deserialize<
                     D: Deserializer,
                 >(deserializer: &mut D) -> Result<($($name,)+), D::Error> {
-                    deserializer.visit(&mut $visitor { marker: PhantomData })
+                    deserializer.visit($visitor { marker: PhantomData })
                 }
             }
         )+
@@ -644,7 +645,7 @@ impl<K, V> Deserialize for HashMap<K, V>
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error> {
-        deserializer.visit(&mut HashMapVisitor { marker: PhantomData })
+        deserializer.visit(HashMapVisitor { marker: PhantomData })
     }
 }
 
@@ -681,7 +682,7 @@ impl<
     fn deserialize<
         D: Deserializer,
     >(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error> {
-        deserializer.visit(&mut BTreeMapVisitor { marker: PhantomData })
+        deserializer.visit(BTreeMapVisitor { marker: PhantomData })
     }
 }
 
@@ -764,7 +765,7 @@ mod tests {
 
         fn visit<
             V: Visitor,
-        >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+        >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
             match self.tokens.next() {
                 Some(Token::Bool(v)) => visitor.visit_bool(v),
                 Some(Token::Isize(v)) => visitor.visit_isize(v),
@@ -829,7 +830,7 @@ mod tests {
         #[inline]
         fn visit_option<
             V: Visitor,
-        >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+        >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
             match self.tokens.peek() {
                 Some(&Token::Option(false)) => {
                     self.tokens.next();
@@ -959,7 +960,7 @@ mod tests {
 
         fn visit_seq<
             V: super::EnumSeqVisitor,
-        >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+        >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
             let token = self.de.tokens.next();
             match token {
                 Some(Token::SeqStart(len)) => {
@@ -982,7 +983,7 @@ mod tests {
 
         fn visit_map<
             V: super::EnumMapVisitor,
-        >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+        >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
             match self.de.tokens.next() {
                 Some(Token::MapStart(len)) => {
                     let value = try!(visitor.visit(TokenDeserializerMapVisitor {
@@ -1012,7 +1013,7 @@ mod tests {
         fn deserialize<
             D: Deserializer,
         >(deserializer: &mut D) -> Result<NamedUnit, D::Error> {
-            deserializer.visit(&mut NamedUnitVisitor)
+            deserializer.visit(NamedUnitVisitor)
         }
     }
 
@@ -1054,7 +1055,7 @@ mod tests {
         fn deserialize<
             D: Deserializer,
         >(deserializer: &mut D) -> Result<NamedSeq, D::Error> {
-            deserializer.visit(&mut NamedSeqVisitor)
+            deserializer.visit(NamedSeqVisitor)
         }
     }
 
@@ -1110,7 +1111,7 @@ mod tests {
         fn deserialize<
             D: Deserializer,
         >(deserializer: &mut D) -> Result<NamedMap, D::Error> {
-            deserializer.visit(&mut NamedMapVisitor)
+            deserializer.visit(NamedMapVisitor)
         }
     }
 
@@ -1161,7 +1162,7 @@ mod tests {
         fn deserialize<
             D: Deserializer,
         >(deserializer: &mut D) -> Result<NamedMapField, D::Error> {
-            deserializer.visit(&mut NamedMapFieldVisitor)
+            deserializer.visit(NamedMapFieldVisitor)
         }
     }
 
@@ -1195,7 +1196,7 @@ mod tests {
         fn deserialize<
             D: Deserializer,
         >(deserializer: &mut D) -> Result<Enum, D::Error> {
-            deserializer.visit(&mut EnumVisitor)
+            deserializer.visit(EnumVisitor)
         }
     }
 
@@ -1222,8 +1223,8 @@ mod tests {
                     try!(visitor.visit_unit());
                     Ok(Enum::Unit)
                 }
-                "Seq" => visitor.visit_seq(&mut EnumSeqVisitor),
-                "Map" => visitor.visit_map(&mut EnumMapVisitor),
+                "Seq" => visitor.visit_seq(EnumSeqVisitor),
+                "Map" => visitor.visit_map(EnumMapVisitor),
                 _ => Err(super::Error::syntax_error()),
             }
         }
@@ -1295,7 +1296,7 @@ mod tests {
         fn deserialize<
             D: Deserializer,
         >(deserializer: &mut D) -> Result<EnumMapField, D::Error> {
-            deserializer.visit(&mut EnumMapFieldVisitor)
+            deserializer.visit(EnumMapFieldVisitor)
         }
     }
 

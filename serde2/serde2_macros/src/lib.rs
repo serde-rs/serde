@@ -585,13 +585,13 @@ pub fn expand_derive_deserialize(
                 generics: LifetimeBounds {
                     lifetimes: Vec::new(),
                     bounds: vec![
-                        ("__S", vec![Path::new(vec!["serde2", "de", "Deserializer"])]),
+                        ("__D", vec![Path::new(vec!["serde2", "de", "Deserializer"])]),
                     ],
                 },
                 explicit_self: None,
                 args: vec![
                     Ty::Ptr(
-                        Box::new(Ty::Literal(Path::new_local("__S"))),
+                        Box::new(Ty::Literal(Path::new_local("__D"))),
                         Borrowed(None, MutMutable)
                     ),
                 ],
@@ -601,7 +601,7 @@ pub fn expand_derive_deserialize(
                         None,
                         vec![
                             Box::new(Ty::Self_),
-                            Box::new(Ty::Literal(Path::new_(vec!["__S", "Error"],
+                            Box::new(Ty::Literal(Path::new_(vec!["__D", "Error"],
                                                             None,
                                                             vec![],
                                                             false))),
@@ -729,7 +729,7 @@ fn deserialize_struct_empty_fields(
             }
         }
 
-        $state.visit(&mut __Visitor)
+        $state.visit(__Visitor)
     })
 }
 
@@ -778,7 +778,7 @@ fn deserialize_struct_unnamed_fields(
             }
         }
 
-        $state.visit(&mut __Visitor)
+        $state.visit(__Visitor)
     })
 }
 
@@ -876,7 +876,7 @@ fn deserialize_struct_named_fields(
             }
         }
 
-        $state.visit(&mut __Visitor)
+        $state.visit(__Visitor)
     })
 }
 
@@ -986,7 +986,7 @@ fn declare_map_field_deserializer(
                 fn deserialize<
                     __S: ::serde2::de::Deserializer,
                 >(state: &mut __S) -> Result<__Field, __S::Error> {
-                    state.visit(&mut __FieldVisitor)
+                    state.visit(__FieldVisitor)
                 }
             }
         ).unwrap(),
@@ -1143,7 +1143,7 @@ fn deserialize_enum(
             }
         }
 
-        $state.visit(&mut __Visitor)
+        $state.visit(__Visitor)
     })
 }
 
@@ -1193,7 +1193,7 @@ fn deserialize_enum_variant(
                         }
                     }
 
-                    $state.visit_seq(&mut __Visitor)
+                    $state.visit_seq(__Visitor)
                 })
             }
         }
@@ -1241,7 +1241,7 @@ fn deserialize_enum_variant(
                     }
                 }
 
-                $state.visit_map(&mut __Visitor)
+                $state.visit_map(__Visitor)
             })
         }
     }

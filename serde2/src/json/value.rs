@@ -267,7 +267,7 @@ impl de::Deserializer for Deserializer {
     #[inline]
     fn visit<
         V: de::Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
         let value = match self.value.take() {
             Some(value) => value,
             None => { return Err(de::Error::end_of_stream_error()); }
@@ -302,7 +302,7 @@ impl de::Deserializer for Deserializer {
     #[inline]
     fn visit_option<
         V: de::Visitor,
-    >(&mut self, visitor: &mut V) -> Result<V::Value, Error> {
+    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
         match self.value {
             Some(Value::Null) => visitor.visit_none(),
             Some(_) => visitor.visit_some(self),
