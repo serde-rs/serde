@@ -6,3 +6,6 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 [lib]
 name = "serde2_macros"
 plugin = true
+
+[dependencies]
+syntax_ast_builder = "0.1.0"

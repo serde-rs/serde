@@ -2,6 +2,7 @@
 
 extern crate syntax;
 extern crate rustc;
+extern crate "syntax_ast_builder" as builder;
 
 use syntax::ast::{
     Ident,
@@ -1211,6 +1212,9 @@ fn deserialize_enum(
 ) -> P<ast::Expr> {
     let type_name = cx.expr_str(span, token::get_ident(type_ident));
 
+    let ctx = builder::Ctx::new();
+    let builder = builder::AstBuilder::new(&ctx);
+
     // Match arms to extract a variant from a string
     let variant_arms: Vec<ast::Arm> = fields.iter()
         .zip(enum_def.variants.iter())
@@ -1225,7 +1229,7 @@ fn deserialize_enum(
                 variant_ptr,
             );
 
-            let s = cx.expr_str(span, token::get_ident(name));
+            let s = builder.expr().str(name);
             quote_arm!(cx, $s => $value,)
         })
         .collect();
