@@ -48,12 +48,6 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
     type Error = io::Error;
 
     #[inline]
-    fn visit_unit(&mut self) -> io::Result<()> {
-        try!(self.writer.write(b"null"));
-        Ok(())
-    }
-
-    #[inline]
     fn visit_bool(&mut self, value: bool) -> io::Result<()> {
         if value {
             try!(self.writer.write(b"true"));
@@ -146,6 +140,20 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
     }
 
     #[inline]
+    fn visit_unit(&mut self) -> io::Result<()> {
+        try!(self.writer.write(b"null"));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> io::Result<()> {
+        try!(self.writer.write(b"{"));
+        try!(self.visit_str(variant));
+        try!(self.writer.write(b":[]}"));
+        Ok(())
+    }
+
+    #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
@@ -154,6 +162,19 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
         while let Some(()) = try!(visitor.visit(self)) { }
 
         try!(self.writer.write(b"]"));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
+        where V: ser::SeqVisitor,
+    {
+        try!(self.writer.write(b"{"));
+        try!(self.visit_str(variant));
+        try!(self.writer.write(b":"));
+        try!(self.visit_seq(visitor));
+        try!(self.writer.write(b"}"));
+
         Ok(())
     }
 
@@ -176,6 +197,19 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
 
         while let Some(()) = try!(visitor.visit(self)) { }
 
+        try!(self.writer.write(b"}"));
+
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
+        where V: ser::MapVisitor,
+    {
+        try!(self.writer.write(b"{"));
+        try!(self.visit_str(variant));
+        try!(self.writer.write(b":"));
+        try!(self.visit_map(visitor));
         try!(self.writer.write(b"}"));
 
         Ok(())

@@ -194,6 +194,26 @@ impl ser::Visitor for Serializer {
     }
 
     #[inline]
+    fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> Result<(), ()>
+        where V: ser::SeqVisitor,
+    {
+        try!(self.visit_seq(visitor));
+
+        let value = match self.state.pop().unwrap() {
+            State::Value(value) => value,
+            _ => panic!(),
+        };
+
+        let mut object = BTreeMap::new();
+
+        object.insert(variant.to_string(), value);
+
+        self.state.push(State::Value(Value::Object(object)));
+
+        Ok(())
+    }
+
+    #[inline]
     fn visit_seq_elt<T>(&mut self, _first: bool, value: T) -> Result<(), ()>
         where T: ser::Serialize,
     {
@@ -228,6 +248,26 @@ impl ser::Visitor for Serializer {
             }
             _ => panic!(),
         }
+
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> Result<(), ()>
+        where V: ser::MapVisitor,
+    {
+        try!(self.visit_map(visitor));
+
+        let value = match self.state.pop().unwrap() {
+            State::Value(value) => value,
+            _ => panic!(),
+        };
+
+        let mut object = BTreeMap::new();
+
+        object.insert(variant.to_string(), value);
+
+        self.state.push(State::Value(Value::Object(object)));
 
         Ok(())
     }

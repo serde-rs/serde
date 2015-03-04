@@ -54,7 +54,9 @@ macro_rules! treemap {
 #[derive_deserialize]
 enum Animal {
     Dog,
-    Frog(String, Vec<isize>)
+    Frog(String, Vec<isize>),
+    Cat { age: usize, name: String },
+
 }
 
 #[derive(PartialEq, Debug)]
@@ -349,10 +351,26 @@ fn test_write_tuple() {
 #[test]
 fn test_write_enum() {
     test_encode_ok(&[
-        (Animal::Dog, "{\"Dog\":[]}"),
-        (Animal::Frog("Henry".to_string(), vec!()), "{\"Frog\":[\"Henry\",[]]}"),
-        (Animal::Frog("Henry".to_string(), vec!(349)), "{\"Frog\":[\"Henry\",[349]]}"),
-        (Animal::Frog("Henry".to_string(), vec!(349, 102)), "{\"Frog\":[\"Henry\",[349,102]]}"),
+        (
+            Animal::Dog,
+            "{\"Dog\":[]}",
+        ),
+        (
+            Animal::Frog("Henry".to_string(), vec!()),
+            "{\"Frog\":[\"Henry\",[]]}",
+        ),
+        (
+            Animal::Frog("Henry".to_string(), vec!(349)),
+            "{\"Frog\":[\"Henry\",[349]]}",
+        ),
+        (
+            Animal::Frog("Henry".to_string(), vec!(349, 102)),
+            "{\"Frog\":[\"Henry\",[349,102]]}",
+        ),
+        (
+            Animal::Cat { age: 5, name: "Kate".to_string() },
+            "{\"Cat\":{\"age\":5,\"name\":\"Kate\"}}"
+        ),
     ]);
 
     /*
