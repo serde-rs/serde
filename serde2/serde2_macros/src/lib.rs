@@ -126,18 +126,41 @@ fn serialize_substructure(cx: &ExtCtxt,
 
     match (&item.node, &*substr.fields) {
         (&ast::ItemStruct(ref struct_def, _), &Struct(ref fields)) => {
-            if fields.is_empty() {
-                serialize_tuple_struct(cx,
-                                       span,
-                                       visitor,
-                                       substr.type_ident)
-            } else {
-                serialize_struct(cx,
-                                 span,
-                                 visitor,
-                                 substr.type_ident,
-                                 fields,
-                                 struct_def)
+            let mut named_fields = vec![];
+            let mut unnamed_fields = vec![];
+
+            for field in fields {
+                match field.name {
+                    Some(name) => { named_fields.push((name, field.span)); }
+                    None => { unnamed_fields.push(field.span); }
+                }
+            }
+
+            match (named_fields.is_empty(), unnamed_fields.is_empty()) {
+                (true, true) => {
+                    serialize_unit_struct(cx,
+                                          span,
+                                          visitor,
+                                          substr.type_ident)
+                }
+                (true, false) => {
+                    serialize_tuple_struct(cx,
+                                           span,
+                                           visitor,
+                                           substr.type_ident,
+                                           &unnamed_fields)
+                }
+                (false, true) => {
+                    serialize_struct(cx,
+                                     span,
+                                     visitor,
+                                     substr.type_ident,
+                                     &named_fields,
+                                     struct_def)
+                }
+                (false, false) => {
+                    panic!("struct has named and unnamed fields")
+                }
             }
         }
 
@@ -155,10 +178,10 @@ fn serialize_substructure(cx: &ExtCtxt,
     }
 }
 
-fn serialize_tuple_struct(cx: &ExtCtxt,
-                          span: Span,
-                          visitor: P<Expr>,
-                          type_ident: Ident) -> P<Expr> {
+fn serialize_unit_struct(cx: &ExtCtxt,
+                         span: Span,
+                         visitor: P<Expr>,
+                         type_ident: Ident) -> P<Expr> {
     let type_name = cx.expr_str(
         span,
         token::get_ident(type_ident));
@@ -166,11 +189,79 @@ fn serialize_tuple_struct(cx: &ExtCtxt,
     quote_expr!(cx, $visitor.visit_named_unit($type_name))
 }
 
+fn serialize_tuple_struct(cx: &ExtCtxt,
+                          span: Span,
+                          visitor: P<Expr>,
+                          type_ident: Ident,
+                          fields: &[Span]) -> P<Expr> {
+    let type_name = cx.expr_str(
+        span,
+        token::get_ident(type_ident));
+    let len = fields.len();
+
+    let arms: Vec<ast::Arm> = fields.iter()
+        .enumerate()
+        .map(|(i, span)| {
+            let first = if i == 0 {
+                quote_expr!(cx, true)
+            } else {
+                quote_expr!(cx, false)
+            };
+
+            let expr = cx.expr_tup_field_access(
+                *span,
+                quote_expr!(cx, self.value),
+                i);
+
+            let i = i as u32;
+
+            quote_arm!(cx,
+                $i => {
+                    self.state += 1;
+                    let v = try!(visitor.visit_seq_elt($first, &$expr));
+                    Ok(Some(v))
+                }
+            )
+        })
+        .collect();
+
+    quote_expr!(cx, {
+        struct Visitor<'a> {
+            state: u32,
+            value: &'a $type_ident,
+        }
+
+        impl<'a> ::serde2::ser::SeqVisitor for Visitor<'a> {
+            #[inline]
+            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+                where V: ::serde2::ser::Visitor,
+            {
+                match self.state {
+                    $arms
+                    _ => Ok(None),
+                }
+            }
+
+            #[inline]
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                let size = $len - (self.state as usize);
+                (size, Some(size))
+            }
+        }
+
+        $visitor.visit_named_seq($type_name, Visitor {
+            value: self,
+            state: 0,
+        })
+    })
+}
+
+
 fn serialize_struct(cx: &ExtCtxt,
                     span: Span,
                     visitor: P<Expr>,
                     type_ident: Ident,
-                    fields: &[FieldInfo],
+                    fields: &[(Ident, Span)],
                     struct_def: &StructDef) -> P<Expr> {
     let type_name = cx.expr_str(
         span,
@@ -184,14 +275,13 @@ fn serialize_struct(cx: &ExtCtxt,
     let arms: Vec<ast::Arm> = fields.iter()
         .zip(aliases.iter())
         .enumerate()
-        .map(|(i, (&FieldInfo { name, span, .. }, alias_lit ))| {
+        .map(|(i, (&(name, span), alias_lit))| {
             let first = if i == 0 {
                 quote_expr!(cx, true)
             } else {
                 quote_expr!(cx, false)
             };
 
-            let name = name.unwrap();
             let expr = match alias_lit {
                 &Some(lit) => {
                     let lit = (*lit).clone();
@@ -242,9 +332,6 @@ fn serialize_struct(cx: &ExtCtxt,
         })
     })
 }
-
-
-
 
 fn serialize_enum(
     cx: &ExtCtxt,

@@ -281,59 +281,11 @@ impl<'a> Visitor for AssertSerializer<'a> {
     }
 }
 
+#[derive_serialize]
 struct NamedUnit;
 
-impl Serialize for NamedUnit {
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
-        where V: Visitor,
-    {
-        visitor.visit_named_unit("NamedUnit")
-    }
-}
-
+#[derive_serialize]
 struct NamedSeq(i32, i32, i32);
-
-impl Serialize for NamedSeq {
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
-        where V: Visitor,
-    {
-        visitor.visit_named_seq("NamedSeq", NamedSeqVisitor {
-            tuple: self,
-            state: 0,
-        })
-    }
-}
-
-struct NamedSeqVisitor<'a> {
-    tuple: &'a NamedSeq,
-    state: u8,
-}
-
-impl<'a> SeqVisitor for NamedSeqVisitor<'a> {
-    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
-        where V: Visitor,
-    {
-        match self.state {
-            0 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_seq_elt(true, &self.tuple.0))))
-            }
-            1 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_seq_elt(false, &self.tuple.1))))
-            }
-            2 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_seq_elt(false, &self.tuple.2))))
-            }
-            _ => Ok(None)
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (3, Some(3))
-    }
-}
 
 enum Enum {
     Unit,
