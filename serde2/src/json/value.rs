@@ -36,6 +36,69 @@ impl ser::Serialize for Value {
     }
 }
 
+impl de::Deserialize for Value {
+    #[inline]
+    fn deserialize<D>(deserializer: &mut D) -> Result<Value, D::Error>
+        where D: de::Deserializer,
+    {
+        struct ValueVisitor;
+
+        impl de::Visitor for ValueVisitor {
+            type Value = Value;
+
+            #[inline]
+            fn visit_unit<E>(&mut self) -> Result<Value, E> {
+                Ok(Value::Null)
+            }
+
+            #[inline]
+            fn visit_bool<E>(&mut self, value: bool) -> Result<Value, E> {
+                Ok(Value::Bool(value))
+            }
+
+            #[inline]
+            fn visit_i64<E>(&mut self, value: i64) -> Result<Value, E> {
+                Ok(Value::I64(value))
+            }
+
+            #[inline]
+            fn visit_f64<E>(&mut self, value: f64) -> Result<Value, E> {
+                Ok(Value::F64(value))
+            }
+
+            #[inline]
+            fn visit_str<E>(&mut self, value: &str) -> Result<Value, E>
+                where E: de::Error,
+            {
+                self.visit_string(value.to_string())
+            }
+
+            #[inline]
+            fn visit_string<E>(&mut self, value: String) -> Result<Value, E> {
+                Ok(Value::String(value))
+            }
+
+            #[inline]
+            fn visit_seq<V>(&mut self, visitor: V) -> Result<Value, V::Error>
+                where V: de::SeqVisitor,
+            {
+                let values = try!(de::VecVisitor::new().visit_seq(visitor));
+                Ok(Value::Array(values))
+            }
+
+            #[inline]
+            fn visit_map<V>(&mut self, visitor: V) -> Result<Value, V::Error>
+                where V: de::MapVisitor,
+            {
+                let values = try!(de::BTreeMapVisitor::new().visit_map(visitor));
+                Ok(Value::Object(values))
+            }
+        }
+
+        deserializer.visit(ValueVisitor)
+    }
+}
+
 struct WriterFormatter<'a, 'b: 'a> {
     inner: &'a mut fmt::Formatter<'b>,
 }

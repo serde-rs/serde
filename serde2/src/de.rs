@@ -518,8 +518,16 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct VecVisitor<T> {
+pub struct VecVisitor<T> {
     marker: PhantomData<T>,
+}
+
+impl<T> VecVisitor<T> {
+    pub fn new() -> Self {
+        VecVisitor {
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<T> Visitor for VecVisitor<T> where T: Deserialize {
@@ -544,7 +552,7 @@ impl<T: Deserialize> Deserialize for Vec<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Vec<T>, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(VecVisitor { marker: PhantomData })
+        deserializer.visit(VecVisitor::new())
     }
 }
 
@@ -612,8 +620,17 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct HashMapVisitor<K, V> {
+pub struct HashMapVisitor<K, V> {
     marker: PhantomData<HashMap<K, V>>,
+}
+
+impl<K, V> HashMapVisitor<K, V> {
+    #[inline]
+    pub fn new() -> Self {
+        HashMapVisitor {
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<K, V> Visitor for HashMapVisitor<K, V>
@@ -644,14 +661,23 @@ impl<K, V> Deserialize for HashMap<K, V>
     fn deserialize<D>(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(HashMapVisitor { marker: PhantomData })
+        deserializer.visit(HashMapVisitor::new())
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct BTreeMapVisitor<K, V> {
+pub struct BTreeMapVisitor<K, V> {
     marker: PhantomData<BTreeMap<K, V>>,
+}
+
+impl<K, V> BTreeMapVisitor<K, V> {
+    #[inline]
+    pub fn new() -> Self {
+        BTreeMapVisitor {
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<K, V> Visitor for BTreeMapVisitor<K, V>
@@ -681,6 +707,6 @@ impl<
     fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(BTreeMapVisitor { marker: PhantomData })
+        deserializer.visit(BTreeMapVisitor::new())
     }
 }

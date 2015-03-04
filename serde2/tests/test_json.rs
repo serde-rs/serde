@@ -198,12 +198,12 @@ fn test_write_list() {
         (long_test_list, "[false,null,[\"foo\\nbar\",3.5]]"),
     ]);
 
+    /*
     let long_test_list = Value::Array(vec![
         Value::Bool(false),
         Value::Null,
         Value::Array(vec![Value::String("foo\nbar".to_string()), Value::F64(3.5)])]);
 
-    /*
     test_pretty_encode_ok(&[
         (
             long_test_list,
@@ -425,7 +425,6 @@ fn test_write_enum() {
     */
 }
 
-/*
 #[test]
 fn test_write_option() {
     test_encode_ok(&[
@@ -460,39 +459,33 @@ fn test_write_option() {
 }
 
 // FIXME (#5527): these could be merged once UFCS is finished.
-fn test_parse_err<
-    'a,
-    T: Debug + de::Deserialize
->(errors: &[(&'a str, Error)]) {
+fn test_parse_err<'a, T>(errors: &[(&'a str, Error)])
+    where T: Debug + de::Deserialize,
+{
     for &(s, ref err) in errors {
         let v: Result<T, Error> = from_str(s);
         assert_eq!(v.unwrap_err(), *err);
     }
 }
 
-fn test_parse_ok<
-    'a,
-    T: PartialEq + Debug + de::Deserialize
->(errors: &[(&'a str, T)]) {
+fn test_parse_ok<'a, T>(errors: &[(&'a str, T)])
+    where T: PartialEq + Debug + ser::Serialize + de::Deserialize,
+{
     for &(s, ref value) in errors {
         let v: T = from_str(s).unwrap();
         assert_eq!(v, *value);
 
-        let v: Value = from_str(s).unwrap();
-        assert_eq!(v, value.to_json());
-    }
-}
+        // Make sure we can deserialize into a `Value`.
+        let json_value: Value = from_str(s).unwrap();
+        assert_eq!(json_value, to_value(&value));
 
-fn test_json_deserialize_ok<
-    T: PartialEq + Debug + de::Deserialize
->(errors: &[T]) {
-    for value in errors {
-        let v: T = from_value(value.to_json()).unwrap();
+        // Make sure we can deserialize from a `Value`.
+        let v: T = from_value(json_value.clone()).unwrap();
         assert_eq!(v, *value);
 
-        // Make sure we can round trip back to `Json`.
-        let v: Value = from_value(value.to_json()).unwrap();
-        assert_eq!(v, value.to_json());
+        // Make sure we can round trip back to `Value`.
+        let json_value2: Value = from_value(json_value.clone()).unwrap();
+        assert_eq!(json_value, json_value2);
     }
 }
 
@@ -506,13 +499,6 @@ fn test_parse_null() {
 
     test_parse_ok(&[
         ("null", ()),
-    ]);
-}
-
-#[test]
-fn test_json_deserialize_null() {
-    test_json_deserialize_ok(&[
-        (),
     ]);
 }
 
@@ -534,14 +520,6 @@ fn test_parse_bool() {
 }
 
 #[test]
-fn test_json_deserialize_bool() {
-    test_json_deserialize_ok(&[
-        true,
-        false,
-    ]);
-}
-
-#[test]
 fn test_parse_number_errors() {
     test_parse_err::<f64>(&[
         ("+", SyntaxError(ExpectedSomeValue, 1, 1)),
@@ -558,7 +536,7 @@ fn test_parse_number_errors() {
 #[test]
 fn test_parse_i64() {
     test_parse_ok(&[
-        ("3", 3i64),
+        ("3", 3),
         ("-2", -2),
         ("-1234", -1234),
     ]);
@@ -578,26 +556,16 @@ fn test_parse_f64() {
 }
 
 #[test]
-fn test_json_deserialize_numbers() {
-    test_json_deserialize_ok(&[
-        3.0f64,
-        3.1,
-        -1.2,
-        0.4,
-        0.4e5,
-        0.4e15,
-        0.4e-01,
-    ]);
-}
-
-#[test]
-fn test_parse_string() {
+fn test_parse_string_errors() {
     test_parse_err::<string::String>(&[
         ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
         ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
         ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
     ]);
+}
 
+#[test]
+fn test_parse_string() {
     test_parse_ok(&[
         ("\"\"", "".to_string()),
         ("\"foo\"", "foo".to_string()),
@@ -608,21 +576,6 @@ fn test_parse_string() {
         ("\"\\t\"", "\t".to_string()),
         ("\"\\u12ab\"", "\u{12ab}".to_string()),
         ("\"\\uAB12\"", "\u{AB12}".to_string()),
-    ]);
-}
-
-#[test]
-fn test_json_deserialize_str() {
-    test_json_deserialize_ok(&[
-        "".to_string(),
-        "foo".to_string(),
-        "\"".to_string(),
-        "\x08".to_string(),
-        "\n".to_string(),
-        "\r".to_string(),
-        "\t".to_string(),
-        "\u{12ab}".to_string(),
-        "\u{AB12}".to_string(),
     ]);
 }
 
@@ -655,42 +608,22 @@ fn test_parse_list() {
     ]);
 
     test_parse_ok(&[
-        ("[[3], [1, 2]]", vec!(vec!(3is), vec!(1, 2))),
+        ("[[3], [1, 2]]", vec!(vec!(3), vec!(1, 2))),
     ]);
 
     let v: () = from_str("[]").unwrap();
     assert_eq!(v, ());
 
     test_parse_ok(&[
-        ("[1, 2, 3]", (1us, 2us, 3us)),
-    ]);
-}
-
-#[test]
-fn test_json_deserialize_list() {
-    test_json_deserialize_ok(&[
-        vec!(),
-        vec!(()),
-    ]);
-
-    test_json_deserialize_ok(&[
-        vec!(true),
-    ]);
-
-    test_json_deserialize_ok(&[
-        vec!(3, 1),
-    ]);
-
-    test_json_deserialize_ok(&[
-        vec!(vec!(3is), vec!(1, 2)),
+        ("[1, 2, 3]", (1, 2, 3)),
     ]);
 }
 
 #[test]
 fn test_parse_object() {
     test_parse_err::<BTreeMap<string::String, isize>>(&[
-        ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
-        ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
+        ("{", SyntaxError(EOFWhileParsingValue, 1, 2)),
+        ("{ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
         ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
         ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
         ("{\"a\"", SyntaxError(EOFWhileParsingObject, 1, 5)),
@@ -699,7 +632,7 @@ fn test_parse_object() {
         ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
         ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
         ("{\"a\":1 1", SyntaxError(ExpectedObjectCommaOrEnd, 1, 8)),
-        ("{\"a\":1,", SyntaxError(EOFWhileParsingString, 1, 8)),
+        ("{\"a\":1,", SyntaxError(EOFWhileParsingValue, 1, 8)),
         ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
     ]);
 
@@ -708,11 +641,11 @@ fn test_parse_object() {
         ("{ }", treemap!()),
         (
             "{\"a\":3}",
-            treemap!("a".to_string() => 3is)
+            treemap!("a".to_string() => 3)
         ),
         (
             "{ \"a\" : 3 }",
-            treemap!("a".to_string() => 3is)
+            treemap!("a".to_string() => 3)
         ),
         (
             "{\"a\":3,\"b\":4}",
@@ -727,21 +660,8 @@ fn test_parse_object() {
     test_parse_ok(&[
         (
             "{\"a\": {\"b\": 3, \"c\": 4}}",
-            treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4is)),
+            treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
         ),
-    ]);
-}
-
-#[test]
-fn test_json_deserialize_object() {
-    test_json_deserialize_ok(&[
-        treemap!(),
-        treemap!("a".to_string() => 3),
-        treemap!("a".to_string() => 3, "b".to_string() => 4),
-    ]);
-
-    test_json_deserialize_ok(&[
-        treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
     ]);
 }
 
@@ -771,17 +691,7 @@ fn test_parse_struct() {
     ]);
 }
 
-#[test]
-fn test_json_deserialize_struct() {
-    test_json_deserialize_ok(&[
-        Outer {
-            inner: vec![
-                Inner { a: (), b: 2, c: vec!["abc".to_string(), "xyz".to_string()] }
-            ]
-        },
-    ]);
-}
-
+/*
 #[test]
 fn test_parse_option() {
     test_parse_ok(&[
