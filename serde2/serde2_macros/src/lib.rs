@@ -443,8 +443,8 @@ fn serialize_variant(
 
         ast::StructVariantKind(ref struct_def) => {
             (
-                cx.ident_of("SeqVisitor"),
-                cx.ident_of("visit_enum_seq"),
+                cx.ident_of("MapVisitor"),
+                cx.ident_of("visit_enum_map"),
                 struct_def.fields.iter()
                     .map(|field| field.node.ty.clone())
                     .collect()

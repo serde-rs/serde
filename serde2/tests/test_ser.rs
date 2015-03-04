@@ -287,96 +287,11 @@ struct NamedUnit;
 #[derive_serialize]
 struct NamedSeq(i32, i32, i32);
 
+#[derive_serialize]
 enum Enum {
     Unit,
     Seq(i32, i32),
     Map { a: i32, b: i32 },
-}
-
-impl Serialize for Enum {
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
-        where V: Visitor,
-    {
-        match *self {
-            Enum::Unit => {
-                visitor.visit_enum_unit("Enum", "Unit")
-            }
-            Enum::Seq(ref a, ref b) => {
-                visitor.visit_enum_seq("Enum", "Seq", EnumSeqVisitor {
-                    a: a,
-                    b: b,
-                    state: 0,
-                })
-            }
-            Enum::Map { ref a, ref b } => {
-                visitor.visit_enum_map("Enum", "Map", EnumMapVisitor {
-                    a: a,
-                    b: b,
-                    state: 0,
-                })
-            }
-        }
-    }
-}
-
-struct EnumSeqVisitor<'a> {
-    a: &'a i32,
-    b: &'a i32,
-    state: u8,
-}
-
-impl<'a> SeqVisitor for EnumSeqVisitor<'a> {
-    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
-        where V: Visitor,
-    {
-        match self.state {
-            0 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_seq_elt(true, self.a))))
-            }
-            1 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_seq_elt(false, self.b))))
-            }
-            _ => {
-                Ok(None)
-            }
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (2, Some(2))
-    }
-}
-
-struct EnumMapVisitor<'a> {
-    a: &'a i32,
-    b: &'a i32,
-    state: u8,
-}
-
-impl<'a> MapVisitor for EnumMapVisitor<'a> {
-    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
-        where V: Visitor,
-    {
-        match self.state {
-            0 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_map_elt(true, "a", self.a))))
-            }
-            1 => {
-                self.state += 1;
-                Ok(Some(try!(visitor.visit_map_elt(false, "b", self.b))))
-            }
-            _ => {
-                Ok(None)
-            }
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (2, Some(2))
-    }
 }
 
 macro_rules! btreemap {
