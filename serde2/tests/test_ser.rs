@@ -281,6 +281,8 @@ impl<'a> Visitor for AssertSerializer<'a> {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+
 #[derive_serialize]
 struct NamedUnit;
 
@@ -288,11 +290,20 @@ struct NamedUnit;
 struct NamedSeq(i32, i32, i32);
 
 #[derive_serialize]
+struct NamedMap {
+    a: i32,
+    b: i32,
+    c: i32,
+}
+
+#[derive_serialize]
 enum Enum {
     Unit,
     Seq(i32, i32),
     Map { a: i32, b: i32 },
 }
+
+//////////////////////////////////////////////////////////////////////////
 
 macro_rules! btreemap {
     () => {
@@ -488,6 +499,23 @@ declare_tests! {
                 Token::SeqSep(false),
                 Token::I32(3),
             Token::SeqEnd,
+        ],
+    }
+    test_named_map {
+        NamedMap { a: 1, b: 2, c: 3 } => vec![
+            Token::NamedMapStart("NamedMap", 3),
+                Token::MapSep(true),
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::MapSep(false),
+                Token::Str("b"),
+                Token::I32(2),
+
+                Token::MapSep(false),
+                Token::Str("c"),
+                Token::I32(3),
+            Token::MapEnd,
         ],
     }
     test_enum {
