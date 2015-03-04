@@ -105,12 +105,6 @@ impl ser::Visitor for Serializer {
     type Error = ();
 
     #[inline]
-    fn visit_unit(&mut self) -> Result<(), ()> {
-        self.state.push(State::Value(Value::Null));
-        Ok(())
-    }
-
-    #[inline]
     fn visit_bool(&mut self, value: bool) -> Result<(), ()> {
         self.state.push(State::Value(Value::Bool(value)));
         Ok(())
@@ -156,6 +150,22 @@ impl ser::Visitor for Serializer {
         where V: ser::Serialize,
     {
         value.visit(self)
+    }
+
+    #[inline]
+    fn visit_unit(&mut self) -> Result<(), ()> {
+        self.state.push(State::Value(Value::Null));
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> Result<(), ()> {
+        let mut values = BTreeMap::new();
+        values.insert(variant.to_string(), Value::Array(vec![]));
+
+        self.state.push(State::Value(Value::Object(values)));
+
+        Ok(())
     }
 
     #[inline]

@@ -346,7 +346,6 @@ fn test_write_tuple() {
     */
 }
 
-/*
 #[test]
 fn test_write_enum() {
     test_encode_ok(&[
@@ -408,6 +407,7 @@ fn test_write_enum() {
     */
 }
 
+/*
 #[test]
 fn test_write_option() {
     test_encode_ok(&[
