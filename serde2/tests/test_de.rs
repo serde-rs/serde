@@ -275,9 +275,9 @@ impl<'a, 'b> de::EnumVisitor for TokenDeserializerEnumVisitor<'a, 'b> {
         }
     }
 
-    fn visit_seq<
-        V: de::EnumSeqVisitor,
-    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumSeqVisitor,
+    {
         let token = self.de.tokens.next();
         match token {
             Some(Token::SeqStart(len)) => {
@@ -298,9 +298,9 @@ impl<'a, 'b> de::EnumVisitor for TokenDeserializerEnumVisitor<'a, 'b> {
         }
     }
 
-    fn visit_map<
-        V: de::EnumMapVisitor,
-    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumMapVisitor,
+    {
         match self.de.tokens.next() {
             Some(Token::MapStart(len)) => {
                 let value = try!(visitor.visit(TokenDeserializerMapVisitor {
@@ -339,15 +339,15 @@ struct NamedUnitVisitor;
 impl Visitor for NamedUnitVisitor {
     type Value = NamedUnit;
 
-    fn visit_unit<
-        E: de::Error,
-    >(&mut self) -> Result<NamedUnit, E> {
+    fn visit_unit<E>(&mut self) -> Result<NamedUnit, E>
+        where E: de::Error,
+    {
         Ok(NamedUnit)
     }
 
-    fn visit_named_unit<
-        E: de::Error,
-    >(&mut self, name: &str) -> Result<NamedUnit, E> {
+    fn visit_named_unit<E>(&mut self, name: &str) -> Result<NamedUnit, E>
+        where E: de::Error,
+    {
         if name == "NamedUnit" {
             Ok(NamedUnit)
         } else {
@@ -355,9 +355,9 @@ impl Visitor for NamedUnitVisitor {
         }
     }
 
-    fn visit_seq<
-        V: de::SeqVisitor,
-    >(&mut self, mut visitor: V) -> Result<NamedUnit, V::Error> {
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<NamedUnit, V::Error>
+        where V: de::SeqVisitor,
+    {
         try!(visitor.end());
         Ok(NamedUnit)
     }
@@ -381,9 +381,9 @@ struct NamedSeqVisitor;
 impl Visitor for NamedSeqVisitor {
     type Value = NamedSeq;
 
-    fn visit_seq<
-        V: de::SeqVisitor,
-    >(&mut self, mut visitor: V) -> Result<NamedSeq, V::Error> {
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<NamedSeq, V::Error>
+        where V: de::SeqVisitor,
+    {
         let a = match try!(visitor.visit()) {
             Some(value) => value,
             None => { return Err(de::Error::end_of_stream_error()); }
@@ -404,9 +404,9 @@ impl Visitor for NamedSeqVisitor {
         Ok(NamedSeq(a, b, c))
     }
 
-    fn visit_named_seq<
-        V: de::SeqVisitor,
-    >(&mut self, name: &str, visitor: V) -> Result<NamedSeq, V::Error> {
+    fn visit_named_seq<V>(&mut self, name: &str, visitor: V) -> Result<NamedSeq, V::Error>
+        where V: de::SeqVisitor,
+    {
         if name == "NamedSeq" {
             self.visit_seq(visitor)
         } else {
@@ -437,9 +437,9 @@ struct NamedMapVisitor;
 impl Visitor for NamedMapVisitor {
     type Value = NamedMap;
 
-    fn visit_map<
-        V: de::MapVisitor,
-    >(&mut self, mut visitor: V) -> Result<NamedMap, V::Error> {
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<NamedMap, V::Error>
+        where V: de::MapVisitor,
+    {
         let mut a = None;
         let mut b = None;
         let mut c = None;
@@ -458,9 +458,9 @@ impl Visitor for NamedMapVisitor {
         }
     }
 
-    fn visit_named_map<
-        V: de::MapVisitor,
-    >(&mut self, name: &str, visitor: V) -> Result<NamedMap, V::Error> {
+    fn visit_named_map<V>(&mut self, name: &str, visitor: V) -> Result<NamedMap, V::Error>
+        where V: de::MapVisitor,
+    {
         if name == "NamedMap" {
             self.visit_map(visitor)
         } else {
@@ -488,9 +488,9 @@ struct NamedMapFieldVisitor;
 impl Visitor for NamedMapFieldVisitor {
     type Value = NamedMapField;
 
-    fn visit_str<
-        E: de::Error,
-    >(&mut self, value: &str) -> Result<NamedMapField, E> {
+    fn visit_str<E>(&mut self, value: &str) -> Result<NamedMapField, E>
+        where E: de::Error,
+    {
         match value {
             "a" => Ok(NamedMapField::A),
             "b" => Ok(NamedMapField::B),
@@ -522,9 +522,9 @@ struct EnumVisitor;
 impl Visitor for EnumVisitor {
     type Value = Enum;
 
-    fn visit_enum<
-        V: de::EnumVisitor,
-    >(&mut self, name: &str, variant: &str, visitor: V) -> Result<Enum, V::Error> {
+    fn visit_enum<V>(&mut self, name: &str, variant: &str, visitor: V) -> Result<Enum, V::Error>
+        where V: de::EnumVisitor,
+    {
         if name == "Enum" {
             self.visit_variant(variant, visitor)
         } else {
@@ -532,9 +532,9 @@ impl Visitor for EnumVisitor {
         }
     }
 
-    fn visit_variant<
-        V: de::EnumVisitor,
-    >(&mut self, name: &str, mut visitor: V) -> Result<Enum, V::Error> {
+    fn visit_variant<V>(&mut self, name: &str, mut visitor: V) -> Result<Enum, V::Error>
+        where V: de::EnumVisitor,
+    {
         match name {
             "Unit" => {
                 try!(visitor.visit_unit());
@@ -552,9 +552,9 @@ struct EnumSeqVisitor;
 impl de::EnumSeqVisitor for EnumSeqVisitor {
     type Value = Enum;
 
-    fn visit<
-        V: de::SeqVisitor,
-    >(&mut self, mut visitor: V) -> Result<Enum, V::Error> {
+    fn visit<V>(&mut self, mut visitor: V) -> Result<Enum, V::Error>
+        where V: de::SeqVisitor,
+    {
         let a = match try!(visitor.visit()) {
             Some(value) => value,
             None => { return Err(de::Error::end_of_stream_error()); }
@@ -581,9 +581,9 @@ struct EnumMapVisitor;
 impl de::EnumMapVisitor for EnumMapVisitor {
     type Value = Enum;
 
-    fn visit<
-        V: de::MapVisitor,
-    >(&mut self, mut visitor: V) -> Result<Enum, V::Error> {
+    fn visit<V>(&mut self, mut visitor: V) -> Result<Enum, V::Error>
+        where V: de::MapVisitor,
+    {
         let mut a = None;
         let mut b = None;
         let mut c = None;
@@ -622,9 +622,9 @@ struct EnumMapFieldVisitor;
 impl Visitor for EnumMapFieldVisitor {
     type Value = EnumMapField;
 
-    fn visit_str<
-        E: de::Error,
-    >(&mut self, value: &str) -> Result<EnumMapField, E> {
+    fn visit_str<E>(&mut self, value: &str) -> Result<EnumMapField, E>
+        where E: de::Error,
+    {
         match value {
             "a" => Ok(EnumMapField::A),
             "b" => Ok(EnumMapField::B),
