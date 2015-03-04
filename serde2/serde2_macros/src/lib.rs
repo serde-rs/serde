@@ -127,10 +127,17 @@ fn serialize_substructure(cx: &ExtCtxt,
     match (&item.node, &*substr.fields) {
         (&ast::ItemStruct(ref struct_def, _), &Struct(ref fields)) => {
             if fields.is_empty() {
-                serialize_tuple_struct(cx)
+                serialize_tuple_struct(cx,
+                                       span,
+                                       visitor,
+                                       substr.type_ident)
             } else {
-                serialize_struct(
-                    cx, span, visitor, substr.type_ident, fields, struct_def)
+                serialize_struct(cx,
+                                 span,
+                                 visitor,
+                                 substr.type_ident,
+                                 fields,
+                                 struct_def)
             }
         }
 
@@ -148,9 +155,15 @@ fn serialize_substructure(cx: &ExtCtxt,
     }
 }
 
-fn serialize_tuple_struct(cx: &ExtCtxt) -> P<Expr> {
-    // unit structs have no fields and need to return `Ok()`
-    quote_expr!(cx, Ok(()))
+fn serialize_tuple_struct(cx: &ExtCtxt,
+                          span: Span,
+                          visitor: P<Expr>,
+                          type_ident: Ident) -> P<Expr> {
+    let type_name = cx.expr_str(
+        span,
+        token::get_ident(type_ident));
+
+    quote_expr!(cx, $visitor.visit_named_unit($type_name))
 }
 
 fn serialize_struct(cx: &ExtCtxt,
@@ -207,9 +220,9 @@ fn serialize_struct(cx: &ExtCtxt,
 
         impl<'a> ::serde2::ser::MapVisitor for Visitor<'a> {
             #[inline]
-            fn visit<
-                V: ::serde2::ser::Visitor,
-            >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+                where V: ::serde2::ser::Visitor,
+            {
                 match self.state {
                     $arms
                     _ => Ok(None),
@@ -515,9 +528,9 @@ fn serialize_variant(
     let methods = vec![
         ast::MethodImplItem(
             quote_method!(cx,
-                fn visit<
-                    V: ::serde2::ser::Visitor,
-                >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+                    where V: ::serde2::ser::Visitor,
+                {
                     match self.state {
                         $visitor_arms
                         _ => Ok(None),
@@ -711,9 +724,9 @@ fn deserialize_struct_empty_fields(
             type Value = $type_ident;
 
             #[inline]
-            fn visit_unit<
-                E: ::serde2::de::Error,
-            >(&mut self) -> Result<$type_ident, E> {
+            fn visit_unit<E>(&mut self) -> Result<$type_ident, E>
+                where E: ::serde2::de::Error,
+            {
                 Ok($result)
             }
 
@@ -761,15 +774,17 @@ fn deserialize_struct_unnamed_fields(
         impl ::serde2::de::Visitor for __Visitor {
             type Value = $type_ident;
 
-            fn visit_seq<
-                __V: ::serde2::de::SeqVisitor,
-            >(&mut self, mut visitor: __V) -> Result<$type_ident, __V::Error> {
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> Result<$type_ident, __V::Error>
+                where __V: ::serde2::de::SeqVisitor,
+            {
                 $visit_seq_expr
             }
 
-            fn visit_named_seq<
-                __V: ::serde2::de::SeqVisitor,
-            >(&mut self, name: &str, visitor: __V) -> Result<$type_ident, __V::Error> {
+            fn visit_named_seq<__V>(&mut self,
+                                    name: &str,
+                                    visitor: __V) -> Result<$type_ident, __V::Error>
+                where __V: ::serde2::de::SeqVisitor,
+            {
                 if name == $struct_name {
                     self.visit_seq(visitor)
                 } else {
@@ -858,16 +873,18 @@ fn deserialize_struct_named_fields(
             type Value = $type_ident;
 
             #[inline]
-            fn visit_map<
-                __V: ::serde2::de::MapVisitor,
-            >(&mut self, mut visitor: __V) -> Result<$type_ident, __V::Error> {
+            fn visit_map<__V>(&mut self, mut visitor: __V) -> Result<$type_ident, __V::Error>
+                where __V: ::serde2::de::MapVisitor,
+            {
                 $visit_map_expr
             }
 
             #[inline]
-            fn visit_named_map<
-                __V: ::serde2::de::MapVisitor,
-            >(&mut self, name: &str, visitor: __V) -> Result<$type_ident, __V::Error> {
+            fn visit_named_map<__V>(&mut self,
+                                    name: &str,
+                                    visitor: __V) -> Result<$type_ident, __V::Error>
+                where __V: ::serde2::de::MapVisitor,
+            {
                 if name == $struct_name {
                     self.visit_map(visitor)
                 } else {
@@ -969,9 +986,9 @@ fn declare_map_field_deserializer(
             impl ::serde2::de::Visitor for __FieldVisitor {
                 type Value = __Field;
 
-                fn visit_str<
-                    E: ::serde2::de::Error,
-                >(&mut self, value: &str) -> Result<__Field, E> {
+                fn visit_str<E>(&mut self, value: &str) -> Result<__Field, E>
+                    where E: ::serde2::de::Error,
+                {
                     match value {
                         $field_arms
                         _ => Err(::serde2::de::Error::syntax_error()),
@@ -983,9 +1000,9 @@ fn declare_map_field_deserializer(
         quote_item!(cx,
             impl ::serde2::de::Deserialize for __Field {
                 #[inline]
-                fn deserialize<
-                    __S: ::serde2::de::Deserializer,
-                >(state: &mut __S) -> Result<__Field, __S::Error> {
+                fn deserialize<S>(state: &mut S) -> Result<__Field, S::Error>
+                    where S: ::serde2::de::Deserializer,
+                {
                     state.visit(__FieldVisitor)
                 }
             }

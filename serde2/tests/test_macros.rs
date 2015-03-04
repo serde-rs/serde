@@ -10,6 +10,9 @@ trait Trait {
 */
 
 #[derive_serialize]
+struct NamedUnit;
+
+#[derive_serialize]
 //#[derive_deserialize]
 enum Enum<'a, A: 'a, B: /* Trait + */ 'a, C> where C: /* Trait + */ 'a {
     Unit,
