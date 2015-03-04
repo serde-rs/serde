@@ -32,9 +32,9 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     type Error = io::Error;
 
     #[inline]
-    fn visit<
-        T: ser::Serialize,
-    >(&mut self, value: &T) -> io::Result<()> {
+    fn visit<T>(&mut self, value: &T) -> io::Result<()>
+        where T: ser::Serialize,
+    {
         value.visit(&mut Visitor { writer: &mut self.writer })
     }
 }

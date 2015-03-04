@@ -1123,9 +1123,12 @@ fn deserialize_enum(
         impl ::serde2::de::Visitor for __Visitor {
             type Value = $type_ident;
 
-            fn visit_enum<
-                __V: ::serde2::de::EnumVisitor,
-            >(&mut self, name: &str, variant: &str, mut visitor: __V) -> Result<$type_ident, __V::Error> {
+            fn visit_enum<__V>(&mut self,
+                               name: &str,
+                               variant: &str,
+                               mut visitor: __V) -> Result<$type_ident, __V::Error>
+                where __V: ::serde2::de::EnumVisitor,
+            {
                 if name == $type_name {
                     self.visit_variant(variant, visitor)
                 } else {
@@ -1133,9 +1136,11 @@ fn deserialize_enum(
                 }
             }
 
-            fn visit_variant<
-                __V: ::serde2::de::EnumVisitor,
-            >(&mut self, name: &str, mut visitor: __V) -> Result<$type_ident, __V::Error> {
+            fn visit_variant<__V>(&mut self,
+                                  name: &str,
+                                  mut visitor: __V) -> Result<$type_ident, __V::Error>
+                where __V: ::serde2::de::EnumVisitor
+            {
                 match name {
                     $variant_arms
                     _ => Err(::serde2::de::Error::syntax_error()),

@@ -21,9 +21,9 @@ pub enum Value {
 
 impl ser::Serialize for Value {
     #[inline]
-    fn visit<
-        V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: ser::Visitor,
+    {
         match *self {
             Value::Null => visitor.visit_unit(),
             Value::Bool(v) => visitor.visit_bool(v),
@@ -91,9 +91,9 @@ impl ser::Serializer for Serializer {
     type Error = ();
 
     #[inline]
-    fn visit<
-        T: ser::Serialize,
-    >(&mut self, value: &T) -> Result<(), ()> {
+    fn visit<T>(&mut self, value: &T) -> Result<(), ()>
+        where T: ser::Serialize,
+    {
         try!(value.visit(self));
         Ok(())
     }
@@ -151,9 +151,9 @@ impl ser::Visitor for Serializer {
     }
 
     #[inline]
-    fn visit_some<
-        V: ser::Serialize,
-    >(&mut self, value: V) -> Result<(), ()> {
+    fn visit_some<V>(&mut self, value: V) -> Result<(), ()>
+        where V: ser::Serialize,
+    {
         value.visit(self)
     }
 
@@ -265,9 +265,9 @@ impl de::Deserializer for Deserializer {
     type Error = Error;
 
     #[inline]
-    fn visit<
-        V: de::Visitor,
-    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         let value = match self.value.take() {
             Some(value) => value,
             None => { return Err(de::Error::end_of_stream_error()); }
@@ -300,9 +300,9 @@ impl de::Deserializer for Deserializer {
     }
 
     #[inline]
-    fn visit_option<
-        V: de::Visitor,
-    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         match self.value {
             Some(Value::Null) => visitor.visit_none(),
             Some(_) => visitor.visit_some(self),

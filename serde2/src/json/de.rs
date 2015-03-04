@@ -81,9 +81,9 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
     }
 
     #[inline]
-    fn parse_value<
-        V: de::Visitor,
-    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+    fn parse_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         self.parse_whitespace();
 
         if self.eof() {
@@ -140,9 +140,9 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
     }
 
     #[inline]
-    fn parse_number<
-        V: de::Visitor,
-    >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+    fn parse_number<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         let mut neg = 1;
 
         if self.ch_is(b'-') {
@@ -387,9 +387,9 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer for Deserializer<Iter> {
     type Error = Error;
 
     #[inline]
-    fn visit<
-        V: de::Visitor,
-    >(&mut self, visitor: V) -> Result<V::Value, Error> {
+    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         self.parse_value(visitor)
     }
 }
@@ -402,9 +402,9 @@ struct SeqVisitor<'a, Iter: 'a> {
 impl<'a, Iter: Iterator<Item=u8>> de::SeqVisitor for SeqVisitor<'a, Iter> {
     type Error = Error;
 
-    fn visit<
-        T: de::Deserialize,
-    >(&mut self) -> Result<Option<T>, Error> {
+    fn visit<T>(&mut self) -> Result<Option<T>, Error>
+        where T: de::Deserialize,
+    {
         self.de.parse_whitespace();
 
         if self.de.ch_is(b']') {
@@ -448,9 +448,9 @@ struct MapVisitor<'a, Iter: 'a> {
 impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor for MapVisitor<'a, Iter> {
     type Error = Error;
 
-    fn visit_key<
-        K: de::Deserialize,
-    >(&mut self) -> Result<Option<K>, Error> {
+    fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+        where K: de::Deserialize,
+    {
         self.de.parse_whitespace();
 
         if self.de.ch_is(b'}') {
@@ -482,9 +482,9 @@ impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor for MapVisitor<'a, Iter> {
         Ok(Some(try!(de::Deserialize::deserialize(self.de))))
     }
 
-    fn visit_value<
-        V: de::Deserialize,
-    >(&mut self) -> Result<V, Error> {
+    fn visit_value<V>(&mut self) -> Result<V, Error>
+        where V: de::Deserialize,
+    {
         self.de.parse_whitespace();
 
         if self.de.ch_is(b':') {

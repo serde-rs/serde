@@ -171,9 +171,8 @@ pub trait Visitor {
 }
 
 pub trait SeqVisitor {
-    fn visit<
-        V: Visitor,
-    >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>;
+    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+        where V: Visitor;
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -182,9 +181,8 @@ pub trait SeqVisitor {
 }
 
 pub trait MapVisitor {
-    fn visit<
-        V: Visitor,
-    >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>;
+    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+        where V: Visitor;
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -198,9 +196,9 @@ macro_rules! impl_visit {
     ($ty:ty, $method:ident) => {
         impl Serialize for $ty {
             #[inline]
-            fn visit<
-                V: Visitor,
-            >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+            fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+                where V: Visitor,
+            {
                 visitor.$method(*self)
             }
         }
@@ -226,18 +224,18 @@ impl_visit!(char, visit_char);
 
 impl<'a> Serialize for &'a str {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         visitor.visit_str(*self)
     }
 }
 
 impl Serialize for String {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         (&self[..]).visit(visitor)
     }
 }
@@ -246,9 +244,9 @@ impl Serialize for String {
 
 impl<T> Serialize for Option<T> where T: Serialize {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         match *self {
             Some(ref value) => visitor.visit_some(value),
             None => visitor.visit_none(),
@@ -263,7 +261,9 @@ pub struct SeqIteratorVisitor<Iter> {
     first: bool,
 }
 
-impl<T, Iter: Iterator<Item=T>> SeqIteratorVisitor<Iter> {
+impl<T, Iter> SeqIteratorVisitor<Iter>
+    where Iter: Iterator<Item=T>
+{
     #[inline]
     pub fn new(iter: Iter) -> SeqIteratorVisitor<Iter> {
         SeqIteratorVisitor {
@@ -273,14 +273,14 @@ impl<T, Iter: Iterator<Item=T>> SeqIteratorVisitor<Iter> {
     }
 }
 
-impl<
-    T: Serialize,
-    Iter: Iterator<Item=T>,
-> SeqVisitor for SeqIteratorVisitor<Iter> {
+impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
+    where T: Serialize,
+          Iter: Iterator<Item=T>,
+{
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+        where V: Visitor,
+    {
         let first = self.first;
         self.first = false;
 
@@ -301,34 +301,31 @@ impl<
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<
-    'a,
-    T: Serialize,
-> Serialize for &'a [T] {
+impl<'a, T> Serialize for &'a [T]
+    where T: Serialize,
+{
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
     }
 }
 
-impl<
-    T: Serialize,
-> Serialize for Vec<T> {
+impl<T> Serialize for Vec<T> where T: Serialize {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         (&self[..]).visit(visitor)
     }
 }
 
 impl<T> Serialize for BTreeSet<T> where T: Serialize {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
     }
 }
@@ -347,9 +344,9 @@ impl<T, S> Serialize for HashSet<T, S>
 
 impl Serialize for () {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         visitor.visit_unit()
     }
 }
@@ -384,13 +381,12 @@ macro_rules! tuple_impls {
                 }
             }
 
-            impl<
-                'a,
-                $($T: Serialize),+
-            > SeqVisitor for $TupleVisitor<'a, $($T),+> {
-                fn visit<
-                    V: Visitor,
-                >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+            impl<'a, $($T),+> SeqVisitor for $TupleVisitor<'a, $($T),+>
+                where $($T: Serialize),+
+            {
+                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+                    where V: Visitor,
+                {
                     let first = self.first;
                     self.first = false;
 
@@ -412,9 +408,9 @@ macro_rules! tuple_impls {
                 }
             }
 
-            impl<
-                $($T: Serialize),+
-            > Serialize for ($($T,)+) {
+            impl<$($T),+> Serialize for ($($T,)+)
+                where $($T: Serialize),+
+            {
                 #[inline]
                 fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
                     visitor.visit_seq($TupleVisitor::new(self))
@@ -536,7 +532,9 @@ pub struct MapIteratorVisitor<Iter> {
     first: bool,
 }
 
-impl<K, V, Iter: Iterator<Item=(K, V)>> MapIteratorVisitor<Iter> {
+impl<K, V, Iter> MapIteratorVisitor<Iter>
+    where Iter: Iterator<Item=(K, V)>
+{
     #[inline]
     pub fn new(iter: Iter) -> MapIteratorVisitor<Iter> {
         MapIteratorVisitor {
@@ -552,9 +550,9 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
           I: Iterator<Item=(K, V)>,
 {
     #[inline]
-    fn visit<
-        V_: Visitor,
-    >(&mut self, visitor: &mut V_) -> Result<Option<V_::Value>, V_::Error> {
+    fn visit<V_>(&mut self, visitor: &mut V_) -> Result<Option<V_::Value>, V_::Error>
+        where V_: Visitor,
+    {
         let first = self.first;
         self.first = false;
 
@@ -600,42 +598,40 @@ impl<K, V, S> Serialize for HashMap<K, V, S>
 
 impl<'a, T> Serialize for &'a T where T: Serialize {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         (**self).visit(visitor)
     }
 }
 
 impl<'a, T> Serialize for Box<T> where T: Serialize {
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         (**self).visit(visitor)
     }
 }
 
-impl<
-    'a,
-    T: Serialize,
-> Serialize for Rc<T> {
+impl<'a, T> Serialize for Rc<T>
+    where T: Serialize,
+{
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         (**self).visit(visitor)
     }
 }
 
-impl<
-    'a,
-    T: Serialize,
-> Serialize for Arc<T> {
+impl<'a, T> Serialize for Arc<T>
+    where T: Serialize,
+{
     #[inline]
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
         (**self).visit(visitor)
     }
 }
@@ -923,9 +919,9 @@ mod tests {
     struct NamedUnit;
 
     impl Serialize for NamedUnit {
-        fn visit<
-            V: Visitor,
-        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+            where V: Visitor,
+        {
             visitor.visit_named_unit("NamedUnit")
         }
     }
@@ -933,9 +929,9 @@ mod tests {
     struct NamedSeq(i32, i32, i32);
 
     impl Serialize for NamedSeq {
-        fn visit<
-            V: Visitor,
-        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+            where V: Visitor,
+        {
             visitor.visit_named_seq("NamedSeq", NamedSeqVisitor {
                 tuple: self,
                 state: 0,
@@ -949,9 +945,9 @@ mod tests {
     }
 
     impl<'a> SeqVisitor for NamedSeqVisitor<'a> {
-        fn visit<
-            V: Visitor,
-        >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+        fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+            where V: Visitor,
+        {
             match self.state {
                 0 => {
                     self.state += 1;
@@ -981,9 +977,9 @@ mod tests {
     }
 
     impl Serialize for Enum {
-        fn visit<
-            V: Visitor,
-        >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+            where V: Visitor,
+        {
             match *self {
                 Enum::Unit => {
                     visitor.visit_enum_unit("Enum", "Unit")
@@ -1013,9 +1009,9 @@ mod tests {
     }
 
     impl<'a> SeqVisitor for EnumSeqVisitor<'a> {
-        fn visit<
-            V: Visitor,
-        >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+        fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+            where V: Visitor,
+        {
             match self.state {
                 0 => {
                     self.state += 1;
@@ -1043,9 +1039,9 @@ mod tests {
     }
 
     impl<'a> MapVisitor for EnumMapVisitor<'a> {
-        fn visit<
-            V: Visitor,
-        >(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error> {
+        fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+            where V: Visitor,
+        {
             match self.state {
                 0 => {
                     self.state += 1;

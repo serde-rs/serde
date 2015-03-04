@@ -15,17 +15,15 @@ pub trait Error {
 }
 
 pub trait Deserialize {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<Self, D::Error>;
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer;
 }
 
 pub trait Deserializer {
     type Error: Error;
 
-    fn visit<
-        V: Visitor,
-    >(&mut self, visitor: V) -> Result<V::Value, Self::Error>;
+    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor;
 
     /// The `visit_option` method allows a `Deserialize` type to inform the
     /// `Deserializer` that it's expecting an optional value. This allows
@@ -33,9 +31,9 @@ pub trait Deserializer {
     /// convert the null value into a `None`, and a regular value as
     /// `Some(value)`.
     #[inline]
-    fn visit_option<
-        V: Visitor,
-    >(&mut self, visitor: V) -> Result<V::Value, Self::Error> {
+    fn visit_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
         self.visit(visitor)
     }
 }
@@ -43,169 +41,172 @@ pub trait Deserializer {
 pub trait Visitor {
     type Value;
 
-    fn visit_bool<
-        E: Error,
-    >(&mut self, _v: bool) -> Result<Self::Value, E> {
+    fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
-    fn visit_isize<
-        E: Error,
-    >(&mut self, v: isize) -> Result<Self::Value, E> {
+    fn visit_isize<E>(&mut self, v: isize) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i8<
-        E: Error,
-    >(&mut self, v: i8) -> Result<Self::Value, E> {
+    fn visit_i8<E>(&mut self, v: i8) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i16<
-        E: Error,
-    >(&mut self, v: i16) -> Result<Self::Value, E> {
+    fn visit_i16<E>(&mut self, v: i16) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i32<
-        E: Error,
-    >(&mut self, v: i32) -> Result<Self::Value, E> {
+    fn visit_i32<E>(&mut self, v: i32) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_i64(v as i64)
     }
 
-    fn visit_i64<
-        E: Error,
-    >(&mut self, _v: i64) -> Result<Self::Value, E> {
+    fn visit_i64<E>(&mut self, _v: i64) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
-    fn visit_usize<
-        E: Error,
-    >(&mut self, v: usize) -> Result<Self::Value, E> {
+    fn visit_usize<E>(&mut self, v: usize) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u8<
-        E: Error,
-    >(&mut self, v: u8) -> Result<Self::Value, E> {
+    fn visit_u8<E>(&mut self, v: u8) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u16<
-        E: Error,
-    >(&mut self, v: u16) -> Result<Self::Value, E> {
+    fn visit_u16<E>(&mut self, v: u16) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u32<
-        E: Error,
-    >(&mut self, v: u32) -> Result<Self::Value, E> {
+    fn visit_u32<E>(&mut self, v: u32) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_u64(v as u64)
     }
 
-    fn visit_u64<
-        E: Error,
-    >(&mut self, _v: u64) -> Result<Self::Value, E> {
+    fn visit_u64<E>(&mut self, _v: u64) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
-    fn visit_f32<
-        E: Error,
-    >(&mut self, v: f32) -> Result<Self::Value, E> {
+    fn visit_f32<E>(&mut self, v: f32) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_f64(v as f64)
     }
 
-    fn visit_f64<
-        E: Error,
-    >(&mut self, _v: f64) -> Result<Self::Value, E> {
+    fn visit_f64<E>(&mut self, _v: f64) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
     #[inline]
-    fn visit_char<
-        E: Error,
-    >(&mut self, v: char) -> Result<Self::Value, E> {
+    fn visit_char<E>(&mut self, v: char) -> Result<Self::Value, E>
+        where E: Error,
+    {
         // The unwraps in here should be safe.
         let mut s = &mut [0; 4];
         let len = v.encode_utf8(s).unwrap();
         self.visit_str(str::from_utf8(&s[..len]).unwrap())
     }
 
-    fn visit_str<
-        E: Error,
-    >(&mut self, _v: &str) -> Result<Self::Value, E> {
+    fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
     #[inline]
-    fn visit_string<
-        E: Error,
-    >(&mut self, v: String) -> Result<Self::Value, E> {
+    fn visit_string<E>(&mut self, v: String) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_str(&v)
     }
 
-    fn visit_unit<
-        E: Error,
-    >(&mut self) -> Result<Self::Value, E> {
+    fn visit_unit<E>(&mut self) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
     #[inline]
-    fn visit_named_unit<
-        E: Error,
-    >(&mut self, _name: &str) -> Result<Self::Value, E> {
+    fn visit_named_unit<E>(&mut self, _name: &str) -> Result<Self::Value, E>
+        where E: Error,
+    {
         self.visit_unit()
     }
 
-    fn visit_none<
-        E: Error,
-    >(&mut self) -> Result<Self::Value, E> {
+    fn visit_none<E>(&mut self) -> Result<Self::Value, E>
+        where E: Error,
+    {
         Err(Error::syntax_error())
     }
 
-    fn visit_some<
-        D: Deserializer,
-    >(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error> {
+    fn visit_some<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
+        where D: Deserializer,
+    {
         Err(Error::syntax_error())
     }
 
-    fn visit_seq<
-        V: SeqVisitor,
-    >(&mut self, _visitor: V) -> Result<Self::Value, V::Error> {
+    fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
+        where V: SeqVisitor,
+    {
         Err(Error::syntax_error())
     }
 
     #[inline]
-    fn visit_named_seq<
-        V: SeqVisitor,
-    >(&mut self, _name: &str, visitor: V) -> Result<Self::Value, V::Error> {
+    fn visit_named_seq<V>(&mut self, _name: &str, visitor: V) -> Result<Self::Value, V::Error>
+        where V: SeqVisitor,
+    {
         self.visit_seq(visitor)
     }
 
-    fn visit_map<
-        V: MapVisitor,
-    >(&mut self, _visitor: V) -> Result<Self::Value, V::Error> {
+    fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
+        where V: MapVisitor,
+    {
         Err(Error::syntax_error())
     }
 
     #[inline]
-    fn visit_named_map<
-        V: MapVisitor,
-    >(&mut self, _name: &str, visitor: V) -> Result<Self::Value, V::Error> {
+    fn visit_named_map<V>(&mut self, _name: &str, visitor: V) -> Result<Self::Value, V::Error>
+        where V: MapVisitor,
+    {
         self.visit_map(visitor)
     }
 
     #[inline]
-    fn visit_enum<
-        V: EnumVisitor,
-    >(&mut self, _name: &str, _variant: &str, _visitor: V) -> Result<Self::Value, V::Error> {
+    fn visit_enum<V>(&mut self,
+                     _name: &str,
+                     _variant: &str,
+                     _visitor: V) -> Result<Self::Value, V::Error>
+        where V: EnumVisitor,
+    {
         Err(Error::syntax_error())
     }
 
     #[inline]
-    fn visit_variant<
-        V: EnumVisitor,
-    >(&mut self, _name: &str, _visitor: V) -> Result<Self::Value, V::Error> {
+    fn visit_variant<V>(&mut self, _name: &str, _visitor: V) -> Result<Self::Value, V::Error>
+        where V: EnumVisitor,
+    {
         Err(Error::syntax_error())
     }
 }
@@ -262,15 +263,15 @@ pub trait EnumVisitor {
         Err(Error::syntax_error())
     }
 
-    fn visit_seq<
-        V: EnumSeqVisitor,
-    >(&mut self, _visitor: V) -> Result<V::Value, Self::Error> {
+    fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: EnumSeqVisitor,
+    {
         Err(Error::syntax_error())
     }
 
-    fn visit_map<
-        V: EnumMapVisitor,
-    >(&mut self, _visitor: V) -> Result<V::Value, Self::Error> {
+    fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: EnumMapVisitor,
+    {
         Err(Error::syntax_error())
     }
 }
@@ -278,17 +279,15 @@ pub trait EnumVisitor {
 pub trait EnumSeqVisitor {
     type Value;
 
-    fn visit<
-        V: SeqVisitor,
-    >(&mut self, visitor: V) -> Result<Self::Value, V::Error>;
+    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
+        where V: SeqVisitor;
 }
 
 pub trait EnumMapVisitor {
     type Value;
 
-    fn visit<
-        V: MapVisitor,
-    >(&mut self, visitor: V) -> Result<Self::Value, V::Error>;
+    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
+        where V: MapVisitor;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -298,23 +297,23 @@ struct UnitVisitor;
 impl Visitor for UnitVisitor {
     type Value = ();
 
-    fn visit_unit<
-        E: Error,
-    >(&mut self) -> Result<(), E> {
+    fn visit_unit<E>(&mut self) -> Result<(), E>
+        where E: Error,
+    {
         Ok(())
     }
 
-    fn visit_seq<
-        V: SeqVisitor,
-    >(&mut self, mut visitor: V) -> Result<(), V::Error> {
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), V::Error>
+        where V: SeqVisitor,
+    {
         visitor.end()
     }
 }
 
 impl Deserialize for () {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<(), D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<(), D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(UnitVisitor)
     }
 }
@@ -326,17 +325,17 @@ struct BoolVisitor;
 impl Visitor for BoolVisitor {
     type Value = bool;
 
-    fn visit_bool<
-        E: Error,
-    >(&mut self, v: bool) -> Result<bool, E> {
+    fn visit_bool<E>(&mut self, v: bool) -> Result<bool, E>
+        where E: Error,
+    {
         Ok(v)
     }
 }
 
 impl Deserialize for bool {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<bool, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<bool, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(BoolVisitor)
     }
 }
@@ -346,9 +345,9 @@ impl Deserialize for bool {
 macro_rules! impl_deserialize_num_method {
     ($src_ty:ty, $method:ident, $from_method:ident) => {
         #[inline]
-        fn $method<
-            E: Error,
-        >(&mut self, v: $src_ty) -> Result<T, E> {
+        fn $method<E>(&mut self, v: $src_ty) -> Result<T, E>
+            where E: Error,
+        {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
                 None => Err(Error::syntax_error()),
@@ -393,9 +392,9 @@ macro_rules! impl_deserialize_num {
     ($ty:ty) => {
         impl Deserialize for $ty {
             #[inline]
-            fn deserialize<
-                D: Deserializer,
-            >(deserializer: &mut D) -> Result<$ty, D::Error> {
+            fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
+                where D: Deserializer,
+            {
                 deserializer.visit(PrimitiveVisitor::new())
             }
         }
@@ -423,16 +422,16 @@ impl Visitor for CharVisitor {
     type Value = char;
 
     #[inline]
-    fn visit_char<
-        E: Error,
-    >(&mut self, v: char) -> Result<char, E> {
+    fn visit_char<E>(&mut self, v: char) -> Result<char, E>
+        where E: Error,
+    {
         Ok(v)
     }
 
     #[inline]
-    fn visit_str<
-        E: Error,
-    >(&mut self, v: &str) -> Result<char, E> {
+    fn visit_str<E>(&mut self, v: &str) -> Result<char, E>
+        where E: Error,
+    {
         let mut iter = v.chars();
         if let Some(v) = iter.next() {
             if iter.next().is_some() {
@@ -448,9 +447,9 @@ impl Visitor for CharVisitor {
 
 impl Deserialize for char {
     #[inline]
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<char, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<char, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(CharVisitor)
     }
 }
@@ -462,23 +461,23 @@ struct StringVisitor;
 impl Visitor for StringVisitor {
     type Value = String;
 
-    fn visit_str<
-        E: Error,
-    >(&mut self, v: &str) -> Result<String, E> {
+    fn visit_str<E>(&mut self, v: &str) -> Result<String, E>
+        where E: Error,
+    {
         Ok(v.to_string())
     }
 
-    fn visit_string<
-        E: Error,
-    >(&mut self, v: String) -> Result<String, E> {
+    fn visit_string<E>(&mut self, v: String) -> Result<String, E>
+        where E: Error,
+    {
         Ok(v)
     }
 }
 
 impl Deserialize for String {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<String, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<String, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(StringVisitor)
     }
 }
@@ -495,24 +494,24 @@ impl<
     type Value = Option<T>;
 
     #[inline]
-    fn visit_none<
-        E: Error,
-    >(&mut self) -> Result<Option<T>, E> {
+    fn visit_none<E>(&mut self) -> Result<Option<T>, E>
+        where E: Error,
+    {
         Ok(None)
     }
 
     #[inline]
-    fn visit_some<
-        D: Deserializer,
-    >(&mut self, deserializer: &mut D) -> Result<Option<T>, D::Error> {
+    fn visit_some<D>(&mut self, deserializer: &mut D) -> Result<Option<T>, D::Error>
+        where D: Deserializer,
+    {
         Ok(Some(try!(Deserialize::deserialize(deserializer))))
     }
 }
 
 impl<T> Deserialize for Option<T> where T: Deserialize {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<Option<T>, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Option<T>, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit_option(OptionVisitor { marker: PhantomData })
     }
 }
@@ -527,9 +526,9 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     type Value = Vec<T>;
 
     #[inline]
-    fn visit_seq<
-        V: SeqVisitor,
-    >(&mut self, mut visitor: V) -> Result<Vec<T>, V::Error> {
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Vec<T>, V::Error>
+        where V: SeqVisitor,
+    {
         let (len, _) = visitor.size_hint();
         let mut values = Vec::with_capacity(len);
 
@@ -542,9 +541,9 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
 }
 
 impl<T: Deserialize> Deserialize for Vec<T> {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<Vec<T>, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Vec<T>, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(VecVisitor { marker: PhantomData })
     }
 }
@@ -566,9 +565,9 @@ macro_rules! tuple_impls {
 
                 #[inline]
                 #[allow(non_snake_case)]
-                fn visit_seq<
-                    V: SeqVisitor,
-                >(&mut self, mut visitor: V) -> Result<($($name,)+), V::Error> {
+                fn visit_seq<V>(&mut self, mut visitor: V) -> Result<($($name,)+), V::Error>
+                    where V: SeqVisitor,
+                {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(value) => value,
@@ -586,9 +585,9 @@ macro_rules! tuple_impls {
                 $($name: Deserialize),+
             > Deserialize for ($($name,)+) {
                 #[inline]
-                fn deserialize<
-                    D: Deserializer,
-                >(deserializer: &mut D) -> Result<($($name,)+), D::Error> {
+                fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
+                    where D: Deserializer,
+                {
                     deserializer.visit($visitor { marker: PhantomData })
                 }
             }
@@ -624,9 +623,9 @@ impl<K, V> Visitor for HashMapVisitor<K, V>
     type Value = HashMap<K, V>;
 
     #[inline]
-    fn visit_map<
-        V_: MapVisitor,
-    >(&mut self, mut visitor: V_) -> Result<HashMap<K, V>, V_::Error> {
+    fn visit_map<V_>(&mut self, mut visitor: V_) -> Result<HashMap<K, V>, V_::Error>
+        where V_: MapVisitor,
+    {
         let (len, _) = visitor.size_hint();
         let mut values = HashMap::with_capacity(len);
 
@@ -642,9 +641,9 @@ impl<K, V> Deserialize for HashMap<K, V>
     where K: Deserialize + Eq + Hash,
           V: Deserialize,
 {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(HashMapVisitor { marker: PhantomData })
     }
 }
@@ -662,9 +661,9 @@ impl<K, V> Visitor for BTreeMapVisitor<K, V>
     type Value = BTreeMap<K, V>;
 
     #[inline]
-    fn visit_map<
-        Visitor: MapVisitor,
-    >(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, Visitor::Error> {
+    fn visit_map<Visitor>(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, Visitor::Error>
+        where Visitor: MapVisitor,
+    {
         let mut values = BTreeMap::new();
 
         while let Some((key, value)) = try!(visitor.visit()) {
@@ -679,9 +678,9 @@ impl<
     K: Deserialize + Eq + Ord,
     V: Deserialize,
 > Deserialize for BTreeMap<K, V> {
-    fn deserialize<
-        D: Deserializer,
-    >(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
+        where D: Deserializer,
+    {
         deserializer.visit(BTreeMapVisitor { marker: PhantomData })
     }
 }
@@ -763,9 +762,9 @@ mod tests {
     impl<'a> Deserializer for TokenDeserializer<'a> {
         type Error = Error;
 
-        fn visit<
-            V: Visitor,
-        >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: Visitor,
+        {
             match self.tokens.next() {
                 Some(Token::Bool(v)) => visitor.visit_bool(v),
                 Some(Token::Isize(v)) => visitor.visit_isize(v),
@@ -828,9 +827,9 @@ mod tests {
         /// Hook into `Option` deserializing so we can treat `Unit` as a
         /// `None`, or a regular value as `Some(value)`.
         #[inline]
-        fn visit_option<
-            V: Visitor,
-        >(&mut self, mut visitor: V) -> Result<V::Value, Error> {
+        fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: Visitor,
+        {
             match self.tokens.peek() {
                 Some(&Token::Option(false)) => {
                     self.tokens.next();
@@ -861,9 +860,9 @@ mod tests {
     impl<'a, 'b> super::SeqVisitor for TokenDeserializerSeqVisitor<'a, 'b> {
         type Error = Error;
 
-        fn visit<
-            T: Deserialize,
-        >(&mut self) -> Result<Option<T>, Error> {
+        fn visit<T>(&mut self) -> Result<Option<T>, Error>
+            where T: Deserialize,
+        {
             let first = self.first;
             self.first = false;
 
@@ -904,9 +903,9 @@ mod tests {
     impl<'a, 'b> super::MapVisitor for TokenDeserializerMapVisitor<'a, 'b> {
         type Error = Error;
 
-        fn visit_key<
-            K: Deserialize,
-        >(&mut self) -> Result<Option<K>, Error> {
+        fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+            where K: Deserialize,
+        {
             let first = self.first;
             self.first = false;
 
@@ -920,9 +919,9 @@ mod tests {
             }
         }
 
-        fn visit_value<
-            V: Deserialize,
-        >(&mut self) -> Result<V, Error> {
+        fn visit_value<V>(&mut self) -> Result<V, Error>
+            where V: Deserialize,
+        {
             Ok(try!(Deserialize::deserialize(self.de)))
         }
 
@@ -1010,9 +1009,9 @@ mod tests {
     struct NamedUnit;
 
     impl Deserialize for NamedUnit {
-        fn deserialize<
-            D: Deserializer,
-        >(deserializer: &mut D) -> Result<NamedUnit, D::Error> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<NamedUnit, D::Error>
+            where D: Deserializer,
+        {
             deserializer.visit(NamedUnitVisitor)
         }
     }
@@ -1052,9 +1051,9 @@ mod tests {
     struct NamedSeq(i32, i32, i32);
 
     impl Deserialize for NamedSeq {
-        fn deserialize<
-            D: Deserializer,
-        >(deserializer: &mut D) -> Result<NamedSeq, D::Error> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<NamedSeq, D::Error>
+            where D: Deserializer,
+        {
             deserializer.visit(NamedSeqVisitor)
         }
     }
@@ -1108,9 +1107,9 @@ mod tests {
     }
 
     impl Deserialize for NamedMap {
-        fn deserialize<
-            D: Deserializer,
-        >(deserializer: &mut D) -> Result<NamedMap, D::Error> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<NamedMap, D::Error>
+            where D: Deserializer,
+        {
             deserializer.visit(NamedMapVisitor)
         }
     }
@@ -1159,9 +1158,9 @@ mod tests {
     }
 
     impl Deserialize for NamedMapField {
-        fn deserialize<
-            D: Deserializer,
-        >(deserializer: &mut D) -> Result<NamedMapField, D::Error> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<NamedMapField, D::Error>
+        where D: Deserializer,
+    {
             deserializer.visit(NamedMapFieldVisitor)
         }
     }
@@ -1193,9 +1192,9 @@ mod tests {
     }
 
     impl Deserialize for Enum {
-        fn deserialize<
-            D: Deserializer,
-        >(deserializer: &mut D) -> Result<Enum, D::Error> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<Enum, D::Error>
+            where D: Deserializer,
+        {
             deserializer.visit(EnumVisitor)
         }
     }
@@ -1293,9 +1292,9 @@ mod tests {
     }
 
     impl Deserialize for EnumMapField {
-        fn deserialize<
-            D: Deserializer,
-        >(deserializer: &mut D) -> Result<EnumMapField, D::Error> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<EnumMapField, D::Error>
+            where D: Deserializer,
+        {
             deserializer.visit(EnumMapFieldVisitor)
         }
     }
