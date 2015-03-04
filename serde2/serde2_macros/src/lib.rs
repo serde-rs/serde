@@ -827,6 +827,15 @@ fn deserialize_struct_empty_fields(
                     Err(::serde2::de::Error::syntax_error())
                 }
             }
+
+
+            #[inline]
+            fn visit_seq<V>(&mut self, mut visitor: V) -> Result<$type_ident, V::Error>
+                where V: de::SeqVisitor,
+            {
+                try!(visitor.end());
+                self.visit_unit()
+            }
         }
 
         $state.visit(__Visitor)

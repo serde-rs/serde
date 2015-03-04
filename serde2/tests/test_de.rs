@@ -324,44 +324,8 @@ impl<'a, 'b> de::EnumVisitor for TokenDeserializerEnumVisitor<'a, 'b> {
 //////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, PartialEq, Debug)]
+#[derive_deserialize]
 struct NamedUnit;
-
-impl Deserialize for NamedUnit {
-    fn deserialize<D>(deserializer: &mut D) -> Result<NamedUnit, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit(NamedUnitVisitor)
-    }
-}
-
-struct NamedUnitVisitor;
-
-impl Visitor for NamedUnitVisitor {
-    type Value = NamedUnit;
-
-    fn visit_unit<E>(&mut self) -> Result<NamedUnit, E>
-        where E: de::Error,
-    {
-        Ok(NamedUnit)
-    }
-
-    fn visit_named_unit<E>(&mut self, name: &str) -> Result<NamedUnit, E>
-        where E: de::Error,
-    {
-        if name == "NamedUnit" {
-            Ok(NamedUnit)
-        } else {
-            Err(de::Error::syntax_error())
-        }
-    }
-
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<NamedUnit, V::Error>
-        where V: de::SeqVisitor,
-    {
-        try!(visitor.end());
-        Ok(NamedUnit)
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////
 
