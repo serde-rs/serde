@@ -8,7 +8,7 @@ use de;
 use ser;
 use super::error::Error;
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Value {
     Null,
     Bool(bool),
@@ -61,6 +61,7 @@ impl fmt::Debug for Value {
     }
 }
 
+#[derive(Debug)]
 enum State {
     Value(Value),
     Array(Vec<Value>),
@@ -227,21 +228,22 @@ impl ser::Visitor for Serializer {
               V: ser::Serialize,
     {
         try!(key.visit(self));
-        try!(value.visit(self));
 
         let key = match self.state.pop().unwrap() {
             State::Value(Value::String(value)) => value,
-            _ => panic!(),
+            state => panic!("expected key, found {:?}", state),
         };
+
+        try!(value.visit(self));
 
         let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
-            _ => panic!(),
+            state => panic!("expected value, found {:?}", state),
         };
 
         match *self.state.last_mut().unwrap() {
             State::Object(ref mut values) => { values.insert(key, value); }
-            _ => panic!(),
+            ref state => panic!("expected object, found {:?}", state),
         }
 
         Ok(())

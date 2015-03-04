@@ -5,8 +5,6 @@ extern crate test;
 extern crate serde2;
 
 use std::fmt::Debug;
-use std::io;
-use std::str;
 use std::string;
 use std::collections::BTreeMap;
 
@@ -115,13 +113,12 @@ fn test_write_null() {
     //test_pretty_encode_ok(tests);
 }
 
-/*
 #[test]
 fn test_write_i64() {
     let tests = &[
-        (3is, "3"),
-        (-2is, "-2"),
-        (-1234is, "-1234"),
+        (3i64, "3"),
+        (-2i64, "-2"),
+        (-1234i64, "-1234"),
     ];
     test_encode_ok(tests);
     //test_pretty_encode_ok(tests);
@@ -130,7 +127,7 @@ fn test_write_i64() {
 #[test]
 fn test_write_f64() {
     let tests = &[
-        (3.0f64, "3"),
+        (3.0, "3"),
         (3.1, "3.1"),
         (-1.5, "-1.5"),
         (0.5, "0.5"),
@@ -306,7 +303,7 @@ fn test_write_object() {
 fn test_write_tuple() {
     test_encode_ok(&[
         (
-            (5is,),
+            (5,),
             "[5]",
         ),
     ]);
@@ -314,7 +311,7 @@ fn test_write_tuple() {
     /*
     test_pretty_encode_ok(&[
         (
-            (5is,),
+            (5,),
             concat!(
                 "[\n",
                 "  5\n",
@@ -326,7 +323,7 @@ fn test_write_tuple() {
 
     test_encode_ok(&[
         (
-            (5is, (6is, "abc")),
+            (5, (6, "abc")),
             "[5,[6,\"abc\"]]",
         ),
     ]);
@@ -334,7 +331,7 @@ fn test_write_tuple() {
     /*
     test_pretty_encode_ok(&[
         (
-            (5is, (6is, "abc")),
+            (5, (6, "abc")),
             concat!(
                 "[\n",
                 "  5,\n",
@@ -349,6 +346,7 @@ fn test_write_tuple() {
     */
 }
 
+/*
 #[test]
 fn test_write_enum() {
     test_encode_ok(&[
@@ -634,8 +632,8 @@ fn test_parse_list() {
     ]);
 
     test_parse_ok(&[
-        ("[3,1]", vec!(3is, 1)),
-        ("[ 3 , 1 ]", vec!(3is, 1)),
+        ("[3,1]", vec!(3, 1)),
+        ("[ 3 , 1 ]", vec!(3, 1)),
     ]);
 
     test_parse_ok(&[
@@ -662,7 +660,7 @@ fn test_json_deserialize_list() {
     ]);
 
     test_json_deserialize_ok(&[
-        vec!(3is, 1),
+        vec!(3, 1),
     ]);
 
     test_json_deserialize_ok(&[
@@ -700,18 +698,18 @@ fn test_parse_object() {
         ),
         (
             "{\"a\":3,\"b\":4}",
-            treemap!("a".to_string() => 3is, "b".to_string() => 4)
+            treemap!("a".to_string() => 3, "b".to_string() => 4)
         ),
         (
             "{ \"a\" : 3 , \"b\" : 4 }",
-            treemap!("a".to_string() => 3is, "b".to_string() => 4),
+            treemap!("a".to_string() => 3, "b".to_string() => 4),
         ),
     ]);
 
     test_parse_ok(&[
         (
             "{\"a\": {\"b\": 3, \"c\": 4}}",
-            treemap!("a".to_string() => treemap!("b".to_string() => 3is, "c".to_string() => 4is)),
+            treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4is)),
         ),
     ]);
 }
@@ -720,12 +718,12 @@ fn test_parse_object() {
 fn test_json_deserialize_object() {
     test_json_deserialize_ok(&[
         treemap!(),
-        treemap!("a".to_string() => 3is),
-        treemap!("a".to_string() => 3is, "b".to_string() => 4),
+        treemap!("a".to_string() => 3),
+        treemap!("a".to_string() => 3, "b".to_string() => 4),
     ]);
 
     test_json_deserialize_ok(&[
-        treemap!("a".to_string() => treemap!("b".to_string() => 3is, "c".to_string() => 4)),
+        treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
     ]);
 }
 
