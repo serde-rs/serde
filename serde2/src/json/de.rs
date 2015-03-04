@@ -392,6 +392,24 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer for Deserializer<Iter> {
     {
         self.parse_value(visitor)
     }
+
+    #[inline]
+    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        self.parse_whitespace();
+
+        if self.eof() {
+            return Err(self.error(ErrorCode::EOFWhileParsingValue));
+        }
+
+        if self.ch_is(b'n') {
+            try!(self.parse_ident(b"ull"));
+            visitor.visit_none()
+        } else {
+            visitor.visit_some(self)
+        }
+    }
 }
 
 struct SeqVisitor<'a, Iter: 'a> {

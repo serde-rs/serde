@@ -691,11 +691,10 @@ fn test_parse_struct() {
     ]);
 }
 
-/*
 #[test]
 fn test_parse_option() {
     test_parse_ok(&[
-        ("null", None),
+        ("null", None::<String>),
         ("\"jodhpurs\"", Some("jodhpurs".to_string())),
     ]);
 
@@ -706,21 +705,18 @@ fn test_parse_option() {
         x: Option<isize>,
     }
 
+    /*
     let value: Foo = from_str("{}").unwrap();
     assert_eq!(value, Foo { x: None });
+    */
 
-    let value: Foo = from_str("{ \"x\": 5 }").unwrap();
-    assert_eq!(value, Foo { x: Some(5) });
-}
-
-#[test]
-fn test_json_deserialize_option() {
-    test_json_deserialize_ok(&[
-        None,
-        Some("jodhpurs".to_string()),
+    test_parse_ok(&[
+        ("{\"x\": null}", Foo { x: None }),
+        ("{\"x\": 5}", Foo { x: Some(5) }),
     ]);
 }
 
+/*
 #[test]
 fn test_parse_enum() {
     test_parse_ok(&[

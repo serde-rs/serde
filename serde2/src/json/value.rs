@@ -79,6 +79,18 @@ impl de::Deserialize for Value {
             }
 
             #[inline]
+            fn visit_none<E>(&mut self) -> Result<Value, E> {
+                Ok(Value::Null)
+            }
+
+            #[inline]
+            fn visit_some<D>(&mut self, deserializer: &mut D) -> Result<Value, D::Error>
+                where D: de::Deserializer,
+            {
+                de::Deserialize::deserialize(deserializer)
+            }
+
+            #[inline]
             fn visit_seq<V>(&mut self, visitor: V) -> Result<Value, V::Error>
                 where V: de::SeqVisitor,
             {
