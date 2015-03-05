@@ -36,6 +36,17 @@ pub trait Deserializer {
     {
         self.visit(visitor)
     }
+
+    /// The `visit_enum` method allows a `Deserialize` type to inform the
+    /// `Deserializer` that it's expecting an enum value. This allows
+    /// deserializers that provide a custom enumeration serialization to
+    /// properly deserialize the type.
+    #[inline]
+    fn visit_enum<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
 }
 
 pub trait Visitor {
@@ -211,6 +222,8 @@ pub trait Visitor {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 pub trait SeqVisitor {
     type Error: Error;
 
@@ -224,6 +237,29 @@ pub trait SeqVisitor {
         (0, None)
     }
 }
+
+impl<'a, V> SeqVisitor for &'a mut V where V: SeqVisitor {
+    type Error = V::Error;
+
+    #[inline]
+    fn visit<T>(&mut self) -> Result<Option<T>, V::Error>
+        where T: Deserialize
+    {
+        (**self).visit()
+    }
+
+    #[inline]
+    fn end(&mut self) -> Result<(), V::Error> {
+        (**self).end()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (**self).size_hint()
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 pub trait MapVisitor {
     type Error: Error;
@@ -256,6 +292,44 @@ pub trait MapVisitor {
     }
 }
 
+impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
+    type Error = V_::Error;
+
+    #[inline]
+    fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, V_::Error>
+        where K: Deserialize,
+              V: Deserialize,
+    {
+        (**self).visit()
+    }
+
+    #[inline]
+    fn visit_key<K>(&mut self) -> Result<Option<K>, V_::Error>
+        where K: Deserialize
+    {
+        (**self).visit_key()
+    }
+
+    #[inline]
+    fn visit_value<V>(&mut self) -> Result<V, V_::Error>
+        where V: Deserialize
+    {
+        (**self).visit_value()
+    }
+
+    #[inline]
+    fn end(&mut self) -> Result<(), V_::Error> {
+        (**self).end()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (**self).size_hint()
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 pub trait EnumVisitor {
     type Error: Error;
 
@@ -276,12 +350,16 @@ pub trait EnumVisitor {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 pub trait EnumSeqVisitor {
     type Value;
 
     fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor;
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 pub trait EnumMapVisitor {
     type Value;
@@ -374,12 +452,12 @@ impl<
 > self::Visitor for PrimitiveVisitor<T> {
     type Value = T;
 
-    impl_deserialize_num_method!(isize, visit_isize, from_int);
+    impl_deserialize_num_method!(isize, visit_isize, from_isize);
     impl_deserialize_num_method!(i8, visit_i8, from_i8);
     impl_deserialize_num_method!(i16, visit_i16, from_i16);
     impl_deserialize_num_method!(i32, visit_i32, from_i32);
     impl_deserialize_num_method!(i64, visit_i64, from_i64);
-    impl_deserialize_num_method!(usize, visit_usize, from_uint);
+    impl_deserialize_num_method!(usize, visit_usize, from_usize);
     impl_deserialize_num_method!(u8, visit_u8, from_u8);
     impl_deserialize_num_method!(u16, visit_u16, from_u16);
     impl_deserialize_num_method!(u32, visit_u32, from_u32);

@@ -1,4 +1,4 @@
-#![feature(io, plugin, test)]
+#![feature(plugin, test)]
 #![plugin(serde2_macros)]
 
 extern crate test;
@@ -13,9 +13,7 @@ use serde2::ser;
 
 use serde2::json::{
     self,
-    Deserializer,
     Error,
-    Serializer,
     Value,
     from_str,
     from_value,
@@ -556,19 +554,17 @@ fn test_parse_f64() {
 }
 
 #[test]
-fn test_parse_string_errors() {
+fn test_parse_string() {
     test_parse_err::<string::String>(&[
         ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
         ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
         ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
     ]);
-}
 
-#[test]
-fn test_parse_string() {
     test_parse_ok(&[
         ("\"\"", "".to_string()),
         ("\"foo\"", "foo".to_string()),
+        (" \"foo\" ", "foo".to_string()),
         ("\"\\\"\"", "\"".to_string()),
         ("\"\\b\"", "\x08".to_string()),
         ("\"\\n\"", "\n".to_string()),
@@ -595,7 +591,7 @@ fn test_parse_list() {
         ("[]", vec!()),
         ("[ ]", vec!()),
         ("[null]", vec!(())),
-        ("[ null ]", vec!(())),
+        (" [ null ] ", vec!(())),
     ]);
 
     test_parse_ok(&[
@@ -604,7 +600,7 @@ fn test_parse_list() {
 
     test_parse_ok(&[
         ("[3,1]", vec!(3, 1)),
-        ("[ 3 , 1 ]", vec!(3, 1)),
+        (" [ 3 , 1 ] ", vec!(3, 1)),
     ]);
 
     test_parse_ok(&[
@@ -652,7 +648,7 @@ fn test_parse_object() {
             treemap!("a".to_string() => 3, "b".to_string() => 4)
         ),
         (
-            "{ \"a\" : 3 , \"b\" : 4 }",
+            " { \"a\" : 3 , \"b\" : 4 } ",
             treemap!("a".to_string() => 3, "b".to_string() => 4),
         ),
     ]);
@@ -716,25 +712,47 @@ fn test_parse_option() {
     ]);
 }
 
-/*
 #[test]
 fn test_parse_enum() {
+    /*
+    test_parse_err::<Animal>(&[
+        ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
+        ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
+        ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
+        ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
+        ("{\"a\"", SyntaxError(EOFWhileParsingObject, 1, 5)),
+        ("{\"a\" ", SyntaxError(EOFWhileParsingObject, 1, 6)),
+        ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
+        ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
+        ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
+        ("{\"a\":1 1", SyntaxError(ExpectedObjectCommaOrEnd, 1, 8)),
+        ("{\"a\":1,", SyntaxError(EOFWhileParsingValue, 1, 8)),
+        ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
+    ]);
+    */
+
     test_parse_ok(&[
-        ("{\"Dog\": []}", Animal::Dog),
+        ("{\"Dog\":[]}", Animal::Dog),
+        (" { \"Dog\" : [ ] } ", Animal::Dog),
         (
-            "{\"Frog\": [\"Henry\", []]}",
+            "{\"Frog\":[\"Henry\",[]]}",
             Animal::Frog("Henry".to_string(), vec!()),
         ),
         (
-            "{\"Frog\": [\"Henry\", [349]]}",
-            Animal::Frog("Henry".to_string(), vec!(349)),
+            " { \"Frog\": [ \"Henry\" , [ 349, 102 ] ] } ",
+            Animal::Frog("Henry".to_string(), vec!(349, 102)),
         ),
         (
-            "{\"Frog\": [\"Henry\", [349, 102]]}",
-            Animal::Frog("Henry".to_string(), vec!(349, 102)),
+            "{\"Cat\": {\"age\": 5, \"name\": \"Kate\"}}",
+            Animal::Cat { age: 5, name: "Kate".to_string() },
+        ),
+        (
+            " { \"Cat\" : { \"age\" : 5 , \"name\" : \"Kate\" } } ",
+            Animal::Cat { age: 5, name: "Kate".to_string() },
         ),
     ]);
 
+    /*
     test_parse_ok(&[
         (
             concat!(
@@ -749,17 +767,10 @@ fn test_parse_enum() {
             )
         ),
     ]);
+    */
 }
 
-#[test]
-fn test_json_deserialize_enum() {
-    test_json_deserialize_ok(&[
-        Animal::Dog,
-        Animal::Frog("Henry".to_string(), vec!()),
-        Animal::Frog("Henry".to_string(), vec!(349)),
-        Animal::Frog("Henry".to_string(), vec!(349, 102)),
-    ]);
-}
+/*
 
 #[test]
 fn test_multiline_errors() {

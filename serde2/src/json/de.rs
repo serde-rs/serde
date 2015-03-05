@@ -104,17 +104,11 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
             }
             b'[' => {
                 self.bump();
-                visitor.visit_seq(SeqVisitor {
-                    de: self,
-                    first: true,
-                })
+                visitor.visit_seq(SeqVisitor::new(self))
             }
             b'{' => {
                 self.bump();
-                visitor.visit_map(MapVisitor {
-                    de: self,
-                    first: true,
-                })
+                visitor.visit_map(MapVisitor::new(self))
             }
             _ => {
                 Err(self.error(ErrorCode::ExpectedSomeValue))
@@ -367,6 +361,19 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
             }
         }
     }
+
+    fn parse_object_colon(&mut self) -> Result<(), Error> {
+        self.parse_whitespace();
+
+        if self.ch_is(b':') {
+            self.bump();
+            Ok(())
+        } else if self.eof() {
+            Err(self.error(ErrorCode::EOFWhileParsingObject))
+        } else {
+            Err(self.error(ErrorCode::ExpectedColon))
+        }
+    }
 }
 
 impl<Iter: Iterator<Item=u8>> de::Deserializer for Deserializer<Iter> {
@@ -396,6 +403,38 @@ impl<Iter: Iterator<Item=u8>> de::Deserializer for Deserializer<Iter> {
             visitor.visit_some(self)
         }
     }
+
+    #[inline]
+    fn visit_enum<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        self.parse_whitespace();
+
+        if self.ch_is(b'{') {
+            self.bump();
+            self.parse_whitespace();
+
+            try!(self.parse_string());
+            try!(self.parse_object_colon());
+
+            let variant = str::from_utf8(&self.buf).unwrap().to_string();
+
+            let value = try!(visitor.visit_variant(&variant, EnumVisitor {
+                de: self,
+            }));
+
+            self.parse_whitespace();
+
+            if self.ch_is(b'}') {
+                self.bump();
+                Ok(value)
+            } else {
+                return Err(self.error(ErrorCode::ExpectedSomeValue));
+            }
+        } else {
+            Err(self.error(ErrorCode::ExpectedSomeValue))
+        }
+    }
 }
 
 struct SeqVisitor<'a, Iter: 'a> {
@@ -403,7 +442,18 @@ struct SeqVisitor<'a, Iter: 'a> {
     first: bool,
 }
 
-impl<'a, Iter: Iterator<Item=u8>> de::SeqVisitor for SeqVisitor<'a, Iter> {
+impl<'a, Iter> SeqVisitor<'a, Iter> {
+    fn new(de: &'a mut Deserializer<Iter>) -> Self {
+        SeqVisitor {
+            de: de,
+            first: true,
+        }
+    }
+}
+
+impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>
+{
     type Error = Error;
 
     fn visit<T>(&mut self) -> Result<Option<T>, Error>
@@ -433,6 +483,8 @@ impl<'a, Iter: Iterator<Item=u8>> de::SeqVisitor for SeqVisitor<'a, Iter> {
     }
 
     fn end(&mut self) -> Result<(), Error> {
+        self.de.parse_whitespace();
+
         if self.de.ch_is(b']') {
             self.de.bump();
             Ok(())
@@ -449,7 +501,18 @@ struct MapVisitor<'a, Iter: 'a> {
     first: bool,
 }
 
-impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor for MapVisitor<'a, Iter> {
+impl<'a, Iter> MapVisitor<'a, Iter> {
+    fn new(de: &'a mut Deserializer<Iter>) -> Self {
+        MapVisitor {
+            de: de,
+            first: true,
+        }
+    }
+}
+
+impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>
+{
     type Error = Error;
 
     fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
@@ -489,22 +552,14 @@ impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor for MapVisitor<'a, Iter> {
     fn visit_value<V>(&mut self) -> Result<V, Error>
         where V: de::Deserialize,
     {
-        self.de.parse_whitespace();
-
-        if self.de.ch_is(b':') {
-            self.de.bump();
-        } else if self.de.eof() {
-            return Err(self.de.error(ErrorCode::EOFWhileParsingObject));
-        } else {
-            return Err(self.de.error(ErrorCode::ExpectedColon));
-        }
-
-        self.de.parse_whitespace();
+        try!(self.de.parse_object_colon());
 
         Ok(try!(de::Deserialize::deserialize(self.de)))
     }
 
     fn end(&mut self) -> Result<(), Error> {
+        self.de.parse_whitespace();
+
         if self.de.ch_is(b']') {
             self.de.bump();
             Ok(())
@@ -512,6 +567,44 @@ impl<'a, Iter: Iterator<Item=u8>> de::MapVisitor for MapVisitor<'a, Iter> {
             Err(self.de.error(ErrorCode::EOFWhileParsingList))
         } else {
             Err(self.de.error(ErrorCode::TrailingCharacters))
+        }
+    }
+}
+
+struct EnumVisitor<'a, Iter: 'a> {
+    de: &'a mut Deserializer<Iter>,
+}
+
+impl<'a, Iter: Iterator<Item=u8>> de::EnumVisitor for EnumVisitor<'a, Iter> {
+    type Error = Error;
+
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        de::Deserialize::deserialize(self.de)
+    }
+
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumSeqVisitor,
+    {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b'[') {
+            self.de.bump();
+            visitor.visit(SeqVisitor::new(self.de))
+        } else {
+            Err(self.de.error(ErrorCode::ExpectedSomeValue))
+        }
+    }
+
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumMapVisitor,
+    {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b'{') {
+            self.de.bump();
+            visitor.visit(MapVisitor::new(self.de))
+        } else {
+            Err(self.de.error(ErrorCode::ExpectedSomeValue))
         }
     }
 }

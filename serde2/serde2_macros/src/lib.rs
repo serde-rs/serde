@@ -1265,7 +1265,7 @@ fn deserialize_enum(
             }
         }
 
-        $state.visit(__Visitor)
+        $state.visit_enum(__Visitor)
     })
 }
 

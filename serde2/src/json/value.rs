@@ -47,11 +47,6 @@ impl de::Deserialize for Value {
             type Value = Value;
 
             #[inline]
-            fn visit_unit<E>(&mut self) -> Result<Value, E> {
-                Ok(Value::Null)
-            }
-
-            #[inline]
             fn visit_bool<E>(&mut self, value: bool) -> Result<Value, E> {
                 Ok(Value::Bool(value))
             }
@@ -88,6 +83,11 @@ impl de::Deserialize for Value {
                 where D: de::Deserializer,
             {
                 de::Deserialize::deserialize(deserializer)
+            }
+
+            #[inline]
+            fn visit_unit<E>(&mut self) -> Result<Value, E> {
+                Ok(Value::Null)
             }
 
             #[inline]
@@ -157,7 +157,7 @@ impl Serializer {
     pub fn unwrap(mut self) -> Value {
         match self.state.pop().unwrap() {
             State::Value(value) => value,
-            _ => panic!(),
+            state => panic!("expected value, found {:?}", state),
         }
     }
 }
@@ -258,12 +258,12 @@ impl ser::Visitor for Serializer {
 
         while let Some(()) = try!(visitor.visit(self)) { }
 
-        match self.state.pop().unwrap() {
-            State::Array(values) => {
-                self.state.push(State::Value(Value::Array(values)));
-            }
-            _ => panic!(),
-        }
+        let values = match self.state.pop().unwrap() {
+            State::Array(values) => values,
+            state => panic!("Expected array, found {:?}", state),
+        };
+
+        self.state.push(State::Value(Value::Array(values)));
 
         Ok(())
     }
@@ -276,7 +276,7 @@ impl ser::Visitor for Serializer {
 
         let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
-            _ => panic!(),
+            state => panic!("expected value, found {:?}", state),
         };
 
         let mut object = BTreeMap::new();
@@ -296,12 +296,12 @@ impl ser::Visitor for Serializer {
 
         let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
-            _ => panic!(),
+            state => panic!("expected value, found {:?}", state),
         };
 
         match *self.state.last_mut().unwrap() {
             State::Array(ref mut values) => { values.push(value); }
-            _ => panic!(),
+            ref state => panic!("expected array, found {:?}", state),
         }
 
         Ok(())
@@ -317,12 +317,12 @@ impl ser::Visitor for Serializer {
 
         while let Some(()) = try!(visitor.visit(self)) { }
 
-        match self.state.pop().unwrap() {
-            State::Object(values) => {
-                self.state.push(State::Value(Value::Object(values)));
-            }
-            _ => panic!(),
-        }
+        let values = match self.state.pop().unwrap() {
+            State::Object(values) => values,
+            state => panic!("expected object, found {:?}", state),
+        };
+
+        self.state.push(State::Value(Value::Object(values)));
 
         Ok(())
     }
@@ -335,7 +335,7 @@ impl ser::Visitor for Serializer {
 
         let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
-            _ => panic!(),
+            state => panic!("expected value, found {:?}", state),
         };
 
         let mut object = BTreeMap::new();
@@ -436,6 +436,46 @@ impl de::Deserializer for Deserializer {
             None => Err(de::Error::end_of_stream_error()),
         }
     }
+
+    #[inline]
+    fn visit_enum<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        let value = match self.value.take() {
+            Some(Value::Object(value)) => value,
+            Some(_) => { return Err(de::Error::syntax_error()); }
+            None => { return Err(de::Error::end_of_stream_error()); }
+        };
+
+        let mut iter = value.into_iter();
+
+        let value = match iter.next() {
+            Some((variant, Value::Array(fields))) => {
+                let len = fields.len();
+                try!(visitor.visit_variant(&variant, SeqDeserializer {
+                    de: self,
+                    iter: fields.into_iter(),
+                    len: len,
+                }))
+            }
+            Some((variant, Value::Object(fields))) => {
+                let len = fields.len();
+                try!(visitor.visit_variant(&variant, MapDeserializer {
+                    de: self,
+                    iter: fields.into_iter(),
+                    value: None,
+                    len: len,
+                }))
+            }
+            Some(_) => { return Err(de::Error::syntax_error()); }
+            None => { return Err(de::Error::syntax_error()); }
+        };
+
+        match iter.next() {
+            Some(_) => Err(de::Error::syntax_error()),
+            None => Ok(value)
+        }
+    }
 }
 
 struct SeqDeserializer<'a> {
@@ -470,6 +510,24 @@ impl<'a> de::SeqVisitor for SeqDeserializer<'a> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len, Some(self.len))
+    }
+}
+
+impl<'a> de::EnumVisitor for SeqDeserializer<'a> {
+    type Error = Error;
+
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        if self.len == 0 {
+            Ok(())
+        } else {
+            Err(de::Error::syntax_error())
+        }
+    }
+
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumSeqVisitor,
+    {
+        visitor.visit(self)
     }
 }
 
@@ -515,6 +573,16 @@ impl<'a> de::MapVisitor for MapDeserializer<'a> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len, Some(self.len))
+    }
+}
+
+impl<'a> de::EnumVisitor for MapDeserializer<'a> {
+    type Error = Error;
+
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumMapVisitor,
+    {
+        visitor.visit(self)
     }
 }
 
