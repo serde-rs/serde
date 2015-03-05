@@ -41,10 +41,8 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
 
     fn eof(&self) -> bool { self.ch.is_none() }
 
-    #[inline]
     fn ch_or_null(&self) -> u8 { self.ch.unwrap_or(b'\x00') }
 
-    #[inline]
     fn bump(&mut self) {
         self.ch = self.rdr.next();
 
@@ -56,23 +54,19 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         }
     }
 
-    #[inline]
     fn next_char(&mut self) -> Option<u8> {
         self.bump();
         self.ch
     }
 
-    #[inline]
     fn ch_is(&self, c: u8) -> bool {
         self.ch == Some(c)
     }
 
-    #[inline]
     fn error(&mut self, reason: ErrorCode) -> Error {
         Error::SyntaxError(reason, self.line, self.col)
     }
 
-    #[inline]
     fn parse_whitespace(&mut self) {
         while self.ch_is(b' ') ||
               self.ch_is(b'\n') ||
@@ -80,7 +74,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
               self.ch_is(b'\r') { self.bump(); }
     }
 
-    #[inline]
     fn parse_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
@@ -129,7 +122,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         }
     }
 
-    #[inline]
     fn parse_ident(&mut self, ident: &[u8]) -> Result<(), Error> {
         if ident.iter().all(|c| Some(*c) == self.next_char()) {
             self.bump();
@@ -139,7 +131,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         }
     }
 
-    #[inline]
     fn parse_number<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
@@ -170,7 +161,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         }
     }
 
-    #[inline]
     fn parse_integer(&mut self) -> Result<i64, Error> {
         let mut res = 0;
 
@@ -204,7 +194,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         Ok(res)
     }
 
-    #[inline]
     fn parse_decimal(&mut self, res: f64) -> Result<f64, Error> {
         self.bump();
 
@@ -230,7 +219,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         Ok(res)
     }
 
-    #[inline]
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
         self.bump();
 
@@ -271,7 +259,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         Ok(res)
     }
 
-    #[inline]
     fn decode_hex_escape(&mut self) -> Result<u16, Error> {
         let mut i = 0;
         let mut n = 0u16;
@@ -299,7 +286,6 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
         Ok(n)
     }
 
-    #[inline]
     fn parse_string(&mut self) -> Result<(), Error> {
         self.buf.clear();
 
