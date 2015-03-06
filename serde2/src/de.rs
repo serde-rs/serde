@@ -1,7 +1,8 @@
-use std::marker::PhantomData;
 use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::num::FromPrimitive;
+use std::path;
 use std::str;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -786,5 +787,33 @@ impl<
         where D: Deserializer,
     {
         deserializer.visit(BTreeMapVisitor::new())
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+struct PathBufVisitor;
+
+impl Visitor for PathBufVisitor {
+    type Value = path::PathBuf;
+
+    fn visit_str<E>(&mut self, v: &str) -> Result<path::PathBuf, E>
+        where E: Error,
+    {
+        Ok(path::PathBuf::new(&v))
+    }
+
+    fn visit_string<E>(&mut self, v: String) -> Result<path::PathBuf, E>
+        where E: Error,
+    {
+        self.visit_str(&v)
+    }
+}
+
+impl Deserialize for path::PathBuf {
+    fn deserialize<D>(deserializer: &mut D) -> Result<path::PathBuf, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.visit(PathBufVisitor)
     }
 }

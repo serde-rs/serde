@@ -1,6 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::collections::hash_state::HashState;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
+use std::path;
 use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
@@ -8,9 +9,8 @@ use std::sync::Arc;
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serialize {
-    fn visit<
-        V: Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error>;
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -605,7 +605,7 @@ impl<'a, T> Serialize for &'a T where T: Serialize {
     }
 }
 
-impl<'a, T> Serialize for Box<T> where T: Serialize {
+impl<T> Serialize for Box<T> where T: Serialize {
     #[inline]
     fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
         where V: Visitor,
@@ -614,9 +614,7 @@ impl<'a, T> Serialize for Box<T> where T: Serialize {
     }
 }
 
-impl<'a, T> Serialize for Rc<T>
-    where T: Serialize,
-{
+impl<T> Serialize for Rc<T> where T: Serialize, {
     #[inline]
     fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
         where V: Visitor,
@@ -625,13 +623,29 @@ impl<'a, T> Serialize for Rc<T>
     }
 }
 
-impl<'a, T> Serialize for Arc<T>
-    where T: Serialize,
-{
+impl<T> Serialize for Arc<T> where T: Serialize, {
     #[inline]
     fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
         where V: Visitor,
     {
         (**self).visit(visitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl Serialize for path::Path {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
+        self.to_str().unwrap().visit(visitor)
+    }
+}
+
+impl Serialize for path::PathBuf {
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
+        self.to_str().unwrap().visit(visitor)
     }
 }
