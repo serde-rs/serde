@@ -5,7 +5,6 @@ extern crate test;
 extern crate serde2;
 
 use std::fmt::Debug;
-use std::string;
 use std::collections::BTreeMap;
 
 use serde2::de;
@@ -13,35 +12,17 @@ use serde2::ser;
 
 use serde2::json::{
     self,
-    Error,
     Value,
     from_str,
     from_value,
     to_value,
 };
 
-use serde2::json::error::Error::{
-    SyntaxError,
-};
-
-use serde2::json::error::ErrorCode::{
-    EOFWhileParsingList,
-    EOFWhileParsingObject,
-    EOFWhileParsingString,
-    EOFWhileParsingValue,
-    ExpectedColon,
-    ExpectedListCommaOrEnd,
-    ExpectedObjectCommaOrEnd,
-    ExpectedSomeIdent,
-    ExpectedSomeValue,
-    InvalidNumber,
-    KeyMustBeAString,
-    TrailingCharacters,
-};
+use serde2::json::error::{Error, ErrorCode};
 
 macro_rules! treemap {
     ($($k:expr => $v:expr),*) => ({
-        let mut _m = ::std::collections::BTreeMap::new();
+        let mut _m = BTreeMap::new();
         $(_m.insert($k, $v);)*
         _m
     })
@@ -63,7 +44,7 @@ enum Animal {
 struct Inner {
     a: (),
     b: usize,
-    c: Vec<string::String>,
+    c: Vec<String>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -456,16 +437,6 @@ fn test_write_option() {
     */
 }
 
-// FIXME (#5527): these could be merged once UFCS is finished.
-fn test_parse_err<'a, T>(errors: &[(&'a str, Error)])
-    where T: Debug + de::Deserialize,
-{
-    for &(s, ref err) in errors {
-        let v: Result<T, Error> = from_str(s);
-        assert_eq!(v.unwrap_err(), *err);
-    }
-}
-
 fn test_parse_ok<'a, T>(errors: &[(&'a str, T)])
     where T: PartialEq + Debug + ser::Serialize + de::Deserialize,
 {
@@ -487,12 +458,22 @@ fn test_parse_ok<'a, T>(errors: &[(&'a str, T)])
     }
 }
 
+// FIXME (#5527): these could be merged once UFCS is finished.
+fn test_parse_err<'a, T>(errors: &[(&'a str, Error)])
+    where T: Debug + de::Deserialize,
+{
+    for &(s, ref err) in errors {
+        let v: Result<T, Error> = from_str(s);
+        assert_eq!(v.unwrap_err(), *err);
+    }
+}
+
 #[test]
 fn test_parse_null() {
     test_parse_err::<()>(&[
-        ("n", SyntaxError(ExpectedSomeIdent, 1, 2)),
-        ("nul", SyntaxError(ExpectedSomeIdent, 1, 4)),
-        ("nulla", SyntaxError(TrailingCharacters, 1, 5)),
+        ("n", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 2)),
+        ("nul", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 4)),
+        ("nulla", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 5)),
     ]);
 
     test_parse_ok(&[
@@ -503,31 +484,33 @@ fn test_parse_null() {
 #[test]
 fn test_parse_bool() {
     test_parse_err::<bool>(&[
-        ("t", SyntaxError(ExpectedSomeIdent, 1, 2)),
-        ("truz", SyntaxError(ExpectedSomeIdent, 1, 4)),
-        ("f", SyntaxError(ExpectedSomeIdent, 1, 2)),
-        ("faz", SyntaxError(ExpectedSomeIdent, 1, 3)),
-        ("truea", SyntaxError(TrailingCharacters, 1, 5)),
-        ("falsea", SyntaxError(TrailingCharacters, 1, 6)),
+        ("t", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 2)),
+        ("truz", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 4)),
+        ("f", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 2)),
+        ("faz", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 3)),
+        ("truea", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 5)),
+        ("falsea", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 6)),
     ]);
 
     test_parse_ok(&[
         ("true", true),
+        (" true ", true),
         ("false", false),
+        (" false ", false),
     ]);
 }
 
 #[test]
 fn test_parse_number_errors() {
     test_parse_err::<f64>(&[
-        ("+", SyntaxError(ExpectedSomeValue, 1, 1)),
-        (".", SyntaxError(ExpectedSomeValue, 1, 1)),
-        ("-", SyntaxError(InvalidNumber, 1, 2)),
-        ("00", SyntaxError(InvalidNumber, 1, 2)),
-        ("1.", SyntaxError(InvalidNumber, 1, 3)),
-        ("1e", SyntaxError(InvalidNumber, 1, 3)),
-        ("1e+", SyntaxError(InvalidNumber, 1, 4)),
-        ("1a", SyntaxError(TrailingCharacters, 1, 2)),
+        ("+", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 1)),
+        (".", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 1)),
+        ("-", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
+        ("00", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
+        ("1.", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
+        ("1e", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
+        ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 4)),
+        ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
     ]);
 }
 
@@ -537,6 +520,7 @@ fn test_parse_i64() {
         ("3", 3),
         ("-2", -2),
         ("-1234", -1234),
+        (" -1234 ", -1234),
     ]);
 }
 
@@ -550,15 +534,16 @@ fn test_parse_f64() {
         ("0.4e5", 0.4e5),
         ("0.4e15", 0.4e15),
         ("0.4e-01", 0.4e-01),
+        (" 0.4e-01 ", 0.4e-01),
     ]);
 }
 
 #[test]
 fn test_parse_string() {
-    test_parse_err::<string::String>(&[
-        ("\"", SyntaxError(EOFWhileParsingString, 1, 2)),
-        ("\"lol", SyntaxError(EOFWhileParsingString, 1, 5)),
-        ("\"lol\"a", SyntaxError(TrailingCharacters, 1, 6)),
+    test_parse_err::<String>(&[
+        ("\"", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 2)),
+        ("\"lol", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 5)),
+        ("\"lol\"a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 6)),
     ]);
 
     test_parse_ok(&[
@@ -578,58 +563,70 @@ fn test_parse_string() {
 #[test]
 fn test_parse_list() {
     test_parse_err::<Vec<f64>>(&[
-        ("[", SyntaxError(EOFWhileParsingValue, 1, 2)),
-        ("[ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
-        ("[1", SyntaxError(EOFWhileParsingList,  1, 3)),
-        ("[1,", SyntaxError(EOFWhileParsingValue, 1, 4)),
-        ("[1,]", SyntaxError(ExpectedSomeValue, 1, 4)),
-        ("[1 2]", SyntaxError(ExpectedListCommaOrEnd, 1, 4)),
-        ("[]a", SyntaxError(TrailingCharacters, 1, 3)),
+        ("[", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
+        ("[ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
+        ("[1", Error::SyntaxError(ErrorCode::EOFWhileParsingList,  1, 3)),
+        ("[1,", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 4)),
+        ("[1,]", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 4)),
+        ("[1 2]", Error::SyntaxError(ErrorCode::ExpectedListCommaOrEnd, 1, 4)),
+        ("[]a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 3)),
     ]);
 
     test_parse_ok(&[
-        ("[]", vec!()),
-        ("[ ]", vec!()),
-        ("[null]", vec!(())),
-        (" [ null ] ", vec!(())),
+        ("[]", vec![]),
+        ("[ ]", vec![]),
+        ("[null]", vec![()]),
+        (" [ null ] ", vec![()]),
     ]);
 
     test_parse_ok(&[
-        ("[true]", vec!(true)),
+        ("[true]", vec![true]),
     ]);
 
     test_parse_ok(&[
-        ("[3,1]", vec!(3, 1)),
-        (" [ 3 , 1 ] ", vec!(3, 1)),
+        ("[3,1]", vec![3, 1]),
+        (" [ 3 , 1 ] ", vec![3, 1]),
     ]);
 
     test_parse_ok(&[
-        ("[[3], [1, 2]]", vec!(vec!(3), vec!(1, 2))),
+        ("[[3], [1, 2]]", vec![vec![3], vec![1, 2]]),
     ]);
 
-    let v: () = from_str("[]").unwrap();
-    assert_eq!(v, ());
+    test_parse_ok(&[
+        ("[1]", (1,)),
+    ]);
+
+    test_parse_ok(&[
+        ("[1, 2]", (1, 2)),
+    ]);
 
     test_parse_ok(&[
         ("[1, 2, 3]", (1, 2, 3)),
     ]);
+
+    test_parse_ok(&[
+        ("[1, [2, 3]]", (1, (2, 3))),
+    ]);
+
+    let v: () = from_str("[]").unwrap();
+    assert_eq!(v, ());
 }
 
 #[test]
 fn test_parse_object() {
-    test_parse_err::<BTreeMap<string::String, isize>>(&[
-        ("{", SyntaxError(EOFWhileParsingValue, 1, 2)),
-        ("{ ", SyntaxError(EOFWhileParsingValue, 1, 3)),
-        ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
-        ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
-        ("{\"a\"", SyntaxError(EOFWhileParsingObject, 1, 5)),
-        ("{\"a\" ", SyntaxError(EOFWhileParsingObject, 1, 6)),
-        ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
-        ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
-        ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
-        ("{\"a\":1 1", SyntaxError(ExpectedObjectCommaOrEnd, 1, 8)),
-        ("{\"a\":1,", SyntaxError(EOFWhileParsingValue, 1, 8)),
-        ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
+    test_parse_err::<BTreeMap<String, u32>>(&[
+        ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
+        ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
+        ("{1", Error::SyntaxError(ErrorCode::KeyMustBeAString, 1, 2)),
+        ("{ \"a\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 6)),
+        ("{\"a\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 5)),
+        ("{\"a\" ", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 6)),
+        ("{\"a\" 1", Error::SyntaxError(ErrorCode::ExpectedColon, 1, 6)),
+        ("{\"a\":", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 6)),
+        ("{\"a\":1", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 7)),
+        ("{\"a\":1 1", Error::SyntaxError(ErrorCode::ExpectedObjectCommaOrEnd, 1, 8)),
+        ("{\"a\":1,", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 8)),
+        ("{}a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 3)),
     ]);
 
     test_parse_ok(&[
@@ -716,18 +713,18 @@ fn test_parse_option() {
 fn test_parse_enum() {
     /*
     test_parse_err::<Animal>(&[
-        ("{", SyntaxError(EOFWhileParsingString, 1, 2)),
-        ("{ ", SyntaxError(EOFWhileParsingString, 1, 3)),
-        ("{1", SyntaxError(KeyMustBeAString, 1, 2)),
-        ("{ \"a\"", SyntaxError(EOFWhileParsingObject, 1, 6)),
-        ("{\"a\"", SyntaxError(EOFWhileParsingObject, 1, 5)),
-        ("{\"a\" ", SyntaxError(EOFWhileParsingObject, 1, 6)),
-        ("{\"a\" 1", SyntaxError(ExpectedColon, 1, 6)),
-        ("{\"a\":", SyntaxError(EOFWhileParsingValue, 1, 6)),
-        ("{\"a\":1", SyntaxError(EOFWhileParsingObject, 1, 7)),
-        ("{\"a\":1 1", SyntaxError(ExpectedObjectCommaOrEnd, 1, 8)),
-        ("{\"a\":1,", SyntaxError(EOFWhileParsingValue, 1, 8)),
-        ("{}a", SyntaxError(TrailingCharacters, 1, 3)),
+        ("{", Error::SyntaxError(EOFWhileParsingString, 1, 2)),
+        ("{ ", Error::SyntaxError(EOFWhileParsingString, 1, 3)),
+        ("{1", Error::SyntaxError(KeyMustBeAString, 1, 2)),
+        ("{ \"a\"", Error::SyntaxError(EOFWhileParsingObject, 1, 6)),
+        ("{\"a\"", Error::SyntaxError(EOFWhileParsingObject, 1, 5)),
+        ("{\"a\" ", Error::SyntaxError(EOFWhileParsingObject, 1, 6)),
+        ("{\"a\" 1", Error::SyntaxError(ExpectedColon, 1, 6)),
+        ("{\"a\":", Error::SyntaxError(EOFWhileParsingValue, 1, 6)),
+        ("{\"a\":1", Error::SyntaxError(EOFWhileParsingObject, 1, 7)),
+        ("{\"a\":1 1", Error::SyntaxError(ExpectedObjectCommaOrEnd, 1, 8)),
+        ("{\"a\":1,", Error::SyntaxError(EOFWhileParsingValue, 1, 8)),
+        ("{}a", Error::SyntaxError(TrailingCharacters, 1, 3)),
     ]);
     */
 
@@ -770,12 +767,22 @@ fn test_parse_enum() {
     */
 }
 
+#[test]
+fn test_parse_trailing_whitespace() {
+    test_parse_ok(&[
+        ("[1, 2] ", vec![1, 2]),
+        ("[1, 2]\n", vec![1, 2]),
+        ("[1, 2]\t", vec![1, 2]),
+        ("[1, 2]\t \n", vec![1, 2]),
+    ]);
+}
+
 /*
 
 #[test]
 fn test_multiline_errors() {
-    test_parse_err::<BTreeMap<string::String, string::String>>(&[
-        ("{\n  \"foo\":\n \"bar\"", SyntaxError(EOFWhileParsingObject, 3us, 8us)),
+    test_parse_err::<BTreeMap<String, String>>(&[
+        ("{\n  \"foo\":\n \"bar\"", Error::SyntaxError(EOFWhileParsingObject, 3us, 8us)),
     ]);
 }
 
@@ -869,7 +876,7 @@ fn test_is_object() {
 #[test]
 fn test_as_object() {
     let json_value: Value = from_str("{}").unwrap();
-    let map = BTreeMap::<string::String, Value>::new();
+    let map = BTreeMap::<String, Value>::new();
     let json_object = json_value.as_object();
     assert_eq!(json_object, Some(&map));
 }
