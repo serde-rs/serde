@@ -47,7 +47,7 @@ impl rustc_serialize::Encodable for HttpProtocol {
 
 impl rustc_serialize::Decodable for HttpProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_usize(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from usize")),
         }
@@ -95,7 +95,7 @@ impl rustc_serialize::Encodable for HttpMethod {
 
 impl rustc_serialize::Decodable for HttpMethod {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_usize(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from usize")),
         }
