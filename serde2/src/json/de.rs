@@ -14,7 +14,9 @@ pub struct Deserializer<Iter> {
     buf: Vec<u8>,
 }
 
-impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
+impl<Iter> Deserializer<Iter>
+    where Iter: Iterator<Item=u8>,
+{
     /// Creates the JSON parser.
     #[inline]
     pub fn new(rdr: Iter) -> Deserializer<Iter> {
@@ -376,7 +378,9 @@ impl<Iter: Iterator<Item=u8>> Deserializer<Iter> {
     }
 }
 
-impl<Iter: Iterator<Item=u8>> de::Deserializer for Deserializer<Iter> {
+impl<Iter> de::Deserializer for Deserializer<Iter>
+    where Iter: Iterator<Item=u8>,
+{
     type Error = Error;
 
     #[inline]
@@ -575,7 +579,9 @@ struct EnumVisitor<'a, Iter: 'a> {
     de: &'a mut Deserializer<Iter>,
 }
 
-impl<'a, Iter: Iterator<Item=u8>> de::EnumVisitor for EnumVisitor<'a, Iter> {
+impl<'a, Iter> de::EnumVisitor for EnumVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>,
+{
     type Error = Error;
 
     fn visit_unit(&mut self) -> Result<(), Error> {
