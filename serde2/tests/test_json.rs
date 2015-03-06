@@ -54,9 +54,9 @@ struct Outer {
     inner: Vec<Inner>,
 }
 
-fn test_encode_ok<
-    T: PartialEq + Debug + ser::Serialize
->(errors: &[(T, &str)]) {
+fn test_encode_ok<T>(errors: &[(T, &str)])
+    where T: PartialEq + Debug + ser::Serialize,
+{
     for &(ref value, out) in errors {
         let out = out.to_string();
 
@@ -69,21 +69,20 @@ fn test_encode_ok<
     }
 }
 
-/*
-fn test_pretty_encode_ok<
-    T: PartialEq + Debug + ser::Serialize<json::PrettySerializer<Vec<u8>>, io::Error>
->(errors: &[(T, &str)]) {
+fn test_pretty_encode_ok<T>(errors: &[(T, &str)])
+    where T: PartialEq + Debug + ser::Serialize,
+{
     for &(ref value, out) in errors {
         let out = out.to_string();
 
-        let s = json::to_pretty_string(value).unwrap();
+        let s = json::to_string_pretty(value).unwrap();
         assert_eq!(s, out);
 
-        let s = json::to_pretty_string(&value.to_json()).unwrap();
+        let v = to_value(&value);
+        let s = json::to_string_pretty(&v).unwrap();
         assert_eq!(s, out);
     }
 }
-*/
 
 #[test]
 fn test_write_null() {
@@ -91,7 +90,7 @@ fn test_write_null() {
         ((), "null"),
     ];
     test_encode_ok(tests);
-    //test_pretty_encode_ok(tests);
+    test_pretty_encode_ok(tests);
 }
 
 #[test]
@@ -102,7 +101,7 @@ fn test_write_i64() {
         (-1234i64, "-1234"),
     ];
     test_encode_ok(tests);
-    //test_pretty_encode_ok(tests);
+    test_pretty_encode_ok(tests);
 }
 
 #[test]
@@ -114,7 +113,7 @@ fn test_write_f64() {
         (0.5, "0.5"),
     ];
     test_encode_ok(tests);
-    //test_pretty_encode_ok(tests);
+    test_pretty_encode_ok(tests);
 }
 
 #[test]
@@ -124,7 +123,7 @@ fn test_write_str() {
         ("foo", "\"foo\""),
     ];
     test_encode_ok(tests);
-    //test_pretty_encode_ok(tests);
+    test_pretty_encode_ok(tests);
 }
 
 #[test]
@@ -134,22 +133,21 @@ fn test_write_bool() {
         (false, "false"),
     ];
     test_encode_ok(tests);
-    //test_pretty_encode_ok(tests);
+    test_pretty_encode_ok(tests);
 }
 
 #[test]
 fn test_write_list() {
     test_encode_ok(&[
-        (vec!(), "[]"),
-        (vec!(true), "[true]"),
-        (vec!(true, false), "[true,false]"),
+        (vec![], "[]"),
+        (vec![true], "[true]"),
+        (vec![true, false], "[true,false]"),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
-        (vec!(), "[]"),
+        (vec![], "[]"),
         (
-            vec!(true),
+            vec![true],
             concat!(
                 "[\n",
                 "  true\n",
@@ -157,7 +155,7 @@ fn test_write_list() {
             ),
         ),
         (
-            vec!(true, false),
+            vec![true, false],
             concat!(
                 "[\n",
                 "  true,\n",
@@ -166,7 +164,6 @@ fn test_write_list() {
             ),
         ),
     ]);
-    */
 
     let long_test_list = Value::Array(vec![
         Value::Bool(false),
@@ -174,14 +171,11 @@ fn test_write_list() {
         Value::Array(vec![Value::String("foo\nbar".to_string()), Value::F64(3.5)])]);
 
     test_encode_ok(&[
-        (long_test_list, "[false,null,[\"foo\\nbar\",3.5]]"),
+        (
+            long_test_list.clone(),
+            "[false,null,[\"foo\\nbar\",3.5]]",
+        ),
     ]);
-
-    /*
-    let long_test_list = Value::Array(vec![
-        Value::Bool(false),
-        Value::Null,
-        Value::Array(vec![Value::String("foo\nbar".to_string()), Value::F64(3.5)])]);
 
     test_pretty_encode_ok(&[
         (
@@ -195,10 +189,9 @@ fn test_write_list() {
                 "    3.5\n",
                 "  ]\n",
                 "]"
-            )
+            ),
         )
     ]);
-    */
 }
 
 #[test]
@@ -214,7 +207,6 @@ fn test_write_object() {
             "{\"a\":true,\"b\":false}"),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
         (treemap!(), "{}"),
         (
@@ -238,13 +230,12 @@ fn test_write_object() {
             ),
         ),
     ]);
-    */
 
     let complex_obj = Value::Object(treemap!(
-        "b".to_string() => Value::Array(vec!(
+        "b".to_string() => Value::Array(vec![
             Value::Object(treemap!("c".to_string() => Value::String("\x0c\r".to_string()))),
             Value::Object(treemap!("d".to_string() => Value::String("".to_string())))
-        ))
+        ])
     ));
 
     test_encode_ok(&[
@@ -259,7 +250,6 @@ fn test_write_object() {
         ),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
         (
             complex_obj.clone(),
@@ -277,7 +267,6 @@ fn test_write_object() {
             ),
         )
     ]);
-    */
 }
 
 #[test]
@@ -289,7 +278,6 @@ fn test_write_tuple() {
         ),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
         (
             (5,),
@@ -300,7 +288,6 @@ fn test_write_tuple() {
             ),
         ),
     ]);
-    */
 
     test_encode_ok(&[
         (
@@ -309,7 +296,6 @@ fn test_write_tuple() {
         ),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
         (
             (5, (6, "abc")),
@@ -324,7 +310,6 @@ fn test_write_tuple() {
             ),
         ),
     ]);
-    */
 }
 
 #[test]
@@ -335,15 +320,15 @@ fn test_write_enum() {
             "{\"Dog\":[]}",
         ),
         (
-            Animal::Frog("Henry".to_string(), vec!()),
+            Animal::Frog("Henry".to_string(), vec![]),
             "{\"Frog\":[\"Henry\",[]]}",
         ),
         (
-            Animal::Frog("Henry".to_string(), vec!(349)),
+            Animal::Frog("Henry".to_string(), vec![349]),
             "{\"Frog\":[\"Henry\",[349]]}",
         ),
         (
-            Animal::Frog("Henry".to_string(), vec!(349, 102)),
+            Animal::Frog("Henry".to_string(), vec![349, 102]),
             "{\"Frog\":[\"Henry\",[349,102]]}",
         ),
         (
@@ -352,7 +337,6 @@ fn test_write_enum() {
         ),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
         (
             Animal::Dog,
@@ -363,7 +347,7 @@ fn test_write_enum() {
             ),
         ),
         (
-            Animal::Frog("Henry".to_string(), vec!()),
+            Animal::Frog("Henry".to_string(), vec![]),
             concat!(
                 "{\n",
                 "  \"Frog\": [\n",
@@ -374,7 +358,7 @@ fn test_write_enum() {
             ),
         ),
         (
-            Animal::Frog("Henry".to_string(), vec!(349)),
+            Animal::Frog("Henry".to_string(), vec![349]),
             concat!(
                 "{\n",
                 "  \"Frog\": [\n",
@@ -387,7 +371,7 @@ fn test_write_enum() {
             ),
         ),
         (
-            Animal::Frog("Henry".to_string(), vec!(349, 102)),
+            Animal::Frog("Henry".to_string(), vec![349, 102]),
             concat!(
                 "{\n",
                 "  \"Frog\": [\n",
@@ -401,7 +385,6 @@ fn test_write_enum() {
             ),
         ),
     ]);
-    */
 }
 
 #[test]
@@ -413,10 +396,9 @@ fn test_write_option() {
 
     test_encode_ok(&[
         (None, "null"),
-        (Some(vec!("foo", "bar")), "[\"foo\",\"bar\"]"),
+        (Some(vec!["foo", "bar"]), "[\"foo\",\"bar\"]"),
     ]);
 
-    /*
     test_pretty_encode_ok(&[
         (None, "null"),
         (Some("jodhpurs"), "\"jodhpurs\""),
@@ -425,7 +407,7 @@ fn test_write_option() {
     test_pretty_encode_ok(&[
         (None, "null"),
         (
-            Some(vec!("foo", "bar")),
+            Some(vec!["foo", "bar"]),
             concat!(
                 "[\n",
                 "  \"foo\",\n",
@@ -434,7 +416,6 @@ fn test_write_option() {
             ),
         ),
     ]);
-    */
 }
 
 fn test_parse_ok<'a, T>(errors: &[(&'a str, T)])
@@ -730,11 +711,11 @@ fn test_parse_enum() {
         (" { \"Dog\" : [ ] } ", Animal::Dog),
         (
             "{\"Frog\":[\"Henry\",[]]}",
-            Animal::Frog("Henry".to_string(), vec!()),
+            Animal::Frog("Henry".to_string(), vec![]),
         ),
         (
             " { \"Frog\": [ \"Henry\" , [ 349, 102 ] ] } ",
-            Animal::Frog("Henry".to_string(), vec!(349, 102)),
+            Animal::Frog("Henry".to_string(), vec![349, 102]),
         ),
         (
             "{\"Cat\": {\"age\": 5, \"name\": \"Kate\"}}",
@@ -746,7 +727,6 @@ fn test_parse_enum() {
         ),
     ]);
 
-    /*
     test_parse_ok(&[
         (
             concat!(
@@ -757,11 +737,10 @@ fn test_parse_enum() {
             ),
             treemap!(
                 "a".to_string() => Animal::Dog,
-                "b".to_string() => Animal::Frog("Henry".to_string(), vec!())
+                "b".to_string() => Animal::Frog("Henry".to_string(), vec![])
             )
         ),
     ]);
-    */
 }
 
 #[test]

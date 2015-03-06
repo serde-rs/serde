@@ -8,6 +8,15 @@ use ser;
 /// A structure for implementing serialization to JSON.
 pub struct Serializer<W> {
     writer: W,
+    format: Format,
+    current_indent: usize,
+    indent: usize,
+}
+
+#[derive(Copy, PartialEq)]
+enum Format {
+    Compact,
+    Pretty,
 }
 
 impl<W: io::Write> Serializer<W> {
@@ -17,6 +26,21 @@ impl<W: io::Write> Serializer<W> {
     pub fn new(writer: W) -> Serializer<W> {
         Serializer {
             writer: writer,
+            format: Format::Compact,
+            current_indent: 0,
+            indent: 0,
+        }
+    }
+
+    /// Creates a new JSON visitr whose output will be written to the writer
+    /// specified.
+    #[inline]
+    pub fn new_pretty(writer: W) -> Serializer<W> {
+        Serializer {
+            writer: writer,
+            format: Format::Pretty,
+            current_indent: 0,
+            indent: 2,
         }
     }
 
@@ -35,26 +59,74 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     fn visit<T>(&mut self, value: &T) -> io::Result<()>
         where T: ser::Serialize,
     {
-        value.visit(&mut Visitor { writer: &mut self.writer })
+        value.visit(&mut Visitor {
+            writer: &mut self.writer,
+            format: self.format,
+            current_indent: self.current_indent,
+            indent: self.indent,
+        })
     }
 }
 
 struct Visitor<'a, W: 'a> {
     writer: &'a mut W,
+    format: Format,
+    current_indent: usize,
+    indent: usize,
 }
 
-impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
+impl<'a, W> Visitor<'a, W> where W: io::Write, {
+    fn serialize_sep(&mut self, first: bool) -> io::Result<()> {
+        match self.format {
+            Format::Compact => {
+                if first {
+                    Ok(())
+                } else {
+                    self.writer.write_all(b",")
+                }
+            }
+            Format::Pretty => {
+                if first {
+                    self.current_indent += self.indent;
+                    try!(self.writer.write_all(b"\n"));
+                } else {
+                    try!(self.writer.write_all(b",\n"));
+                }
+
+                spaces(&mut self.writer, self.current_indent)
+            }
+        }
+    }
+
+    fn serialize_colon(&mut self) -> io::Result<()> {
+        match self.format {
+            Format::Compact => self.writer.write_all(b":"),
+            Format::Pretty => self.writer.write_all(b": "),
+        }
+    }
+
+    fn serialize_end(&mut self, current_indent: usize, s: &[u8]) -> io::Result<()> {
+        if self.format == Format::Pretty && current_indent != self.current_indent {
+            self.current_indent -= self.indent;
+            try!(self.writer.write(b"\n"));
+            try!(spaces(&mut self.writer, self.current_indent));
+        }
+
+        self.writer.write_all(s)
+    }
+}
+
+impl<'a, W> ser::Visitor for Visitor<'a, W> where W: io::Write, {
     type Value = ();
     type Error = io::Error;
 
     #[inline]
     fn visit_bool(&mut self, value: bool) -> io::Result<()> {
         if value {
-            try!(self.writer.write(b"true"));
+            self.writer.write_all(b"true")
         } else {
-            try!(self.writer.write(b"false"));
+            self.writer.write_all(b"false")
         }
-        Ok(())
     }
 
     #[inline]
@@ -141,50 +213,53 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
 
     #[inline]
     fn visit_unit(&mut self) -> io::Result<()> {
-        try!(self.writer.write(b"null"));
-        Ok(())
+        self.writer.write_all(b"null")
     }
 
     #[inline]
     fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> io::Result<()> {
-        try!(self.writer.write(b"{"));
+        let current_indent = self.current_indent;
+
+        try!(self.writer.write_all(b"{"));
+        try!(self.serialize_sep(true));
         try!(self.visit_str(variant));
-        try!(self.writer.write(b":[]}"));
-        Ok(())
+        try!(self.serialize_colon());
+        try!(self.writer.write_all(b"[]"));
+        self.serialize_end(current_indent, b"}")
     }
 
     #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
-        try!(self.writer.write(b"["));
+        let current_indent = self.current_indent;
+
+        try!(self.writer.write_all(b"["));
 
         while let Some(()) = try!(visitor.visit(self)) { }
 
-        try!(self.writer.write(b"]"));
-        Ok(())
+        self.serialize_end(current_indent, b"]")
     }
 
     #[inline]
     fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
-        try!(self.writer.write(b"{"));
-        try!(self.visit_str(variant));
-        try!(self.writer.write(b":"));
-        try!(self.visit_seq(visitor));
-        try!(self.writer.write(b"}"));
+        let current_indent = self.current_indent;
 
-        Ok(())
+        try!(self.writer.write_all(b"{"));
+        try!(self.serialize_sep(true));
+        try!(self.visit_str(variant));
+        try!(self.serialize_colon());
+        try!(self.visit_seq(visitor));
+        self.serialize_end(current_indent, b"}")
     }
 
     #[inline]
     fn visit_seq_elt<T>(&mut self, first: bool, value: T) -> io::Result<()>
         where T: ser::Serialize,
     {
-        if !first {
-            try!(self.writer.write(b","));
-        }
+        try!(self.serialize_sep(first));
 
         value.visit(self)
     }
@@ -193,26 +268,27 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
     fn visit_map<V>(&mut self, mut visitor: V) -> io::Result<()>
         where V: ser::MapVisitor,
     {
-        try!(self.writer.write(b"{"));
+        let current_indent = self.current_indent;
+
+        try!(self.writer.write_all(b"{"));
 
         while let Some(()) = try!(visitor.visit(self)) { }
 
-        try!(self.writer.write(b"}"));
-
-        Ok(())
+        self.serialize_end(current_indent, b"}")
     }
 
     #[inline]
     fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
         where V: ser::MapVisitor,
     {
-        try!(self.writer.write(b"{"));
-        try!(self.visit_str(variant));
-        try!(self.writer.write(b":"));
-        try!(self.visit_map(visitor));
-        try!(self.writer.write(b"}"));
+        let current_indent = self.current_indent;
 
-        Ok(())
+        try!(self.writer.write_all(b"{"));
+        try!(self.serialize_sep(true));
+        try!(self.visit_str(variant));
+        try!(self.serialize_colon());
+        try!(self.visit_map(visitor));
+        self.serialize_end(current_indent, b"}")
     }
 
     #[inline]
@@ -220,14 +296,10 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
         where K: ser::Serialize,
               V: ser::Serialize,
     {
-        if !first {
-            try!(self.writer.write(b","));
-        }
-
+        try!(self.serialize_sep(first));
         try!(key.visit(self));
-        try!(self.writer.write(b":"));
-        try!(value.visit(self));
-        Ok(())
+        try!(self.serialize_colon());
+        value.visit(self)
     }
 }
 
@@ -235,7 +307,7 @@ impl<'a, W: io::Write> ser::Visitor for Visitor<'a, W> {
 pub fn escape_bytes<W>(wr: &mut W, bytes: &[u8]) -> io::Result<()>
     where W: io::Write
 {
-    try!(wr.write(b"\""));
+    try!(wr.write_all(b"\""));
 
     let mut start = 0;
 
@@ -252,19 +324,19 @@ pub fn escape_bytes<W>(wr: &mut W, bytes: &[u8]) -> io::Result<()>
         };
 
         if start < i {
-            try!(wr.write(&bytes[start..i]));
+            try!(wr.write_all(&bytes[start..i]));
         }
 
-        try!(wr.write(escaped));
+        try!(wr.write_all(escaped));
 
         start = i + 1;
     }
 
     if start != bytes.len() {
-        try!(wr.write(&bytes[start..]));
+        try!(wr.write_all(&bytes[start..]));
     }
 
-    try!(wr.write(b"\""));
+    try!(wr.write_all(b"\""));
     Ok(())
 }
 
@@ -288,22 +360,18 @@ fn fmt_f32_or_null<W>(wr: &mut W, value: f32) -> io::Result<()>
     where W: io::Write
 {
     match value.classify() {
-        FpCategory::Nan | FpCategory::Infinite => try!(wr.write(b"null")),
-        _ => try!(wr.write(f32::to_str_digits(value, 6).as_bytes())),
-    };
-
-    Ok(())
+        FpCategory::Nan | FpCategory::Infinite => wr.write_all(b"null"),
+        _ => wr.write_all(f32::to_str_digits(value, 6).as_bytes()),
+    }
 }
 
 fn fmt_f64_or_null<W>(wr: &mut W, value: f64) -> io::Result<()>
     where W: io::Write
 {
     match value.classify() {
-        FpCategory::Nan | FpCategory::Infinite => try!(wr.write(b"null")),
-        _ => try!(wr.write(f64::to_str_digits(value, 6).as_bytes())),
-    };
-
-    Ok(())
+        FpCategory::Nan | FpCategory::Infinite => wr.write_all(b"null"),
+        _ => wr.write_all(f64::to_str_digits(value, 6).as_bytes()),
+    }
 }
 
 /// Encode the specified struct into a json `[u8]` writer.
@@ -313,6 +381,17 @@ pub fn to_writer<W, T>(writer: &mut W, value: &T) -> io::Result<()>
           T: ser::Serialize,
 {
     let mut ser = Serializer::new(writer);
+    try!(ser::Serializer::visit(&mut ser, value));
+    Ok(())
+}
+
+/// Encode the specified struct into a json `[u8]` writer.
+#[inline]
+pub fn to_writer_pretty<W, T>(writer: &mut W, value: &T) -> io::Result<()>
+    where W: io::Write,
+          T: ser::Serialize,
+{
+    let mut ser = Serializer::new_pretty(writer);
     try!(ser::Serializer::visit(&mut ser, value));
     Ok(())
 }
@@ -329,6 +408,18 @@ pub fn to_vec<T>(value: &T) -> Vec<u8>
     writer
 }
 
+/// Encode the specified struct into a json `[u8]` buffer.
+#[inline]
+pub fn to_vec_pretty<T>(value: &T) -> Vec<u8>
+    where T: ser::Serialize,
+{
+    // We are writing to a Vec, which doesn't fail. So we can ignore
+    // the error.
+    let mut writer = Vec::with_capacity(128);
+    to_writer_pretty(&mut writer, value).unwrap();
+    writer
+}
+
 /// Encode the specified struct into a json `String` buffer.
 #[inline]
 pub fn to_string<T>(value: &T) -> Result<String, FromUtf8Error>
@@ -336,4 +427,31 @@ pub fn to_string<T>(value: &T) -> Result<String, FromUtf8Error>
 {
     let vec = to_vec(value);
     String::from_utf8(vec)
+}
+
+/// Encode the specified struct into a json `String` buffer.
+#[inline]
+pub fn to_string_pretty<T>(value: &T) -> Result<String, FromUtf8Error>
+    where T: ser::Serialize
+{
+    let vec = to_vec_pretty(value);
+    String::from_utf8(vec)
+}
+
+fn spaces<W>(wr: &mut W, mut n: usize) -> io::Result<()>
+    where W: io::Write,
+{
+    const LEN: usize = 16;
+    const BUF: &'static [u8; LEN] = &[b' '; 16];
+
+    while n >= LEN {
+        try!(wr.write_all(BUF));
+        n -= LEN;
+    }
+
+    if n > 0 {
+        wr.write_all(&BUF[..n])
+    } else {
+        Ok(())
+    }
 }

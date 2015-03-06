@@ -1,5 +1,3 @@
-#![feature(test)]
-
 extern crate serde2;
 
 use std::collections::BTreeMap;
