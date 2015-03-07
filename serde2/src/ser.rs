@@ -605,6 +605,15 @@ impl<'a, T> Serialize for &'a T where T: Serialize {
     }
 }
 
+impl<'a, T> Serialize for &'a mut T where T: Serialize {
+    #[inline]
+    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+        where V: Visitor,
+    {
+        (**self).visit(visitor)
+    }
+}
+
 impl<T> Serialize for Box<T> where T: Serialize {
     #[inline]
     fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>

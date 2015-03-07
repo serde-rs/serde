@@ -9,5 +9,5 @@ name = "serde2"
 [dependencies]
 rustc-serialize = "*"
 
-[dependencies.serde2_macros]
+[dev-dependencies.serde2_macros]
 path = "serde2_macros/"
