@@ -41,7 +41,6 @@ use syntax::ext::deriving::generic::ty::{
     borrowed_explicit_self,
 };
 use syntax::parse::token;
-use syntax::owned_slice::OwnedSlice;
 use syntax::ptr::P;
 
 use rustc::plugin::Registry;
@@ -123,6 +122,9 @@ fn serialize_substructure(cx: &ExtCtxt,
                           span: Span,
                           substr: &Substructure,
                           item: &Item) -> P<Expr> {
+    let ctx = builder::Ctx::new();
+    let builder = builder::AstBuilder::new(&ctx).span(span);
+
     let visitor = substr.nonself_args[0].clone();
 
     match (&item.node, &*substr.fields) {
@@ -139,27 +141,33 @@ fn serialize_substructure(cx: &ExtCtxt,
 
             match (named_fields.is_empty(), unnamed_fields.is_empty()) {
                 (true, true) => {
-                    serialize_unit_struct(cx,
-                                          span,
-                                          visitor,
-                                          substr.type_ident)
+                    serialize_unit_struct(
+                        cx,
+                        builder,
+                        visitor,
+                        substr.type_ident,
+                    )
                 }
                 (true, false) => {
-                    serialize_tuple_struct(cx,
-                                           span,
-                                           visitor,
-                                           substr.type_ident,
-                                           &unnamed_fields,
-                                           generics)
+                    serialize_tuple_struct(
+                        cx,
+                        builder,
+                        visitor,
+                        substr.type_ident,
+                        &unnamed_fields,
+                        generics,
+                    )
                 }
                 (false, true) => {
-                    serialize_struct(cx,
-                                     span,
-                                     visitor,
-                                     substr.type_ident,
-                                     &named_fields,
-                                     struct_def,
-                                     generics)
+                    serialize_struct(
+                        cx,
+                        builder,
+                        visitor,
+                        substr.type_ident,
+                        &named_fields,
+                        struct_def,
+                        generics,
+                    )
                 }
                 (false, false) => {
                     panic!("struct has named and unnamed fields")
@@ -168,39 +176,41 @@ fn serialize_substructure(cx: &ExtCtxt,
         }
 
         (&ast::ItemEnum(_, ref generics), &EnumMatching(_idx, variant, ref fields)) => {
-            serialize_enum(cx,
-                           span,
-                           visitor,
-                           substr.type_ident,
-                           variant,
-                           &fields,
-                           generics)
+            serialize_enum(
+                cx,
+                span,
+                builder,
+                visitor,
+                substr.type_ident,
+                variant,
+                &fields,
+                generics,
+            )
         }
 
         _ => cx.bug("expected Struct or EnumMatching in derive_serialize")
     }
 }
 
-fn serialize_unit_struct(cx: &ExtCtxt,
-                         span: Span,
-                         visitor: P<Expr>,
-                         type_ident: Ident) -> P<Expr> {
-    let type_name = cx.expr_str(
-        span,
-        token::get_ident(type_ident));
+fn serialize_unit_struct(
+    cx: &ExtCtxt,
+    builder: builder::AstBuilder,
+    visitor: P<Expr>,
+    type_ident: Ident
+) -> P<Expr> {
+    let type_name = builder.expr().str(type_ident);
 
     quote_expr!(cx, $visitor.visit_named_unit($type_name))
 }
 
-fn serialize_tuple_struct(cx: &ExtCtxt,
-                          span: Span,
-                          visitor: P<Expr>,
-                          type_ident: Ident,
-                          fields: &[Span],
-                          generics: &ast::Generics) -> P<Expr> {
-    let ctx = builder::Ctx::new();
-    let builder = builder::AstBuilder::new(&ctx).span(span);
-
+fn serialize_tuple_struct(
+    cx: &ExtCtxt,
+    builder: builder::AstBuilder,
+    visitor: P<Expr>,
+    type_ident: Ident,
+    fields: &[Span],
+    generics: &ast::Generics
+) -> P<Expr> {
     let type_name = builder.expr().str(type_ident);
     let len = fields.len();
 
@@ -270,16 +280,15 @@ fn serialize_tuple_struct(cx: &ExtCtxt,
     })
 }
 
-fn serialize_struct(cx: &ExtCtxt,
-                    span: Span,
-                    visitor: P<Expr>,
-                    type_ident: Ident,
-                    fields: &[(Ident, Span)],
-                    struct_def: &StructDef,
-                    generics: &ast::Generics) -> P<Expr> {
-    let ctx = builder::Ctx::new();
-    let builder = builder::AstBuilder::new(&ctx).span(span);
-
+fn serialize_struct(
+    cx: &ExtCtxt,
+    builder: builder::AstBuilder,
+    visitor: P<Expr>,
+    type_ident: Ident,
+    fields: &[(Ident, Span)],
+    struct_def: &StructDef,
+    generics: &ast::Generics
+) -> P<Expr> {
     let type_name = builder.expr().str(type_ident);
     let len = fields.len();
 
@@ -290,7 +299,7 @@ fn serialize_struct(cx: &ExtCtxt,
     let arms: Vec<ast::Arm> = fields.iter()
         .zip(aliases.iter())
         .enumerate()
-        .map(|(i, (&(name, span), alias_lit))| {
+        .map(|(i, (&(name, _), alias_lit))| {
             let first = builder.expr().bool(i == 0);
 
             let expr = match *alias_lit {
@@ -360,15 +369,15 @@ fn serialize_struct(cx: &ExtCtxt,
 fn serialize_enum(
     cx: &ExtCtxt,
     span: Span,
+    builder: builder::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     variant: &ast::Variant,
     fields: &[FieldInfo],
     generics: &ast::Generics,
 ) -> P<Expr> {
-    let type_name = cx.expr_str(span, token::get_ident(type_ident));
-    let variant_ident = variant.node.name;
-    let variant_name = cx.expr_str(span, token::get_ident(variant_ident));
+    let type_name = builder.expr().str(type_ident);
+    let variant_name = builder.expr().str(variant.node.name);
 
     if fields.is_empty() {
         quote_expr!(cx,
@@ -379,20 +388,22 @@ fn serialize_enum(
         )
     } else {
         serialize_variant(
-                cx,
-                span,
-                visitor,
-                type_name,
-                variant_name,
-                generics,
-                variant,
-                fields)
+            cx,
+            span,
+            builder,
+            visitor,
+            type_name,
+            variant_name,
+            generics,
+            variant,
+            fields)
     }
 }
 
 fn serialize_variant(
     cx: &ExtCtxt,
     span: Span,
+    builder: builder::AstBuilder,
     visitor: P<ast::Expr>,
     type_name: P<ast::Expr>,
     variant_name: P<ast::Expr>,
@@ -400,55 +411,13 @@ fn serialize_variant(
     variant: &ast::Variant,
     fields: &[FieldInfo],
 ) -> P<Expr> {
-    let mut generics = generics.clone();
-
-    // We need to constrain all the lifetimes to the lifetime of the visitor.
-    let visitor_lifetime = cx.lifetime(span, cx.name_of("'__a"));
-
-    generics.lifetimes =
-        Some(ast::LifetimeDef {
-            lifetime: visitor_lifetime,
-            bounds: vec![],
-        }).into_iter().chain(generics.lifetimes.iter()
-            .map(|lifetime_def| {
-                let mut bounds = lifetime_def.bounds.clone();
-                bounds.push(visitor_lifetime.clone());
-
-                ast::LifetimeDef {
-                    lifetime: lifetime_def.lifetime.clone(),
-                    bounds: bounds,
-                }
-            })
-        ).collect();
-
-    let serialize_path = cx.path_global(
-        span,
-        vec![
-            cx.ident_of("serde2"),
-            cx.ident_of("ser"),
-            cx.ident_of("Serialize"),
-        ],
-    );
-
-    // Make sure all the type parameters are constrained by the visitor lifetime.
-    let ty_params = generics.ty_params.iter()
-        .map(|ty_param| {
-            let serialize_bound = cx.typarambound(serialize_path.clone());
-            let visitor_bound = ast::RegionTyParamBound(visitor_lifetime.clone());
-
-            let mut bounds = ty_param.bounds.clone().into_vec();
-            bounds.push(serialize_bound);
-            bounds.push(visitor_bound);
-
-            cx.typaram(
-                ty_param.span,
-                ty_param.ident,
-                OwnedSlice::from_vec(bounds),
-                None)
-        })
-        .collect();
-
-    generics.ty_params = OwnedSlice::from_vec(ty_params);
+    let generics = builder.from_generics(generics.clone())
+        .add_lifetime_bound("'__a")
+        .add_ty_param_bound(
+            builder.path().global().ids(&["serde2", "ser", "Serialize"]).build()
+        )
+        .lifetime_name("'__a")
+        .build();
 
     let (
         trait_name,
@@ -479,85 +448,32 @@ fn serialize_variant(
     let len = fields.len();
 
     let visitor_field_names: Vec<ast::Ident> = (0 .. len)
-        .map(|i| token::str_to_ident(&format!("field{}", i)))
+        .map(|i| builder.id(&format!("field{}", i)))
         .collect();
 
-    let mut visitor_fields = vec![
-        respan(
-            span,
-            ast::StructField_ {
-                kind: ast::NamedField(
-                    cx.ident_of("state"),
-                    ast::Visibility::Inherited,
-                ),
-                id: ast::DUMMY_NODE_ID,
-                ty: cx.ty_ident(span, cx.ident_of("u32")),
-                attrs: Vec::new(),
-            }
-        ),
-    ];
+    let visitor_ident = builder.id("__Visitor");
 
-    visitor_fields.extend(
-        visitor_field_names.iter()
-            .zip(tys.iter())
-            .map(|(name, ty)| {
-                respan(
-                    span,
-                    ast::StructField_ {
-                        kind: ast::NamedField(
-                            *name,
-                            ast::Visibility::Inherited,
-                        ),
-                        id: ast::DUMMY_NODE_ID,
-                        ty: cx.ty_rptr(
-                            span,
-                            ty.clone(),
-                            Some(cx.lifetime(span, cx.name_of("'__a"))),
-                            ast::MutImmutable,
-                        ),
-                        attrs: Vec::new(),
-                    }
-                )
-            })
-    );
+    let mut struct_builder = builder.item().struct_(visitor_ident)
+        .with_generics(generics.clone())
+        .field("state").u32();
 
-    let visitor_ident = cx.ident_of("__Visitor");
+    for (name, ty) in visitor_field_names.iter().zip(tys.iter()) {
+        struct_builder = struct_builder.field(name)
+            .ref_().lifetime("'__a").build_ty(ty.clone());
+    }
 
-    let visitor_struct = cx.item_struct_poly(
-        span,
-        visitor_ident,
-        ast::StructDef {
-            fields: visitor_fields,
-            ctor_id: None,
-        },
-        generics.clone(),
-    );
+    let visitor_struct = struct_builder.build();
 
-    let mut visitor_field_exprs = vec![
-        cx.field_imm(
-            span,
-            cx.ident_of("state"),
-            quote_expr!(cx, 0),
-        ),
-    ];
+    let mut struct_builder = builder.expr().struct_path(visitor_ident)
+        .field("state").u32(0);
 
-    visitor_field_exprs.extend(
-        visitor_field_names.iter()
-            .zip(fields.iter())
-            .map(|(name, field)| {
-                let e = cx.expr_addr_of(
-                    span,
-                    field.self_.clone(),
-                );
+    for (name, field) in visitor_field_names.iter().zip(fields.iter()) {
+        struct_builder = struct_builder.field(name)
+            .addr_of()
+            .build_expr(field.self_.clone());
+    }
 
-                cx.field_imm(span, *name, e)
-            })
-    );
-
-    let visitor_expr = cx.expr_struct(
-        span,
-        cx.path_ident(span, visitor_ident),
-        visitor_field_exprs);
+    let visitor_expr = struct_builder.build();
 
     let mut first = true;
 
@@ -607,32 +523,18 @@ fn serialize_variant(
         })
         .collect();
 
-    let trait_path = cx.path_global(
-        span, 
-        vec![
-            cx.ident_of("serde2"),
-            cx.ident_of("ser"),
-            trait_name,
-        ],
-    );
+    let trait_path = builder.path()
+        .global()
+        .ids(&["serde2", "ser"]).id(trait_name)
+        .build();
 
     let trait_ref = cx.trait_ref(trait_path);
     let opt_trait_ref = Some(trait_ref);
 
-    let self_ty = cx.ty_path(
-        cx.path_all(
-            span,
-            false,
-            vec![cx.ident_of("__Visitor")],
-            generics.lifetimes.iter()
-                .map(|lifetime| lifetime.lifetime)
-                .collect(),
-            generics.ty_params.iter()
-                .map(|ty_param| cx.ty_ident(span, ty_param.ident))
-                .collect(),
-            vec![],
-        ),
-    );
+    let self_ty = builder.ty()
+        .path()
+        .segment("__Visitor").with_generics(generics.clone()).build()
+        .build();
 
     let impl_ident = ast_util::impl_pretty_name(&opt_trait_ref, Some(&self_ty));
 
