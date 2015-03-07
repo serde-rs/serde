@@ -158,7 +158,8 @@ fn serialize_substructure(cx: &ExtCtxt,
                                      visitor,
                                      substr.type_ident,
                                      &named_fields,
-                                     struct_def)
+                                     struct_def,
+                                     generics)
                 }
                 (false, false) => {
                     panic!("struct has named and unnamed fields")
@@ -269,16 +270,17 @@ fn serialize_tuple_struct(cx: &ExtCtxt,
     })
 }
 
-
 fn serialize_struct(cx: &ExtCtxt,
                     span: Span,
                     visitor: P<Expr>,
                     type_ident: Ident,
                     fields: &[(Ident, Span)],
-                    struct_def: &StructDef) -> P<Expr> {
-    let type_name = cx.expr_str(
-        span,
-        token::get_ident(type_ident));
+                    struct_def: &StructDef,
+                    generics: &ast::Generics) -> P<Expr> {
+    let ctx = builder::Ctx::new();
+    let builder = builder::AstBuilder::new(&ctx).span(span);
+
+    let type_name = builder.expr().str(type_ident);
     let len = fields.len();
 
     let aliases : Vec<Option<&ast::Lit>> = struct_def.fields.iter()
@@ -289,18 +291,11 @@ fn serialize_struct(cx: &ExtCtxt,
         .zip(aliases.iter())
         .enumerate()
         .map(|(i, (&(name, span), alias_lit))| {
-            let first = if i == 0 {
-                quote_expr!(cx, true)
-            } else {
-                quote_expr!(cx, false)
-            };
+            let first = builder.expr().bool(i == 0);
 
-            let expr = match alias_lit {
-                &Some(lit) => {
-                    let lit = (*lit).clone();
-                    cx.expr_lit(lit.span, lit.node)
-                },
-                &None => cx.expr_str(span, token::get_ident(name)),
+            let expr = match *alias_lit {
+                Some(lit) => builder.expr().build_lit(P(lit.clone())),
+                None => builder.expr().str(name),
             };
 
             let i = i as u32;
@@ -315,13 +310,29 @@ fn serialize_struct(cx: &ExtCtxt,
         })
         .collect();
 
+    let type_generics = builder.from_generics(generics.clone())
+        .strip_bounds()
+        .build();
+
+    let visitor_impl_generics = builder.from_generics(generics.clone())
+        .add_lifetime_bound("'__a")
+        .add_ty_param_bound(
+            builder.path().global().ids(&["serde2", "ser", "Serialize"]).build()
+        )
+        .lifetime_name("'__a")
+        .build();
+
+    let visitor_generics = builder.from_generics(visitor_impl_generics.clone())
+        .strip_bounds()
+        .build();
+
     quote_expr!(cx, {
-        struct Visitor<'a> {
+        struct Visitor $visitor_impl_generics {
             state: u32,
-            value: &'a $type_ident,
+            value: &'__a $type_ident $type_generics,
         }
 
-        impl<'a> ::serde2::ser::MapVisitor for Visitor<'a> {
+        impl $visitor_impl_generics ::serde2::ser::MapVisitor for Visitor $visitor_generics {
             #[inline]
             fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
                 where V: ::serde2::ser::Visitor,
