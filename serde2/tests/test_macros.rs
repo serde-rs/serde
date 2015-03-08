@@ -27,6 +27,7 @@ trait Trait {
 
 #[derive(Debug, PartialEq)]
 #[derive_serialize]
+#[derive_deserialize]
 struct NamedUnit;
 
 #[derive(Debug, PartialEq)]
@@ -78,13 +79,11 @@ fn test_named_unit() {
         Value::Null
     );
 
-    /*
     let v = json::from_str("null").unwrap();
     assert_eq!(v, named_unit);
 
     let v = json::from_value(Value::Null).unwrap();
     assert_eq!(v, named_unit);
-    */
 }
 
 #[test]
