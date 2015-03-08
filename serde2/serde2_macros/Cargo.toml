@@ -8,4 +8,6 @@ name = "serde2_macros"
 plugin = true
 
 [dependencies]
+quasi = "0.1.0"
+quasi_macros = "0.1.0"
 syntax_ast_builder = "0.1.0"

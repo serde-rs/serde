@@ -1,5 +1,7 @@
-#![feature(plugin_registrar, quote, unboxed_closures, rustc_private)]
+#![feature(plugin, plugin_registrar, rustc_private, unboxed_closures)]
+#![plugin(quasi_macros)]
 
+extern crate quasi;
 extern crate rustc;
 extern crate syntax;
 extern crate syntax_ast_builder;
