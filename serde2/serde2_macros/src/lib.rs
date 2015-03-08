@@ -147,7 +147,7 @@ fn serialize_substructure(
                 (true, true) => {
                     serialize_unit_struct(
                         cx,
-                        builder,
+                        &builder,
                         visitor,
                         substr.type_ident,
                     )
@@ -155,7 +155,7 @@ fn serialize_substructure(
                 (true, false) => {
                     serialize_tuple_struct(
                         cx,
-                        builder,
+                        &builder,
                         visitor,
                         substr.type_ident,
                         &unnamed_fields,
@@ -165,7 +165,7 @@ fn serialize_substructure(
                 (false, true) => {
                     serialize_struct(
                         cx,
-                        builder,
+                        &builder,
                         visitor,
                         substr.type_ident,
                         &named_fields,
@@ -183,7 +183,7 @@ fn serialize_substructure(
             serialize_enum(
                 cx,
                 span,
-                builder,
+                &builder,
                 visitor,
                 substr.type_ident,
                 variant,
@@ -198,7 +198,7 @@ fn serialize_substructure(
 
 fn serialize_unit_struct(
     cx: &ExtCtxt,
-    builder: aster::AstBuilder,
+    builder: &aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident
 ) -> P<Expr> {
@@ -209,7 +209,7 @@ fn serialize_unit_struct(
 
 fn serialize_tuple_struct(
     cx: &ExtCtxt,
-    builder: aster::AstBuilder,
+    builder: &aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     fields: &[Span],
@@ -284,7 +284,7 @@ fn serialize_tuple_struct(
 
 fn serialize_struct(
     cx: &ExtCtxt,
-    builder: aster::AstBuilder,
+    builder: &aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     fields: &[(Ident, Span)],
@@ -369,7 +369,7 @@ fn serialize_struct(
 fn serialize_enum(
     cx: &ExtCtxt,
     span: Span,
-    builder: aster::AstBuilder,
+    builder: &aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     variant: &ast::Variant,
@@ -403,7 +403,7 @@ fn serialize_enum(
 fn serialize_variant(
     cx: &ExtCtxt,
     span: Span,
-    builder: aster::AstBuilder,
+    builder: &aster::AstBuilder,
     visitor: P<ast::Expr>,
     type_name: P<ast::Expr>,
     variant_name: P<ast::Expr>,
@@ -651,6 +651,9 @@ fn deserialize_substructure(
     substr: &Substructure,
     item: &Item,
 ) -> P<Expr> {
+    let ctx = aster::Ctx::new();
+    let builder = aster::AstBuilder::new(&ctx).span(span);
+
     let state = substr.nonself_args[0].clone();
 
     match (&item.node, &*substr.fields) {
@@ -658,6 +661,7 @@ fn deserialize_substructure(
             deserialize_struct(
                 cx,
                 span,
+                &builder,
                 substr.type_ident,
                 substr.type_ident,
                 cx.path(span, vec![substr.type_ident]),
@@ -671,6 +675,7 @@ fn deserialize_substructure(
             deserialize_enum(
                 cx,
                 span,
+                &builder,
                 substr.type_ident,
                 &fields,
                 state,
@@ -685,6 +690,7 @@ fn deserialize_substructure(
 fn deserialize_struct(
     cx: &ExtCtxt,
     span: Span,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
     struct_ident: Ident,
     struct_path: ast::Path,
@@ -698,7 +704,7 @@ fn deserialize_struct(
             if fields.is_empty() {
                 deserialize_struct_empty_fields(
                     cx,
-                    span,
+                    builder,
                     type_ident,
                     struct_ident,
                     struct_path,
@@ -707,6 +713,7 @@ fn deserialize_struct(
                 deserialize_struct_unnamed_fields(
                     cx,
                     span,
+                    builder,
                     type_ident,
                     struct_ident,
                     struct_path,
@@ -720,6 +727,7 @@ fn deserialize_struct(
             deserialize_struct_named_fields(
                 cx,
                 span,
+                builder,
                 type_ident,
                 struct_ident,
                 struct_path,
@@ -732,15 +740,14 @@ fn deserialize_struct(
 
 fn deserialize_struct_empty_fields(
     cx: &ExtCtxt,
-    span: Span,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
     struct_ident: Ident,
     struct_path: ast::Path,
     state: P<ast::Expr>,
 ) -> P<ast::Expr> {
-    let struct_name = cx.expr_str(span, token::get_ident(struct_ident));
-
-    let result = cx.expr_path(struct_path);
+    let struct_name = builder.expr().str(struct_ident);
+    let result = builder.expr().build_path(struct_path);
 
     quote_expr!(cx, {
         struct __Visitor;
@@ -783,6 +790,7 @@ fn deserialize_struct_empty_fields(
 fn deserialize_struct_unnamed_fields(
     cx: &ExtCtxt,
     span: Span,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
     struct_ident: Ident,
     struct_path: ast::Path,
@@ -790,16 +798,11 @@ fn deserialize_struct_unnamed_fields(
     state: P<ast::Expr>,
     generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let ctx = aster::Ctx::new();
-    let builder = aster::AstBuilder::new(&ctx).span(span);
-
     let visitor_impl_generics = builder.from_generics(generics.clone())
         .add_ty_param_bound(
             builder.path().global().ids(&["serde2", "de", "Deserialize"]).build()
         )
         .build();
-
-    let struct_name = builder.expr().str(struct_ident);
 
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
         .map(|i| builder.id(&format!("__field{}", i)))
@@ -808,6 +811,7 @@ fn deserialize_struct_unnamed_fields(
     let visit_seq_expr = declare_visit_seq(
         cx,
         span,
+        builder,
         struct_path,
         &field_names,
     );
@@ -838,6 +842,8 @@ fn deserialize_struct_unnamed_fields(
                 .build(),
         )
     };
+
+    let struct_name = builder.expr().str(struct_ident);
 
     let visitor_ty = builder.ty().path()
         .segment("__Visitor").with_generics(generics.clone()).build()
@@ -878,7 +884,7 @@ fn deserialize_struct_unnamed_fields(
 
 fn declare_visit_seq(
     cx: &ExtCtxt,
-    span: Span,
+    builder: &aster::AstBuilder,
     struct_path: ast::Path,
     field_names: &[Ident],
 ) -> P<ast::Expr> {
@@ -895,10 +901,10 @@ fn declare_visit_seq(
         })
         .collect();
 
-    let result = cx.expr_call(
-        span,
-        cx.expr_path(struct_path),
-        field_names.iter().map(|name| cx.expr_ident(span, *name)).collect());
+    let result = builder.expr().call()
+        .build_path(struct_path)
+        .with_args(field_names.iter().map(|name| builder.expr().id(*name)))
+        .build();
 
     quote_expr!(cx, {
         $let_values
@@ -912,6 +918,7 @@ fn declare_visit_seq(
 fn deserialize_struct_named_fields(
     cx: &ExtCtxt,
     span: Span,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
     struct_ident: Ident,
     struct_path: ast::Path,
@@ -919,7 +926,7 @@ fn deserialize_struct_named_fields(
     state: P<ast::Expr>,
     struct_def: &StructDef,
 ) -> P<ast::Expr> {
-    let struct_name = cx.expr_str(span, token::get_ident(struct_ident));
+    let struct_name = builder.expr().str(struct_ident);
 
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
@@ -1186,17 +1193,14 @@ fn declare_visit_map(
 
 fn deserialize_enum(
     cx: &ExtCtxt,
-    span: Span,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
     fields: &[(Ident, Span, StaticFields)],
     state: P<ast::Expr>,
     enum_def: &EnumDef,
     _generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let type_name = cx.expr_str(span, token::get_ident(type_ident));
-
-    let ctx = aster::Ctx::new();
-    let builder = aster::AstBuilder::new(&ctx);
+    let type_name = builder.expr().str(type_ident);
 
     // Match arms to extract a variant from a string
     let variant_arms: Vec<ast::Arm> = fields.iter()
@@ -1205,6 +1209,7 @@ fn deserialize_enum(
             let value = deserialize_enum_variant(
                 cx,
                 span,
+                builder,
                 type_ident,
                 name,
                 fields,
@@ -1255,6 +1260,7 @@ fn deserialize_enum(
 fn deserialize_enum_variant(
     cx: &ExtCtxt,
     span: Span,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
     variant_ident: Ident,
     fields: &StaticFields,
@@ -1281,6 +1287,7 @@ fn deserialize_enum_variant(
                 let visit_seq_expr = declare_visit_seq(
                     cx,
                     span,
+                    builder,
                     variant_path,
                     &field_names,
                 );
