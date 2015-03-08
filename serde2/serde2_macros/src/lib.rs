@@ -1,8 +1,10 @@
 #![feature(plugin_registrar, quote, unboxed_closures, rustc_private)]
 
-extern crate syntax;
 extern crate rustc;
-extern crate "syntax_ast_builder" as builder;
+extern crate syntax;
+extern crate syntax_ast_builder;
+
+use syntax_ast_builder as builder;
 
 use syntax::ast::{
     Ident,
@@ -221,8 +223,6 @@ fn serialize_tuple_struct(
                 .tup_field(i)
                 .field("value").self_();
 
-            let i = i as u32;
-
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
@@ -251,7 +251,7 @@ fn serialize_tuple_struct(
 
     quote_expr!(cx, {
         struct Visitor $visitor_impl_generics {
-            state: u32,
+            state: usize,
             value: &'__a $type_ident $type_generics,
         }
 
@@ -307,8 +307,6 @@ fn serialize_struct(
                 None => builder.expr().str(name),
             };
 
-            let i = i as u32;
-
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
@@ -337,7 +335,7 @@ fn serialize_struct(
 
     quote_expr!(cx, {
         struct Visitor $visitor_impl_generics {
-            state: u32,
+            state: usize,
             value: &'__a $type_ident $type_generics,
         }
 
@@ -445,51 +443,50 @@ fn serialize_variant(
         }
     };
 
-    let len = fields.len();
-
-    let visitor_field_names: Vec<ast::Ident> = (0 .. len)
-        .map(|i| builder.id(&format!("field{}", i)))
-        .collect();
+    let value_ty = builder.ty()
+        .tuple()
+        .with_tys(tys.into_iter().map(|ty| {
+            builder.ty()
+                .ref_()
+                .lifetime("'__a")
+                .build_ty(ty)
+        }))
+        .build();
 
     let visitor_ident = builder.id("__Visitor");
 
-    let mut struct_builder = builder.item().struct_(visitor_ident)
+    let visitor_struct = builder.item().struct_(visitor_ident)
         .with_generics(generics.clone())
-        .field("state").u32();
+        .field("state").usize()
+        .field("value").build_ty(value_ty)
+        .build();
 
-    for (name, ty) in visitor_field_names.iter().zip(tys.iter()) {
-        struct_builder = struct_builder.field(name)
-            .ref_().lifetime("'__a").build_ty(ty.clone());
-    }
-
-    let visitor_struct = struct_builder.build();
-
-    let mut struct_builder = builder.expr().struct_path(visitor_ident)
-        .field("state").u32(0);
-
-    for (name, field) in visitor_field_names.iter().zip(fields.iter()) {
-        struct_builder = struct_builder.field(name)
-            .addr_of()
-            .build_expr(field.self_.clone());
-    }
-
-    let visitor_expr = struct_builder.build();
+    let visitor_expr = builder.expr().struct_path(visitor_ident)
+        .field("state").usize(0)
+        .field("value").tuple()
+            .with_exprs(
+                fields.iter().map(|field| {
+                    builder.expr()
+                        .addr_of()
+                        .build_expr(field.self_.clone())
+                })
+            )
+            .build()
+        .build();
 
     let mut first = true;
 
-    let visitor_arms: Vec<ast::Arm> = visitor_field_names.iter()
-        .zip(fields.iter())
+    let visitor_arms: Vec<ast::Arm> = fields.iter()
         .enumerate()
-        .map(|(state, (name, field))| {
-            let field_expr = cx.expr_field_access(
-                span,
-                cx.expr_self(span),
-                *name,
-            );
+        .map(|(state, field)| {
+            let field_expr = builder.expr()
+                .tup_field(state)
+                .field("value").self_();
 
             let visit_expr = match field.name {
                 Some(real_name) => {
-                    let real_name = cx.expr_str(span, token::get_ident(real_name));
+                    let real_name = builder.expr().str(real_name);
+
                     quote_expr!(cx,
                         ::serde2::ser::Visitor::visit_map_elt(
                             visitor,
@@ -512,8 +509,6 @@ fn serialize_variant(
 
             first = false;
 
-            let state = state as u32;
-
             quote_arm!(cx,
                 $state => {
                     self.state += 1;
@@ -533,9 +528,12 @@ fn serialize_variant(
 
     let self_ty = builder.ty()
         .path()
-        .segment("__Visitor").with_generics(generics.clone()).build()
+        .segment("__Visitor")
+            .with_generics(generics.clone())
+            .build()
         .build();
 
+    let len = fields.len();
     let impl_ident = ast_util::impl_pretty_name(&opt_trait_ref, Some(&self_ty));
 
     let methods = vec![
