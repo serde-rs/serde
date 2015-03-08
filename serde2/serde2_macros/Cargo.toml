@@ -10,4 +10,4 @@ plugin = true
 [dependencies]
 quasi = "0.1.0"
 quasi_macros = "0.1.0"
-syntax_ast_builder = "0.1.0"
+aster = "0.1.2"

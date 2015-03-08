@@ -1,12 +1,10 @@
 #![feature(plugin, plugin_registrar, rustc_private, unboxed_closures)]
 #![plugin(quasi_macros)]
 
+extern crate aster;
 extern crate quasi;
 extern crate rustc;
 extern crate syntax;
-extern crate syntax_ast_builder;
-
-use syntax_ast_builder as builder;
 
 use syntax::ast::{
     Ident,
@@ -126,8 +124,8 @@ fn serialize_substructure(cx: &ExtCtxt,
                           span: Span,
                           substr: &Substructure,
                           item: &Item) -> P<Expr> {
-    let ctx = builder::Ctx::new();
-    let builder = builder::AstBuilder::new(&ctx).span(span);
+    let ctx = aster::Ctx::new();
+    let builder = aster::AstBuilder::new(&ctx).span(span);
 
     let visitor = substr.nonself_args[0].clone();
 
@@ -198,7 +196,7 @@ fn serialize_substructure(cx: &ExtCtxt,
 
 fn serialize_unit_struct(
     cx: &ExtCtxt,
-    builder: builder::AstBuilder,
+    builder: aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident
 ) -> P<Expr> {
@@ -209,7 +207,7 @@ fn serialize_unit_struct(
 
 fn serialize_tuple_struct(
     cx: &ExtCtxt,
-    builder: builder::AstBuilder,
+    builder: aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     fields: &[Span],
@@ -284,7 +282,7 @@ fn serialize_tuple_struct(
 
 fn serialize_struct(
     cx: &ExtCtxt,
-    builder: builder::AstBuilder,
+    builder: aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     fields: &[(Ident, Span)],
@@ -369,7 +367,7 @@ fn serialize_struct(
 fn serialize_enum(
     cx: &ExtCtxt,
     span: Span,
-    builder: builder::AstBuilder,
+    builder: aster::AstBuilder,
     visitor: P<Expr>,
     type_ident: Ident,
     variant: &ast::Variant,
@@ -403,7 +401,7 @@ fn serialize_enum(
 fn serialize_variant(
     cx: &ExtCtxt,
     span: Span,
-    builder: builder::AstBuilder,
+    builder: aster::AstBuilder,
     visitor: P<ast::Expr>,
     type_name: P<ast::Expr>,
     variant_name: P<ast::Expr>,
@@ -1137,8 +1135,8 @@ fn deserialize_enum(
 ) -> P<ast::Expr> {
     let type_name = cx.expr_str(span, token::get_ident(type_ident));
 
-    let ctx = builder::Ctx::new();
-    let builder = builder::AstBuilder::new(&ctx);
+    let ctx = aster::Ctx::new();
+    let builder = aster::AstBuilder::new(&ctx);
 
     // Match arms to extract a variant from a string
     let variant_arms: Vec<ast::Arm> = fields.iter()
