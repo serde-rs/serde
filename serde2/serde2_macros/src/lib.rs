@@ -1,4 +1,4 @@
-#![feature(plugin, plugin_registrar, rustc_private, unboxed_closures)]
+#![feature(custom_derive, plugin, plugin_registrar, rustc_private, unboxed_closures)]
 #![plugin(quasi_macros)]
 
 extern crate aster;

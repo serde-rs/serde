@@ -1,4 +1,4 @@
-#![feature(plugin, test)]
+#![feature(custom_derive, plugin, test)]
 #![plugin(serde2_macros)]
 
 extern crate test;
