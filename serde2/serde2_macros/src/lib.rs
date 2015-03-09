@@ -729,7 +729,8 @@ fn deserialize_struct(
                 struct_path,
                 &fields,
                 state,
-                struct_def)
+                struct_def,
+                generics)
         }
     }
 }
@@ -919,13 +920,55 @@ fn deserialize_struct_named_fields(
     fields: &[(Ident, Span)],
     state: P<ast::Expr>,
     struct_def: &StructDef,
+    generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let struct_name = builder.expr().str(struct_ident);
+    let visitor_impl_generics = builder.from_generics(generics.clone())
+        .add_ty_param_bound(
+            builder.path().global().ids(&["serde2", "de", "Deserialize"]).build()
+        )
+        .build();
 
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
         .map(|i| token::str_to_ident(&format!("__field{}", i)))
         .collect();
+
+    // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
+    let (visitor_struct, visitor_expr) = if generics.ty_params.is_empty() {
+        (
+            builder.item().tuple_struct("__Visitor")
+                .build(),
+            builder.expr().id("__Visitor"),
+        )
+    } else {
+        (
+            builder.item().tuple_struct("__Visitor")
+                .generics().with(generics.clone()).build()
+                .with_tys(
+                    generics.ty_params.iter().map(|ty_param| {
+                        builder.ty().phantom_data().id(ty_param.ident)
+                    })
+                )
+                .build(),
+            builder.expr().call().id("__Visitor")
+                .with_args(
+                    generics.ty_params.iter().map(|_| {
+                        builder.expr().phantom_data()
+                    })
+                )
+                .build(),
+        )
+    };
+
+    let struct_name = builder.expr().str(struct_ident);
+
+    let visitor_ty = builder.ty().path()
+        .segment("__Visitor").with_generics(generics.clone()).build()
+        .build();
+
+    let value_ty = builder.ty().path()
+        .segment(type_ident).with_generics(generics.clone()).build()
+        .build();
 
     let field_deserializer = declare_map_field_deserializer(
         cx,
@@ -948,13 +991,13 @@ fn deserialize_struct_named_fields(
     quote_expr!(cx, {
         $field_deserializer
 
-        struct __Visitor;
+        $visitor_struct;
 
-        impl ::serde2::de::Visitor for __Visitor {
-            type Value = $type_ident;
+        impl $visitor_impl_generics ::serde2::de::Visitor for $visitor_ty {
+            type Value = $value_ty;
 
             #[inline]
-            fn visit_map<__V>(&mut self, mut visitor: __V) -> Result<$type_ident, __V::Error>
+            fn visit_map<__V>(&mut self, mut visitor: __V) -> Result<$value_ty, __V::Error>
                 where __V: ::serde2::de::MapVisitor,
             {
                 $visit_map_expr
@@ -963,7 +1006,7 @@ fn deserialize_struct_named_fields(
             #[inline]
             fn visit_named_map<__V>(&mut self,
                                     name: &str,
-                                    visitor: __V) -> Result<$type_ident, __V::Error>
+                                    visitor: __V) -> Result<$value_ty, __V::Error>
                 where __V: ::serde2::de::MapVisitor,
             {
                 if name == $struct_name {
@@ -974,7 +1017,7 @@ fn deserialize_struct_named_fields(
             }
         }
 
-        $state.visit(__Visitor)
+        $state.visit($visitor_expr)
     })
 }
 

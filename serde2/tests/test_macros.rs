@@ -32,14 +32,6 @@ struct NamedUnit;
 
 #[derive(Debug, PartialEq)]
 #[derive_serialize]
-struct NamedMap<'a, 'b, A: 'a, B: 'b, C> {
-    a: &'a A,
-    b: &'b mut B,
-    c: C,
-}
-
-#[derive(Debug, PartialEq)]
-#[derive_serialize]
 //#[derive_deserialize]
 enum Enum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
     Unit,
@@ -126,7 +118,15 @@ fn test_de_named_tuple() {
 }
 
 #[test]
-fn test_named_map() {
+fn test_ser_named_map() {
+    #[derive(Debug, PartialEq)]
+    #[derive_serialize]
+    struct NamedMap<'a, 'b, A: 'a, B: 'b, C> {
+        a: &'a A,
+        b: &'b mut B,
+        c: C,
+    }
+
     let a = 5;
     let mut b = 6;
     let c = 7;
@@ -148,6 +148,37 @@ fn test_named_map() {
             "b".to_string() => Value::I64(6),
             "c".to_string() => Value::I64(7)
         ])
+    );
+}
+
+#[test]
+fn test_de_named_map() {
+    #[derive(Debug, PartialEq)]
+    #[derive_deserialize]
+    struct NamedMap<A, B, C> {
+        a: A,
+        b: B,
+        c: C,
+    }
+
+    let v = NamedMap {
+        a: 5,
+        b: 6,
+        c: 7,
+    };
+
+    assert_eq!(
+        json::from_str("{\"a\":5,\"b\":6,\"c\":7}").unwrap(),
+        v
+    );
+
+    assert_eq!(
+        json::from_value(Value::Object(btreemap![
+            "a".to_string() => Value::I64(5),
+            "b".to_string() => Value::I64(6),
+            "c".to_string() => Value::I64(7)
+        ])).unwrap(),
+        v
     );
 }
 
