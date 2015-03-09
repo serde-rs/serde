@@ -1314,7 +1314,7 @@ fn deserialize_enum(
             fn visit_enum<__V>(&mut self,
                                name: &str,
                                variant: &str,
-                               mut visitor: __V) -> Result<$value_ty, __V::Error>
+                               visitor: __V) -> Result<$value_ty, __V::Error>
                 where __V: ::serde2::de::EnumVisitor,
             {
                 if name == $type_name {
