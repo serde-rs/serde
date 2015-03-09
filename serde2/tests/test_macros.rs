@@ -32,14 +32,13 @@ struct NamedUnit;
 
 #[derive(Debug, PartialEq)]
 #[derive_serialize]
-//#[derive_deserialize]
-enum Enum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
+enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
     Unit,
     Seq(
         i8,
         B,
         &'a C,
-        //B::Type,
+        //C::Type,
         &'a mut D,
         //<D as Trait>::Type,
     ),
@@ -49,6 +48,28 @@ enum Enum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
         c: &'a C,
         //d: C::Type,
         e: &'a mut D,
+        //f: <D as Trait>::Type,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+#[derive_deserialize]
+enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
+    Unit,
+    Seq(
+        i8,
+        B,
+        C,
+        //C::Type,
+        D,
+        //<D as Trait>::Type,
+    ),
+    Map {
+        a: i8,
+        b: B,
+        c: C,
+        //d: C::Type,
+        e: D,
         //f: <D as Trait>::Type,
     },
 }
@@ -183,14 +204,14 @@ fn test_de_named_map() {
 }
 
 #[test]
-fn test_enum_unit() {
+fn test_ser_enum_unit() {
     assert_eq!(
-        json::to_string(&Enum::Unit::<u32, u32, u32>).unwrap(),
+        json::to_string(&SerEnum::Unit::<u32, u32, u32>).unwrap(),
         "{\"Unit\":[]}"
     );
 
     assert_eq!(
-        json::to_value(&Enum::Unit::<u32, u32, u32>),
+        json::to_value(&SerEnum::Unit::<u32, u32, u32>),
         Value::Object(btreemap!(
             "Unit".to_string() => Value::Array(vec![]))
         )
@@ -198,7 +219,7 @@ fn test_enum_unit() {
 }
 
 #[test]
-fn test_enum_seq() {
+fn test_ser_enum_seq() {
     let a = 1;
     let b = 2;
     let c = 3;
@@ -207,7 +228,7 @@ fn test_enum_seq() {
     //let f = 6;
 
     assert_eq!(
-        json::to_string(&Enum::Seq(
+        json::to_string(&SerEnum::Seq(
             a,
             b,
             &c,
@@ -219,7 +240,7 @@ fn test_enum_seq() {
     );
 
     assert_eq!(
-        json::to_value(&Enum::Seq(
+        json::to_value(&SerEnum::Seq(
             a,
             b,
             &c,
@@ -241,7 +262,7 @@ fn test_enum_seq() {
 }
 
 #[test]
-fn test_enum_map() {
+fn test_ser_enum_map() {
     let a = 1;
     let b = 2;
     let c = 3;
@@ -250,7 +271,7 @@ fn test_enum_map() {
     //let f = 6;
 
     assert_eq!(
-        json::to_string(&Enum::Map {
+        json::to_string(&SerEnum::Map {
             a: a,
             b: b,
             c: &c,
@@ -262,7 +283,7 @@ fn test_enum_map() {
     );
 
     assert_eq!(
-        json::to_value(&Enum::Map {
+        json::to_value(&SerEnum::Map {
             a: a,
             b: b,
             c: &c,
@@ -280,5 +301,106 @@ fn test_enum_map() {
                 //"f".to_string() => Value::I64(6)
             ])
         ))
+    );
+}
+
+#[test]
+fn test_de_enum_unit() {
+    assert_eq!(
+        json::from_str("{\"Unit\":[]}").unwrap(),
+        DeEnum::Unit::<u32, u32, u32>
+    );
+
+    assert_eq!(
+        json::from_value(Value::Object(btreemap!(
+            "Unit".to_string() => Value::Array(vec![]))
+        )).unwrap(),
+        DeEnum::Unit::<u32, u32, u32>
+    );
+}
+
+#[test]
+fn test_de_enum_seq() {
+    let a = 1;
+    let b = 2;
+    let c = 3;
+    //let d = 4;
+    let e = 5;
+    //let f = 6;
+
+    assert_eq!(
+        json::from_str("{\"Seq\":[1,2,3,5]}").unwrap(),
+        DeEnum::Seq(
+            a,
+            b,
+            c,
+            //d,
+            e,
+            //f,
+        )
+    );
+
+    assert_eq!(
+        json::from_value(Value::Object(btreemap!(
+            "Seq".to_string() => Value::Array(vec![
+                Value::I64(1),
+                Value::I64(2),
+                Value::I64(3),
+                //Value::I64(4),
+                Value::I64(5),
+                //Value::I64(6),
+            ])
+        ))).unwrap(),
+        DeEnum::Seq(
+            a,
+            b,
+            c,
+            //d,
+            e,
+            //e,
+        )
+    );
+}
+
+#[test]
+fn test_de_enum_map() {
+    let a = 1;
+    let b = 2;
+    let c = 3;
+    //let d = 4;
+    let e = 5;
+    //let f = 6;
+
+    assert_eq!(
+        json::from_str("{\"Map\":{\"a\":1,\"b\":2,\"c\":3,\"e\":5}}").unwrap(),
+        DeEnum::Map {
+            a: a,
+            b: b,
+            c: c,
+            //d: d,
+            e: e,
+            //f: f,
+        }
+    );
+
+    assert_eq!(
+        json::from_value(Value::Object(btreemap!(
+            "Map".to_string() => Value::Object(btreemap![
+                "a".to_string() => Value::I64(1),
+                "b".to_string() => Value::I64(2),
+                "c".to_string() => Value::I64(3),
+                //"d".to_string() => Value::I64(4)
+                "e".to_string() => Value::I64(5)
+                //"f".to_string() => Value::I64(6)
+            ])
+        ))).unwrap(),
+        DeEnum::Map {
+            a: a,
+            b: b,
+            c: c,
+            //d: d,
+            e: e,
+            //f: f,
+        }
     );
 }

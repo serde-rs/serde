@@ -1236,8 +1236,49 @@ fn deserialize_enum(
     fields: &[(Ident, Span, StaticFields)],
     state: P<ast::Expr>,
     enum_def: &EnumDef,
-    _generics: &ast::Generics,
+    generics: &ast::Generics,
 ) -> P<ast::Expr> {
+    let visitor_impl_generics = builder.from_generics(generics.clone())
+        .add_ty_param_bound(
+            builder.path().global().ids(&["serde2", "de", "Deserialize"]).build()
+        )
+        .build();
+
+    // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
+    let (visitor_struct, visitor_expr) = if generics.ty_params.is_empty() {
+        (
+            builder.item().tuple_struct("__Visitor")
+                .build(),
+            builder.expr().id("__Visitor"),
+        )
+    } else {
+        (
+            builder.item().tuple_struct("__Visitor")
+                .generics().with(generics.clone()).build()
+                .with_tys(
+                    generics.ty_params.iter().map(|ty_param| {
+                        builder.ty().phantom_data().id(ty_param.ident)
+                    })
+                )
+                .build(),
+            builder.expr().call().id("__Visitor")
+                .with_args(
+                    generics.ty_params.iter().map(|_| {
+                        builder.expr().phantom_data()
+                    })
+                )
+                .build(),
+        )
+    };
+
+    let visitor_ty = builder.ty().path()
+        .segment("__Visitor").with_generics(generics.clone()).build()
+        .build();
+
+    let value_ty = builder.ty().path()
+        .segment(type_ident).with_generics(generics.clone()).build()
+        .build();
+
     let type_name = builder.expr().str(type_ident);
 
     // Match arms to extract a variant from a string
@@ -1253,6 +1294,10 @@ fn deserialize_enum(
                 fields,
                 cx.expr_ident(span, cx.ident_of("visitor")),
                 variant_ptr,
+                &visitor_impl_generics,
+                &visitor_ty,
+                &visitor_expr,
+                &value_ty,
             );
 
             let s = builder.expr().str(name);
@@ -1261,15 +1306,15 @@ fn deserialize_enum(
         .collect();
 
     quote_expr!(cx, {
-        struct __Visitor;
+        $visitor_struct;
 
-        impl ::serde2::de::Visitor for __Visitor {
-            type Value = $type_ident;
+        impl $visitor_impl_generics ::serde2::de::Visitor for $visitor_ty {
+            type Value = $value_ty;
 
             fn visit_enum<__V>(&mut self,
                                name: &str,
                                variant: &str,
-                               mut visitor: __V) -> Result<$type_ident, __V::Error>
+                               mut visitor: __V) -> Result<$value_ty, __V::Error>
                 where __V: ::serde2::de::EnumVisitor,
             {
                 if name == $type_name {
@@ -1281,7 +1326,7 @@ fn deserialize_enum(
 
             fn visit_variant<__V>(&mut self,
                                   name: &str,
-                                  mut visitor: __V) -> Result<$type_ident, __V::Error>
+                                  mut visitor: __V) -> Result<$value_ty, __V::Error>
                 where __V: ::serde2::de::EnumVisitor
             {
                 match name {
@@ -1291,7 +1336,7 @@ fn deserialize_enum(
             }
         }
 
-        $state.visit_enum(__Visitor)
+        $state.visit_enum($visitor_expr)
     })
 }
 
@@ -1304,6 +1349,10 @@ fn deserialize_enum_variant(
     fields: &StaticFields,
     state: P<ast::Expr>,
     variant_ptr: &P<ast::Variant>,
+    visitor_impl_generics: &ast::Generics,
+    visitor_ty: &P<ast::Ty>,
+    visitor_expr: &P<ast::Expr>,
+    value_ty: &P<ast::Ty>,
 ) -> P<ast::Expr> {
     let variant_path = cx.path(span, vec![type_ident, variant_ident]);
 
@@ -1330,19 +1379,17 @@ fn deserialize_enum_variant(
                 );
 
                 quote_expr!(cx, {
-                    struct __Visitor;
-
-                    impl ::serde2::de::EnumSeqVisitor for __Visitor {
-                        type Value = $type_ident;
+                    impl $visitor_impl_generics ::serde2::de::EnumSeqVisitor for $visitor_ty {
+                        type Value = $value_ty;
 
                         fn visit<
                             V: ::serde2::de::SeqVisitor,
-                        >(&mut self, mut visitor: V) -> Result<$type_ident, V::Error> {
+                        >(&mut self, mut visitor: V) -> Result<$value_ty, V::Error> {
                             $visit_seq_expr
                         }
                     }
 
-                    $state.visit_seq(__Visitor)
+                    $state.visit_seq($visitor_expr)
                 })
             }
         }
@@ -1379,19 +1426,17 @@ fn deserialize_enum_variant(
             quote_expr!(cx, {
                 $field_deserializer
 
-                struct __Visitor;
-
-                impl ::serde2::de::EnumMapVisitor for __Visitor {
-                    type Value = $type_ident;
+                impl $visitor_impl_generics ::serde2::de::EnumMapVisitor for $visitor_ty {
+                    type Value = $value_ty;
 
                     fn visit<
                         V: ::serde2::de::MapVisitor,
-                    >(&mut self, mut visitor: V) -> Result<$type_ident, V::Error> {
+                    >(&mut self, mut visitor: V) -> Result<$value_ty, V::Error> {
                         $visit_map_expr
                     }
                 }
 
-                $state.visit_map(__Visitor)
+                $state.visit_map($visitor_expr)
             })
         }
     }
