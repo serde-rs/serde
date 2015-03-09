@@ -1,14 +1,14 @@
 #![feature(custom_derive, plugin, test)]
-#![plugin(serde2_macros)]
+#![plugin(serde_macros)]
 
 extern crate test;
-extern crate serde2;
+extern crate serde;
 
 use std::collections::BTreeMap;
 use std::iter;
 use std::vec;
 
-use serde2::de::{self, Deserialize, Deserializer, Visitor};
+use serde::de::{self, Deserialize, Deserializer, Visitor};
 
 #[derive(Debug)]
 enum Token<'a> {

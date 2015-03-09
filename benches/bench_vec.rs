@@ -16,9 +16,16 @@ use serde::de::{Deserializer, Deserialize};
 
 #[derive(PartialEq, Debug)]
 pub enum Error {
-    EndOfStream,
+    EndOfStreamError,
     SyntaxError,
-    OtherError(String),
+}
+
+impl serde::de::Error for Error {
+    fn syntax_error() -> Error { Error::SyntaxError }
+
+    fn end_of_stream_error() -> Error { Error::EndOfStreamError }
+
+    fn missing_field_error(_: &'static str) -> Error { Error::SyntaxError }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -28,158 +35,155 @@ mod decoder {
     use rustc_serialize;
 
     use super::Error;
-    use super::Error::{EndOfStream, SyntaxError, OtherError};
 
-    pub struct IsizeDecoder {
+    pub struct UsizeDecoder {
         len: usize,
-        iter: vec::IntoIter<isize>,
+        iter: vec::IntoIter<usize>,
     }
 
-    impl IsizeDecoder {
+    impl UsizeDecoder {
         #[inline]
-        pub fn new(values: Vec<isize>) -> IsizeDecoder {
-            IsizeDecoder {
+        pub fn new(values: Vec<usize>) -> UsizeDecoder {
+            UsizeDecoder {
                 len: values.len(),
                 iter: values.into_iter(),
             }
         }
     }
 
-    impl rustc_serialize::Decoder for IsizeDecoder {
+    impl rustc_serialize::Decoder for UsizeDecoder {
         type Error = Error;
 
-        fn error(&mut self, msg: &str) -> Error {
-            OtherError(msg.to_string())
-        }
+        fn error(&mut self, _: &str) -> Error { Error::SyntaxError }
 
         // Primitive types:
-        fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
-        fn read_usize(&mut self) -> Result<usize, Error> { Err(SyntaxError) }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError) }
+        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::SyntaxError) }
         #[inline]
-        fn read_isize(&mut self) -> Result<isize, Error> {
+        fn read_usize(&mut self) -> Result<usize, Error> {
             match self.iter.next() {
                 Some(value) => Ok(value),
-                None => Err(EndOfStream),
+                None => Err(Error::EndOfStreamError),
             }
         }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
-        fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
-        fn read_str(&mut self) -> Result<String, Error> { Err(SyntaxError) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(Error::SyntaxError) }
+        fn read_str(&mut self) -> Result<String, Error> { Err(Error::SyntaxError) }
 
         // Compound types:
         fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder, usize) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder, usize) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             Err(Error::SyntaxError)
         }
 
         // Specialized types:
         fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder, bool) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder, bool) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         #[inline]
         fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder, usize) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
             let len = self.len;
             f(self, len)
         }
         #[inline]
         fn read_seq_elt<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
             f(self)
         }
 
         fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder, usize) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         fn read_map_elt_key<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         fn read_map_elt_val<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
+            F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
     }
 
@@ -202,34 +206,32 @@ mod decoder {
     impl rustc_serialize::Decoder for U8Decoder {
         type Error = Error;
 
-        fn error(&mut self, msg: &str) -> Error {
-            OtherError(msg.to_string())
-        }
+        fn error(&mut self, _: &str) -> Error { Error::SyntaxError }
 
         // Primitive types:
-        fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
-        fn read_usize(&mut self) -> Result<usize, Error> { Err(SyntaxError) }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
+        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::SyntaxError) }
+        fn read_usize(&mut self) -> Result<usize, Error> { Err(Error::SyntaxError) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
         #[inline]
         fn read_u8(&mut self) -> Result<u8, Error> {
             match self.iter.next() {
                 Some(value) => Ok(value),
-                None => Err(EndOfStream),
+                None => Err(Error::EndOfStreamError),
             }
         }
         #[inline]
-        fn read_isize(&mut self) -> Result<isize, Error> { Err(SyntaxError) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
-        fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
-        fn read_str(&mut self) -> Result<String, Error> { Err(SyntaxError) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(Error::SyntaxError) }
+        fn read_str(&mut self) -> Result<String, Error> { Err(Error::SyntaxError) }
 
         // Compound types:
         fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
@@ -302,7 +304,7 @@ mod decoder {
         fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder, bool) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         #[inline]
@@ -322,19 +324,19 @@ mod decoder {
         fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder, usize) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         fn read_map_elt_key<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         fn read_map_elt_val<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
     }
 }
@@ -346,8 +348,6 @@ mod deserializer {
     use std::vec;
 
     use super::Error;
-    use super::Error::{EndOfStream, SyntaxError};
-    use self::State::{StartState, SepOrEndState, EndState};
 
     use serde::de;
 
@@ -358,151 +358,141 @@ mod deserializer {
         EndState,
     }
 
-    pub struct IsizeDeserializer {
+    pub struct Deserializer<A> {
         state: State,
+        iter: vec::IntoIter<A>,
         len: usize,
-        iter: vec::IntoIter<isize>,
+        value: Option<A>,
     }
 
-    impl IsizeDeserializer {
+    impl<A> Deserializer<A> {
         #[inline]
-        pub fn new(values: Vec<isize>) -> IsizeDeserializer {
-            IsizeDeserializer {
-                state: StartState,
-                len: values.len(),
+        pub fn new(values: Vec<A>) -> Deserializer<A> {
+            let len = values.len();
+            Deserializer {
+                state: State::StartState,
                 iter: values.into_iter(),
+                len: len,
+                value: None,
             }
         }
     }
 
-    impl Iterator for IsizeDeserializer {
-        type Item = Result<de::Token, Error>;
+    impl de::Deserializer for Deserializer<usize> {
+        type Error = Error;
 
         #[inline]
-        fn next(&mut self) -> Option<Result<de::Token, Error>> {
+        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
+        {
             match self.state {
-                StartState => {
-                    self.state = SepOrEndState;
-                    Some(Ok(de::Token::SeqStart(self.len)))
+                State::StartState => {
+                    self.state = State::SepOrEndState;
+                    visitor.visit_seq(self)
                 }
-                SepOrEndState => {
-                    match self.iter.next() {
-                        Some(value) => {
-                            Some(Ok(de::Token::Isize(value)))
-                        }
-                        None => {
-                            self.state = EndState;
-                            Some(Ok(de::Token::End))
-                        }
-                    }
+                State::SepOrEndState => {
+                    visitor.visit_usize(self.value.take().unwrap())
                 }
-                EndState => {
-                    None
+                State::EndState => {
+                    Err(Error::EndOfStreamError)
                 }
             }
         }
     }
 
-    impl de::Deserializer<Error> for IsizeDeserializer {
-        #[inline]
-        fn end_of_stream_error(&mut self) -> Error {
-            EndOfStream
-        }
+    impl de::SeqVisitor for Deserializer<usize> {
+        type Error = Error;
 
         #[inline]
-        fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> Error {
-            SyntaxError
-        }
-
-        #[inline]
-        fn unexpected_name_error(&mut self, _token: de::Token) -> Error {
-            SyntaxError
-        }
-
-        #[inline]
-        fn conversion_error(&mut self, _token: de::Token) -> Error {
-            SyntaxError
-        }
-
-        #[inline]
-        fn missing_field<
-            T: de::Deserialize<IsizeDeserializer, Error>
-        >(&mut self, _field: &'static str) -> Result<T, Error> {
-            Err(SyntaxError)
-        }
-    }
-
-    pub struct U8Deserializer {
-        state: State,
-        len: usize,
-        iter: vec::IntoIter<u8>,
-    }
-
-    impl U8Deserializer {
-        #[inline]
-        pub fn new(values: Vec<u8>) -> U8Deserializer {
-            U8Deserializer {
-                state: StartState,
-                len: values.len(),
-                iter: values.into_iter(),
+        fn visit<T>(&mut self) -> Result<Option<T>, Error>
+            where T: de::Deserialize,
+        {
+            match self.iter.next() {
+                Some(value) => {
+                    self.len -= 1;
+                    self.value = Some(value);
+                    Ok(Some(try!(de::Deserialize::deserialize(self))))
+                }
+                None => {
+                    self.state = State::EndState;
+                    Ok(None)
+                }
             }
         }
-    }
-
-    impl Iterator for U8Deserializer {
-        type Item = Result<de::Token, Error>;
 
         #[inline]
-        fn next(&mut self) -> Option<Result<de::Token, Error>> {
+        fn end(&mut self) -> Result<(), Error> {
+            match self.iter.next() {
+                Some(_) => Err(Error::SyntaxError),
+                None => {
+                    self.state = State::EndState;
+                    Ok(())
+                }
+            }
+        }
+
+        #[inline]
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.len, Some(self.len))
+        }
+    }
+
+    impl de::Deserializer for Deserializer<u8> {
+        type Error = Error;
+
+        #[inline]
+        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
+        {
             match self.state {
-                StartState => {
-                    self.state = SepOrEndState;
-                    Some(Ok(de::Token::SeqStart(self.len)))
+                State::StartState => {
+                    self.state = State::SepOrEndState;
+                    visitor.visit_seq(self)
                 }
-                SepOrEndState => {
-                    match self.iter.next() {
-                        Some(value) => {
-                            Some(Ok(de::Token::U8(value)))
-                        }
-                        None => {
-                            self.state = EndState;
-                            Some(Ok(de::Token::End))
-                        }
-                    }
+                State::SepOrEndState => {
+                    visitor.visit_u8(self.value.take().unwrap())
                 }
-                EndState => {
-                    None
+                State::EndState => {
+                    Err(Error::EndOfStreamError)
                 }
             }
         }
     }
 
-    impl de::Deserializer<Error> for U8Deserializer {
+    impl de::SeqVisitor for Deserializer<u8> {
+        type Error = Error;
+
         #[inline]
-        fn end_of_stream_error(&mut self) -> Error {
-            EndOfStream
+        fn visit<T>(&mut self) -> Result<Option<T>, Error>
+            where T: de::Deserialize,
+        {
+            match self.iter.next() {
+                Some(value) => {
+                    self.len -= 1;
+                    self.value = Some(value);
+                    Ok(Some(try!(de::Deserialize::deserialize(self))))
+                }
+                None => {
+                    self.state = State::EndState;
+                    Ok(None)
+                }
+            }
         }
 
         #[inline]
-        fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> Error {
-            SyntaxError
+        fn end(&mut self) -> Result<(), Error> {
+            match self.iter.next() {
+                Some(_) => Err(Error::SyntaxError),
+                None => {
+                    self.state = State::EndState;
+                    Ok(())
+                }
+            }
         }
 
         #[inline]
-        fn unexpected_name_error(&mut self, _token: de::Token) -> Error {
-            SyntaxError
-        }
-
-        #[inline]
-        fn conversion_error(&mut self, _token: de::Token) -> Error {
-            SyntaxError
-        }
-
-        #[inline]
-        fn missing_field<
-            T: de::Deserialize<U8Deserializer, Error>
-        >(&mut self, _field: &'static str) -> Result<T, Error> {
-            Err(SyntaxError)
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.len, Some(self.len))
         }
     }
 }
@@ -519,9 +509,9 @@ fn run_decoder<
 }
 
 fn run_deserializer<
-    D: Deserializer<E>,
+    D: Deserializer<Error=E>,
     E: Debug,
-    T: Clone + PartialEq + Debug + Deserialize<D, E>
+    T: Clone + PartialEq + Debug + Deserialize
 >(mut d: D, value: T) {
     let v: T = Deserialize::deserialize(&mut d).unwrap();
 
@@ -529,26 +519,26 @@ fn run_deserializer<
 }
 
 #[bench]
-fn bench_decoder_int_000(b: &mut Bencher) {
+fn bench_decoder_usize_000(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<isize> = vec!();
-        run_decoder(decoder::IsizeDecoder::new(v.clone()), v)
+        let v: Vec<usize> = vec!();
+        run_decoder(decoder::UsizeDecoder::new(v.clone()), v)
     })
 }
 
 #[bench]
-fn bench_decoder_int_003(b: &mut Bencher) {
+fn bench_decoder_usize_003(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<isize> = vec!(1, 2, 3);
-        run_decoder(decoder::IsizeDecoder::new(v.clone()), v)
+        let v: Vec<usize> = vec!(1, 2, 3);
+        run_decoder(decoder::UsizeDecoder::new(v.clone()), v)
     })
 }
 
 #[bench]
-fn bench_decoder_int_100(b: &mut Bencher) {
+fn bench_decoder_usize_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<isize> = range(0is, 100).collect();
-        run_decoder(decoder::IsizeDecoder::new(v.clone()), v)
+        let v: Vec<usize> = range(0, 100).collect();
+        run_decoder(decoder::UsizeDecoder::new(v.clone()), v)
     })
 }
 
@@ -577,26 +567,26 @@ fn bench_decoder_u8_100(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_deserializer_int_000(b: &mut Bencher) {
+fn bench_deserializer_usize_000(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<isize> = vec!();
-        run_deserializer(deserializer::IsizeDeserializer::new(v.clone()), v)
+        let v: Vec<usize> = vec!();
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
 #[bench]
-fn bench_deserializer_int_003(b: &mut Bencher) {
+fn bench_deserializer_usize_003(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<isize> = vec!(1, 2, 3);
-        run_deserializer(deserializer::IsizeDeserializer::new(v.clone()), v)
+        let v: Vec<usize> = vec!(1, 2, 3);
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
 #[bench]
-fn bench_deserializer_int_100(b: &mut Bencher) {
+fn bench_deserializer_usize_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<isize> = range(0is, 100).collect();
-        run_deserializer(deserializer::IsizeDeserializer::new(v.clone()), v)
+        let v: Vec<usize> = range(0, 100).collect();
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
@@ -604,7 +594,7 @@ fn bench_deserializer_int_100(b: &mut Bencher) {
 fn bench_deserializer_u8_000(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<u8> = vec!();
-        run_deserializer(deserializer::U8Deserializer::new(v.clone()), v)
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
@@ -612,7 +602,7 @@ fn bench_deserializer_u8_000(b: &mut Bencher) {
 fn bench_deserializer_u8_003(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<u8> = vec!(1, 2, 3);
-        run_deserializer(deserializer::U8Deserializer::new(v.clone()), v)
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
 
@@ -620,6 +610,6 @@ fn bench_deserializer_u8_003(b: &mut Bencher) {
 fn bench_deserializer_u8_100(b: &mut Bencher) {
     b.iter(|| {
         let v: Vec<u8> = range(0u8, 100).collect();
-        run_deserializer(deserializer::U8Deserializer::new(v.clone()), v)
+        run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }

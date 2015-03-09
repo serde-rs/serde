@@ -1,16 +1,16 @@
 #![feature(custom_derive, plugin, test)]
-#![plugin(serde2_macros)]
+#![plugin(serde_macros)]
 
 extern crate test;
-extern crate serde2;
+extern crate serde;
 
 use std::fmt::Debug;
 use std::collections::BTreeMap;
 
-use serde2::de;
-use serde2::ser;
+use serde::de;
+use serde::ser;
 
-use serde2::json::{
+use serde::json::{
     self,
     Value,
     from_str,
@@ -18,7 +18,7 @@ use serde2::json::{
     to_value,
 };
 
-use serde2::json::error::{Error, ErrorCode};
+use serde::json::error::{Error, ErrorCode};
 
 macro_rules! treemap {
     ($($k:expr => $v:expr),*) => ({

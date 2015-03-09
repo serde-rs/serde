@@ -1,4 +1,4 @@
-#![feature(collections, core, io, plugin, test)]
+#![feature(custom_derive, collections, core, io, plugin, test)]
 #![allow(non_camel_case_types)]
 #![plugin(serde_macros)]
 
@@ -10,11 +10,10 @@ use std::io::{self, ReadExt, WriteExt};
 use std::num::FromPrimitive;
 use test::Bencher;
 
-use serde::de;
+use serde::de::{self, Deserialize, Deserializer};
 use serde::json::ser::escape_str;
 use serde::json;
-use serde::ser::Serialize;
-use serde::ser;
+use serde::ser::{self, Serialize, Serializer};
 
 use rustc_serialize::Encodable;
 
@@ -48,24 +47,28 @@ impl rustc_serialize::Encodable for HttpProtocol {
 
 impl rustc_serialize::Decodable for HttpProtocol {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpProtocol, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_usize(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from usize")),
         }
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpProtocol {
+impl ser::Serialize for HttpProtocol {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_u8(*self as u8)
+    fn visit<
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpProtocol {
+impl de::Deserialize for HttpProtocol {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpProtocol, E> {
-        d.expect_from_primitive(token)
+    fn deserialize<
+        S: Deserializer,
+    >(state: &mut S) -> Result<HttpProtocol, S::Error> {
+        state.visit(de::PrimitiveVisitor::new())
     }
 }
 
@@ -92,24 +95,28 @@ impl rustc_serialize::Encodable for HttpMethod {
 
 impl rustc_serialize::Decodable for HttpMethod {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<HttpMethod, D::Error> {
-        match FromPrimitive::from_uint(try!(d.read_usize())) {
+        match FromPrimitive::from_usize(try!(d.read_usize())) {
             Some(value) => Ok(value),
             None => Err(d.error("cannot convert from usize")),
         }
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for HttpMethod {
+impl ser::Serialize for HttpMethod {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_u8(*self as u8)
+    fn visit<
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for HttpMethod {
+impl de::Deserialize for HttpMethod {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<HttpMethod, E> {
-        d.expect_from_primitive(token)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<HttpMethod, S::Error> {
+        state.visit(de::PrimitiveVisitor::new())
     }
 }
 
@@ -136,17 +143,21 @@ impl rustc_serialize::Decodable for CacheStatus {
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for CacheStatus {
+impl ser::Serialize for CacheStatus {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_usize(*self as usize)
+    fn visit<
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for CacheStatus {
+impl de::Deserialize for CacheStatus {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<CacheStatus, E> {
-        d.expect_from_primitive(token)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<CacheStatus, S::Error> {
+        state.visit(de::PrimitiveVisitor::new())
     }
 }
 
@@ -182,17 +193,21 @@ impl rustc_serialize::Decodable for OriginProtocol {
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for OriginProtocol {
+impl ser::Serialize for OriginProtocol {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_u8(*self as u8)
+    fn visit<
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for OriginProtocol {
+impl de::Deserialize for OriginProtocol {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<OriginProtocol, E> {
-        d.expect_from_primitive(token)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<OriginProtocol, S::Error> {
+        state.visit(de::PrimitiveVisitor::new())
     }
 }
 
@@ -220,17 +235,21 @@ impl rustc_serialize::Decodable for ZonePlan {
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for ZonePlan {
+impl ser::Serialize for ZonePlan {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_u8(*self as u8)
+    fn visit<
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for ZonePlan {
+impl de::Deserialize for ZonePlan {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<ZonePlan, E> {
-        d.expect_from_primitive(token)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<ZonePlan, S::Error> {
+        state.visit(de::PrimitiveVisitor::new())
     }
 }
 
@@ -509,17 +528,21 @@ impl rustc_serialize::Decodable for Country {
     }
 }
 
-impl<S: ser::Serializer<E>, E> ser::Serialize<S, E> for Country {
+impl ser::Serialize for Country {
     #[inline]
-    fn serialize(&self, s: &mut S) -> Result<(), E> {
-        s.serialize_u8(*self as u8)
+    fn visit<
+        V: ser::Visitor,
+    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+        visitor.visit_u8(*self as u8)
     }
 }
 
-impl<D: de::Deserializer<E>, E> de::Deserialize<D, E> for Country {
+impl de::Deserialize for Country {
     #[inline]
-    fn deserialize_token(d: &mut D, token: de::Token) -> Result<Country, E> {
-        d.expect_from_primitive(token)
+    fn deserialize<
+        S: de::Deserializer,
+    >(state: &mut S) -> Result<Country, S::Error> {
+        state.visit(de::PrimitiveVisitor::new())
     }
 }
 
@@ -652,7 +675,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
         // we would have failed if `reserve` overflowed.
         dst.set_len(dst_len + src_len);
 
-        ::std::ptr::copy_nonoverlapping_memory(
+        ::std::ptr::copy_nonoverlapping(
             dst.as_mut_ptr().offset(dst_len as isize),
             src.as_ptr(),
             src_len);
@@ -687,7 +710,7 @@ fn test_encoder() {
         log.encode(&mut encoder).unwrap();
     }
 
-    assert_eq!(&wr[], JSON_STR);
+    assert_eq!(&wr, &JSON_STR);
 }
 
 #[bench]
@@ -734,10 +757,10 @@ fn test_serializer_vec() {
     let log = Log::new();
     let wr = Vec::with_capacity(1024);
     let mut serializer = json::Serializer::new(wr);
-    log.serialize(&mut serializer).unwrap();
+    serializer.visit(&log).unwrap();
 
-    let json = serializer.unwrap();
-    assert_eq!(&json[], JSON_STR.as_bytes());
+    let json = serializer.into_inner();
+    assert_eq!(&json, &JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -752,8 +775,8 @@ fn bench_serializer_vec(b: &mut Bencher) {
         wr.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap();
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
     });
 }
 
@@ -767,11 +790,11 @@ fn bench_serializer_slice(b: &mut Bencher) {
 
     b.iter(|| {
         for item in buf.iter_mut(){ *item = 0; }
-        let mut wr = &mut buf[];
+        let mut wr = &mut buf[..];
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap();
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
     });
 }
 
@@ -783,10 +806,11 @@ fn test_serializer_my_mem_writer0() {
 
     {
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.serialize(&mut serializer).unwrap();
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
     }
 
-    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
+    assert_eq!(&wr.buf, &JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -801,8 +825,8 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
         wr.buf.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap();
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
     });
 }
 
@@ -814,10 +838,11 @@ fn test_serializer_my_mem_writer1() {
 
     {
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.serialize(&mut serializer).unwrap();
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
     }
 
-    assert_eq!(&wr.buf[], JSON_STR.as_bytes());
+    assert_eq!(&wr.buf, &JSON_STR.as_bytes());
 }
 
 #[bench]
@@ -832,8 +857,8 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
         wr.buf.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.serialize(&mut serializer).unwrap();
-        let _json = serializer.unwrap();
+        serializer.visit(&log).unwrap();
+        let _json = serializer.into_inner();
     });
 }
 
@@ -1017,7 +1042,7 @@ fn test_manual_serialize_vec_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1042,7 +1067,7 @@ fn test_manual_serialize_vec_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1068,7 +1093,7 @@ fn test_manual_serialize_my_mem_writer0_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1094,7 +1119,7 @@ fn test_manual_serialize_my_mem_writer0_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1120,7 +1145,7 @@ fn test_manual_serialize_my_mem_writer1_no_escape() {
     manual_serialize_no_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1146,7 +1171,7 @@ fn test_manual_serialize_my_mem_writer1_escape() {
     manual_serialize_escape(&mut wr, &log);
 
     let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
+    assert_eq!(&JSON_STR, &json);
 }
 
 #[bench]
@@ -1164,116 +1189,6 @@ fn bench_manual_serialize_my_mem_writer1_escape(b: &mut Bencher) {
     });
 }
 
-fn direct<W: io::Write>(wr: &mut W, log: &Log) {
-    use serde::ser::Serializer;
-
-    let mut serializer = json::Serializer::new(wr.by_ref());
-
-    serializer.serialize_struct_start("Log", 12).unwrap();
-
-    serializer.serialize_struct_elt("timestamp", &log.timestamp).unwrap();
-    serializer.serialize_struct_elt("zone_id", &log.zone_id).unwrap();
-    serializer.serialize_struct_elt("zone_plan", &(log.zone_plan as usize)).unwrap();
-    serializer.serialize_struct_elt("http", &log.http).unwrap();
-    serializer.serialize_struct_elt("origin", &log.origin).unwrap();
-    serializer.serialize_struct_elt("country", &(log.country as usize)).unwrap();
-    serializer.serialize_struct_elt("cache_status", &(log.cache_status as usize)).unwrap();
-    serializer.serialize_struct_elt("server_ip", &log.server_ip).unwrap();
-    serializer.serialize_struct_elt("server_name", &log.server_name).unwrap();
-    serializer.serialize_struct_elt("remote_ip", &log.remote_ip).unwrap();
-    serializer.serialize_struct_elt("bytes_dlv", &log.bytes_dlv).unwrap();
-    serializer.serialize_struct_elt("ray_id", &log.ray_id).unwrap();
-
-    serializer.serialize_struct_end().unwrap();
-}
-
-#[test]
-fn test_direct_vec() {
-    let log = Log::new();
-
-    let mut wr = Vec::with_capacity(1024);
-    direct(&mut wr, &log);
-
-    let json = String::from_utf8(wr).unwrap();
-    assert_eq!(JSON_STR, &json[]);
-}
-
-#[bench]
-fn bench_direct_vec(b: &mut Bencher) {
-    let log = Log::new();
-
-    let mut wr = Vec::with_capacity(1024);
-    direct(&mut wr, &log);
-    b.bytes = wr.len() as u64;
-
-    b.iter(|| {
-        let mut wr = Vec::with_capacity(1024);
-        direct(&mut wr, &log);
-    });
-}
-
-#[test]
-fn test_direct_my_mem_writer0() {
-    let log = Log::new();
-
-    let mut wr = MyMemWriter0::with_capacity(1024);
-    direct(&mut wr, &log);
-
-    let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
-}
-
-#[bench]
-fn bench_direct_my_mem_writer0(b: &mut Bencher) {
-    let log = Log::new();
-
-    let mut wr = MyMemWriter0::with_capacity(1024);
-    direct(&mut wr, &log);
-    b.bytes = wr.buf.len() as u64;
-
-    b.iter(|| {
-        wr.buf.clear();
-
-        direct(&mut wr, &log);
-    });
-}
-
-#[test]
-fn test_direct_my_mem_writer1() {
-    let log = Log::new();
-
-    let mut wr = MyMemWriter1::with_capacity(1024);
-    direct(&mut wr, &log);
-
-    let json = String::from_utf8(wr.buf).unwrap();
-    assert_eq!(JSON_STR, &json[]);
-}
-
-#[bench]
-fn bench_direct_my_mem_writer1(b: &mut Bencher) {
-    let log = Log::new();
-
-    let mut wr = MyMemWriter1::with_capacity(1024);
-    direct(&mut wr, &log);
-    b.bytes = wr.buf.len() as u64;
-
-    b.iter(|| {
-        wr.buf.clear();
-
-        direct(&mut wr, &log);
-    });
-}
-
-#[test]
-fn test_decoder() {
-    use rustc_serialize::json::Json;
-
-    let json = Json::from_str(JSON_STR).unwrap();
-    let mut decoder = rustc_serialize::json::Decoder::new(json);
-    let log: Log = rustc_serialize::Decodable::decode(&mut decoder).unwrap();
-    assert_eq!(log, Log::new());
-}
-
 #[bench]
 fn bench_decoder(b: &mut Bencher) {
     use rustc_serialize::json::Json;
@@ -1287,299 +1202,6 @@ fn bench_decoder(b: &mut Bencher) {
     });
 }
 
-#[test]
-fn test_deserializer() {
-    let log: Log = json::from_str(JSON_STR).unwrap();
-    assert_eq!(log, Log::new());
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-#[inline]
-fn manual_reader_ignore<R: Reader>(rdr: &mut R, buf: &mut [u8], key: &[u8]) {
-    let buf = &mut buf[0..key.len()];
-    rdr.read(buf).unwrap();
-    assert_eq!(buf, key);
-}
-
-#[inline]
-fn manual_reader_field<R: Reader>(rdr: &mut R, buf: &mut [u8], key: &[u8]) {
-    let b = rdr.read_byte().unwrap();
-    assert_eq!(b, b'"');
-
-    manual_reader_ignore(rdr, buf, key);
-
-    let b = rdr.read_byte().unwrap();
-    assert_eq!(b, b'"');
-
-    let b = rdr.read_byte().unwrap();
-    assert_eq!(b, b':');
-}
-
-#[inline]
-fn manual_reader_int<R: Reader>(rdr: &mut R, buf: &mut [u8], key: &[u8]) -> i64 {
-    manual_reader_field(rdr, buf, key);
-
-    let mut res = 0;
-
-    loop {
-        let byte = rdr.read_byte().unwrap();
-        match byte {
-            b'0' ... b'9' => {
-                res *= 10;
-                res += (byte as i64) - (b'0' as i64);
-            }
-            _ => { break; }
-        }
-    }
-
-    res
-}
-
-#[inline]
-fn manual_reader_string<R: Reader>(rdr: &mut R, buf: &mut [u8], key: &[u8]) -> String {
-    manual_reader_field(rdr, buf, key);
-    manual_reader_ignore(rdr, buf, b"\"");
-
-    let mut idx = 0;
-
-    loop {
-        let byte = rdr.read_byte().unwrap();
-        match byte {
-            b'"' => { break; }
-            byte => { buf[idx] = byte; }
-        };
-
-        idx += 1;
-    }
-
-    let b = rdr.read_byte().unwrap();
-    assert!(b == b',' || b == b']' || b == b'}');
-
-    String::from_utf8(buf[..idx].to_vec()).unwrap()
-}
-
-#[inline]
-fn manual_reader_deserialize<R: Reader>(rdr: &mut R) -> Log {
-    let mut buf = [0; 128];
-
-    manual_reader_ignore(rdr, &mut buf, b"{");
-    let timestamp = manual_reader_int(rdr, &mut buf, b"timestamp");
-    let zone_id = manual_reader_int(rdr, &mut buf, b"zone_id");
-    let zone_plan = manual_reader_int(rdr, &mut buf, b"zone_plan");
-
-    manual_reader_field(rdr, &mut buf, b"http");
-    manual_reader_ignore(rdr, &mut buf, b"{");
-
-    let protocol = manual_reader_int(rdr, &mut buf, b"protocol");
-    let status = manual_reader_int(rdr, &mut buf, b"status");
-    let host_status = manual_reader_int(rdr, &mut buf, b"host_status");
-    let up_status = manual_reader_int(rdr, &mut buf, b"up_status");
-    let method = manual_reader_int(rdr, &mut buf, b"method");
-    let content_type = manual_reader_string(rdr, &mut buf, b"content_type");
-    let user_agent = manual_reader_string(rdr, &mut buf, b"user_agent");
-    let referer = manual_reader_string(rdr, &mut buf, b"referer");
-    let request_uri = manual_reader_string(rdr, &mut buf, b"request_uri");
-
-    let http = Http {
-        protocol: FromPrimitive::from_i64(protocol).unwrap(),
-        status: FromPrimitive::from_i64(status).unwrap(),
-        host_status: FromPrimitive::from_i64(host_status).unwrap(),
-        up_status: FromPrimitive::from_i64(up_status).unwrap(),
-        method: FromPrimitive::from_i64(method).unwrap(),
-        content_type: content_type,
-        user_agent: user_agent,
-        referer: referer,
-        request_uri: request_uri,
-    };
-
-    manual_reader_ignore(rdr, &mut buf, b",");
-    manual_reader_field(rdr, &mut buf, b"origin");
-    manual_reader_ignore(rdr, &mut buf, b"{");
-
-    let ip = manual_reader_string(rdr, &mut buf, b"ip");
-    let port = manual_reader_int(rdr, &mut buf, b"port");
-    let hostname = manual_reader_string(rdr, &mut buf, b"hostname");
-    let protocol = manual_reader_int(rdr, &mut buf, b"protocol");
-
-    let origin = Origin {
-        ip: ip,
-        port: FromPrimitive::from_i64(port).unwrap(),
-        hostname: hostname,
-        protocol: FromPrimitive::from_i64(protocol).unwrap(),
-    };
-
-    manual_reader_ignore(rdr, &mut buf, b",");
-    let country = manual_reader_int(rdr, &mut buf, b"country");
-    let cache_status = manual_reader_int(rdr, &mut buf, b"cache_status");
-    let server_ip = manual_reader_string(rdr, &mut buf, b"server_ip");
-    let server_name = manual_reader_string(rdr, &mut buf, b"server_name");
-    let remote_ip = manual_reader_string(rdr, &mut buf, b"remote_ip");
-    let bytes_dlv = manual_reader_int(rdr, &mut buf, b"bytes_dlv");
-    let ray_id = manual_reader_string(rdr, &mut buf, b"ray_id");
-
-    Log {
-        timestamp: timestamp,
-        zone_id: FromPrimitive::from_i64(zone_id).unwrap(),
-        zone_plan: FromPrimitive::from_i64(zone_plan).unwrap(),
-        http: http,
-        origin: origin,
-        country: FromPrimitive::from_i64(country).unwrap(),
-        cache_status: FromPrimitive::from_i64(cache_status).unwrap(),
-        server_ip: server_ip,
-        server_name: server_name,
-        remote_ip: remote_ip,
-        bytes_dlv: FromPrimitive::from_i64(bytes_dlv).unwrap(),
-        ray_id: ray_id,
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-#[inline]
-fn manual_iter_ignore<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
-    let buf = &mut buf[0..key.len()];
-
-    for idx in range(0, key.len()) {
-        buf[idx] = rdr.next().unwrap();
-    }
-    assert_eq!(buf, key);
-}
-
-#[inline]
-fn manual_iter_field<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) {
-    let b = rdr.next().unwrap();
-    assert_eq!(b, b'"');
-
-    manual_iter_ignore(rdr.by_ref(), buf, key);
-
-    let b = rdr.next().unwrap();
-    assert_eq!(b, b'"');
-
-    let b = rdr.next().unwrap();
-    assert_eq!(b, b':');
-}
-
-#[inline]
-fn manual_iter_int<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> i64 {
-    manual_iter_field(rdr.by_ref(), buf, key);
-
-    let mut res = 0;
-
-    loop {
-        let byte = rdr.next().unwrap();
-        match byte {
-            b'0' ... b'9' => {
-                res *= 10;
-                res += (byte as i64) - (b'0' as i64);
-            }
-            _ => { break; }
-        }
-    }
-
-    res
-}
-
-#[inline]
-fn manual_iter_string<R: Iterator<Item=u8>>(mut rdr: R, buf: &mut [u8], key: &[u8]) -> String {
-    manual_iter_field(rdr.by_ref(), buf, key);
-    manual_iter_ignore(rdr.by_ref(), buf, b"\"");
-
-    let mut idx = 0;
-
-    loop {
-        let byte = rdr.next().unwrap();
-        match byte {
-            b'"' => { break; }
-            byte => { buf[idx] = byte; }
-        };
-
-        idx += 1;
-    }
-
-    let b = rdr.next().unwrap();
-    assert!(b == b',' || b == b']' || b == b'}');
-
-    String::from_utf8(buf[..idx].to_vec()).unwrap()
-}
-
-#[inline]
-fn manual_iter_deserialize<R: Iterator<Item=u8>>(mut rdr: R) -> Log {
-    let mut buf = [0u8; 128];
-
-    manual_iter_ignore(rdr.by_ref(), &mut buf, b"{");
-    let timestamp = manual_iter_int(rdr.by_ref(), &mut buf, b"timestamp");
-    let zone_id = manual_iter_int(rdr.by_ref(), &mut buf, b"zone_id");
-    let zone_plan = manual_iter_int(rdr.by_ref(), &mut buf, b"zone_plan");
-
-    manual_iter_field(rdr.by_ref(), &mut buf, b"http");
-    manual_iter_ignore(rdr.by_ref(), &mut buf, b"{");
-
-    let protocol = manual_iter_int(rdr.by_ref(), &mut buf, b"protocol");
-    let status = manual_iter_int(rdr.by_ref(), &mut buf, b"status");
-    let host_status = manual_iter_int(rdr.by_ref(), &mut buf, b"host_status");
-    let up_status = manual_iter_int(rdr.by_ref(), &mut buf, b"up_status");
-    let method = manual_iter_int(rdr.by_ref(), &mut buf, b"method");
-    let content_type = manual_iter_string(rdr.by_ref(), &mut buf, b"content_type");
-    let user_agent = manual_iter_string(rdr.by_ref(), &mut buf, b"user_agent");
-    let referer = manual_iter_string(rdr.by_ref(), &mut buf, b"referer");
-    let request_uri = manual_iter_string(rdr.by_ref(), &mut buf, b"request_uri");
-
-    let http = Http {
-        protocol: FromPrimitive::from_i64(protocol).unwrap(),
-        status: FromPrimitive::from_i64(status).unwrap(),
-        host_status: FromPrimitive::from_i64(host_status).unwrap(),
-        up_status: FromPrimitive::from_i64(up_status).unwrap(),
-        method: FromPrimitive::from_i64(method).unwrap(),
-        content_type: content_type,
-        user_agent: user_agent,
-        referer: referer,
-        request_uri: request_uri,
-    };
-
-    manual_iter_ignore(rdr.by_ref(), &mut buf, b",");
-    manual_iter_field(rdr.by_ref(), &mut buf, b"origin");
-    manual_iter_ignore(rdr.by_ref(), &mut buf, b"{");
-
-    let ip = manual_iter_string(rdr.by_ref(), &mut buf, b"ip");
-    let port = manual_iter_int(rdr.by_ref(), &mut buf, b"port");
-    let hostname = manual_iter_string(rdr.by_ref(), &mut buf, b"hostname");
-    let protocol = manual_iter_int(rdr.by_ref(), &mut buf, b"protocol");
-
-    let origin = Origin {
-        ip: ip,
-        port: FromPrimitive::from_i64(port).unwrap(),
-        hostname: hostname,
-        protocol: FromPrimitive::from_i64(protocol).unwrap(),
-    };
-
-    manual_iter_ignore(rdr.by_ref(), &mut buf, b",");
-    let country = manual_iter_int(rdr.by_ref(), &mut buf, b"country");
-    let cache_status = manual_iter_int(rdr.by_ref(), &mut buf, b"cache_status");
-    let server_ip = manual_iter_string(rdr.by_ref(), &mut buf, b"server_ip");
-    let server_name = manual_iter_string(rdr.by_ref(), &mut buf, b"server_name");
-    let remote_ip = manual_iter_string(rdr.by_ref(), &mut buf, b"remote_ip");
-    let bytes_dlv = manual_iter_int(rdr.by_ref(), &mut buf, b"bytes_dlv");
-    let ray_id = manual_iter_string(rdr.by_ref(), &mut buf, b"ray_id");
-
-    Log {
-        timestamp: timestamp,
-        zone_id: FromPrimitive::from_i64(zone_id).unwrap(),
-        zone_plan: FromPrimitive::from_i64(zone_plan).unwrap(),
-        http: http,
-        origin: origin,
-        country: FromPrimitive::from_i64(country).unwrap(),
-        cache_status: FromPrimitive::from_i64(cache_status).unwrap(),
-        server_ip: server_ip,
-        server_name: server_name,
-        remote_ip: remote_ip,
-        bytes_dlv: FromPrimitive::from_i64(bytes_dlv).unwrap(),
-        ray_id: ray_id,
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 #[bench]
 fn bench_deserializer(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
@@ -1587,108 +1209,4 @@ fn bench_deserializer(b: &mut Bencher) {
     b.iter(|| {
         let _log: Log = json::from_str(JSON_STR).unwrap();
     });
-}
-
-#[bench]
-fn bench_deserializers(b: &mut Bencher) {
-    let s = r#"{"timestamp":25469139677502,"zone_id":123456,"zone_plan":1,"http":{"protocol":2,"status":200,"host_status":503,"up_status":520,"method":1,"content_type":"text/html","user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36","referer":"https://www.cloudflare.com/","request_uri":"/cdn-cgi/trace"},"origin":{"ip":"1.2.3.4","port":8000,"hostname":"www.example.com","protocol":2},"country":238,"cache_status":3,"server_ip":"192.168.1.1","server_name":"metal.cloudflare.com","remote_ip":"10.1.2.3","bytes_dlv":123456,"ray_id":"10c73629cce30078-LAX"}"#;
-
-    b.bytes = s.len() as u64;
-
-    for _ in range(0is, 10000) {
-        let _log: Log = json::from_str(s).unwrap();
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-#[test]
-fn test_reader_manual_deserializer() {
-    let mut rdr = JSON_STR.as_bytes();
-    let log = manual_reader_deserialize(&mut rdr);
-
-    assert_eq!(log, Log::new());
-}
-
-#[bench]
-fn bench_reader_manual_reader_deserializer(b: &mut Bencher) {
-    b.bytes = JSON_STR.len() as u64;
-
-    b.iter(|| {
-        let mut rdr = JSON_STR.as_bytes();
-        let _ = manual_reader_deserialize(&mut rdr);
-    });
-}
-
-#[bench]
-fn bench_reader_manual_reader_deserializers(b: &mut Bencher) {
-    b.bytes = JSON_STR.len() as u64;
-
-    for _ in range(0is, 100000) {
-        let mut rdr = JSON_STR.as_bytes();
-        let _ = manual_reader_deserialize(&mut rdr);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-#[test]
-fn test_iter_manual_iter_deserializer() {
-    let log = manual_iter_deserialize(JSON_STR.bytes());
-
-    assert_eq!(log, Log::new());
-}
-
-#[bench]
-fn bench_iter_manual_iter_deserializer(b: &mut Bencher) {
-    b.bytes = JSON_STR.len() as u64;
-
-    b.iter(|| {
-        let _ = manual_iter_deserialize(JSON_STR.bytes());
-    });
-}
-
-#[bench]
-fn bench_iter_manual_iter_deserializers(b: &mut Bencher) {
-    b.bytes = JSON_STR.len() as u64;
-
-    for _ in range(0is, 10000) {
-        let _ = manual_iter_deserialize(JSON_STR.bytes());
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-#[test]
-fn test_iter_manual_reader_as_iter_deserializer() {
-    let rdr = JSON_STR.as_bytes();
-    let iter = rdr.bytes().map(|x| x.unwrap());
-
-    let log = manual_iter_deserialize(iter);
-
-    assert_eq!(log, Log::new());
-}
-
-#[bench]
-fn bench_iter_manual_reader_as_iter_deserializer(b: &mut Bencher) {
-    b.bytes = JSON_STR.len() as u64;
-
-    b.iter(|| {
-        let rdr = JSON_STR.as_bytes();
-        let iter = rdr.bytes().map(|x| x.unwrap());
-
-        let _ = manual_iter_deserialize(iter);
-    });
-}
-
-#[bench]
-fn bench_iter_manual_reader_as_iter_deserializers(b: &mut Bencher) {
-    b.bytes = JSON_STR.len() as u64;
-
-    for _ in range(0is, 10000) {
-        let rdr = JSON_STR.as_bytes();
-        let iter = rdr.bytes().map(|x| x.unwrap());
-
-        let _ = manual_iter_deserialize(iter);
-    }
 }

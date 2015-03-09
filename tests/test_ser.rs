@@ -1,13 +1,13 @@
 #![feature(custom_derive, plugin, test)]
-#![plugin(serde2_macros)]
+#![plugin(serde_macros)]
 
 extern crate test;
-extern crate serde2;
+extern crate serde;
 
 use std::vec;
 use std::collections::BTreeMap;
 
-use serde2::ser::{Serialize, Serializer, Visitor, SeqVisitor, MapVisitor};
+use serde::ser::{Serialize, Serializer, Visitor, SeqVisitor, MapVisitor};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token<'a> {

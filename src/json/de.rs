@@ -1,110 +1,50 @@
-use std::str;
+use std::char;
 use std::num::Float;
 use unicode::str::Utf16Item;
-use std::char;
+use std::str;
 
 use de;
-
 use super::error::{Error, ErrorCode};
 
-#[derive(PartialEq, Debug)]
-enum State {
-    // Parse a value.
-    Value,
-    // Parse a value or ']'.
-    ListStart,
-    // Parse ',' or ']' after an element in a list.
-    ListCommaOrEnd,
-    // Parse a key:value or an ']'.
-    ObjectStart,
-    // Parse ',' or ']' after an element in an object.
-    ObjectCommaOrEnd,
-    // Parse a key in an object.
-    //ObjectKey,
-    // Parse a value in an object.
-    ObjectValue,
-}
-
-/// A streaming JSON parser implemented as an iterator of JsonEvent, consuming
-/// an iterator of char.
-pub struct Parser<Iter> {
+pub struct Deserializer<Iter> {
     rdr: Iter,
     ch: Option<u8>,
     line: usize,
     col: usize,
-    // A state machine is kept to make it possible to interupt and resume parsing.
-    state_stack: Vec<State>,
     buf: Vec<u8>,
 }
 
-impl<Iter: Iterator<Item=u8>> Iterator for Parser<Iter> {
-    type Item = Result<de::Token, Error>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Result<de::Token, Error>> {
-        let state = match self.state_stack.pop() {
-            Some(state) => state,
-            None => {
-                // If we have no state left, then we're expecting the structure
-                // to be done, so make sure there are no trailing characters.
-
-                self.parse_whitespace();
-
-                if self.eof() {
-                    return None;
-                } else {
-                    return Some(Err(self.error(ErrorCode::TrailingCharacters)));
-                }
-            }
-        };
-
-        match state {
-            State::Value => Some(self.parse_value()),
-            State::ListStart => Some(self.parse_list_start()),
-            State::ListCommaOrEnd => Some(self.parse_list_comma_or_end()),
-            State::ObjectStart => {
-                match self.parse_object_start() {
-                    Ok(Some(s)) => Some(Ok(de::Token::String(s.to_string()))),
-                    Ok(None) => Some(Ok(de::Token::End)),
-                    Err(err) => Some(Err(err)),
-                }
-            }
-            State::ObjectCommaOrEnd => {
-                match self.parse_object_comma_or_end() {
-                    Ok(Some(s)) => Some(Ok(de::Token::String(s.to_string()))),
-                    Ok(None) => Some(Ok(de::Token::End)),
-                    Err(err) => Some(Err(err)),
-                }
-            }
-            //State::ObjectKey => Some(self.parse_object_key()),
-            State::ObjectValue => Some(self.parse_object_value()),
-        }
-    }
-}
-
-impl<Iter: Iterator<Item=u8>> Parser<Iter> {
+impl<Iter> Deserializer<Iter>
+    where Iter: Iterator<Item=u8>,
+{
     /// Creates the JSON parser.
     #[inline]
-    pub fn new(rdr: Iter) -> Parser<Iter> {
-        let mut p = Parser {
+    pub fn new(rdr: Iter) -> Deserializer<Iter> {
+        let mut p = Deserializer {
             rdr: rdr,
             ch: Some(b'\x00'),
             line: 1,
             col: 0,
-            state_stack: vec!(State::Value),
             buf: Vec::with_capacity(128),
         };
         p.bump();
         return p;
     }
 
-    #[inline(always)]
+    #[inline]
+    pub fn end(&mut self) -> Result<(), Error> {
+        self.parse_whitespace();
+        if self.eof() {
+            Ok(())
+        } else {
+            Err(self.error(ErrorCode::TrailingCharacters))
+        }
+    }
+
     fn eof(&self) -> bool { self.ch.is_none() }
 
-    #[inline]
     fn ch_or_null(&self) -> u8 { self.ch.unwrap_or(b'\x00') }
 
-    #[inline(always)]
     fn bump(&mut self) {
         self.ch = self.rdr.next();
 
@@ -116,23 +56,19 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         }
     }
 
-    #[inline]
     fn next_char(&mut self) -> Option<u8> {
         self.bump();
         self.ch
     }
 
-    #[inline(always)]
     fn ch_is(&self, c: u8) -> bool {
         self.ch == Some(c)
     }
 
-    #[inline]
     fn error(&mut self, reason: ErrorCode) -> Error {
         Error::SyntaxError(reason, self.line, self.col)
     }
 
-    #[inline]
     fn parse_whitespace(&mut self) {
         while self.ch_is(b' ') ||
               self.ch_is(b'\n') ||
@@ -140,8 +76,9 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
               self.ch_is(b'\r') { self.bump(); }
     }
 
-    #[inline]
-    fn parse_value(&mut self) -> Result<de::Token, Error> {
+    fn parse_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         self.parse_whitespace();
 
         if self.eof() {
@@ -149,22 +86,31 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         }
 
         match self.ch_or_null() {
-            b'n' => self.parse_ident(b"ull", de::Token::Null),
-            b't' => self.parse_ident(b"rue", de::Token::Bool(true)),
-            b'f' => self.parse_ident(b"alse", de::Token::Bool(false)),
-            b'0' ... b'9' | b'-' => self.parse_number(),
+            b'n' => {
+                try!(self.parse_ident(b"ull"));
+                visitor.visit_unit()
+            }
+            b't' => {
+                try!(self.parse_ident(b"rue"));
+                visitor.visit_bool(true)
+            }
+            b'f' => {
+                try!(self.parse_ident(b"alse"));
+                visitor.visit_bool(false)
+            }
+            b'0' ... b'9' | b'-' => self.parse_number(visitor),
             b'"' => {
-                Ok(de::Token::String(try!(self.parse_string()).to_string()))
+                try!(self.parse_string());
+                let s = str::from_utf8(&self.buf).unwrap();
+                visitor.visit_str(s)
             }
             b'[' => {
                 self.bump();
-                self.state_stack.push(State::ListStart);
-                Ok(de::Token::SeqStart(0))
+                visitor.visit_seq(SeqVisitor::new(self))
             }
             b'{' => {
                 self.bump();
-                self.state_stack.push(State::ObjectStart);
-                Ok(de::Token::MapStart(0))
+                visitor.visit_map(MapVisitor::new(self))
             }
             _ => {
                 Err(self.error(ErrorCode::ExpectedSomeValue))
@@ -172,18 +118,18 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         }
     }
 
-    #[inline]
-    fn parse_ident(&mut self, ident: &[u8], token: de::Token) -> Result<de::Token, Error> {
+    fn parse_ident(&mut self, ident: &[u8]) -> Result<(), Error> {
         if ident.iter().all(|c| Some(*c) == self.next_char()) {
             self.bump();
-            Ok(token)
+            Ok(())
         } else {
             Err(self.error(ErrorCode::ExpectedSomeIdent))
         }
     }
 
-    #[inline]
-    fn parse_number(&mut self) -> Result<de::Token, Error> {
+    fn parse_number<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
         let mut neg = 1;
 
         if self.ch_is(b'-') {
@@ -205,13 +151,12 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                 res = try!(self.parse_exponent(res));
             }
 
-            Ok(de::Token::F64(neg * res))
+            visitor.visit_f64(neg * res)
         } else {
-            Ok(de::Token::I64(neg * res))
+            visitor.visit_i64(neg * res)
         }
     }
 
-    #[inline]
     fn parse_integer(&mut self) -> Result<i64, Error> {
         let mut res = 0;
 
@@ -245,7 +190,6 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         Ok(res)
     }
 
-    #[inline]
     fn parse_decimal(&mut self, res: f64) -> Result<f64, Error> {
         self.bump();
 
@@ -261,7 +205,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
                     dec /= 10.0;
-                    res += (((c as isize) - (b'0' as isize)) as f64) * dec;
+                    res += (((c as u64) - (b'0' as u64)) as f64) * dec;
                     self.bump();
                 }
                 _ => break,
@@ -271,11 +215,10 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         Ok(res)
     }
 
-    #[inline]
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
         self.bump();
 
-        let mut exp = 0us;
+        let mut exp = 0;
         let mut neg_exp = false;
 
         if self.ch_is(b'+') {
@@ -294,7 +237,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
                     exp *= 10;
-                    exp += (c as usize) - (b'0' as usize);
+                    exp += (c as i32) - (b'0' as i32);
 
                     self.bump();
                 }
@@ -302,7 +245,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
             }
         }
 
-        let exp: f64 = 10_f64.powi(exp as i32);
+        let exp: f64 = 10_f64.powi(exp);
         if neg_exp {
             res /= exp;
         } else {
@@ -312,11 +255,10 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         Ok(res)
     }
 
-    #[inline]
     fn decode_hex_escape(&mut self) -> Result<u16, Error> {
-        let mut i = 0us;
+        let mut i = 0;
         let mut n = 0u16;
-        while i < 4us && !self.eof() {
+        while i < 4 && !self.eof() {
             self.bump();
             n = match self.ch_or_null() {
                 c @ b'0' ... b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
@@ -329,19 +271,18 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                 _ => { return Err(self.error(ErrorCode::InvalidEscape)); }
             };
 
-            i += 1us;
+            i += 1;
         }
 
         // Error out if we didn't parse 4 digits.
-        if i != 4us {
+        if i != 4 {
             return Err(self.error(ErrorCode::InvalidEscape));
         }
 
         Ok(n)
     }
 
-    #[inline]
-    fn parse_string(&mut self) -> Result<&str, Error> {
+    fn parse_string(&mut self) -> Result<(), Error> {
         self.buf.clear();
 
         let mut escape = false;
@@ -397,7 +338,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                             }
                         };
 
-                        let buf = &mut [0u8; 4];
+                        let buf = &mut [0; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
                         self.buf.extend(buf[..len].iter().map(|b| *b));
                     }
@@ -410,7 +351,7 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
                 match ch {
                     b'"' => {
                         self.bump();
-                        return Ok(str::from_utf8(&self.buf).unwrap());
+                        return Ok(());
                     }
                     b'\\' => {
                         escape = true;
@@ -423,92 +364,12 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
         }
     }
 
-    #[inline]
-    fn parse_list_start(&mut self) -> Result<de::Token, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b']') {
-            self.bump();
-            Ok(de::Token::End)
-        } else {
-            self.state_stack.push(State::ListCommaOrEnd);
-            self.parse_value()
-        }
-    }
-
-    #[inline]
-    fn parse_list_comma_or_end(&mut self) -> Result<de::Token, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b',') {
-            self.bump();
-            self.state_stack.push(State::ListCommaOrEnd);
-            self.parse_value()
-        } else if self.ch_is(b']') {
-            self.bump();
-            Ok(de::Token::End)
-        } else if self.eof() {
-            Err(self.error(ErrorCode::EOFWhileParsingList))
-        } else {
-            Err(self.error(ErrorCode::ExpectedListCommaOrEnd))
-        }
-    }
-
-    #[inline]
-    fn parse_object_start(&mut self) -> Result<Option<&str>, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b'}') {
-            self.bump();
-            Ok(None)
-        } else {
-            Ok(Some(try!(self.parse_object_key())))
-        }
-    }
-
-    #[inline]
-    fn parse_object_comma_or_end(&mut self) -> Result<Option<&str>, Error> {
-        self.parse_whitespace();
-
-        if self.ch_is(b',') {
-            self.bump();
-            Ok(Some(try!(self.parse_object_key())))
-        } else if self.ch_is(b'}') {
-            self.bump();
-            Ok(None)
-        } else if self.eof() {
-            Err(self.error(ErrorCode::EOFWhileParsingObject))
-        } else {
-            Err(self.error(ErrorCode::ExpectedObjectCommaOrEnd))
-        }
-    }
-
-    #[inline]
-    fn parse_object_key(&mut self) -> Result<&str, Error> {
-        self.parse_whitespace();
-
-        if self.eof() {
-            return Err(self.error(ErrorCode::EOFWhileParsingString));
-        }
-
-        match self.ch_or_null() {
-            b'"' => {
-                self.state_stack.push(State::ObjectValue);
-
-                Ok(try!(self.parse_string()))
-            }
-            _ => Err(self.error(ErrorCode::KeyMustBeAString)),
-        }
-    }
-
-    #[inline]
-    fn parse_object_value(&mut self) -> Result<de::Token, Error> {
+    fn parse_object_colon(&mut self) -> Result<(), Error> {
         self.parse_whitespace();
 
         if self.ch_is(b':') {
             self.bump();
-            self.state_stack.push(State::ObjectCommaOrEnd);
-            self.parse_value()
+            Ok(())
         } else if self.eof() {
             Err(self.error(ErrorCode::EOFWhileParsingObject))
         } else {
@@ -517,148 +378,259 @@ impl<Iter: Iterator<Item=u8>> Parser<Iter> {
     }
 }
 
-impl<Iter: Iterator<Item=u8>> de::Deserializer<Error> for Parser<Iter> {
-    fn end_of_stream_error(&mut self) -> Error {
-        Error::SyntaxError(ErrorCode::EOFWhileParsingValue, self.line, self.col)
-    }
+impl<Iter> de::Deserializer for Deserializer<Iter>
+    where Iter: Iterator<Item=u8>,
+{
+    type Error = Error;
 
-    fn syntax_error(&mut self, token: de::Token, expected: &'static [de::TokenKind]) -> Error {
-        Error::SyntaxError(ErrorCode::ExpectedTokens(token, expected), self.line, self.col)
-    }
-
-    fn unexpected_name_error(&mut self, token: de::Token) -> Error {
-        Error::SyntaxError(ErrorCode::UnexpectedName(token), self.line, self.col)
-    }
-
-    fn conversion_error(&mut self, token: de::Token) -> Error {
-        Error::SyntaxError(ErrorCode::ConversionError(token), self.line, self.col)
+    #[inline]
+    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        self.parse_value(visitor)
     }
 
     #[inline]
-    fn missing_field<
-        T: de::Deserialize<Parser<Iter>, Error>
-    >(&mut self, _field: &'static str) -> Result<T, Error> {
-        // JSON can represent `null` values as a missing value, so this isn't
-        // necessarily an error.
-        de::Deserialize::deserialize_token(self, de::Token::Null)
-    }
+    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        self.parse_whitespace();
 
-    // Special case treating options as a nullable value.
-    #[inline]
-    fn expect_option<
-        U: de::Deserialize<Parser<Iter>, Error>
-    >(&mut self, token: de::Token) -> Result<Option<U>, Error> {
-        match token {
-            de::Token::Null => Ok(None),
-            token => {
-                let value: U = try!(de::Deserialize::deserialize_token(self, token));
-                Ok(Some(value))
-            }
-        }
-    }
-
-    // Special case treating enums as a `{"<variant-name>": [<fields>]}`.
-    #[inline]
-    fn expect_enum_start(&mut self,
-                         token: de::Token,
-                         _name: &str,
-                         variants: &[&str]) -> Result<usize, Error> {
-        match token {
-            de::Token::MapStart(_) => { }
-            _ => { return Err(self.error(ErrorCode::ExpectedEnumMapStart)); }
-        };
-
-        // Enums only have one field in them, which is the variant name.
-        let variant = match try!(self.expect_token()) {
-            de::Token::String(variant) => variant,
-            _ => { return Err(self.error(ErrorCode::ExpectedEnumVariantString)); }
-        };
-
-        // The variant's field is a list of the values.
-        match try!(self.expect_token()) {
-            de::Token::SeqStart(_) => { }
-            _ => { return Err(self.error(ErrorCode::ExpectedEnumToken)); }
+        if self.eof() {
+            return Err(self.error(ErrorCode::EOFWhileParsingValue));
         }
 
-        match variants.iter().position(|v| *v == &variant[]) {
-            Some(idx) => Ok(idx),
-            None => Err(self.error(ErrorCode::UnknownVariant)),
-        }
-    }
-
-    fn expect_enum_end(&mut self) -> Result<(), Error> {
-        // There will be one `End` for the list, and one for the object.
-        match try!(self.expect_token()) {
-            de::Token::End => {
-                match try!(self.expect_token()) {
-                    de::Token::End => Ok(()),
-                    _ => Err(self.error(ErrorCode::ExpectedEnumEndToken)),
-                }
-            }
-            _ => Err(self.error(ErrorCode::ExpectedEnumEnd)),
+        if self.ch_is(b'n') {
+            try!(self.parse_ident(b"ull"));
+            visitor.visit_none()
+        } else {
+            visitor.visit_some(self)
         }
     }
 
     #[inline]
-    fn expect_struct_start(&mut self, token: de::Token, _name: &str) -> Result<(), Error> {
-        match token {
-            de::Token::MapStart(_) => Ok(()),
-            _ => {
-                static EXPECTED_TOKENS: &'static [de::TokenKind] = &[
-                    de::TokenKind::MapStartKind,
-                ];
-                Err(self.syntax_error(token, EXPECTED_TOKENS))
+    fn visit_enum<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        self.parse_whitespace();
+
+        if self.ch_is(b'{') {
+            self.bump();
+            self.parse_whitespace();
+
+            try!(self.parse_string());
+            try!(self.parse_object_colon());
+
+            let variant = str::from_utf8(&self.buf).unwrap().to_string();
+
+            let value = try!(visitor.visit_variant(&variant, EnumVisitor {
+                de: self,
+            }));
+
+            self.parse_whitespace();
+
+            if self.ch_is(b'}') {
+                self.bump();
+                Ok(value)
+            } else {
+                return Err(self.error(ErrorCode::ExpectedSomeValue));
             }
+        } else {
+            Err(self.error(ErrorCode::ExpectedSomeValue))
+        }
+    }
+}
+
+struct SeqVisitor<'a, Iter: 'a> {
+    de: &'a mut Deserializer<Iter>,
+    first: bool,
+}
+
+impl<'a, Iter> SeqVisitor<'a, Iter> {
+    fn new(de: &'a mut Deserializer<Iter>) -> Self {
+        SeqVisitor {
+            de: de,
+            first: true,
+        }
+    }
+}
+
+impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>
+{
+    type Error = Error;
+
+    fn visit<T>(&mut self) -> Result<Option<T>, Error>
+        where T: de::Deserialize,
+    {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b']') {
+            self.de.bump();
+            return Ok(None);
+        }
+
+        if self.first {
+            self.first = false;
+        } else {
+            if self.de.ch_is(b',') {
+                self.de.bump();
+            } else if self.de.eof() {
+                return Err(self.de.error(ErrorCode::EOFWhileParsingList));
+            } else {
+                return Err(self.de.error(ErrorCode::ExpectedListCommaOrEnd));
+            }
+        }
+
+        let value = try!(de::Deserialize::deserialize(self.de));
+        Ok(Some(value))
+    }
+
+    fn end(&mut self) -> Result<(), Error> {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b']') {
+            self.de.bump();
+            Ok(())
+        } else if self.de.eof() {
+            Err(self.de.error(ErrorCode::EOFWhileParsingList))
+        } else {
+            Err(self.de.error(ErrorCode::TrailingCharacters))
+        }
+    }
+}
+
+struct MapVisitor<'a, Iter: 'a> {
+    de: &'a mut Deserializer<Iter>,
+    first: bool,
+}
+
+impl<'a, Iter> MapVisitor<'a, Iter> {
+    fn new(de: &'a mut Deserializer<Iter>) -> Self {
+        MapVisitor {
+            de: de,
+            first: true,
+        }
+    }
+}
+
+impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>
+{
+    type Error = Error;
+
+    fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+        where K: de::Deserialize,
+    {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b'}') {
+            self.de.bump();
+            return Ok(None);
+        }
+
+        if self.first {
+            self.first = false;
+        } else {
+            if self.de.ch_is(b',') {
+                self.de.bump();
+                self.de.parse_whitespace();
+            } else if self.de.eof() {
+                return Err(self.de.error(ErrorCode::EOFWhileParsingObject));
+            } else {
+                return Err(self.de.error(ErrorCode::ExpectedObjectCommaOrEnd));
+            }
+        }
+
+        if self.de.eof() {
+            return Err(self.de.error(ErrorCode::EOFWhileParsingValue));
+        }
+
+        if !self.de.ch_is(b'"') {
+            return Err(self.de.error(ErrorCode::KeyMustBeAString));
+        }
+
+        Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+    }
+
+    fn visit_value<V>(&mut self) -> Result<V, Error>
+        where V: de::Deserialize,
+    {
+        try!(self.de.parse_object_colon());
+
+        Ok(try!(de::Deserialize::deserialize(self.de)))
+    }
+
+    fn end(&mut self) -> Result<(), Error> {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b']') {
+            self.de.bump();
+            Ok(())
+        } else if self.de.eof() {
+            Err(self.de.error(ErrorCode::EOFWhileParsingList))
+        } else {
+            Err(self.de.error(ErrorCode::TrailingCharacters))
+        }
+    }
+}
+
+struct EnumVisitor<'a, Iter: 'a> {
+    de: &'a mut Deserializer<Iter>,
+}
+
+impl<'a, Iter> de::EnumVisitor for EnumVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>,
+{
+    type Error = Error;
+
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        de::Deserialize::deserialize(self.de)
+    }
+
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumSeqVisitor,
+    {
+        self.de.parse_whitespace();
+
+        if self.de.ch_is(b'[') {
+            self.de.bump();
+            visitor.visit(SeqVisitor::new(self.de))
+        } else {
+            Err(self.de.error(ErrorCode::ExpectedSomeValue))
         }
     }
 
-    #[inline]
-    fn expect_struct_field_or_end(&mut self,
-                                  fields: &'static [&'static str]
-                                 ) -> Result<Option<Option<usize>>, Error> {
-        let result = match self.state_stack.pop() {
-            Some(State::ObjectStart) => {
-                try!(self.parse_object_start())
-            }
-            Some(State::ObjectCommaOrEnd) => {
-                try!(self.parse_object_comma_or_end())
-            }
-            _ => panic!("invalid internal state"),
-        };
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumMapVisitor,
+    {
+        self.de.parse_whitespace();
 
-        let s = match result {
-            Some(s) => s,
-            None => { return Ok(None); }
-        };
-
-        Ok(Some(fields.iter().position(|field| *field == &s[])))
+        if self.de.ch_is(b'{') {
+            self.de.bump();
+            visitor.visit(MapVisitor::new(self.de))
+        } else {
+            Err(self.de.error(ErrorCode::ExpectedSomeValue))
+        }
     }
 }
 
 /// Decodes a json value from an `Iterator<u8>`.
-pub fn from_iter<
-    Iter: Iterator<Item=u8>,
-    T: de::Deserialize<Parser<Iter>, Error>
->(iter: Iter) -> Result<T, Error> {
-    let mut parser = Parser::new(iter);
-    let value = try!(de::Deserialize::deserialize(&mut parser));
+pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
+    where I: Iterator<Item=u8>,
+          T: de::Deserialize
+{
+    let mut de = Deserializer::new(iter);
+    let value = try!(de::Deserialize::deserialize(&mut de));
 
     // Make sure the whole stream has been consumed.
-    match parser.next() {
-        Some(Ok(_token)) => Err(parser.error(ErrorCode::TrailingCharacters)),
-        Some(Err(err)) => Err(err),
-        None => Ok(value),
-    }
+    try!(de.end());
+    Ok(value)
 }
 
 /// Decodes a json value from a string
-pub fn from_str<
-    'a,
-    T: de::Deserialize<Parser<str::Bytes<'a>>, Error>
->(s: &'a str) -> Result<T, Error> {
+pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
+    where T: de::Deserialize
+{
     from_iter(s.bytes())
-}
-
-#[cfg(test)]
-mod tests {
 }

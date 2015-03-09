@@ -10,7 +10,8 @@
 
 use std::collections::BTreeMap;
 
-use json::value::{ToJson, Value};
+use ser::{self, Serialize};
+use json::value::{self, Value};
 
 pub struct ArrayBuilder {
     array: Vec<Value>,
@@ -25,24 +26,25 @@ impl ArrayBuilder {
         Value::Array(self.array)
     }
 
-    pub fn push<T: ToJson>(self, value: T) -> ArrayBuilder {
-        let mut builder = self;
-        builder.array.push(value.to_json());
-        builder
+    pub fn push<T: ser::Serialize>(mut self, v: T) -> ArrayBuilder {
+        self.array.push(value::to_value(&v));
+        self
     }
 
-    pub fn push_array<F>(self, f: F) -> ArrayBuilder where
+    pub fn push_array<F>(mut self, f: F) -> ArrayBuilder where
         F: FnOnce(ArrayBuilder) -> ArrayBuilder
     {
         let builder = ArrayBuilder::new();
-        self.push(f(builder).unwrap())
+        self.array.push(f(builder).unwrap());
+        self
     }
 
-    pub fn push_object<F>(self, f: F) -> ArrayBuilder where
+    pub fn push_object<F>(mut self, f: F) -> ArrayBuilder where
         F: FnOnce(ObjectBuilder) -> ObjectBuilder
     {
         let builder = ObjectBuilder::new();
-        self.push(f(builder).unwrap())
+        self.array.push(f(builder).unwrap());
+        self
     }
 }
 
@@ -59,77 +61,24 @@ impl ObjectBuilder {
         Value::Object(self.object)
     }
 
-    pub fn insert<V: ToJson>(self, key: String, value: V) -> ObjectBuilder {
-        let mut builder = self;
-        builder.object.insert(key, value.to_json());
-        builder
+    pub fn insert<V: ser::Serialize>(mut self, k: String, v: V) -> ObjectBuilder {
+        self.object.insert(k, value::to_value(&v));
+        self
     }
 
-    pub fn insert_array<F>(self, key: String, f: F) -> ObjectBuilder where
+    pub fn insert_array<F>(mut self, key: String, f: F) -> ObjectBuilder where
         F: FnOnce(ArrayBuilder) -> ArrayBuilder
     {
         let builder = ArrayBuilder::new();
-        self.insert(key, f(builder).unwrap())
+        self.object.insert(key, f(builder).unwrap());
+        self
     }
 
-    pub fn insert_object<F>(self, key: String, f: F) -> ObjectBuilder where
+    pub fn insert_object<F>(mut self, key: String, f: F) -> ObjectBuilder where
         F: FnOnce(ObjectBuilder) -> ObjectBuilder
     {
         let builder = ObjectBuilder::new();
-        self.insert(key, f(builder).unwrap())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
-
-    use json::value::Value;
-    use super::{ArrayBuilder, ObjectBuilder};
-
-    #[test]
-    fn test_array_builder() {
-        let value = ArrayBuilder::new().unwrap();
-        assert_eq!(value, Value::Array(Vec::new()));
-
-        let value = ArrayBuilder::new()
-            .push(1is)
-            .push(2is)
-            .push(3is)
-            .unwrap();
-        assert_eq!(value, Value::Array(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))));
-
-        let value = ArrayBuilder::new()
-            .push_array(|bld| bld.push(1is).push(2is).push(3is))
-            .unwrap();
-        assert_eq!(value, Value::Array(vec!(Value::Array(vec!(Value::Integer(1), Value::Integer(2), Value::Integer(3))))));
-
-        let value = ArrayBuilder::new()
-            .push_object(|bld|
-                bld
-                    .insert("a".to_string(), 1is)
-                    .insert("b".to_string(), 2is))
-            .unwrap();
-
-        let mut map = BTreeMap::new();
-        map.insert("a".to_string(), Value::Integer(1));
-        map.insert("b".to_string(), Value::Integer(2));
-        assert_eq!(value, Value::Array(vec!(Value::Object(map))));
-    }
-
-    #[test]
-    fn test_object_builder() {
-        let value = ObjectBuilder::new().unwrap();
-        assert_eq!(value, Value::Object(BTreeMap::new()));
-
-        let value = ObjectBuilder::new()
-            .insert("a".to_string(), 1is)
-            .insert("b".to_string(), 2is)
-            .unwrap();
-
-        let mut map = BTreeMap::new();
-        map.insert("a".to_string(), Value::Integer(1));
-        map.insert("b".to_string(), Value::Integer(2));
-        assert_eq!(value, Value::Object(map));
+        self.object.insert(key, f(builder).unwrap());
+        self
     }
 }

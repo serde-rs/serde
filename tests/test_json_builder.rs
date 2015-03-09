@@ -1,9 +1,9 @@
-extern crate serde2;
+extern crate serde;
 
 use std::collections::BTreeMap;
 
-use serde2::json::value::Value;
-use serde2::json::builder::{ArrayBuilder, ObjectBuilder};
+use serde::json::value::Value;
+use serde::json::builder::{ArrayBuilder, ObjectBuilder};
 
 #[test]
 fn test_array_builder() {

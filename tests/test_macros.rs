@@ -1,10 +1,10 @@
 #![feature(custom_derive, plugin)]
-#![plugin(serde2_macros)]
+#![plugin(serde_macros)]
 
-extern crate serde2;
+extern crate serde;
 
 use std::collections::BTreeMap;
-use serde2::json::{self, Value};
+use serde::json::{self, Value};
 
 macro_rules! btreemap {
     () => {

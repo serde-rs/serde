@@ -2,12 +2,11 @@ use std::error;
 use std::fmt;
 use std::io;
 
-use de::{Token, TokenKind};
+use de;
 
 /// The errors that can arise while parsing a JSON stream.
-#[derive(Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum ErrorCode {
-    ConversionError(Token),
     EOFWhileParsingList,
     EOFWhileParsingObject,
     EOFWhileParsingString,
@@ -24,7 +23,6 @@ pub enum ErrorCode {
     ExpectedObjectCommaOrEnd,
     ExpectedSomeIdent,
     ExpectedSomeValue,
-    ExpectedTokens(Token, &'static [TokenKind]),
     InvalidEscape,
     InvalidNumber,
     InvalidUnicodeCodePoint,
@@ -35,15 +33,16 @@ pub enum ErrorCode {
     NotUtf8,
     TrailingCharacters,
     UnexpectedEndOfHexEscape,
-    UnexpectedName(Token),
     UnknownVariant,
     UnrecognizedHex,
 }
 
 impl fmt::Debug for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use std::fmt::Debug;
+
         match *self {
-            ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {:?}", token),
+            //ErrorCode::ConversionError(ref token) => write!(f, "failed to convert {}", token),
             ErrorCode::EOFWhileParsingList => "EOF While parsing list".fmt(f),
             ErrorCode::EOFWhileParsingObject => "EOF While parsing object".fmt(f),
             ErrorCode::EOFWhileParsingString => "EOF While parsing string".fmt(f),
@@ -60,7 +59,7 @@ impl fmt::Debug for ErrorCode {
             ErrorCode::ExpectedObjectCommaOrEnd => "expected `,` or `}`".fmt(f),
             ErrorCode::ExpectedSomeIdent => "expected ident".fmt(f),
             ErrorCode::ExpectedSomeValue => "expected value".fmt(f),
-            ErrorCode::ExpectedTokens(ref token, tokens) => write!(f, "expected {:?}, found {:?}", tokens, token),
+            //ErrorCode::ExpectedTokens(ref token, tokens) => write!(f, "expected {}, found {}", tokens, token),
             ErrorCode::InvalidEscape => "invalid escape".fmt(f),
             ErrorCode::InvalidNumber => "invalid number".fmt(f),
             ErrorCode::InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
@@ -71,7 +70,7 @@ impl fmt::Debug for ErrorCode {
             ErrorCode::NotUtf8 => "contents not utf-8".fmt(f),
             ErrorCode::TrailingCharacters => "trailing characters".fmt(f),
             ErrorCode::UnexpectedEndOfHexEscape => "unexpected end of hex escape".fmt(f),
-            ErrorCode::UnexpectedName(ref name) => write!(f, "unexpected name {:?}", name),
+            //ErrorCode::UnexpectedName(ref name) => write!(f, "unexpected name {}", name),
             ErrorCode::UnknownVariant => "unknown variant".fmt(f),
             ErrorCode::UnrecognizedHex => "invalid \\u escape (unrecognized hex)".fmt(f),
         }
@@ -83,39 +82,59 @@ pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),
     IoError(io::Error),
+    /*
     ExpectedError(String, String),
-    MissingFieldError(String),
+    */
+    MissingFieldError(&'static str),
+    /*
     UnknownVariantError(String),
+    */
 }
 
 impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::SyntaxError(..) => "syntax error",
-            Error::IoError(_) => "Input/Output error",
+            Error::IoError(ref error) => error.description(),
+            /*
             Error::ExpectedError(ref expected, _) => &expected,
+            */
             Error::MissingFieldError(_) => "missing field",
+            /*
             Error::UnknownVariantError(_) => "unknown variant",
+            */
         }
     }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            Error::IoError(ref error) => Some(error),
+            _ => None,
+        }
+    }
+
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::SyntaxError(ref code, line, col) => {
-                write!(fmt, "{:?} at line {:?} column {:?}", code, line, col)
+                write!(fmt, "{:?} at line {} column {}", code, line, col)
             }
             Error::IoError(ref error) => fmt::Display::fmt(error, fmt),
+            /*
             Error::ExpectedError(ref expected, ref found) => {
-                write!(fmt, "expected {:?}, found {:?}", expected, found)
+                Some(format!("expected {}, found {}", expected, found))
             }
+            */
             Error::MissingFieldError(ref field) => {
-                write!(fmt, "missing field {:?}", field)
+                write!(fmt, "missing field {}", field)
             }
+            /*
             Error::UnknownVariantError(ref variant) => {
-                write!(fmt, "unknown variant {:?}", variant)
+                Some(format!("unknown variant {}", variant))
             }
+            */
         }
     }
 }
@@ -123,5 +142,19 @@ impl fmt::Display for Error {
 impl error::FromError<io::Error> for Error {
     fn from_error(error: io::Error) -> Error {
         Error::IoError(error)
+    }
+}
+
+impl de::Error for Error {
+    fn syntax_error() -> Error {
+        Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)
+    }
+
+    fn end_of_stream_error() -> Error {
+        Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 0, 0)
+    }
+
+    fn missing_field_error(field: &'static str) -> Error {
+        Error::MissingFieldError(field)
     }
 }

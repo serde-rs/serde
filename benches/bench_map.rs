@@ -1,4 +1,4 @@
-#![feature(core, plugin, test)]
+#![feature(custom_derive, core, plugin, test)]
 #![plugin(serde_macros)]
 
 extern crate serde;
@@ -19,7 +19,17 @@ use serde::de::{Deserializer, Deserialize};
 pub enum Error {
     EndOfStream,
     SyntaxError,
-    OtherError(String),
+    MissingField,
+}
+
+impl serde::de::Error for Error {
+    fn syntax_error() -> Error { Error::SyntaxError }
+
+    fn end_of_stream_error() -> Error { Error::EndOfStream }
+
+    fn missing_field_error(_: &'static str) -> Error {
+        Error::MissingField
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -30,7 +40,6 @@ mod decoder {
     use rustc_serialize;
 
     use super::Error;
-    use super::Error::{EndOfStream, SyntaxError, OtherError};
     use self::Value::{StringValue, IsizeValue};
 
     enum Value {
@@ -58,39 +67,39 @@ mod decoder {
     impl rustc_serialize::Decoder for IsizeDecoder {
         type Error = Error;
 
-        fn error(&mut self, msg: &str) -> Error {
-            OtherError(msg.to_string())
+        fn error(&mut self, _msg: &str) -> Error {
+            Error::SyntaxError
         }
 
         // Primitive types:
-        fn read_nil(&mut self) -> Result<(), Error> { Err(SyntaxError) }
-        fn read_usize(&mut self) -> Result<usize, Error> { Err(SyntaxError) }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(SyntaxError) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(SyntaxError) }
+        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::SyntaxError) }
+        fn read_usize(&mut self) -> Result<usize, Error> { Err(Error::SyntaxError) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError) }
         #[inline]
         fn read_isize(&mut self) -> Result<isize, Error> {
             match self.stack.pop() {
                 Some(IsizeValue(x)) => Ok(x),
-                Some(_) => Err(SyntaxError),
-                None => Err(EndOfStream),
+                Some(_) => Err(Error::SyntaxError),
+                None => Err(Error::EndOfStream),
             }
         }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(SyntaxError) }
-        fn read_char(&mut self) -> Result<char, Error> { Err(SyntaxError) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(Error::SyntaxError) }
         #[inline]
         fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
                 Some(StringValue(x)) => Ok(x),
-                Some(_) => Err(SyntaxError),
-                None => Err(EndOfStream),
+                Some(_) => Err(Error::SyntaxError),
+                None => Err(Error::EndOfStream),
             }
         }
 
@@ -165,19 +174,19 @@ mod decoder {
         fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut IsizeDecoder, bool) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         fn read_seq<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut IsizeDecoder, usize) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         fn read_seq_elt<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut IsizeDecoder) -> Result<T, Error>,
         {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
 
         #[inline]
@@ -198,7 +207,7 @@ mod decoder {
                     f(self)
                 }
                 None => {
-                    Err(SyntaxError)
+                    Err(Error::SyntaxError)
                 }
             }
         }
@@ -216,39 +225,94 @@ mod decoder {
 
 mod deserializer {
     use std::collections::HashMap;
-    use std::collections::hash_map::IntoIter;
+    use std::collections::hash_map;
 
     use super::Error;
-    use super::Error::{EndOfStream, SyntaxError};
-    use self::State::{StartState, KeyOrEndState, ValueState, EndState};
 
     use serde::de;
 
     #[derive(PartialEq, Debug)]
     enum State {
         StartState,
-        KeyOrEndState,
+        KeyState(String),
         ValueState(isize),
-        EndState,
     }
 
     pub struct IsizeDeserializer {
         stack: Vec<State>,
-        len: usize,
-        iter: IntoIter<String, isize>,
+        iter: hash_map::IntoIter<String, isize>,
     }
 
     impl IsizeDeserializer {
         #[inline]
         pub fn new(values: HashMap<String, isize>) -> IsizeDeserializer {
             IsizeDeserializer {
-                stack: vec!(StartState),
-                len: values.len(),
+                stack: vec!(State::StartState),
                 iter: values.into_iter(),
             }
         }
     }
 
+    impl de::Deserializer for IsizeDeserializer {
+        type Error = Error;
+
+        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
+        {
+            match self.stack.pop() {
+                Some(State::StartState) => {
+                    visitor.visit_map(self)
+                }
+                Some(State::KeyState(key)) => {
+                    visitor.visit_string(key)
+                }
+                Some(State::ValueState(value)) => {
+                    visitor.visit_isize(value)
+                }
+                None => {
+                    Err(Error::EndOfStream)
+                }
+            }
+        }
+    }
+
+    impl de::MapVisitor for IsizeDeserializer {
+        type Error = Error;
+
+        fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+            where K: de::Deserialize,
+        {
+            match self.iter.next() {
+                Some((key, value)) => {
+                    self.stack.push(State::ValueState(value));
+                    self.stack.push(State::KeyState(key));
+                    Ok(Some(try!(de::Deserialize::deserialize(self))))
+                }
+                None => {
+                    Ok(None)
+                }
+            }
+        }
+
+        fn visit_value<V>(&mut self) -> Result<V, Error>
+            where V: de::Deserialize,
+        {
+            de::Deserialize::deserialize(self)
+        }
+
+        fn end(&mut self) -> Result<(), Error> {
+            match self.iter.next() {
+                Some(_) => Err(Error::SyntaxError),
+                None => Ok(()),
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            self.iter.size_hint()
+        }
+    }
+
+/*
     impl Iterator for IsizeDeserializer {
         type Item = Result<de::Token, Error>;
 
@@ -310,9 +374,10 @@ mod deserializer {
         fn missing_field<
             T: de::Deserialize<IsizeDeserializer, Error>
         >(&mut self, _field: &'static str) -> Result<T, Error> {
-            Err(SyntaxError)
+            Err(Error::SyntaxError)
         }
     }
+*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -338,7 +403,7 @@ fn bench_decoder_000(b: &mut Bencher) {
 fn bench_decoder_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0is, 3) {
+        for i in range(0, 3) {
             m.insert(i.to_string(), i);
         }
         run_decoder(decoder::IsizeDecoder::new(m.clone()), m)
@@ -349,7 +414,7 @@ fn bench_decoder_003(b: &mut Bencher) {
 fn bench_decoder_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0is, 100) {
+        for i in range(0, 100) {
             m.insert(i.to_string(), i);
         }
         run_decoder(decoder::IsizeDecoder::new(m.clone()), m)
@@ -357,9 +422,9 @@ fn bench_decoder_100(b: &mut Bencher) {
 }
 
 fn run_deserializer<
-    D: Deserializer<E>,
+    D: Deserializer<Error=E>,
     E: Debug,
-    T: Clone + PartialEq + Debug + Deserialize<D, E>
+    T: Clone + PartialEq + Debug + Deserialize
 >(mut d: D, value: T) {
     let v: T = Deserialize::deserialize(&mut d).unwrap();
 
@@ -378,7 +443,7 @@ fn bench_deserializer_000(b: &mut Bencher) {
 fn bench_deserializer_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0is, 3) {
+        for i in range(0, 3) {
             m.insert(i.to_string(), i);
         }
         run_deserializer(deserializer::IsizeDeserializer::new(m.clone()), m)
@@ -389,7 +454,7 @@ fn bench_deserializer_003(b: &mut Bencher) {
 fn bench_deserializer_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0is, 100) {
+        for i in range(0, 100) {
             m.insert(i.to_string(), i);
         }
         run_deserializer(deserializer::IsizeDeserializer::new(m.clone()), m)

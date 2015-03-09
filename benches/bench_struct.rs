@@ -1,4 +1,4 @@
-#![feature(plugin, test)]
+#![feature(custom_derive, plugin, test)]
 #![plugin(serde_macros)]
 
 extern crate serde;
@@ -35,11 +35,21 @@ struct Outer {
 #[derive(Debug)]
 pub enum Error {
     EndOfStream,
-    SyntaxError(String),
-    UnexpectedName(String),
-    ConversionError(String),
-    MissingField(&'static str),
-    OtherError(String),
+    SyntaxError,
+    UnexpectedName,
+    ConversionError,
+    MissingField,
+    OtherError,
+}
+
+impl serde::de::Error for Error {
+    fn syntax_error() -> Error { Error::SyntaxError }
+
+    fn end_of_stream_error() -> Error { Error::EndOfStream }
+
+    fn missing_field_error(_: &'static str) -> Error {
+        Error::MissingField
+    }
 }
 
 mod decoder {
@@ -92,8 +102,8 @@ mod decoder {
     impl Decoder for OuterDecoder {
         type Error = Error;
 
-        fn error(&mut self, msg: &str) -> Error {
-            Error::OtherError(msg.to_string())
+        fn error(&mut self, _msg: &str) -> Error {
+            Error::OtherError
         }
 
         // Primitive types:
@@ -101,40 +111,40 @@ mod decoder {
         fn read_nil(&mut self) -> Result<(), Error> {
             match self.stack.pop() {
                 Some(NullState) => Ok(()),
-                _ => Err(Error::SyntaxError("NullState".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
         #[inline]
         fn read_usize(&mut self) -> Result<usize, Error> {
             match self.stack.pop() {
                 Some(UsizeState(value)) => Ok(value),
-                _ => Err(Error::SyntaxError("UintState".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError("".to_string())) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError("".to_string())) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
         #[inline]
         fn read_char(&mut self) -> Result<char, Error> {
             match self.stack.pop() {
                 Some(CharState(c)) => Ok(c),
-                _ => Err(Error::SyntaxError("".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
         #[inline]
         fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
                 Some(StringState(value)) => Ok(value),
-                _ => Err(Error::SyntaxError("".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
 
@@ -142,31 +152,31 @@ mod decoder {
         fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         #[inline]
@@ -180,7 +190,7 @@ mod decoder {
                         self.stack.push(FieldState("inner"));
                         f(self)
                     } else {
-                        Err(Error::SyntaxError("expected Outer".to_string()))
+                        Err(Error::SyntaxError)
                     }
                 }
                 Some(InnerState(Inner { a: (), b, c })) => {
@@ -195,10 +205,10 @@ mod decoder {
                         self.stack.push(FieldState("a"));
                         f(self)
                     } else {
-                        Err(Error::SyntaxError("expected Inner".to_string()))
+                        Err(Error::SyntaxError)
                     }
                 }
-                _ => Err(Error::SyntaxError("expected InnerState or OuterState".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
         #[inline]
@@ -210,35 +220,35 @@ mod decoder {
                     if f_name == name {
                         f(self)
                     } else {
-                        Err(Error::SyntaxError("expected FieldState".to_string()))
+                        Err(Error::SyntaxError)
                     }
                 }
-                _ => Err(Error::SyntaxError("expected FieldState".to_string()))
+                _ => Err(Error::SyntaxError)
             }
         }
 
         fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError("".to_string()))
+            Err(Error::SyntaxError)
         }
 
         // Specialized types:
@@ -248,7 +258,7 @@ mod decoder {
         {
             match self.stack.pop() {
                 Some(OptionState(b)) => f(self, b),
-                _ => Err(Error::SyntaxError("expected OptionState".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
 
@@ -264,7 +274,7 @@ mod decoder {
                     }
                     f(self, len)
                 }
-                _ => Err(Error::SyntaxError("expected VecState".to_string()))
+                _ => Err(Error::SyntaxError)
             }
         }
         #[inline]
@@ -295,7 +305,7 @@ mod decoder {
                     }
                     f(self, len)
                 }
-                _ => Err(Error::SyntaxError("expected MapState".to_string())),
+                _ => Err(Error::SyntaxError),
             }
         }
         #[inline]
@@ -318,39 +328,24 @@ mod decoder {
 
 mod deserializer {
     use std::collections::HashMap;
+    use std::collections::hash_map;
+    use std::vec;
     use super::{Outer, Inner};
     use super::Error;
     use serde::de;
-
-    use self::State::{
-        OuterState,
-        InnerState,
-        FieldState,
-        NullState,
-        UsizeState,
-        CharState,
-        StringState,
-        OptionState,
-        //TupleState(usize),
-        VecState,
-        MapState,
-        EndState,
-    };
 
     #[derive(Debug)]
     enum State {
         OuterState(Outer),
         InnerState(Inner),
-        FieldState(&'static str),
+        StrState(&'static str),
         NullState,
         UsizeState(usize),
         CharState(char),
         StringState(String),
         OptionState(bool),
-        //TupleState(uint),
         VecState(Vec<Inner>),
         MapState(HashMap<String, Option<char>>),
-        EndState,
     }
 
     pub struct OuterDeserializer {
@@ -361,101 +356,242 @@ mod deserializer {
         #[inline]
         pub fn new(outer: Outer) -> OuterDeserializer {
             OuterDeserializer {
-                stack: vec!(OuterState(outer)),
+                stack: vec!(State::OuterState(outer)),
             }
         }
     }
 
-    impl Iterator for OuterDeserializer {
-        type Item = Result<de::Token, Error>;
+    impl de::Deserializer for OuterDeserializer {
+        type Error = Error;
 
-        #[inline]
-        fn next(&mut self) -> Option<Result<de::Token, Error>> {
+        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
+        {
             match self.stack.pop() {
-                Some(OuterState(Outer { inner })) => {
-                    self.stack.push(EndState);
-                    self.stack.push(VecState(inner));
-                    self.stack.push(FieldState("inner"));
-                    Some(Ok(de::Token::StructStart("Outer", 1)))
-                }
-                Some(InnerState(Inner { a: (), b, c })) => {
-                    self.stack.push(EndState);
-                    self.stack.push(MapState(c));
-                    self.stack.push(FieldState("c"));
+                Some(State::OuterState(Outer { inner })) => {
+                    self.stack.push(State::VecState(inner));
+                    self.stack.push(State::StrState("inner"));
 
-                    self.stack.push(UsizeState(b));
-                    self.stack.push(FieldState("b"));
+                    visitor.visit_named_map("Outer", OuterMapVisitor {
+                        de: self,
+                        state: 0,
+                    })
+                }
+                Some(State::InnerState(Inner { a: (), b, c })) => {
+                    self.stack.push(State::MapState(c));
+                    self.stack.push(State::StrState("c"));
 
-                    self.stack.push(NullState);
-                    self.stack.push(FieldState("a"));
-                    Some(Ok(de::Token::StructStart("Inner", 3)))
+                    self.stack.push(State::UsizeState(b));
+                    self.stack.push(State::StrState("b"));
+
+                    self.stack.push(State::NullState);
+                    self.stack.push(State::StrState("a"));
+
+                    visitor.visit_named_map("Inner", InnerMapVisitor {
+                        de: self,
+                        state: 0,
+                    })
                 }
-                Some(FieldState(name)) => Some(Ok(de::Token::Str(name))),
-                Some(VecState(value)) => {
-                    self.stack.push(EndState);
-                    let len = value.len();
-                    for inner in value.into_iter().rev() {
-                        self.stack.push(InnerState(inner));
-                    }
-                    Some(Ok(de::Token::SeqStart(len)))
+                Some(State::VecState(value)) => {
+                    visitor.visit_seq(OuterSeqVisitor {
+                        de: self,
+                        iter: value.into_iter(),
+                    })
                 }
-                Some(MapState(value)) => {
-                    self.stack.push(EndState);
-                    let len = value.len();
-                    for (key, value) in value {
-                        match value {
-                            Some(c) => {
-                                self.stack.push(CharState(c));
-                                self.stack.push(OptionState(true));
-                            }
-                            None => {
-                                self.stack.push(OptionState(false));
-                            }
-                        }
-                        self.stack.push(StringState(key));
-                    }
-                    Some(Ok(de::Token::MapStart(len)))
+                Some(State::MapState(value)) => {
+                    visitor.visit_map(MapVisitor {
+                        de: self,
+                        iter: value.into_iter(),
+                    })
                 }
-                //Some(TupleState(len)) => Some(Ok(de::Token::TupleStart(len))),
-                Some(NullState) => Some(Ok(de::Token::Null)),
-                Some(UsizeState(x)) => Some(Ok(de::Token::Usize(x))),
-                Some(CharState(x)) => Some(Ok(de::Token::Char(x))),
-                Some(StringState(x)) => Some(Ok(de::Token::String(x))),
-                Some(OptionState(x)) => Some(Ok(de::Token::Option(x))),
-                Some(EndState) => {
-                    Some(Ok(de::Token::End))
+                Some(State::NullState) => {
+                    visitor.visit_unit()
                 }
-                None => None,
+                Some(State::UsizeState(x)) => {
+                    visitor.visit_usize(x)
+                }
+                Some(State::CharState(x)) => {
+                    visitor.visit_char(x)
+                }
+                Some(State::StrState(x)) => {
+                    visitor.visit_str(x)
+                }
+                Some(State::StringState(x)) => {
+                    visitor.visit_string(x)
+                }
+                Some(State::OptionState(false)) => {
+                    visitor.visit_none()
+                }
+                Some(State::OptionState(true)) => {
+                    visitor.visit_some(self)
+                }
+                None => Err(Error::EndOfStream),
             }
         }
     }
 
-    impl de::Deserializer<Error> for OuterDeserializer {
-        #[inline]
-        fn end_of_stream_error(&mut self) -> Error {
-            Error::EndOfStream
+    struct OuterMapVisitor<'a> {
+        de: &'a mut OuterDeserializer,
+        state: usize,
+    }
+
+    impl<'a> de::MapVisitor for OuterMapVisitor<'a> {
+        type Error = Error;
+
+        fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+            where K: de::Deserialize,
+        {
+            match self.state {
+                0 => {
+                    self.state += 1;
+                    Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+                }
+                _ => {
+                    Ok(None)
+                }
+            }
         }
 
-        #[inline]
-        fn syntax_error(&mut self, token: de::Token, expected: &[de::TokenKind]) -> Error {
-            Error::SyntaxError(format!("expected {:?}, found {:?}", expected, token))
+        fn visit_value<V>(&mut self) -> Result<V, Error>
+            where V: de::Deserialize,
+        {
+            de::Deserialize::deserialize(self.de)
         }
 
-        #[inline]
-        fn unexpected_name_error(&mut self, token: de::Token) -> Error {
-            Error::UnexpectedName(format!("found {:?}", token))
+        fn end(&mut self) -> Result<(), Error> {
+            if self.state == 1 {
+                Ok(())
+            } else {
+                Err(Error::SyntaxError)
+            }
         }
 
-        #[inline]
-        fn conversion_error(&mut self, token: de::Token) -> Error {
-            Error::UnexpectedName(format!("found {:?}", token))
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            let len = 1 - self.state;
+            (len, Some(len))
+        }
+    }
+
+    struct OuterSeqVisitor<'a> {
+        de: &'a mut OuterDeserializer,
+        iter: vec::IntoIter<Inner>,
+    }
+
+    impl<'a> de::SeqVisitor for OuterSeqVisitor<'a> {
+        type Error = Error;
+
+        fn visit<T>(&mut self) -> Result<Option<T>, Error>
+            where T: de::Deserialize,
+        {
+            match self.iter.next() {
+                Some(value) => {
+                    self.de.stack.push(State::InnerState(value));
+                    Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+                }
+                None => {
+                    Ok(None)
+                }
+            }
         }
 
-        #[inline]
-        fn missing_field<
-            T: de::Deserialize<OuterDeserializer, Error>
-        >(&mut self, field: &'static str) -> Result<T, Error> {
-            Err(Error::MissingField(field))
+        fn end(&mut self) -> Result<(), Error> {
+            match self.iter.next() {
+                Some(_) => Err(Error::SyntaxError),
+                None => Ok(()),
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            self.iter.size_hint()
+        }
+    }
+
+    struct InnerMapVisitor<'a> {
+        de: &'a mut OuterDeserializer,
+        state: usize,
+    }
+
+    impl<'a> de::MapVisitor for InnerMapVisitor<'a> {
+        type Error = Error;
+
+        fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+            where K: de::Deserialize,
+        {
+            match self.state {
+                0 ... 2 => {
+                    self.state += 1;
+                    Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+                }
+                _ => {
+                    Ok(None)
+                }
+            }
+        }
+
+        fn visit_value<V>(&mut self) -> Result<V, Error>
+            where V: de::Deserialize,
+        {
+            de::Deserialize::deserialize(self.de)
+        }
+
+        fn end(&mut self) -> Result<(), Error> {
+            if self.state == 1 {
+                Ok(())
+            } else {
+                Err(Error::SyntaxError)
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            let len = 1 - self.state;
+            (len, Some(len))
+        }
+    }
+
+    struct MapVisitor<'a> {
+        de: &'a mut OuterDeserializer,
+        iter: hash_map::IntoIter<String, Option<char>>,
+    }
+
+    impl<'a> de::MapVisitor for MapVisitor<'a> {
+        type Error = Error;
+
+        fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
+            where K: de::Deserialize,
+        {
+            match self.iter.next() {
+                Some((key, Some(value))) => {
+                    self.de.stack.push(State::CharState(value));
+                    self.de.stack.push(State::OptionState(true));
+                    self.de.stack.push(State::StringState(key));
+                    Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+                }
+                Some((key, None)) => {
+                    self.de.stack.push(State::OptionState(false));
+                    self.de.stack.push(State::StringState(key));
+                    Ok(Some(try!(de::Deserialize::deserialize(self.de))))
+                }
+                None => {
+                    Ok(None)
+                }
+            }
+        }
+
+        fn visit_value<V>(&mut self) -> Result<V, Error>
+            where V: de::Deserialize,
+        {
+            de::Deserialize::deserialize(self.de)
+        }
+
+        fn end(&mut self) -> Result<(), Error> {
+            match self.iter.next() {
+                Some(_) => Err(Error::SyntaxError),
+                None => Ok(()),
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            self.iter.size_hint()
         }
     }
 }
