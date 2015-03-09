@@ -2,6 +2,9 @@
 name = "serde"
 version = "0.2.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "A quasi-quoting macro system"
+repository = "https://github.com/erickt/rust-quasi"
 
 [lib]
 name = "serde"
@@ -9,5 +12,5 @@ name = "serde"
 [dependencies]
 rustc-serialize = "*"
 
-[dev-dependencies.serde_macros]
-path = "serde_macros/"
+[dev-dependencies]
+serde_macros = "0.2.0"
