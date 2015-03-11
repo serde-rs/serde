@@ -82,13 +82,13 @@ fn expand_derive_serialize(
                 generics: LifetimeBounds {
                     lifetimes: Vec::new(),
                     bounds: vec![
-                        ("__V", vec![Path::new(vec!["serde", "ser", "Visitor"])]),
+                        ("__S", vec![Path::new(vec!["serde", "ser", "Serializer"])]),
                     ]
                 },
                 explicit_self: borrowed_explicit_self(),
                 args: vec![
                     Ty::Ptr(
-                        Box::new(Ty::Literal(Path::new_local("__V"))),
+                        Box::new(Ty::Literal(Path::new_local("__S"))),
                         Borrowed(None, MutMutable),
                     ),
                 ],
@@ -98,7 +98,7 @@ fn expand_derive_serialize(
                         None,
                         vec![
                             Box::new(Ty::Tuple(vec![])),
-                            Box::new(Ty::Literal(Path::new_(vec!["__V", "Error"],
+                            Box::new(Ty::Literal(Path::new_(vec!["__S", "Error"],
                                                             None,
                                                             vec![],
                                                             false))),
@@ -125,7 +125,7 @@ fn serialize_substructure(
 ) -> P<Expr> {
     let builder = aster::AstBuilder::new().span(span);
 
-    let visitor = substr.nonself_args[0].clone();
+    let serializer = substr.nonself_args[0].clone();
 
     match (&item.node, &*substr.fields) {
         (&ast::ItemStruct(ref struct_def, ref generics), &Struct(ref fields)) => {
@@ -144,7 +144,7 @@ fn serialize_substructure(
                     serialize_unit_struct(
                         cx,
                         &builder,
-                        visitor,
+                        serializer,
                         substr.type_ident,
                     )
                 }
@@ -152,7 +152,7 @@ fn serialize_substructure(
                     serialize_tuple_struct(
                         cx,
                         &builder,
-                        visitor,
+                        serializer,
                         substr.type_ident,
                         &unnamed_fields,
                         generics,
@@ -162,7 +162,7 @@ fn serialize_substructure(
                     serialize_struct(
                         cx,
                         &builder,
-                        visitor,
+                        serializer,
                         substr.type_ident,
                         &named_fields,
                         struct_def,
@@ -180,7 +180,7 @@ fn serialize_substructure(
                 cx,
                 span,
                 &builder,
-                visitor,
+                serializer,
                 substr.type_ident,
                 variant,
                 &fields,
@@ -195,18 +195,18 @@ fn serialize_substructure(
 fn serialize_unit_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    visitor: P<Expr>,
+    serializer: P<Expr>,
     type_ident: Ident
 ) -> P<Expr> {
     let type_name = builder.expr().str(type_ident);
 
-    quote_expr!(cx, $visitor.visit_named_unit($type_name))
+    quote_expr!(cx, $serializer.visit_named_unit($type_name))
 }
 
 fn serialize_tuple_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    visitor: P<Expr>,
+    serializer: P<Expr>,
     type_ident: Ident,
     fields: &[Span],
     generics: &ast::Generics
@@ -224,7 +224,7 @@ fn serialize_tuple_struct(
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(visitor.visit_seq_elt($first, &$expr));
+                    let v = try!(serializer.visit_seq_elt($first, &$expr));
                     Ok(Some(v))
                 }
             )
@@ -255,8 +255,8 @@ fn serialize_tuple_struct(
 
         impl $visitor_impl_generics ::serde::ser::SeqVisitor for Visitor $visitor_generics {
             #[inline]
-            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
-                where V: ::serde::ser::Visitor,
+            fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+                where S: ::serde::ser::Serializer,
             {
                 match self.state {
                     $arms
@@ -271,7 +271,7 @@ fn serialize_tuple_struct(
             }
         }
 
-        $visitor.visit_named_seq($type_name, Visitor {
+        $serializer.visit_named_seq($type_name, Visitor {
             value: self,
             state: 0,
         })
@@ -281,7 +281,7 @@ fn serialize_tuple_struct(
 fn serialize_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    visitor: P<Expr>,
+    serializer: P<Expr>,
     type_ident: Ident,
     fields: &[(Ident, Span)],
     struct_def: &StructDef,
@@ -308,7 +308,7 @@ fn serialize_struct(
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(visitor.visit_map_elt($first, $expr, &self.value.$name));
+                    let v = try!(serializer.visit_map_elt($first, $expr, &self.value.$name));
                     Ok(Some(v))
                 }
             )
@@ -339,8 +339,8 @@ fn serialize_struct(
 
         impl $visitor_impl_generics ::serde::ser::MapVisitor for Visitor $visitor_generics {
             #[inline]
-            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
-                where V: ::serde::ser::Visitor,
+            fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+                where S: ::serde::ser::Serializer,
             {
                 match self.state {
                     $arms
@@ -355,7 +355,7 @@ fn serialize_struct(
             }
         }
 
-        $visitor.visit_named_map($type_name, Visitor {
+        $serializer.visit_named_map($type_name, Visitor {
             value: self,
             state: 0,
         })
@@ -366,7 +366,7 @@ fn serialize_enum(
     cx: &ExtCtxt,
     span: Span,
     builder: &aster::AstBuilder,
-    visitor: P<Expr>,
+    serializer: P<Expr>,
     type_ident: Ident,
     variant: &ast::Variant,
     fields: &[FieldInfo],
@@ -377,8 +377,8 @@ fn serialize_enum(
 
     if fields.is_empty() {
         quote_expr!(cx,
-            ::serde::ser::Visitor::visit_enum_unit(
-                $visitor,
+            ::serde::ser::Serializer::visit_enum_unit(
+                $serializer,
                 $type_name,
                 $variant_name)
         )
@@ -387,7 +387,7 @@ fn serialize_enum(
             cx,
             span,
             builder,
-            visitor,
+            serializer,
             type_name,
             variant_name,
             generics,
@@ -400,7 +400,7 @@ fn serialize_variant(
     cx: &ExtCtxt,
     span: Span,
     builder: &aster::AstBuilder,
-    visitor: P<ast::Expr>,
+    serializer: P<ast::Expr>,
     type_name: P<ast::Expr>,
     variant_name: P<ast::Expr>,
     generics: &ast::Generics,
@@ -486,8 +486,8 @@ fn serialize_variant(
                     let real_name = builder.expr().str(real_name);
 
                     quote_expr!(cx,
-                        ::serde::ser::Visitor::visit_map_elt(
-                            visitor,
+                        ::serde::ser::Serializer::visit_map_elt(
+                            serializer,
                             $first,
                             $real_name,
                             $field_expr,
@@ -496,8 +496,8 @@ fn serialize_variant(
                 }
                 None => {
                     quote_expr!(cx,
-                        ::serde::ser::Visitor::visit_seq_elt(
-                            visitor,
+                        ::serde::ser::Serializer::visit_seq_elt(
+                            serializer,
                             $first,
                             $field_expr,
                         )
@@ -537,8 +537,8 @@ fn serialize_variant(
     let methods = vec![
         ast::MethodImplItem(
             quote_method!(cx,
-                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
-                    where V: ::serde::ser::Visitor,
+                fn visit<V>(&mut self, serializer: &mut V) -> Result<Option<()>, V::Error>
+                    where V: ::serde::ser::Serializer,
                 {
                     match self.state {
                         $visitor_arms
@@ -575,8 +575,8 @@ fn serialize_variant(
         $visitor_struct
         $visitor_impl
 
-        ::serde::ser::Visitor::$visitor_method_name(
-            $visitor,
+        ::serde::ser::Serializer::$visitor_method_name(
+            $serializer,
             $type_name,
             $variant_name,
             $visitor_expr,
@@ -967,7 +967,7 @@ fn deserialize_struct_named_fields(
         .segment(type_ident).with_generics(generics.clone()).build()
         .build();
 
-    let field_deserializer = declare_map_field_deserializer(
+    let field_devisitor = declare_map_field_devisitor(
         cx,
         span,
         builder,
@@ -986,7 +986,7 @@ fn deserialize_struct_named_fields(
     );
 
     quote_expr!(cx, {
-        $field_deserializer
+        $field_devisitor
 
         $visitor_struct;
 
@@ -1045,7 +1045,7 @@ fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
                   })
 }
 
-fn declare_map_field_deserializer(
+fn declare_map_field_devisitor(
     cx: &ExtCtxt,
     span: Span,
     _builder: &aster::AstBuilder,
@@ -1396,7 +1396,7 @@ fn deserialize_enum_variant(
                 .map(|i| token::str_to_ident(&format!("__field{}", i)))
                 .collect();
 
-            let field_deserializer = declare_map_field_deserializer(
+            let field_devisitor = declare_map_field_devisitor(
                 cx,
                 span,
                 builder,
@@ -1421,7 +1421,7 @@ fn deserialize_enum_variant(
             );
 
             quote_expr!(cx, {
-                $field_deserializer
+                $field_devisitor
 
                 impl $visitor_impl_generics ::serde::de::EnumMapVisitor for $visitor_ty {
                     type Value = $value_ty;

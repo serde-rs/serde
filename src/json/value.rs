@@ -21,17 +21,17 @@ pub enum Value {
 
 impl ser::Serialize for Value {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
-        where V: ser::Visitor,
+    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: ser::Serializer,
     {
         match *self {
-            Value::Null => visitor.visit_unit(),
-            Value::Bool(v) => visitor.visit_bool(v),
-            Value::I64(v) => visitor.visit_i64(v),
-            Value::F64(v) => visitor.visit_f64(v),
-            Value::String(ref v) => visitor.visit_str(&v),
-            Value::Array(ref v) => v.visit(visitor),
-            Value::Object(ref v) => v.visit(visitor),
+            Value::Null => serializer.visit_unit(),
+            Value::Bool(v) => serializer.visit_bool(v),
+            Value::I64(v) => serializer.visit_i64(v),
+            Value::F64(v) => serializer.visit_f64(v),
+            Value::String(ref v) => serializer.visit_str(&v),
+            Value::Array(ref v) => v.visit(serializer),
+            Value::Object(ref v) => v.visit(serializer),
         }
     }
 }
@@ -163,18 +163,6 @@ impl Serializer {
 }
 
 impl ser::Serializer for Serializer {
-    type Error = ();
-
-    #[inline]
-    fn visit<T>(&mut self, value: &T) -> Result<(), ()>
-        where T: ser::Serialize,
-    {
-        try!(value.visit(self));
-        Ok(())
-    }
-}
-
-impl ser::Visitor for Serializer {
     type Error = ();
 
     #[inline]
@@ -589,7 +577,7 @@ pub fn to_value<T>(value: &T) -> Value
     where T: ser::Serialize
 {
     let mut ser = Serializer::new();
-    ser::Serializer::visit(&mut ser, value).ok().unwrap();
+    value.visit(&mut ser).ok().unwrap();
     ser.unwrap()
 }
 

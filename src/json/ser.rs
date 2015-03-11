@@ -49,32 +49,7 @@ impl<W: io::Write> Serializer<W> {
     pub fn into_inner(self) -> W {
         self.writer
     }
-}
 
-impl<W: io::Write> ser::Serializer for Serializer<W> {
-    type Error = io::Error;
-
-    #[inline]
-    fn visit<T>(&mut self, value: &T) -> io::Result<()>
-        where T: ser::Serialize,
-    {
-        value.visit(&mut Visitor {
-            writer: &mut self.writer,
-            format: self.format,
-            current_indent: self.current_indent,
-            indent: self.indent,
-        })
-    }
-}
-
-struct Visitor<'a, W: 'a> {
-    writer: &'a mut W,
-    format: Format,
-    current_indent: usize,
-    indent: usize,
-}
-
-impl<'a, W> Visitor<'a, W> where W: io::Write, {
     fn serialize_sep(&mut self, first: bool) -> io::Result<()> {
         match self.format {
             Format::Compact => {
@@ -115,7 +90,9 @@ impl<'a, W> Visitor<'a, W> where W: io::Write, {
     }
 }
 
-impl<'a, W> ser::Visitor for Visitor<'a, W> where W: io::Write, {
+impl<W> ser::Serializer for Serializer<W>
+    where W: io::Write,
+{
     type Error = io::Error;
 
     #[inline]
@@ -129,72 +106,72 @@ impl<'a, W> ser::Visitor for Visitor<'a, W> where W: io::Write, {
 
     #[inline]
     fn visit_isize(&mut self, value: isize) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_i8(&mut self, value: i8) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_i16(&mut self, value: i16) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_i32(&mut self, value: i32) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_i64(&mut self, value: i64) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_usize(&mut self, value: usize) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_u8(&mut self, value: u8) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_u16(&mut self, value: u16) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_u32(&mut self, value: u32) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_u64(&mut self, value: u64) -> io::Result<()> {
-        write!(self.writer, "{}", value)
+        write!(&mut self.writer, "{}", value)
     }
 
     #[inline]
     fn visit_f32(&mut self, value: f32) -> io::Result<()> {
-        fmt_f32_or_null(self.writer, value)
+        fmt_f32_or_null(&mut self.writer, value)
     }
 
     #[inline]
     fn visit_f64(&mut self, value: f64) -> io::Result<()> {
-        fmt_f64_or_null(self.writer, value)
+        fmt_f64_or_null(&mut self.writer, value)
     }
 
     #[inline]
     fn visit_char(&mut self, value: char) -> io::Result<()> {
-        escape_char(self.writer, value)
+        escape_char(&mut self.writer, value)
     }
 
     #[inline]
     fn visit_str(&mut self, value: &str) -> io::Result<()> {
-        escape_str(self.writer, value)
+        escape_str(&mut self.writer, value)
     }
 
     #[inline]
@@ -379,7 +356,7 @@ pub fn to_writer<W, T>(writer: &mut W, value: &T) -> io::Result<()>
           T: ser::Serialize,
 {
     let mut ser = Serializer::new(writer);
-    try!(ser::Serializer::visit(&mut ser, value));
+    try!(value.visit(&mut ser));
     Ok(())
 }
 
@@ -390,7 +367,7 @@ pub fn to_writer_pretty<W, T>(writer: &mut W, value: &T) -> io::Result<()>
           T: ser::Serialize,
 {
     let mut ser = Serializer::new_pretty(writer);
-    try!(ser::Serializer::visit(&mut ser, value));
+    try!(value.visit(&mut ser));
     Ok(())
 }
 

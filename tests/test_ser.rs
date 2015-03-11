@@ -7,7 +7,7 @@ extern crate serde;
 use std::vec;
 use std::collections::BTreeMap;
 
-use serde::ser::{Serialize, Serializer, Visitor, SeqVisitor, MapVisitor};
+use serde::ser::{Serialize, Serializer, SeqVisitor, MapVisitor};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token<'a> {
@@ -79,14 +79,6 @@ impl<'a> AssertSerializer<'a> {
 }
 
 impl<'a> Serializer for AssertSerializer<'a> {
-    type Error = ();
-
-    fn visit<T: Serialize>(&mut self, value: &T) -> Result<(), ()> {
-        value.visit(self)
-    }
-}
-
-impl<'a> Visitor for AssertSerializer<'a> {
     type Error = ();
 
     fn visit_unit(&mut self) -> Result<(), ()> {
@@ -322,7 +314,7 @@ macro_rules! declare_test {
         fn $name() {
             $(
                 let mut ser = AssertSerializer::new($tokens);
-                assert_eq!(ser.visit(&$value), Ok(()));
+                assert_eq!($value.visit(&mut ser), Ok(()));
             )+
         }
     }
