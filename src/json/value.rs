@@ -21,7 +21,7 @@ pub enum Value {
 
 impl ser::Serialize for Value {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: ser::Visitor,
     {
         match *self {
@@ -163,7 +163,6 @@ impl Serializer {
 }
 
 impl ser::Serializer for Serializer {
-    type Value = ();
     type Error = ();
 
     #[inline]
@@ -176,7 +175,6 @@ impl ser::Serializer for Serializer {
 }
 
 impl ser::Visitor for Serializer {
-    type Value = ();
     type Error = ();
 
     #[inline]

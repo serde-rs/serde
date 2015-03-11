@@ -79,7 +79,6 @@ impl<'a> AssertSerializer<'a> {
 }
 
 impl<'a> Serializer for AssertSerializer<'a> {
-    type Value = ();
     type Error = ();
 
     fn visit<T: Serialize>(&mut self, value: &T) -> Result<(), ()> {
@@ -88,7 +87,6 @@ impl<'a> Serializer for AssertSerializer<'a> {
 }
 
 impl<'a> Visitor for AssertSerializer<'a> {
-    type Value = ();
     type Error = ();
 
     fn visit_unit(&mut self) -> Result<(), ()> {

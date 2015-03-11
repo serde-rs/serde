@@ -58,7 +58,7 @@ impl ser::Serialize for HttpProtocol {
     #[inline]
     fn visit<
         V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    >(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_u8(*self as u8)
     }
 }
@@ -106,7 +106,7 @@ impl ser::Serialize for HttpMethod {
     #[inline]
     fn visit<
         V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    >(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_u8(*self as u8)
     }
 }
@@ -147,7 +147,7 @@ impl ser::Serialize for CacheStatus {
     #[inline]
     fn visit<
         V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    >(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_u8(*self as u8)
     }
 }
@@ -197,7 +197,7 @@ impl ser::Serialize for OriginProtocol {
     #[inline]
     fn visit<
         V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    >(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_u8(*self as u8)
     }
 }
@@ -239,7 +239,7 @@ impl ser::Serialize for ZonePlan {
     #[inline]
     fn visit<
         V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    >(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_u8(*self as u8)
     }
 }
@@ -532,7 +532,7 @@ impl ser::Serialize for Country {
     #[inline]
     fn visit<
         V: ser::Visitor,
-    >(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    >(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_u8(*self as u8)
     }
 }

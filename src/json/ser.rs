@@ -52,7 +52,6 @@ impl<W: io::Write> Serializer<W> {
 }
 
 impl<W: io::Write> ser::Serializer for Serializer<W> {
-    type Value = ();
     type Error = io::Error;
 
     #[inline]
@@ -117,7 +116,6 @@ impl<'a, W> Visitor<'a, W> where W: io::Write, {
 }
 
 impl<'a, W> ser::Visitor for Visitor<'a, W> where W: io::Write, {
-    type Value = ();
     type Error = io::Error;
 
     #[inline]

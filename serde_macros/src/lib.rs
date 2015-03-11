@@ -97,10 +97,7 @@ fn expand_derive_serialize(
                         vec!("std", "result", "Result"),
                         None,
                         vec![
-                            Box::new(Ty::Literal(Path::new_(vec!["__V", "Value"],
-                                                            None,
-                                                            vec![],
-                                                            false))),
+                            Box::new(Ty::Tuple(vec![])),
                             Box::new(Ty::Literal(Path::new_(vec!["__V", "Error"],
                                                             None,
                                                             vec![],
@@ -258,7 +255,7 @@ fn serialize_tuple_struct(
 
         impl $visitor_impl_generics ::serde::ser::SeqVisitor for Visitor $visitor_generics {
             #[inline]
-            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
                 where V: ::serde::ser::Visitor,
             {
                 match self.state {
@@ -342,7 +339,7 @@ fn serialize_struct(
 
         impl $visitor_impl_generics ::serde::ser::MapVisitor for Visitor $visitor_generics {
             #[inline]
-            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+            fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
                 where V: ::serde::ser::Visitor,
             {
                 match self.state {
@@ -540,7 +537,7 @@ fn serialize_variant(
     let methods = vec![
         ast::MethodImplItem(
             quote_method!(cx,
-                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
                     where V: ::serde::ser::Visitor,
                 {
                     match self.state {

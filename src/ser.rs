@@ -9,117 +9,115 @@ use std::sync::Arc;
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serialize {
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serializer {
-    type Value;
     type Error;
 
-    fn visit<T>(&mut self, value: &T) -> Result<Self::Value, Self::Error>
+    fn visit<T>(&mut self, value: &T) -> Result<(), Self::Error>
         where T: Serialize;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Visitor {
-    type Value;
     type Error;
 
-    fn visit_bool(&mut self, v: bool) -> Result<Self::Value, Self::Error>;
+    fn visit_bool(&mut self, v: bool) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_isize(&mut self, v: isize) -> Result<Self::Value, Self::Error> {
+    fn visit_isize(&mut self, v: isize) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i8(&mut self, v: i8) -> Result<Self::Value, Self::Error> {
+    fn visit_i8(&mut self, v: i8) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i16(&mut self, v: i16) -> Result<Self::Value, Self::Error> {
+    fn visit_i16(&mut self, v: i16) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i32(&mut self, v: i32) -> Result<Self::Value, Self::Error> {
+    fn visit_i32(&mut self, v: i32) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
     #[inline]
-    fn visit_i64(&mut self, v: i64) -> Result<Self::Value, Self::Error>;
+    fn visit_i64(&mut self, v: i64) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_usize(&mut self, v: usize) -> Result<Self::Value, Self::Error> {
+    fn visit_usize(&mut self, v: usize) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u8(&mut self, v: u8) -> Result<Self::Value, Self::Error> {
+    fn visit_u8(&mut self, v: u8) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u16(&mut self, v: u16) -> Result<Self::Value, Self::Error> {
+    fn visit_u16(&mut self, v: u16) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u32(&mut self, v: u32) -> Result<Self::Value, Self::Error> {
+    fn visit_u32(&mut self, v: u32) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
     #[inline]
-    fn visit_u64(&mut self, v: u64) -> Result<Self::Value, Self::Error>;
+    fn visit_u64(&mut self, v: u64) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_f32(&mut self, v: f32) -> Result<Self::Value, Self::Error> {
+    fn visit_f32(&mut self, v: f32) -> Result<(), Self::Error> {
         self.visit_f64(v as f64)
     }
 
-    fn visit_f64(&mut self, v: f64) -> Result<Self::Value, Self::Error>;
+    fn visit_f64(&mut self, v: f64) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_char(&mut self, v: char) -> Result<Self::Value, Self::Error> {
+    fn visit_char(&mut self, v: char) -> Result<(), Self::Error> {
         // The unwraps in here should be safe.
         let mut s = &mut [0; 4];
         let len = v.encode_utf8(s).unwrap();
         self.visit_str(str::from_utf8(&s[..len]).unwrap())
     }
 
-    fn visit_str(&mut self, value: &str) -> Result<Self::Value, Self::Error>;
+    fn visit_str(&mut self, value: &str) -> Result<(), Self::Error>;
 
-    fn visit_unit(&mut self) -> Result<Self::Value, Self::Error>;
+    fn visit_unit(&mut self) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_named_unit(&mut self, _name: &str) -> Result<Self::Value, Self::Error> {
+    fn visit_named_unit(&mut self, _name: &str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
     #[inline]
     fn visit_enum_unit(&mut self,
                        _name: &str,
-                       _variant: &str) -> Result<Self::Value, Self::Error> {
+                       _variant: &str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
-    fn visit_none(&mut self) -> Result<Self::Value, Self::Error>;
+    fn visit_none(&mut self) -> Result<(), Self::Error>;
 
-    fn visit_some<V>(&mut self, value: V) -> Result<Self::Value, Self::Error>
+    fn visit_some<V>(&mut self, value: V) -> Result<(), Self::Error>
         where V: Serialize;
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<Self::Value, Self::Error>
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor;
 
     #[inline]
     fn visit_named_seq<V>(&mut self,
                           _name: &'static str,
-                          visitor: V) -> Result<Self::Value, Self::Error>
+                          visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.visit_seq(visitor)
@@ -129,7 +127,7 @@ pub trait Visitor {
     fn visit_enum_seq<V>(&mut self,
                          _name: &'static str,
                          _variant: &'static str,
-                         visitor: V) -> Result<Self::Value, Self::Error>
+                         visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.visit_seq(visitor)
@@ -137,16 +135,16 @@ pub trait Visitor {
 
     fn visit_seq_elt<T>(&mut self,
                         first: bool,
-                        value: T) -> Result<Self::Value, Self::Error>
+                        value: T) -> Result<(), Self::Error>
         where T: Serialize;
 
-    fn visit_map<V>(&mut self, visitor: V) -> Result<Self::Value, Self::Error>
+    fn visit_map<V>(&mut self, visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor;
 
     #[inline]
     fn visit_named_map<V>(&mut self,
                           _name: &'static str,
-                          visitor: V) -> Result<Self::Value, Self::Error>
+                          visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.visit_map(visitor)
@@ -156,7 +154,7 @@ pub trait Visitor {
     fn visit_enum_map<V>(&mut self,
                           _name: &'static str,
                           _variant: &'static str,
-                          visitor: V) -> Result<Self::Value, Self::Error>
+                          visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.visit_map(visitor)
@@ -165,13 +163,13 @@ pub trait Visitor {
     fn visit_map_elt<K, V>(&mut self,
                            first: bool,
                            key: K,
-                           value: V) -> Result<Self::Value, Self::Error>
+                           value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize;
 }
 
 pub trait SeqVisitor {
-    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
         where V: Visitor;
 
     #[inline]
@@ -181,7 +179,7 @@ pub trait SeqVisitor {
 }
 
 pub trait MapVisitor {
-    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
         where V: Visitor;
 
     #[inline]
@@ -196,7 +194,7 @@ macro_rules! impl_visit {
     ($ty:ty, $method:ident) => {
         impl Serialize for $ty {
             #[inline]
-            fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+            fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
                 where V: Visitor,
             {
                 visitor.$method(*self)
@@ -224,7 +222,7 @@ impl_visit!(char, visit_char);
 
 impl<'a> Serialize for &'a str {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         visitor.visit_str(*self)
@@ -233,7 +231,7 @@ impl<'a> Serialize for &'a str {
 
 impl Serialize for String {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (&self[..]).visit(visitor)
@@ -244,7 +242,7 @@ impl Serialize for String {
 
 impl<T> Serialize for Option<T> where T: Serialize {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         match *self {
@@ -278,7 +276,7 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
           Iter: Iterator<Item=T>,
 {
     #[inline]
-    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+    fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
         where V: Visitor,
     {
         let first = self.first;
@@ -305,7 +303,7 @@ impl<'a, T> Serialize for &'a [T]
     where T: Serialize,
 {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
@@ -314,7 +312,7 @@ impl<'a, T> Serialize for &'a [T]
 
 impl<T> Serialize for Vec<T> where T: Serialize {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (&self[..]).visit(visitor)
@@ -323,7 +321,7 @@ impl<T> Serialize for Vec<T> where T: Serialize {
 
 impl<T> Serialize for BTreeSet<T> where T: Serialize {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
@@ -335,7 +333,7 @@ impl<T, S> Serialize for HashSet<T, S>
           S: HashState,
 {
     #[inline]
-    fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+    fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_seq(SeqIteratorVisitor::new(self.iter()))
     }
 }
@@ -344,7 +342,7 @@ impl<T, S> Serialize for HashSet<T, S>
 
 impl Serialize for () {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         visitor.visit_unit()
@@ -384,7 +382,7 @@ macro_rules! tuple_impls {
             impl<'a, $($T),+> SeqVisitor for $TupleVisitor<'a, $($T),+>
                 where $($T: Serialize),+
             {
-                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<V::Value>, V::Error>
+                fn visit<V>(&mut self, visitor: &mut V) -> Result<Option<()>, V::Error>
                     where V: Visitor,
                 {
                     let first = self.first;
@@ -412,7 +410,7 @@ macro_rules! tuple_impls {
                 where $($T: Serialize),+
             {
                 #[inline]
-                fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
+                fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<(), V::Error> {
                     visitor.visit_seq($TupleVisitor::new(self))
                 }
             }
@@ -550,7 +548,7 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
           I: Iterator<Item=(K, V)>,
 {
     #[inline]
-    fn visit<V_>(&mut self, visitor: &mut V_) -> Result<Option<V_::Value>, V_::Error>
+    fn visit<V_>(&mut self, visitor: &mut V_) -> Result<Option<()>, V_::Error>
         where V_: Visitor,
     {
         let first = self.first;
@@ -578,7 +576,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
           V: Serialize,
 {
     #[inline]
-    fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<V_::Value, V_::Error> {
+    fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<(), V_::Error> {
         visitor.visit_map(MapIteratorVisitor::new(self.iter()))
     }
 }
@@ -589,7 +587,7 @@ impl<K, V, S> Serialize for HashMap<K, V, S>
           S: HashState,
 {
     #[inline]
-    fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<V_::Value, V_::Error> {
+    fn visit<V_: Visitor>(&self, visitor: &mut V_) -> Result<(), V_::Error> {
         visitor.visit_map(MapIteratorVisitor::new(self.iter()))
     }
 }
@@ -598,7 +596,7 @@ impl<K, V, S> Serialize for HashMap<K, V, S>
 
 impl<'a, T> Serialize for &'a T where T: Serialize {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (**self).visit(visitor)
@@ -607,7 +605,7 @@ impl<'a, T> Serialize for &'a T where T: Serialize {
 
 impl<'a, T> Serialize for &'a mut T where T: Serialize {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (**self).visit(visitor)
@@ -616,7 +614,7 @@ impl<'a, T> Serialize for &'a mut T where T: Serialize {
 
 impl<T> Serialize for Box<T> where T: Serialize {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (**self).visit(visitor)
@@ -625,7 +623,7 @@ impl<T> Serialize for Box<T> where T: Serialize {
 
 impl<T> Serialize for Rc<T> where T: Serialize, {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (**self).visit(visitor)
@@ -634,7 +632,7 @@ impl<T> Serialize for Rc<T> where T: Serialize, {
 
 impl<T> Serialize for Arc<T> where T: Serialize, {
     #[inline]
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         (**self).visit(visitor)
@@ -644,7 +642,7 @@ impl<T> Serialize for Arc<T> where T: Serialize, {
 ///////////////////////////////////////////////////////////////////////////////
 
 impl Serialize for path::Path {
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         self.to_str().unwrap().visit(visitor)
@@ -652,7 +650,7 @@ impl Serialize for path::Path {
 }
 
 impl Serialize for path::PathBuf {
-    fn visit<V>(&self, visitor: &mut V) -> Result<V::Value, V::Error>
+    fn visit<V>(&self, visitor: &mut V) -> Result<(), V::Error>
         where V: Visitor,
     {
         self.to_str().unwrap().visit(visitor)
