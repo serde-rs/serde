@@ -56,7 +56,7 @@ impl rustc_serialize::Decodable for HttpProtocol {
 
 impl ser::Serialize for HttpProtocol {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         serializer.visit_u8(*self as u8)
@@ -104,7 +104,7 @@ impl rustc_serialize::Decodable for HttpMethod {
 
 impl ser::Serialize for HttpMethod {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         serializer.visit_u8(*self as u8)
@@ -145,7 +145,7 @@ impl rustc_serialize::Decodable for CacheStatus {
 
 impl ser::Serialize for CacheStatus {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         serializer.visit_u8(*self as u8)
@@ -195,7 +195,7 @@ impl rustc_serialize::Decodable for OriginProtocol {
 
 impl ser::Serialize for OriginProtocol {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         serializer.visit_u8(*self as u8)
@@ -237,7 +237,7 @@ impl rustc_serialize::Decodable for ZonePlan {
 
 impl ser::Serialize for ZonePlan {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         serializer.visit_u8(*self as u8)
@@ -530,7 +530,7 @@ impl rustc_serialize::Decodable for Country {
 
 impl ser::Serialize for Country {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         serializer.visit_u8(*self as u8)
@@ -757,7 +757,7 @@ fn test_serializer_vec() {
     let log = Log::new();
     let wr = Vec::with_capacity(1024);
     let mut serializer = json::Serializer::new(wr);
-    log.visit(&mut serializer).unwrap();
+    log.serialize(&mut serializer).unwrap();
 
     let json = serializer.into_inner();
     assert_eq!(&json, &JSON_STR.as_bytes());
@@ -775,7 +775,7 @@ fn bench_serializer_vec(b: &mut Bencher) {
         wr.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.visit(&mut serializer).unwrap();
+        log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
 }
@@ -793,7 +793,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
         let mut wr = &mut buf[..];
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.visit(&mut serializer).unwrap();
+        log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
 }
@@ -806,7 +806,7 @@ fn test_serializer_my_mem_writer0() {
 
     {
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.visit(&mut serializer).unwrap();
+        log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     }
 
@@ -825,7 +825,7 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
         wr.buf.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.visit(&mut serializer).unwrap();
+        log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
 }
@@ -838,7 +838,7 @@ fn test_serializer_my_mem_writer1() {
 
     {
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.visit(&mut serializer).unwrap();
+        log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     }
 
@@ -857,7 +857,7 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
         wr.buf.clear();
 
         let mut serializer = json::Serializer::new(wr.by_ref());
-        log.visit(&mut serializer).unwrap();
+        log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
 }

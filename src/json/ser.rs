@@ -183,7 +183,7 @@ impl<W> ser::Serializer for Serializer<W>
     fn visit_some<V>(&mut self, value: V) -> io::Result<()>
         where V: ser::Serialize
     {
-        value.visit(self)
+        value.serialize(self)
     }
 
     #[inline]
@@ -236,7 +236,7 @@ impl<W> ser::Serializer for Serializer<W>
     {
         try!(self.serialize_sep(first));
 
-        value.visit(self)
+        value.serialize(self)
     }
 
     #[inline]
@@ -272,9 +272,9 @@ impl<W> ser::Serializer for Serializer<W>
               V: ser::Serialize,
     {
         try!(self.serialize_sep(first));
-        try!(key.visit(self));
+        try!(key.serialize(self));
         try!(self.serialize_colon());
-        value.visit(self)
+        value.serialize(self)
     }
 }
 
@@ -356,7 +356,7 @@ pub fn to_writer<W, T>(writer: &mut W, value: &T) -> io::Result<()>
           T: ser::Serialize,
 {
     let mut ser = Serializer::new(writer);
-    try!(value.visit(&mut ser));
+    try!(value.serialize(&mut ser));
     Ok(())
 }
 
@@ -367,7 +367,7 @@ pub fn to_writer_pretty<W, T>(writer: &mut W, value: &T) -> io::Result<()>
           T: ser::Serialize,
 {
     let mut ser = Serializer::new_pretty(writer);
-    try!(value.visit(&mut ser));
+    try!(value.serialize(&mut ser));
     Ok(())
 }
 

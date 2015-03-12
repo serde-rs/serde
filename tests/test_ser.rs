@@ -180,7 +180,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
         where V: Serialize,
     {
         assert_eq!(self.iter.next(), Some(Token::Option(true)));
-        value.visit(self)
+        value.serialize(self)
     }
 
 
@@ -221,7 +221,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
         where T: Serialize
     {
         assert_eq!(self.iter.next(), Some(Token::SeqSep(first)));
-        value.visit(self)
+        value.serialize(self)
     }
 
     fn visit_map<V>(&mut self, visitor: V) -> Result<(), ()>
@@ -266,8 +266,8 @@ impl<'a> Serializer for AssertSerializer<'a> {
     {
         assert_eq!(self.iter.next(), Some(Token::MapSep(first)));
 
-        try!(key.visit(self));
-        value.visit(self)
+        try!(key.serialize(self));
+        value.serialize(self)
     }
 }
 
@@ -314,7 +314,7 @@ macro_rules! declare_test {
         fn $name() {
             $(
                 let mut ser = AssertSerializer::new($tokens);
-                assert_eq!($value.visit(&mut ser), Ok(()));
+                assert_eq!($value.serialize(&mut ser), Ok(()));
             )+
         }
     }

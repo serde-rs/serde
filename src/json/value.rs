@@ -21,7 +21,7 @@ pub enum Value {
 
 impl ser::Serialize for Value {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer,
     {
         match *self {
@@ -30,8 +30,8 @@ impl ser::Serialize for Value {
             Value::I64(v) => serializer.visit_i64(v),
             Value::F64(v) => serializer.visit_f64(v),
             Value::String(ref v) => serializer.visit_str(&v),
-            Value::Array(ref v) => v.visit(serializer),
-            Value::Object(ref v) => v.visit(serializer),
+            Value::Array(ref v) => v.serialize(serializer),
+            Value::Object(ref v) => v.serialize(serializer),
         }
     }
 }
@@ -210,7 +210,7 @@ impl ser::Serializer for Serializer {
     fn visit_some<V>(&mut self, value: V) -> Result<(), ()>
         where V: ser::Serialize,
     {
-        value.visit(self)
+        value.serialize(self)
     }
 
     #[inline]
@@ -278,7 +278,7 @@ impl ser::Serializer for Serializer {
     fn visit_seq_elt<T>(&mut self, _first: bool, value: T) -> Result<(), ()>
         where T: ser::Serialize,
     {
-        try!(value.visit(self));
+        try!(value.serialize(self));
 
         let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
@@ -338,14 +338,14 @@ impl ser::Serializer for Serializer {
         where K: ser::Serialize,
               V: ser::Serialize,
     {
-        try!(key.visit(self));
+        try!(key.serialize(self));
 
         let key = match self.state.pop().unwrap() {
             State::Value(Value::String(value)) => value,
             state => panic!("expected key, found {:?}", state),
         };
 
-        try!(value.visit(self));
+        try!(value.serialize(self));
 
         let value = match self.state.pop().unwrap() {
             State::Value(value) => value,
@@ -577,7 +577,7 @@ pub fn to_value<T>(value: &T) -> Value
     where T: ser::Serialize
 {
     let mut ser = Serializer::new();
-    value.visit(&mut ser).ok().unwrap();
+    value.serialize(&mut ser).ok().unwrap();
     ser.unwrap()
 }
 

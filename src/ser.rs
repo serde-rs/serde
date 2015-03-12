@@ -9,7 +9,7 @@ use std::sync::Arc;
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Serialize {
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer;
 }
 
@@ -185,7 +185,7 @@ macro_rules! impl_visit {
     ($ty:ty, $method:ident) => {
         impl Serialize for $ty {
             #[inline]
-            fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                 where S: Serializer,
             {
                 serializer.$method(*self)
@@ -213,7 +213,7 @@ impl_visit!(char, visit_char);
 
 impl<'a> Serialize for &'a str {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_str(*self)
@@ -222,10 +222,10 @@ impl<'a> Serialize for &'a str {
 
 impl Serialize for String {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (&self[..]).visit(serializer)
+        (&self[..]).serialize(serializer)
     }
 }
 
@@ -233,7 +233,7 @@ impl Serialize for String {
 
 impl<T> Serialize for Option<T> where T: Serialize {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         match *self {
@@ -294,7 +294,7 @@ impl<'a, T> Serialize for &'a [T]
     where T: Serialize,
 {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_seq(SeqIteratorVisitor::new(self.iter()))
@@ -303,16 +303,16 @@ impl<'a, T> Serialize for &'a [T]
 
 impl<T> Serialize for Vec<T> where T: Serialize {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (&self[..]).visit(serializer)
+        (&self[..]).serialize(serializer)
     }
 }
 
 impl<T> Serialize for BTreeSet<T> where T: Serialize {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_seq(SeqIteratorVisitor::new(self.iter()))
@@ -324,7 +324,7 @@ impl<T, H> Serialize for HashSet<T, H>
           H: HashState,
 {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_seq(SeqIteratorVisitor::new(self.iter()))
@@ -335,7 +335,7 @@ impl<T, H> Serialize for HashSet<T, H>
 
 impl Serialize for () {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_unit()
@@ -403,7 +403,7 @@ macro_rules! tuple_impls {
                 where $($T: Serialize),+
             {
                 #[inline]
-                fn visit<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
+                fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
                     serializer.visit_seq($TupleVisitor::new(self))
                 }
             }
@@ -569,7 +569,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
           V: Serialize,
 {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_map(MapIteratorVisitor::new(self.iter()))
@@ -582,7 +582,7 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
           H: HashState,
 {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
         serializer.visit_map(MapIteratorVisitor::new(self.iter()))
@@ -593,63 +593,63 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
 
 impl<'a, T> Serialize for &'a T where T: Serialize {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (**self).visit(serializer)
+        (**self).serialize(serializer)
     }
 }
 
 impl<'a, T> Serialize for &'a mut T where T: Serialize {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (**self).visit(serializer)
+        (**self).serialize(serializer)
     }
 }
 
 impl<T> Serialize for Box<T> where T: Serialize {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (**self).visit(serializer)
+        (**self).serialize(serializer)
     }
 }
 
 impl<T> Serialize for Rc<T> where T: Serialize, {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (**self).visit(serializer)
+        (**self).serialize(serializer)
     }
 }
 
 impl<T> Serialize for Arc<T> where T: Serialize, {
     #[inline]
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (**self).visit(serializer)
+        (**self).serialize(serializer)
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 impl Serialize for path::Path {
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        self.to_str().unwrap().visit(serializer)
+        self.to_str().unwrap().serialize(serializer)
     }
 }
 
 impl Serialize for path::PathBuf {
-    fn visit<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        self.to_str().unwrap().visit(serializer)
+        self.to_str().unwrap().serialize(serializer)
     }
 }

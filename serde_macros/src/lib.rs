@@ -78,7 +78,7 @@ fn expand_derive_serialize(
         associated_types: vec![],
         methods: vec![
             MethodDef {
-                name: "visit",
+                name: "serialize",
                 generics: LifetimeBounds {
                     lifetimes: Vec::new(),
                     bounds: vec![
