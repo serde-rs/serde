@@ -643,7 +643,7 @@ fn test_parse_object() {
 fn test_parse_struct() {
     test_parse_err::<Outer>(&[
         ("[]", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{}", Error::MissingFieldError("inner")),
+        ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
     ]);
 
@@ -758,4 +758,27 @@ fn test_multiline_errors() {
     test_parse_err::<BTreeMap<String, String>>(&[
         ("{\n  \"foo\":\n \"bar\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 3, 8)),
     ]);
+}
+
+#[test]
+fn test_missing_field() {
+    #[derive(Debug, PartialEq)]
+    #[derive_deserialize]
+    struct Foo {
+        x: Option<u32>,
+    }
+
+    let value: Foo = from_str("{}").unwrap();
+    assert_eq!(value, Foo { x: None });
+
+    let value: Foo = from_str("{\"x\": 5}").unwrap();
+    assert_eq!(value, Foo { x: Some(5) });
+
+    let value: Foo = from_value(Value::Object(treemap!())).unwrap();
+    assert_eq!(value, Foo { x: None });
+
+    let value: Foo = from_value(Value::Object(treemap!(
+        "x".to_string() => Value::I64(5)
+    ))).unwrap();
+    assert_eq!(value, Foo { x: Some(5) });
 }

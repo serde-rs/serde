@@ -1192,9 +1192,7 @@ fn declare_visit_map(
             quote_stmt!(cx,
                 let $field = match $field {
                     Some($field) => $field,
-                    None => {
-                        return Err(::serde::de::Error::missing_field_error($name_str));
-                    }
+                    None => try!(visitor.missing_field($name_str)),
                 };
             )
         })

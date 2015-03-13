@@ -291,6 +291,12 @@ pub trait MapVisitor {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
     }
+
+    fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
+        where V: Deserialize,
+    {
+        Err(Error::missing_field_error(field))
+    }
 }
 
 impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
