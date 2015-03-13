@@ -233,11 +233,7 @@ impl ser::Serializer for Serializer {
     fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor,
     {
-        let len = match visitor.size_hint() {
-            (_, Some(len)) => len,
-            (len, None) => len,
-        };
-
+        let len = visitor.len().unwrap_or(0);
         let values = Vec::with_capacity(len);
 
         self.state.push(State::Array(values));

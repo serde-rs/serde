@@ -265,9 +265,8 @@ fn serialize_tuple_struct(
             }
 
             #[inline]
-            fn size_hint(&self) -> (usize, Option<usize>) {
-                let size = $len - (self.state as usize);
-                (size, Some(size))
+            fn len(&self) -> Option<usize> {
+                Some($len)
             }
         }
 
@@ -349,9 +348,8 @@ fn serialize_struct(
             }
 
             #[inline]
-            fn size_hint(&self) -> (usize, Option<usize>) {
-                let size = $len - (self.state as usize);
-                (size, Some(size))
+            fn len(&self) -> Option<usize> {
+                Some($len)
             }
         }
 
@@ -550,8 +548,8 @@ fn serialize_variant(
 
         ast::MethodImplItem(
             quote_method!(cx,
-                fn size_hint(&self) -> (usize, Option<usize>) {
-                    ($len - self.state as usize, Some($len - self.state as usize))
+                fn len(&self) -> Option<usize> {
+                    Some($len)
                 }
             )
         ),

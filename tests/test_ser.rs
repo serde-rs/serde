@@ -33,15 +33,15 @@ pub enum Token<'a> {
     NamedUnit(&'a str),
     EnumUnit(&'a str, &'a str),
 
-    SeqStart(usize),
-    NamedSeqStart(&'a str, usize),
-    EnumSeqStart(&'a str, &'a str, usize),
+    SeqStart(Option<usize>),
+    NamedSeqStart(&'a str, Option<usize>),
+    EnumSeqStart(&'a str, &'a str, Option<usize>),
     SeqSep(bool),
     SeqEnd,
 
-    MapStart(usize),
-    NamedMapStart(&'a str, usize),
-    EnumMapStart(&'a str, &'a str, usize),
+    MapStart(Option<usize>),
+    NamedMapStart(&'a str, Option<usize>),
+    EnumMapStart(&'a str, &'a str, Option<usize>),
     MapSep(bool),
     MapEnd,
 }
@@ -187,7 +187,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
     fn visit_seq<V>(&mut self, visitor: V) -> Result<(), ()>
         where V: SeqVisitor
     {
-        let (len, _) = visitor.size_hint();
+        let len = visitor.len();
 
         assert_eq!(self.iter.next(), Some(Token::SeqStart(len)));
 
@@ -197,7 +197,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
     fn visit_named_seq<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
         where V: SeqVisitor
     {
-        let (len, _) = visitor.size_hint();
+        let len = visitor.len();
 
         assert_eq!(self.iter.next().unwrap(), Token::NamedSeqStart(name, len));
 
@@ -210,7 +210,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
                          visitor: V) -> Result<(), ()>
         where V: SeqVisitor
     {
-        let (len, _) = visitor.size_hint();
+        let len = visitor.len();
 
         assert_eq!(self.iter.next().unwrap(), Token::EnumSeqStart(name, variant, len));
 
@@ -227,7 +227,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
     fn visit_map<V>(&mut self, visitor: V) -> Result<(), ()>
         where V: MapVisitor
     {
-        let (len, _) = visitor.size_hint();
+        let len = visitor.len();
 
         assert_eq!(self.iter.next(), Some(Token::MapStart(len)));
 
@@ -237,7 +237,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
     fn visit_named_map<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
         where V: MapVisitor
     {
-        let (len, _) = visitor.size_hint();
+        let len = visitor.len();
 
         assert_eq!(self.iter.next().unwrap(), Token::NamedMapStart(name, len));
 
@@ -250,7 +250,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
                          visitor: V) -> Result<(), ()>
         where V: MapVisitor
     {
-        let (len, _) = visitor.size_hint();
+        let len = visitor.len();
 
         assert_eq!(self.iter.next().unwrap(), Token::EnumMapStart(name, variant, len));
 
@@ -370,11 +370,11 @@ declare_tests! {
     }
     test_slice {
         &[0][..0] => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         &[1, 2, 3][..] => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep(true),
                 Token::I32(1),
 
@@ -388,23 +388,23 @@ declare_tests! {
     }
     test_vec {
         Vec::<isize>::new() => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         vec![vec![], vec![1], vec![2, 3]] => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep(true),
-                Token::SeqStart(0),
+                Token::SeqStart(Some(0)),
                 Token::SeqEnd,
 
                 Token::SeqSep(false),
-                Token::SeqStart(1),
+                Token::SeqStart(Some(1)),
                     Token::SeqSep(true),
                     Token::I32(1),
                 Token::SeqEnd,
 
                 Token::SeqSep(false),
-                Token::SeqStart(2),
+                Token::SeqStart(Some(2)),
                     Token::SeqSep(true),
                     Token::I32(2),
 
@@ -416,13 +416,13 @@ declare_tests! {
     }
     test_tuple {
         (1,) => vec![
-            Token::SeqStart(1),
+            Token::SeqStart(Some(1)),
                 Token::SeqSep(true),
                 Token::I32(1),
             Token::SeqEnd,
         ],
         (1, 2, 3) => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep(true),
                 Token::I32(1),
 
@@ -436,14 +436,14 @@ declare_tests! {
     }
     test_btreemap {
         btreemap![1 => 2] => vec![
-            Token::MapStart(1),
+            Token::MapStart(Some(1)),
                 Token::MapSep(true),
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
         btreemap![1 => 2, 3 => 4] => vec![
-            Token::MapStart(2),
+            Token::MapStart(Some(2)),
                 Token::MapSep(true),
                 Token::I32(1),
                 Token::I32(2),
@@ -454,15 +454,15 @@ declare_tests! {
             Token::MapEnd,
         ],
         btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => vec![
-            Token::MapStart(2),
+            Token::MapStart(Some(2)),
                 Token::MapSep(true),
                 Token::I32(1),
-                Token::MapStart(0),
+                Token::MapStart(Some(0)),
                 Token::MapEnd,
 
                 Token::MapSep(false),
                 Token::I32(2),
-                Token::MapStart(2),
+                Token::MapStart(Some(2)),
                     Token::MapSep(true),
                     Token::I32(3),
                     Token::I32(4),
@@ -479,7 +479,7 @@ declare_tests! {
     }
     test_named_seq {
         NamedSeq(1, 2, 3) => vec![
-            Token::NamedSeqStart("NamedSeq", 3),
+            Token::NamedSeqStart("NamedSeq", Some(3)),
                 Token::SeqSep(true),
                 Token::I32(1),
 
@@ -493,7 +493,7 @@ declare_tests! {
     }
     test_named_map {
         NamedMap { a: 1, b: 2, c: 3 } => vec![
-            Token::NamedMapStart("NamedMap", 3),
+            Token::NamedMapStart("NamedMap", Some(3)),
                 Token::MapSep(true),
                 Token::Str("a"),
                 Token::I32(1),
@@ -511,7 +511,7 @@ declare_tests! {
     test_enum {
         Enum::Unit => vec![Token::EnumUnit("Enum", "Unit")],
         Enum::Seq(1, 2) => vec![
-            Token::EnumSeqStart("Enum", "Seq", 2),
+            Token::EnumSeqStart("Enum", "Seq", Some(2)),
                 Token::SeqSep(true),
                 Token::I32(1),
 
@@ -520,7 +520,7 @@ declare_tests! {
             Token::SeqEnd,
         ],
         Enum::Map { a: 1, b: 2 } => vec![
-            Token::EnumMapStart("Enum", "Map", 2),
+            Token::EnumMapStart("Enum", "Map", Some(2)),
                 Token::MapSep(true),
                 Token::Str("a"),
                 Token::I32(1),

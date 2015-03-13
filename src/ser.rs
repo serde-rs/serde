@@ -163,9 +163,10 @@ pub trait SeqVisitor {
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: Serializer;
 
+    /// Return the length of the sequence if known.
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, None)
+    fn len(&self) -> Option<usize> {
+        None
     }
 }
 
@@ -173,9 +174,10 @@ pub trait MapVisitor {
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: Serializer;
 
+    /// Return the length of the map if known.
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, None)
+    fn len(&self) -> Option<usize> {
+        None
     }
 }
 
@@ -247,6 +249,7 @@ impl<T> Serialize for Option<T> where T: Serialize {
 
 pub struct SeqIteratorVisitor<Iter> {
     iter: Iter,
+    len: Option<usize>,
     first: bool,
 }
 
@@ -254,9 +257,10 @@ impl<T, Iter> SeqIteratorVisitor<Iter>
     where Iter: Iterator<Item=T>
 {
     #[inline]
-    pub fn new(iter: Iter) -> SeqIteratorVisitor<Iter> {
+    pub fn new(iter: Iter, len: Option<usize>) -> SeqIteratorVisitor<Iter> {
         SeqIteratorVisitor {
             iter: iter,
+            len: len,
             first: true,
         }
     }
@@ -283,8 +287,8 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
     }
 
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+    fn len(&self) -> Option<usize> {
+        self.len
     }
 }
 
@@ -297,7 +301,7 @@ impl<'a, T> Serialize for &'a [T]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_seq(SeqIteratorVisitor::new(self.iter()))
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -310,12 +314,14 @@ impl<T> Serialize for Vec<T> where T: Serialize {
     }
 }
 
-impl<T> Serialize for BTreeSet<T> where T: Serialize {
+impl<T> Serialize for BTreeSet<T>
+    where T: Serialize + Ord,
+{
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_seq(SeqIteratorVisitor::new(self.iter()))
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -327,7 +333,7 @@ impl<T, H> Serialize for HashSet<T, H>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_seq(SeqIteratorVisitor::new(self.iter()))
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -394,8 +400,8 @@ macro_rules! tuple_impls {
                     }
                 }
 
-                fn size_hint(&self) -> (usize, Option<usize>) {
-                    ($len, Some($len))
+                fn len(&self) -> Option<usize> {
+                    Some($len)
                 }
             }
 
@@ -520,6 +526,7 @@ tuple_impls! {
 
 pub struct MapIteratorVisitor<Iter> {
     iter: Iter,
+    len: Option<usize>,
     first: bool,
 }
 
@@ -527,9 +534,10 @@ impl<K, V, Iter> MapIteratorVisitor<Iter>
     where Iter: Iterator<Item=(K, V)>
 {
     #[inline]
-    pub fn new(iter: Iter) -> MapIteratorVisitor<Iter> {
+    pub fn new(iter: Iter, len: Option<usize>) -> MapIteratorVisitor<Iter> {
         MapIteratorVisitor {
             iter: iter,
+            len: len,
             first: true,
         }
     }
@@ -557,8 +565,8 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
     }
 
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+    fn len(&self) -> Option<usize> {
+        self.len
     }
 }
 
@@ -572,7 +580,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_map(MapIteratorVisitor::new(self.iter()))
+        serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -585,7 +593,7 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_map(MapIteratorVisitor::new(self.iter()))
+        serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
