@@ -6,41 +6,33 @@ use std::string::FromUtf8Error;
 use ser;
 
 /// A structure for implementing serialization to JSON.
-pub struct Serializer<W> {
+pub struct Serializer<W, F=CompactFormatter> {
     writer: W,
-    format: Format,
-    current_indent: usize,
-    indent: usize,
+    formatter: F,
 }
 
-#[derive(Copy, PartialEq)]
-enum Format {
-    Compact,
-    Pretty,
-}
-
-impl<W: io::Write> Serializer<W> {
+impl<W> Serializer<W>
+    where W: io::Write,
+{
     /// Creates a new JSON visitr whose output will be written to the writer
     /// specified.
     #[inline]
     pub fn new(writer: W) -> Serializer<W> {
-        Serializer {
-            writer: writer,
-            format: Format::Compact,
-            current_indent: 0,
-            indent: 0,
-        }
+        Serializer::new_with_formatter(writer, CompactFormatter)
     }
+}
 
+impl<W, F> Serializer<W, F>
+    where W: io::Write,
+          F: Formatter,
+{
     /// Creates a new JSON visitr whose output will be written to the writer
     /// specified.
     #[inline]
-    pub fn new_pretty(writer: W) -> Serializer<W> {
+    pub fn new_with_formatter(writer: W, formatter: F) -> Serializer<W, F> {
         Serializer {
             writer: writer,
-            format: Format::Pretty,
-            current_indent: 0,
-            indent: 2,
+            formatter: formatter,
         }
     }
 
@@ -49,49 +41,11 @@ impl<W: io::Write> Serializer<W> {
     pub fn into_inner(self) -> W {
         self.writer
     }
-
-    fn serialize_sep(&mut self, first: bool) -> io::Result<()> {
-        match self.format {
-            Format::Compact => {
-                if first {
-                    Ok(())
-                } else {
-                    self.writer.write_all(b",")
-                }
-            }
-            Format::Pretty => {
-                if first {
-                    self.current_indent += self.indent;
-                    try!(self.writer.write_all(b"\n"));
-                } else {
-                    try!(self.writer.write_all(b",\n"));
-                }
-
-                spaces(&mut self.writer, self.current_indent)
-            }
-        }
-    }
-
-    fn serialize_colon(&mut self) -> io::Result<()> {
-        match self.format {
-            Format::Compact => self.writer.write_all(b":"),
-            Format::Pretty => self.writer.write_all(b": "),
-        }
-    }
-
-    fn serialize_end(&mut self, current_indent: usize, s: &[u8]) -> io::Result<()> {
-        if self.format == Format::Pretty && current_indent != self.current_indent {
-            self.current_indent -= self.indent;
-            try!(self.writer.write(b"\n"));
-            try!(spaces(&mut self.writer, self.current_indent));
-        }
-
-        self.writer.write_all(s)
-    }
 }
 
-impl<W> ser::Serializer for Serializer<W>
+impl<W, F> ser::Serializer for Serializer<W, F>
     where W: io::Write,
+          F: Formatter,
 {
     type Error = io::Error;
 
@@ -193,48 +147,50 @@ impl<W> ser::Serializer for Serializer<W>
 
     #[inline]
     fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> io::Result<()> {
-        let current_indent = self.current_indent;
-
-        try!(self.writer.write_all(b"{"));
-        try!(self.serialize_sep(true));
+        try!(self.formatter.open(&mut self.writer, b'{'));
+        try!(self.formatter.comma(&mut self.writer, true));
         try!(self.visit_str(variant));
-        try!(self.serialize_colon());
+        try!(self.formatter.colon(&mut self.writer));
         try!(self.writer.write_all(b"[]"));
-        self.serialize_end(current_indent, b"}")
+        self.formatter.close(&mut self.writer, b'}')
     }
 
     #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
-        let current_indent = self.current_indent;
+        match visitor.len() {
+            Some(len) if len == 0 => {
+                self.writer.write_all(b"[]")
+            }
+            _ => {
+                try!(self.formatter.open(&mut self.writer, b'['));
 
-        try!(self.writer.write_all(b"["));
+                while let Some(()) = try!(visitor.visit(self)) { }
 
-        while let Some(()) = try!(visitor.visit(self)) { }
+                self.formatter.close(&mut self.writer, b']')
+            }
+        }
 
-        self.serialize_end(current_indent, b"]")
     }
 
     #[inline]
     fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
-        let current_indent = self.current_indent;
-
-        try!(self.writer.write_all(b"{"));
-        try!(self.serialize_sep(true));
+        try!(self.formatter.open(&mut self.writer, b'{'));
+        try!(self.formatter.comma(&mut self.writer, true));
         try!(self.visit_str(variant));
-        try!(self.serialize_colon());
+        try!(self.formatter.colon(&mut self.writer));
         try!(self.visit_seq(visitor));
-        self.serialize_end(current_indent, b"}")
+        self.formatter.close(&mut self.writer, b'}')
     }
 
     #[inline]
     fn visit_seq_elt<T>(&mut self, first: bool, value: T) -> io::Result<()>
         where T: ser::Serialize,
     {
-        try!(self.serialize_sep(first));
+        try!(self.formatter.comma(&mut self.writer, first));
 
         value.serialize(self)
     }
@@ -243,27 +199,31 @@ impl<W> ser::Serializer for Serializer<W>
     fn visit_map<V>(&mut self, mut visitor: V) -> io::Result<()>
         where V: ser::MapVisitor,
     {
-        let current_indent = self.current_indent;
+        match visitor.len() {
+            Some(len) if len == 0 => {
+                self.writer.write_all(b"{}")
+            }
+            _ => {
+                try!(self.formatter.open(&mut self.writer, b'{'));
 
-        try!(self.writer.write_all(b"{"));
+                while let Some(()) = try!(visitor.visit(self)) { }
 
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        self.serialize_end(current_indent, b"}")
+                self.formatter.close(&mut self.writer, b'}')
+            }
+        }
     }
 
     #[inline]
     fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
         where V: ser::MapVisitor,
     {
-        let current_indent = self.current_indent;
-
-        try!(self.writer.write_all(b"{"));
-        try!(self.serialize_sep(true));
+        try!(self.formatter.open(&mut self.writer, b'{'));
+        try!(self.formatter.comma(&mut self.writer, true));
         try!(self.visit_str(variant));
-        try!(self.serialize_colon());
+        try!(self.formatter.colon(&mut self.writer));
         try!(self.visit_map(visitor));
-        self.serialize_end(current_indent, b"}")
+
+        self.formatter.close(&mut self.writer, b'}')
     }
 
     #[inline]
@@ -271,10 +231,98 @@ impl<W> ser::Serializer for Serializer<W>
         where K: ser::Serialize,
               V: ser::Serialize,
     {
-        try!(self.serialize_sep(first));
+        try!(self.formatter.comma(&mut self.writer, first));
         try!(key.serialize(self));
-        try!(self.serialize_colon());
+        try!(self.formatter.colon(&mut self.writer));
         value.serialize(self)
+    }
+}
+
+pub trait Formatter {
+    fn open<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
+        where W: io::Write;
+
+    fn comma<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+        where W: io::Write;
+
+    fn colon<W>(&mut self, writer: &mut W) -> io::Result<()>
+        where W: io::Write;
+
+    fn close<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
+        where W: io::Write;
+}
+
+pub struct CompactFormatter;
+
+impl Formatter for CompactFormatter {
+    fn open<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
+        where W: io::Write,
+    {
+        writer.write_all(&[ch])
+    }
+
+    fn comma<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+        where W: io::Write,
+    {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b",")
+        }
+    }
+
+    fn colon<W>(&mut self, writer: &mut W) -> io::Result<()>
+        where W: io::Write,
+    {
+        writer.write_all(b":")
+    }
+
+    fn close<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
+        where W: io::Write,
+    {
+        writer.write_all(&[ch])
+    }
+}
+
+pub struct PrettyFormatter {
+    current_indent: usize,
+    indent: usize,
+}
+
+impl Formatter for PrettyFormatter {
+    fn open<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
+        where W: io::Write,
+    {
+        self.current_indent += self.indent;
+        writer.write_all(&[ch])
+    }
+
+    fn comma<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+        where W: io::Write,
+    {
+        if first {
+            try!(writer.write_all(b"\n"));
+        } else {
+            try!(writer.write_all(b",\n"));
+        }
+
+        spaces(writer, self.current_indent)
+    }
+
+    fn colon<W>(&mut self, writer: &mut W) -> io::Result<()>
+        where W: io::Write,
+    {
+        writer.write_all(b": ")
+    }
+
+    fn close<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
+        where W: io::Write,
+    {
+        self.current_indent -= self.indent;
+        try!(writer.write(b"\n"));
+        try!(spaces(writer, self.current_indent));
+
+        writer.write_all(&[ch])
     }
 }
 
@@ -366,7 +414,10 @@ pub fn to_writer_pretty<W, T>(writer: &mut W, value: &T) -> io::Result<()>
     where W: io::Write,
           T: ser::Serialize,
 {
-    let mut ser = Serializer::new_pretty(writer);
+    let mut ser = Serializer::new_with_formatter(writer, PrettyFormatter {
+        current_indent: 0,
+        indent: 2,
+    });
     try!(value.serialize(&mut ser));
     Ok(())
 }
