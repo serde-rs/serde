@@ -133,7 +133,7 @@ fn serialize_substructure(
 
             for field in fields {
                 match field.name {
-                    Some(name) => { named_fields.push((name, field.span)); }
+                    Some(name) => { named_fields.push(name); }
                     None => { unnamed_fields += 1; }
                 }
             }
@@ -310,41 +310,91 @@ fn serialize_struct(
     builder: &aster::AstBuilder,
     serializer: P<Expr>,
     type_ident: Ident,
-    fields: &[(Ident, Span)],
+    fields: &[Ident],
     struct_def: &StructDef,
     generics: &ast::Generics
 ) -> P<Expr> {
+    let value_ty = builder.ty()
+        .ref_()
+            .lifetime("'__a")
+            .ty().path()
+                .segment(type_ident).with_generics(generics.clone()).build()
+                .build();
+
+    let (visitor_struct, visitor_impl) = serialize_struct_visitor(
+        cx,
+        builder,
+        value_ty,
+        struct_def,
+        generics,
+        fields.iter().map(|field| quote_expr!(cx, &self.value.$field)),
+    );
+
     let type_name = builder.expr().str(type_ident);
-    let len = fields.len();
 
-    let aliases : Vec<Option<&ast::Lit>> = struct_def.fields.iter()
-        .map(field_alias)
-        .collect();
+    quote_expr!(cx, {
+        $visitor_struct
+        $visitor_impl
+        $serializer.visit_named_map($type_name, Visitor {
+            value: self,
+            state: 0,
+        })
+    })
+}
 
-    let arms: Vec<ast::Arm> = fields.iter()
-        .zip(aliases.iter())
-        .enumerate()
-        .map(|(i, (&(name, _), alias_lit))| {
-            let first = builder.expr().bool(i == 0);
+fn serialize_struct_visitor<I>(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    value_ty: P<ast::Ty>,
+    struct_def: &StructDef,
+    generics: &ast::Generics,
+    value_exprs: I,
+) -> (P<ast::Item>, P<ast::Item>)
+    where I: Iterator<Item=P<ast::Expr>>,
+{
+    let len = struct_def.fields.len();
 
-            let expr = match *alias_lit {
+    let key_exprs = struct_def.fields.iter()
+        .map(|field| {
+            match field_alias(field) {
                 Some(lit) => builder.expr().build_lit(P(lit.clone())),
-                None => builder.expr().str(name),
-            };
+                None => {
+                    match field.node.kind {
+                        ast::NamedField(name, _) => {
+                            builder.expr().str(name)
+                        }
+                        ast::UnnamedField(_) => {
+                            cx.bug("struct has named and unnamed fields")
+                        }
+                    }
+                }
+            }
+        });
+
+    let arms: Vec<ast::Arm> = key_exprs
+        .zip(value_exprs)
+        .enumerate()
+        .map(|(i, (key_expr, value_expr))| {
+            let first = i == 0;
 
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(serializer.visit_map_elt($first, $expr, &self.value.$name));
-                    Ok(Some(v))
+                    Ok(
+                        Some(
+                            try!(
+                                serializer.visit_map_elt(
+                                    $first,
+                                    $key_expr,
+                                    $value_expr,
+                                )
+                            )
+                        )
+                    )
                 }
             )
         })
         .collect();
-
-    let type_generics = builder.from_generics(generics.clone())
-        .strip_bounds()
-        .build();
 
     let visitor_impl_generics = builder.from_generics(generics.clone())
         .add_lifetime_bound("'__a")
@@ -354,38 +404,42 @@ fn serialize_struct(
         .lifetime_name("'__a")
         .build();
 
+    let where_clause = &visitor_impl_generics.where_clause;
+
     let visitor_generics = builder.from_generics(visitor_impl_generics.clone())
         .strip_bounds()
         .build();
 
-    quote_expr!(cx, {
-        struct Visitor $visitor_impl_generics {
-            state: usize,
-            value: &'__a $type_ident $type_generics,
-        }
+    (
+        quote_item!(cx,
+            struct Visitor $visitor_impl_generics $where_clause {
+                state: usize,
+                value: $value_ty,
+            }
+        ).unwrap(),
 
-        impl $visitor_impl_generics ::serde::ser::MapVisitor for Visitor $visitor_generics {
-            #[inline]
-            fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                where S: ::serde::ser::Serializer,
-            {
-                match self.state {
-                    $arms
-                    _ => Ok(None),
+        quote_item!(cx,
+            impl $visitor_impl_generics
+            ::serde::ser::MapVisitor
+            for Visitor $visitor_generics
+            $where_clause {
+                #[inline]
+                fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+                    where S: ::serde::ser::Serializer,
+                {
+                    match self.state {
+                        $arms
+                        _ => Ok(None),
+                    }
+                }
+
+                #[inline]
+                fn len(&self) -> Option<usize> {
+                    Some($len)
                 }
             }
-
-            #[inline]
-            fn len(&self) -> Option<usize> {
-                Some($len)
-            }
-        }
-
-        $serializer.visit_named_map($type_name, Visitor {
-            value: self,
-            state: 0,
-        })
-    })
+        ).unwrap(),
+    )
 }
 
 fn serialize_enum(
@@ -421,7 +475,7 @@ fn serialize_enum(
                     fields,
                 )
             }
-            ast::StructVariantKind(_) => {
+            ast::StructVariantKind(ref struct_def) => {
                 serialize_struct_variant(
                     cx,
                     builder,
@@ -429,7 +483,7 @@ fn serialize_enum(
                     type_name,
                     variant_name,
                     generics,
-                    variant,
+                    struct_def,
                     fields,
                 )
             }
@@ -489,57 +543,22 @@ fn serialize_tuple_variant(
 fn serialize_struct_variant(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    serializer: P<ast::Expr>,
+    serializer: P<Expr>,
     type_name: P<ast::Expr>,
     variant_name: P<ast::Expr>,
     generics: &ast::Generics,
-    variant: &ast::Variant,
+    struct_def: &ast::StructDef,
     fields: &[FieldInfo],
 ) -> P<Expr> {
-    let trait_generics = builder.from_generics(generics.clone())
-        .add_lifetime_bound("'__a")
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "ser", "Serialize"]).build()
+    let value_ty = builder.ty().tuple()
+        .with_tys(
+            struct_def.fields.iter().map(|field| {
+                builder.ty()
+                    .ref_()
+                    .lifetime("'__a")
+                    .build_ty(field.node.ty.clone())
+            })
         )
-        .lifetime_name("'__a")
-        .build();
-
-    let where_clause = &generics.where_clause;
-
-    let type_generics = builder.from_generics(trait_generics.clone())
-        .strip_bounds()
-        .build();
-
-    let (trait_name, method, tys,): (_, _, Vec<_>) = match variant.node.kind {
-        ast::TupleVariantKind(ref args) => {
-            (
-                cx.ident_of("SeqVisitor"),
-                cx.ident_of("visit_enum_seq"),
-                args.iter()
-                    .map(|arg| arg.ty.clone())
-                    .collect()
-            )
-        }
-
-        ast::StructVariantKind(ref struct_def) => {
-            (
-                cx.ident_of("MapVisitor"),
-                cx.ident_of("visit_enum_map"),
-                struct_def.fields.iter()
-                    .map(|field| field.node.ty.clone())
-                    .collect()
-            )
-        }
-    };
-
-    let value_ty = builder.ty()
-        .tuple()
-        .with_tys(tys.into_iter().map(|ty| {
-            builder.ty()
-                .ref_()
-                .lifetime("'__a")
-                .build_ty(ty)
-        }))
         .build();
 
     let value_expr = builder.expr().tuple()
@@ -552,79 +571,26 @@ fn serialize_struct_variant(
         )
         .build();
 
-    let visitor_arms: Vec<ast::Arm> = fields.iter()
-        .enumerate()
-        .map(|(state, field)| {
-            let first = state == 0;
-
-            let field_expr = builder.expr()
-                .tup_field(state)
-                .field("value").self_();
-
-            let visit_expr = match field.name {
-                Some(real_name) => {
-                    let real_name = builder.expr().str(real_name);
-
-                    quote_expr!(cx,
-                        ::serde::ser::Serializer::visit_map_elt(
-                            serializer,
-                            $first,
-                            $real_name,
-                            $field_expr,
-                        )
-                    )
-                }
-                None => {
-                    quote_expr!(cx,
-                        ::serde::ser::Serializer::visit_seq_elt(
-                            serializer,
-                            $first,
-                            $field_expr,
-                        )
-                    )
-                }
-            };
-
-            quote_arm!(cx,
-                $state => {
-                    self.state += 1;
-                    Ok(Some(try!($visit_expr)))
-                }
-            )
+    let (visitor_struct, visitor_impl) = serialize_struct_visitor(
+        cx,
+        builder,
+        value_ty,
+        struct_def,
+        generics,
+        (0 .. fields.len()).map(|i| {
+            builder.expr()
+                .tup_field(i)
+                .field("value").self_()
         })
-        .collect();
-
-    let len = fields.len();
+    );
 
     quote_expr!(cx, {
-        struct __Visitor $trait_generics $where_clause {
-            state: usize,
-            value: $value_ty,
-        }
-
-        impl $trait_generics ::serde::ser::$trait_name for __Visitor $type_generics $where_clause {
-            fn visit<V>(&mut self, serializer: &mut V) -> Result<Option<()>, V::Error>
-                where V: ::serde::ser::Serializer,
-            {
-                match self.state {
-                    $visitor_arms
-                    _ => Ok(None),
-                }
-            }
-            fn len(&self) -> Option<usize> {
-                Some($len)
-            }
-        }
-
-        ::serde::ser::Serializer::$method(
-            $serializer,
-            $type_name,
-            $variant_name,
-            __Visitor {
-                state: 0,
-                value: $value_expr,
-            },
-        )
+        $visitor_struct
+        $visitor_impl
+        $serializer.visit_enum_map($type_name, $variant_name, Visitor {
+            value: $value_expr,
+            state: 0,
+        })
     })
 }
 
@@ -1126,7 +1092,7 @@ fn declare_map_field_devisitor(
         ast::EnumDef { variants: field_variants });
 
     // Get aliases
-    let aliases : Vec<Option<&ast::Lit>> = struct_def.fields.iter()
+    let aliases: Vec<Option<&ast::Lit>> = struct_def.fields.iter()
         .map(field_alias)
         .collect();
 
