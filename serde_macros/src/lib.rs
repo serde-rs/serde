@@ -599,8 +599,24 @@ fn deserialize_substructure(
 
     let state = substr.nonself_args[0].clone();
 
-    match (&item.node, &*substr.fields) {
-        (&ast::ItemStruct(_, ref generics), &StaticStruct(ref struct_def, ref fields)) => {
+    let generics = match item.node {
+        ast::ItemStruct(_, ref generics) => generics,
+        ast::ItemEnum(_, ref generics) => generics,
+        _ => cx.bug("expected ItemStruct or ItemEnum in derive(Deserialize)")
+    };
+
+    let trait_generics = builder.from_generics(generics.clone())
+        .add_ty_param_bound(
+            builder.path().global().ids(&["serde", "de", "Deserialize"]).build()
+        )
+        .build();
+
+    let type_generics = builder.from_generics(trait_generics.clone())
+        .strip_bounds()
+        .build();
+
+    match *substr.fields {
+        StaticStruct(ref struct_def, ref fields) => {
             deserialize_struct(
                 cx,
                 span,
@@ -611,10 +627,11 @@ fn deserialize_substructure(
                 fields,
                 state,
                 struct_def,
-                generics,
+                &trait_generics,
+                &type_generics,
             )
         }
-        (&ast::ItemEnum(_, ref generics), &StaticEnum(ref enum_def, ref fields)) => {
+        StaticEnum(ref enum_def, ref fields) => {
             deserialize_enum(
                 cx,
                 &builder,
@@ -622,7 +639,8 @@ fn deserialize_substructure(
                 &fields,
                 state,
                 enum_def,
-                generics,
+                &trait_generics,
+                &type_generics,
             )
         }
         _ => cx.bug("expected StaticEnum or StaticStruct in derive(Deserialize)")
@@ -639,7 +657,8 @@ fn deserialize_struct(
     fields: &StaticFields,
     state: P<ast::Expr>,
     struct_def: &StructDef,
-    generics: &ast::Generics,
+    trait_generics: &ast::Generics,
+    impl_generics: &ast::Generics,
 ) -> P<ast::Expr> {
     match *fields {
         Unnamed(ref fields) => {
@@ -660,7 +679,8 @@ fn deserialize_struct(
                     struct_path,
                     &fields,
                     state,
-                    generics,
+                    trait_generics,
+                    impl_generics,
                 )
             }
         }
@@ -675,7 +695,9 @@ fn deserialize_struct(
                 &fields,
                 state,
                 struct_def,
-                generics)
+                trait_generics,
+                impl_generics,
+            )
         }
     }
 }
@@ -737,19 +759,10 @@ fn deserialize_struct_unnamed_fields(
     struct_path: ast::Path,
     fields: &[Span],
     state: P<ast::Expr>,
-    generics: &ast::Generics,
+    trait_generics: &ast::Generics,
+    type_generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let trait_generics = builder.from_generics(generics.clone())
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "de", "Deserialize"]).build()
-        )
-        .build();
-
     let where_clause = &trait_generics.where_clause;
-
-    let type_generics = builder.from_generics(trait_generics.clone())
-        .strip_bounds()
-        .build();
 
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
         .map(|i| builder.id(&format!("__field{}", i)))
@@ -765,13 +778,13 @@ fn deserialize_struct_unnamed_fields(
     // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
     let (visitor_struct, visitor_expr) = deserialize_struct_field_visitor(
         builder,
-        generics
+        trait_generics
     );
 
     let struct_name = builder.expr().str(struct_ident);
 
     let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(generics.clone()).build()
+        .segment(type_ident).with_generics(type_generics.clone()).build()
         .build();
 
     quote_expr!(cx, {
@@ -846,13 +859,10 @@ fn deserialize_struct_named_fields(
     fields: &[(Ident, Span)],
     state: P<ast::Expr>,
     struct_def: &StructDef,
-    generics: &ast::Generics,
+    trait_generics: &ast::Generics,
+    type_generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let visitor_impl_generics = builder.from_generics(generics.clone())
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "de", "Deserialize"]).build()
-        )
-        .build();
+    let where_clause = &trait_generics.where_clause;
 
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
@@ -860,7 +870,7 @@ fn deserialize_struct_named_fields(
         .collect();
 
     // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
-    let (visitor_struct, visitor_expr) = if generics.ty_params.is_empty() {
+    let (visitor_struct, visitor_expr) = if trait_generics.ty_params.is_empty() {
         (
             builder.item().tuple_struct("__Visitor")
                 .build(),
@@ -869,16 +879,16 @@ fn deserialize_struct_named_fields(
     } else {
         (
             builder.item().tuple_struct("__Visitor")
-                .generics().with(generics.clone()).build()
+                .generics().with(trait_generics.clone()).build()
                 .with_tys(
-                    generics.ty_params.iter().map(|ty_param| {
+                    trait_generics.ty_params.iter().map(|ty_param| {
                         builder.ty().phantom_data().id(ty_param.ident)
                     })
                 )
                 .build(),
             builder.expr().call().id("__Visitor")
                 .with_args(
-                    generics.ty_params.iter().map(|_| {
+                    trait_generics.ty_params.iter().map(|_| {
                         builder.expr().phantom_data()
                     })
                 )
@@ -889,11 +899,11 @@ fn deserialize_struct_named_fields(
     let struct_name = builder.expr().str(struct_ident);
 
     let visitor_ty = builder.ty().path()
-        .segment("__Visitor").with_generics(generics.clone()).build()
+        .segment("__Visitor").with_generics(trait_generics.clone()).build()
         .build();
 
     let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(generics.clone()).build()
+        .segment(type_ident).with_generics(trait_generics.clone()).build()
         .build();
 
     let field_devisitor = declare_map_field_devisitor(
@@ -919,7 +929,7 @@ fn deserialize_struct_named_fields(
 
         $visitor_struct;
 
-        impl $visitor_impl_generics ::serde::de::Visitor for $visitor_ty {
+        impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
             type Value = $value_ty;
 
             #[inline]
@@ -1092,7 +1102,6 @@ fn declare_visit_map(
     fields: &[(Ident, Span)],
     struct_def: &StructDef,
 ) -> P<ast::Expr> {
-
     // Declare each field.
     let let_values: Vec<P<ast::Stmt>> = field_names.iter()
         .zip(struct_def.fields.iter())
@@ -1160,23 +1169,14 @@ fn deserialize_enum(
     fields: &[(Ident, Span, StaticFields)],
     state: P<ast::Expr>,
     enum_def: &EnumDef,
-    generics: &ast::Generics,
+    trait_generics: &ast::Generics,
+    type_generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let trait_generics = builder.from_generics(generics.clone())
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "de", "Deserialize"]).build()
-        )
-        .build();
-
     let where_clause = &trait_generics.where_clause;
-
-    let type_generics = builder.from_generics(trait_generics.clone())
-        .strip_bounds()
-        .build();
 
     let (visitor_struct, visitor_expr) = deserialize_struct_field_visitor(
         builder,
-        generics,
+        trait_generics,
     );
 
     let value_ty = builder.ty().path()
@@ -1246,9 +1246,9 @@ fn deserialize_enum(
 // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
 fn deserialize_struct_field_visitor(
     builder: &aster::AstBuilder,
-    generics: &ast::Generics,
+    trait_generics: &ast::Generics,
 ) -> (P<ast::Item>, P<ast::Expr>) {
-    if generics.ty_params.is_empty() {
+    if trait_generics.ty_params.is_empty() {
         (
             builder.item().tuple_struct("__Visitor")
                 .build(),
@@ -1257,16 +1257,16 @@ fn deserialize_struct_field_visitor(
     } else {
         (
             builder.item().tuple_struct("__Visitor")
-                .generics().with(generics.clone()).build()
+                .generics().with(trait_generics.clone()).build()
                 .with_tys(
-                    generics.ty_params.iter().map(|ty_param| {
+                    trait_generics.ty_params.iter().map(|ty_param| {
                         builder.ty().phantom_data().id(ty_param.ident)
                     })
                 )
                 .build(),
             builder.expr().call().id("__Visitor")
                 .with_args(
-                    generics.ty_params.iter().map(|_| {
+                    trait_generics.ty_params.iter().map(|_| {
                         builder.expr().phantom_data()
                     })
                 )
