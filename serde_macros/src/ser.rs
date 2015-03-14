@@ -468,9 +468,6 @@ fn serialize_tuple_struct_visitor(
 
     let visitor_impl_generics = builder.from_generics(generics.clone())
         .add_lifetime_bound("'__a")
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "ser", "Serialize"]).build()
-        )
         .lifetime_name("'__a")
         .build();
 
@@ -567,9 +564,6 @@ fn serialize_struct_visitor<I>(
 
     let visitor_impl_generics = builder.from_generics(generics.clone())
         .add_lifetime_bound("'__a")
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "ser", "Serialize"]).build()
-        )
         .lifetime_name("'__a")
         .build();
 
