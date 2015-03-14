@@ -162,6 +162,9 @@ fn deserialize_substructure(
                 enum_def,
                 &trait_generics,
                 &type_generics,
+                visitor_item,
+                visitor_ty,
+                visitor_expr,
                 value_ty,
             )
         }
@@ -218,30 +221,30 @@ fn deserialize_struct(
     value_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     match *fields {
+        Unnamed(ref fields) if fields.is_empty() => {
+            deserialize_unit_struct(
+                cx,
+                builder,
+                type_ident,
+                struct_ident,
+                struct_path,
+                state,
+            )
+        }
         Unnamed(ref fields) => {
-            if fields.is_empty() {
-                deserialize_struct_empty_fields(
-                    cx,
-                    builder,
-                    type_ident,
-                    struct_ident,
-                    struct_path,
-                    state)
-            } else {
-                deserialize_struct_unnamed_fields(
-                    cx,
-                    builder,
-                    struct_ident,
-                    struct_path,
-                    &fields,
-                    state,
-                    trait_generics,
-                    visitor_item,
-                    visitor_ty,
-                    visitor_expr,
-                    value_ty,
-                )
-            }
+            deserialize_tuple_struct(
+                cx,
+                builder,
+                struct_ident,
+                struct_path,
+                &fields,
+                state,
+                trait_generics,
+                visitor_item,
+                visitor_ty,
+                visitor_expr,
+                value_ty,
+            )
         }
         Named(ref fields) => {
             deserialize_struct_named_fields(
@@ -263,7 +266,7 @@ fn deserialize_struct(
     }
 }
 
-fn deserialize_struct_empty_fields(
+fn deserialize_unit_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     type_ident: Ident,
@@ -312,7 +315,7 @@ fn deserialize_struct_empty_fields(
     })
 }
 
-fn deserialize_struct_unnamed_fields(
+fn deserialize_tuple_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_ident: Ident,
@@ -331,7 +334,7 @@ fn deserialize_struct_unnamed_fields(
         .map(|i| builder.id(&format!("__field{}", i)))
         .collect();
 
-    let visit_seq_expr = declare_visit_seq(
+    let visit_seq_expr = deserialize_seq(
         cx,
         builder,
         struct_path,
@@ -369,7 +372,7 @@ fn deserialize_struct_unnamed_fields(
     })
 }
 
-fn declare_visit_seq(
+fn deserialize_seq(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
@@ -664,14 +667,12 @@ fn deserialize_enum(
     enum_def: &EnumDef,
     trait_generics: &ast::Generics,
     type_generics: &ast::Generics,
+    visitor_item: P<ast::Item>,
+    visitor_ty: P<ast::Ty>,
+    visitor_expr: P<ast::Expr>,
     value_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
-
-    let (visitor_struct, visitor_expr) = deserialize_visitor(
-        builder,
-        trait_generics,
-    );
 
     let type_name = builder.expr().str(type_ident);
 
@@ -688,9 +689,11 @@ fn deserialize_enum(
                 fields,
                 cx.expr_ident(span, cx.ident_of("visitor")),
                 variant,
+                visitor_item.clone(),
+                visitor_ty.clone(),
+                visitor_expr.clone(),
                 &value_ty,
                 &trait_generics,
-                &type_generics,
             );
 
             let s = builder.expr().str(name);
@@ -699,7 +702,7 @@ fn deserialize_enum(
         .collect();
 
     quote_expr!(cx, {
-        $visitor_struct;
+        $visitor_item
 
         impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
             type Value = $value_ty;
@@ -742,9 +745,11 @@ fn deserialize_enum_variant(
     fields: &StaticFields,
     state: P<ast::Expr>,
     variant: &P<ast::Variant>,
+    visitor_item: P<ast::Item>,
+    visitor_ty: P<ast::Ty>,
+    visitor_expr: P<ast::Expr>,
     value_ty: &P<ast::Ty>,
     trait_generics: &ast::Generics,
-    type_generics: &ast::Generics,
 ) -> P<ast::Expr> {
     let variant_path = builder.path()
         .ids(&[type_ident, variant_ident])
@@ -765,8 +770,8 @@ fn deserialize_enum_variant(
                 &*fields,
                 variant_path,
                 trait_generics,
-                type_generics,
                 state,
+                visitor_ty,
                 value_ty,
             )
         }
@@ -778,8 +783,10 @@ fn deserialize_enum_variant(
                 &*fields,
                 variant_path,
                 trait_generics,
-                type_generics,
                 state,
+                visitor_item,
+                visitor_ty,
+                visitor_expr,
                 value_ty,
                 variant,
             )
@@ -793,8 +800,8 @@ fn deserialize_enum_variant_seq(
     fields: &[Span],
     variant_path: ast::Path,
     trait_generics: &ast::Generics,
-    type_generics: &ast::Generics,
     state: P<ast::Expr>,
+    visitor_ty: P<ast::Ty>,
     value_ty: &P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
@@ -804,22 +811,24 @@ fn deserialize_enum_variant_seq(
         .map(|i| token::str_to_ident(&format!("__field{}", i)))
         .collect();
 
-    let visit_seq_expr = declare_visit_seq(
+    let (visitor_item, visitor_expr) = deserialize_visitor(
+        builder,
+        trait_generics,
+    );
+
+    let visit_seq_expr = deserialize_seq(
         cx,
         builder,
         variant_path,
         &field_names,
     );
 
-    let (visitor_struct, visitor_expr) = deserialize_visitor(
-        builder,
-        trait_generics,
-    );
-
     quote_expr!(cx, {
-        $visitor_struct
+        $visitor_item
 
-        impl $trait_generics ::serde::de::EnumSeqVisitor for __Visitor $type_generics $where_clause {
+        impl $trait_generics ::serde::de::EnumSeqVisitor
+        for $visitor_ty
+        $where_clause {
             type Value = $value_ty;
 
             fn visit<
@@ -840,8 +849,10 @@ fn deserialize_enum_variant_map(
     fields: &[(Ident, Span)],
     variant_path: ast::Path,
     trait_generics: &ast::Generics,
-    type_generics: &ast::Generics,
     state: P<ast::Expr>,
+    visitor_item: P<ast::Item>,
+    visitor_ty: P<ast::Ty>,
+    visitor_expr: P<ast::Expr>,
     value_ty: &P<ast::Ty>,
     variant: &P<ast::Variant>,
 ) -> P<ast::Expr> {
@@ -876,16 +887,14 @@ fn deserialize_enum_variant_map(
         },
     );
 
-    let (visitor_struct, visitor_expr) = deserialize_visitor(
-        builder,
-        trait_generics
-    );
-
     quote_expr!(cx, {
-        $visitor_struct
         $field_devisitor
 
-        impl $trait_generics ::serde::de::EnumMapVisitor for __Visitor $type_generics $where_clause {
+        $visitor_item
+
+        impl $trait_generics ::serde::de::EnumMapVisitor
+        for $visitor_ty
+        $where_clause {
             type Value = $value_ty;
 
             fn visit<
