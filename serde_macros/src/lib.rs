@@ -660,6 +660,10 @@ fn deserialize_struct(
     trait_generics: &ast::Generics,
     impl_generics: &ast::Generics,
 ) -> P<ast::Expr> {
+    let visitor_ty = builder.ty().path()
+        .segment("__Visitor").with_generics(trait_generics.clone()).build()
+        .build();
+
     match *fields {
         Unnamed(ref fields) => {
             if fields.is_empty() {
@@ -680,7 +684,7 @@ fn deserialize_struct(
                     &fields,
                     state,
                     trait_generics,
-                    impl_generics,
+                    visitor_ty,
                 )
             }
         }
@@ -696,7 +700,7 @@ fn deserialize_struct(
                 state,
                 struct_def,
                 trait_generics,
-                impl_generics,
+                visitor_ty,
             )
         }
     }
@@ -760,7 +764,7 @@ fn deserialize_struct_unnamed_fields(
     fields: &[Span],
     state: P<ast::Expr>,
     trait_generics: &ast::Generics,
-    type_generics: &ast::Generics,
+    visitor_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
@@ -784,13 +788,13 @@ fn deserialize_struct_unnamed_fields(
     let struct_name = builder.expr().str(struct_ident);
 
     let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(type_generics.clone()).build()
+        .segment(type_ident).with_generics(trait_generics.clone()).build()
         .build();
 
     quote_expr!(cx, {
         $visitor_struct
 
-        impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
+        impl $trait_generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $value_ty;
 
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> Result<$value_ty, __V::Error>
@@ -860,7 +864,7 @@ fn deserialize_struct_named_fields(
     state: P<ast::Expr>,
     struct_def: &StructDef,
     trait_generics: &ast::Generics,
-    type_generics: &ast::Generics,
+    visitor_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
@@ -898,10 +902,6 @@ fn deserialize_struct_named_fields(
 
     let struct_name = builder.expr().str(struct_ident);
 
-    let visitor_ty = builder.ty().path()
-        .segment("__Visitor").with_generics(trait_generics.clone()).build()
-        .build();
-
     let value_ty = builder.ty().path()
         .segment(type_ident).with_generics(trait_generics.clone()).build()
         .build();
@@ -929,7 +929,7 @@ fn deserialize_struct_named_fields(
 
         $visitor_struct;
 
-        impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
+        impl $trait_generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $value_ty;
 
             #[inline]
