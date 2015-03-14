@@ -763,7 +763,7 @@ fn deserialize_struct_unnamed_fields(
     );
 
     // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
-    let (visitor_struct, visitor_expr) = deserialize_struct_unnamed_field_visitor(
+    let (visitor_struct, visitor_expr) = deserialize_struct_field_visitor(
         builder,
         generics
     );
@@ -1168,43 +1168,19 @@ fn deserialize_enum(
         )
         .build();
 
+    let where_clause = &trait_generics.where_clause;
+
     let type_generics = builder.from_generics(trait_generics.clone())
         .strip_bounds()
         .build();
 
-    // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
-    let (visitor_struct, visitor_expr) = if generics.ty_params.is_empty() {
-        (
-            builder.item().tuple_struct("__Visitor")
-                .build(),
-            builder.expr().id("__Visitor"),
-        )
-    } else {
-        (
-            builder.item().tuple_struct("__Visitor")
-                .generics().with(generics.clone()).build()
-                .with_tys(
-                    generics.ty_params.iter().map(|ty_param| {
-                        builder.ty().phantom_data().id(ty_param.ident)
-                    })
-                )
-                .build(),
-            builder.expr().call().id("__Visitor")
-                .with_args(
-                    generics.ty_params.iter().map(|_| {
-                        builder.expr().phantom_data()
-                    })
-                )
-                .build(),
-        )
-    };
-
-    let visitor_ty = builder.ty().path()
-        .segment("__Visitor").with_generics(generics.clone()).build()
-        .build();
+    let (visitor_struct, visitor_expr) = deserialize_struct_field_visitor(
+        builder,
+        generics,
+    );
 
     let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(generics.clone()).build()
+        .segment(type_ident).with_generics(type_generics.clone()).build()
         .build();
 
     let type_name = builder.expr().str(type_ident);
@@ -1212,7 +1188,7 @@ fn deserialize_enum(
     // Match arms to extract a variant from a string
     let variant_arms: Vec<ast::Arm> = fields.iter()
         .zip(enum_def.variants.iter())
-        .map(|(&(name, span, ref fields), variant_ptr)| {
+        .map(|(&(name, span, ref fields), variant)| {
             let value = deserialize_enum_variant(
                 cx,
                 span,
@@ -1221,7 +1197,7 @@ fn deserialize_enum(
                 name,
                 fields,
                 cx.expr_ident(span, cx.ident_of("visitor")),
-                variant_ptr,
+                variant,
                 &value_ty,
                 &trait_generics,
                 &type_generics,
@@ -1235,7 +1211,7 @@ fn deserialize_enum(
     quote_expr!(cx, {
         $visitor_struct;
 
-        impl $trait_generics ::serde::de::Visitor for $visitor_ty {
+        impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
             type Value = $value_ty;
 
             fn visit_enum<__V>(&mut self,
@@ -1267,7 +1243,8 @@ fn deserialize_enum(
     })
 }
 
-fn deserialize_struct_unnamed_field_visitor(
+// Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
+fn deserialize_struct_field_visitor(
     builder: &aster::AstBuilder,
     generics: &ast::Generics,
 ) -> (P<ast::Item>, P<ast::Expr>) {
@@ -1306,7 +1283,7 @@ fn deserialize_enum_variant(
     variant_ident: Ident,
     fields: &StaticFields,
     state: P<ast::Expr>,
-    variant_ptr: &P<ast::Variant>,
+    variant: &P<ast::Variant>,
     value_ty: &P<ast::Ty>,
     trait_generics: &ast::Generics,
     type_generics: &ast::Generics,
@@ -1346,7 +1323,7 @@ fn deserialize_enum_variant(
                 type_generics,
                 state,
                 value_ty,
-                variant_ptr,
+                variant,
             )
         }
     }
@@ -1377,7 +1354,7 @@ fn deserialize_enum_variant_seq(
         &field_names,
     );
 
-    let (visitor_struct, visitor_expr) = deserialize_struct_unnamed_field_visitor(
+    let (visitor_struct, visitor_expr) = deserialize_struct_field_visitor(
         builder,
         trait_generics,
     );
@@ -1410,7 +1387,7 @@ fn deserialize_enum_variant_map(
     type_generics: &ast::Generics,
     state: P<ast::Expr>,
     value_ty: &P<ast::Ty>,
-    variant_ptr: &P<ast::Variant>,
+    variant: &P<ast::Variant>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
@@ -1425,7 +1402,7 @@ fn deserialize_enum_variant_map(
         builder,
         &field_names,
         fields,
-        match variant_ptr.node.kind {
+        match variant.node.kind {
             ast::VariantKind::StructVariantKind(ref sd) => &*sd,
             _ => panic!("Mismatched enum types")
         },
@@ -1437,13 +1414,13 @@ fn deserialize_enum_variant_map(
         variant_path,
         &field_names,
         fields,
-        match variant_ptr.node.kind {
+        match variant.node.kind {
             ast::VariantKind::StructVariantKind(ref sd) => &*sd,
             _ => panic!("Mismatched enum types")
         },
     );
 
-    let (visitor_struct, visitor_expr) = deserialize_struct_unnamed_field_visitor(
+    let (visitor_struct, visitor_expr) = deserialize_struct_field_visitor(
         builder,
         trait_generics
     );
