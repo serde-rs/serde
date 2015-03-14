@@ -11,6 +11,6 @@ name = "serde_macros"
 plugin = true
 
 [dependencies]
-quasi = "0.1.3"
-quasi_macros = "0.1.3"
-aster = "0.1.3"
+aster = "*"
+quasi = "*"
+quasi_macros = "*"
