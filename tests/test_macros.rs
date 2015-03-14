@@ -50,6 +50,25 @@ enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
         e: &'a mut D,
         //f: <D as Trait>::Type,
     },
+
+    // Make sure we can support more than one variant.
+    _Unit2,
+    _Seq2(
+        i8,
+        B,
+        &'a C,
+        //C::Type,
+        &'a mut D,
+        //<D as Trait>::Type,
+    ),
+    _Map2 {
+        a: i8,
+        b: B,
+        c: &'a C,
+        //d: C::Type,
+        e: &'a mut D,
+        //f: <D as Trait>::Type,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -65,6 +84,25 @@ enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
         //<D as Trait>::Type,
     ),
     Map {
+        a: i8,
+        b: B,
+        c: C,
+        //d: C::Type,
+        e: D,
+        //f: <D as Trait>::Type,
+    },
+
+    // Make sure we can support more than one variant.
+    _Unit2,
+    _Seq2(
+        i8,
+        B,
+        C,
+        //C::Type,
+        D,
+        //<D as Trait>::Type,
+    ),
+    _Map2 {
         a: i8,
         b: B,
         c: C,
