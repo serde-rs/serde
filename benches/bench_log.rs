@@ -6,7 +6,7 @@ extern crate serde;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate test;
 
-use std::io::{self, ReadExt, WriteExt};
+use std::io::{self, Read, Write};
 use std::num::FromPrimitive;
 use test::Bencher;
 
@@ -637,7 +637,7 @@ impl MyMemWriter0 {
 }
 
 
-impl io::Write for MyMemWriter0 {
+impl Write for MyMemWriter0 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.buf.push_all(buf);
@@ -682,7 +682,7 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
     }
 }
 
-impl io::Write for MyMemWriter1 {
+impl Write for MyMemWriter1 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         push_all_bytes(&mut self.buf, buf);
@@ -872,7 +872,7 @@ fn bench_copy(b: &mut Bencher) {
     });
 }
 
-fn manual_serialize_no_escape<W: io::Write>(wr: &mut W, log: &Log) {
+fn manual_serialize_no_escape<W: Write>(wr: &mut W, log: &Log) {
     wr.write(b"{\"timestamp\":").unwrap();
     (write!(wr, "{}", log.timestamp)).unwrap();
     wr.write(b",\"zone_id\":").unwrap();
@@ -929,7 +929,7 @@ fn manual_serialize_no_escape<W: io::Write>(wr: &mut W, log: &Log) {
     wr.write(b"}").unwrap();
 }
 
-fn manual_serialize_escape<W: io::Write>(wr: &mut W, log: &Log) {
+fn manual_serialize_escape<W: Write>(wr: &mut W, log: &Log) {
     wr.write_all(b"{").unwrap();
     escape_str(wr, "timestamp").unwrap();
     wr.write_all(b":").unwrap();
