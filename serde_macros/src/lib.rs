@@ -17,7 +17,6 @@ use syntax::ast::{
     EnumDef,
 };
 use syntax::ast;
-use syntax::ast_util;
 use syntax::codemap::{Span, respan};
 use syntax::ext::base::{ExtCtxt, Decorator, ItemDecorator};
 use syntax::ext::build::AstBuilder;
@@ -178,7 +177,6 @@ fn serialize_substructure(
         (&ast::ItemEnum(_, ref generics), &EnumMatching(_idx, variant, ref fields)) => {
             serialize_enum(
                 cx,
-                span,
                 &builder,
                 serializer,
                 substr.type_ident,
@@ -362,7 +360,6 @@ fn serialize_struct(
 
 fn serialize_enum(
     cx: &ExtCtxt,
-    span: Span,
     builder: &aster::AstBuilder,
     serializer: P<Expr>,
     type_ident: Ident,
@@ -383,7 +380,6 @@ fn serialize_enum(
     } else {
         serialize_variant(
             cx,
-            span,
             builder,
             serializer,
             type_name,
@@ -396,7 +392,6 @@ fn serialize_enum(
 
 fn serialize_variant(
     cx: &ExtCtxt,
-    span: Span,
     builder: &aster::AstBuilder,
     serializer: P<ast::Expr>,
     type_name: P<ast::Expr>,
@@ -405,7 +400,7 @@ fn serialize_variant(
     variant: &ast::Variant,
     fields: &[FieldInfo],
 ) -> P<Expr> {
-    let generics = builder.from_generics(generics.clone())
+    let trait_generics = builder.from_generics(generics.clone())
         .add_lifetime_bound("'__a")
         .add_ty_param_bound(
             builder.path().global().ids(&["serde", "ser", "Serialize"]).build()
@@ -413,11 +408,13 @@ fn serialize_variant(
         .lifetime_name("'__a")
         .build();
 
-    let (
-        trait_name,
-        visitor_method_name,
-        tys,
-    ): (Ident, Ident, Vec<P<ast::Ty>>) = match variant.node.kind {
+    let where_clause = &generics.where_clause;
+
+    let type_generics = builder.from_generics(trait_generics.clone())
+        .strip_bounds()
+        .build();
+
+    let (trait_name, method, tys,): (_, _, Vec<_>) = match variant.node.kind {
         ast::TupleVariantKind(ref args) => {
             (
                 cx.ident_of("SeqVisitor"),
@@ -449,32 +446,21 @@ fn serialize_variant(
         }))
         .build();
 
-    let visitor_ident = builder.id("__Visitor");
-
-    let visitor_struct = builder.item().struct_(visitor_ident)
-        .generics().with(generics.clone()).build()
-        .field("state").usize()
-        .field("value").build(value_ty)
+    let value_expr = builder.expr().tuple()
+        .with_exprs(
+            fields.iter().map(|field| {
+                builder.expr()
+                    .addr_of()
+                    .build(field.self_.clone())
+            })
+        )
         .build();
-
-    let visitor_expr = builder.expr().struct_path(visitor_ident)
-        .field("state").usize(0)
-        .field("value").tuple()
-            .with_exprs(
-                fields.iter().map(|field| {
-                    builder.expr()
-                        .addr_of()
-                        .build(field.self_.clone())
-                })
-            )
-            .build()
-        .build();
-
-    let mut first = true;
 
     let visitor_arms: Vec<ast::Arm> = fields.iter()
         .enumerate()
         .map(|(state, field)| {
+            let first = state == 0;
+
             let field_expr = builder.expr()
                 .tup_field(state)
                 .field("value").self_();
@@ -503,8 +489,6 @@ fn serialize_variant(
                 }
             };
 
-            first = false;
-
             quote_arm!(cx,
                 $state => {
                     self.state += 1;
@@ -514,70 +498,36 @@ fn serialize_variant(
         })
         .collect();
 
-    let trait_path = builder.path()
-        .global()
-        .ids(&["serde", "ser"]).id(trait_name)
-        .build();
-
-    let trait_ref = cx.trait_ref(trait_path);
-    let opt_trait_ref = Some(trait_ref);
-
-    let self_ty = builder.ty()
-        .path()
-        .segment("__Visitor")
-            .with_generics(generics.clone())
-            .build()
-        .build();
-
     let len = fields.len();
-    let impl_ident = ast_util::impl_pretty_name(&opt_trait_ref, Some(&self_ty));
-
-    let methods = vec![
-        ast::MethodImplItem(
-            quote_method!(cx,
-                fn visit<V>(&mut self, serializer: &mut V) -> Result<Option<()>, V::Error>
-                    where V: ::serde::ser::Serializer,
-                {
-                    match self.state {
-                        $visitor_arms
-                        _ => Ok(None),
-                    }
-                }
-            )
-        ),
-
-        ast::MethodImplItem(
-            quote_method!(cx,
-                fn len(&self) -> Option<usize> {
-                    Some($len)
-                }
-            )
-        ),
-    ];
-
-    let visitor_impl = cx.item(
-        span,
-        impl_ident,
-        vec![],
-        ast::ItemImpl(
-            ast::Unsafety::Normal,
-            ast::ImplPolarity::Positive,
-            generics,
-            opt_trait_ref,
-            self_ty,
-            methods,
-        ),
-    );
 
     quote_expr!(cx, {
-        $visitor_struct
-        $visitor_impl
+        struct __Visitor $trait_generics $where_clause {
+            state: usize,
+            value: $value_ty,
+        }
 
-        ::serde::ser::Serializer::$visitor_method_name(
+        impl $trait_generics ::serde::ser::$trait_name for __Visitor $type_generics $where_clause {
+            fn visit<V>(&mut self, serializer: &mut V) -> Result<Option<()>, V::Error>
+                where V: ::serde::ser::Serializer,
+            {
+                match self.state {
+                    $visitor_arms
+                    _ => Ok(None),
+                }
+            }
+            fn len(&self) -> Option<usize> {
+                Some($len)
+            }
+        }
+
+        ::serde::ser::Serializer::$method(
             $serializer,
             $type_name,
             $variant_name,
-            $visitor_expr,
+            __Visitor {
+                state: 0,
+                value: $value_expr,
+            },
         )
     })
 }
@@ -789,10 +739,16 @@ fn deserialize_struct_unnamed_fields(
     state: P<ast::Expr>,
     generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let visitor_impl_generics = builder.from_generics(generics.clone())
+    let trait_generics = builder.from_generics(generics.clone())
         .add_ty_param_bound(
             builder.path().global().ids(&["serde", "de", "Deserialize"]).build()
         )
+        .build();
+
+    let where_clause = &trait_generics.where_clause;
+
+    let type_generics = builder.from_generics(trait_generics.clone())
+        .strip_bounds()
         .build();
 
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
@@ -835,10 +791,6 @@ fn deserialize_struct_unnamed_fields(
 
     let struct_name = builder.expr().str(struct_ident);
 
-    let visitor_ty = builder.ty().path()
-        .segment("__Visitor").with_generics(generics.clone()).build()
-        .build();
-
     let value_ty = builder.ty().path()
         .segment(type_ident).with_generics(generics.clone()).build()
         .build();
@@ -846,7 +798,7 @@ fn deserialize_struct_unnamed_fields(
     quote_expr!(cx, {
         $visitor_struct;
 
-        impl $visitor_impl_generics ::serde::de::Visitor for $visitor_ty {
+        impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
             type Value = $value_ty;
 
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> Result<$value_ty, __V::Error>
