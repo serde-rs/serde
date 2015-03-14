@@ -706,6 +706,10 @@ fn deserialize_struct(
     visitor_ty: P<ast::Ty>,
     visitor_expr: P<ast::Expr>,
 ) -> P<ast::Expr> {
+    let value_ty = builder.ty().path()
+        .segment(type_ident).with_generics(trait_generics.clone()).build()
+        .build();
+
     match *fields {
         Unnamed(ref fields) => {
             if fields.is_empty() {
@@ -720,7 +724,6 @@ fn deserialize_struct(
                 deserialize_struct_unnamed_fields(
                     cx,
                     builder,
-                    type_ident,
                     struct_ident,
                     struct_path,
                     &fields,
@@ -729,6 +732,7 @@ fn deserialize_struct(
                     visitor_item,
                     visitor_ty,
                     visitor_expr,
+                    value_ty,
                 )
             }
         }
@@ -737,7 +741,6 @@ fn deserialize_struct(
                 cx,
                 span,
                 builder,
-                type_ident,
                 struct_ident,
                 struct_path,
                 &fields,
@@ -747,6 +750,7 @@ fn deserialize_struct(
                 visitor_item,
                 visitor_ty,
                 visitor_expr,
+                value_ty,
             )
         }
     }
@@ -804,7 +808,6 @@ fn deserialize_struct_empty_fields(
 fn deserialize_struct_unnamed_fields(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    type_ident: Ident,
     struct_ident: Ident,
     struct_path: ast::Path,
     fields: &[Span],
@@ -813,6 +816,7 @@ fn deserialize_struct_unnamed_fields(
     visitor_item: P<ast::Item>,
     visitor_ty: P<ast::Ty>,
     visitor_expr: P<ast::Expr>,
+    value_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
@@ -828,10 +832,6 @@ fn deserialize_struct_unnamed_fields(
     );
 
     let struct_name = builder.expr().str(struct_ident);
-
-    let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(trait_generics.clone()).build()
-        .build();
 
     quote_expr!(cx, {
         $visitor_item
@@ -899,7 +899,6 @@ fn deserialize_struct_named_fields(
     cx: &ExtCtxt,
     span: Span,
     builder: &aster::AstBuilder,
-    type_ident: Ident,
     struct_ident: Ident,
     struct_path: ast::Path,
     fields: &[(Ident, Span)],
@@ -909,6 +908,7 @@ fn deserialize_struct_named_fields(
     visitor_item: P<ast::Item>,
     visitor_ty: P<ast::Ty>,
     visitor_expr: P<ast::Expr>,
+    value_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
@@ -916,12 +916,6 @@ fn deserialize_struct_named_fields(
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
         .map(|i| token::str_to_ident(&format!("__field{}", i)))
         .collect();
-
-    let struct_name = builder.expr().str(struct_ident);
-
-    let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(trait_generics.clone()).build()
-        .build();
 
     let field_devisitor = declare_map_field_devisitor(
         cx,
@@ -940,6 +934,8 @@ fn deserialize_struct_named_fields(
         fields,
         struct_def
     );
+
+    let struct_name = builder.expr().str(struct_ident);
 
     quote_expr!(cx, {
         $field_devisitor
