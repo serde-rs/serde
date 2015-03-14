@@ -625,6 +625,10 @@ fn deserialize_substructure(
         &trait_generics
     );
 
+    let value_ty = builder.ty().path()
+        .segment(substr.type_ident).with_generics(trait_generics.clone()).build()
+        .build();
+
     match *substr.fields {
         StaticStruct(ref struct_def, ref fields) => {
             deserialize_struct(
@@ -633,7 +637,7 @@ fn deserialize_substructure(
                 &builder,
                 substr.type_ident,
                 substr.type_ident,
-                cx.path(span, vec![substr.type_ident]),
+                builder.path().id(substr.type_ident).build(),
                 fields,
                 state,
                 struct_def,
@@ -641,6 +645,7 @@ fn deserialize_substructure(
                 visitor_item,
                 visitor_ty,
                 visitor_expr,
+                value_ty,
             )
         }
         StaticEnum(ref enum_def, ref fields) => {
@@ -653,6 +658,7 @@ fn deserialize_substructure(
                 enum_def,
                 &trait_generics,
                 &type_generics,
+                value_ty,
             )
         }
         _ => cx.bug("expected StaticEnum or StaticStruct in derive(Deserialize)")
@@ -705,11 +711,8 @@ fn deserialize_struct(
     visitor_item: P<ast::Item>,
     visitor_ty: P<ast::Ty>,
     visitor_expr: P<ast::Expr>,
+    value_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
-    let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(trait_generics.clone()).build()
-        .build();
-
     match *fields {
         Unnamed(ref fields) => {
             if fields.is_empty() {
@@ -1184,6 +1187,7 @@ fn deserialize_enum(
     enum_def: &EnumDef,
     trait_generics: &ast::Generics,
     type_generics: &ast::Generics,
+    value_ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
@@ -1191,10 +1195,6 @@ fn deserialize_enum(
         builder,
         trait_generics,
     );
-
-    let value_ty = builder.ty().path()
-        .segment(type_ident).with_generics(type_generics.clone()).build()
-        .build();
 
     let type_name = builder.expr().str(type_ident);
 
@@ -1269,15 +1269,15 @@ fn deserialize_enum_variant(
     trait_generics: &ast::Generics,
     type_generics: &ast::Generics,
 ) -> P<ast::Expr> {
-    let variant_path = cx.path(span, vec![type_ident, variant_ident]);
+    let variant_path = builder.path()
+        .ids(&[type_ident, variant_ident])
+        .build();
 
     match *fields {
         Unnamed(ref fields) if fields.is_empty() => {
-            let result = cx.expr_path(variant_path);
-
             quote_expr!(cx, {
                 try!($state.visit_unit());
-                Ok($result)
+                Ok($variant_path)
             })
         }
 
@@ -1322,7 +1322,6 @@ fn deserialize_enum_variant_seq(
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
-
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
         .map(|i| token::str_to_ident(&format!("__field{}", i)))
@@ -1356,7 +1355,6 @@ fn deserialize_enum_variant_seq(
         $state.visit_seq($visitor_expr)
     })
 }
-
 
 fn deserialize_enum_variant_map(
     cx: &ExtCtxt,
