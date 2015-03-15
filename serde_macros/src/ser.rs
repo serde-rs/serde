@@ -13,7 +13,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use field::field_alias;
+use field::struct_field_strs;
 
 pub fn expand_derive_serialize(
     cx: &mut ExtCtxt,
@@ -520,24 +520,9 @@ fn serialize_struct_visitor<I>(
 {
     let len = struct_def.fields.len();
 
-    let key_exprs = struct_def.fields.iter()
-        .map(|field| {
-            match field_alias(field) {
-                Some(lit) => builder.expr().build_lit(P(lit.clone())),
-                None => {
-                    match field.node.kind {
-                        ast::NamedField(name, _) => {
-                            builder.expr().str(name)
-                        }
-                        ast::UnnamedField(_) => {
-                            cx.bug("struct has named and unnamed fields")
-                        }
-                    }
-                }
-            }
-        });
+    let key_exprs = struct_field_strs(cx, builder, struct_def);
 
-    let arms: Vec<ast::Arm> = key_exprs
+    let arms: Vec<ast::Arm> = key_exprs.iter()
         .zip(value_exprs)
         .enumerate()
         .map(|(i, (key_expr, value_expr))| {

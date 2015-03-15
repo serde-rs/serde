@@ -1,4 +1,8 @@
 use syntax::ast;
+use syntax::ext::base::ExtCtxt;
+use syntax::ptr::P;
+
+use aster;
 
 pub fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
     field.node.attrs.iter()
@@ -26,4 +30,28 @@ pub fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
                 None
             }
         })
+}
+
+pub fn struct_field_strs(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    struct_def: &ast::StructDef,
+) -> Vec<P<ast::Expr>> {
+    struct_def.fields.iter()
+        .map(|field| {
+            match field_alias(field) {
+                Some(alias) => builder.expr().build_lit(P(alias.clone())),
+                None => {
+                    match field.node.kind {
+                        ast::NamedField(name, _) => {
+                            builder.expr().str(name)
+                        }
+                        ast::UnnamedField(_) => {
+                            cx.bug("struct has named and unnamed fields")
+                        }
+                    }
+                }
+            }
+        })
+        .collect()
 }

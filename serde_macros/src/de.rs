@@ -34,7 +34,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use field::field_alias;
+use field::struct_field_strs;
 
 pub fn expand_derive_deserialize(
     cx: &mut ExtCtxt,
@@ -431,7 +431,6 @@ fn deserialize_struct_named_fields(
         cx,
         builder,
         &field_names,
-        fields,
         struct_def,
     );
 
@@ -483,7 +482,6 @@ fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     field_names: &[ast::Ident],
-    fields: &[Ident],
     struct_def: &StructDef,
 ) -> Vec<P<ast::Item>> {
     let field_enum = builder.item().enum_("__Field")
@@ -495,20 +493,13 @@ fn deserialize_field_visitor(
         .build();
 
     // Get aliases
-    let aliases: Vec<Option<&ast::Lit>> = struct_def.fields.iter()
-        .map(field_alias)
-        .collect();
+    let aliases = struct_field_strs(cx, builder, struct_def);
 
     // Match arms to extract a field from a string
-    let field_arms: Vec<ast::Arm> = fields.iter()
+    let field_arms: Vec<ast::Arm> = aliases.iter()
         .zip(field_names.iter())
-        .zip(aliases.iter())
-        .map(|((name, field), alias_lit)| {
-            let s = match *alias_lit {
-                Some(lit) => builder.expr().build_lit(P(lit.clone())),
-                None => builder.expr().str(name),
-            };
-            quote_arm!(cx, $s => { Ok(__Field::$field) })
+        .map(|(alias, field)| {
+            quote_arm!(cx, $alias => { Ok(__Field::$field) })
         })
         .collect();
 
@@ -851,7 +842,6 @@ fn deserialize_enum_variant_map(
         cx,
         builder,
         &field_names,
-        fields,
         match variant.node.kind {
             ast::VariantKind::StructVariantKind(ref sd) => &*sd,
             _ => panic!("Mismatched enum types")
