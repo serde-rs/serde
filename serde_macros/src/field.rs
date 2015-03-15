@@ -4,7 +4,7 @@ use syntax::ptr::P;
 
 use aster;
 
-pub fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
+fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
     field.node.attrs.iter()
         .find(|sa| {
             if let ast::MetaList(ref n, _) = sa.node.value.node {
@@ -54,4 +54,27 @@ pub fn struct_field_strs(
             }
         })
         .collect()
+}
+
+pub fn default_value(field: &ast::StructField) -> bool {
+    field.node.attrs.iter()
+        .any(|sa| {
+             if let ast::MetaItem_::MetaList(ref n, ref vals) = sa.node.value.node {
+                 if n == &"serde" {
+                     vals.iter()
+                         .map(|mi|
+                              if let ast::MetaItem_::MetaWord(ref n) = mi.node {
+                                  n == &"default"
+                              } else {
+                                  false
+                              })
+                         .any(|x| x)
+                 } else {
+                     false
+                 }
+             }
+             else {
+                 false
+             }
+        })
 }

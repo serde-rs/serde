@@ -1,7 +1,6 @@
 use syntax::ast::{
     Ident,
     MetaItem,
-    MetaItem_,
     Item,
     Expr,
     MutMutable,
@@ -34,7 +33,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use field::struct_field_strs;
+use field;
 
 pub fn expand_derive_deserialize(
     cx: &mut ExtCtxt,
@@ -422,25 +421,12 @@ fn deserialize_struct_named_fields(
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
-    // Create the field names for the fields.
-    let field_names: Vec<ast::Ident> = (0 .. fields.len())
-        .map(|i| builder.id(format!("__field{}", i)))
-        .collect();
-
-    let field_visitor = deserialize_field_visitor(
+    let (field_visitor, visit_map_expr) = deserialize_struct_visitor(
         cx,
         builder,
-        &field_names,
         struct_def,
-    );
-
-    let visit_map_expr = deserialize_map(
-        cx,
-        builder,
         struct_path,
-        &field_names,
         fields,
-        struct_def
     );
 
     let struct_name = builder.expr().str(struct_ident);
@@ -478,86 +464,6 @@ fn deserialize_struct_named_fields(
     })
 }
 
-fn deserialize_field_visitor(
-    cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
-    field_names: &[ast::Ident],
-    struct_def: &StructDef,
-) -> Vec<P<ast::Item>> {
-    let field_enum = builder.item()
-        .attr().allow(&["non_camel_case_types"])
-        .enum_("__Field")
-        .with_variants(
-            field_names.iter().map(|field| {
-                builder.variant(field).tuple().build()
-            })
-        )
-        .build();
-
-    // Get aliases
-    let aliases = struct_field_strs(cx, builder, struct_def);
-
-    // Match arms to extract a field from a string
-    let field_arms: Vec<ast::Arm> = aliases.iter()
-        .zip(field_names.iter())
-        .map(|(alias, field)| {
-            quote_arm!(cx, $alias => { Ok(__Field::$field) })
-        })
-        .collect();
-
-    vec![
-        field_enum,
-
-        quote_item!(cx,
-            impl ::serde::de::Deserialize for __Field {
-                #[inline]
-                fn deserialize<S>(state: &mut S) -> Result<__Field, S::Error>
-                    where S: ::serde::de::Deserializer,
-                {
-                    struct __FieldVisitor;
-
-                    impl ::serde::de::Visitor for __FieldVisitor {
-                        type Value = __Field;
-
-                        fn visit_str<E>(&mut self, value: &str) -> Result<__Field, E>
-                            where E: ::serde::de::Error,
-                        {
-                            match value {
-                                $field_arms
-                                _ => Err(::serde::de::Error::syntax_error()),
-                            }
-                        }
-                    }
-
-                    state.visit(__FieldVisitor)
-                }
-            }
-        ).unwrap(),
-    ]
-}
-
-fn default_value(field: &ast::StructField) -> bool {
-    field.node.attrs.iter()
-        .any(|sa|
-             if let MetaItem_::MetaList(ref n, ref vals) = sa.node.value.node {
-                 if n == &"serde" {
-                     vals.iter()
-                         .map(|mi|
-                              if let MetaItem_::MetaWord(ref n) = mi.node {
-                                  n == &"default"
-                              } else {
-                                  false
-                              })
-                         .any(|x| x)
-                 } else {
-                     false
-                 }
-             }
-             else {
-                 false
-             })
-}
-
 fn deserialize_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
@@ -570,10 +476,10 @@ fn deserialize_map(
     let let_values: Vec<P<ast::Stmt>> = field_names.iter()
         .zip(struct_def.fields.iter())
         .map(|(field, sf)| {
-            if default_value(sf) {
-                quote_stmt!(
-                    cx,
-                    let mut $field = Some(::std::default::Default::default());)
+            if field::default_value(sf) {
+                quote_stmt!(cx,
+                    let mut $field = Some(::std::default::Default::default());
+                )
             } else {
                 quote_stmt!(cx, let mut $field = None;)
             }
@@ -828,31 +734,17 @@ fn deserialize_enum_variant_map(
 ) -> P<ast::Expr> {
     let where_clause = &trait_generics.where_clause;
 
-    // Create the field names for the fields.
-    let field_names: Vec<ast::Ident> = (0 .. fields.len())
-        .map(|i| builder.id(format!("__field{}", i)))
-        .collect();
+    let struct_def = match variant.node.kind {
+        ast::VariantKind::StructVariantKind(ref struct_def) => struct_def,
+        _ => panic!("Mismatched enum types")
+    };
 
-    let field_visitor = deserialize_field_visitor(
+    let (field_visitor, visit_map_expr) = deserialize_struct_visitor(
         cx,
         builder,
-        &field_names,
-        match variant.node.kind {
-            ast::VariantKind::StructVariantKind(ref sd) => &*sd,
-            _ => panic!("Mismatched enum types")
-        },
-    );
-
-    let visit_map_expr = deserialize_map(
-        cx,
-        builder,
+        struct_def,
         variant_path,
-        &field_names,
         fields,
-        match variant.node.kind {
-            ast::VariantKind::StructVariantKind(ref sd) => &*sd,
-            _ => panic!("Mismatched enum types")
-        },
     );
 
     quote_expr!(cx, {
@@ -874,4 +766,94 @@ fn deserialize_enum_variant_map(
 
         $state.visit_map($visitor_expr)
     })
+}
+
+fn deserialize_field_visitor(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    field_names: &[ast::Ident],
+    struct_def: &StructDef,
+) -> Vec<P<ast::Item>> {
+    let field_enum = builder.item()
+        .attr().allow(&["non_camel_case_types"])
+        .enum_("__Field")
+        .with_variants(
+            field_names.iter().map(|field| {
+                builder.variant(field).tuple().build()
+            })
+        )
+        .build();
+
+    // Get aliases
+    let aliases = field::struct_field_strs(cx, builder, struct_def);
+
+    // Match arms to extract a field from a string
+    let field_arms: Vec<ast::Arm> = aliases.iter()
+        .zip(field_names.iter())
+        .map(|(alias, field)| {
+            quote_arm!(cx, $alias => { Ok(__Field::$field) })
+        })
+        .collect();
+
+    vec![
+        field_enum,
+
+        quote_item!(cx,
+            impl ::serde::de::Deserialize for __Field {
+                #[inline]
+                fn deserialize<S>(state: &mut S) -> Result<__Field, S::Error>
+                    where S: ::serde::de::Deserializer,
+                {
+                    struct __FieldVisitor;
+
+                    impl ::serde::de::Visitor for __FieldVisitor {
+                        type Value = __Field;
+
+                        fn visit_str<E>(&mut self, value: &str) -> Result<__Field, E>
+                            where E: ::serde::de::Error,
+                        {
+                            match value {
+                                $field_arms
+                                _ => Err(::serde::de::Error::syntax_error()),
+                            }
+                        }
+                    }
+
+                    state.visit(__FieldVisitor)
+                }
+            }
+        ).unwrap(),
+    ]
+}
+
+fn deserialize_struct_visitor(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    struct_def: &ast::StructDef,
+    struct_path: ast::Path,
+    fields: &[Ident],
+) -> (Vec<P<ast::Item>>, P<ast::Expr>) {
+
+    // Create the field names for the fields.
+    let field_names: Vec<ast::Ident> = (0 .. struct_def.fields.len())
+        .map(|i| builder.id(format!("__field{}", i)))
+        .collect();
+
+    let field_visitor = deserialize_field_visitor(
+        cx,
+        builder,
+        &field_names,
+        struct_def,
+    );
+
+    let visit_map_expr = deserialize_map(
+        cx,
+        builder,
+        struct_path,
+        &field_names,
+        fields,
+        struct_def,
+    );
+
+    (field_visitor, visit_map_expr)
 }
