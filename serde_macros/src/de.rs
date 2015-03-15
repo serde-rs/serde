@@ -245,6 +245,10 @@ fn deserialize_struct(
             )
         }
         Named(ref fields) => {
+            let fields: Vec<_> = fields.iter()
+                .map(|&(name, _)| name.clone())
+                .collect();
+
             deserialize_struct_named_fields(
                 cx,
                 builder,
@@ -407,7 +411,7 @@ fn deserialize_struct_named_fields(
     builder: &aster::AstBuilder,
     struct_ident: Ident,
     struct_path: ast::Path,
-    fields: &[(Ident, Span)],
+    fields: &[Ident],
     state: P<ast::Expr>,
     struct_def: &StructDef,
     trait_generics: &ast::Generics,
@@ -479,7 +483,7 @@ fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     field_names: &[ast::Ident],
-    fields: &[(Ident, Span)],
+    fields: &[Ident],
     struct_def: &StructDef,
 ) -> Vec<P<ast::Item>> {
     let field_enum = builder.item().enum_("__Field")
@@ -499,15 +503,13 @@ fn deserialize_field_visitor(
     let field_arms: Vec<ast::Arm> = fields.iter()
         .zip(field_names.iter())
         .zip(aliases.iter())
-        .map(|((&(name, span), field), alias_lit)| {
-            let s = match alias_lit {
-                &None => cx.expr_str(span, token::get_ident(name)) ,
-                &Some(lit) =>{
-                    let lit = (*lit).clone();
-                    cx.expr_lit(lit.span, lit.node)
-                },
+        .map(|((name, field), alias_lit)| {
+            let s = match *alias_lit {
+                Some(lit) => builder.expr().build_lit(P(lit.clone())),
+                None => builder.expr().str(name),
             };
-            quote_arm!(cx, $s => Ok(__Field::$field),)})
+            quote_arm!(cx, $s => { Ok(__Field::$field) })
+        })
         .collect();
 
     vec![
@@ -548,7 +550,6 @@ fn deserialize_field_visitor(
     ]
 }
 
-
 fn default_value(field: &ast::StructField) -> bool {
     field.node.attrs.iter()
         .any(|sa|
@@ -576,7 +577,7 @@ fn deserialize_map(
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
     field_names: &[Ident],
-    fields: &[(Ident, Span)],
+    fields: &[Ident],
     struct_def: &StructDef,
 ) -> P<ast::Expr> {
     // Declare each field.
@@ -604,8 +605,8 @@ fn deserialize_map(
 
     let extract_values: Vec<P<ast::Stmt>> = fields.iter()
         .zip(field_names.iter())
-        .map(|(&(name, span), field)| {
-            let name_str = cx.expr_str(span, token::get_ident(name));
+        .map(|(name, field)| {
+            let name_str = builder.expr().str(name);
             quote_stmt!(cx,
                 let $field = match $field {
                     Some($field) => $field,
@@ -619,8 +620,8 @@ fn deserialize_map(
         .with_id_exprs(
             fields.iter()
                 .zip(field_names.iter())
-                .map(|(&(name, _), field)| { 
-                    (name, builder.expr().id(field))
+                .map(|(name, field)| {
+                    (name.clone(), builder.expr().id(field))
                 })
         )
         .build();
@@ -748,7 +749,7 @@ fn deserialize_enum_variant(
             deserialize_enum_variant_seq(
                 cx,
                 builder,
-                &*fields,
+                fields.len(),
                 variant_path,
                 trait_generics,
                 state,
@@ -757,10 +758,14 @@ fn deserialize_enum_variant(
             )
         }
         Named(ref fields) => {
+            let fields: Vec<_> = fields.iter()
+                .map(|&(field, _)| field.clone())
+                .collect();
+
             deserialize_enum_variant_map(
                 cx,
                 builder,
-                &*fields,
+                &fields,
                 variant_path,
                 trait_generics,
                 state,
@@ -777,7 +782,7 @@ fn deserialize_enum_variant(
 fn deserialize_enum_variant_seq(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    fields: &[Span],
+    fields: usize,
     variant_path: ast::Path,
     trait_generics: &ast::Generics,
     state: P<ast::Expr>,
@@ -787,7 +792,7 @@ fn deserialize_enum_variant_seq(
     let where_clause = &trait_generics.where_clause;
 
     // Create the field names for the fields.
-    let field_names: Vec<ast::Ident> = (0 .. fields.len())
+    let field_names: Vec<ast::Ident> = (0 .. fields)
         .map(|i| token::str_to_ident(&format!("__field{}", i)))
         .collect();
 
@@ -825,7 +830,7 @@ fn deserialize_enum_variant_seq(
 fn deserialize_enum_variant_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    fields: &[(Ident, Span)],
+    fields: &[Ident],
     variant_path: ast::Path,
     trait_generics: &ast::Generics,
     state: P<ast::Expr>,
