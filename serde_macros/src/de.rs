@@ -424,10 +424,10 @@ fn deserialize_struct_named_fields(
 
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
-        .map(|i| token::str_to_ident(&format!("__field{}", i)))
+        .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
-    let field_devisitor = declare_map_field_devisitor(
+    let field_visitor = deserialize_field_visitor(
         cx,
         span,
         builder,
@@ -436,7 +436,7 @@ fn deserialize_struct_named_fields(
         struct_def,
     );
 
-    let visit_map_expr = declare_visit_map(
+    let visit_map_expr = deserialize_map(
         cx,
         builder,
         struct_path,
@@ -448,7 +448,7 @@ fn deserialize_struct_named_fields(
     let struct_name = builder.expr().str(struct_ident);
 
     quote_expr!(cx, {
-        $field_devisitor
+        $field_visitor
 
         $visitor_item
 
@@ -480,7 +480,7 @@ fn deserialize_struct_named_fields(
     })
 }
 
-fn declare_map_field_devisitor(
+fn deserialize_field_visitor(
     cx: &ExtCtxt,
     span: Span,
     _builder: &aster::AstBuilder,
@@ -590,7 +590,7 @@ fn default_value(field: &ast::StructField) -> bool {
              })
 }
 
-fn declare_visit_map(
+fn deserialize_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
@@ -677,7 +677,7 @@ fn deserialize_enum(
     let type_name = builder.expr().str(type_ident);
 
     // Match arms to extract a variant from a string
-    let variant_arms: Vec<ast::Arm> = fields.iter()
+    let variant_arms: Vec<_> = fields.iter()
         .zip(enum_def.variants.iter())
         .map(|(&(name, span, ref fields), variant)| {
             let value = deserialize_enum_variant(
@@ -704,7 +704,9 @@ fn deserialize_enum(
     quote_expr!(cx, {
         $visitor_item
 
-        impl $trait_generics ::serde::de::Visitor for __Visitor $type_generics $where_clause {
+        impl $trait_generics ::serde::de::Visitor
+        for __Visitor $type_generics
+        $where_clause {
             type Value = $value_ty;
 
             fn visit_enum<__V>(&mut self,
@@ -860,10 +862,10 @@ fn deserialize_enum_variant_map(
 
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
-        .map(|i| token::str_to_ident(&format!("__field{}", i)))
+        .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
-    let field_devisitor = declare_map_field_devisitor(
+    let field_visitor = deserialize_field_visitor(
         cx,
         span,
         builder,
@@ -875,7 +877,7 @@ fn deserialize_enum_variant_map(
         },
     );
 
-    let visit_map_expr = declare_visit_map(
+    let visit_map_expr = deserialize_map(
         cx,
         builder,
         variant_path,
@@ -888,7 +890,7 @@ fn deserialize_enum_variant_map(
     );
 
     quote_expr!(cx, {
-        $field_devisitor
+        $field_visitor
 
         $visitor_item
 
