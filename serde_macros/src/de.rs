@@ -9,7 +9,7 @@ use syntax::ast::{
     EnumDef,
 };
 use syntax::ast;
-use syntax::codemap::{Span, respan};
+use syntax::codemap::Span;
 use syntax::ext::base::{ExtCtxt, ItemDecorator};
 use syntax::ext::build::AstBuilder;
 use syntax::ext::deriving::generic::{
@@ -137,7 +137,6 @@ fn deserialize_substructure(
         StaticStruct(ref struct_def, ref fields) => {
             deserialize_struct(
                 cx,
-                span,
                 &builder,
                 substr.type_ident,
                 substr.type_ident,
@@ -206,7 +205,6 @@ fn deserialize_visitor(
 
 fn deserialize_struct(
     cx: &ExtCtxt,
-    span: Span,
     builder: &aster::AstBuilder,
     type_ident: Ident,
     struct_ident: Ident,
@@ -249,7 +247,6 @@ fn deserialize_struct(
         Named(ref fields) => {
             deserialize_struct_named_fields(
                 cx,
-                span,
                 builder,
                 struct_ident,
                 struct_path,
@@ -407,7 +404,6 @@ fn deserialize_seq(
 
 fn deserialize_struct_named_fields(
     cx: &ExtCtxt,
-    span: Span,
     builder: &aster::AstBuilder,
     struct_ident: Ident,
     struct_path: ast::Path,
@@ -429,7 +425,6 @@ fn deserialize_struct_named_fields(
 
     let field_visitor = deserialize_field_visitor(
         cx,
-        span,
         builder,
         &field_names,
         fields,
@@ -482,32 +477,18 @@ fn deserialize_struct_named_fields(
 
 fn deserialize_field_visitor(
     cx: &ExtCtxt,
-    span: Span,
-    _builder: &aster::AstBuilder,
+    builder: &aster::AstBuilder,
     field_names: &[ast::Ident],
     fields: &[(Ident, Span)],
     struct_def: &StructDef,
 ) -> Vec<P<ast::Item>> {
-    // Create the field names for the fields.
-    let field_variants: Vec<P<ast::Variant>> = field_names.iter()
-        .map(|field| {
-            P(respan(
-                span,
-                ast::Variant_ {
-                    name: *field,
-                    attrs: Vec::new(),
-                    kind: ast::TupleVariantKind(Vec::new()),
-                    id: ast::DUMMY_NODE_ID,
-                    disr_expr: None,
-                    vis: ast::Inherited,
-                }))
-        })
-        .collect();
-
-    let field_enum = cx.item_enum(
-        span,
-        token::str_to_ident("__Field"),
-        ast::EnumDef { variants: field_variants });
+    let field_enum = builder.item().enum_("__Field")
+        .with_variants(
+            field_names.iter().map(|field| {
+                builder.variant(field).tuple().build()
+            })
+        )
+        .build();
 
     // Get aliases
     let aliases: Vec<Option<&ast::Lit>> = struct_def.fields.iter()
@@ -679,15 +660,14 @@ fn deserialize_enum(
     // Match arms to extract a variant from a string
     let variant_arms: Vec<_> = fields.iter()
         .zip(enum_def.variants.iter())
-        .map(|(&(name, span, ref fields), variant)| {
+        .map(|(&(name, _, ref fields), variant)| {
             let value = deserialize_enum_variant(
                 cx,
-                span,
                 builder,
                 type_ident,
                 name,
                 fields,
-                cx.expr_ident(span, cx.ident_of("visitor")),
+                builder.expr().id("visitor"),
                 variant,
                 visitor_item.clone(),
                 visitor_ty.clone(),
@@ -740,7 +720,6 @@ fn deserialize_enum(
 
 fn deserialize_enum_variant(
     cx: &ExtCtxt,
-    span: Span,
     builder: &aster::AstBuilder,
     type_ident: Ident,
     variant_ident: Ident,
@@ -780,7 +759,6 @@ fn deserialize_enum_variant(
         Named(ref fields) => {
             deserialize_enum_variant_map(
                 cx,
-                span,
                 builder,
                 &*fields,
                 variant_path,
@@ -846,7 +824,6 @@ fn deserialize_enum_variant_seq(
 
 fn deserialize_enum_variant_map(
     cx: &ExtCtxt,
-    span: Span,
     builder: &aster::AstBuilder,
     fields: &[(Ident, Span)],
     variant_path: ast::Path,
@@ -867,7 +844,6 @@ fn deserialize_enum_variant_map(
 
     let field_visitor = deserialize_field_visitor(
         cx,
-        span,
         builder,
         &field_names,
         fields,
