@@ -484,7 +484,9 @@ fn deserialize_field_visitor(
     field_names: &[ast::Ident],
     struct_def: &StructDef,
 ) -> Vec<P<ast::Item>> {
-    let field_enum = builder.item().enum_("__Field")
+    let field_enum = builder.item()
+        .attr().allow(&["non_camel_case_types"])
+        .enum_("__Field")
         .with_variants(
             field_names.iter().map(|field| {
                 builder.variant(field).tuple().build()
@@ -504,29 +506,7 @@ fn deserialize_field_visitor(
         .collect();
 
     vec![
-        quote_item!(cx,
-            #[allow(non_camel_case_types)]
-            $field_enum
-        ).unwrap(),
-
-        quote_item!(cx,
-            struct __FieldVisitor;
-        ).unwrap(),
-
-        quote_item!(cx,
-            impl ::serde::de::Visitor for __FieldVisitor {
-                type Value = __Field;
-
-                fn visit_str<E>(&mut self, value: &str) -> Result<__Field, E>
-                    where E: ::serde::de::Error,
-                {
-                    match value {
-                        $field_arms
-                        _ => Err(::serde::de::Error::syntax_error()),
-                    }
-                }
-            }
-        ).unwrap(),
+        field_enum,
 
         quote_item!(cx,
             impl ::serde::de::Deserialize for __Field {
@@ -534,6 +514,21 @@ fn deserialize_field_visitor(
                 fn deserialize<S>(state: &mut S) -> Result<__Field, S::Error>
                     where S: ::serde::de::Deserializer,
                 {
+                    struct __FieldVisitor;
+
+                    impl ::serde::de::Visitor for __FieldVisitor {
+                        type Value = __Field;
+
+                        fn visit_str<E>(&mut self, value: &str) -> Result<__Field, E>
+                            where E: ::serde::de::Error,
+                        {
+                            match value {
+                                $field_arms
+                                _ => Err(::serde::de::Error::syntax_error()),
+                            }
+                        }
+                    }
+
                     state.visit(__FieldVisitor)
                 }
             }
