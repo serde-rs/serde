@@ -1,6 +1,7 @@
 language: rust
 script:
 - cargo test
+- cargo bench
 - cargo doc
 after_success: |
   [ $TRAVIS_BRANCH = "master" ] &&
