@@ -54,7 +54,7 @@ pub fn expand_derive_serialize(
         #[automatically_derived]
         impl $impl_generics ::serde::ser::Serialize for $serialize_ty $where_clause {
             fn serialize<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
-                where __S: serde::ser::Serializer,
+                where __S: ::serde::ser::Serializer,
             {
                 $body
             }
