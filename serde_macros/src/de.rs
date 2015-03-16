@@ -374,86 +374,6 @@ fn deserialize_struct(
     })
 }
 
-fn deserialize_map(
-    cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
-    struct_path: ast::Path,
-    struct_def: &StructDef,
-) -> P<ast::Expr> {
-    // Create the field names for the fields.
-    let field_names: Vec<ast::Ident> = (0 .. struct_def.fields.len())
-        .map(|i| builder.id(format!("__field{}", i)))
-        .collect();
-
-    // Declare each field.
-    let let_values: Vec<P<ast::Stmt>> = field_names.iter()
-        .map(|field_name| quote_stmt!(cx, let mut $field_name = None;))
-        .collect();
-
-    // Match arms to extract a value for a field.
-    let value_arms: Vec<ast::Arm> = field_names.iter()
-        .map(|field_name| {
-            quote_arm!(cx,
-                __Field::$field_name => {
-                    $field_name = Some(try!(visitor.visit_value()));
-                }
-            )
-        })
-        .collect();
-
-    let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
-        .zip(struct_def.fields.iter())
-        .map(|(field_name, field)| {
-            let name_str = match field.node.kind {
-                ast::NamedField(name, _) => builder.expr().str(name),
-                ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
-            };
-
-            let missing_expr = if field::default_value(field) {
-                quote_expr!(cx, ::std::default::Default::default())
-            } else {
-                quote_expr!(cx, try!(visitor.missing_field($name_str)))
-            };
-
-            quote_stmt!(cx,
-                let $field_name = match $field_name {
-                    Some($field_name) => $field_name,
-                    None => $missing_expr,
-                };
-            )
-        })
-        .collect();
-
-    let result = builder.expr().struct_path(struct_path)
-        .with_id_exprs(
-            struct_def.fields.iter()
-                .zip(field_names.iter())
-                .map(|(field, field_name)| {
-                    (
-                        match field.node.kind {
-                            ast::NamedField(name, _) => name.clone(),
-                            ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
-                        },
-                        builder.expr().id(field_name),
-                    )
-                })
-        )
-        .build();
-
-    quote_expr!(cx, {
-        $let_values
-
-        while let Some(key) = try!(visitor.visit_key()) {
-            match key {
-                $value_arms
-            }
-        }
-
-        $extract_values
-        Ok($result)
-    })
-}
-
 fn deserialize_item_enum(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
@@ -733,4 +653,84 @@ fn deserialize_struct_visitor(
     );
 
     (field_visitor, visit_map_expr)
+}
+
+fn deserialize_map(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    struct_path: ast::Path,
+    struct_def: &StructDef,
+) -> P<ast::Expr> {
+    // Create the field names for the fields.
+    let field_names: Vec<ast::Ident> = (0 .. struct_def.fields.len())
+        .map(|i| builder.id(format!("__field{}", i)))
+        .collect();
+
+    // Declare each field.
+    let let_values: Vec<P<ast::Stmt>> = field_names.iter()
+        .map(|field_name| quote_stmt!(cx, let mut $field_name = None;))
+        .collect();
+
+    // Match arms to extract a value for a field.
+    let value_arms: Vec<ast::Arm> = field_names.iter()
+        .map(|field_name| {
+            quote_arm!(cx,
+                __Field::$field_name => {
+                    $field_name = Some(try!(visitor.visit_value()));
+                }
+            )
+        })
+        .collect();
+
+    let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
+        .zip(struct_def.fields.iter())
+        .map(|(field_name, field)| {
+            let name_str = match field.node.kind {
+                ast::NamedField(name, _) => builder.expr().str(name),
+                ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+            };
+
+            let missing_expr = if field::default_value(field) {
+                quote_expr!(cx, ::std::default::Default::default())
+            } else {
+                quote_expr!(cx, try!(visitor.missing_field($name_str)))
+            };
+
+            quote_stmt!(cx,
+                let $field_name = match $field_name {
+                    Some($field_name) => $field_name,
+                    None => $missing_expr,
+                };
+            )
+        })
+        .collect();
+
+    let result = builder.expr().struct_path(struct_path)
+        .with_id_exprs(
+            struct_def.fields.iter()
+                .zip(field_names.iter())
+                .map(|(field, field_name)| {
+                    (
+                        match field.node.kind {
+                            ast::NamedField(name, _) => name.clone(),
+                            ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+                        },
+                        builder.expr().id(field_name),
+                    )
+                })
+        )
+        .build();
+
+    quote_expr!(cx, {
+        $let_values
+
+        while let Some(key) = try!(visitor.visit_key()) {
+            match key {
+                $value_arms
+            }
+        }
+
+        $extract_values
+        Ok($result)
+    })
 }
