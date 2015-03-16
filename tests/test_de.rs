@@ -184,12 +184,13 @@ impl<'a, 'b> de::SeqVisitor for TokenDeserializerSeqVisitor<'a, 'b> {
         let first = self.first;
         self.first = false;
 
-        match self.de.tokens.next() {
-            Some(Token::SeqSep(first_)) if first_ == first => {
+        match self.de.tokens.peek() {
+            Some(&Token::SeqSep(first_)) if first_ == first => {
                 self.len -= 1;
+                self.de.tokens.next();
                 Ok(Some(try!(Deserialize::deserialize(self.de))))
             }
-            Some(Token::SeqEnd) => Ok(None),
+            Some(&Token::SeqEnd) => Ok(None),
             Some(_) => {
                 Err(Error::SyntaxError)
             }
@@ -198,6 +199,7 @@ impl<'a, 'b> de::SeqVisitor for TokenDeserializerSeqVisitor<'a, 'b> {
     }
 
     fn end(&mut self) -> Result<(), Error> {
+        assert_eq!(self.len, 0);
         match self.de.tokens.next() {
             Some(Token::SeqEnd) => Ok(()),
             Some(_) => Err(Error::SyntaxError),
@@ -227,11 +229,13 @@ impl<'a, 'b> de::MapVisitor for TokenDeserializerMapVisitor<'a, 'b> {
         let first = self.first;
         self.first = false;
 
-        match self.de.tokens.next() {
-            Some(Token::MapSep(first_)) if first_ == first => {
+        match self.de.tokens.peek() {
+            Some(&Token::MapSep(first_)) if first_ == first => {
+                self.de.tokens.next();
+                self.len -= 1;
                 Ok(Some(try!(Deserialize::deserialize(self.de))))
             }
-            Some(Token::MapEnd) => Ok(None),
+            Some(&Token::MapEnd) => Ok(None),
             Some(_) => Err(Error::SyntaxError),
             None => Err(Error::EndOfStreamError),
         }
@@ -244,6 +248,7 @@ impl<'a, 'b> de::MapVisitor for TokenDeserializerMapVisitor<'a, 'b> {
     }
 
     fn end(&mut self) -> Result<(), Error> {
+        assert_eq!(self.len, 0);
         match self.de.tokens.next() {
             Some(Token::MapEnd) => Ok(()),
             Some(_) => Err(Error::SyntaxError),

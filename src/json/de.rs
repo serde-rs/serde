@@ -466,7 +466,6 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
         self.de.parse_whitespace();
 
         if self.de.ch_is(b']') {
-            self.de.bump();
             return Ok(None);
         }
 
@@ -525,7 +524,6 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
         self.de.parse_whitespace();
 
         if self.de.ch_is(b'}') {
-            self.de.bump();
             return Ok(None);
         }
 
@@ -565,11 +563,11 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
     fn end(&mut self) -> Result<(), Error> {
         self.de.parse_whitespace();
 
-        if self.de.ch_is(b']') {
+        if self.de.ch_is(b'}') {
             self.de.bump();
             Ok(())
         } else if self.de.eof() {
-            Err(self.de.error(ErrorCode::EOFWhileParsingList))
+            Err(self.de.error(ErrorCode::EOFWhileParsingObject))
         } else {
             Err(self.de.error(ErrorCode::TrailingCharacters))
         }

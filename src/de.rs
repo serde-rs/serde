@@ -629,6 +629,8 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
             values.push(value);
         }
 
+        try!(visitor.end());
+
         Ok(values)
     }
 }
@@ -735,6 +737,8 @@ impl<K, V> Visitor for HashMapVisitor<K, V>
             values.insert(key, value);
         }
 
+        try!(visitor.end());
+
         Ok(values)
     }
 }
@@ -780,6 +784,8 @@ impl<K, V> Visitor for BTreeMapVisitor<K, V>
         while let Some((key, value)) = try!(visitor.visit()) {
             values.insert(key, value);
         }
+
+        try!(visitor.end());
 
         Ok(values)
     }
