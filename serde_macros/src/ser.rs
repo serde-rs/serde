@@ -27,7 +27,7 @@ pub fn expand_derive_serialize(
     let generics = match item.node {
         ast::ItemStruct(_, ref generics) => generics,
         ast::ItemEnum(_, ref generics) => generics,
-        _ => cx.bug("expected ItemStruct or ItemEnum in derive(Deserialize)")
+        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive_serialize]")
     };
 
     let impl_generics = builder.from_generics(generics.clone())
@@ -36,7 +36,7 @@ pub fn expand_derive_serialize(
         )
         .build();
 
-    let serialize_ty = builder.ty().path()
+    let ty = builder.ty().path()
         .segment(item.ident).with_generics(impl_generics.clone()).build()
         .build();
 
@@ -45,14 +45,14 @@ pub fn expand_derive_serialize(
         &builder,
         item,
         &impl_generics,
-        serialize_ty.clone(),
+        ty.clone(),
     );
 
     let where_clause = &impl_generics.where_clause;
 
     let impl_item = quote_item!(cx,
         #[automatically_derived]
-        impl $impl_generics ::serde::ser::Serialize for $serialize_ty $where_clause {
+        impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
             fn serialize<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
                 where __S: ::serde::ser::Serializer,
             {
@@ -69,7 +69,7 @@ fn serialize_body(
     builder: &aster::AstBuilder,
     item: &Item,
     impl_generics: &ast::Generics,
-    serialize_ty: P<ast::Ty>,
+    ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     match item.node {
         ast::ItemStruct(ref struct_def, _) => {
@@ -78,11 +78,10 @@ fn serialize_body(
                 builder,
                 item,
                 impl_generics,
-                serialize_ty,
+                ty,
                 struct_def,
             )
         }
-
         ast::ItemEnum(ref enum_def, _) => {
             serialize_item_enum(
                 cx,
@@ -92,8 +91,7 @@ fn serialize_body(
                 enum_def,
             )
         }
-
-        _ => cx.bug("expected ItemStruct or ItemEnum in derive_serialize")
+        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive_serialize]")
     }
 }
 
@@ -102,7 +100,7 @@ fn serialize_item_struct(
     builder: &aster::AstBuilder,
     item: &Item,
     impl_generics: &ast::Generics,
-    serialize_ty: P<ast::Ty>,
+    ty: P<ast::Ty>,
     struct_def: &ast::StructDef,
 ) -> P<ast::Expr> {
     let mut named_fields = vec![];
@@ -129,7 +127,7 @@ fn serialize_item_struct(
                 &builder,
                 item.ident,
                 impl_generics,
-                serialize_ty,
+                ty,
                 unnamed_fields,
             )
         }
@@ -139,7 +137,7 @@ fn serialize_item_struct(
                 &builder,
                 item.ident,
                 impl_generics,
-                serialize_ty,
+                ty,
                 struct_def,
                 named_fields,
             )
@@ -165,13 +163,13 @@ fn serialize_tuple_struct(
     builder: &aster::AstBuilder,
     type_ident: Ident,
     impl_generics: &ast::Generics,
-    serialize_ty: P<ast::Ty>,
+    ty: P<ast::Ty>,
     fields: usize,
 ) -> P<ast::Expr> {
     let value_ty = builder.ty()
         .ref_()
             .lifetime("'__a")
-            .build_ty(serialize_ty);
+            .build_ty(ty);
 
     let (visitor_struct, visitor_impl) = serialize_tuple_struct_visitor(
         cx,
@@ -198,14 +196,14 @@ fn serialize_struct(
     builder: &aster::AstBuilder,
     type_ident: Ident,
     impl_generics: &ast::Generics,
-    serialize_ty: P<ast::Ty>,
+    ty: P<ast::Ty>,
     struct_def: &StructDef,
     fields: Vec<Ident>,
 ) -> P<ast::Expr> {
     let value_ty = builder.ty()
         .ref_()
             .lifetime("'__a")
-            .build_ty(serialize_ty.clone());
+            .build_ty(ty.clone());
 
     let (visitor_struct, visitor_impl) = serialize_struct_visitor(
         cx,

@@ -32,6 +32,30 @@ struct NamedUnit;
 
 #[derive(Debug, PartialEq)]
 #[derive_serialize]
+struct SerNamedTuple<'a, 'b, A: 'a, B: 'b, C>(&'a A, &'b mut B, C);
+
+#[derive(Debug, PartialEq)]
+#[derive_deserialize]
+struct DeNamedTuple<A, B, C>(A, B, C);
+
+#[derive(Debug, PartialEq)]
+#[derive_serialize]
+struct SerNamedMap<'a, 'b, A: 'a, B: 'b, C> {
+    a: &'a A,
+    b: &'b mut B,
+    c: C,
+}
+
+#[derive(Debug, PartialEq)]
+#[derive_deserialize]
+struct DeNamedMap<A, B, C> {
+    a: A,
+    b: B,
+    c: C,
+}
+
+#[derive(Debug, PartialEq)]
+#[derive_serialize]
 enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
     Unit,
     Seq(
@@ -135,14 +159,10 @@ fn test_named_unit() {
 
 #[test]
 fn test_ser_named_tuple() {
-    #[derive(Debug, PartialEq)]
-    #[derive_serialize]
-    struct NamedTuple<'a, 'b, A: 'a, B: 'b, C>(&'a A, &'b mut B, C);
-
     let a = 5;
     let mut b = 6;
     let c = 7;
-    let named_tuple = NamedTuple(&a, &mut b, c);
+    let named_tuple = SerNamedTuple(&a, &mut b, c);
 
     assert_eq!(
         json::to_string(&named_tuple).unwrap(),
@@ -157,13 +177,9 @@ fn test_ser_named_tuple() {
 
 #[test]
 fn test_de_named_tuple() {
-    #[derive(Debug, PartialEq)]
-    #[derive_deserialize]
-    struct NamedTuple<A, B, C>(A, B, C);
-
     assert_eq!(
         json::from_str("[1,2,3]").unwrap(),
-        NamedTuple(1, 2, 3)
+        DeNamedTuple(1, 2, 3)
     );
 
     assert_eq!(
@@ -178,18 +194,10 @@ fn test_de_named_tuple() {
 
 #[test]
 fn test_ser_named_map() {
-    #[derive(Debug, PartialEq)]
-    #[derive_serialize]
-    struct NamedMap<'a, 'b, A: 'a, B: 'b, C> {
-        a: &'a A,
-        b: &'b mut B,
-        c: C,
-    }
-
     let a = 5;
     let mut b = 6;
     let c = 7;
-    let named_map = NamedMap {
+    let named_map = SerNamedMap {
         a: &a,
         b: &mut b,
         c: c,
@@ -212,15 +220,7 @@ fn test_ser_named_map() {
 
 #[test]
 fn test_de_named_map() {
-    #[derive(Debug, PartialEq)]
-    #[derive_deserialize]
-    struct NamedMap<A, B, C> {
-        a: A,
-        b: B,
-        c: C,
-    }
-
-    let v = NamedMap {
+    let v = DeNamedMap {
         a: 5,
         b: 6,
         c: 7,
