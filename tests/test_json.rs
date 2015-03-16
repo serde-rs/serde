@@ -907,7 +907,7 @@ fn test_parse_option() {
 #[test]
 fn test_parse_enum() {
     test_parse_err::<Animal>(&[
-        ("{}", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 3)),
+        ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 2)),
         ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),

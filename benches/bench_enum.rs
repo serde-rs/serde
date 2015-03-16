@@ -245,9 +245,11 @@ mod deserializer {
 
     use serde::de;
 
+    #[derive(Debug)]
     enum State {
         AnimalState(Animal),
         IsizeState(isize),
+        StrState(&'static str),
         StringState(String),
         UnitState,
     }
@@ -273,28 +275,50 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.stack.pop() {
-                Some(State::AnimalState(Animal::Dog)) => {
-                    self.stack.push(State::UnitState);
-                    visitor.visit_enum("Animal", "Dog", DogVisitor {
-                        de: self,
-                    })
-                }
-                Some(State::AnimalState(Animal::Frog(x0, x1))) => {
-                    self.stack.push(State::IsizeState(x1));
-                    self.stack.push(State::StringState(x0));
-                    visitor.visit_enum("Animal", "Frog", FrogVisitor {
-                        de: self,
-                        state: 0,
-                    })
-                }
                 Some(State::IsizeState(value)) => {
                     visitor.visit_isize(value)
                 }
                 Some(State::StringState(value)) => {
                     visitor.visit_string(value)
                 }
+                Some(State::StrState(value)) => {
+                    visitor.visit_str(value)
+                }
                 Some(State::UnitState) => {
                     visitor.visit_unit()
+                }
+                Some(_) => {
+                    Err(Error::SyntaxError)
+                }
+                None => {
+                    Err(Error::EndOfStreamError)
+                }
+            }
+        }
+
+        #[inline]
+        fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::EnumVisitor,
+        {
+            match self.stack.pop() {
+                Some(State::AnimalState(Animal::Dog)) => {
+                    self.stack.push(State::UnitState);
+                    self.stack.push(State::StrState("Dog"));
+                    visitor.visit(DogVisitor {
+                        de: self,
+                    })
+                }
+                Some(State::AnimalState(Animal::Frog(x0, x1))) => {
+                    self.stack.push(State::IsizeState(x1));
+                    self.stack.push(State::StringState(x0));
+                    self.stack.push(State::StrState("Frog"));
+                    visitor.visit(FrogVisitor {
+                        de: self,
+                        state: 0,
+                    })
+                }
+                Some(_) => {
+                    Err(Error::SyntaxError)
                 }
                 None => {
                     Err(Error::EndOfStreamError)
@@ -307,11 +331,29 @@ mod deserializer {
         de: &'a mut AnimalDeserializer,
     }
 
-    impl<'a> de::EnumVisitor for DogVisitor<'a> {
+    impl<'a> de::VariantVisitor for DogVisitor<'a> {
         type Error = Error;
+
+        fn visit_variant<V>(&mut self) -> Result<V, Error>
+            where V: de::Deserialize
+        {
+            de::Deserialize::deserialize(self.de)
+        }
 
         fn visit_unit(&mut self) -> Result<(), Error> {
             de::Deserialize::deserialize(self.de)
+        }
+
+        fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+            where V: de::EnumSeqVisitor
+        {
+            Err(de::Error::syntax_error())
+        }
+
+        fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+            where V: de::EnumMapVisitor
+        {
+            Err(de::Error::syntax_error())
         }
     }
 
@@ -320,13 +362,29 @@ mod deserializer {
         state: usize,
     }
 
-    impl<'a> de::EnumVisitor for FrogVisitor<'a> {
+    impl<'a> de::VariantVisitor for FrogVisitor<'a> {
         type Error = Error;
+
+        fn visit_variant<V>(&mut self) -> Result<V, Error>
+            where V: de::Deserialize
+        {
+            de::Deserialize::deserialize(self.de)
+        }
+
+        fn visit_unit(&mut self) -> Result<(), Error> {
+            Err(de::Error::syntax_error())
+        }
 
         fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::EnumSeqVisitor,
         {
             visitor.visit(self)
+        }
+
+        fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+            where V: de::EnumMapVisitor
+        {
+            Err(de::Error::syntax_error())
         }
     }
 

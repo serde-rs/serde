@@ -420,8 +420,8 @@ impl de::Deserializer for Deserializer {
     }
 
     #[inline]
-    fn visit_enum<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
+    fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumVisitor,
     {
         let value = match self.value.take() {
             Some(Value::Object(value)) => value,
@@ -433,16 +433,20 @@ impl de::Deserializer for Deserializer {
 
         let value = match iter.next() {
             Some((variant, Value::Array(fields))) => {
+                self.value = Some(Value::String(variant));
+
                 let len = fields.len();
-                try!(visitor.visit_variant(&variant, SeqDeserializer {
+                try!(visitor.visit(SeqDeserializer {
                     de: self,
                     iter: fields.into_iter(),
                     len: len,
                 }))
             }
             Some((variant, Value::Object(fields))) => {
+                self.value = Some(Value::String(variant));
+
                 let len = fields.len();
-                try!(visitor.visit_variant(&variant, MapDeserializer {
+                try!(visitor.visit(MapDeserializer {
                     de: self,
                     iter: fields.into_iter(),
                     value: None,
@@ -495,8 +499,14 @@ impl<'a> de::SeqVisitor for SeqDeserializer<'a> {
     }
 }
 
-impl<'a> de::EnumVisitor for SeqDeserializer<'a> {
+impl<'a> de::VariantVisitor for SeqDeserializer<'a> {
     type Error = Error;
+
+    fn visit_variant<V>(&mut self) -> Result<V, Error>
+        where V: de::Deserialize,
+    {
+        de::Deserialize::deserialize(self.de)
+    }
 
     fn visit_unit(&mut self) -> Result<(), Error> {
         if self.len == 0 {
@@ -510,6 +520,12 @@ impl<'a> de::EnumVisitor for SeqDeserializer<'a> {
         where V: de::EnumSeqVisitor,
     {
         visitor.visit(self)
+    }
+
+    fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumMapVisitor
+    {
+        Err(de::Error::syntax_error())
     }
 }
 
@@ -583,8 +599,24 @@ impl<'a> de::MapVisitor for MapDeserializer<'a> {
     }
 }
 
-impl<'a> de::EnumVisitor for MapDeserializer<'a> {
+impl<'a> de::VariantVisitor for MapDeserializer<'a> {
     type Error = Error;
+
+    fn visit_variant<V>(&mut self) -> Result<V, Error>
+        where V: de::Deserialize,
+    {
+        de::Deserialize::deserialize(self.de)
+    }
+
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        Err(de::Error::syntax_error())
+    }
+
+    fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumSeqVisitor
+    {
+        Err(de::Error::syntax_error())
+    }
 
     fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumMapVisitor,

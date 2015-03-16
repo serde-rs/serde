@@ -44,7 +44,7 @@ enum Token<'a> {
     MapSep(bool),
     MapEnd,
 
-    EnumStart(&'a str, &'a str),
+    EnumStart(&'a str),
     EnumEnd,
 }
 
@@ -132,11 +132,6 @@ impl<'a> Deserializer for TokenDeserializer<'a> {
                     first: true,
                 })
             }
-            Some(Token::EnumStart(name, variant)) => {
-                visitor.visit_enum(name, variant, TokenDeserializerEnumVisitor {
-                    de: self,
-                })
-            }
             Some(_) => Err(Error::SyntaxError),
             None => Err(Error::EndOfStreamError),
         }
@@ -144,7 +139,6 @@ impl<'a> Deserializer for TokenDeserializer<'a> {
 
     /// Hook into `Option` deserializing so we can treat `Unit` as a
     /// `None`, or a regular value as `Some(value)`.
-    #[inline]
     fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: Visitor,
     {
@@ -162,6 +156,24 @@ impl<'a> Deserializer for TokenDeserializer<'a> {
                 visitor.visit_none()
             }
             Some(_) => visitor.visit_some(self),
+            None => Err(Error::EndOfStreamError),
+        }
+    }
+
+    fn visit_enum<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumVisitor,
+    {
+        match self.tokens.next() {
+            Some(Token::EnumStart(n)) => {
+                if name == n {
+                    visitor.visit(TokenDeserializerVariantVisitor {
+                        de: self,
+                    })
+                } else {
+                    Err(Error::SyntaxError)
+                }
+            }
+            Some(_) => Err(Error::SyntaxError),
             None => Err(Error::EndOfStreamError),
         }
     }
@@ -263,12 +275,18 @@ impl<'a, 'b> de::MapVisitor for TokenDeserializerMapVisitor<'a, 'b> {
 
 //////////////////////////////////////////////////////////////////////////
 
-struct TokenDeserializerEnumVisitor<'a, 'b: 'a> {
+struct TokenDeserializerVariantVisitor<'a, 'b: 'a> {
     de: &'a mut TokenDeserializer<'b>,
 }
 
-impl<'a, 'b> de::EnumVisitor for TokenDeserializerEnumVisitor<'a, 'b> {
+impl<'a, 'b> de::VariantVisitor for TokenDeserializerVariantVisitor<'a, 'b> {
     type Error = Error;
+
+    fn visit_kind<V>(&mut self) -> Result<V, Error>
+        where V: de::Deserialize,
+    {
+        de::Deserialize::deserialize(self.de)
+    }
 
     fn visit_unit(&mut self) -> Result<(), Error> {
         let value = try!(Deserialize::deserialize(self.de));
@@ -611,16 +629,18 @@ declare_tests! {
             Token::MapEnd,
         ],
     }
-    test_enum {
+    test_enum_unit {
         Enum::Unit => vec![
-            Token::EnumStart("Enum", "Unit"),
+            Token::EnumStart("Enum"),
+                Token::Str("Unit"),
                 Token::Unit,
             Token::EnumEnd,
         ],
     }
     test_enum_seq {
         Enum::Seq(1, 2, 3) => vec![
-            Token::EnumStart("Enum", "Seq"),
+            Token::EnumStart("Enum"),
+                Token::Str("Seq"),
                 Token::SeqStart(3),
                     Token::SeqSep(true),
                     Token::I32(1),
@@ -636,7 +656,8 @@ declare_tests! {
     }
     test_enum_map {
         Enum::Map { a: 1, b: 2, c: 3 } => vec![
-            Token::EnumStart("Enum", "Map"),
+            Token::EnumStart("Enum"),
+                Token::Str("Map"),
                 Token::MapStart(3),
                     Token::MapSep(true),
                     Token::Str("a"),

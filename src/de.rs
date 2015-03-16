@@ -43,10 +43,10 @@ pub trait Deserializer {
     /// deserializers that provide a custom enumeration serialization to
     /// properly deserialize the type.
     #[inline]
-    fn visit_enum<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor,
+    fn visit_enum<V>(&mut self, _enum: &str, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: EnumVisitor,
     {
-        self.visit(visitor)
+        Err(Error::syntax_error())
     }
 }
 
@@ -204,23 +204,6 @@ pub trait Visitor {
     {
         self.visit_map(visitor)
     }
-
-    #[inline]
-    fn visit_enum<V>(&mut self,
-                     _name: &str,
-                     _variant: &str,
-                     _visitor: V) -> Result<Self::Value, V::Error>
-        where V: EnumVisitor,
-    {
-        Err(Error::syntax_error())
-    }
-
-    #[inline]
-    fn visit_variant<V>(&mut self, _name: &str, _visitor: V) -> Result<Self::Value, V::Error>
-        where V: EnumVisitor,
-    {
-        Err(Error::syntax_error())
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -338,22 +321,53 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait EnumVisitor {
+    type Value;
+
+    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
+        where V: VariantVisitor;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+pub trait VariantVisitor {
     type Error: Error;
 
-    fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Err(Error::syntax_error())
-    }
+    fn visit_variant<V>(&mut self) -> Result<V, Self::Error>
+        where V: Deserialize;
+
+    fn visit_unit(&mut self) -> Result<(), Self::Error>;
 
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
-        where V: EnumSeqVisitor,
-    {
-        Err(Error::syntax_error())
-    }
+        where V: EnumSeqVisitor;
 
     fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
-        where V: EnumMapVisitor,
+        where V: EnumMapVisitor;
+}
+
+impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
+    type Error = T::Error;
+
+    fn visit_variant<V>(&mut self) -> Result<V, T::Error>
+        where V: Deserialize
     {
-        Err(Error::syntax_error())
+        (**self).visit_variant()
+    }
+
+    {
+    fn visit_unit(&mut self) -> Result<(), T::Error> {
+        (**self).visit_unit()
+    }
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+        where V: EnumSeqVisitor
+    {
+        (**self).visit_seq(visitor)
+    }
+
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+        where V: EnumMapVisitor
+    {
+        (**self).visit_map(visitor)
     }
 }
 
