@@ -685,10 +685,8 @@ fn test_parse_option() {
         x: Option<isize>,
     }
 
-    /*
     let value: Foo = from_str("{}").unwrap();
     assert_eq!(value, Foo { x: None });
-    */
 
     test_parse_ok(&[
         ("{\"x\": null}", Foo { x: None }),
