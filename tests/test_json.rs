@@ -144,6 +144,68 @@ fn test_write_list() {
         (vec![true, false], "[true,false]"),
     ]);
 
+    test_encode_ok(&[
+        (vec![vec![], vec![], vec![]], "[[],[],[]]"),
+        (vec![vec![1, 2, 3], vec![], vec![]], "[[1,2,3],[],[]]"),
+        (vec![vec![], vec![1, 2, 3], vec![]], "[[],[1,2,3],[]]"),
+        (vec![vec![], vec![], vec![1, 2, 3]], "[[],[],[1,2,3]]"),
+    ]);
+
+    test_pretty_encode_ok(&[
+        (
+            vec![vec![], vec![], vec![]],
+            concat!(
+                "[\n",
+                "  [],\n",
+                "  [],\n",
+                "  []\n",
+                "]"
+            ),
+        ),
+        (
+            vec![vec![1, 2, 3], vec![], vec![]],
+            concat!(
+                "[\n",
+                "  [\n",
+                "    1,\n",
+                "    2,\n",
+                "    3\n",
+                "  ],\n",
+                "  [],\n",
+                "  []\n",
+                "]"
+            ),
+        ),
+        (
+            vec![vec![], vec![1, 2, 3], vec![]],
+            concat!(
+                "[\n",
+                "  [],\n",
+                "  [\n",
+                "    1,\n",
+                "    2,\n",
+                "    3\n",
+                "  ],\n",
+                "  []\n",
+                "]"
+            ),
+        ),
+        (
+            vec![vec![], vec![], vec![1, 2, 3]],
+            concat!(
+                "[\n",
+                "  [],\n",
+                "  [],\n",
+                "  [\n",
+                "    1,\n",
+                "    2,\n",
+                "    3\n",
+                "  ]\n",
+                "]"
+            ),
+        ),
+    ]);
+
     test_pretty_encode_ok(&[
         (vec![], "[]"),
         (
@@ -205,6 +267,154 @@ fn test_write_object() {
                 "b".to_string() => false
             ),
             "{\"a\":true,\"b\":false}"),
+    ]);
+
+    test_encode_ok(&[
+        (
+            treemap![
+                "a".to_string() => treemap![],
+                "b".to_string() => treemap![],
+                "c".to_string() => treemap![]
+            ],
+            "{\"a\":{},\"b\":{},\"c\":{}}",
+        ),
+        (
+            treemap![
+                "a".to_string() => treemap![
+                    "a".to_string() => treemap!["a" => vec![1,2,3]],
+                    "b".to_string() => treemap![],
+                    "c".to_string() => treemap![]
+                ],
+                "b".to_string() => treemap![],
+                "c".to_string() => treemap![]
+            ],
+            "{\"a\":{\"a\":{\"a\":[1,2,3]},\"b\":{},\"c\":{}},\"b\":{},\"c\":{}}",
+        ),
+        (
+            treemap![
+                "a".to_string() => treemap![],
+                "b".to_string() => treemap![
+                    "a".to_string() => treemap!["a" => vec![1,2,3]],
+                    "b".to_string() => treemap![],
+                    "c".to_string() => treemap![]
+                ],
+                "c".to_string() => treemap![]
+            ],
+            "{\"a\":{},\"b\":{\"a\":{\"a\":[1,2,3]},\"b\":{},\"c\":{}},\"c\":{}}",
+        ),
+        (
+            treemap![
+                "a".to_string() => treemap![],
+                "b".to_string() => treemap![],
+                "c".to_string() => treemap![
+                    "a".to_string() => treemap!["a" => vec![1,2,3]],
+                    "b".to_string() => treemap![],
+                    "c".to_string() => treemap![]
+                ]
+            ],
+            "{\"a\":{},\"b\":{},\"c\":{\"a\":{\"a\":[1,2,3]},\"b\":{},\"c\":{}}}",
+        ),
+    ]);
+
+    test_pretty_encode_ok(&[
+        (
+            treemap![
+                "a".to_string() => treemap![],
+                "b".to_string() => treemap![],
+                "c".to_string() => treemap![]
+            ],
+            concat!(
+                "{\n",
+                "  \"a\": {},\n",
+                "  \"b\": {},\n",
+                "  \"c\": {}\n",
+                "}",
+            ),
+        ),
+        (
+            treemap![
+                "a".to_string() => treemap![
+                    "a".to_string() => treemap!["a" => vec![1,2,3]],
+                    "b".to_string() => treemap![],
+                    "c".to_string() => treemap![]
+                ],
+                "b".to_string() => treemap![],
+                "c".to_string() => treemap![]
+            ],
+            concat!(
+                "{\n",
+                "  \"a\": {\n",
+                "    \"a\": {\n",
+                "      \"a\": [\n",
+                "        1,\n",
+                "        2,\n",
+                "        3\n",
+                "      ]\n",
+                "    },\n",
+                "    \"b\": {},\n",
+                "    \"c\": {}\n",
+                "  },\n",
+                "  \"b\": {},\n",
+                "  \"c\": {}\n",
+                "}"
+            ),
+        ),
+        (
+            treemap![
+                "a".to_string() => treemap![],
+                "b".to_string() => treemap![
+                    "a".to_string() => treemap!["a" => vec![1,2,3]],
+                    "b".to_string() => treemap![],
+                    "c".to_string() => treemap![]
+                ],
+                "c".to_string() => treemap![]
+            ],
+            concat!(
+                "{\n",
+                "  \"a\": {},\n",
+                "  \"b\": {\n",
+                "    \"a\": {\n",
+                "      \"a\": [\n",
+                "        1,\n",
+                "        2,\n",
+                "        3\n",
+                "      ]\n",
+                "    },\n",
+                "    \"b\": {},\n",
+                "    \"c\": {}\n",
+                "  },\n",
+                "  \"c\": {}\n",
+                "}"
+            ),
+        ),
+        (
+            treemap![
+                "a".to_string() => treemap![],
+                "b".to_string() => treemap![],
+                "c".to_string() => treemap![
+                    "a".to_string() => treemap!["a" => vec![1,2,3]],
+                    "b".to_string() => treemap![],
+                    "c".to_string() => treemap![]
+                ]
+            ],
+            concat!(
+                "{\n",
+                "  \"a\": {},\n",
+                "  \"b\": {},\n",
+                "  \"c\": {\n",
+                "    \"a\": {\n",
+                "      \"a\": [\n",
+                "        1,\n",
+                "        2,\n",
+                "        3\n",
+                "      ]\n",
+                "    },\n",
+                "    \"b\": {},\n",
+                "    \"c\": {}\n",
+                "  }\n",
+                "}"
+            ),
+        ),
     ]);
 
     test_pretty_encode_ok(&[

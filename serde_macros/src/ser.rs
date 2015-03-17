@@ -449,7 +449,6 @@ fn serialize_tuple_struct_visitor(
 ) -> (P<ast::Item>, P<ast::Item>) {
     let arms: Vec<ast::Arm> = (0 .. fields)
         .map(|i| {
-            let first = builder.expr().bool(i == 0);
             let expr = builder.expr()
                 .tup_field(i)
                 .field("value").self_();
@@ -457,7 +456,7 @@ fn serialize_tuple_struct_visitor(
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(serializer.visit_seq_elt($first, &$expr));
+                    let v = try!(serializer.visit_seq_elt(&$expr));
                     Ok(Some(v))
                 }
             )
@@ -524,8 +523,6 @@ fn serialize_struct_visitor<I>(
         .zip(value_exprs)
         .enumerate()
         .map(|(i, (key_expr, value_expr))| {
-            let first = i == 0;
-
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
@@ -533,7 +530,6 @@ fn serialize_struct_visitor<I>(
                         Some(
                             try!(
                                 serializer.visit_map_elt(
-                                    $first,
                                     $key_expr,
                                     $value_expr,
                                 )

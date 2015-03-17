@@ -9,6 +9,10 @@ use ser;
 pub struct Serializer<W, F=CompactFormatter> {
     writer: W,
     formatter: F,
+
+    /// `first` is used to signify if we should print a comma when we are walking through a
+    /// sequence.
+    first: bool,
 }
 
 impl<W> Serializer<W>
@@ -33,6 +37,7 @@ impl<W, F> Serializer<W, F>
         Serializer {
             writer: writer,
             formatter: formatter,
+            first: false,
         }
     }
 
@@ -166,6 +171,8 @@ impl<W, F> ser::Serializer for Serializer<W, F>
             _ => {
                 try!(self.formatter.open(&mut self.writer, b'['));
 
+                self.first = true;
+
                 while let Some(()) = try!(visitor.visit(self)) { }
 
                 self.formatter.close(&mut self.writer, b']')
@@ -187,10 +194,11 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_seq_elt<T>(&mut self, first: bool, value: T) -> io::Result<()>
+    fn visit_seq_elt<T>(&mut self, value: T) -> io::Result<()>
         where T: ser::Serialize,
     {
-        try!(self.formatter.comma(&mut self.writer, first));
+        try!(self.formatter.comma(&mut self.writer, self.first));
+        self.first = false;
 
         value.serialize(self)
     }
@@ -205,6 +213,8 @@ impl<W, F> ser::Serializer for Serializer<W, F>
             }
             _ => {
                 try!(self.formatter.open(&mut self.writer, b'{'));
+
+                self.first = true;
 
                 while let Some(()) = try!(visitor.visit(self)) { }
 
@@ -227,11 +237,13 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_map_elt<K, V>(&mut self, first: bool, key: K, value: V) -> io::Result<()>
+    fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> io::Result<()>
         where K: ser::Serialize,
               V: ser::Serialize,
     {
-        try!(self.formatter.comma(&mut self.writer, first));
+        try!(self.formatter.comma(&mut self.writer, self.first));
+        self.first = false;
+
         try!(key.serialize(self));
         try!(self.formatter.colon(&mut self.writer));
         value.serialize(self)

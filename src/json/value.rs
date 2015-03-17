@@ -271,7 +271,7 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_seq_elt<T>(&mut self, _first: bool, value: T) -> Result<(), ()>
+    fn visit_seq_elt<T>(&mut self, value: T) -> Result<(), ()>
         where T: ser::Serialize,
     {
         try!(value.serialize(self));
@@ -330,7 +330,7 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_map_elt<K, V>(&mut self, _first: bool, key: K, value: V) -> Result<(), ()>
+    fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), ()>
         where K: ser::Serialize,
               V: ser::Serialize,
     {

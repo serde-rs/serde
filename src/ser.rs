@@ -124,9 +124,7 @@ pub trait Serializer {
         self.visit_seq(visitor)
     }
 
-    fn visit_seq_elt<T>(&mut self,
-                        first: bool,
-                        value: T) -> Result<(), Self::Error>
+    fn visit_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize;
 
     fn visit_map<V>(&mut self, visitor: V) -> Result<(), Self::Error>
@@ -151,10 +149,7 @@ pub trait Serializer {
         self.visit_map(visitor)
     }
 
-    fn visit_map_elt<K, V>(&mut self,
-                           first: bool,
-                           key: K,
-                           value: V) -> Result<(), Self::Error>
+    fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize;
 }
@@ -250,7 +245,6 @@ impl<T> Serialize for Option<T> where T: Serialize {
 pub struct SeqIteratorVisitor<Iter> {
     iter: Iter,
     len: Option<usize>,
-    first: bool,
 }
 
 impl<T, Iter> SeqIteratorVisitor<Iter>
@@ -261,7 +255,6 @@ impl<T, Iter> SeqIteratorVisitor<Iter>
         SeqIteratorVisitor {
             iter: iter,
             len: len,
-            first: true,
         }
     }
 }
@@ -274,12 +267,9 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: Serializer,
     {
-        let first = self.first;
-        self.first = false;
-
         match self.iter.next() {
             Some(value) => {
-                let value = try!(serializer.visit_seq_elt(first, value));
+                let value = try!(serializer.visit_seq_elt(value));
                 Ok(Some(value))
             }
             None => Ok(None),
@@ -365,7 +355,6 @@ macro_rules! tuple_impls {
             pub struct $TupleVisitor<'a, $($T: 'a),+> {
                 tuple: &'a ($($T,)+),
                 state: u8,
-                first: bool,
             }
 
             impl<'a, $($T: 'a),+> $TupleVisitor<'a, $($T),+> {
@@ -373,7 +362,6 @@ macro_rules! tuple_impls {
                     $TupleVisitor {
                         tuple: tuple,
                         state: 0,
-                        first: true,
                     }
                 }
             }
@@ -384,14 +372,11 @@ macro_rules! tuple_impls {
                 fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
                     where S: Serializer,
                 {
-                    let first = self.first;
-                    self.first = false;
-
                     match self.state {
                         $(
                             $state => {
                                 self.state += 1;
-                                Ok(Some(try!(serializer.visit_seq_elt(first, &e!(self.tuple.$idx)))))
+                                Ok(Some(try!(serializer.visit_seq_elt(&e!(self.tuple.$idx)))))
                             }
                         )+
                         _ => {
@@ -527,7 +512,6 @@ tuple_impls! {
 pub struct MapIteratorVisitor<Iter> {
     iter: Iter,
     len: Option<usize>,
-    first: bool,
 }
 
 impl<K, V, Iter> MapIteratorVisitor<Iter>
@@ -538,7 +522,6 @@ impl<K, V, Iter> MapIteratorVisitor<Iter>
         MapIteratorVisitor {
             iter: iter,
             len: len,
-            first: true,
         }
     }
 }
@@ -552,12 +535,9 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: Serializer,
     {
-        let first = self.first;
-        self.first = false;
-
         match self.iter.next() {
             Some((key, value)) => {
-                let value = try!(serializer.visit_map_elt(first, key, value));
+                let value = try!(serializer.visit_map_elt(key, value));
                 Ok(Some(value))
             }
             None => Ok(None)
