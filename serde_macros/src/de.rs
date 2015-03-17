@@ -608,8 +608,8 @@ fn deserialize_field_visitor(
         quote_item!(cx,
             impl ::serde::de::Deserialize for __Field {
                 #[inline]
-                fn deserialize<S>(state: &mut S) -> Result<__Field, S::Error>
-                    where S: ::serde::de::Deserializer,
+                fn deserialize<D>(deserializer: &mut D) -> Result<__Field, D::Error>
+                    where D: ::serde::de::Deserializer,
                 {
                     struct __FieldVisitor;
 
@@ -626,7 +626,7 @@ fn deserialize_field_visitor(
                         }
                     }
 
-                    state.visit(__FieldVisitor)
+                    deserializer.visit(__FieldVisitor)
                 }
             }
         ).unwrap(),
