@@ -535,7 +535,7 @@ mod deserializer {
         }
 
         fn end(&mut self) -> Result<(), Error> {
-            if self.state == 1 {
+            if self.state == 3 {
                 Ok(())
             } else {
                 Err(Error::SyntaxError)
