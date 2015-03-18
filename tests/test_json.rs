@@ -28,7 +28,7 @@ macro_rules! treemap {
     })
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[derive_serialize]
 #[derive_deserialize]
 enum Animal {
@@ -38,7 +38,7 @@ enum Animal {
 
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Inner {
@@ -47,7 +47,7 @@ struct Inner {
     c: Vec<String>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[derive_serialize]
 #[derive_deserialize]
 struct Outer {
@@ -628,53 +628,56 @@ fn test_write_option() {
     ]);
 }
 
-fn test_parse_ok<'a, T>(errors: &[(&'a str, T)])
-    where T: PartialEq + Debug + ser::Serialize + de::Deserialize,
+fn test_parse_ok<T>(errors: Vec<(&'static str, T)>)
+    where T: Clone + Debug + PartialEq + ser::Serialize + de::Deserialize,
 {
-    for &(s, ref value) in errors {
-        let v: T = from_str(s).unwrap();
-        assert_eq!(v, *value);
+    for (s, value) in errors {
+        let v: Result<T, Error> = from_str(s);
+        assert_eq!(v, Ok(value.clone()));
 
         // Make sure we can deserialize into a `Value`.
-        let json_value: Value = from_str(s).unwrap();
-        assert_eq!(json_value, to_value(&value));
+        let json_value: Result<Value, Error> = from_str(s);
+        assert_eq!(json_value, Ok(to_value(&value)));
+
+        let json_value = json_value.unwrap();
+
 
         // Make sure we can deserialize from a `Value`.
-        let v: T = from_value(json_value.clone()).unwrap();
-        assert_eq!(v, *value);
+        let v: Result<T, Error> = from_value(json_value.clone());
+        assert_eq!(v, Ok(value));
 
         // Make sure we can round trip back to `Value`.
-        let json_value2: Value = from_value(json_value.clone()).unwrap();
-        assert_eq!(json_value, json_value2);
+        let json_value2: Result<Value, Error> = from_value(json_value.clone());
+        assert_eq!(json_value2, Ok(json_value));
     }
 }
 
 // FIXME (#5527): these could be merged once UFCS is finished.
-fn test_parse_err<'a, T>(errors: &[(&'a str, Error)])
-    where T: Debug + de::Deserialize,
+fn test_parse_err<T>(errors: Vec<(&'static str, Error)>)
+    where T: Debug + PartialEq + de::Deserialize,
 {
-    for &(s, ref err) in errors {
+    for (s, err) in errors {
         let v: Result<T, Error> = from_str(s);
-        assert_eq!(v.unwrap_err(), *err);
+        assert_eq!(v, Err(err));
     }
 }
 
 #[test]
 fn test_parse_null() {
-    test_parse_err::<()>(&[
+    test_parse_err::<()>(vec![
         ("n", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 2)),
         ("nul", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 4)),
         ("nulla", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 5)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("null", ()),
     ]);
 }
 
 #[test]
 fn test_parse_bool() {
-    test_parse_err::<bool>(&[
+    test_parse_err::<bool>(vec![
         ("t", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 2)),
         ("truz", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 4)),
         ("f", Error::SyntaxError(ErrorCode::ExpectedSomeIdent, 1, 2)),
@@ -683,7 +686,7 @@ fn test_parse_bool() {
         ("falsea", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 6)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("true", true),
         (" true ", true),
         ("false", false),
@@ -693,7 +696,7 @@ fn test_parse_bool() {
 
 #[test]
 fn test_parse_number_errors() {
-    test_parse_err::<f64>(&[
+    test_parse_err::<f64>(vec![
         ("+", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 1)),
         (".", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 1)),
         ("-", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
@@ -707,7 +710,7 @@ fn test_parse_number_errors() {
 
 #[test]
 fn test_parse_i64() {
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("3", 3),
         ("-2", -2),
         ("-1234", -1234),
@@ -717,7 +720,7 @@ fn test_parse_i64() {
 
 #[test]
 fn test_parse_f64() {
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("3.0", 3.0f64),
         ("3.1", 3.1),
         ("-1.2", -1.2),
@@ -731,13 +734,13 @@ fn test_parse_f64() {
 
 #[test]
 fn test_parse_string() {
-    test_parse_err::<String>(&[
+    test_parse_err::<String>(vec![
         ("\"", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 2)),
         ("\"lol", Error::SyntaxError(ErrorCode::EOFWhileParsingString, 1, 5)),
         ("\"lol\"a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 6)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("\"\"", "".to_string()),
         ("\"foo\"", "foo".to_string()),
         (" \"foo\" ", "foo".to_string()),
@@ -753,7 +756,7 @@ fn test_parse_string() {
 
 #[test]
 fn test_parse_list() {
-    test_parse_err::<Vec<f64>>(&[
+    test_parse_err::<Vec<f64>>(vec![
         ("[", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
         ("[ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
         ("[1", Error::SyntaxError(ErrorCode::EOFWhileParsingList,  1, 3)),
@@ -763,39 +766,39 @@ fn test_parse_list() {
         ("[]a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 3)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[]", vec![]),
         ("[ ]", vec![]),
         ("[null]", vec![()]),
         (" [ null ] ", vec![()]),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[true]", vec![true]),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[3,1]", vec![3, 1]),
         (" [ 3 , 1 ] ", vec![3, 1]),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[[3], [1, 2]]", vec![vec![3], vec![1, 2]]),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[1]", (1,)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[1, 2]", (1, 2)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[1, 2, 3]", (1, 2, 3)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[1, [2, 3]]", (1, (2, 3))),
     ]);
 
@@ -805,7 +808,7 @@ fn test_parse_list() {
 
 #[test]
 fn test_parse_object() {
-    test_parse_err::<BTreeMap<String, u32>>(&[
+    test_parse_err::<BTreeMap<String, u32>>(vec![
         ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
         ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
         ("{1", Error::SyntaxError(ErrorCode::KeyMustBeAString, 1, 2)),
@@ -820,7 +823,7 @@ fn test_parse_object() {
         ("{}a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 3)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("{}", treemap!()),
         ("{ }", treemap!()),
         (
@@ -841,7 +844,7 @@ fn test_parse_object() {
         ),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         (
             "{\"a\": {\"b\": 3, \"c\": 4}}",
             treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
@@ -851,13 +854,13 @@ fn test_parse_object() {
 
 #[test]
 fn test_parse_struct() {
-    test_parse_err::<Outer>(&[
+    test_parse_err::<Outer>(vec![
         ("[]", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         (
             "{
                 \"inner\": []
@@ -883,12 +886,12 @@ fn test_parse_struct() {
 
 #[test]
 fn test_parse_option() {
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("null", None::<String>),
         ("\"jodhpurs\"", Some("jodhpurs".to_string())),
     ]);
 
-    #[derive(PartialEq, Debug)]
+    #[derive(Clone, Debug, PartialEq)]
     #[derive_serialize]
     #[derive_deserialize]
     struct Foo {
@@ -898,23 +901,28 @@ fn test_parse_option() {
     let value: Foo = from_str("{}").unwrap();
     assert_eq!(value, Foo { x: None });
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("{\"x\": null}", Foo { x: None }),
         ("{\"x\": 5}", Foo { x: Some(5) }),
     ]);
 }
 
 #[test]
-fn test_parse_enum() {
-    test_parse_err::<Animal>(&[
+fn test_parse_enum_errors() {
+    test_parse_err::<Animal>(vec![
         ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 2)),
+        ("{\"Dog\":", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 8)),
+        ("{\"Dog\":}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
         ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
-        ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
+        ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
+        ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
     ]);
+}
 
-    test_parse_ok(&[
+#[test]
+fn test_parse_enum() {
+    test_parse_ok(vec![
         ("{\"Dog\":[]}", Animal::Dog),
         (" { \"Dog\" : [ ] } ", Animal::Dog),
         (
@@ -935,7 +943,7 @@ fn test_parse_enum() {
         ),
     ]);
 
-    test_parse_ok(&[
+    test_parse_ok(vec![
         (
             concat!(
                 "{",
@@ -953,7 +961,7 @@ fn test_parse_enum() {
 
 #[test]
 fn test_parse_trailing_whitespace() {
-    test_parse_ok(&[
+    test_parse_ok(vec![
         ("[1, 2] ", vec![1, 2]),
         ("[1, 2]\n", vec![1, 2]),
         ("[1, 2]\t", vec![1, 2]),
@@ -963,7 +971,7 @@ fn test_parse_trailing_whitespace() {
 
 #[test]
 fn test_multiline_errors() {
-    test_parse_err::<BTreeMap<String, String>>(&[
+    test_parse_err::<BTreeMap<String, String>>(vec![
         ("{\n  \"foo\":\n \"bar\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 3, 8)),
     ]);
 }

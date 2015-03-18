@@ -340,20 +340,10 @@ mod deserializer {
             de::Deserialize::deserialize(self.de)
         }
 
-        fn visit_unit(&mut self) -> Result<(), Error> {
-            de::Deserialize::deserialize(self.de)
-        }
-
-        fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
-            where V: de::EnumSeqVisitor
+        fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
         {
-            Err(de::Error::syntax_error())
-        }
-
-        fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
-            where V: de::EnumMapVisitor
-        {
-            Err(de::Error::syntax_error())
+            de::Deserializer::visit(self.de, visitor)
         }
     }
 
@@ -371,20 +361,10 @@ mod deserializer {
             de::Deserialize::deserialize(self.de)
         }
 
-        fn visit_unit(&mut self) -> Result<(), Error> {
-            Err(de::Error::syntax_error())
-        }
-
-        fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-            where V: de::EnumSeqVisitor,
+        fn visit_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
         {
-            visitor.visit(self)
-        }
-
-        fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
-            where V: de::EnumMapVisitor
-        {
-            Err(de::Error::syntax_error())
+            visitor.visit_seq(self)
         }
     }
 

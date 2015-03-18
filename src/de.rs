@@ -15,10 +15,14 @@ pub trait Error {
     fn missing_field_error(&'static str) -> Self;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 pub trait Deserialize {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer;
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 pub trait Deserializer {
     type Error: Error;
@@ -49,6 +53,8 @@ pub trait Deserializer {
         Err(Error::syntax_error())
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 pub trait Visitor {
     type Value;
@@ -335,13 +341,8 @@ pub trait VariantVisitor {
     fn visit_variant<V>(&mut self) -> Result<V, Self::Error>
         where V: Deserialize;
 
-    fn visit_unit(&mut self) -> Result<(), Self::Error>;
-
-    fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
-        where V: EnumSeqVisitor;
-
-    fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
-        where V: EnumMapVisitor;
+    fn visit_value<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor;
 }
 
 impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
@@ -353,21 +354,10 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_variant()
     }
 
+    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+        where V: Visitor,
     {
-    fn visit_unit(&mut self) -> Result<(), T::Error> {
-        (**self).visit_unit()
-    }
-
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
-        where V: EnumSeqVisitor
-    {
-        (**self).visit_seq(visitor)
-    }
-
-    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
-        where V: EnumMapVisitor
-    {
-        (**self).visit_map(visitor)
+        (**self).visit_value(visitor)
     }
 }
 
@@ -391,7 +381,7 @@ pub trait EnumMapVisitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct UnitVisitor;
+pub struct UnitVisitor;
 
 impl Visitor for UnitVisitor {
     type Value = ();

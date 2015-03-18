@@ -454,7 +454,7 @@ fn deserialize_variant(
     match variant.node.kind {
         ast::TupleVariantKind(ref args) if args.is_empty() => {
             quote_expr!(cx, {
-                try!(visitor.visit_unit());
+                try!(visitor.visit_value(::serde::de::UnitVisitor));
                 Ok($type_ident::$variant_ident)
             })
         }
@@ -509,17 +509,17 @@ fn deserialize_tuple_variant(
     quote_expr!(cx, {
         $visitor_item
 
-        impl $generics ::serde::de::EnumSeqVisitor for $visitor_ty $where_clause {
+        impl $generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit<
-                V: ::serde::de::SeqVisitor,
-            >(&mut self, mut visitor: V) -> Result<$ty, V::Error> {
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+                where __V: ::serde::de::SeqVisitor,
+            {
                 $visit_seq_expr
             }
         }
 
-        visitor.visit_seq($visitor_expr)
+        visitor.visit_value($visitor_expr)
     })
 }
 
@@ -551,17 +551,17 @@ fn deserialize_struct_variant(
 
         $visitor_item
 
-        impl $generics ::serde::de::EnumMapVisitor for $visitor_ty $where_clause {
+        impl $generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit<
-                V: ::serde::de::MapVisitor,
-            >(&mut self, mut visitor: V) -> Result<$ty, V::Error> {
+            fn visit_map<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+                where __V: ::serde::de::MapVisitor,
+            {
                 $field_expr
             }
         }
 
-        visitor.visit_map($visitor_expr)
+        visitor.visit_value($visitor_expr)
     })
 }
 

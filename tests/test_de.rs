@@ -282,65 +282,16 @@ struct TokenDeserializerVariantVisitor<'a, 'b: 'a> {
 impl<'a, 'b> de::VariantVisitor for TokenDeserializerVariantVisitor<'a, 'b> {
     type Error = Error;
 
-    fn visit_kind<V>(&mut self) -> Result<V, Error>
+    fn visit_variant<V>(&mut self) -> Result<V, Error>
         where V: de::Deserialize,
     {
         de::Deserialize::deserialize(self.de)
     }
 
-    fn visit_unit(&mut self) -> Result<(), Error> {
-        let value = try!(Deserialize::deserialize(self.de));
-
-        match self.de.tokens.next() {
-            Some(Token::EnumEnd) => Ok(value),
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::EnumSeqVisitor,
+    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
     {
-        let token = self.de.tokens.next();
-        match token {
-            Some(Token::SeqStart(len)) => {
-                let value = try!(visitor.visit(TokenDeserializerSeqVisitor {
-                    de: self.de,
-                    len: len,
-                    first: true,
-                }));
-
-                match self.de.tokens.next() {
-                    Some(Token::EnumEnd) => Ok(value),
-                    Some(_) => Err(Error::SyntaxError),
-                    None => Err(Error::EndOfStreamError),
-                }
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::EnumMapVisitor,
-    {
-        match self.de.tokens.next() {
-            Some(Token::MapStart(len)) => {
-                let value = try!(visitor.visit(TokenDeserializerMapVisitor {
-                    de: self.de,
-                    len: len,
-                    first: true,
-                }));
-
-                match self.de.tokens.next() {
-                    Some(Token::EnumEnd) => Ok(value),
-                    Some(_) => Err(Error::SyntaxError),
-                    None => Err(Error::EndOfStreamError),
-                }
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
+        de::Deserializer::visit(self.de, visitor)
     }
 }
 

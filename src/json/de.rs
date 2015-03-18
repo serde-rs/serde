@@ -604,48 +604,12 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
         de::Deserialize::deserialize(self)
     }
 
-    /*
-    fn visit_value<V>(&mut self) -> Result<V, Error>
-        where V: de::Deserialize
-    {
-        de::Deserialize::deserialize(self)
-    }
-    */
-
-    fn visit_unit(&mut self) -> Result<(), Error> {
-        try!(self.parse_object_colon());
-
-        de::Deserialize::deserialize(self)
-    }
-
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::EnumSeqVisitor
+    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
     {
         try!(self.parse_object_colon());
 
-        self.parse_whitespace();
-
-        if self.ch_is(b'[') {
-            self.bump();
-            visitor.visit(SeqVisitor::new(self))
-        } else {
-            Err(self.error(ErrorCode::ExpectedSomeValue))
-        }
-    }
-
-    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::EnumMapVisitor
-    {
-        try!(self.parse_object_colon());
-
-        self.parse_whitespace();
-
-        if self.ch_is(b'{') {
-            self.bump();
-            visitor.visit(MapVisitor::new(self))
-        } else {
-            Err(self.error(ErrorCode::ExpectedSomeValue))
-        }
+        de::Deserializer::visit(self, visitor)
     }
 }
 
