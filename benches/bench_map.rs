@@ -1,4 +1,4 @@
-#![feature(custom_derive, core, plugin, test)]
+#![feature(custom_derive, plugin, test)]
 #![plugin(serde_macros)]
 
 extern crate serde;
@@ -403,7 +403,7 @@ fn bench_decoder_000(b: &mut Bencher) {
 fn bench_decoder_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0, 3) {
+        for i in (0 .. 3) {
             m.insert(i.to_string(), i);
         }
         run_decoder(decoder::IsizeDecoder::new(m.clone()), m)
@@ -414,7 +414,7 @@ fn bench_decoder_003(b: &mut Bencher) {
 fn bench_decoder_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0, 100) {
+        for i in (0 .. 100) {
             m.insert(i.to_string(), i);
         }
         run_decoder(decoder::IsizeDecoder::new(m.clone()), m)
@@ -443,7 +443,7 @@ fn bench_deserializer_000(b: &mut Bencher) {
 fn bench_deserializer_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0, 3) {
+        for i in (0 .. 3) {
             m.insert(i.to_string(), i);
         }
         run_deserializer(deserializer::IsizeDeserializer::new(m.clone()), m)
@@ -454,7 +454,7 @@ fn bench_deserializer_003(b: &mut Bencher) {
 fn bench_deserializer_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in range(0, 100) {
+        for i in (0 .. 100) {
             m.insert(i.to_string(), i);
         }
         run_deserializer(deserializer::IsizeDeserializer::new(m.clone()), m)

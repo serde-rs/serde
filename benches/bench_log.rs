@@ -1,4 +1,4 @@
-#![feature(custom_derive, collections, core, io, plugin, test)]
+#![feature(custom_derive, collections, core, plugin, test)]
 #![allow(non_camel_case_types)]
 #![plugin(serde_macros)]
 

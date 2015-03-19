@@ -1,4 +1,4 @@
-#![feature(core, plugin, test)]
+#![feature(plugin, test)]
 #![plugin(serde_macros)]
 
 extern crate serde;
@@ -537,7 +537,7 @@ fn bench_decoder_usize_003(b: &mut Bencher) {
 #[bench]
 fn bench_decoder_usize_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<usize> = range(0, 100).collect();
+        let v: Vec<usize> = (0 .. 100).collect();
         run_decoder(decoder::UsizeDecoder::new(v.clone()), v)
     })
 }
@@ -561,7 +561,7 @@ fn bench_decoder_u8_003(b: &mut Bencher) {
 #[bench]
 fn bench_decoder_u8_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<u8> = range(0u8, 100).collect();
+        let v: Vec<u8> = (0 .. 100).collect();
         run_decoder(decoder::U8Decoder::new(v.clone()), v)
     })
 }
@@ -585,7 +585,7 @@ fn bench_deserializer_usize_003(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_usize_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<usize> = range(0, 100).collect();
+        let v: Vec<usize> = (0 .. 100).collect();
         run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }
@@ -609,7 +609,7 @@ fn bench_deserializer_u8_003(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_u8_100(b: &mut Bencher) {
     b.iter(|| {
-        let v: Vec<u8> = range(0u8, 100).collect();
+        let v: Vec<u8> = (0 .. 100).collect();
         run_deserializer(deserializer::Deserializer::new(v.clone()), v)
     })
 }

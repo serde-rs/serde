@@ -289,7 +289,7 @@ fn deserialize_seq(
     struct_path: ast::Path,
     fields: usize,
 ) -> P<ast::Expr> {
-    let let_values: Vec<P<_>> = (0 .. fields)
+    let let_values: Vec<P<ast::Stmt>> = (0 .. fields)
         .map(|i| {
             let name = builder.id(format!("__field{}", i));
             quote_stmt!(cx,
@@ -299,7 +299,7 @@ fn deserialize_seq(
                         return Err(::serde::de::Error::end_of_stream_error());
                     }
                 };
-            )
+            ).unwrap()
         })
         .collect();
 
@@ -659,7 +659,7 @@ fn deserialize_map(
 
     // Declare each field.
     let let_values: Vec<P<ast::Stmt>> = field_names.iter()
-        .map(|field_name| quote_stmt!(cx, let mut $field_name = None;))
+        .map(|field_name| quote_stmt!(cx, let mut $field_name = None;).unwrap())
         .collect();
 
     // Match arms to extract a value for a field.
@@ -692,7 +692,7 @@ fn deserialize_map(
                     Some($field_name) => $field_name,
                     None => $missing_expr,
                 };
-            )
+            ).unwrap()
         })
         .collect();
 
