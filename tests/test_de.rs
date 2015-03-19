@@ -297,24 +297,20 @@ impl<'a, 'b> de::VariantVisitor for TokenDeserializerVariantVisitor<'a, 'b> {
 
 //////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, PartialEq, Debug)]
-#[derive_deserialize]
+#[derive(Copy, PartialEq, Debug, Deserialize)]
 struct NamedUnit;
 
-#[derive(PartialEq, Debug)]
-#[derive_deserialize]
+#[derive(PartialEq, Debug, Deserialize)]
 struct NamedSeq(i32, i32, i32);
 
-#[derive(PartialEq, Debug)]
-#[derive_deserialize]
+#[derive(PartialEq, Debug, Deserialize)]
 struct NamedMap {
     a: i32,
     b: i32,
     c: i32,
 }
 
-#[derive(PartialEq, Debug)]
-#[derive_deserialize]
+#[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
     Unit,
     Seq(i32, i32, i32),

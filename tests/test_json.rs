@@ -28,9 +28,7 @@ macro_rules! treemap {
     })
 }
 
-#[derive(Clone, Debug, PartialEq)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Animal {
     Dog,
     Frog(String, Vec<isize>),
@@ -38,18 +36,14 @@ enum Animal {
 
 }
 
-#[derive(Clone, Debug, PartialEq)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Inner {
     a: (),
     b: usize,
     c: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Outer {
     inner: Vec<Inner>,
 }
@@ -903,9 +897,7 @@ fn test_parse_option() {
         ("\"jodhpurs\"", Some("jodhpurs".to_string())),
     ]);
 
-    #[derive(Clone, Debug, PartialEq)]
-    #[derive_serialize]
-    #[derive_deserialize]
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct Foo {
         x: Option<isize>,
     }
@@ -990,8 +982,7 @@ fn test_multiline_errors() {
 
 #[test]
 fn test_missing_field() {
-    #[derive(Debug, PartialEq)]
-    #[derive_deserialize]
+    #[derive(Debug, PartialEq, Deserialize)]
     struct Foo {
         x: Option<u32>,
     }

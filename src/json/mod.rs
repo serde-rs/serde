@@ -46,7 +46,7 @@
 //! from JSON via the serialization API.  To be able to serialize a piece of data, it must implement
 //! the `serde::Serialize` trait.  To be able to deserialize a piece of data, it must implement the
 //! `serde::Deserialize` trait.  Serde provides provides an annotation to automatically generate
-//! the code for these traits: `#[derive_serialize]` and `#[derive_deserialize]`.
+//! the code for these traits: `#[derive(Serialize, Deserialize)]`.
 //!
 //! The JSON API also provides an enum `serde::json::Value` and a method `to_value` to serialize
 //! objects.  A `serde::json::Value` value can be serialized as a string or buffer using the
@@ -70,8 +70,7 @@
 //! use serde::json;
 //!
 //! // Automatically generate `Serialize` and `Deserialize` trait implementations
-//! #[derive_serialize]
-//! #[derive_deserialize]
+//! #[derive(Serialize, Deserialize)]
 //! pub struct TestStruct  {
 //!     data_int: u8,
 //!     data_str: String,

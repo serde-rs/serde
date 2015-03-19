@@ -267,20 +267,20 @@ impl<'a> Serializer for AssertSerializer<'a> {
 
 //////////////////////////////////////////////////////////////////////////
 
-#[derive_serialize]
+#[derive(Serialize)]
 struct NamedUnit;
 
-#[derive_serialize]
+#[derive(Serialize)]
 struct NamedSeq(i32, i32, i32);
 
-#[derive_serialize]
+#[derive(Serialize)]
 struct NamedMap {
     a: i32,
     b: i32,
     c: i32,
 }
 
-#[derive_serialize]
+#[derive(Serialize)]
 enum Enum {
     Unit,
     Seq(i32, i32),

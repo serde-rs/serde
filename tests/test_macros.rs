@@ -25,37 +25,30 @@ trait Trait {
 }
 */
 
-#[derive(Debug, PartialEq)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct NamedUnit;
 
-#[derive(Debug, PartialEq)]
-#[derive_serialize]
+#[derive(Debug, PartialEq, Serialize)]
 struct SerNamedTuple<'a, 'b, A: 'a, B: 'b, C>(&'a A, &'b mut B, C);
 
-#[derive(Debug, PartialEq)]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, Deserialize)]
 struct DeNamedTuple<A, B, C>(A, B, C);
 
-#[derive(Debug, PartialEq)]
-#[derive_serialize]
+#[derive(Debug, PartialEq, Serialize)]
 struct SerNamedMap<'a, 'b, A: 'a, B: 'b, C> {
     a: &'a A,
     b: &'b mut B,
     c: C,
 }
 
-#[derive(Debug, PartialEq)]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, Deserialize)]
 struct DeNamedMap<A, B, C> {
     a: A,
     b: B,
     c: C,
 }
 
-#[derive(Debug, PartialEq)]
-#[derive_serialize]
+#[derive(Debug, PartialEq, Serialize)]
 enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
     Unit,
     Seq(
@@ -95,8 +88,7 @@ enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
     },
 }
 
-#[derive(Debug, PartialEq)]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, Deserialize)]
 enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
     Unit,
     Seq(

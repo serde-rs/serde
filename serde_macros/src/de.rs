@@ -28,7 +28,7 @@ pub fn expand_derive_deserialize(
     let generics = match item.node {
         ast::ItemStruct(_, ref generics) => generics,
         ast::ItemEnum(_, ref generics) => generics,
-        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive_deserialize]")
+        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive(Deserialize)]")
     };
 
     let impl_generics = builder.from_generics(generics.clone())
@@ -93,7 +93,7 @@ fn deserialize_body(
                 enum_def,
             )
         }
-        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive_deserialize]")
+        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive(Deserialize)]")
     }
 }
 

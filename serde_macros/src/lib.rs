@@ -18,10 +18,10 @@ mod field;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(
-        token::intern("derive_serialize"),
+        token::intern("derive_Serialize"),
         Decorator(Box::new(ser::expand_derive_serialize)));
 
     reg.register_syntax_extension(
-        token::intern("derive_deserialize"),
+        token::intern("derive_Deserialize"),
         Decorator(Box::new(de::expand_derive_deserialize)));
 }

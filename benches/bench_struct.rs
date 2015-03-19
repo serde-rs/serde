@@ -14,8 +14,7 @@ use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Debug, RustcDecodable)]
-#[derive_deserialize]
+#[derive(Clone, PartialEq, Debug, RustcDecodable, Deserialize)]
 pub struct Inner {
     a: (),
     b: usize,
@@ -24,8 +23,7 @@ pub struct Inner {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Debug, RustcDecodable)]
-#[derive_deserialize]
+#[derive(Clone, PartialEq, Debug, RustcDecodable, Deserialize)]
 pub struct Outer {
     inner: Vec<Inner>,
 }

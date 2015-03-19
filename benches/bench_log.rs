@@ -17,9 +17,7 @@ use serde::ser::{self, Serialize, Serializer};
 
 use rustc_serialize::Encodable;
 
-#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable, Serialize, Deserialize)]
 struct Http {
     protocol: HttpProtocol,
     status: u32,
@@ -161,9 +159,7 @@ impl de::Deserialize for CacheStatus {
     }
 }
 
-#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable, Serialize, Deserialize)]
 struct Origin {
     ip: String,
     port: u32,
@@ -546,9 +542,7 @@ impl de::Deserialize for Country {
     }
 }
 
-#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
-#[derive_serialize]
-#[derive_deserialize]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable, Serialize, Deserialize)]
 struct Log {
     timestamp: i64,
     zone_id: u32,

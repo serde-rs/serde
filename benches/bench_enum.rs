@@ -15,8 +15,7 @@ use Animal::{Dog, Frog};
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Debug, RustcDecodable)]
-#[derive_deserialize]
+#[derive(Clone, PartialEq, Debug, RustcDecodable, Deserialize)]
 pub enum Animal {
     Dog,
     Frog(String, isize)
