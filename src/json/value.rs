@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, btree_map};
 use std::fmt;
 use std::io;
+use std::num;
 use std::str;
 use std::vec;
 
@@ -13,10 +14,210 @@ pub enum Value {
     Null,
     Bool(bool),
     I64(i64),
+    U64(u64),
     F64(f64),
     String(String),
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
+}
+
+impl Value {
+    /// If the `Value` is an Object, returns the value associated with the provided key.
+    /// Otherwise, returns None.
+    pub fn find<'a>(&'a self, key: &str) -> Option<&'a Value>{
+        match self {
+            &Value::Object(ref map) => map.get(key),
+            _ => None
+        }
+    }
+
+    /// Attempts to get a nested Value Object for each key in `keys`.
+    /// If any key is found not to exist, find_path will return None.
+    /// Otherwise, it will return the `Value` associated with the final key.
+    pub fn find_path<'a>(&'a self, keys: &[&str]) -> Option<&'a Value>{
+        let mut target = self;
+        for key in keys.iter() {
+            match target.find(*key) {
+                Some(t) => { target = t; },
+                None => return None
+            }
+        }
+        Some(target)
+    }
+
+    /// If the `Value` is an Object, performs a depth-first search until
+    /// a value associated with the provided key is found. If no value is found
+    /// or the `Value` is not an Object, returns None.
+    pub fn search<'a>(&'a self, key: &str) -> Option<&'a Value> {
+        match self {
+            &Value::Object(ref map) => {
+                match map.get(key) {
+                    Some(json_value) => Some(json_value),
+                    None => {
+                        for (_, v) in map.iter() {
+                            match v.search(key) {
+                                x if x.is_some() => return x,
+                                _ => ()
+                            }
+                        }
+                        None
+                    }
+                }
+            },
+            _ => None
+        }
+    }
+
+    /// Returns true if the `Value` is an Object. Returns false otherwise.
+    pub fn is_object<'a>(&'a self) -> bool {
+        self.as_object().is_some()
+    }
+
+    /// If the `Value` is an Object, returns the associated BTreeMap.
+    /// Returns None otherwise.
+    pub fn as_object<'a>(&'a self) -> Option<&'a BTreeMap<String, Value>> {
+        match self {
+            &Value::Object(ref map) => Some(map),
+            _ => None
+        }
+    }
+
+    /// If the `Value` is an Object, returns the associated mutable BTreeMap.
+    /// Returns None otherwise.
+    pub fn as_object_mut<'a>(&'a mut self) -> Option<&'a mut BTreeMap<String, Value>> {
+        match self {
+            &mut Value::Object(ref mut map) => Some(map),
+            _ => None
+        }
+    }
+
+    /// Returns true if the `Value` is an Array. Returns false otherwise.
+    pub fn is_array<'a>(&'a self) -> bool {
+        self.as_array().is_some()
+    }
+
+    /// If the `Value` is an Array, returns the associated vector.
+    /// Returns None otherwise.
+    pub fn as_array<'a>(&'a self) -> Option<&'a Vec<Value>> {
+        match self {
+            &Value::Array(ref array) => Some(&*array),
+            _ => None
+        }
+    }
+
+    /// If the `Value` is an Array, returns the associated mutable vector.
+    /// Returns None otherwise.
+    pub fn as_array_mut<'a>(&'a mut self) -> Option<&'a mut Vec<Value>> {
+        match self {
+            &mut Value::Array(ref mut list) => Some(list),
+            _ => None
+        }
+    }
+
+    /// Returns true if the `Value` is a String. Returns false otherwise.
+    pub fn is_string<'a>(&'a self) -> bool {
+        self.as_string().is_some()
+    }
+
+    /// If the `Value` is a String, returns the associated str.
+    /// Returns None otherwise.
+    pub fn as_string<'a>(&'a self) -> Option<&'a str> {
+        match *self {
+            Value::String(ref s) => Some(&s),
+            _ => None
+        }
+    }
+
+    /// Returns true if the `Value` is a Number. Returns false otherwise.
+    pub fn is_number(&self) -> bool {
+        match *self {
+            Value::I64(_) | Value::U64(_) | Value::F64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if the `Value` is a i64. Returns false otherwise.
+    pub fn is_i64(&self) -> bool {
+        match *self {
+            Value::I64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if the `Value` is a u64. Returns false otherwise.
+    pub fn is_u64(&self) -> bool {
+        match *self {
+            Value::U64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if the `Value` is a f64. Returns false otherwise.
+    pub fn is_f64(&self) -> bool {
+        match *self {
+            Value::F64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// If the `Value` is a number, return or cast it to a i64.
+    /// Returns None otherwise.
+    pub fn as_i64(&self) -> Option<i64> {
+        match *self {
+            Value::I64(n) => Some(n),
+            Value::U64(n) => num::cast(n),
+            _ => None
+        }
+    }
+
+    /// If the `Value` is a number, return or cast it to a u64.
+    /// Returns None otherwise.
+    pub fn as_u64(&self) -> Option<u64> {
+        match *self {
+            Value::I64(n) => num::cast(n),
+            Value::U64(n) => Some(n),
+            _ => None
+        }
+    }
+
+    /// If the `Value` is a number, return or cast it to a f64.
+    /// Returns None otherwise.
+    pub fn as_f64(&self) -> Option<f64> {
+        match *self {
+            Value::I64(n) => num::cast(n),
+            Value::U64(n) => num::cast(n),
+            Value::F64(n) => Some(n),
+            _ => None
+        }
+    }
+
+    /// Returns true if the `Value` is a Boolean. Returns false otherwise.
+    pub fn is_boolean(&self) -> bool {
+        self.as_boolean().is_some()
+    }
+
+    /// If the `Value` is a Boolean, returns the associated bool.
+    /// Returns None otherwise.
+    pub fn as_boolean(&self) -> Option<bool> {
+        match self {
+            &Value::Bool(b) => Some(b),
+            _ => None
+        }
+    }
+
+    /// Returns true if the `Value` is a Null. Returns false otherwise.
+    pub fn is_null(&self) -> bool {
+        self.as_null().is_some()
+    }
+
+    /// If the `Value` is a Null, returns ().
+    /// Returns None otherwise.
+    pub fn as_null(&self) -> Option<()> {
+        match self {
+            &Value::Null => Some(()),
+            _ => None
+        }
+    }
 }
 
 impl ser::Serialize for Value {
@@ -28,6 +229,7 @@ impl ser::Serialize for Value {
             Value::Null => serializer.visit_unit(),
             Value::Bool(v) => serializer.visit_bool(v),
             Value::I64(v) => serializer.visit_i64(v),
+            Value::U64(v) => serializer.visit_u64(v),
             Value::F64(v) => serializer.visit_f64(v),
             Value::String(ref v) => serializer.visit_str(&v),
             Value::Array(ref v) => v.serialize(serializer),
@@ -53,7 +255,16 @@ impl de::Deserialize for Value {
 
             #[inline]
             fn visit_i64<E>(&mut self, value: i64) -> Result<Value, E> {
-                Ok(Value::I64(value))
+                if value < 0 {
+                    Ok(Value::I64(value))
+                } else {
+                    Ok(Value::U64(value as u64))
+                }
+            }
+
+            #[inline]
+            fn visit_u64<E>(&mut self, value: u64) -> Result<Value, E> {
+                Ok(Value::U64(value))
             }
 
             #[inline]
@@ -173,13 +384,17 @@ impl ser::Serializer for Serializer {
 
     #[inline]
     fn visit_i64(&mut self, value: i64) -> Result<(), ()> {
-        self.state.push(State::Value(Value::I64(value)));
+        if value < 0 {
+            self.state.push(State::Value(Value::I64(value)));
+        } else {
+            self.state.push(State::Value(Value::U64(value as u64)));
+        }
         Ok(())
     }
 
     #[inline]
     fn visit_u64(&mut self, value: u64) -> Result<(), ()> {
-        self.state.push(State::Value(Value::I64(value as i64)));
+        self.state.push(State::Value(Value::U64(value)));
         Ok(())
     }
 
@@ -386,6 +601,7 @@ impl de::Deserializer for Deserializer {
             Value::Null => visitor.visit_unit(),
             Value::Bool(v) => visitor.visit_bool(v),
             Value::I64(v) => visitor.visit_i64(v),
+            Value::U64(v) => visitor.visit_u64(v),
             Value::F64(v) => visitor.visit_f64(v),
             Value::String(v) => visitor.visit_string(v),
             Value::Array(v) => {

@@ -711,10 +711,17 @@ fn test_parse_number_errors() {
 #[test]
 fn test_parse_i64() {
     test_parse_ok(vec![
-        ("3", 3),
         ("-2", -2),
         ("-1234", -1234),
         (" -1234 ", -1234),
+    ]);
+}
+
+#[test]
+fn test_parse_u64() {
+    test_parse_ok(vec![
+        ("3", 3u64),
+        ("1234", 1234),
     ]);
 }
 
@@ -778,28 +785,28 @@ fn test_parse_list() {
     ]);
 
     test_parse_ok(vec![
-        ("[3,1]", vec![3, 1]),
+        ("[3,1]", vec![3u64, 1]),
         (" [ 3 , 1 ] ", vec![3, 1]),
     ]);
 
     test_parse_ok(vec![
-        ("[[3], [1, 2]]", vec![vec![3], vec![1, 2]]),
+        ("[[3], [1, 2]]", vec![vec![3u64], vec![1, 2]]),
     ]);
 
     test_parse_ok(vec![
-        ("[1]", (1,)),
+        ("[1]", (1u64,)),
     ]);
 
     test_parse_ok(vec![
-        ("[1, 2]", (1, 2)),
+        ("[1, 2]", (1u64, 2u64)),
     ]);
 
     test_parse_ok(vec![
-        ("[1, 2, 3]", (1, 2, 3)),
+        ("[1, 2, 3]", (1u64, 2u64, 3u64)),
     ]);
 
     test_parse_ok(vec![
-        ("[1, [2, 3]]", (1, (2, 3))),
+        ("[1, [2, 3]]", (1u64, (2u64, 3u64))),
     ]);
 
     let v: () = from_str("[]").unwrap();
@@ -828,7 +835,7 @@ fn test_parse_object() {
         ("{ }", treemap!()),
         (
             "{\"a\":3}",
-            treemap!("a".to_string() => 3)
+            treemap!("a".to_string() => 3u64)
         ),
         (
             "{ \"a\" : 3 }",
@@ -847,7 +854,12 @@ fn test_parse_object() {
     test_parse_ok(vec![
         (
             "{\"a\": {\"b\": 3, \"c\": 4}}",
-            treemap!("a".to_string() => treemap!("b".to_string() => 3, "c".to_string() => 4)),
+            treemap!(
+                "a".to_string() => treemap!(
+                    "b".to_string() => 3u64,
+                    "c".to_string() => 4
+                )
+            ),
         ),
     ]);
 }
@@ -962,7 +974,7 @@ fn test_parse_enum() {
 #[test]
 fn test_parse_trailing_whitespace() {
     test_parse_ok(vec![
-        ("[1, 2] ", vec![1, 2]),
+        ("[1, 2] ", vec![1u64, 2]),
         ("[1, 2]\n", vec![1, 2]),
         ("[1, 2]\t", vec![1, 2]),
         ("[1, 2]\t \n", vec![1, 2]),

@@ -171,7 +171,7 @@ fn test_ser_named_tuple() {
 
     assert_eq!(
         json::to_value(&named_tuple),
-        Value::Array(vec![Value::I64(5), Value::I64(6), Value::I64(7)])
+        Value::Array(vec![Value::U64(5), Value::U64(6), Value::U64(7)])
     );
 }
 
@@ -185,9 +185,9 @@ fn test_de_named_tuple() {
     assert_eq!(
         json::from_str("[1,2,3]").unwrap(),
         Value::Array(vec![
-            Value::I64(1),
-            Value::I64(2),
-            Value::I64(3),
+            Value::U64(1),
+            Value::U64(2),
+            Value::U64(3),
         ])
     );
 }
@@ -211,9 +211,9 @@ fn test_ser_named_map() {
     assert_eq!(
         json::to_value(&named_map),
         Value::Object(btreemap![
-            "a".to_string() => Value::I64(5),
-            "b".to_string() => Value::I64(6),
-            "c".to_string() => Value::I64(7)
+            "a".to_string() => Value::U64(5),
+            "b".to_string() => Value::U64(6),
+            "c".to_string() => Value::U64(7)
         ])
     );
 }
@@ -233,9 +233,9 @@ fn test_de_named_map() {
 
     assert_eq!(
         json::from_value(Value::Object(btreemap![
-            "a".to_string() => Value::I64(5),
-            "b".to_string() => Value::I64(6),
-            "c".to_string() => Value::I64(7)
+            "a".to_string() => Value::U64(5),
+            "b".to_string() => Value::U64(6),
+            "c".to_string() => Value::U64(7)
         ])).unwrap(),
         v
     );
@@ -288,12 +288,12 @@ fn test_ser_enum_seq() {
         )),
         Value::Object(btreemap!(
             "Seq".to_string() => Value::Array(vec![
-                Value::I64(1),
-                Value::I64(2),
-                Value::I64(3),
-                //Value::I64(4),
-                Value::I64(5),
-                //Value::I64(6),
+                Value::U64(1),
+                Value::U64(2),
+                Value::U64(3),
+                //Value::U64(4),
+                Value::U64(5),
+                //Value::U64(6),
             ])
         ))
     );
@@ -331,12 +331,12 @@ fn test_ser_enum_map() {
         }),
         Value::Object(btreemap!(
             "Map".to_string() => Value::Object(btreemap![
-                "a".to_string() => Value::I64(1),
-                "b".to_string() => Value::I64(2),
-                "c".to_string() => Value::I64(3),
-                //"d".to_string() => Value::I64(4)
-                "e".to_string() => Value::I64(5)
-                //"f".to_string() => Value::I64(6)
+                "a".to_string() => Value::U64(1),
+                "b".to_string() => Value::U64(2),
+                "c".to_string() => Value::U64(3),
+                //"d".to_string() => Value::U64(4)
+                "e".to_string() => Value::U64(5)
+                //"f".to_string() => Value::U64(6)
             ])
         ))
     );
@@ -381,12 +381,12 @@ fn test_de_enum_seq() {
     assert_eq!(
         json::from_value(Value::Object(btreemap!(
             "Seq".to_string() => Value::Array(vec![
-                Value::I64(1),
-                Value::I64(2),
-                Value::I64(3),
-                //Value::I64(4),
-                Value::I64(5),
-                //Value::I64(6),
+                Value::U64(1),
+                Value::U64(2),
+                Value::U64(3),
+                //Value::U64(4),
+                Value::U64(5),
+                //Value::U64(6),
             ])
         ))).unwrap(),
         DeEnum::Seq(
@@ -424,12 +424,12 @@ fn test_de_enum_map() {
     assert_eq!(
         json::from_value(Value::Object(btreemap!(
             "Map".to_string() => Value::Object(btreemap![
-                "a".to_string() => Value::I64(1),
-                "b".to_string() => Value::I64(2),
-                "c".to_string() => Value::I64(3),
-                //"d".to_string() => Value::I64(4)
-                "e".to_string() => Value::I64(5)
-                //"f".to_string() => Value::I64(6)
+                "a".to_string() => Value::U64(1),
+                "b".to_string() => Value::U64(2),
+                "c".to_string() => Value::U64(3),
+                //"d".to_string() => Value::U64(4)
+                "e".to_string() => Value::U64(5)
+                //"f".to_string() => Value::U64(6)
             ])
         ))).unwrap(),
         DeEnum::Map {

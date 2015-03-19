@@ -130,17 +130,16 @@ impl<Iter> Deserializer<Iter>
     fn parse_number<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        let mut neg = 1;
+        let mut neg = false;
 
         if self.ch_is(b'-') {
             self.bump();
-            neg = -1;
+            neg = true;
         }
 
         let res = try!(self.parse_integer());
 
         if self.ch_is(b'.') || self.ch_is(b'e') || self.ch_is(b'E') {
-            let neg = neg as f64;
             let mut res = res as f64;
 
             if self.ch_is(b'.') {
@@ -151,13 +150,28 @@ impl<Iter> Deserializer<Iter>
                 res = try!(self.parse_exponent(res));
             }
 
-            visitor.visit_f64(neg * res)
+            if neg {
+                visitor.visit_f64(-res)
+            } else {
+                visitor.visit_f64(res)
+            }
         } else {
-            visitor.visit_i64(neg * res)
+            if neg {
+                let res = -(res as i64);
+
+                // Make sure we didn't underflow.
+                if res > 0 {
+                    Err(self.error(ErrorCode::InvalidNumber))
+                } else {
+                    visitor.visit_i64(res)
+                }
+            } else {
+                visitor.visit_u64(res)
+            }
         }
     }
 
-    fn parse_integer(&mut self) -> Result<i64, Error> {
+    fn parse_integer(&mut self) -> Result<u64, Error> {
         let mut res = 0;
 
         match self.ch_or_null() {
@@ -177,7 +191,7 @@ impl<Iter> Deserializer<Iter>
                     match self.ch_or_null() {
                         c @ b'0' ... b'9' => {
                             res *= 10;
-                            res += (c as i64) - (b'0' as i64);
+                            res += (c as u64) - (b'0' as u64);
                             self.bump();
                         }
                         _ => break,
