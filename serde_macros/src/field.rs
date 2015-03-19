@@ -1,4 +1,5 @@
 use syntax::ast;
+use syntax::attr;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 
@@ -15,6 +16,7 @@ fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
         })
         .and_then(|sa| {
             if let ast::MetaList(_, ref vals) = sa.node.value.node {
+                attr::mark_used(&sa);
                 vals.iter().fold(None, |v, mi| {
                     if let ast::MetaNameValue(ref n, ref lit) = mi.node {
                         if n == &"alias" {
@@ -61,6 +63,7 @@ pub fn default_value(field: &ast::StructField) -> bool {
         .any(|sa| {
              if let ast::MetaItem_::MetaList(ref n, ref vals) = sa.node.value.node {
                  if n == &"serde" {
+                     attr::mark_used(&sa);
                      vals.iter()
                          .map(|mi|
                               if let ast::MetaItem_::MetaWord(ref n) = mi.node {
