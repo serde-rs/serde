@@ -16,7 +16,7 @@ use serde::de::{Deserializer, Deserialize};
 
 #[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
-struct Inner {
+pub struct Inner {
     a: (),
     b: usize,
     c: HashMap<String, Option<char>>,
@@ -26,7 +26,7 @@ struct Inner {
 
 #[derive(Clone, PartialEq, Debug, RustcDecodable)]
 #[derive_deserialize]
-struct Outer {
+pub struct Outer {
     inner: Vec<Inner>,
 }
 
