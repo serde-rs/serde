@@ -660,6 +660,13 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     type Value = Vec<T>;
 
     #[inline]
+    fn visit_unit<E>(&mut self) -> Result<Vec<T>, E>
+        where E: Error,
+    {
+        Ok(vec![])
+    }
+
+    #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Vec<T>, V::Error>
         where V: SeqVisitor,
     {
@@ -768,6 +775,13 @@ impl<K, V> Visitor for HashMapVisitor<K, V>
     type Value = HashMap<K, V>;
 
     #[inline]
+    fn visit_unit<E>(&mut self) -> Result<HashMap<K, V>, E>
+        where E: Error,
+    {
+        Ok(HashMap::new())
+    }
+
+    #[inline]
     fn visit_map<V_>(&mut self, mut visitor: V_) -> Result<HashMap<K, V>, V_::Error>
         where V_: MapVisitor,
     {
@@ -815,6 +829,13 @@ impl<K, V> Visitor for BTreeMapVisitor<K, V>
           V: Deserialize
 {
     type Value = BTreeMap<K, V>;
+
+    #[inline]
+    fn visit_unit<E>(&mut self) -> Result<BTreeMap<K, V>, E>
+        where E: Error,
+    {
+        Ok(BTreeMap::new())
+    }
 
     #[inline]
     fn visit_map<Visitor>(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, Visitor::Error>

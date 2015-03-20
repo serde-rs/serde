@@ -500,6 +500,9 @@ declare_tests! {
     }
     test_vec {
         Vec::<isize>::new() => vec![
+            Token::Unit,
+        ],
+        Vec::<isize>::new() => vec![
             Token::SeqStart(0),
             Token::SeqEnd,
         ],
@@ -525,6 +528,15 @@ declare_tests! {
                 Token::SeqEnd,
             Token::SeqEnd,
         ],
+        Vec::<isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::Unit,
+        ],
+        Vec::<isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::SeqStart(0),
+            Token::SeqEnd,
+        ],
     }
     test_tuple {
         (1,) => vec![
@@ -547,6 +559,13 @@ declare_tests! {
         ],
     }
     test_btreemap {
+        BTreeMap::<isize, isize>::new() => vec![
+            Token::Unit,
+        ],
+        BTreeMap::<isize, isize>::new() => vec![
+            Token::MapStart(0),
+            Token::MapEnd,
+        ],
         btreemap![1 => 2] => vec![
             Token::MapStart(1),
                 Token::MapSep(true),
@@ -583,6 +602,15 @@ declare_tests! {
                     Token::I32(5),
                     Token::I32(6),
                 Token::MapEnd,
+            Token::MapEnd,
+        ],
+        BTreeMap::<isize, isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::Unit,
+        ],
+        BTreeMap::<isize, isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::MapStart(0),
             Token::MapEnd,
         ],
     }

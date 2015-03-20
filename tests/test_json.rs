@@ -861,8 +861,8 @@ fn test_parse_object() {
 #[test]
 fn test_parse_struct() {
     test_parse_err::<Outer>(vec![
-        ("[]", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
+        ("5", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
+        ("\"hello\"", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
         ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
     ]);
 
@@ -888,6 +888,13 @@ fn test_parse_struct() {
             },
         )
     ]);
+
+    assert_eq!(
+        from_str("{}"),
+        Ok(Outer {
+            inner: vec![],
+        })
+    );
 }
 
 #[test]
