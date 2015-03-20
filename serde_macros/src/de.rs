@@ -206,18 +206,6 @@ fn deserialize_unit_struct(
             }
 
             #[inline]
-            fn visit_named_unit<
-                E: ::serde::de::Error,
-            >(&mut self, name: &str) -> Result<$type_ident, E> {
-                if name == $type_name {
-                    self.visit_unit()
-                } else {
-                    Err(::serde::de::Error::syntax_error())
-                }
-            }
-
-
-            #[inline]
             fn visit_seq<V>(&mut self, mut visitor: V) -> Result<$type_ident, V::Error>
                 where V: ::serde::de::SeqVisitor,
             {
@@ -226,7 +214,7 @@ fn deserialize_unit_struct(
             }
         }
 
-        deserializer.visit(__Visitor)
+        deserializer.visit_named_unit($type_name, __Visitor)
     })
 }
 
@@ -265,21 +253,9 @@ fn deserialize_tuple_struct(
             {
                 $visit_seq_expr
             }
-
-            fn visit_named_seq<__V>(&mut self,
-                                    name: &str,
-                                    visitor: __V) -> Result<$ty, __V::Error>
-                where __V: ::serde::de::SeqVisitor,
-            {
-                if name == $type_name {
-                    self.visit_seq(visitor)
-                } else {
-                    Err(::serde::de::Error::syntax_error())
-                }
-            }
         }
 
-        deserializer.visit($visitor_expr)
+        deserializer.visit_named_seq($type_name, $visitor_expr)
     })
 }
 
@@ -355,22 +331,9 @@ fn deserialize_struct(
             {
                 $visit_map_expr
             }
-
-            #[inline]
-            fn visit_named_map<__V>(&mut self,
-                                    name: &str,
-                                    visitor: __V) -> Result<$ty, __V::Error>
-                where __V: ::serde::de::MapVisitor,
-            {
-                if name == $type_name {
-                    self.visit_map(visitor)
-                } else {
-                    Err(::serde::de::Error::syntax_error())
-                }
-            }
         }
 
-        deserializer.visit($visitor_expr)
+        deserializer.visit_named_map($type_name, $visitor_expr)
     })
 }
 

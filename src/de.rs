@@ -18,22 +18,24 @@ pub trait Error {
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Deserialize {
+    /// Deserialize this value given this `Deserializer`.
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// `Deserializer` is an abstract trait that can deserialize values into a `Visitor`.
 pub trait Deserializer {
     type Error: Error;
 
+    /// The `visit` method walks a visitor through a value as it is being deserialized.
     fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
-    /// The `visit_option` method allows a `Deserialize` type to inform the
-    /// `Deserializer` that it's expecting an optional value. This allows
-    /// deserializers that encode an optional value as a nullable value to
-    /// convert the null value into a `None`, and a regular value as
+    /// The `visit_option` method allows a `Deserialize` type to inform the `Deserializer` that
+    /// it's expecting an optional value. This allows deserializers that encode an optional value
+    /// as a nullable value to convert the null value into a `None`, and a regular value as
     /// `Some(value)`.
     #[inline]
     fn visit_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
@@ -42,10 +44,59 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    /// The `visit_enum` method allows a `Deserialize` type to inform the
-    /// `Deserializer` that it's expecting an enum value. This allows
-    /// deserializers that provide a custom enumeration serialization to
-    /// properly deserialize the type.
+    /// The `visit_seq` method allows a `Deserialize` type to inform the `Deserializer` that it's
+    /// expecting a sequence of values. This allows deserializers to parse sequences that aren't
+    /// tagged as sequences.
+    #[inline]
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// The `visit_map` method allows a `Deserialize` type to inform the `Deserializer` that it's
+    /// expecting a map of values. This allows deserializers to parse sequences that aren't tagged
+    /// as maps.
+    #[inline]
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// The `visit_named_unit` method allows a `Deserialize` type to inform the `Deserializer` that
+    /// it's expecting a named unit. This allows deserializers to a named unit that aren't tagged
+    /// as a named unit.
+    #[inline]
+    fn visit_named_unit<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// The `visit_named_seq` method allows a `Deserialize` type to inform the `Deserializer` that
+    /// it's expecting a named sequence of values. This allows deserializers to parse sequences
+    /// that aren't tagged as sequences.
+    #[inline]
+    fn visit_named_seq<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit_seq(visitor)
+    }
+
+    /// The `visit_named_map` method allows a `Deserialize` type to inform the `Deserializer` that
+    /// it's expecting a map of values. This allows deserializers to parse sequences that aren't
+    /// tagged as maps.
+    #[inline]
+    fn visit_named_map<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit_map(visitor)
+    }
+
+    /// The `visit_enum` method allows a `Deserialize` type to inform the `Deserializer` that it's
+    /// expecting an enum value. This allows deserializers that provide a custom enumeration
+    /// serialization to properly deserialize the type.
     #[inline]
     fn visit_enum<V>(&mut self, _enum: &str, _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
@@ -191,24 +242,10 @@ pub trait Visitor {
         Err(Error::syntax_error())
     }
 
-    #[inline]
-    fn visit_named_seq<V>(&mut self, _name: &str, visitor: V) -> Result<Self::Value, V::Error>
-        where V: SeqVisitor,
-    {
-        self.visit_seq(visitor)
-    }
-
     fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
     {
         Err(Error::syntax_error())
-    }
-
-    #[inline]
-    fn visit_named_map<V>(&mut self, _name: &str, visitor: V) -> Result<Self::Value, V::Error>
-        where V: MapVisitor,
-    {
-        self.visit_map(visitor)
     }
 }
 

@@ -30,7 +30,7 @@ pub struct Outer {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     EndOfStream,
     SyntaxError,
@@ -366,30 +366,6 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.stack.pop() {
-                Some(State::OuterState(Outer { inner })) => {
-                    self.stack.push(State::VecState(inner));
-                    self.stack.push(State::StrState("inner"));
-
-                    visitor.visit_named_map("Outer", OuterMapVisitor {
-                        de: self,
-                        state: 0,
-                    })
-                }
-                Some(State::InnerState(Inner { a: (), b, c })) => {
-                    self.stack.push(State::MapState(c));
-                    self.stack.push(State::StrState("c"));
-
-                    self.stack.push(State::UsizeState(b));
-                    self.stack.push(State::StrState("b"));
-
-                    self.stack.push(State::NullState);
-                    self.stack.push(State::StrState("a"));
-
-                    visitor.visit_named_map("Inner", InnerMapVisitor {
-                        de: self,
-                        state: 0,
-                    })
-                }
                 Some(State::VecState(value)) => {
                     visitor.visit_seq(OuterSeqVisitor {
                         de: self,
@@ -423,7 +399,50 @@ mod deserializer {
                 Some(State::OptionState(true)) => {
                     visitor.visit_some(self)
                 }
+                Some(token) => Err(Error::SyntaxError),
                 None => Err(Error::EndOfStream),
+            }
+        }
+
+        fn visit_named_map<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
+            where V: de::Visitor,
+        {
+            match self.stack.pop() {
+                Some(State::OuterState(Outer { inner })) => {
+                    if name != "Outer" {
+                        return Err(Error::SyntaxError);
+                    }
+
+                    self.stack.push(State::VecState(inner));
+                    self.stack.push(State::StrState("inner"));
+
+                    visitor.visit_map(OuterMapVisitor {
+                        de: self,
+                        state: 0,
+                    })
+                }
+                Some(State::InnerState(Inner { a: (), b, c })) => {
+                    if name != "Inner" {
+                        return Err(Error::SyntaxError);
+                    }
+
+                    self.stack.push(State::MapState(c));
+                    self.stack.push(State::StrState("c"));
+
+                    self.stack.push(State::UsizeState(b));
+                    self.stack.push(State::StrState("b"));
+
+                    self.stack.push(State::NullState);
+                    self.stack.push(State::StrState("a"));
+
+                    visitor.visit_map(InnerMapVisitor {
+                        de: self,
+                        state: 0,
+                    })
+                }
+                _ => {
+                    Err(Error::SyntaxError)
+                }
             }
         }
     }
@@ -605,9 +624,9 @@ fn bench_decoder_0_0(b: &mut Bencher) {
         };
 
         let mut d = decoder::OuterDecoder::new(outer.clone());
-        let value: Outer = Decodable::decode(&mut d).unwrap();
+        let value: Result<Outer, Error> = Decodable::decode(&mut d);
 
-        assert_eq!(value, outer);
+        assert_eq!(value, Ok(outer));
     })
 }
 
@@ -627,9 +646,9 @@ fn bench_decoder_1_0(b: &mut Bencher) {
         };
 
         let mut d = decoder::OuterDecoder::new(outer.clone());
-        let value: Outer = Decodable::decode(&mut d).unwrap();
+        let value: Result<Outer, Error> = Decodable::decode(&mut d);
 
-        assert_eq!(value, outer);
+        assert_eq!(value, Ok(outer));
     })
 }
 
@@ -654,9 +673,9 @@ fn bench_decoder_1_5(b: &mut Bencher) {
         };
 
         let mut d = decoder::OuterDecoder::new(outer.clone());
-        let value: Outer = Decodable::decode(&mut d).unwrap();
+        let value: Result<Outer, Error> = Decodable::decode(&mut d);
 
-        assert_eq!(value, outer);
+        assert_eq!(value, Ok(outer));
     })
 }
 
@@ -668,9 +687,9 @@ fn bench_deserializer_0_0(b: &mut Bencher) {
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserialize::deserialize(&mut d).unwrap();
+        let value: Result<Outer, Error> = Deserialize::deserialize(&mut d);
 
-        assert_eq!(value, outer);
+        assert_eq!(value, Ok(outer));
     })
 }
 
@@ -690,9 +709,9 @@ fn bench_deserializer_1_0(b: &mut Bencher) {
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserialize::deserialize(&mut d).unwrap();
+        let value: Result<Outer, Error> = Deserialize::deserialize(&mut d);
 
-        assert_eq!(value, outer);
+        assert_eq!(value, Ok(outer));
     })
 }
 
@@ -717,8 +736,8 @@ fn bench_deserializer_1_5(b: &mut Bencher) {
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
-        let value: Outer = Deserialize::deserialize(&mut d).unwrap();
+        let value: Result<Outer, Error> = Deserialize::deserialize(&mut d);
 
-        assert_eq!(value, outer);
+        assert_eq!(value, Ok(outer));
     })
 }
