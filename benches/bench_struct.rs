@@ -399,7 +399,7 @@ mod deserializer {
                 Some(State::OptionState(true)) => {
                     visitor.visit_some(self)
                 }
-                Some(token) => Err(Error::SyntaxError),
+                Some(_) => Err(Error::SyntaxError),
                 None => Err(Error::EndOfStream),
             }
         }
