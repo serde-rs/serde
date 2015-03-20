@@ -16,4 +16,5 @@ pub mod ser;
 pub mod de;
 pub mod json;
 pub mod bytes;
+pub mod xml;
 mod iterator;
