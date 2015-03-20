@@ -53,7 +53,7 @@ pub fn expand_derive_serialize(
     let impl_item = quote_item!(cx,
         #[automatically_derived]
         impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
-            fn serialize<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
+            fn serialize<__S>(&self, serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
                 where __S: ::serde::ser::Serializer,
             {
                 $body
@@ -487,7 +487,7 @@ fn serialize_tuple_struct_visitor(
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
-                fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+                fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
                     where S: ::serde::ser::Serializer,
                 {
                     match self.state {
@@ -566,7 +566,7 @@ fn serialize_struct_visitor<I>(
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
-                fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+                fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
                     where S: ::serde::ser::Serializer,
                 {
                     match self.state {
