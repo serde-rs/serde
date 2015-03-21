@@ -1,7 +1,9 @@
 use std::char;
+use std::io;
 use std::num::Float;
-use unicode::str::Utf16Item;
 use std::str;
+
+use unicode::str::Utf16Item;
 
 use de;
 use super::error::{Error, ErrorCode};
@@ -11,29 +13,31 @@ pub struct Deserializer<Iter> {
     ch: Option<u8>,
     line: usize,
     col: usize,
-    buf: Vec<u8>,
+    str_buf: Vec<u8>,
 }
 
 impl<Iter> Deserializer<Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
-    /// Creates the JSON parser.
+    /// Creates the JSON parser from an `std::iter::Iterator`.
     #[inline]
-    pub fn new(rdr: Iter) -> Deserializer<Iter> {
-        let mut p = Deserializer {
+    pub fn new(rdr: Iter) -> Result<Deserializer<Iter>, Error> {
+        let mut deserializer = Deserializer {
             rdr: rdr,
-            ch: Some(b'\x00'),
+            ch: None,
             line: 1,
             col: 0,
-            buf: Vec::with_capacity(128),
+            str_buf: Vec::with_capacity(128),
         };
-        p.bump();
-        return p;
+
+        try!(deserializer.bump());
+
+        Ok(deserializer)
     }
 
     #[inline]
     pub fn end(&mut self) -> Result<(), Error> {
-        self.parse_whitespace();
+        try!(self.parse_whitespace());
         if self.eof() {
             Ok(())
         } else {
@@ -45,8 +49,12 @@ impl<Iter> Deserializer<Iter>
 
     fn ch_or_null(&self) -> u8 { self.ch.unwrap_or(b'\x00') }
 
-    fn bump(&mut self) {
-        self.ch = self.rdr.next();
+    fn bump(&mut self) -> Result<(), Error> {
+        self.ch = match self.rdr.next() {
+            Some(Err(err)) => { return Err(Error::IoError(err)); }
+            Some(Ok(ch)) => Some(ch),
+            None => None,
+        };
 
         if self.ch_is(b'\n') {
             self.line += 1;
@@ -54,11 +62,13 @@ impl<Iter> Deserializer<Iter>
         } else {
             self.col += 1;
         }
+
+        Ok(())
     }
 
-    fn next_char(&mut self) -> Option<u8> {
-        self.bump();
-        self.ch
+    fn next_char(&mut self) -> Result<Option<u8>, Error> {
+        try!(self.bump());
+        Ok(self.ch)
     }
 
     fn ch_is(&self, c: u8) -> bool {
@@ -69,17 +79,19 @@ impl<Iter> Deserializer<Iter>
         Error::SyntaxError(reason, self.line, self.col)
     }
 
-    fn parse_whitespace(&mut self) {
+    fn parse_whitespace(&mut self) -> Result<(), Error> {
         while self.ch_is(b' ') ||
               self.ch_is(b'\n') ||
               self.ch_is(b'\t') ||
-              self.ch_is(b'\r') { self.bump(); }
+              self.ch_is(b'\r') { try!(self.bump()); }
+
+        Ok(())
     }
 
     fn parse_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        self.parse_whitespace();
+        try!(self.parse_whitespace());
 
         if self.eof() {
             return Err(self.error(ErrorCode::EOFWhileParsingValue));
@@ -101,15 +113,15 @@ impl<Iter> Deserializer<Iter>
             b'0' ... b'9' | b'-' => self.parse_number(visitor),
             b'"' => {
                 try!(self.parse_string());
-                let s = str::from_utf8(&self.buf).unwrap();
+                let s = str::from_utf8(&self.str_buf).unwrap();
                 visitor.visit_str(s)
             }
             b'[' => {
-                self.bump();
+                try!(self.bump());
                 visitor.visit_seq(SeqVisitor::new(self))
             }
             b'{' => {
-                self.bump();
+                try!(self.bump());
                 visitor.visit_map(MapVisitor::new(self))
             }
             _ => {
@@ -119,12 +131,14 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn parse_ident(&mut self, ident: &[u8]) -> Result<(), Error> {
-        if ident.iter().all(|c| Some(*c) == self.next_char()) {
-            self.bump();
-            Ok(())
-        } else {
-            Err(self.error(ErrorCode::ExpectedSomeIdent))
+        for c in ident {
+            if Some(*c) != try!(self.next_char()) {
+                return Err(self.error(ErrorCode::ExpectedSomeIdent));
+            }
         }
+
+        try!(self.bump());
+        Ok(())
     }
 
     fn parse_number<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
@@ -133,7 +147,7 @@ impl<Iter> Deserializer<Iter>
         let mut neg = false;
 
         if self.ch_is(b'-') {
-            self.bump();
+            try!(self.bump());
             neg = true;
         }
 
@@ -176,7 +190,7 @@ impl<Iter> Deserializer<Iter>
 
         match self.ch_or_null() {
             b'0' => {
-                self.bump();
+                try!(self.bump());
 
                 // There can be only one leading '0'.
                 match self.ch_or_null() {
@@ -192,7 +206,7 @@ impl<Iter> Deserializer<Iter>
                         c @ b'0' ... b'9' => {
                             res *= 10;
                             res += (c as u64) - (b'0' as u64);
-                            self.bump();
+                            try!(self.bump());
                         }
                         _ => break,
                     }
@@ -205,7 +219,7 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn parse_decimal(&mut self, res: f64) -> Result<f64, Error> {
-        self.bump();
+        try!(self.bump());
 
         // Make sure a digit follows the decimal place.
         match self.ch_or_null() {
@@ -220,7 +234,7 @@ impl<Iter> Deserializer<Iter>
                 c @ b'0' ... b'9' => {
                     dec /= 10.0;
                     res += (((c as u64) - (b'0' as u64)) as f64) * dec;
-                    self.bump();
+                    try!(self.bump());
                 }
                 _ => break,
             }
@@ -230,15 +244,15 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
-        self.bump();
+        try!(self.bump());
 
         let mut exp = 0;
         let mut neg_exp = false;
 
         if self.ch_is(b'+') {
-            self.bump();
+            try!(self.bump());
         } else if self.ch_is(b'-') {
-            self.bump();
+            try!(self.bump());
             neg_exp = true;
         }
 
@@ -253,7 +267,7 @@ impl<Iter> Deserializer<Iter>
                     exp *= 10;
                     exp += (c as i32) - (b'0' as i32);
 
-                    self.bump();
+                    try!(self.bump());
                 }
                 _ => break
             }
@@ -273,7 +287,7 @@ impl<Iter> Deserializer<Iter>
         let mut i = 0;
         let mut n = 0u16;
         while i < 4 && !self.eof() {
-            self.bump();
+            try!(self.bump());
             n = match self.ch_or_null() {
                 c @ b'0' ... b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
                 b'a' | b'A' => n * 16_u16 + 10_u16,
@@ -297,26 +311,26 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn parse_string(&mut self) -> Result<(), Error> {
-        self.buf.clear();
+        self.str_buf.clear();
 
         let mut escape = false;
 
         loop {
-            let ch = match self.next_char() {
+            let ch = match try!(self.next_char()) {
                 Some(ch) => ch,
                 None => { return Err(self.error(ErrorCode::EOFWhileParsingString)); }
             };
 
             if escape {
                 match ch {
-                    b'"' => self.buf.push(b'"'),
-                    b'\\' => self.buf.push(b'\\'),
-                    b'/' => self.buf.push(b'/'),
-                    b'b' => self.buf.push(b'\x08'),
-                    b'f' => self.buf.push(b'\x0c'),
-                    b'n' => self.buf.push(b'\n'),
-                    b'r' => self.buf.push(b'\r'),
-                    b't' => self.buf.push(b'\t'),
+                    b'"' => self.str_buf.push(b'"'),
+                    b'\\' => self.str_buf.push(b'\\'),
+                    b'/' => self.str_buf.push(b'/'),
+                    b'b' => self.str_buf.push(b'\x08'),
+                    b'f' => self.str_buf.push(b'\x0c'),
+                    b'n' => self.str_buf.push(b'\n'),
+                    b'r' => self.str_buf.push(b'\r'),
+                    b't' => self.str_buf.push(b'\t'),
                     b'u' => {
                         let c = match try!(self.decode_hex_escape()) {
                             0xDC00 ... 0xDFFF => {
@@ -326,8 +340,8 @@ impl<Iter> Deserializer<Iter>
                             // Non-BMP characters are encoded as a sequence of
                             // two hex escapes, representing UTF-16 surrogates.
                             n1 @ 0xD800 ... 0xDBFF => {
-                                let c1 = self.next_char();
-                                let c2 = self.next_char();
+                                let c1 = try!(self.next_char());
+                                let c2 = try!(self.next_char());
                                 match (c1, c2) {
                                     (Some(b'\\'), Some(b'u')) => (),
                                     _ => {
@@ -354,7 +368,7 @@ impl<Iter> Deserializer<Iter>
 
                         let buf = &mut [0; 4];
                         let len = c.encode_utf8(buf).unwrap_or(0);
-                        self.buf.extend(buf[..len].iter().map(|b| *b));
+                        self.str_buf.extend(buf[..len].iter().map(|b| *b));
                     }
                     _ => {
                         return Err(self.error(ErrorCode::InvalidEscape));
@@ -364,14 +378,14 @@ impl<Iter> Deserializer<Iter>
             } else {
                 match ch {
                     b'"' => {
-                        self.bump();
+                        try!(self.bump());
                         return Ok(());
                     }
                     b'\\' => {
                         escape = true;
                     }
                     ch => {
-                        self.buf.push(ch);
+                        self.str_buf.push(ch);
                     }
                 }
             }
@@ -379,10 +393,10 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn parse_object_colon(&mut self) -> Result<(), Error> {
-        self.parse_whitespace();
+        try!(self.parse_whitespace());
 
         if self.ch_is(b':') {
-            self.bump();
+            try!(self.bump());
             Ok(())
         } else if self.eof() {
             Err(self.error(ErrorCode::EOFWhileParsingObject))
@@ -393,7 +407,7 @@ impl<Iter> Deserializer<Iter>
 }
 
 impl<Iter> de::Deserializer for Deserializer<Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     type Error = Error;
 
@@ -408,7 +422,7 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        self.parse_whitespace();
+        try!(self.parse_whitespace());
 
         if self.eof() {
             return Err(self.error(ErrorCode::EOFWhileParsingValue));
@@ -426,20 +440,20 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
-        self.parse_whitespace();
+        try!(self.parse_whitespace());
 
         if self.ch_is(b'{') {
-            self.bump();
-            self.parse_whitespace();
+            try!(self.bump());
+            try!(self.parse_whitespace());
 
             let value = {
                 try!(visitor.visit(&mut *self))
             };
 
-            self.parse_whitespace();
+            try!(self.parse_whitespace());
 
             if self.ch_is(b'}') {
-                self.bump();
+                try!(self.bump());
                 Ok(value)
             } else {
                 Err(self.error(ErrorCode::ExpectedSomeValue))
@@ -465,14 +479,14 @@ impl<'a, Iter> SeqVisitor<'a, Iter> {
 }
 
 impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     type Error = Error;
 
     fn visit<T>(&mut self) -> Result<Option<T>, Error>
         where T: de::Deserialize,
     {
-        self.de.parse_whitespace();
+        try!(self.de.parse_whitespace());
 
         if self.de.ch_is(b']') {
             return Ok(None);
@@ -482,7 +496,7 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
             self.first = false;
         } else {
             if self.de.ch_is(b',') {
-                self.de.bump();
+                try!(self.de.bump());
             } else if self.de.eof() {
                 return Err(self.de.error(ErrorCode::EOFWhileParsingList));
             } else {
@@ -495,11 +509,10 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
     }
 
     fn end(&mut self) -> Result<(), Error> {
-        self.de.parse_whitespace();
+        try!(self.de.parse_whitespace());
 
         if self.de.ch_is(b']') {
-            self.de.bump();
-            Ok(())
+            self.de.bump()
         } else if self.de.eof() {
             Err(self.de.error(ErrorCode::EOFWhileParsingList))
         } else {
@@ -523,14 +536,14 @@ impl<'a, Iter> MapVisitor<'a, Iter> {
 }
 
 impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>
+    where Iter: Iterator<Item=io::Result<u8>>
 {
     type Error = Error;
 
     fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
         where K: de::Deserialize,
     {
-        self.de.parse_whitespace();
+        try!(self.de.parse_whitespace());
 
         if self.de.ch_is(b'}') {
             return Ok(None);
@@ -540,8 +553,8 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
             self.first = false;
         } else {
             if self.de.ch_is(b',') {
-                self.de.bump();
-                self.de.parse_whitespace();
+                try!(self.de.bump());
+                try!(self.de.parse_whitespace());
             } else if self.de.eof() {
                 return Err(self.de.error(ErrorCode::EOFWhileParsingObject));
             } else {
@@ -569,10 +582,10 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
     }
 
     fn end(&mut self) -> Result<(), Error> {
-        self.de.parse_whitespace();
+        try!(self.de.parse_whitespace());
 
         if self.de.ch_is(b'}') {
-            self.de.bump();
+            try!(self.de.bump());
             Ok(())
         } else if self.de.eof() {
             Err(self.de.error(ErrorCode::EOFWhileParsingObject))
@@ -608,7 +621,7 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
 }
 
 impl<Iter> de::VariantVisitor for Deserializer<Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     type Error = Error;
 
@@ -627,12 +640,12 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
     }
 }
 
-/// Decodes a json value from an `Iterator<u8>`.
+/// Decodes a json value from a `std::io::Read`.
 pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
-    where I: Iterator<Item=u8>,
-          T: de::Deserialize
+    where I: Iterator<Item=io::Result<u8>>,
+          T: de::Deserialize,
 {
-    let mut de = Deserializer::new(iter);
+    let mut de = try!(Deserializer::new(iter));
     let value = try!(de::Deserialize::deserialize(&mut de));
 
     // Make sure the whole stream has been consumed.
@@ -640,9 +653,24 @@ pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
     Ok(value)
 }
 
-/// Decodes a json value from a string
-pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
+/// Decodes a json value from a `std::io::Read`.
+pub fn from_reader<R, T>(rdr: R) -> Result<T, Error>
+    where R: io::Read,
+          T: de::Deserialize,
+{
+    from_iter(rdr.bytes())
+}
+
+/// Decodes a json value from a `&str`.
+pub fn from_slice<T>(v: &[u8]) -> Result<T, Error>
     where T: de::Deserialize
 {
-    from_iter(s.bytes())
+    from_iter(v.iter().map(|byte| Ok(*byte)))
+}
+
+/// Decodes a json value from a `&str`.
+pub fn from_str<T>(s: &str) -> Result<T, Error>
+    where T: de::Deserialize
+{
+    from_slice(s.as_bytes())
 }
