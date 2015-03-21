@@ -4,7 +4,7 @@
 extern crate test;
 extern crate serde;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::iter;
 use std::vec;
 
@@ -36,11 +36,11 @@ enum Token {
     Unit,
 
     SeqStart(usize),
-    SeqSep(bool),
+    SeqSep,
     SeqEnd,
 
     MapStart(usize),
-    MapSep(bool),
+    MapSep,
     MapEnd,
 
     EnumStart(&'static str),
@@ -107,14 +107,12 @@ impl Deserializer for TokenDeserializer {
                 visitor.visit_seq(TokenDeserializerSeqVisitor {
                     de: self,
                     len: len,
-                    first: true,
                 })
             }
             Some(Token::MapStart(len)) => {
                 visitor.visit_map(TokenDeserializerMapVisitor {
                     de: self,
                     len: len,
-                    first: true,
                 })
             }
             Some(Token::Name(_)) => self.visit(visitor),
@@ -221,7 +219,6 @@ impl Deserializer for TokenDeserializer {
 struct TokenDeserializerSeqVisitor<'a> {
     de: &'a mut TokenDeserializer,
     len: usize,
-    first: bool,
 }
 
 impl<'a> de::SeqVisitor for TokenDeserializerSeqVisitor<'a> {
@@ -230,11 +227,8 @@ impl<'a> de::SeqVisitor for TokenDeserializerSeqVisitor<'a> {
     fn visit<T>(&mut self) -> Result<Option<T>, Error>
         where T: Deserialize,
     {
-        let first = self.first;
-        self.first = false;
-
         match self.de.tokens.peek() {
-            Some(&Token::SeqSep(first_)) if first_ == first => {
+            Some(&Token::SeqSep) => {
                 self.len -= 1;
                 self.de.tokens.next();
                 Ok(Some(try!(Deserialize::deserialize(self.de))))
@@ -266,7 +260,6 @@ impl<'a> de::SeqVisitor for TokenDeserializerSeqVisitor<'a> {
 struct TokenDeserializerMapVisitor<'a> {
     de: &'a mut TokenDeserializer,
     len: usize,
-    first: bool,
 }
 
 impl<'a> de::MapVisitor for TokenDeserializerMapVisitor<'a> {
@@ -275,11 +268,8 @@ impl<'a> de::MapVisitor for TokenDeserializerMapVisitor<'a> {
     fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
         where K: Deserialize,
     {
-        let first = self.first;
-        self.first = false;
-
         match self.de.tokens.peek() {
-            Some(&Token::MapSep(first_)) if first_ == first => {
+            Some(&Token::MapSep) => {
                 self.de.tokens.next();
                 self.len -= 1;
                 Ok(Some(try!(Deserialize::deserialize(self.de))))
@@ -356,6 +346,19 @@ enum Enum {
 
 //////////////////////////////////////////////////////////////////////////
 
+macro_rules! btreeset {
+    () => {
+        BTreeSet::new()
+    };
+    ($($value:expr),+) => {
+        {
+            let mut set = BTreeSet::new();
+            $(set.insert($value);)+
+            set
+        }
+    }
+}
+
 macro_rules! btreemap {
     () => {
         BTreeMap::new()
@@ -363,6 +366,32 @@ macro_rules! btreemap {
     ($($key:expr => $value:expr),+) => {
         {
             let mut map = BTreeMap::new();
+            $(map.insert($key, $value);)+
+            map
+        }
+    }
+}
+
+macro_rules! hashset {
+    () => {
+        HashSet::new()
+    };
+    ($($value:expr),+) => {
+        {
+            let mut set = HashSet::new();
+            $(set.insert($value);)+
+            set
+        }
+    }
+}
+
+macro_rules! hashmap {
+    () => {
+        HashMap::new()
+    };
+    ($($key:expr => $value:expr),+) => {
+        {
+            let mut map = HashMap::new();
             $(map.insert($key, $value);)+
             map
         }
@@ -474,27 +503,97 @@ declare_tests! {
     test_named_seq {
         NamedSeq(1, 2, 3) => vec![
             Token::SeqStart(3),
-                Token::SeqSep(true),
+                Token::SeqSep,
                 Token::I32(1),
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::I32(2),
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::I32(3),
             Token::SeqEnd,
         ],
         NamedSeq(1, 2, 3) => vec![
             Token::Name("NamedSeq"),
             Token::SeqStart(3),
-                Token::SeqSep(true),
+                Token::SeqSep,
                 Token::I32(1),
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::I32(2),
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::I32(3),
+            Token::SeqEnd,
+        ],
+    }
+    test_btreeset {
+        BTreeSet::<isize>::new() => vec![
+            Token::Unit,
+        ],
+        BTreeSet::<isize>::new() => vec![
+            Token::SeqStart(0),
+            Token::SeqEnd,
+        ],
+        btreeset![btreeset![], btreeset![1], btreeset![2, 3]] => vec![
+            Token::SeqStart(3),
+                Token::SeqSep,
+                Token::SeqStart(0),
+                Token::SeqEnd,
+
+                Token::SeqSep,
+                Token::SeqStart(1),
+                    Token::SeqSep,
+                    Token::I32(1),
+                Token::SeqEnd,
+
+                Token::SeqSep,
+                Token::SeqStart(2),
+                    Token::SeqSep,
+                    Token::I32(2),
+
+                    Token::SeqSep,
+                    Token::I32(3),
+                Token::SeqEnd,
+            Token::SeqEnd,
+        ],
+        BTreeSet::<isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::Unit,
+        ],
+        BTreeSet::<isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::SeqStart(0),
+            Token::SeqEnd,
+        ],
+    }
+    test_hashset {
+        HashSet::<isize>::new() => vec![
+            Token::Unit,
+        ],
+        HashSet::<isize>::new() => vec![
+            Token::SeqStart(0),
+            Token::SeqEnd,
+        ],
+        hashset![1, 2, 3] => vec![
+            Token::SeqStart(3),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+
+                Token::SeqSep,
+                Token::I32(3),
+            Token::SeqEnd,
+        ],
+        HashSet::<isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::Unit,
+        ],
+        HashSet::<isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::SeqStart(0),
             Token::SeqEnd,
         ],
     }
@@ -508,22 +607,22 @@ declare_tests! {
         ],
         vec![vec![], vec![1], vec![2, 3]] => vec![
             Token::SeqStart(3),
-                Token::SeqSep(true),
+                Token::SeqSep,
                 Token::SeqStart(0),
                 Token::SeqEnd,
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::SeqStart(1),
-                    Token::SeqSep(true),
+                    Token::SeqSep,
                     Token::I32(1),
                 Token::SeqEnd,
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::SeqStart(2),
-                    Token::SeqSep(true),
+                    Token::SeqSep,
                     Token::I32(2),
 
-                    Token::SeqSep(false),
+                    Token::SeqSep,
                     Token::I32(3),
                 Token::SeqEnd,
             Token::SeqEnd,
@@ -541,19 +640,19 @@ declare_tests! {
     test_tuple {
         (1,) => vec![
             Token::SeqStart(1),
-                Token::SeqSep(true),
+                Token::SeqSep,
                 Token::I32(1),
             Token::SeqEnd,
         ],
         (1, 2, 3) => vec![
             Token::SeqStart(3),
-                Token::SeqSep(true),
+                Token::SeqSep,
                 Token::I32(1),
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::I32(2),
 
-                Token::SeqSep(false),
+                Token::SeqSep,
                 Token::I32(3),
             Token::SeqEnd,
         ],
@@ -568,37 +667,37 @@ declare_tests! {
         ],
         btreemap![1 => 2] => vec![
             Token::MapStart(1),
-                Token::MapSep(true),
+                Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
         btreemap![1 => 2, 3 => 4] => vec![
             Token::MapStart(2),
-                Token::MapSep(true),
+                Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
 
-                Token::MapSep(false),
+                Token::MapSep,
                 Token::I32(3),
                 Token::I32(4),
             Token::MapEnd,
         ],
         btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => vec![
             Token::MapStart(2),
-                Token::MapSep(true),
+                Token::MapSep,
                 Token::I32(1),
                 Token::MapStart(0),
                 Token::MapEnd,
 
-                Token::MapSep(false),
+                Token::MapSep,
                 Token::I32(2),
                 Token::MapStart(2),
-                    Token::MapSep(true),
+                    Token::MapSep,
                     Token::I32(3),
                     Token::I32(4),
 
-                    Token::MapSep(false),
+                    Token::MapSep,
                     Token::I32(5),
                     Token::I32(6),
                 Token::MapEnd,
@@ -614,18 +713,74 @@ declare_tests! {
             Token::MapEnd,
         ],
     }
+    test_hashmap {
+        HashMap::<isize, isize>::new() => vec![
+            Token::Unit,
+        ],
+        HashMap::<isize, isize>::new() => vec![
+            Token::MapStart(0),
+            Token::MapEnd,
+        ],
+        hashmap![1 => 2] => vec![
+            Token::MapStart(1),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        hashmap![1 => 2, 3 => 4] => vec![
+            Token::MapStart(2),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+
+                Token::MapSep,
+                Token::I32(3),
+                Token::I32(4),
+            Token::MapEnd,
+        ],
+        hashmap![1 => hashmap![], 2 => hashmap![3 => 4, 5 => 6]] => vec![
+            Token::MapStart(2),
+                Token::MapSep,
+                Token::I32(1),
+                Token::MapStart(0),
+                Token::MapEnd,
+
+                Token::MapSep,
+                Token::I32(2),
+                Token::MapStart(2),
+                    Token::MapSep,
+                    Token::I32(3),
+                    Token::I32(4),
+
+                    Token::MapSep,
+                    Token::I32(5),
+                    Token::I32(6),
+                Token::MapEnd,
+            Token::MapEnd,
+        ],
+        HashMap::<isize, isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::Unit,
+        ],
+        HashMap::<isize, isize>::new() => vec![
+            Token::Name("Anything"),
+            Token::MapStart(0),
+            Token::MapEnd,
+        ],
+    }
     test_named_map {
         NamedMap { a: 1, b: 2, c: 3 } => vec![
             Token::MapStart(3),
-                Token::MapSep(true),
+                Token::MapSep,
                 Token::Str("a"),
                 Token::I32(1),
 
-                Token::MapSep(false),
+                Token::MapSep,
                 Token::Str("b"),
                 Token::I32(2),
 
-                Token::MapSep(false),
+                Token::MapSep,
                 Token::Str("c"),
                 Token::I32(3),
             Token::MapEnd,
@@ -633,15 +788,15 @@ declare_tests! {
         NamedMap { a: 1, b: 2, c: 3 } => vec![
             Token::Name("NamedMap"),
             Token::MapStart(3),
-                Token::MapSep(true),
+                Token::MapSep,
                 Token::Str("a"),
                 Token::I32(1),
 
-                Token::MapSep(false),
+                Token::MapSep,
                 Token::Str("b"),
                 Token::I32(2),
 
-                Token::MapSep(false),
+                Token::MapSep,
                 Token::Str("c"),
                 Token::I32(3),
             Token::MapEnd,
@@ -660,13 +815,13 @@ declare_tests! {
             Token::EnumStart("Enum"),
                 Token::Str("Seq"),
                 Token::SeqStart(3),
-                    Token::SeqSep(true),
+                    Token::SeqSep,
                     Token::I32(1),
 
-                    Token::SeqSep(false),
+                    Token::SeqSep,
                     Token::I32(2),
 
-                    Token::SeqSep(false),
+                    Token::SeqSep,
                     Token::I32(3),
                 Token::SeqEnd,
             Token::EnumEnd,
@@ -677,15 +832,15 @@ declare_tests! {
             Token::EnumStart("Enum"),
                 Token::Str("Map"),
                 Token::MapStart(3),
-                    Token::MapSep(true),
+                    Token::MapSep,
                     Token::Str("a"),
                     Token::I32(1),
 
-                    Token::MapSep(false),
+                    Token::MapSep,
                     Token::Str("b"),
                     Token::I32(2),
 
-                    Token::MapSep(false),
+                    Token::MapSep,
                     Token::Str("c"),
                     Token::I32(3),
                 Token::MapEnd,

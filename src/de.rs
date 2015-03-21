@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::num::FromPrimitive;
@@ -644,6 +644,111 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+pub struct BTreeSetVisitor<T> {
+    marker: PhantomData<T>,
+}
+
+impl<T> BTreeSetVisitor<T> {
+    pub fn new() -> Self {
+        BTreeSetVisitor {
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<T> Visitor for BTreeSetVisitor<T>
+    where T: Deserialize + Eq + Ord,
+{
+    type Value = BTreeSet<T>;
+
+    #[inline]
+    fn visit_unit<E>(&mut self) -> Result<BTreeSet<T>, E>
+        where E: Error,
+    {
+        Ok(BTreeSet::new())
+    }
+
+    #[inline]
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<BTreeSet<T>, V::Error>
+        where V: SeqVisitor,
+    {
+        let mut values = BTreeSet::new();
+
+        while let Some(value) = try!(visitor.visit()) {
+            values.insert(value);
+        }
+
+        try!(visitor.end());
+
+        Ok(values)
+    }
+}
+
+impl<T> Deserialize for BTreeSet<T>
+    where T: Deserialize + Eq + Ord,
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<BTreeSet<T>, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.visit(BTreeSetVisitor::new())
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+pub struct HashSetVisitor<T> {
+    marker: PhantomData<T>,
+}
+
+impl<T> HashSetVisitor<T> {
+    pub fn new() -> Self {
+        HashSetVisitor {
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<T> Visitor for HashSetVisitor<T>
+    where T: Deserialize + Eq + Hash,
+{
+    type Value = HashSet<T>;
+
+    #[inline]
+    fn visit_unit<E>(&mut self) -> Result<HashSet<T>, E>
+        where E: Error,
+    {
+        Ok(HashSet::new())
+    }
+
+    #[inline]
+    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<HashSet<T>, V::Error>
+        where V: SeqVisitor,
+    {
+        let (len, _) = visitor.size_hint();
+        let mut values = HashSet::with_capacity(len);
+
+        while let Some(value) = try!(visitor.visit()) {
+            values.insert(value);
+        }
+
+        try!(visitor.end());
+
+        Ok(values)
+    }
+}
+
+impl<T> Deserialize for HashSet<T>
+    where T: Deserialize + Eq + Hash,
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<HashSet<T>, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.visit(HashSetVisitor::new())
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 pub struct VecVisitor<T> {
     marker: PhantomData<T>,
 }
@@ -663,7 +768,7 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     fn visit_unit<E>(&mut self) -> Result<Vec<T>, E>
         where E: Error,
     {
-        Ok(vec![])
+        Ok(Vec::new())
     }
 
     #[inline]
@@ -683,7 +788,9 @@ impl<T> Visitor for VecVisitor<T> where T: Deserialize {
     }
 }
 
-impl<T: Deserialize> Deserialize for Vec<T> {
+impl<T> Deserialize for Vec<T>
+    where T: Deserialize,
+{
     fn deserialize<D>(deserializer: &mut D) -> Result<Vec<T>, D::Error>
         where D: Deserializer,
     {
@@ -755,6 +862,61 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+pub struct BTreeMapVisitor<K, V> {
+    marker: PhantomData<BTreeMap<K, V>>,
+}
+
+impl<K, V> BTreeMapVisitor<K, V> {
+    #[inline]
+    pub fn new() -> Self {
+        BTreeMapVisitor {
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<K, V> Visitor for BTreeMapVisitor<K, V>
+    where K: Deserialize + Ord,
+          V: Deserialize
+{
+    type Value = BTreeMap<K, V>;
+
+    #[inline]
+    fn visit_unit<E>(&mut self) -> Result<BTreeMap<K, V>, E>
+        where E: Error,
+    {
+        Ok(BTreeMap::new())
+    }
+
+    #[inline]
+    fn visit_map<Visitor>(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, Visitor::Error>
+        where Visitor: MapVisitor,
+    {
+        let mut values = BTreeMap::new();
+
+        while let Some((key, value)) = try!(visitor.visit()) {
+            values.insert(key, value);
+        }
+
+        try!(visitor.end());
+
+        Ok(values)
+    }
+}
+
+impl<K, V> Deserialize for BTreeMap<K, V>
+    where K: Deserialize + Eq + Ord,
+          V: Deserialize,
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.visit(BTreeMapVisitor::new())
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 pub struct HashMapVisitor<K, V> {
     marker: PhantomData<HashMap<K, V>>,
 }
@@ -806,61 +968,6 @@ impl<K, V> Deserialize for HashMap<K, V>
         where D: Deserializer,
     {
         deserializer.visit(HashMapVisitor::new())
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub struct BTreeMapVisitor<K, V> {
-    marker: PhantomData<BTreeMap<K, V>>,
-}
-
-impl<K, V> BTreeMapVisitor<K, V> {
-    #[inline]
-    pub fn new() -> Self {
-        BTreeMapVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<K, V> Visitor for BTreeMapVisitor<K, V>
-    where K: Deserialize + Ord,
-          V: Deserialize
-{
-    type Value = BTreeMap<K, V>;
-
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<BTreeMap<K, V>, E>
-        where E: Error,
-    {
-        Ok(BTreeMap::new())
-    }
-
-    #[inline]
-    fn visit_map<Visitor>(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, Visitor::Error>
-        where Visitor: MapVisitor,
-    {
-        let mut values = BTreeMap::new();
-
-        while let Some((key, value)) = try!(visitor.visit()) {
-            values.insert(key, value);
-        }
-
-        try!(visitor.end());
-
-        Ok(values)
-    }
-}
-
-impl<
-    K: Deserialize + Eq + Ord,
-    V: Deserialize,
-> Deserialize for BTreeMap<K, V> {
-    fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit(BTreeMapVisitor::new())
     }
 }
 
