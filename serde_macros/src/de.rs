@@ -54,7 +54,7 @@ pub fn expand_derive_deserialize(
     let impl_item = quote_item!(cx,
         #[automatically_derived]
         impl $impl_generics ::serde::de::Deserialize for $ty $where_clause {
-            fn deserialize<__D>(deserializer: &mut __D) -> Result<$ty, __D::Error>
+            fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<$ty, __D::Error>
                 where __D: ::serde::de::Deserializer,
             {
                 $body
@@ -199,14 +199,14 @@ fn deserialize_unit_struct(
             type Value = $type_ident;
 
             #[inline]
-            fn visit_unit<E>(&mut self) -> Result<$type_ident, E>
+            fn visit_unit<E>(&mut self) -> ::std::result::Result<$type_ident, E>
                 where E: ::serde::de::Error,
             {
                 Ok($type_ident)
             }
 
             #[inline]
-            fn visit_seq<V>(&mut self, mut visitor: V) -> Result<$type_ident, V::Error>
+            fn visit_seq<V>(&mut self, mut visitor: V) -> ::std::result::Result<$type_ident, V::Error>
                 where V: ::serde::de::SeqVisitor,
             {
                 try!(visitor.end());
@@ -248,7 +248,7 @@ fn deserialize_tuple_struct(
         impl $impl_generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::SeqVisitor,
             {
                 $visit_seq_expr
@@ -326,7 +326,7 @@ fn deserialize_struct(
             type Value = $ty;
 
             #[inline]
-            fn visit_map<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+            fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::MapVisitor,
             {
                 $visit_map_expr
@@ -391,7 +391,7 @@ fn deserialize_item_enum(
         impl $impl_generics ::serde::de::EnumVisitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+            fn visit<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::VariantVisitor,
             {
                 match try!(visitor.visit_variant()) {
@@ -475,7 +475,7 @@ fn deserialize_tuple_variant(
         impl $generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::SeqVisitor,
             {
                 $visit_seq_expr
@@ -517,7 +517,7 @@ fn deserialize_struct_variant(
         impl $generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit_map<__V>(&mut self, mut visitor: __V) -> Result<$ty, __V::Error>
+            fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::MapVisitor,
             {
                 $field_expr
@@ -562,7 +562,7 @@ fn deserialize_field_visitor(
         quote_item!(cx,
             impl ::serde::de::Deserialize for __Field {
                 #[inline]
-                fn deserialize<D>(deserializer: &mut D) -> Result<__Field, D::Error>
+                fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
                     where D: ::serde::de::Deserializer,
                 {
                     struct __FieldVisitor;
@@ -570,7 +570,7 @@ fn deserialize_field_visitor(
                     impl ::serde::de::Visitor for __FieldVisitor {
                         type Value = __Field;
 
-                        fn visit_str<E>(&mut self, value: &str) -> Result<__Field, E>
+                        fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<__Field, E>
                             where E: ::serde::de::Error,
                         {
                             match value {
