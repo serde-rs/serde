@@ -305,7 +305,7 @@ impl de::Deserialize for Value {
             fn visit_seq<V>(&mut self, visitor: V) -> Result<Value, V::Error>
                 where V: de::SeqVisitor,
             {
-                let values = try!(de::VecVisitor::new().visit_seq(visitor));
+                let values = try!(de::impls::VecVisitor::new().visit_seq(visitor));
                 Ok(Value::Array(values))
             }
 
@@ -313,7 +313,7 @@ impl de::Deserialize for Value {
             fn visit_map<V>(&mut self, visitor: V) -> Result<Value, V::Error>
                 where V: de::MapVisitor,
             {
-                let values = try!(de::BTreeMapVisitor::new().visit_map(visitor));
+                let values = try!(de::impls::BTreeMapVisitor::new().visit_map(visitor));
                 Ok(Value::Object(values))
             }
         }

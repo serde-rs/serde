@@ -417,7 +417,7 @@ fn deserialize_variant(
     match variant.node.kind {
         ast::TupleVariantKind(ref args) if args.is_empty() => {
             quote_expr!(cx, {
-                try!(visitor.visit_value(::serde::de::UnitVisitor));
+                try!(visitor.visit_value(::serde::de::impls::UnitVisitor));
                 Ok($type_ident::$variant_ident)
             })
         }

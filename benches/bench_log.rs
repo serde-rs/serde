@@ -66,7 +66,7 @@ impl de::Deserialize for HttpProtocol {
     fn deserialize<
         S: Deserializer,
     >(state: &mut S) -> Result<HttpProtocol, S::Error> {
-        state.visit(de::PrimitiveVisitor::new())
+        state.visit(de::impls::PrimitiveVisitor::new())
     }
 }
 
@@ -114,7 +114,7 @@ impl de::Deserialize for HttpMethod {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<HttpMethod, S::Error> {
-        state.visit(de::PrimitiveVisitor::new())
+        state.visit(de::impls::PrimitiveVisitor::new())
     }
 }
 
@@ -155,7 +155,7 @@ impl de::Deserialize for CacheStatus {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<CacheStatus, S::Error> {
-        state.visit(de::PrimitiveVisitor::new())
+        state.visit(de::impls::PrimitiveVisitor::new())
     }
 }
 
@@ -203,7 +203,7 @@ impl de::Deserialize for OriginProtocol {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<OriginProtocol, S::Error> {
-        state.visit(de::PrimitiveVisitor::new())
+        state.visit(de::impls::PrimitiveVisitor::new())
     }
 }
 
@@ -245,7 +245,7 @@ impl de::Deserialize for ZonePlan {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<ZonePlan, S::Error> {
-        state.visit(de::PrimitiveVisitor::new())
+        state.visit(de::impls::PrimitiveVisitor::new())
     }
 }
 
@@ -538,7 +538,7 @@ impl de::Deserialize for Country {
     fn deserialize<
         S: de::Deserializer,
     >(state: &mut S) -> Result<Country, S::Error> {
-        state.visit(de::PrimitiveVisitor::new())
+        state.visit(de::impls::PrimitiveVisitor::new())
     }
 }
 
