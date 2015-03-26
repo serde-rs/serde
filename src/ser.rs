@@ -1,5 +1,5 @@
 use std::collections::hash_state::HashState;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecMap};
 use std::hash::Hash;
 use std::path;
 use std::rc::Rc;
@@ -578,6 +578,17 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
     where K: Serialize + Eq + Hash,
           V: Serialize,
           H: HashState,
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+    }
+}
+
+impl<V> Serialize for VecMap<V>
+    where V: Serialize,
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>

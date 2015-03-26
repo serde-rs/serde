@@ -1,4 +1,4 @@
-#![feature(convert, core, std_misc, unicode)]
+#![feature(collections, convert, core, std_misc, unicode)]
 
 extern crate unicode;
 
