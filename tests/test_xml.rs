@@ -1,5 +1,6 @@
 #![feature(custom_derive, plugin, test)]
 #![plugin(serde_macros)]
+#![feature(custom_attribute)]
 
 extern crate test;
 extern crate serde;
@@ -121,6 +122,21 @@ fn test_parse_struct() {
                 b: 2,
                 c: "abc".to_string(),
             },
+        )
+    ]);
+}
+
+#[test]
+fn test_parse_xml_value() {
+    #[derive(Eq, Debug, PartialEq, Deserialize, Serialize)]
+    struct Test {
+        #[serde(alias="$value")]
+        myval: String,
+    }
+    test_parse_ok(&[
+        (
+            "<Test>abc</Test>",
+            Test { myval: "abc".to_string() },
         )
     ]);
 }

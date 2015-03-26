@@ -63,6 +63,7 @@ where Iter: Iterator<Item=u8>,
     fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
+        println!("InnerDeserializer::visit_option");
         self.0.buf.clear();
         match self.0.ch.unwrap() {
             b'/' => {
@@ -82,12 +83,14 @@ where Iter: Iterator<Item=u8>,
     fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
+        println!("InnerDeserializer::visit_seq");
         visitor.visit_seq(SeqVisitor::new(self.0))
     }
 
     fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
+        println!("InnerDeserializer::visit_map");
         self.0.buf.clear();
         println!("{:?} __ {:?}", self.0.buf, self.0.ch);
         let v = try!(self.0.parse_inner_map(visitor));
@@ -132,6 +135,13 @@ impl<'a> KeyDeserializer<'a> {
             },
             Err(_) => Err(de.error(NotUtf8))
         }
+    }
+
+    fn value_map<T>() -> Result<T, Error>
+        where T: de::Deserialize,
+    {
+        let kds = &mut KeyDeserializer("$value");
+        de::Deserialize::deserialize(kds)
     }
 
     fn from_utf8<Iter>(de: &Deserializer<Iter>) -> Result<&str, Error>
@@ -248,6 +258,17 @@ impl<Iter> Deserializer<Iter>
         while self.ch_is_one_of(" \n\t\r".as_bytes()) { self.bump(); }
     }
 
+    fn read_whitespace(&mut self) {
+        while let Some(c) = self.ch {
+            if b" \n\t\r".iter().any(|&ch| ch == c) {
+                self.buf.push(c);
+                self.bump();
+            } else {
+                return;
+            }
+        }
+    }
+
     fn skip_until(&mut self, ch: u8) -> Result<(), Error> {
         while let Some(c) = self.ch {
             if ch == c {
@@ -284,6 +305,7 @@ impl<Iter> Deserializer<Iter>
     fn parse_inner_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
+        println!("parse_inner_map");
         self.skip_whitespace();
         match self.ch {
             None => Err(self.error(EOF)),
@@ -295,18 +317,29 @@ impl<Iter> Deserializer<Iter>
             },
             Some(b'>') => {
                 self.bump();
-                self.skip_whitespace();
-                assert!(self.ch_is(b'<'));
-                self.bump();
-                if self.ch_is(b'/') {
+                assert!(self.buf.is_empty());
+                self.read_whitespace();
+                if self.ch_is(b'<') {
+                    self.buf.clear();
+                    self.bump();
+                    if self.ch_is(b'/') {
+                        try!(self.skip_until(b'>'));
+                        self.bump();
+                        de::Deserialize::deserialize(&mut UnitDeserializer)
+                    } else {
+                        try!(self.read_tag());
+                        let val = visitor.visit_map(ContentVisitor::new_inner(self));
+                        self.buf.clear();
+                        val
+                    }
+                } else {
+                    // $value map
+                    try!(self.read_until(b'<'));
+                    self.bump();
+                    assert!(self.ch_is(b'/'));
                     try!(self.skip_until(b'>'));
                     self.bump();
-                    de::Deserialize::deserialize(&mut UnitDeserializer)
-                } else {
-                    try!(self.read_tag());
-                    let val = visitor.visit_map(ContentVisitor::new_inner(self));
-                    self.buf.clear();
-                    val
+                    visitor.visit_map(ContentVisitor::new_value(self))
                 }
             }
             _ => unimplemented!()
@@ -440,7 +473,14 @@ struct ContentVisitor<'a, Iter: 'a>
     where Iter: Iterator<Item=u8>,
 {
     de: &'a mut Deserializer<Iter>,
-    attributes_done: bool,
+    state: ContentVisitorState,
+}
+
+#[derive(Debug)]
+enum ContentVisitorState {
+    Attribute,
+    Element,
+    Value,
 }
 
 impl <'a, Iter> ContentVisitor<'a, Iter>
@@ -449,7 +489,14 @@ impl <'a, Iter> ContentVisitor<'a, Iter>
     fn new_inner(de: &'a mut Deserializer<Iter>) -> Self {
         ContentVisitor {
             de: de,
-            attributes_done: true,
+            state: ContentVisitorState::Element,
+        }
+    }
+
+    fn new_value(de: &'a mut Deserializer<Iter>) -> Self {
+        ContentVisitor {
+            de: de,
+            state: ContentVisitorState::Value,
         }
     }
 
@@ -470,36 +517,47 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
         where K: de::Deserialize,
     {
-        println!("{:?} visit_key: {:?}", self as *const Self, (self.attributes_done, self.de.line, self.de.col));
+        println!("{:?} visit_key: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
         if self.de.buf.is_empty() {
             return Ok(None);
         }
-        let val = try!(KeyDeserializer::decode(self.de));
-        if self.attributes_done {
-            Ok(val)
-        } else {
-            unimplemented!()
+        match self.state {
+            ContentVisitorState::Element => KeyDeserializer::decode(self.de),
+
+            ContentVisitorState::Value => KeyDeserializer::value_map(),
+
+            ContentVisitorState::Attribute => unimplemented!(),
         }
     }
 
     fn visit_value<V>(&mut self) -> Result<V, Error>
         where V: de::Deserialize,
     {
-        println!("{:?} visit_value: {:?}", self as *const Self, (self.attributes_done, self.de.line, self.de.col));
-        if self.attributes_done {
-            let ids = &mut InnerDeserializer(self.de);
-            de::Deserialize::deserialize(ids)
-        } else {
-            unimplemented!()
+        println!("{:?} visit_value: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
+        match self.state {
+            ContentVisitorState::Element => {
+                let ids = &mut InnerDeserializer(self.de);
+                de::Deserialize::deserialize(ids)
+            },
+
+            ContentVisitorState::Value => {
+                let val = KeyDeserializer::decode(self.de);
+                self.de.buf.clear();
+                val
+            },
+
+            ContentVisitorState::Attribute => unimplemented!(),
         }
     }
 
     fn end(&mut self) -> Result<(), Error> {
-        println!("{:?} end: {:?}", self as *const Self, (self.attributes_done, self.de.line, self.de.col));
-        if self.attributes_done {
-            self.parse_element_close()
-        } else {
-            unimplemented!()
+        println!("{:?} end: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
+        match self.state {
+            ContentVisitorState::Element => self.parse_element_close(),
+
+            ContentVisitorState::Value => Ok(()),
+
+            ContentVisitorState::Attribute => unimplemented!(),
         }
     }
 
@@ -540,23 +598,28 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
         if self.done {
             return Ok(None);
         }
+        println!("{:?} reading value", self as *const Self);
         // need to copy here
         // could compare closing tag with next opening tag instead
         // but that requires modification of InnerDeserializer
+        assert!(!self.de.buf.is_empty());
         let name = self.de.buf.clone();
         self.de.buf.clear();
         let val = {
+            println!("{:?} reading inner", self as *const Self);
             let ids = &mut InnerDeserializer(self.de);
             try!(de::Deserialize::deserialize(ids))
         };
         println!("{:?} got seq valu", self as *const Self);
         if self.de.buf.is_empty() {
+            println!("{:?} buf empty", self as *const Self);
             // last of the sequence and last of the map
             self.done = true;
         } else {
             // compare next element name to current
             assert!(!self.de.buf.is_empty());
             if self.de.buf != name {
+                println!("seq done: {:?} != {:?}", self.de.buf, name);
                 self.done = true;
             }
         }
