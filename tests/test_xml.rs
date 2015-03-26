@@ -198,3 +198,99 @@ fn test_parse_complexstruct() {
         )
     ]);
 }
+
+#[test]
+fn test_parse_hierarchies() {
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    struct A {
+        a1: String,
+        a2: (String, String),
+    }
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    struct B {
+        b1: A,
+        b2: (A, A),
+    }
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    struct C {
+        c1: B,
+        c2: Vec<B>,
+    }
+
+    test_parse_ok(&[
+    (
+        "<C><c1>
+            <b1>
+                <a1>No</a1>
+                <a2>Maybe</a2>
+                <a2>Yes</a2>
+            </b1>
+            <b2>
+                <a1>Red</a1>
+                <a2>Green</a2>
+                <a2>Blue</a2>
+            </b2>
+            <b2>
+                <a1>London</a1>
+                <a2>Berlin</a2>
+                <a2>Paris</a2>
+            </b2>
+        </c1></C>",
+        C {
+            c1: B {
+                b1: A {
+                    a1: "No".to_string(),
+                    a2: ("Maybe".to_string(), "Yes".to_string()),
+                },
+                b2: (A {
+                        a1: "Red".to_string(),
+                        a2: ("Green".to_string(), "Blue".to_string()),
+                    },
+                    A {
+                        a1: "London".to_string(),
+                        a2: ("Berlin".to_string(), "Paris".to_string()),
+                    },
+                ),
+            },
+            c2: vec![]
+        }
+    ),
+    (
+        "<C><c1>
+            <b2>
+                <a2>Green</a2>
+                <a2>Blue</a2>
+                <a1>Red</a1>
+            </b2>
+            <b2>
+                <a2>Berlin</a2>
+                <a2>Paris</a2>
+                <a1>London</a1>
+            </b2>
+            <b1>
+                <a2>Maybe</a2>
+                <a2>Yes</a2>
+                <a1>No</a1>
+            </b1>
+        </c1></C>",
+        C {
+            c1: B {
+                b1: A {
+                    a1: "No".to_string(),
+                    a2: ("Maybe".to_string(), "Yes".to_string()),
+                },
+                b2: (A {
+                        a1: "Red".to_string(),
+                        a2: ("Green".to_string(), "Blue".to_string()),
+                    },
+                    A {
+                        a1: "London".to_string(),
+                        a2: ("Berlin".to_string(), "Paris".to_string()),
+                    },
+                ),
+            },
+            c2: vec![]
+        }
+    ),
+    ]);
+}
