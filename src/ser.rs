@@ -73,6 +73,8 @@ pub trait Serializer {
 
     fn visit_f64(&mut self, v: f64) -> Result<(), Self::Error>;
 
+    /// `visit_char` serializes a character. By default it serializes it as a `&str` containing a
+    /// single character.
     #[inline]
     fn visit_char(&mut self, v: char) -> Result<(), Self::Error> {
         // The unwraps in here should be safe.
@@ -81,7 +83,15 @@ pub trait Serializer {
         self.visit_str(str::from_utf8(&s[..len]).unwrap())
     }
 
+    /// `visit_str` serializes a `&str`.
     fn visit_str(&mut self, value: &str) -> Result<(), Self::Error>;
+
+    /// `visit_bytes` is a hook that enables those serialization formats that support serializing
+    /// byte slices separately from generic arrays. By default it serializes as a regular array. 
+    #[inline]
+    fn visit_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error> {
+        self.visit_seq(SeqIteratorVisitor::new(value.iter(), Some(value.len())))
+    }
 
     fn visit_unit(&mut self) -> Result<(), Self::Error>;
 

@@ -103,6 +103,16 @@ pub trait Deserializer {
     {
         Err(Error::syntax_error())
     }
+
+    /// The `visit_bytes` method allows a `Deserialize` type to inform the `Deserializer` that it's
+    /// expecting a `Vec<u8>`. This allows deserializers that provide a custom byte vector
+    /// serialization to properly deserialize the type.
+    #[inline]
+    fn visit_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -244,6 +254,18 @@ pub trait Visitor {
 
     fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
+    {
+        Err(Error::syntax_error())
+    }
+
+    fn visit_bytes<E>(&mut self, _v: &[u8]) -> Result<Self::Value, E>
+        where E: Error,
+    {
+        Err(Error::syntax_error())
+    }
+
+    fn visit_byte_buf<E>(&mut self, _v: Vec<u8>) -> Result<Self::Value, E>
+        where E: Error,
     {
         Err(Error::syntax_error())
     }
@@ -981,7 +1003,7 @@ impl Visitor for PathBufVisitor {
     fn visit_str<E>(&mut self, v: &str) -> Result<path::PathBuf, E>
         where E: Error,
     {
-        Ok(path::PathBuf::new(&v))
+        Ok(From::from(v))
     }
 
     fn visit_string<E>(&mut self, v: String) -> Result<path::PathBuf, E>
