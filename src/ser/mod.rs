@@ -14,59 +14,81 @@ pub trait Serialize {
 pub trait Serializer {
     type Error;
 
+    /// `visit_bool` serializes a `bool` value.
     fn visit_bool(&mut self, v: bool) -> Result<(), Self::Error>;
 
+    /// `visit_isize` serializes a `isize` value. By default it casts the value to a `i64` and
+    /// passes it to the `visit_i64` method.
     #[inline]
     fn visit_isize(&mut self, v: isize) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i8` serializes a `i8` value. By default it casts the value to a `i64` and
+    /// passes it to the `visit_i64` method.
     #[inline]
     fn visit_i8(&mut self, v: i8) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i16` serializes a `i16` value. By default it casts the value to a `i64` and
+    /// passes it to the `visit_i64` method.
     #[inline]
     fn visit_i16(&mut self, v: i16) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i32` serializes a `i32` value. By default it casts the value to a `i64` and
+    /// passes it to the `visit_i64` method.
     #[inline]
     fn visit_i32(&mut self, v: i32) -> Result<(), Self::Error> {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i64` serializes a `i64` value.
     #[inline]
     fn visit_i64(&mut self, v: i64) -> Result<(), Self::Error>;
 
+    /// `visit_usize` serializes a `usize` value. By default it casts the value to a `u64` and
+    /// passes it to the `visit_u64` method.
     #[inline]
     fn visit_usize(&mut self, v: usize) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u8` serializes a `u8` value. By default it casts the value to a `u64` and passes
+    /// it to the `visit_u64` method.
     #[inline]
     fn visit_u8(&mut self, v: u8) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u32` serializes a `u32` value. By default it casts the value to a `u64` and passes
+    /// it to the `visit_u64` method.
     #[inline]
     fn visit_u16(&mut self, v: u16) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u32` serializes a `u32` value. By default it casts the value to a `u64` and passes
+    /// it to the `visit_u64` method.
     #[inline]
     fn visit_u32(&mut self, v: u32) -> Result<(), Self::Error> {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u64` serializes a `u64` value.
     #[inline]
     fn visit_u64(&mut self, v: u64) -> Result<(), Self::Error>;
 
+    /// `visit_f32` serializes a `f32` value. By default it casts the value to a `f64` and passes
+    /// it to the `visit_f64` method.
     #[inline]
     fn visit_f32(&mut self, v: f32) -> Result<(), Self::Error> {
         self.visit_f64(v as f64)
     }
 
+    /// `visit_f64` serializes a `f64` value.
     fn visit_f64(&mut self, v: f64) -> Result<(), Self::Error>;
 
     /// `visit_char` serializes a character. By default it serializes it as a `&str` containing a
