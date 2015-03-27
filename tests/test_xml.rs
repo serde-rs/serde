@@ -200,6 +200,49 @@ fn test_parse_complexstruct() {
 }
 
 #[test]
+fn test_parse_attributes() {
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    struct A {
+        a1: String,
+        #[serde(alias="$value")]
+        a2: i32,
+    }
+
+    test_parse_ok(&[
+    (
+        r#"<A a1="What is the answer to the ultimate question?">42</A>"#,
+        A {
+            a1: "What is the answer to the ultimate question?".to_string(),
+            a2: 42,
+        }
+    ),
+    ]);
+
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    struct B {
+        b1: String,
+        b2: i32,
+    }
+
+    test_parse_ok(&[
+    (
+        r#"<B b1="What is the answer to the ultimate question?" b2="42"/>"#,
+        B {
+            b1: "What is the answer to the ultimate question?".to_string(),
+            b2: 42,
+        }
+    ),
+    (
+        r#"<B b1="What is the answer to the ultimate question?" b2="42"></B>"#,
+        B {
+            b1: "What is the answer to the ultimate question?".to_string(),
+            b2: 42,
+        }
+    ),
+    ]);
+}
+
+#[test]
 fn test_parse_hierarchies() {
     #[derive(PartialEq, Debug, Serialize, Deserialize)]
     struct A {

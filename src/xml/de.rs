@@ -17,6 +17,8 @@ pub struct InnerDeserializer<'a, Iter: Iterator<Item=u8> + 'a> (
     &'a mut Deserializer<Iter>,
 );
 
+// TODO: this type should expect self.0.buf.is_empty()
+// but that can only be done after a SeqVisitor rehaul to get rid of the alloc
 impl<'a, Iter> de::Deserializer for InnerDeserializer<'a, Iter>
 where Iter: Iterator<Item=u8>,
 {
@@ -302,6 +304,18 @@ impl<Iter> Deserializer<Iter>
         Err(self.error(EOF))
     }
 
+    fn read_attr_name(&mut self) -> Result<(), Error> {
+        println!("read_attr_name");
+        while let Some(c) = self.ch {
+            if self.ch_is_one_of(b" =") {
+                return Ok(());
+            }
+            self.buf.push(c);
+            self.bump();
+        }
+        Err(self.error(EOF))
+    }
+
     fn parse_inner_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
@@ -342,7 +356,16 @@ impl<Iter> Deserializer<Iter>
                     visitor.visit_map(ContentVisitor::new_value(self))
                 }
             }
-            _ => unimplemented!()
+            _ => {
+                assert!(self.buf.is_empty());
+                try!(self.read_attr_name());
+                self.skip_whitespace();
+                assert!(self.ch_is(b'='));
+                self.bump();
+                self.skip_whitespace();
+                assert!(self.ch_is_one_of(b"'\""));
+                visitor.visit_map(ContentVisitor::new_attr(self))
+            }
         }
     }
 }
@@ -500,12 +523,11 @@ impl <'a, Iter> ContentVisitor<'a, Iter>
         }
     }
 
-    fn parse_element_close(&mut self) -> Result<(), Error> {
-        assert!(self.de.ch_is(b'/'));
-        self.de.bump();
-        try!(self.de.read_until(b'>'));
-        self.de.bump();
-        Ok(())
+    fn new_attr(de: &'a mut Deserializer<Iter>) -> Self {
+        ContentVisitor {
+            de: de,
+            state: ContentVisitorState::Attribute,
+        }
     }
 }
 
@@ -522,11 +544,10 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             return Ok(None);
         }
         match self.state {
-            ContentVisitorState::Element => KeyDeserializer::decode(self.de),
+            ContentVisitorState::Element
+            | ContentVisitorState::Attribute => KeyDeserializer::decode(self.de),
 
             ContentVisitorState::Value => KeyDeserializer::value_map(),
-
-            ContentVisitorState::Attribute => unimplemented!(),
         }
     }
 
@@ -546,18 +567,74 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 val
             },
 
-            ContentVisitorState::Attribute => unimplemented!(),
+            ContentVisitorState::Attribute => {
+                self.de.buf.clear();
+                assert!(self.de.ch_is_one_of(b"'\""));
+                let quot = self.de.ch.unwrap();
+                self.de.bump();
+                try!(self.de.read_until(quot));
+                self.de.bump();
+                let val = try!(KeyDeserializer::decode(self.de));
+                self.de.buf.clear();
+                self.de.skip_whitespace();
+                match self.de.ch {
+                    None => return Err(self.de.error(EOF)),
+                    Some(b'/') => {
+                        self.de.bump();
+                        assert!(self.de.ch_is(b'>'));
+                        self.de.bump();
+                    }
+                    Some(b'>') => {
+                        self.de.bump();
+                        self.de.read_whitespace();
+                        if self.de.ch_is(b'<') {
+                            self.de.buf.clear();
+                            self.de.bump();
+                            if self.de.ch_is(b'/') {
+                                try!(self.de.skip_until(b'>'));
+                                self.de.bump();
+                            } else {
+                                try!(self.de.read_tag());
+                                self.state = ContentVisitorState::Element;
+                            }
+                        } else {
+                            // $value map
+                            try!(self.de.read_until(b'<'));
+                            self.de.bump();
+                            assert!(self.de.ch_is(b'/'));
+                            try!(self.de.skip_until(b'>'));
+                            self.de.bump();
+                            self.state = ContentVisitorState::Value;
+                        }
+                    }
+                    Some(_) => {
+                        try!(self.de.read_attr_name());
+                        self.de.skip_whitespace();
+                        assert!(self.de.ch_is(b'='));
+                        self.de.bump();
+                        self.de.skip_whitespace();
+                        assert!(self.de.ch_is_one_of(b"'\""));
+                    }
+                }
+                Ok(val)
+            },
         }
     }
 
     fn end(&mut self) -> Result<(), Error> {
         println!("{:?} end: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
         match self.state {
-            ContentVisitorState::Element => self.parse_element_close(),
+            ContentVisitorState::Element => {
+                assert!(self.de.ch_is(b'/'));
+                self.de.bump();
+                try!(self.de.read_until(b'>'));
+                self.de.bump();
+                Ok(())
+            },
 
             ContentVisitorState::Value => Ok(()),
 
-            ContentVisitorState::Attribute => unimplemented!(),
+            ContentVisitorState::Attribute => Ok(()),
         }
     }
 
