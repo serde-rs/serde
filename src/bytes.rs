@@ -18,7 +18,6 @@ impl<'a, T> From<T> for Bytes<'a> where T: Into<&'a [u8]> {
     }
 }
 
-
 impl<'a> ops::Deref for Bytes<'a> {
     type Target = [u8];
 
