@@ -9,6 +9,7 @@ enum InnerMapState {
     Value,
     Inner,
     Attr,
+    Whitespace,
 }
 
 pub struct Deserializer<Iter: Iterator<Item=u8>> {
@@ -306,6 +307,10 @@ impl<Iter> Deserializer<Iter>
         match try!(self.read_inner_map()) {
             Unit => de::Deserialize::deserialize(&mut UnitDeserializer),
             Value => visitor.visit_map(ContentVisitor::new_value(self)),
+            Whitespace => {
+                self.buf.clear();
+                de::Deserialize::deserialize(&mut UnitDeserializer)
+            }
             Inner => {
                 let val = visitor.visit_map(ContentVisitor::new_inner(self));
                 self.buf.clear();
@@ -330,13 +335,13 @@ impl<Iter> Deserializer<Iter>
                 assert!(self.buf.is_empty());
                 self.read_whitespace();
                 if self.ch_is(b'<') {
-                    self.buf.clear();
                     self.bump();
                     if self.ch_is(b'/') {
                         try!(self.skip_until(b'>'));
                         self.bump();
-                        Ok(InnerMapState::Unit)
+                        Ok(InnerMapState::Whitespace)
                     } else {
+                        self.buf.clear();
                         try!(self.read_tag());
                         Ok(InnerMapState::Inner)
                     }
@@ -366,30 +371,21 @@ impl<Iter> Deserializer<Iter>
     fn read_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor
     {
+        use self::InnerMapState::*;
         self.buf.clear();
-        match self.ch.unwrap() {
-            b'/' => {
-                self.bump();
-                assert!(self.ch_is(b'>'));
-                self.bump();
-                self.skip_whitespace();
-                visitor.visit_unit()
-            }
-            b'>' => {
-                self.bump();
-                try!(self.read_until(b'<'));
-                println!("{:?}", from_utf8(&self.buf));
+        match try!(self.read_inner_map()) {
+            Unit => visitor.visit_unit(),
+            Value | Whitespace => {
                 let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self)));
                 self.buf.clear();
-                self.bump();
-                assert!(self.ch_is(b'/'));
-                self.bump();
-                try!(self.skip_until(b'>'));
-                self.bump();
-                self.skip_whitespace();
                 v
-            }
-            _ => Err(self.error(RawValueCannotHaveAttributes))
+            },
+            Inner => {
+                let val = visitor.visit_map(ContentVisitor::new_inner(self));
+                self.buf.clear();
+                val
+            },
+            Attr => Err(self.error(RawValueCannotHaveAttributes)),
         }
     }
 }
@@ -589,10 +585,9 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 let val = try!(KeyDeserializer::decode(self.de));
                 self.de.buf.clear();
                 match try!(self.de.read_inner_map()) {
-                    Unit => {},
                     Value => self.state = ContentVisitorState::Value,
                     Inner => self.state = ContentVisitorState::Element,
-                    Attr => {},
+                    Attr | Unit | Whitespace => {},
                 }
                 Ok(val)
             },

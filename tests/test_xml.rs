@@ -60,6 +60,10 @@ fn test_parse_string() {
         (
             "<bla></bla>",
             "".to_string(),
+        ),
+        (
+            "<bla>     </bla>",
+            "     ".to_string(),
         )
     ]);
 }
