@@ -4,6 +4,12 @@ use de;
 
 use std::str::from_utf8;
 
+enum InnerMapState {
+    Unit,
+    Value,
+    Inner,
+    Attr,
+}
 
 pub struct Deserializer<Iter: Iterator<Item=u8>> {
     rdr: Iter,
@@ -293,7 +299,21 @@ impl<Iter> Deserializer<Iter>
     fn parse_inner_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
+        use self::InnerMapState::*;
         println!("parse_inner_map");
+        match try!(self.read_inner_map()) {
+            Unit => de::Deserialize::deserialize(&mut UnitDeserializer),
+            Value => visitor.visit_map(ContentVisitor::new_value(self)),
+            Inner => {
+                let val = visitor.visit_map(ContentVisitor::new_inner(self));
+                self.buf.clear();
+                val
+            },
+            Attr => visitor.visit_map(ContentVisitor::new_attr(self)),
+        }
+    }
+
+    fn read_inner_map(&mut self) -> Result<InnerMapState, Error> {
         self.skip_whitespace();
         match self.ch {
             None => Err(self.error(EOF)),
@@ -301,7 +321,7 @@ impl<Iter> Deserializer<Iter>
                 self.bump();
                 assert!(self.ch_is(b'>'));
                 self.bump();
-                de::Deserialize::deserialize(&mut UnitDeserializer)
+                Ok(InnerMapState::Unit)
             },
             Some(b'>') => {
                 self.bump();
@@ -313,12 +333,10 @@ impl<Iter> Deserializer<Iter>
                     if self.ch_is(b'/') {
                         try!(self.skip_until(b'>'));
                         self.bump();
-                        de::Deserialize::deserialize(&mut UnitDeserializer)
+                        Ok(InnerMapState::Unit)
                     } else {
                         try!(self.read_tag());
-                        let val = visitor.visit_map(ContentVisitor::new_inner(self));
-                        self.buf.clear();
-                        val
+                        Ok(InnerMapState::Inner)
                     }
                 } else {
                     // $value map
@@ -327,7 +345,7 @@ impl<Iter> Deserializer<Iter>
                     assert!(self.ch_is(b'/'));
                     try!(self.skip_until(b'>'));
                     self.bump();
-                    visitor.visit_map(ContentVisitor::new_value(self))
+                    Ok(InnerMapState::Value)
                 }
             }
             _ => {
@@ -338,10 +356,11 @@ impl<Iter> Deserializer<Iter>
                 self.bump();
                 self.skip_whitespace();
                 assert!(self.ch_is_one_of(b"'\""));
-                visitor.visit_map(ContentVisitor::new_attr(self))
+                Ok(InnerMapState::Attr)
             }
         }
     }
+
     fn read_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor
     {
