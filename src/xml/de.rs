@@ -29,37 +29,11 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         println!("InnerDeserializer::visit");
-        self.0.buf.clear();
-        match self.0.ch.unwrap() {
-            b'/' => {
-                self.0.bump();
-                assert!(self.0.ch_is(b'>'));
-                self.0.bump();
-                self.0.skip_whitespace();
-                assert!(self.0.ch_is(b'<'));
-                self.0.bump();
-                try!(self.0.read_tag());
-                visitor.visit_unit()
-            }
-            b'>' => {
-                self.0.bump();
-                try!(self.0.read_until(b'<'));
-                println!("{:?}", from_utf8(&self.0.buf));
-                let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self.0)));
-                self.0.buf.clear();
-                self.0.bump();
-                assert!(self.0.ch_is(b'/'));
-                self.0.bump();
-                try!(self.0.skip_until(b'>'));
-                self.0.bump();
-                self.0.skip_whitespace();
-                assert!(self.0.ch_is(b'<'));
-                self.0.bump();
-                try!(self.0.read_tag());
-                v
-            }
-            _ => Err(self.0.error(RawValueCannotHaveAttributes))
-        }
+        let v = try!(self.0.read_value(visitor));
+        assert!(self.0.ch_is(b'<'));
+        self.0.bump();
+        try!(self.0.read_tag());
+        Ok(v)
     }
 
     fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
@@ -368,6 +342,35 @@ impl<Iter> Deserializer<Iter>
             }
         }
     }
+    fn read_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor
+    {
+        self.buf.clear();
+        match self.ch.unwrap() {
+            b'/' => {
+                self.bump();
+                assert!(self.ch_is(b'>'));
+                self.bump();
+                self.skip_whitespace();
+                visitor.visit_unit()
+            }
+            b'>' => {
+                self.bump();
+                try!(self.read_until(b'<'));
+                println!("{:?}", from_utf8(&self.buf));
+                let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self)));
+                self.buf.clear();
+                self.bump();
+                assert!(self.ch_is(b'/'));
+                self.bump();
+                try!(self.skip_until(b'>'));
+                self.bump();
+                self.skip_whitespace();
+                v
+            }
+            _ => Err(self.error(RawValueCannotHaveAttributes))
+        }
+    }
 }
 
 
@@ -377,21 +380,13 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     type Error = Error;
 
     #[inline]
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         self.skip_whitespace();
         assert!(self.ch_is(b'<'));
-        try!(self.skip_until(b'>'));
-        self.bump();
-        try!(self.read_until(b'<'));
-        self.bump();
-        assert!(self.ch_is(b'/'));
-        try!(self.skip_until(b'>'));
-        self.bump();
-        let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self)));
-        self.buf.clear();
-        v
+        self.read_tag();
+        self.read_value(visitor)
     }
 
     #[inline]
