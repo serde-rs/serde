@@ -36,9 +36,7 @@ where Iter: Iterator<Item=u8>,
     {
         println!("InnerDeserializer::visit");
         let v = try!(self.0.read_value(visitor));
-        assert!(self.0.ch_is(b'<'));
-        self.0.bump();
-        try!(self.0.read_tag());
+        try!(self.0.read_next_tag());
         Ok(v)
     }
 
@@ -76,10 +74,7 @@ where Iter: Iterator<Item=u8>,
         self.0.buf.clear();
         println!("{:?} __ {:?}", self.0.buf, self.0.ch);
         let v = try!(self.0.parse_inner_map(visitor));
-        self.0.skip_whitespace();
-        assert!(self.0.ch_is(b'<'));
-        self.0.bump();
-        try!(self.0.read_tag());
+        try!(self.0.read_next_tag());
         Ok(v)
     }
 
@@ -272,6 +267,13 @@ impl<Iter> Deserializer<Iter>
         Err(self.error(EOF))
     }
 
+    fn read_next_tag(&mut self) -> Result<(), Error> {
+        self.skip_whitespace();
+        assert!(self.ch_is(b'<'));
+        self.bump();
+        self.read_tag()
+    }
+
     fn read_tag(&mut self) -> Result<(), Error> {
         println!("read_tag");
         while let Some(c) = self.ch {
@@ -402,9 +404,7 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        self.skip_whitespace();
-        assert!(self.ch_is(b'<'));
-        self.read_tag();
+        try!(self.read_next_tag());
         self.read_value(visitor)
     }
 
@@ -433,10 +433,7 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        self.skip_whitespace();
-        assert!(self.ch_is(b'<'));
-        self.bump();
-        try!(self.read_tag());
+        try!(self.read_next_tag());
         self.buf.clear();
         self.parse_inner_map(visitor)
     }
