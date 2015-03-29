@@ -582,6 +582,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             },
 
             ContentVisitorState::Attribute => {
+                use self::InnerMapState::*;
                 self.de.buf.clear();
                 assert!(self.de.ch_is_one_of(b"'\""));
                 let quot = self.de.ch.unwrap();
@@ -590,45 +591,11 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 self.de.bump();
                 let val = try!(KeyDeserializer::decode(self.de));
                 self.de.buf.clear();
-                self.de.skip_whitespace();
-                match self.de.ch {
-                    None => return Err(self.de.error(EOF)),
-                    Some(b'/') => {
-                        self.de.bump();
-                        assert!(self.de.ch_is(b'>'));
-                        self.de.bump();
-                    }
-                    Some(b'>') => {
-                        self.de.bump();
-                        self.de.read_whitespace();
-                        if self.de.ch_is(b'<') {
-                            self.de.buf.clear();
-                            self.de.bump();
-                            if self.de.ch_is(b'/') {
-                                try!(self.de.skip_until(b'>'));
-                                self.de.bump();
-                            } else {
-                                try!(self.de.read_tag());
-                                self.state = ContentVisitorState::Element;
-                            }
-                        } else {
-                            // $value map
-                            try!(self.de.read_until(b'<'));
-                            self.de.bump();
-                            assert!(self.de.ch_is(b'/'));
-                            try!(self.de.skip_until(b'>'));
-                            self.de.bump();
-                            self.state = ContentVisitorState::Value;
-                        }
-                    }
-                    Some(_) => {
-                        try!(self.de.read_attr_name());
-                        self.de.skip_whitespace();
-                        assert!(self.de.ch_is(b'='));
-                        self.de.bump();
-                        self.de.skip_whitespace();
-                        assert!(self.de.ch_is_one_of(b"'\""));
-                    }
+                match try!(self.de.read_inner_map()) {
+                    Unit => {},
+                    Value => self.state = ContentVisitorState::Value,
+                    Inner => self.state = ContentVisitorState::Element,
+                    Attr => {},
                 }
                 Ok(val)
             },
