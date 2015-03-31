@@ -11,3 +11,4 @@ rustc-serialize = "*"
 
 [dev-dependencies.serde_macros]
 path = "serde_macros/"
+version = "0.3.0"
