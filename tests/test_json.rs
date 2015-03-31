@@ -861,9 +861,9 @@ fn test_parse_object() {
 #[test]
 fn test_parse_struct() {
     test_parse_err::<Outer>(vec![
-        ("5", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("\"hello\"", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
+        ("5", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 2)),
+        ("\"hello\"", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
+        ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 15)),
     ]);
 
     test_parse_ok(vec![
@@ -924,10 +924,10 @@ fn test_parse_enum_errors() {
         ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 2)),
         ("{\"Dog\":", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 8)),
         ("{\"Dog\":}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
-        ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
-        ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)),
+        ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 11)),
+        ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
+        ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 10)),
+        ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
     ]);
 }
 

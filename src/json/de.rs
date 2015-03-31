@@ -97,7 +97,7 @@ impl<Iter> Deserializer<Iter>
             return Err(self.error(ErrorCode::EOFWhileParsingValue));
         }
 
-        match self.ch_or_null() {
+        let value = match self.ch_or_null() {
             b'n' => {
                 try!(self.parse_ident(b"ull"));
                 visitor.visit_unit()
@@ -127,6 +127,12 @@ impl<Iter> Deserializer<Iter>
             _ => {
                 Err(self.error(ErrorCode::ExpectedSomeValue))
             }
+        };
+
+        match value {
+            Ok(value) => Ok(value),
+            Err(Error::SyntaxError(code, _, _)) => Err(self.error(code)),
+            Err(err) => Err(err),
         }
     }
 
