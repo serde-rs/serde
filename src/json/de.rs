@@ -603,26 +603,8 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
     fn missing_field<V>(&mut self, _field: &'static str) -> Result<V, Error>
         where V: de::Deserialize,
     {
-        // See if the type can deserialize from a unit.
-        struct UnitDeserializer;
-
-        impl de::Deserializer for UnitDeserializer {
-            type Error = Error;
-
-            fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-                where V: de::Visitor,
-            {
-                visitor.visit_unit()
-            }
-
-            fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-                where V: de::Visitor,
-            {
-                visitor.visit_none()
-            }
-        }
-
-        Ok(try!(de::Deserialize::deserialize(&mut UnitDeserializer)))
+        let mut de = de::value::ValueDeserializer::deserializer(());
+        Ok(try!(de::Deserialize::deserialize(&mut de)))
     }
 }
 

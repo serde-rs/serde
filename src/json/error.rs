@@ -145,6 +145,22 @@ impl error::FromError<io::Error> for Error {
     }
 }
 
+impl error::FromError<de::value::Error> for Error {
+    fn from_error(error: de::value::Error) -> Error {
+        match error {
+            de::value::Error::SyntaxError => {
+                de::Error::syntax_error()
+            }
+            de::value::Error::EndOfStreamError => {
+                de::Error::end_of_stream_error()
+            }
+            de::value::Error::MissingFieldError(field) => {
+                de::Error::missing_field_error(field)
+            }
+        }
+    }
+}
+
 impl de::Error for Error {
     fn syntax_error() -> Error {
         Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)
