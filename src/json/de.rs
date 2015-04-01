@@ -603,7 +603,7 @@ impl<'a, Iter> de::MapVisitor for MapVisitor<'a, Iter>
     fn missing_field<V>(&mut self, _field: &'static str) -> Result<V, Error>
         where V: de::Deserialize,
     {
-        let mut de = de::value::ValueDeserializer::deserializer(());
+        let mut de = de::value::ValueDeserializer::into_deserializer(());
         Ok(try!(de::Deserialize::deserialize(&mut de)))
     }
 }

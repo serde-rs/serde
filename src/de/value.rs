@@ -32,7 +32,7 @@ impl de::Error for Error {
 pub trait ValueDeserializer {
     type Deserializer: de::Deserializer<Error=Error>;
 
-    fn deserializer(self) -> Self::Deserializer;
+    fn into_deserializer(self) -> Self::Deserializer;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,7 +40,7 @@ pub trait ValueDeserializer {
 impl ValueDeserializer for () {
     type Deserializer = UnitDeserializer;
 
-    fn deserializer(self) -> UnitDeserializer {
+    fn into_deserializer(self) -> UnitDeserializer {
         UnitDeserializer
     }
 }
@@ -73,7 +73,7 @@ macro_rules! primitive_deserializer {
         impl ValueDeserializer for $ty {
             type Deserializer = $name;
 
-            fn deserializer(self) -> $name {
+            fn into_deserializer(self) -> $name {
                 $name(Some(self))
             }
         }
@@ -116,7 +116,7 @@ pub struct StrDeserializer<'a>(Option<&'a str>);
 impl<'a> ValueDeserializer for &'a str {
     type Deserializer = StrDeserializer<'a>;
 
-    fn deserializer(self) -> StrDeserializer<'a> {
+    fn into_deserializer(self) -> StrDeserializer<'a> {
         StrDeserializer(Some(self))
     }
 }
@@ -164,7 +164,7 @@ pub struct StringDeserializer(Option<String>);
 impl ValueDeserializer for String {
     type Deserializer = StringDeserializer;
 
-    fn deserializer(self) -> StringDeserializer {
+    fn into_deserializer(self) -> StringDeserializer {
         StringDeserializer(Some(self))
     }
 }
@@ -245,7 +245,7 @@ impl<I, T> de::SeqVisitor for SeqDeserializer<I>
         match self.iter.next() {
             Some(value) => {
                 self.len -= 1;
-                let mut de = value.deserializer();
+                let mut de = value.into_deserializer();
                 Ok(Some(try!(de::Deserialize::deserialize(&mut de))))
             }
             None => Ok(None),
@@ -272,7 +272,7 @@ impl<T> ValueDeserializer for Vec<T>
 {
     type Deserializer = SeqDeserializer<vec::IntoIter<T>>;
 
-    fn deserializer(self) -> SeqDeserializer<vec::IntoIter<T>> {
+    fn into_deserializer(self) -> SeqDeserializer<vec::IntoIter<T>> {
         let len = self.len();
         SeqDeserializer::new(self.into_iter(), len)
     }
@@ -283,7 +283,7 @@ impl<T> ValueDeserializer for BTreeSet<T>
 {
     type Deserializer = SeqDeserializer<btree_set::IntoIter<T>>;
 
-    fn deserializer(self) -> SeqDeserializer<btree_set::IntoIter<T>> {
+    fn into_deserializer(self) -> SeqDeserializer<btree_set::IntoIter<T>> {
         let len = self.len();
         SeqDeserializer::new(self.into_iter(), len)
     }
@@ -294,7 +294,7 @@ impl<T> ValueDeserializer for HashSet<T>
 {
     type Deserializer = SeqDeserializer<hash_set::IntoIter<T>>;
 
-    fn deserializer(self) -> SeqDeserializer<hash_set::IntoIter<T>> {
+    fn into_deserializer(self) -> SeqDeserializer<hash_set::IntoIter<T>> {
         let len = self.len();
         SeqDeserializer::new(self.into_iter(), len)
     }
@@ -354,7 +354,7 @@ impl<I, K, V> de::MapVisitor for MapDeserializer<I, K, V>
             Some((key, value)) => {
                 self.len -= 1;
                 self.value = Some(value);
-                let mut de = key.deserializer();
+                let mut de = key.into_deserializer();
                 Ok(Some(try!(de::Deserialize::deserialize(&mut de))))
             }
             None => Ok(None),
@@ -366,7 +366,7 @@ impl<I, K, V> de::MapVisitor for MapDeserializer<I, K, V>
     {
         match self.value.take() {
             Some(value) => {
-                let mut de = value.deserializer();
+                let mut de = value.into_deserializer();
                 de::Deserialize::deserialize(&mut de)
             }
             None => Err(de::Error::syntax_error())
@@ -394,7 +394,7 @@ impl<K, V> ValueDeserializer for BTreeMap<K, V>
 {
     type Deserializer = MapDeserializer<btree_map::IntoIter<K, V>, K, V>;
 
-    fn deserializer(self) -> MapDeserializer<btree_map::IntoIter<K, V>, K, V> {
+    fn into_deserializer(self) -> MapDeserializer<btree_map::IntoIter<K, V>, K, V> {
         let len = self.len();
         MapDeserializer::new(self.into_iter(), len)
     }
@@ -406,7 +406,7 @@ impl<K, V> ValueDeserializer for HashMap<K, V>
 {
     type Deserializer = MapDeserializer<hash_map::IntoIter<K, V>, K, V>;
 
-    fn deserializer(self) -> MapDeserializer<hash_map::IntoIter<K, V>, K, V> {
+    fn into_deserializer(self) -> MapDeserializer<hash_map::IntoIter<K, V>, K, V> {
         let len = self.len();
         MapDeserializer::new(self.into_iter(), len)
     }
