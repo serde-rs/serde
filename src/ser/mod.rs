@@ -1,3 +1,5 @@
+//! Generic serialization framework.
+
 use std::str;
 
 pub mod impls;

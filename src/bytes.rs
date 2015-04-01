@@ -1,3 +1,5 @@
+//! Helper module to enable serializing bytes more efficiently
+
 use std::ops;
 
 use ser;

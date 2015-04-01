@@ -1,3 +1,5 @@
+//! Generic deserialization framework.
+
 use std::str;
 
 pub mod impls;
