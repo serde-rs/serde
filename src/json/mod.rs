@@ -50,53 +50,16 @@
 //!
 //! The JSON API also provides an enum `serde::json::Value` and a method `to_value` to serialize
 //! objects.  A `serde::json::Value` value can be serialized as a string or buffer using the
-//! functions described above.  You can also use the `json::Encoder` object, which implements the
-//! `Encoder` trait.
+//! functions described above.  You can also use the `json::Serializer` object, which implements the
+//! `Serializer` trait.
 //!
 //! # Examples of use
-//!
-//! ## Using Autoserialization
-//!
-//! Create a struct called `TestStruct` and serialize and deserialize it to and from JSON using the
-//! serialization API, using the derived serialization code.
-//!
-//! ```rust
-//! // Required to use the annotations.
-//! #![feature(custom_derive, plugin)]
-//! #![plugin(serde_macros)]
-//!
-//! extern crate serde;
-//!
-//! use serde::json;
-//!
-//! // Automatically generate `Serialize` and `Deserialize` trait implementations
-//! #[derive(Serialize, Deserialize)]
-//! pub struct TestStruct  {
-//!     data_int: u8,
-//!     data_str: String,
-//!     data_vector: Vec<u8>,
-//! }
-//!
-//! fn main() {
-//!     let object = TestStruct {
-//!         data_int: 1,
-//!         data_str: "homura".to_string(),
-//!         data_vector: vec![2,3,4,5],
-//!     };
-//!
-//!     // Serialize using `json::to_string`
-//!     let serialized = json::to_string(&object).unwrap();
-//!
-//!     // Deserialize using `json::from_str`
-//!     let deserialized: TestStruct = json::from_str(&serialized).unwrap();
-//! }
-//! ```
 //!
 //! ## Parsing a `str` to `Value` and reading the result
 //!
 //! ```rust
-//! #![feature(custom_derive, plugin)]
-//! #![plugin(serde_macros)]
+//! //#![feature(custom_derive, plugin)]
+//! //#![plugin(serde_macros)]
 //!
 //! extern crate serde;
 //!
