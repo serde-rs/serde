@@ -1,6 +1,5 @@
 use std::char;
 use std::io;
-use std::num::Float;
 use std::str;
 
 use unicode::str::Utf16Item;
