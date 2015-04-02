@@ -670,8 +670,8 @@ fn push_all_bytes(dst: &mut Vec<u8>, src: &[u8]) {
         dst.set_len(dst_len + src_len);
 
         ::std::ptr::copy_nonoverlapping(
-            dst.as_mut_ptr().offset(dst_len as isize),
             src.as_ptr(),
+            dst.as_mut_ptr().offset(dst_len as isize),
             src_len);
     }
 }
