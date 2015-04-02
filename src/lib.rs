@@ -6,7 +6,7 @@
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
 
-#![feature(collections, convert, core, std_misc, unicode)]
+#![feature(collections, core, std_misc, unicode)]
 
 extern crate unicode;
 
