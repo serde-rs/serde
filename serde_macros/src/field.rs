@@ -5,7 +5,7 @@ use syntax::ptr::P;
 
 use aster;
 
-fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
+fn field_rename(field: &ast::StructField) -> Option<&ast::Lit> {
     field.node.attrs.iter()
         .find(|sa| {
             if let ast::MetaList(ref n, _) = sa.node.value.node {
@@ -19,7 +19,7 @@ fn field_alias(field: &ast::StructField) -> Option<&ast::Lit> {
                 attr::mark_used(&sa);
                 vals.iter().fold(None, |v, mi| {
                     if let ast::MetaNameValue(ref n, ref lit) = mi.node {
-                        if n == &"alias" {
+                        if n == &"rename" {
                             Some(lit)
                         } else {
                             v
@@ -41,8 +41,8 @@ pub fn struct_field_strs(
 ) -> Vec<P<ast::Expr>> {
     struct_def.fields.iter()
         .map(|field| {
-            match field_alias(field) {
-                Some(alias) => builder.expr().build_lit(P(alias.clone())),
+            match field_rename(field) {
+                Some(rename) => builder.expr().build_lit(P(rename.clone())),
                 None => {
                     match field.node.kind {
                         ast::NamedField(name, _) => {
