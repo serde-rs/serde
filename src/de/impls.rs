@@ -3,6 +3,8 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::num::FromPrimitive;
 use std::path;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use de::{
     Deserialize,
@@ -650,3 +652,31 @@ impl Deserialize for path::PathBuf {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+impl<T: Deserialize> Deserialize for Box<T> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Box<T>, D::Error>
+        where D: Deserializer,
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(Box::new(val))
+    }
+}
+
+impl<T: Deserialize> Deserialize for Arc<T> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Arc<T>, D::Error>
+        where D: Deserializer,
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(Arc::new(val))
+    }
+}
+
+impl<T: Deserialize> Deserialize for Rc<T> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Rc<T>, D::Error>
+        where D: Deserializer,
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(Rc::new(val))
+    }
+}

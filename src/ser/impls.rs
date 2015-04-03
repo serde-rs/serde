@@ -44,12 +44,12 @@ impl_visit!(char, visit_char);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<'a> Serialize for &'a str {
+impl Serialize for str {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_str(*self)
+        serializer.visit_str(self)
     }
 }
 
@@ -426,7 +426,7 @@ impl<V> Serialize for VecMap<V>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<'a, T> Serialize for &'a T where T: Serialize {
+impl<'a, T: ?Sized> Serialize for &'a T where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -435,7 +435,7 @@ impl<'a, T> Serialize for &'a T where T: Serialize {
     }
 }
 
-impl<'a, T> Serialize for &'a mut T where T: Serialize {
+impl<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -444,7 +444,7 @@ impl<'a, T> Serialize for &'a mut T where T: Serialize {
     }
 }
 
-impl<T> Serialize for Box<T> where T: Serialize {
+impl<T: ?Sized> Serialize for Box<T> where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
