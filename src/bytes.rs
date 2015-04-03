@@ -12,10 +12,18 @@ pub struct Bytes<'a> {
     bytes: &'a [u8],
 }
 
-impl<'a, T> From<T> for Bytes<'a> where T: Into<&'a [u8]> {
-    fn from(bytes: T) -> Self {
+impl<'a> From<&'a [u8]> for Bytes<'a> {
+    fn from(bytes: &'a [u8]) -> Self {
         Bytes {
-            bytes: bytes.into(),
+            bytes: bytes,
+        }
+    }
+}
+
+impl<'a> From<&'a Vec<u8>> for Bytes<'a> {
+    fn from(bytes: &'a Vec<u8>) -> Self {
+        Bytes {
+            bytes: &bytes,
         }
     }
 }

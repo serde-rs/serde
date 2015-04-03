@@ -1,4 +1,4 @@
-#![feature(convert, custom_derive, plugin, test)]
+#![feature(custom_derive, plugin, test)]
 #![plugin(serde_macros)]
 
 extern crate test;
@@ -192,10 +192,12 @@ fn test_byte_buf_ser_bytes() {
 #[test]
 fn test_byte_buf_de_json() {
     let bytes = ByteBuf::new();
-    assert_eq!(json::from_str("[]").unwrap(), bytes);
+    let v: ByteBuf = json::from_str("[]").unwrap();
+    assert_eq!(v, bytes);
 
     let bytes = ByteBuf::from(vec![1, 2, 3]);
-    assert_eq!(json::from_str("[1, 2, 3]").unwrap(), bytes);
+    let v: ByteBuf = json::from_str("[1, 2, 3]").unwrap();
+    assert_eq!(v, bytes);
 }
 
 #[test]

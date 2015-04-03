@@ -626,23 +626,20 @@ fn test_parse_ok<T>(errors: Vec<(&'static str, T)>)
     where T: Clone + Debug + PartialEq + ser::Serialize + de::Deserialize,
 {
     for (s, value) in errors {
-        let v: Result<T, Error> = from_str(s);
-        assert_eq!(v, Ok(value.clone()));
+        let v: T = from_str(s).unwrap();
+        assert_eq!(v, value.clone());
 
         // Make sure we can deserialize into a `Value`.
-        let json_value: Result<Value, Error> = from_str(s);
-        assert_eq!(json_value, Ok(to_value(&value)));
-
-        let json_value = json_value.unwrap();
-
+        let json_value: Value = from_str(s).unwrap();
+        assert_eq!(json_value, to_value(&value));
 
         // Make sure we can deserialize from a `Value`.
-        let v: Result<T, Error> = from_value(json_value.clone());
-        assert_eq!(v, Ok(value));
+        let v: T = from_value(json_value.clone()).unwrap();
+        assert_eq!(v, value);
 
         // Make sure we can round trip back to `Value`.
-        let json_value2: Result<Value, Error> = from_value(json_value.clone());
-        assert_eq!(json_value2, Ok(json_value));
+        let json_value2: Value = from_value(json_value.clone()).unwrap();
+        assert_eq!(json_value2, json_value);
     }
 }
 
@@ -651,8 +648,20 @@ fn test_parse_err<T>(errors: Vec<(&'static str, Error)>)
     where T: Debug + PartialEq + de::Deserialize,
 {
     for (s, err) in errors {
-        let v: Result<T, Error> = from_str(s);
-        assert_eq!(v, Err(err));
+        match (err, from_str::<T>(s).unwrap_err()) {
+            (
+                Error::SyntaxError(expected_code, expected_line, expected_col),
+                Error::SyntaxError(actual_code, actual_line, actual_col),
+            ) => {
+                assert_eq!(
+                    (expected_code, expected_line, expected_col),
+                    (actual_code, actual_line, actual_col)
+                )
+            }
+            (expected_err, actual_err) => {
+                panic!("unexpected errors {} != {}", expected_err, actual_err)
+            }
+        }
     }
 }
 
@@ -889,11 +898,13 @@ fn test_parse_struct() {
         )
     ]);
 
+    let v: Outer = from_str("{}").unwrap();
+
     assert_eq!(
-        from_str("{}"),
-        Ok(Outer {
+        v,
+        Outer {
             inner: vec![],
-        })
+        }
     );
 }
 
