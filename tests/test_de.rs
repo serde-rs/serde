@@ -59,7 +59,7 @@ impl<'a> TokenDeserializer {
     }
 }
 
-#[derive(Copy, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum Error {
     SyntaxError,
     EndOfStreamError,
@@ -324,7 +324,7 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
 
 //////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, PartialEq, Debug, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug, Deserialize)]
 struct NamedUnit;
 
 #[derive(PartialEq, Debug, Deserialize)]
