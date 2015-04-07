@@ -315,7 +315,17 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
         de::Deserialize::deserialize(self.de)
     }
 
-    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        de::Deserialize::deserialize(self.de)
+    }
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        de::Deserializer::visit(self.de, visitor)
+    }
+
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self.de, visitor)

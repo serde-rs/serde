@@ -737,7 +737,18 @@ impl<'a> de::VariantVisitor for SeqDeserializer<'a> {
         de::Deserialize::deserialize(self.de)
     }
 
-    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_unit(&mut self) -> Result<(), Error>
+    {
+        de::Deserialize::deserialize(self)
+    }
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        de::Deserializer::visit(self, visitor)
+    }
+
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self, visitor)
@@ -836,7 +847,17 @@ impl<'a> de::VariantVisitor for MapDeserializer<'a> {
         de::Deserialize::deserialize(self.de)
     }
 
-    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        de::Deserialize::deserialize(self)
+    }
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        de::Deserializer::visit(self, visitor)
+    }
+
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self, visitor)

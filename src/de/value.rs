@@ -149,10 +149,8 @@ impl<'a> de::VariantVisitor for StrDeserializer<'a> {
         de::Deserialize::deserialize(self)
     }
 
-    fn visit_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        visitor.visit_unit()
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        Ok(())
     }
 }
 
@@ -197,10 +195,8 @@ impl<'a> de::VariantVisitor for StringDeserializer {
         de::Deserialize::deserialize(self)
     }
 
-    fn visit_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        visitor.visit_unit()
+    fn visit_unit(&mut self) -> Result<(), Error> {
+        Ok(())
     }
 }
 

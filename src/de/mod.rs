@@ -385,6 +385,8 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// `EnumVisitor` is a visitor that is created by the `Deserialize` and passed to the
+/// `Deserializer` in order to deserialize enums.
 pub trait EnumVisitor {
     type Value;
 
@@ -394,14 +396,33 @@ pub trait EnumVisitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// `VariantVisitor` is a visitor that is created by the `Deserializer` and passed to the
+/// `Deserialize` in order to deserialize a specific enum variant.
 pub trait VariantVisitor {
     type Error: Error;
 
+    /// `visit_variant` is called to identify which variant to deserialize.
     fn visit_variant<V>(&mut self) -> Result<V, Self::Error>
         where V: Deserialize;
 
-    fn visit_value<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor;
+    /// `visit_unit` is called when deserializing a variant with no values.
+    fn visit_unit(&mut self) -> Result<(), Self::Error> {
+        Err(Error::syntax_error())
+    }
+
+    /// `visit_seq` is called when deserializing a tuple-like variant.
+    fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor
+    {
+        Err(Error::syntax_error())
+    }
+
+    /// `visit_map` is called when deserializing a struct-like variant.
+    fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor
+    {
+        Err(Error::syntax_error())
+    }
 }
 
 impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
@@ -413,10 +434,20 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_variant()
     }
 
-    fn visit_value<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+    fn visit_unit(&mut self) -> Result<(), T::Error> {
+        (**self).visit_unit()
+    }
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
-        (**self).visit_value(visitor)
+        (**self).visit_seq(visitor)
+    }
+
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+        where V: Visitor,
+    {
+        (**self).visit_map(visitor)
     }
 }
 
