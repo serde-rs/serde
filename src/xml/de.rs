@@ -75,6 +75,7 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn next_char(&mut self) -> Result<u8, LexerError> {
+        print!(" -> {:?}", self.peek_char().map(|x| x as char));
         self.rdr.next().ok_or(LexerError::EOF)
     }
 
@@ -103,7 +104,7 @@ impl<Iter> XmlIterator<Iter>
             b'<' => match try!(self.peek_char()) {
                 b'/' => {
                     // won't panic
-                    self.rdr.next().unwrap();
+                    self.next_char().unwrap();
                     Ok(EndTagBegin)
                 },
                 b'!' => unimplemented!(),
@@ -144,7 +145,6 @@ pub enum LexerError {
 impl<Iter: Iterator<Item=u8>> Iterator for XmlIterator<Iter> {
     type Item = Result<Lexical, LexerError>;
     fn next(&mut self) -> Option<Result<Lexical, LexerError>> {
-        print!(" -> {:?}", self.peek_char().map(|x| x as char));
         match self.rdr.peek() {
             None => None,
             Some(&b'\n') => {
@@ -414,29 +414,35 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn read_next_tag(&mut self) -> Result<(), Error> {
+        println!("read_next_tag");
         self.skip_whitespace();
-        assert!(self.ch_is(Lexical::StartTagBegin));
-        self.bump();
         self.read_tag()
     }
 
     fn read_tag(&mut self) -> Result<(), Error> {
         use self::Lexical::*;
         println!("read_tag");
-        while let Some(c) = self.ch {
-            if self.ch_is_one_of(&ws()) {
-                return Ok(());
-            }
-            if self.ch_is_one_of(&[TagClose, EmptyElementEnd]) {
-                return Ok(());
-            }
-            match c {
-                Text(c) => self.rdr.buf.push(c),
-                _ => unimplemented!()
-            }
-            self.bump();
+        match self.ch.unwrap() {
+            EndTagBegin => Ok(()),
+            StartTagBegin => {
+                self.bump();
+                while let Some(c) = self.ch {
+                    if self.ch_is_one_of(&ws()) {
+                        return Ok(());
+                    }
+                    if self.ch_is_one_of(&[TagClose, EmptyElementEnd]) {
+                        return Ok(());
+                    }
+                    match c {
+                        Text(c) => self.rdr.buf.push(c),
+                        _ => unimplemented!()
+                    }
+                    self.bump();
+                }
+                Err(self.error(EOF))
+            },
+            x => Err(self.error(Expected(StartTagBegin, x))),
         }
-        Err(self.error(EOF))
     }
 
     fn read_attr_name(&mut self) -> Result<(), Error> {
@@ -496,7 +502,6 @@ impl<Iter> Deserializer<Iter>
                     self.bump();
                     Ok(InnerMapState::Whitespace)
                 } else if self.ch_is(StartTagBegin) {
-                    self.bump();
                     self.rdr.buf.clear();
                     try!(self.read_tag());
                     Ok(InnerMapState::Inner)
