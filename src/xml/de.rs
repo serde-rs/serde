@@ -196,7 +196,8 @@ where Iter: Iterator<Item=u8>,
                 self.0.bump();
                 visitor.visit_none()
             },
-            Lexical::Text(c) if b"\t\r\n >".contains(&c) => {
+            Lexical::TagClose => visitor.visit_some(self),
+            Lexical::Text(c) if b"\t\r\n ".contains(&c) => {
                 visitor.visit_some(self)
             },
             _ => Err(self.0.error(InvalidOptionalElement)),
