@@ -519,9 +519,6 @@ impl<Iter> Deserializer<Iter>
                 try!(self.read_attr_name());
                 self.skip_whitespace();
                 assert!(self.ch_is(Eq));
-                self.bump();
-                self.skip_whitespace();
-                assert!(self.ch_is(AttributeValue));
                 Ok(InnerMapState::Attr)
             }
         }
@@ -735,14 +732,14 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
 
             ContentVisitorState::Attribute => {
                 use self::InnerMapState::*;
+                assert!(self.de.ch_is(Lexical::Eq));
                 self.de.rdr.buf.clear();
+                self.de.bump();
+                self.de.skip_whitespace();
                 assert!(self.de.ch_is(Lexical::AttributeValue));
-                let quot = self.de.ch.unwrap();
-                self.de.bump();
-                try!(self.de.read_until(quot));
-                self.de.bump();
                 let val = try!(KeyDeserializer::decode(self.de));
                 self.de.rdr.buf.clear();
+                self.de.bump();
                 match try!(self.de.read_inner_map()) {
                     Value => self.state = ContentVisitorState::Value,
                     Inner => self.state = ContentVisitorState::Element,
