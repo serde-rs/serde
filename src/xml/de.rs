@@ -2,6 +2,8 @@ use super::error::*;
 use super::error::ErrorCode::*;
 use de;
 
+use std::iter::Peekable;
+
 use std::str::from_utf8;
 
 enum InnerMapState {
@@ -12,12 +14,155 @@ enum InnerMapState {
     Whitespace,
 }
 
-pub struct Deserializer<Iter: Iterator<Item=u8>> {
-    rdr: Iter,
-    ch: Option<u8>,
+macro_rules! next {
+    ($sel:expr) => (
+        match $sel.rdr.next() {
+            None => return Err($sel.error(EOF)),
+            Some(Err(e)) => return Err($sel.error(LexingError(e))),
+            Some(Ok(x)) => x,
+        }
+    )
+}
+
+macro_rules! expect {
+    ($sel:expr, $what:expr) => (
+        match $sel.rdr.next() {
+            None => return Err($sel.error(Expected($what, EOF)))
+            Err(e) => return Err($sel.error(LexingError(e))),
+            Ok(x) if x == $what => {},
+            Ok(x) => return Err($sel.error(Expected($what, x))),
+        }
+    )
+}
+
+#[derive(Debug, Copy, PartialEq, Clone)]
+pub enum Lexical {
+    StartTagBegin,
+    Text(u8),
+    TagClose,
+
+    AttributeValue,
+
+    EmptyElementEnd,
+
+    EndTagBegin,
+
+    Eq,
+}
+
+struct XmlIterator<Iter: Iterator<Item=u8>> {
+    rdr: Peekable<Iter>,
     line: usize,
     col: usize,
     buf: Vec<u8>,
+}
+
+impl<Iter> XmlIterator<Iter>
+    where Iter: Iterator<Item=u8>,
+{
+    #[inline]
+    pub fn new(rdr: Iter) -> XmlIterator<Iter> {
+        XmlIterator {
+            rdr: rdr.peekable(),
+            line: 1,
+            col: 1,
+            buf: Vec::with_capacity(128),
+        }
+    }
+
+    fn peek_char(&mut self) -> Result<u8, LexerError> {
+        self.rdr.peek().ok_or(LexerError::EOF).map(|&c| c)
+    }
+
+    fn next_char(&mut self) -> Result<u8, LexerError> {
+        self.rdr.next().ok_or(LexerError::EOF)
+    }
+
+    fn end(&mut self) -> Result<(), LexerError> {
+        while let Some(c) = self.rdr.next() {
+            if !b" \n\t\r".contains(&c) {
+                return Err(LexerError::ExpectedEOF);
+            }
+        }
+        Ok(())
+    }
+
+    fn next_non_whitespace_char(&mut self) -> Result<u8, LexerError> {
+        loop {
+            match try!(self.next_char()) {
+                b' ' | b'\n' | b'\r' | b'\t' => {},
+                c => return Ok(c),
+            }
+        }
+    }
+
+    fn decode(&mut self) -> Result<Lexical, LexerError> {
+        use self::Lexical::*;
+        use self::LexerError::*;
+        match try!(self.next_char()) {
+            b'<' => match try!(self.peek_char()) {
+                b'/' => {
+                    // won't panic
+                    self.rdr.next().unwrap();
+                    Ok(EndTagBegin)
+                },
+                b'!' => unimplemented!(),
+                b'?' => unimplemented!(),
+                _ => Ok(StartTagBegin),
+            },
+            quote @ b'"' | quote @ b'\'' => {
+                assert!(self.buf.is_empty());
+                loop {
+                    match try!(self.next_char()) {
+                        c if c == quote => return Ok(AttributeValue),
+                        c => self.buf.push(c),
+                    }
+                }
+            },
+            b'=' => Ok(Eq),
+            b'>' => Ok(TagClose),
+            b'/' => match try!(self.next_char()) {
+                b'>' => Ok(EmptyElementEnd),
+                _ => Err(ExpectedLT),
+            },
+            b'&' => unimplemented!(),
+            c => Ok(Text(c)),
+        }
+    }
+}
+
+#[derive(Debug, Copy, PartialEq, Clone)]
+pub enum LexerError {
+    EOF,
+    ExpectedLT,
+    ExpectedQuotes,
+    Utf8,
+    MixedElementsAndText,
+    ExpectedEOF,
+}
+
+impl<Iter: Iterator<Item=u8>> Iterator for XmlIterator<Iter> {
+    type Item = Result<Lexical, LexerError>;
+    fn next(&mut self) -> Option<Result<Lexical, LexerError>> {
+        print!(" -> {:?}", self.peek_char().map(|x| x as char));
+        match self.rdr.peek() {
+            None => None,
+            Some(&b'\n') => {
+                self.line += 1;
+                self.col = 1;
+                Some(self.decode())
+            },
+            Some(_) => {
+                self.col += 1;
+                Some(self.decode())
+            },
+        }
+    }
+}
+
+pub struct Deserializer<Iter: Iterator<Item=u8>> {
+    rdr: XmlIterator<Iter>,
+    ch: Option<Lexical>,
 }
 
 pub struct InnerDeserializer<'a, Iter: Iterator<Item=u8> + 'a> (
@@ -45,18 +190,16 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         println!("InnerDeserializer::visit_option");
-        self.0.buf.clear();
+        self.0.rdr.buf.clear();
         match self.0.ch.unwrap() {
-            b'/' => {
-                self.0.bump();
-                assert!(self.0.ch_is(b'>'));
+            Lexical::EmptyElementEnd => {
                 self.0.bump();
                 visitor.visit_none()
-            }
-            b'>' | b' ' | b'\n' | b'\r' | b'\t' => {
+            },
+            Lexical::Text(c) if b"\t\r\n >".contains(&c) => {
                 visitor.visit_some(self)
-            }
-            _ => Err(self.0.error(InvalidOptionalElement))
+            },
+            _ => Err(self.0.error(InvalidOptionalElement)),
         }
     }
 
@@ -72,8 +215,8 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         println!("InnerDeserializer::visit_map");
-        self.0.buf.clear();
-        println!("{:?} __ {:?}", self.0.buf, self.0.ch);
+        self.0.rdr.buf.clear();
+        println!("{:?}", self.0.rdr.buf);
         let v = try!(self.0.parse_inner_map(visitor));
         try!(self.0.read_next_tag());
         Ok(v)
@@ -101,7 +244,7 @@ impl<'a> KeyDeserializer<'a> {
         where Iter: Iterator<Item=u8>,
         T: de::Deserialize,
     {
-        let s = from_utf8(&de.buf);
+        let s = from_utf8(&de.rdr.buf);
         match s {
             Ok(text) => {
                 let kds = &mut KeyDeserializer(text);
@@ -125,7 +268,7 @@ impl<'a> KeyDeserializer<'a> {
     fn from_utf8<Iter>(de: &Deserializer<Iter>) -> Result<&str, Error>
         where Iter: Iterator<Item=u8>,
     {
-        let s = from_utf8(&de.buf);
+        let s = from_utf8(&de.rdr.buf);
         s.or(Err(de.error(NotUtf8)))
     }
 }
@@ -172,6 +315,11 @@ impl<'a> de::Deserializer for KeyDeserializer<'a> {
     }
 }
 
+fn ws() -> [Lexical; 4] {
+    use self::Lexical::*;
+    [Text(b' '), Text(b'\r'), Text(b'\t'), Text(b'\n')]
+}
+
 impl<Iter> Deserializer<Iter>
     where Iter: Iterator<Item=u8>,
 {
@@ -179,11 +327,8 @@ impl<Iter> Deserializer<Iter>
     #[inline]
     pub fn new(rdr: Iter) -> Deserializer<Iter> {
         let mut p = Deserializer {
-            rdr: rdr,
-            ch: Some(b'\x00'),
-            line: 1,
-            col: 0,
-            buf: Vec::with_capacity(128),
+            rdr: XmlIterator::new(rdr),
+            ch: Some(Lexical::Text(b'\0')),
         };
         p.bump();
         return p;
@@ -193,33 +338,29 @@ impl<Iter> Deserializer<Iter>
     pub fn end(&mut self) -> Result<(), Error> {
         self.skip_whitespace();
         assert!(self.eof());
-        assert!(self.buf.is_empty());
+        assert!(self.rdr.buf.is_empty());
         Ok(())
     }
 
     fn eof(&self) -> bool { self.ch.is_none() }
 
     fn bump(&mut self) {
-        print!("bump: {:?}", (self.line, self.col, self.ch));
+        print!("bump: {:?}", (self.rdr.line, self.rdr.col, self.ch));
         if let None = self.ch {
             panic!("iterator overrun");
         }
-        self.ch = self.rdr.next();
-
-        if self.ch_is(b'\n') {
-            self.line += 1;
-            self.col = 1;
-        } else {
-            self.col += 1;
-        }
+        self.ch = match self.rdr.next() {
+            None => None,
+            Some(x) => Some(x.unwrap()),
+        };
         println!(" -> {:?}", self.ch);
     }
 
-    fn ch_is(&self, c: u8) -> bool {
+    fn ch_is(&self, c: Lexical) -> bool {
         self.ch == Some(c)
     }
 
-    fn ch_is_one_of(&self, c: &[u8]) -> bool {
+    fn ch_is_one_of(&self, c: &[Lexical]) -> bool {
         for &c in c {
             if Some(c) == self.ch {
                 return true;
@@ -229,17 +370,18 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn error(&self, reason: ErrorCode) -> Error {
-        Error::SyntaxError(reason, self.line, self.col)
+        Error::SyntaxError(reason, self.rdr.line, self.rdr.col)
     }
 
     fn skip_whitespace(&mut self) {
-        while self.ch_is_one_of(" \n\t\r".as_bytes()) { self.bump(); }
+        while self.ch_is_one_of(&ws()) { self.bump(); }
     }
 
     fn read_whitespace(&mut self) {
-        while let Some(c) = self.ch {
-            if b" \n\t\r".iter().any(|&ch| ch == c) {
-                self.buf.push(c);
+        use self::Lexical::Text;
+        while let Some(Text(c)) = self.ch {
+            if ws().iter().any(|&ch| ch == Text(c)) {
+                self.rdr.buf.push(c);
                 self.bump();
             } else {
                 return;
@@ -247,7 +389,7 @@ impl<Iter> Deserializer<Iter>
         }
     }
 
-    fn skip_until(&mut self, ch: u8) -> Result<(), Error> {
+    fn skip_until(&mut self, ch: Lexical) -> Result<(), Error> {
         while let Some(c) = self.ch {
             if ch == c {
                 return Ok(())
@@ -257,12 +399,15 @@ impl<Iter> Deserializer<Iter>
         Err(self.error(EOF))
     }
 
-    fn read_until(&mut self, ch: u8) -> Result<(), Error> {
+    fn read_until(&mut self, ch: Lexical) -> Result<(), Error> {
         while let Some(c) = self.ch {
             if ch == c {
                 return Ok(())
             }
-            self.buf.push(c);
+            match c {
+                Lexical::Text(c) => self.rdr.buf.push(c),
+                _ => unimplemented!()
+            }
             self.bump();
         }
         Err(self.error(EOF))
@@ -270,18 +415,25 @@ impl<Iter> Deserializer<Iter>
 
     fn read_next_tag(&mut self) -> Result<(), Error> {
         self.skip_whitespace();
-        assert!(self.ch_is(b'<'));
+        assert!(self.ch_is(Lexical::StartTagBegin));
         self.bump();
         self.read_tag()
     }
 
     fn read_tag(&mut self) -> Result<(), Error> {
+        use self::Lexical::*;
         println!("read_tag");
         while let Some(c) = self.ch {
-            if self.ch_is_one_of(b" \n\t\r>/") {
+            if self.ch_is_one_of(&ws()) {
                 return Ok(());
             }
-            self.buf.push(c);
+            if self.ch_is_one_of(&[TagClose, EmptyElementEnd]) {
+                return Ok(());
+            }
+            match c {
+                Text(c) => self.rdr.buf.push(c),
+                _ => unimplemented!()
+            }
             self.bump();
         }
         Err(self.error(EOF))
@@ -290,10 +442,16 @@ impl<Iter> Deserializer<Iter>
     fn read_attr_name(&mut self) -> Result<(), Error> {
         println!("read_attr_name");
         while let Some(c) = self.ch {
-            if self.ch_is_one_of(b" =") {
+            if self.ch_is_one_of(&ws()) {
                 return Ok(());
             }
-            self.buf.push(c);
+            if self.ch_is(Lexical::Eq) {
+                return Ok(());
+            }
+            match c {
+                Lexical::Text(c) => self.rdr.buf.push(c),
+                _ => unimplemented!()
+            }
             self.bump();
         }
         Err(self.error(EOF))
@@ -308,12 +466,12 @@ impl<Iter> Deserializer<Iter>
             Unit => de::Deserialize::deserialize(&mut UnitDeserializer),
             Value => visitor.visit_map(ContentVisitor::new_value(self)),
             Whitespace => {
-                self.buf.clear();
+                self.rdr.buf.clear();
                 de::Deserialize::deserialize(&mut UnitDeserializer)
             }
             Inner => {
                 let val = visitor.visit_map(ContentVisitor::new_inner(self));
-                self.buf.clear();
+                self.rdr.buf.clear();
                 val
             },
             Attr => visitor.visit_map(ContentVisitor::new_attr(self)),
@@ -321,48 +479,43 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn read_inner_map(&mut self) -> Result<InnerMapState, Error> {
+        use self::Lexical::*;
         self.skip_whitespace();
         match self.ch {
             None => Err(self.error(EOF)),
-            Some(b'/') => {
-                self.bump();
-                assert!(self.ch_is(b'>'));
+            Some(EmptyElementEnd) => {
                 self.bump();
                 Ok(InnerMapState::Unit)
             },
-            Some(b'>') => {
+            Some(TagClose) => {
                 self.bump();
-                assert!(self.buf.is_empty());
+                assert!(self.rdr.buf.is_empty());
                 self.read_whitespace();
-                if self.ch_is(b'<') {
+                if self.ch_is(EndTagBegin) {
+                    try!(self.skip_until(TagClose));
                     self.bump();
-                    if self.ch_is(b'/') {
-                        try!(self.skip_until(b'>'));
-                        self.bump();
-                        Ok(InnerMapState::Whitespace)
-                    } else {
-                        self.buf.clear();
-                        try!(self.read_tag());
-                        Ok(InnerMapState::Inner)
-                    }
+                    Ok(InnerMapState::Whitespace)
+                } else if self.ch_is(StartTagBegin) {
+                    self.bump();
+                    self.rdr.buf.clear();
+                    try!(self.read_tag());
+                    Ok(InnerMapState::Inner)
                 } else {
                     // $value map
-                    try!(self.read_until(b'<'));
-                    self.bump();
-                    assert!(self.ch_is(b'/'));
-                    try!(self.skip_until(b'>'));
+                    try!(self.read_until(EndTagBegin));
+                    try!(self.skip_until(TagClose));
                     self.bump();
                     Ok(InnerMapState::Value)
                 }
             }
             _ => {
-                assert!(self.buf.is_empty());
+                assert!(self.rdr.buf.is_empty());
                 try!(self.read_attr_name());
                 self.skip_whitespace();
-                assert!(self.ch_is(b'='));
+                assert!(self.ch_is(Eq));
                 self.bump();
                 self.skip_whitespace();
-                assert!(self.ch_is_one_of(b"'\""));
+                assert!(self.ch_is(AttributeValue));
                 Ok(InnerMapState::Attr)
             }
         }
@@ -372,17 +525,17 @@ impl<Iter> Deserializer<Iter>
         where V: de::Visitor
     {
         use self::InnerMapState::*;
-        self.buf.clear();
+        self.rdr.buf.clear();
         match try!(self.read_inner_map()) {
             Unit => visitor.visit_unit(),
             Value | Whitespace => {
                 let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self)));
-                self.buf.clear();
+                self.rdr.buf.clear();
                 v
             },
             Inner => {
                 let val = visitor.visit_map(ContentVisitor::new_inner(self));
-                self.buf.clear();
+                self.rdr.buf.clear();
                 val
             },
             Attr => Err(self.error(RawValueCannotHaveAttributes)),
@@ -430,7 +583,7 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         where V: de::Visitor,
     {
         try!(self.read_next_tag());
-        self.buf.clear();
+        self.rdr.buf.clear();
         self.parse_inner_map(visitor)
     }
 }
@@ -546,8 +699,8 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
         where K: de::Deserialize,
     {
-        println!("{:?} visit_key: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
-        if self.de.buf.is_empty() {
+        println!("{:?} visit_key: {:?}", self as *const Self, (&self.state, self.de.rdr.line, self.de.rdr.col));
+        if self.de.rdr.buf.is_empty() {
             return Ok(None);
         }
         match self.state {
@@ -561,7 +714,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     fn visit_value<V>(&mut self) -> Result<V, Error>
         where V: de::Deserialize,
     {
-        println!("{:?} visit_value: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
+        println!("{:?} visit_value: {:?}", self as *const Self, (&self.state, self.de.rdr.line, self.de.rdr.col));
         match self.state {
             ContentVisitorState::Element => {
                 let ids = &mut InnerDeserializer(self.de);
@@ -570,20 +723,20 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
 
             ContentVisitorState::Value => {
                 let val = KeyDeserializer::decode(self.de);
-                self.de.buf.clear();
+                self.de.rdr.buf.clear();
                 val
             },
 
             ContentVisitorState::Attribute => {
                 use self::InnerMapState::*;
-                self.de.buf.clear();
-                assert!(self.de.ch_is_one_of(b"'\""));
+                self.de.rdr.buf.clear();
+                assert!(self.de.ch_is(Lexical::AttributeValue));
                 let quot = self.de.ch.unwrap();
                 self.de.bump();
                 try!(self.de.read_until(quot));
                 self.de.bump();
                 let val = try!(KeyDeserializer::decode(self.de));
-                self.de.buf.clear();
+                self.de.rdr.buf.clear();
                 match try!(self.de.read_inner_map()) {
                     Value => self.state = ContentVisitorState::Value,
                     Inner => self.state = ContentVisitorState::Element,
@@ -595,12 +748,12 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     }
 
     fn end(&mut self) -> Result<(), Error> {
-        println!("{:?} end: {:?}", self as *const Self, (&self.state, self.de.line, self.de.col));
+        println!("{:?} end: {:?}", self as *const Self, (&self.state, self.de.rdr.line, self.de.rdr.col));
         match self.state {
             ContentVisitorState::Element => {
-                assert!(self.de.ch_is(b'/'));
+                assert!(self.de.ch_is(Lexical::EndTagBegin));
                 self.de.bump();
-                try!(self.de.read_until(b'>'));
+                try!(self.de.read_until(Lexical::TagClose));
                 self.de.bump();
                 Ok(())
             },
@@ -652,24 +805,24 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
         // need to copy here
         // could compare closing tag with next opening tag instead
         // but that requires modification of InnerDeserializer
-        assert!(!self.de.buf.is_empty());
-        let name = self.de.buf.clone();
-        self.de.buf.clear();
+        assert!(!self.de.rdr.buf.is_empty());
+        let name = self.de.rdr.buf.clone();
+        self.de.rdr.buf.clear();
         let val = {
             println!("{:?} reading inner", self as *const Self);
             let ids = &mut InnerDeserializer(self.de);
             try!(de::Deserialize::deserialize(ids))
         };
         println!("{:?} got seq valu", self as *const Self);
-        if self.de.buf.is_empty() {
+        if self.de.rdr.buf.is_empty() {
             println!("{:?} buf empty", self as *const Self);
             // last of the sequence and last of the map
             self.done = true;
         } else {
             // compare next element name to current
-            assert!(!self.de.buf.is_empty());
-            if self.de.buf != name {
-                println!("seq done: {:?} != {:?}", self.de.buf, name);
+            assert!(!self.de.rdr.buf.is_empty());
+            if self.de.rdr.buf != name {
+                println!("seq done: {:?} != {:?}", self.de.rdr.buf, name);
                 self.done = true;
             }
         }
@@ -677,7 +830,7 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
     }
 
     fn end(&mut self) -> Result<(), Error> {
-        println!("SeqVisitor::end: {:?}", self.de.buf);
+        println!("SeqVisitor::end: {:?}", self.de.rdr.buf);
         Ok(())
     }
 }

@@ -14,6 +14,8 @@ pub enum ErrorCode {
     InvalidOptionalElement,
     NotUtf8,
     SerdeExpectedSomeValue,
+    LexingError(super::de::LexerError),
+    Expected(super::de::Lexical, super::de::Lexical),
 }
 
 impl fmt::Debug for ErrorCode {
@@ -26,6 +28,8 @@ impl fmt::Debug for ErrorCode {
             InvalidOptionalElement => "invalid optional element".fmt(f),
             NotUtf8 => "bad utf8".fmt(f),
             SerdeExpectedSomeValue => "serde expected some value".fmt(f),
+            LexingError(e) => write!(f, "error during lexing: \"{:?}\"", e),
+            Expected(what, got) => write!(f, "expected \"{:?}\" got \"{:?}\"", what, got),
         }
     }
 }
