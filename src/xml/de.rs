@@ -1,3 +1,4 @@
+#![deny(unused_must_use)]
 use super::error::*;
 use super::error::ErrorCode::*;
 use de;
@@ -143,18 +144,22 @@ pub enum LexerError {
 }
 
 impl<Iter: Iterator<Item=u8>> Iterator for XmlIterator<Iter> {
-    type Item = Result<Lexical, LexerError>;
-    fn next(&mut self) -> Option<Result<Lexical, LexerError>> {
+    type Item = Result<Lexical, Error>;
+    fn next(&mut self) -> Option<Result<Lexical, Error>> {
         match self.rdr.peek() {
             None => None,
             Some(&b'\n') => {
                 self.line += 1;
                 self.col = 1;
-                Some(self.decode())
+                Some(self.decode().map_err(|e|
+                    Error::SyntaxError(LexingError(e), self.line, self.col)
+                ))
             },
             Some(_) => {
                 self.col += 1;
-                Some(self.decode())
+                Some(self.decode().map_err(|e|
+                    Error::SyntaxError(LexingError(e), self.line, self.col)
+                ))
             },
         }
     }
@@ -193,7 +198,7 @@ where Iter: Iterator<Item=u8>,
         self.0.rdr.buf.clear();
         match self.0.ch.unwrap() {
             Lexical::EmptyElementEnd => {
-                self.0.bump();
+                try!(self.0.bump());
                 visitor.visit_none()
             },
             Lexical::TagClose => visitor.visit_some(self),
@@ -326,18 +331,18 @@ impl<Iter> Deserializer<Iter>
 {
     /// Creates the Xml parser.
     #[inline]
-    pub fn new(rdr: Iter) -> Deserializer<Iter> {
+    pub fn new(rdr: Iter) -> Result<Deserializer<Iter>, Error> {
         let mut p = Deserializer {
             rdr: XmlIterator::new(rdr),
             ch: Some(Lexical::Text(b'\0')),
         };
-        p.bump();
-        return p;
+        try!(p.bump());
+        return Ok(p);
     }
 
     #[inline]
     pub fn end(&mut self) -> Result<(), Error> {
-        self.skip_whitespace();
+        try!(self.skip_whitespace());
         assert!(self.eof());
         assert!(self.rdr.buf.is_empty());
         Ok(())
@@ -345,16 +350,17 @@ impl<Iter> Deserializer<Iter>
 
     fn eof(&self) -> bool { self.ch.is_none() }
 
-    fn bump(&mut self) {
+    fn bump(&mut self) -> Result<(), Error> {
         print!("bump: {:?}", (self.rdr.line, self.rdr.col, self.ch));
         if let None = self.ch {
             panic!("iterator overrun");
         }
         self.ch = match self.rdr.next() {
             None => None,
-            Some(x) => Some(x.unwrap()),
+            Some(x) => Some(try!(x)),
         };
         println!(" -> {:?}", self.ch);
+        Ok(())
     }
 
     fn ch_is(&self, c: Lexical) -> bool {
@@ -374,20 +380,22 @@ impl<Iter> Deserializer<Iter>
         Error::SyntaxError(reason, self.rdr.line, self.rdr.col)
     }
 
-    fn skip_whitespace(&mut self) {
-        while self.ch_is_one_of(&ws()) { self.bump(); }
+    fn skip_whitespace(&mut self) -> Result<(), Error> {
+        while self.ch_is_one_of(&ws()) { try!(self.bump()); }
+        Ok(())
     }
 
-    fn read_whitespace(&mut self) {
+    fn read_whitespace(&mut self) -> Result<(), Error> {
         use self::Lexical::Text;
         while let Some(Text(c)) = self.ch {
             if ws().iter().any(|&ch| ch == Text(c)) {
                 self.rdr.buf.push(c);
-                self.bump();
+                try!(self.bump());
             } else {
-                return;
+                return Ok(());
             }
         }
+        Ok(())
     }
 
     fn skip_until(&mut self, ch: Lexical) -> Result<(), Error> {
@@ -395,7 +403,7 @@ impl<Iter> Deserializer<Iter>
             if ch == c {
                 return Ok(())
             }
-            self.bump();
+            try!(self.bump());
         }
         Err(self.error(EOF))
     }
@@ -409,14 +417,14 @@ impl<Iter> Deserializer<Iter>
                 Lexical::Text(c) => self.rdr.buf.push(c),
                 _ => unimplemented!()
             }
-            self.bump();
+            try!(self.bump());
         }
         Err(self.error(EOF))
     }
 
     fn read_next_tag(&mut self) -> Result<(), Error> {
         println!("read_next_tag");
-        self.skip_whitespace();
+        try!(self.skip_whitespace());
         self.read_tag()
     }
 
@@ -426,7 +434,7 @@ impl<Iter> Deserializer<Iter>
         match self.ch.unwrap() {
             EndTagBegin => Ok(()),
             StartTagBegin => {
-                self.bump();
+                try!(self.bump());
                 while let Some(c) = self.ch {
                     if self.ch_is_one_of(&ws()) {
                         return Ok(());
@@ -438,7 +446,7 @@ impl<Iter> Deserializer<Iter>
                         Text(c) => self.rdr.buf.push(c),
                         _ => unimplemented!()
                     }
-                    self.bump();
+                    try!(self.bump());
                 }
                 Err(self.error(EOF))
             },
@@ -459,7 +467,7 @@ impl<Iter> Deserializer<Iter>
                 Lexical::Text(c) => self.rdr.buf.push(c),
                 _ => unimplemented!()
             }
-            self.bump();
+            try!(self.bump());
         }
         Err(self.error(EOF))
     }
@@ -487,20 +495,20 @@ impl<Iter> Deserializer<Iter>
 
     fn read_inner_map(&mut self) -> Result<InnerMapState, Error> {
         use self::Lexical::*;
-        self.skip_whitespace();
+        try!(self.skip_whitespace());
         match self.ch {
             None => Err(self.error(EOF)),
             Some(EmptyElementEnd) => {
-                self.bump();
+                try!(self.bump());
                 Ok(InnerMapState::Unit)
             },
             Some(TagClose) => {
-                self.bump();
+                try!(self.bump());
                 assert!(self.rdr.buf.is_empty());
-                self.read_whitespace();
+                try!(self.read_whitespace());
                 if self.ch_is(EndTagBegin) {
                     try!(self.skip_until(TagClose));
-                    self.bump();
+                    try!(self.bump());
                     Ok(InnerMapState::Whitespace)
                 } else if self.ch_is(StartTagBegin) {
                     self.rdr.buf.clear();
@@ -510,14 +518,14 @@ impl<Iter> Deserializer<Iter>
                     // $value map
                     try!(self.read_until(EndTagBegin));
                     try!(self.skip_until(TagClose));
-                    self.bump();
+                    try!(self.bump());
                     Ok(InnerMapState::Value)
                 }
             }
             _ => {
                 assert!(self.rdr.buf.is_empty());
                 try!(self.read_attr_name());
-                self.skip_whitespace();
+                try!(self.skip_whitespace());
                 assert!(self.ch_is(Eq));
                 Ok(InnerMapState::Attr)
             }
@@ -734,12 +742,12 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 use self::InnerMapState::*;
                 assert!(self.de.ch_is(Lexical::Eq));
                 self.de.rdr.buf.clear();
-                self.de.bump();
-                self.de.skip_whitespace();
+                try!(self.de.bump());
+                try!(self.de.skip_whitespace());
                 assert!(self.de.ch_is(Lexical::AttributeValue));
                 let val = try!(KeyDeserializer::decode(self.de));
                 self.de.rdr.buf.clear();
-                self.de.bump();
+                try!(self.de.bump());
                 match try!(self.de.read_inner_map()) {
                     Value => self.state = ContentVisitorState::Value,
                     Inner => self.state = ContentVisitorState::Element,
@@ -755,9 +763,9 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
         match self.state {
             ContentVisitorState::Element => {
                 assert!(self.de.ch_is(Lexical::EndTagBegin));
-                self.de.bump();
+                try!(self.de.bump());
                 try!(self.de.read_until(Lexical::TagClose));
-                self.de.bump();
+                try!(self.de.bump());
                 Ok(())
             },
 
@@ -843,7 +851,7 @@ pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
     where I: Iterator<Item=u8>,
           T: de::Deserialize
 {
-    let mut de = Deserializer::new(iter);
+    let mut de = try!(Deserializer::new(iter));
     let value = try!(de::Deserialize::deserialize(&mut de));
 
     // Make sure the whole stream has been consumed.
