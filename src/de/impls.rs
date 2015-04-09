@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::str;
 
 use num::FromPrimitive;
 
@@ -120,7 +121,7 @@ impl<T> NumericVisitor<T> {
 
 impl<
     T: Deserialize + FromPrimitive + str::FromStr
-> self::Visitor for NumericVisitor<T> {
+> Visitor for NumericVisitor<T> {
     type Value = T;
 
     impl_deserialize_num_method!(isize, visit_isize, from_isize);

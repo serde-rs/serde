@@ -34,7 +34,7 @@ impl fmt::Debug for ErrorCode {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Debug)]
 pub enum Error {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),
@@ -74,8 +74,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::FromError<io::Error> for Error {
-    fn from_error(error: io::Error) -> Error {
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Error {
         Error::IoError(error)
     }
 }

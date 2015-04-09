@@ -134,7 +134,7 @@ fn test_parse_struct() {
 fn test_parse_xml_value() {
     #[derive(Eq, Debug, PartialEq, Deserialize, Serialize)]
     struct Test {
-        #[serde(alias="$value")]
+        #[serde(rename="$value")]
         myval: String,
     }
     test_parse_ok(&[
@@ -208,7 +208,7 @@ fn test_parse_attributes() {
     #[derive(PartialEq, Debug, Serialize, Deserialize)]
     struct A {
         a1: String,
-        #[serde(alias="$value")]
+        #[serde(rename="$value")]
         a2: i32,
     }
 
