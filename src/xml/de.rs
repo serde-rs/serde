@@ -363,6 +363,14 @@ impl<Iter> Deserializer<Iter>
         Ok(())
     }
 
+    fn expect(&self, c: Lexical) -> Result<(), Error> {
+        match self.ch {
+            None => Err(self.error(EOF)),
+            Some(ch) if ch == c => Ok(()),
+            Some(ch) => Err(self.error(Expected(c, ch))),
+        }
+    }
+
     fn ch_is(&self, c: Lexical) -> bool {
         self.ch == Some(c)
     }
@@ -526,7 +534,7 @@ impl<Iter> Deserializer<Iter>
                 assert!(self.rdr.buf.is_empty());
                 try!(self.read_attr_name());
                 try!(self.skip_whitespace());
-                assert!(self.ch_is(Eq));
+                try!(self.expect(Eq));
                 Ok(InnerMapState::Attr)
             }
         }
@@ -740,11 +748,11 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
 
             ContentVisitorState::Attribute => {
                 use self::InnerMapState::*;
-                assert!(self.de.ch_is(Lexical::Eq));
+                try!(self.de.expect(Lexical::Eq));
                 self.de.rdr.buf.clear();
                 try!(self.de.bump());
                 try!(self.de.skip_whitespace());
-                assert!(self.de.ch_is(Lexical::AttributeValue));
+                try!(self.de.expect(Lexical::AttributeValue));
                 let val = try!(KeyDeserializer::decode(self.de));
                 self.de.rdr.buf.clear();
                 try!(self.de.bump());
@@ -762,7 +770,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
         println!("{:?} end: {:?}", self as *const Self, (&self.state, self.de.rdr.line, self.de.rdr.col));
         match self.state {
             ContentVisitorState::Element => {
-                assert!(self.de.ch_is(Lexical::EndTagBegin));
+                try!(self.de.expect(Lexical::EndTagBegin));
                 try!(self.de.bump());
                 try!(self.de.read_until(Lexical::TagClose));
                 try!(self.de.bump());
