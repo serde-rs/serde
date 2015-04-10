@@ -307,6 +307,9 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         println!("InnerDeserializer::visit");
+        self.0.rdr.buf.clear();
+        try!(self.0.bump());
+        try!(self.0.skip_whitespace());
         let v = try!(self.0.read_value(visitor));
         try!(self.0.read_next_tag());
         Ok(v)
@@ -317,15 +320,14 @@ where Iter: Iterator<Item=u8>,
     {
         println!("InnerDeserializer::visit_option");
         self.0.rdr.buf.clear();
-        match self.0.ch.unwrap() {
+        try!(self.0.bump());
+        try!(self.0.skip_whitespace());
+        match try!(self.0.ch()) {
             Lexical::EmptyElementEnd => {
                 try!(self.0.bump());
                 visitor.visit_none()
             },
             Lexical::StartTagClose => visitor.visit_some(self),
-            Lexical::Text(c) if b"\t\r\n ".contains(&c) => {
-                visitor.visit_some(self)
-            },
             _ => Err(self.0.error(InvalidOptionalElement)),
         }
     }
@@ -852,10 +854,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
         match self.state {
             ContentVisitorState::Element => {
                 assert!(self.de.ch_is(StartTagName));
-                let val = try!(KeyDeserializer::decode(self.de));
-                self.de.rdr.buf.clear();
-                try!(self.de.bump());
-                Ok(val)
+                KeyDeserializer::decode(self.de)
             }
             ContentVisitorState::Attribute => KeyDeserializer::decode(self.de),
 
@@ -953,13 +952,12 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
         if self.done {
             return Ok(None);
         }
-        println!("{:?} reading value", self as *const Self);
         // need to copy here
         // could compare closing tag with next opening tag instead
         // but that requires modification of InnerDeserializer
         assert!(!self.de.rdr.buf.is_empty());
         let name = self.de.rdr.buf.clone();
-        self.de.rdr.buf.clear();
+        println!("{:?} reading value", self as *const Self);
         let val = {
             println!("{:?} reading inner", self as *const Self);
             let ids = &mut InnerDeserializer(self.de);
