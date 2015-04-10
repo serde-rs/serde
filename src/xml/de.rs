@@ -51,8 +51,6 @@ pub enum Lexical {
 
     EndTagBegin,
     EndTagName,
-
-    Eq,
 }
 
 enum LexerState {
@@ -169,7 +167,9 @@ impl<Iter> XmlIterator<Iter>
         let quot = try!(quot.ok_or(LexerError::EOF));
         assert!(self.buf.is_empty());
         self.buf.extend(self.rdr.by_ref().take_while(|&ch| ch != quot));
+        // hack to detect EOF in take_while
         try!(self.peek_char());
+        self.state = LexerState::AttributeName;
         Ok(Lexical::AttributeValue)
     }
 
@@ -178,20 +178,23 @@ impl<Iter> XmlIterator<Iter>
         use self::LexerError::*;
         assert!(self.buf.is_empty());
         loop {
-            return match self.rdr.next() {
-                Some(b'/') => match try!(self.next_char()) {
+            return match try!(self.next_char()) {
+                b'/' => match try!(self.next_char()) {
                     b'>' => {
                         self.state = LexerState::Start;
                         Ok(EmptyElementEnd)
                     },
                     _ => Err(ExpectedLT),
                 },
-                Some(b'>') => {
+                b'>' => {
                     self.state = LexerState::Start;
                     Ok(StartTagClose)
                 },
-                Some(c) => unimplemented!(),
-                None => break,
+                b'\n' | b'\r' | b'\t' | b' ' => continue,
+                c => {
+                    self.buf.push(c);
+                    break;
+                },
             }
         }
         for c in &mut self.rdr {
@@ -572,24 +575,6 @@ impl<Iter> Deserializer<Iter>
         }
     }
 
-    fn read_attr_name(&mut self) -> Result<(), Error> {
-        println!("read_attr_name");
-        while let Some(c) = self.ch {
-            if self.ch_is_one_of(&ws()) {
-                return Ok(());
-            }
-            if self.ch_is(Lexical::Eq) {
-                return Ok(());
-            }
-            match c {
-                Lexical::Text(c) => self.rdr.buf.push(c),
-                _ => unimplemented!()
-            }
-            try!(self.bump());
-        }
-        Err(self.error(EOF))
-    }
-
     fn parse_inner_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
@@ -636,19 +621,11 @@ impl<Iter> Deserializer<Iter>
                 } else {
                     // $value map
                     try!(self.read_until(EndTagBegin));
-                    try!(self.bump());
-                    assert!(self.ch_is(EndTagName));
-                    try!(self.bump());
                     Ok(InnerMapState::Value)
                 }
             }
-            _ => {
-                assert!(self.rdr.buf.is_empty());
-                try!(self.read_attr_name());
-                try!(self.skip_whitespace());
-                try!(self.expect(Eq));
-                Ok(InnerMapState::Attr)
-            }
+            AttributeName => Ok(InnerMapState::Attr),
+            c => Err(self.error(Expected(StartTagClose, c))),
         }
     }
 
@@ -875,15 +852,18 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             ContentVisitorState::Value => {
                 let val = KeyDeserializer::decode(self.de);
                 self.de.rdr.buf.clear();
+                try!(self.de.bump());
+                assert!(self.de.ch_is(Lexical::EndTagName));
+                self.de.rdr.buf.clear();
+                try!(self.de.bump());
                 val
             },
 
             ContentVisitorState::Attribute => {
                 use self::InnerMapState::*;
-                try!(self.de.expect(Lexical::Eq));
+                try!(self.de.expect(Lexical::AttributeName));
                 self.de.rdr.buf.clear();
                 try!(self.de.bump());
-                try!(self.de.skip_whitespace());
                 try!(self.de.expect(Lexical::AttributeValue));
                 let val = try!(KeyDeserializer::decode(self.de));
                 self.de.rdr.buf.clear();
