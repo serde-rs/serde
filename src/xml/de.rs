@@ -83,9 +83,11 @@ impl<Iter: Iterator<Item=u8>> Iterator for LineColIterator<Iter> {
             Some(b'\n') => {
                 self.line += 1;
                 self.col = 1;
+                print!(" -> \\n");
                 Some(b'\n')
             },
             Some(c) => {
+                print!(" -> {:?}", c as char);
                 self.col += 1;
                 Some(c)
             },
@@ -120,7 +122,6 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn next_char(&mut self) -> Result<u8, LexerError> {
-        print!(" -> {:?}", self.peek_char().map(|x| x as char));
         self.rdr.next().ok_or(LexerError::EOF)
     }
 
@@ -179,17 +180,17 @@ impl<Iter> XmlIterator<Iter>
         loop {
             return match self.rdr.next() {
                 Some(b'/') => match try!(self.next_char()) {
-                    b'>' => Ok(EmptyElementEnd),
+                    b'>' => {
+                        self.state = LexerState::Start;
+                        Ok(EmptyElementEnd)
+                    },
                     _ => Err(ExpectedLT),
                 },
                 Some(b'>') => {
                     self.state = LexerState::Start;
                     Ok(StartTagClose)
                 },
-                Some(c) => {
-                    self.buf.push(c);
-                    continue;
-                }
+                Some(c) => unimplemented!(),
                 None => break,
             }
         }
@@ -415,15 +416,10 @@ impl<'a> de::Deserializer for KeyDeserializer<'a> {
     }
 
     #[inline]
-    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_option<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        println!("{:?} keydeserializer::visit_option", self as *const Self);
-        if self.0.is_empty() {
-            visitor.visit_none()
-        } else {
-            visitor.visit_some(self)
-        }
+        unimplemented!()
     }
 
     #[inline]
@@ -489,6 +485,10 @@ impl<Iter> Deserializer<Iter>
             Some(ch) if ch == c => Ok(()),
             Some(ch) => Err(self.error(Expected(c, ch))),
         }
+    }
+
+    fn ch(&self) -> Result<Lexical, Error> {
+        self.ch.ok_or(self.error(EOF))
     }
 
     fn ch_is(&self, c: Lexical) -> bool {
@@ -594,11 +594,11 @@ impl<Iter> Deserializer<Iter>
         use self::InnerMapState::*;
         println!("parse_inner_map");
         match try!(self.read_inner_map()) {
-            Unit => de::Deserialize::deserialize(&mut UnitDeserializer),
+            Unit => visitor.visit_map(EmptyMapVisitor),
             Value => visitor.visit_map(ContentVisitor::new_value(self)),
             Whitespace => {
                 self.rdr.buf.clear();
-                de::Deserialize::deserialize(&mut UnitDeserializer)
+                visitor.visit_map(EmptyMapVisitor)
             }
             Inner => {
                 let val = visitor.visit_map(ContentVisitor::new_inner(self));
@@ -612,27 +612,35 @@ impl<Iter> Deserializer<Iter>
     fn read_inner_map(&mut self) -> Result<InnerMapState, Error> {
         use self::Lexical::*;
         try!(self.skip_whitespace());
-        match self.ch {
-            None => Err(self.error(EOF)),
-            Some(EmptyElementEnd) => {
+        match try!(self.ch()) {
+            EmptyElementEnd => {
                 try!(self.bump());
                 Ok(InnerMapState::Unit)
             },
-            Some(StartTagClose) => {
+            StartTagClose => {
                 try!(self.bump());
                 assert!(self.rdr.buf.is_empty());
                 try!(self.read_whitespace());
                 if self.ch_is(EndTagBegin) {
-                    unimplemented!()
+                    try!(self.bump());
+                    assert!(self.ch_is(EndTagName));
+                    self.rdr.buf.clear();
+                    try!(self.bump());
+                    Ok(InnerMapState::Whitespace)
                 } else if self.ch_is(StartTagBegin) {
                     self.rdr.buf.clear();
                     try!(self.read_tag());
                     Ok(InnerMapState::Inner)
                 } else {
-                    unimplemented!()
+                    // $value map
+                    try!(self.read_until(EndTagBegin));
+                    try!(self.bump());
+                    assert!(self.ch_is(EndTagName));
+                    try!(self.bump());
+                    Ok(InnerMapState::Value)
                 }
             }
-            Some(_) => {
+            _ => {
                 assert!(self.rdr.buf.is_empty());
                 try!(self.read_attr_name());
                 try!(self.skip_whitespace());
@@ -645,21 +653,34 @@ impl<Iter> Deserializer<Iter>
     fn read_value<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor
     {
-        use self::InnerMapState::*;
-        self.rdr.buf.clear();
-        match try!(self.read_inner_map()) {
-            Unit => visitor.visit_unit(),
-            Value | Whitespace => {
-                let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self)));
+        use self::Lexical::*;
+        println!("read_value");
+        match try!(self.ch()) {
+            StartTagClose => {
+                try!(self.bump());
+                try!(self.read_until(EndTagBegin));
+                // try! is broken here
+                let v = match visitor.visit_str(try!(KeyDeserializer::from_utf8(self))) {
+                    Ok(v) => v,
+                    Err(e) => return Err(e),
+                };
                 self.rdr.buf.clear();
-                v
-            },
-            Inner => {
-                let val = visitor.visit_map(ContentVisitor::new_inner(self));
+                try!(self.bump());
+                assert!(self.ch_is(EndTagName));
                 self.rdr.buf.clear();
-                val
+                try!(self.bump());
+                Ok(v)
             },
-            Attr => Err(self.error(RawValueCannotHaveAttributes)),
+            EmptyElementEnd => {
+                // try! is broken here
+                let v = match visitor.visit_unit() {
+                    Ok(v) => v,
+                    Err(e) => return Err(e),
+                };
+                try!(self.bump());
+                Ok(v)
+            },
+            c => Err(self.error(Expected(StartTagClose, c))),
         }
     }
 }
@@ -671,23 +692,13 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     type Error = Error;
 
     #[inline]
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        use self::Lexical::*;
         try!(self.read_next_tag());
         self.rdr.buf.clear();
         try!(self.bump());
-        assert!(self.ch_is(StartTagClose));
-        try!(self.bump());
-        try!(self.read_until(EndTagBegin));
-        let v = visitor.visit_str(try!(KeyDeserializer::from_utf8(self)));
-        self.rdr.buf.clear();
-        try!(self.bump());
-        assert!(self.ch_is(EndTagName));
-        self.rdr.buf.clear();
-        try!(self.bump());
-        v
+        self.read_value(visitor)
     }
 
     #[inline]
@@ -716,7 +727,8 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         where V: de::Visitor,
     {
         try!(self.read_next_tag());
-        self.rdr.buf.clear();
+        self.rdr.buf.clear(); // TODO: visit_named_map
+        try!(self.bump());
         self.parse_inner_map(visitor)
     }
 }
@@ -832,16 +844,23 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
         where K: de::Deserialize,
     {
+        use self::Lexical::*;
         println!("{:?} visit_key: {:?}", self as *const Self, (&self.state, self.de.rdr.rdr.line, self.de.rdr.rdr.col));
         if self.de.rdr.buf.is_empty() {
             return Ok(None);
         }
         match self.state {
-            ContentVisitorState::Element
-            | ContentVisitorState::Attribute => KeyDeserializer::decode(self.de),
+            ContentVisitorState::Element => {
+                assert!(self.de.ch_is(StartTagName));
+                let val = try!(KeyDeserializer::decode(self.de));
+                self.de.rdr.buf.clear();
+                try!(self.de.bump());
+                Ok(val)
+            }
+            ContentVisitorState::Attribute => KeyDeserializer::decode(self.de),
 
             ContentVisitorState::Value => KeyDeserializer::value_map(),
-        }
+        }.map(|x| Some(x))
     }
 
     fn visit_value<V>(&mut self) -> Result<V, Error>
