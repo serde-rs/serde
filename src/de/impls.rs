@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::num::FromPrimitive;
@@ -572,6 +572,8 @@ impl<K, V> Deserialize for HashMap<K, V>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// FIXME: `VecMap` is unstable.
+/*
 pub struct VecMapVisitor<V> {
     marker: PhantomData<VecMap<V>>,
 }
@@ -623,6 +625,7 @@ impl<V> Deserialize for VecMap<V>
         deserializer.visit(VecMapVisitor::new())
     }
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
 use std::path;
 use std::rc::Rc;
@@ -410,6 +410,8 @@ impl<K, V> Serialize for HashMap<K, V>
     }
 }
 
+// FIXME: `VecMap` is unstable.
+/*
 impl<V> Serialize for VecMap<V>
     where V: Serialize,
 {
@@ -420,6 +422,7 @@ impl<V> Serialize for VecMap<V>
         serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 

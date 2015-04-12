@@ -6,7 +6,7 @@
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
 
-#![feature(collections, core)]
+#![feature(core)]
 
 
 pub use ser::{Serialize, Serializer};
