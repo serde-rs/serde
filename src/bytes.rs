@@ -97,12 +97,6 @@ impl AsMut<[u8]> for ByteBuf {
     }
 }
 
-impl Into<Vec<u8>> for ByteBuf {
-    fn into(self) -> Vec<u8> {
-        self.bytes
-    }
-}
-
 impl ops::Deref for ByteBuf {
     type Target = [u8];
 
