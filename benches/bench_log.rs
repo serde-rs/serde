@@ -30,7 +30,7 @@ struct Http {
     request_uri: String,
 }
 
-#[derive(Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
     HTTP10,
@@ -70,7 +70,7 @@ impl de::Deserialize for HttpProtocol {
     }
 }
 
-#[derive(Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
 enum HttpMethod {
     METHOD_UNKNOWN,
     GET,
@@ -118,7 +118,7 @@ impl de::Deserialize for HttpMethod {
     }
 }
 
-#[derive(Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
     Miss,
@@ -167,7 +167,7 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
-#[derive(Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
     HTTP,
@@ -207,7 +207,7 @@ impl de::Deserialize for OriginProtocol {
     }
 }
 
-#[derive(Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
     FREE,
@@ -249,7 +249,7 @@ impl de::Deserialize for ZonePlan {
     }
 }
 
-#[derive(Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
 enum Country {
 	UNKNOWN,
 	A1,
