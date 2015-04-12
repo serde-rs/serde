@@ -1,4 +1,3 @@
-use std::collections::hash_state::HashState;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecMap};
 use std::hash::Hash;
 use std::path;
@@ -151,9 +150,8 @@ impl<T> Serialize for BTreeSet<T>
     }
 }
 
-impl<T, H> Serialize for HashSet<T, H>
+impl<T> Serialize for HashSet<T>
     where T: Serialize + Eq + Hash,
-          H: HashState,
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -400,10 +398,9 @@ impl<K, V> Serialize for BTreeMap<K, V>
     }
 }
 
-impl<K, V, H> Serialize for HashMap<K, V, H>
+impl<K, V> Serialize for HashMap<K, V>
     where K: Serialize + Eq + Hash,
           V: Serialize,
-          H: HashState,
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>

@@ -1,4 +1,3 @@
-use std::{f32, f64};
 use std::io;
 use std::num::{Float, FpCategory};
 use std::string::FromUtf8Error;
@@ -396,7 +395,14 @@ fn fmt_f32_or_null<W>(wr: &mut W, value: f32) -> io::Result<()>
 {
     match value.classify() {
         FpCategory::Nan | FpCategory::Infinite => wr.write_all(b"null"),
-        _ => wr.write_all(f32::to_str_digits(value, 6).as_bytes()),
+        _ => {
+            let s = value.to_string();
+            try!(wr.write_all(s.as_bytes()));
+            if !s.contains('.') {
+                try!(wr.write_all(b".0"))
+            }
+            Ok(())
+        }
     }
 }
 
@@ -405,7 +411,14 @@ fn fmt_f64_or_null<W>(wr: &mut W, value: f64) -> io::Result<()>
 {
     match value.classify() {
         FpCategory::Nan | FpCategory::Infinite => wr.write_all(b"null"),
-        _ => wr.write_all(f64::to_str_digits(value, 6).as_bytes()),
+        _ => {
+            let s = value.to_string();
+            try!(wr.write_all(s.as_bytes()));
+            if !s.contains('.') {
+                try!(wr.write_all(b".0"))
+            }
+            Ok(())
+        }
     }
 }
 
