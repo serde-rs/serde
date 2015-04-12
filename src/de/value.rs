@@ -18,12 +18,14 @@ use de;
 pub enum Error {
     SyntaxError,
     EndOfStreamError,
+    UnknownFieldError(String),
     MissingFieldError(&'static str),
 }
 
 impl de::Error for Error {
     fn syntax_error() -> Self { Error::SyntaxError }
     fn end_of_stream_error() -> Self { Error::EndOfStreamError }
+    fn unknown_field_error(field: &str) -> Self { Error::UnknownFieldError(field.to_string()) }
     fn missing_field_error(field: &'static str) -> Self { Error::MissingFieldError(field) }
 }
 

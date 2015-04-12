@@ -12,7 +12,9 @@ pub trait Error {
 
     fn end_of_stream_error() -> Self;
 
-    fn missing_field_error(&'static str) -> Self;
+    fn unknown_field_error(field: &str) -> Self;
+
+    fn missing_field_error(field: &'static str) -> Self;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

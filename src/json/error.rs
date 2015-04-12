@@ -5,7 +5,7 @@ use std::io;
 use de;
 
 /// The errors that can arise while parsing a JSON stream.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ErrorCode {
     EOFWhileParsingList,
     EOFWhileParsingObject,
@@ -28,6 +28,7 @@ pub enum ErrorCode {
     InvalidUnicodeCodePoint,
     KeyMustBeAString,
     LoneLeadingSurrogateInHexEscape,
+    UnknownField(String),
     MissingField(&'static str),
     NotFourDigit,
     NotUtf8,
@@ -65,6 +66,7 @@ impl fmt::Debug for ErrorCode {
             ErrorCode::InvalidUnicodeCodePoint => "invalid unicode code point".fmt(f),
             ErrorCode::KeyMustBeAString => "key must be a string".fmt(f),
             ErrorCode::LoneLeadingSurrogateInHexEscape => "lone leading surrogate in hex escape".fmt(f),
+            ErrorCode::UnknownField(ref field) => write!(f, "unknown field \"{}\"", field),
             ErrorCode::MissingField(ref field) => write!(f, "missing field \"{}\"", field),
             ErrorCode::NotFourDigit => "invalid \\u escape (not four digits)".fmt(f),
             ErrorCode::NotUtf8 => "contents not utf-8".fmt(f),
@@ -154,6 +156,9 @@ impl From<de::value::Error> for Error {
             de::value::Error::EndOfStreamError => {
                 de::Error::end_of_stream_error()
             }
+            de::value::Error::UnknownFieldError(field) => {
+                Error::SyntaxError(ErrorCode::UnknownField(field), 0, 0)
+            }
             de::value::Error::MissingFieldError(field) => {
                 de::Error::missing_field_error(field)
             }
@@ -168,6 +173,10 @@ impl de::Error for Error {
 
     fn end_of_stream_error() -> Error {
         Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 0, 0)
+    }
+
+    fn unknown_field_error(field: &str) -> Error {
+        Error::SyntaxError(ErrorCode::UnknownField(field.to_string()), 0, 0)
     }
 
     fn missing_field_error(field: &'static str) -> Error {

@@ -575,7 +575,7 @@ fn deserialize_field_visitor(
                         {
                             match value {
                                 $field_arms
-                                _ => Err(::serde::de::Error::syntax_error()),
+                                _ => Err(::serde::de::Error::unknown_field_error(value)),
                             }
                         }
                     }

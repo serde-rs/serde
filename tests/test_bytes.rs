@@ -18,6 +18,8 @@ impl serde::de::Error for Error {
 
     fn end_of_stream_error() -> Error { Error }
 
+    fn unknown_field_error(_field: &str) -> Error { Error }
+
     fn missing_field_error(_field: &'static str) -> Error { Error }
 }
 

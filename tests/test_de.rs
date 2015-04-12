@@ -59,10 +59,11 @@ impl<'a> TokenDeserializer {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 enum Error {
     SyntaxError,
     EndOfStreamError,
+    UnknownFieldError(String),
     MissingFieldError(&'static str),
     InvalidName(&'static str),
 }
@@ -71,6 +72,10 @@ impl de::Error for Error {
     fn syntax_error() -> Error { Error::SyntaxError }
 
     fn end_of_stream_error() -> Error { Error::EndOfStreamError }
+
+    fn unknown_field_error(field: &str) -> Error {
+        Error::UnknownFieldError(field.to_string())
+    }
 
     fn missing_field_error(field: &'static str) -> Error {
         Error::MissingFieldError(field)

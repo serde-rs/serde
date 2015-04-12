@@ -34,6 +34,8 @@ impl serde::de::Error for Error {
 
     fn end_of_stream_error() -> Error { Error::EndOfStreamError }
 
+    fn unknown_field_error(_: &str) -> Error { Error::SyntaxError }
+
     fn missing_field_error(_: &'static str) -> Error { Error::SyntaxError }
 }
 

@@ -935,7 +935,7 @@ fn test_parse_enum_errors() {
         ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 2)),
         ("{\"Dog\":", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 8)),
         ("{\"Dog\":}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
-        ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 11)),
+        ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::UnknownField("unknown".to_string()), 1, 11)),
         ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
         ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 10)),
         ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
