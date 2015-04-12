@@ -1,9 +1,10 @@
 use std::collections::{BTreeMap, btree_map};
 use std::fmt;
 use std::io;
-use std::num;
 use std::str;
 use std::vec;
+
+use num::NumCast;
 
 use de;
 use ser;
@@ -165,7 +166,7 @@ impl Value {
     pub fn as_i64(&self) -> Option<i64> {
         match *self {
             Value::I64(n) => Some(n),
-            Value::U64(n) => num::cast(n),
+            Value::U64(n) => NumCast::from(n),
             _ => None
         }
     }
@@ -174,7 +175,7 @@ impl Value {
     /// Returns None otherwise.
     pub fn as_u64(&self) -> Option<u64> {
         match *self {
-            Value::I64(n) => num::cast(n),
+            Value::I64(n) => NumCast::from(n),
             Value::U64(n) => Some(n),
             _ => None
         }
@@ -184,8 +185,8 @@ impl Value {
     /// Returns None otherwise.
     pub fn as_f64(&self) -> Option<f64> {
         match *self {
-            Value::I64(n) => num::cast(n),
-            Value::U64(n) => num::cast(n),
+            Value::I64(n) => NumCast::from(n),
+            Value::U64(n) => NumCast::from(n),
             Value::F64(n) => Some(n),
             _ => None
         }

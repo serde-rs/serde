@@ -1,10 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
 use std::marker::PhantomData;
-use std::num::FromPrimitive;
 use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
+
+use num::FromPrimitive;
 
 use de::{
     Deserialize,

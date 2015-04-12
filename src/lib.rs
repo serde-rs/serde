@@ -6,8 +6,7 @@
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
 
-#![feature(core)]
-
+extern crate num;
 
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer, Error};
