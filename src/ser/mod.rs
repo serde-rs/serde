@@ -1,7 +1,5 @@
 //! Generic serialization framework.
 
-use std::str;
-
 pub mod impls;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -97,10 +95,9 @@ pub trait Serializer {
     /// single character.
     #[inline]
     fn visit_char(&mut self, v: char) -> Result<(), Self::Error> {
-        // The unwraps in here should be safe.
-        let mut s = &mut [0; 4];
-        let len = v.encode_utf8(s).unwrap();
-        self.visit_str(str::from_utf8(&s[..len]).unwrap())
+        // FIXME: this allocation is required in order to be compatible with stable rust, which
+        // doesn't support encoding a `char` into a stack buffer.
+        self.visit_str(&v.to_string())
     }
 
     /// `visit_str` serializes a `&str`.

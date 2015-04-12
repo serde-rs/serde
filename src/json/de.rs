@@ -2,8 +2,6 @@ use std::char;
 use std::io;
 use std::str;
 
-use unicode::str::Utf16Item;
-
 use de;
 use super::error::{Error, ErrorCode};
 
@@ -345,35 +343,44 @@ impl<Iter> Deserializer<Iter>
                             // Non-BMP characters are encoded as a sequence of
                             // two hex escapes, representing UTF-16 surrogates.
                             n1 @ 0xD800 ... 0xDBFF => {
-                                let c1 = try!(self.next_char());
-                                let c2 = try!(self.next_char());
-                                match (c1, c2) {
+                                match (try!(self.next_char()), try!(self.next_char())) {
                                     (Some(b'\\'), Some(b'u')) => (),
                                     _ => {
                                         return Err(self.error(ErrorCode::UnexpectedEndOfHexEscape));
                                     }
                                 }
 
-                                let buf = &[n1, try!(self.decode_hex_escape())];
-                                match ::unicode::str::utf16_items(buf).next() {
-                                    Some(Utf16Item::ScalarValue(c)) => c,
-                                    _ => {
-                                        return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
+                                let n2 = try!(self.decode_hex_escape());
+
+                                if n2 < 0xDC00 || n2 > 0xDFFF {
+                                    return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
+                                }
+
+                                let n = (((n1 - 0xD800) as u32) << 10 |
+                                          (n2 - 0xDC00) as u32) + 0x1_0000;
+
+                                match char::from_u32(n as u32) {
+                                    Some(c) => c,
+                                    None => {
+                                        return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
                                     }
                                 }
                             }
 
-                            n => match char::from_u32(n as u32) {
-                                Some(c) => c,
-                                None => {
-                                    return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
+                            n => {
+                                match char::from_u32(n as u32) {
+                                    Some(c) => c,
+                                    None => {
+                                        return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
+                                    }
                                 }
                             }
                         };
 
-                        let buf = &mut [0; 4];
-                        let len = c.encode_utf8(buf).unwrap_or(0);
-                        self.str_buf.extend(buf[..len].iter().map(|b| *b));
+                        // FIXME: this allocation is required in order to be compatible with stable
+                        // rust, which doesn't support encoding a `char` into a stack buffer.
+                        let buf = c.to_string();
+                        self.str_buf.extend(buf.bytes());
                     }
                     _ => {
                         return Err(self.error(ErrorCode::InvalidEscape));

@@ -1,7 +1,5 @@
 //! Generic deserialization framework.
 
-use std::str;
-
 pub mod impls;
 pub mod value;
 
@@ -204,10 +202,9 @@ pub trait Visitor {
     fn visit_char<E>(&mut self, v: char) -> Result<Self::Value, E>
         where E: Error,
     {
-        // The unwraps in here should be safe.
-        let mut s = &mut [0; 4];
-        let len = v.encode_utf8(s).unwrap();
-        self.visit_str(str::from_utf8(&s[..len]).unwrap())
+        // FIXME: this allocation is required in order to be compatible with stable rust, which
+        // doesn't support encoding a `char` into a stack buffer.
+        self.visit_string(v.to_string())
     }
 
     fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
