@@ -198,18 +198,18 @@ struct PointMapVisitor<'a> {
     state: u8,
 }
 
-impl<'a> serde::ser::MapVisitor for PointMapVisitor {
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option(), S::Error>
+impl<'a> serde::ser::MapVisitor for PointMapVisitor<'a> {
+    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: serde::Serializer
     {
         match self.state {
             0 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_map_elt("x", &self.x)))
+                Ok(Some(try!(serializer.visit_map_elt("x", &self.value.x))))
             }
             1 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_map_elt("y", &self.y))))
+                Ok(Some(try!(serializer.visit_map_elt("y", &self.value.y))))
             }
             _ => {
                 Ok(None)
@@ -233,7 +233,7 @@ can create the `i32` from a variety of different types:
 
 ```rust
 impl Deserialize for i32 {
-    fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
+    fn deserialize<D>(deserializer: &mut D) -> Result<i32, D::Error>
         where D: serde::Deserializer,
     {
         deserializer.visit(I32Visitor)
