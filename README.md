@@ -205,7 +205,7 @@ impl<'a> serde::ser::MapVisitor for PointMapVisitor<'a> {
         match self.state {
             0 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_map_elt("x", &self.value.x)))
+                Ok(Some(try!(serializer.visit_map_elt("x", &self.value.x))))
             }
             1 => {
                 self.state += 1;
