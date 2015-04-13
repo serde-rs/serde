@@ -233,7 +233,7 @@ can create the `i32` from a variety of different types:
 
 ```rust
 impl Deserialize for i32 {
-    fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
+    fn deserialize<D>(deserializer: &mut D) -> Result<i32, D::Error>
         where D: serde::Deserializer,
     {
         deserializer.visit(I32Visitor)
