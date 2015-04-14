@@ -8,19 +8,23 @@ use std::iter::Peekable;
 use std::str;
 
 macro_rules! expect {
-    ($sel:expr, $pat:pat, $err:expr) => (
+    ($sel:expr, $pat:pat, $err:expr) => {{
         match try!($sel.bump()) {
             $pat => {},
             _ => return Err($sel.rdr.expected($err)),
         }
-    )
+    }}
 }
 
 macro_rules! expect_val {
     ($sel:expr, $i:ident, $err:expr) => {{
         try!($sel.bump());
-        // cannot match on bump here due to rust-bug in functions
-        // with &mut self arg and & return value
+        is_val!($sel, $i, $err)
+    }}
+}
+
+macro_rules! is_val {
+    ($sel:expr, $i:ident, $err:expr) => {{
         match try!($sel.ch()) {
             $i(x) => x,
             _ => return Err($sel.rdr.expected($err)),
@@ -184,7 +188,7 @@ impl<Iter> XmlIterator<Iter>
     fn decode_attr_val(&mut self) -> Result<InternalLexical, LexerError> {
         let quot = self.rdr.find(|&ch| ch == b'\'' || ch == b'"');
         let quot = try!(quot.ok_or(LexerError::EOF));
-        assert!(self.buf.is_empty());
+        self.buf.clear();
         self.buf.extend(self.rdr.by_ref().take_while(|&ch| ch != quot));
         // hack to detect EOF in take_while
         try!(self.peek_char());
@@ -239,48 +243,54 @@ impl<Iter> XmlIterator<Iter>
         }
         Err(EOF)
     }
-
     fn decode_tag(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
-        match try!(self.peek_char()) {
-            b'/' => {
-                // won't panic
-                self.next_char().unwrap();
-                for c in &mut self.rdr {
-                    if c == b'>' {
-                        self.state = LexerState::Start;
-                        return Ok(EndTagName)
-                    }
+        for c in &mut self.rdr {
+            if c == b'>' {
+                self.state = LexerState::Start;
+                return Ok(EndTagName)
+            }
+            self.buf.push(c);
+        }
+        Err(LexerError::EOF)
+    }
+
+    fn decode_tag_name(&mut self) -> Result<InternalLexical, LexerError> {
+        use self::InternalLexical::*;
+        loop {
+            match try!(self.peek_char()) {
+                b'\n' | b'\r' | b'\t' | b' ' | b'/' | b'>' => {
+                    debug_assert!(!self.buf.is_empty());
+                    self.state = LexerState::AttributeName;
+                    return Ok(StartTagName);
+                },
+                c => {
                     self.buf.push(c);
+                    self.rdr.next();
                 }
-                Err(LexerError::EOF)
-            },
-            b'!' => unimplemented!(),
-            b'?' => unimplemented!(),
-            _ => {
-                loop {
-                    match try!(self.peek_char()) {
-                        b'\n' | b'\r' | b'\t' | b' ' | b'/' | b'>' => {
-                            assert!(!self.buf.is_empty());
-                            self.state = LexerState::AttributeName;
-                            return Ok(StartTagName);
-                        },
-                        c => {
-                            self.buf.push(c);
-                            self.rdr.next();
-                        }
-                    }
-                }
-            },
+            }
         }
     }
 
     fn decode_normal(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
         match self.rdr.next() {
-            Some(b'<') => {
-                self.state = LexerState::Tag;
-                Ok(Text)
+            Some(b'<') => match try!(self.next_char()) {
+                b'/' => {
+                    self.state = LexerState::Tag;
+                    Ok(Text)
+                },
+                b'!' => unimplemented!(),
+                b'?' => unimplemented!(),
+                c => {
+                    if self.buf.iter().all(|&c| b" \t\n\r".contains(&c)) {
+                        self.buf.clear();
+                        self.buf.push(c);
+                        self.decode_tag_name()
+                    } else {
+                        Err(LexerError::MixedElementsAndText)
+                    }
+                }
             },
             // error: not in this state
             Some(c) if b"'\"=>/".contains(&c) => unimplemented!(),
@@ -389,14 +399,9 @@ where Iter: Iterator<Item=u8>,
     fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        use self::Lexical::*;
         println!("InnerDeserializer::visit_map");
-        match try!(self.0.ch()) {
-            StartTagClose => visitor.visit_map(ContentVisitor::new_inner(self.0)),
-            EmptyElementEnd(_) => visitor.visit_map(EmptyMapVisitor),
-            AttributeName(_) => visitor.visit_map(ContentVisitor::new_attr(self.0)),
-            _ => Err(self.0.rdr.expected("map"))
-        }
+        try!(self.0.bump());
+        visitor.visit_map(ContentVisitor::new_attr(&mut self.0))
     }
 
     fn visit_named_unit<V>(&mut self, _name: &str, _visitor: V) -> Result<V::Value, Error>
@@ -508,7 +513,6 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     {
         use self::Lexical::*;
         println!("Deserializer::visit");
-        expect!(self.rdr, Text([]), "nothing before start tag");
         expect!(self.rdr, StartTagName(_), "start tag name");
         try!(self.rdr.bump());
         let v = try!(InnerDeserializer(&mut self.rdr).visit(visitor));
@@ -539,16 +543,19 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 
     #[inline]
-    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         use self::Lexical::*;
         println!("Deserializer::visit_map");
-        match try!(self.rdr.bump()) {
-            StartTagName(_) => {}, // TODO: named map
-            _ => return Err(self.rdr.rdr.expected("start tag")),
+        expect!(self.rdr, StartTagName(_), "start tag name"); // TODO: named map
+        let v = try!(InnerDeserializer(&mut self.rdr).visit_map(visitor));
+        match try!(self.ch()) {
+            EndTagName(_) | EmptyElementEnd(_) => {},
+            _ => return Err(self.rdr.rdr.expected("end tag")),
         }
-        visitor.visit_map(ContentVisitor::new_attr(&mut self.rdr))
+        expect!(self.rdr, EndOfFile, "end of file");
+        Ok(v)
     }
 }
 
@@ -633,20 +640,6 @@ enum ContentVisitorState {
 impl <'a, Iter> ContentVisitor<'a, Iter>
     where Iter: Iterator<Item=u8>,
 {
-    fn new_inner(de: &'a mut XmlIterator<Iter>) -> Self {
-        ContentVisitor {
-            de: de,
-            state: ContentVisitorState::Element,
-        }
-    }
-
-    fn new_value(de: &'a mut XmlIterator<Iter>) -> Self {
-        ContentVisitor {
-            de: de,
-            state: ContentVisitorState::Value,
-        }
-    }
-
     fn new_attr(de: &'a mut XmlIterator<Iter>) -> Self {
         ContentVisitor {
             de: de,
@@ -665,17 +658,46 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     {
         use self::Lexical::*;
         use self::ContentVisitorState::*;
-        println!("visit_key: {:?}", &self.state);
-        try!(self.de.bump());
-        // cannot match on bump here due to rust-bug in functions
-        // with &mut self arg and & return value
-        match (&self.state, try!(self.de.ch())) {
+        println!("visit_key: {:?}", (&self.state, try!(self.de.ch())));
+        match match (&self.state, try!(self.de.ch())) {
             (&Attribute, EmptyElementEnd(_)) => return Ok(None),
-            (&Attribute, AttributeName(n)) => KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n))),
-            (&Element, StartTagName(n)) => KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n))),
-            (&Value, Text(_)) => KeyDeserializer::value_map(),
+            (&Attribute, StartTagClose) => 0,
+            (&Attribute, AttributeName(n)) => return Ok(Some(try!(KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n)))))),
+            (&Element, StartTagName(n)) => return Ok(Some(try!(KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n)))))),
+            (&Element, Text(_)) => 1,
+            (&Value, EndTagName(_)) => return Ok(None),
+            (&Value, Text([])) => 3,
+            (&Value, Text(_)) => return Ok(Some(try!(KeyDeserializer::value_map()))),
+            (&Element, EmptyElementEnd(_)) => 2,
             _ => unimplemented!()
-        }.map(|x| Some(x))
+        } {
+            0 => {
+                // hack for Attribute, StartTagClose
+                try!(self.de.bump());
+                self.state = Element;
+                self.visit_key()
+            },
+            1 => {
+                // hack for Element, Text
+                self.state = Value;
+                self.visit_key()
+            },
+            2 => {
+                // hack for Element, EmptyElementEnd
+                // happens when coming out of an empty element which is an inner value
+                // maybe catch in visit_value?
+                try!(self.de.bump());
+                self.visit_key()
+            },
+            3 => {
+                // hack for Value, Text([])
+                // happens when coming out of an empty element which is an inner value
+                // and then directly running into the `</`
+                try!(self.de.bump());
+                self.visit_key()
+            },
+            _ => unreachable!()
+        }
     }
 
     fn visit_value<V>(&mut self) -> Result<V, Error>
@@ -686,18 +708,23 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
         println!("visit_value: {:?}", &self.state);
         match self.state {
             Attribute => {
+                let v = {
+                    let v = expect_val!(self.de, AttributeValue, "attribute value");
+                    let v = try!(self.de.rdr.from_utf8(v));
+                    try!(KeyDeserializer::visit(v))
+                };
                 try!(self.de.bump());
-                // cannot match on bump here due to rust-bug in functions
-                // with &mut self arg and & return value
-                match try!(self.de.ch()) {
-                    AttributeValue(n) => KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n))),
-                    _ => unimplemented!(),
-                }
+                Ok(v)
             },
             Element => de::Deserialize::deserialize(&mut InnerDeserializer(&mut self.de)),
-            Value => match try!(self.de.ch()) {
-                Text(n) => KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n))),
-                _ => unimplemented!(),
+            Value => {
+                let v = {
+                    let v = is_val!(self.de, Text, "text");
+                    let v = try!(self.de.rdr.from_utf8(v));
+                    try!(KeyDeserializer::visit(v))
+                };
+                try!(self.de.bump());
+                Ok(v)
             }
         }
     }
