@@ -11,18 +11,21 @@ macro_rules! expect {
     ($sel:expr, $pat:pat, $err:expr) => (
         match try!($sel.bump()) {
             $pat => {},
-            _ => return Err(self.rdr.rdr.expected($err)),
+            _ => return Err($sel.rdr.expected($err)),
         }
     )
 }
 
 macro_rules! expect_val {
-    ($sel:expr, $i:ident, $err:expr) => (
-        match try!($sel.bump()) {
+    ($sel:expr, $i:ident, $err:expr) => {{
+        try!($sel.bump());
+        // cannot match on bump here due to rust-bug in functions
+        // with &mut self arg and & return value
+        match try!($sel.ch()) {
             $i(x) => x,
-            _ => return Err(self.rdr.rdr.expected($err)),
+            _ => return Err($sel.rdr.expected($err)),
         }
-    )
+    }}
 }
 
 #[derive(Debug, Copy, PartialEq, Clone)]
@@ -358,17 +361,13 @@ where Iter: Iterator<Item=u8>,
         use self::Lexical::*;
         println!("InnerDeserializer::visit");
         match try!(self.0.ch()) {
-            StartTagClose => {},
-            EmptyElementEnd(_) => return visitor.visit_unit(),
-            _ => return Err(self.0.rdr.expected("start tag close")),
-        }
-        try!(self.0.bump());
-        // cannot match on bump here due to rust-bug in functions
-        // with &mut self arg and & return value
-        match try!(self.0.ch()) {
-            Text(txt) => visitor.visit_str(try!(self.0.rdr.from_utf8(txt))),
-            EndTagName(_) => visitor.visit_unit(),
-            _ => Err(self.0.rdr.expected("text")),
+            StartTagClose => {
+                let v = expect_val!(self.0, Text, "text");
+                let v = try!(self.0.rdr.from_utf8(v));
+                visitor.visit_str(v)
+            },
+            EmptyElementEnd(_) => visitor.visit_unit(),
+            _ => Err(self.0.rdr.expected("start tag close")),
         }
     }
 
@@ -504,41 +503,18 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     type Error = Error;
 
     #[inline]
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         use self::Lexical::*;
         println!("Deserializer::visit");
-        match try!(self.rdr.bump()) {
-            Text([]) => {},
-            _ => return Err(self.rdr.rdr.expected("nothing before start tag")),
-        }
-        match try!(self.rdr.bump()) {
-            StartTagName(_) => {},
-            _ => return Err(self.rdr.rdr.expected("start tag name")),
-        }
-        match try!(self.rdr.bump()) {
-            StartTagClose => {},
-            EmptyElementEnd(_) => return visitor.visit_unit(),
-            _ => return Err(self.rdr.rdr.expected("start tag close")),
-        }
+        expect!(self.rdr, Text([]), "nothing before start tag");
+        expect!(self.rdr, StartTagName(_), "start tag name");
         try!(self.rdr.bump());
-        // cannot match on bump here due to rust-bug in functions
-        // with &mut self arg and & return value
-        let v = match try!(self.rdr.ch()) {
-            Text(txt) => visitor.visit_str(try!(self.rdr.rdr.from_utf8(txt))),
-            EndTagName(_) => visitor.visit_unit(),
-            _ => Err(self.rdr.rdr.expected("text")),
-        };
-        let v = try!(v);
-        match try!(self.rdr.bump()) {
-            EndTagName(_) => {},
-            _ => return Err(self.rdr.rdr.expected("end tag")),
-        }
-        match try!(self.rdr.bump()) {
-            EndOfFile => Ok(v),
-            _ => Err(self.rdr.rdr.expected("end of file")),
-        }
+        let v = try!(InnerDeserializer(&mut self.rdr).visit(visitor));
+        expect!(self.rdr, EndTagName(_), "end tag");
+        expect!(self.rdr, EndOfFile, "end of file");
+        Ok(v)
     }
 
     #[inline]
