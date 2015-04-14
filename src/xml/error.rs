@@ -15,7 +15,7 @@ pub enum ErrorCode {
     NotUtf8,
     SerdeExpectedSomeValue,
     LexingError(super::de::LexerError),
-    Expected(super::de::Lexical, super::de::Lexical),
+    Expected(&'static str),
 }
 
 impl fmt::Debug for ErrorCode {
@@ -29,7 +29,7 @@ impl fmt::Debug for ErrorCode {
             NotUtf8 => "bad utf8".fmt(f),
             SerdeExpectedSomeValue => "serde expected some value".fmt(f),
             LexingError(e) => write!(f, "error during lexing: \"{:?}\"", e),
-            Expected(what, got) => write!(f, "expected \"{:?}\" got \"{:?}\"", what, got),
+            Expected(what) => write!(f, "expected {}", what),
         }
     }
 }
