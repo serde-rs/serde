@@ -133,7 +133,45 @@ fn test_parse_struct() {
                 b: 2,
                 c: "abc".to_string(),
             },
-        )
+        ),
+        (
+            "<Simple><!-- this is a comment -->
+                <c>abc</c>
+                <a/>
+                <b>2</b>
+            </Simple>",
+            Simple {
+                a: (),
+                b: 2,
+                c: "abc".to_string(),
+            },
+        ),
+    ]);
+}
+
+#[test]
+fn test_hugo_duncan() {
+    let s = "
+        <?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        <DescribeInstancesResponse xmlns=\"http://ec2.amazonaws.com/doc/2014-10-01/\">
+            <requestId>9474f558-10a5-42e8-84d1-f9ee181fe943</requestId>
+            <reservationSet/>
+        </DescribeInstancesResponse>
+    ";
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    #[allow(non_snake_case)]
+    struct DescribeInstancesResponse {
+        requestId: String,
+        reservationSet: (),
+    }
+    test_parse_ok(&[
+        (
+            s,
+            DescribeInstancesResponse {
+                requestId: "9474f558-10a5-42e8-84d1-f9ee181fe943".to_string(),
+                reservationSet: (),
+            },
+        ),
     ]);
 }
 

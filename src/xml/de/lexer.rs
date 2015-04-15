@@ -246,6 +246,46 @@ impl<Iter> XmlIterator<Iter>
         }
     }
 
+    fn decode_comment(&mut self) -> Result<(), LexerError> {
+        use self::LexerError::*;
+        if try!(self.next_char()) != b'-' {
+            return Err(BadComment);
+        }
+        if try!(self.next_char()) != b'-' {
+            return Err(BadComment);
+        }
+        loop {
+            while try!(self.next_char()) != b'-' {}
+            if try!(self.next_char()) != b'-' {
+                continue;
+            }
+            if try!(self.next_char()) != b'>' {
+                continue;
+            }
+            return Ok(())
+        }
+    }
+
+    fn decode_declaration(&mut self) -> Result<(), LexerError> {
+        use self::LexerError::*;
+        if try!(self.next_char()) != b'x' {
+            return Err(BadDeclaration);
+        }
+        if try!(self.next_char()) != b'm' {
+            return Err(BadDeclaration);
+        }
+        if try!(self.next_char()) != b'l' {
+            return Err(BadDeclaration);
+        }
+        loop {
+            while try!(self.next_char()) != b'?' {}
+            if try!(self.next_char()) != b'>' {
+                continue;
+            }
+            return Ok(())
+        }
+    }
+
     fn decode_normal(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
         match self.rdr.next() {
@@ -254,8 +294,14 @@ impl<Iter> XmlIterator<Iter>
                     self.state = LexerState::Tag;
                     Ok(Text)
                 },
-                b'!' => unimplemented!(),
-                b'?' => unimplemented!(),
+                b'!' => {
+                    try!(self.decode_comment());
+                    self.decode_normal()
+                },
+                b'?' => {
+                    try!(self.decode_declaration());
+                    self.decode_normal()
+                },
                 c => {
                     if self.buf.iter().all(|&c| b" \t\n\r".contains(&c)) {
                         self.buf.clear();
@@ -321,4 +367,6 @@ pub enum LexerError {
     MixedElementsAndText,
     ExpectedEOF,
     ExpectedEq,
+    BadComment,
+    BadDeclaration,
 }

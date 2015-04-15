@@ -367,6 +367,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
         match match (&self.state, try!(self.de.ch())) {
             (&Attribute, EmptyElementEnd(_)) => return Ok(None),
             (&Attribute, StartTagClose) => 0,
+            (&Attribute, AttributeName(b"xmlns")) => 6,
             (&Attribute, AttributeName(n)) => return Ok(Some(try!(KeyDeserializer::visit(try!(self.de.from_utf8(n)))))),
             (&Element, StartTagName(n)) => return Ok(Some(try!(KeyDeserializer::visit(try!(self.de.from_utf8(n)))))),
             (&Inner, Text(_)) => 1,
@@ -410,6 +411,12 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 self.visit_key()
             },
             5 => {
+                try!(self.de.bump());
+                self.visit_key()
+            }
+            6 => {
+                // hack for xmlns
+                expect!(self.de, AttributeValue(_), "attribute value");
                 try!(self.de.bump());
                 self.visit_key()
             }
