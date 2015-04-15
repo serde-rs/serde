@@ -407,7 +407,6 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         println!("InnerDeserializer::visit_map");
-        try!(self.0.bump());
         visitor.visit_map(ContentVisitor::new_attr(&mut self.0))
     }
 
@@ -560,6 +559,7 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         use self::Lexical::*;
         println!("Deserializer::visit_map");
         expect!(self.rdr, StartTagName(_), "start tag name"); // TODO: named map
+        try!(self.rdr.bump());
         let v = try!(InnerDeserializer(&mut self.rdr).visit_map(visitor));
         match try!(self.ch()) {
             EndTagName(_) | EmptyElementEnd(_) => {},
