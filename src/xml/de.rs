@@ -353,8 +353,20 @@ pub struct Deserializer<Iter: Iterator<Item=u8>> {
 }
 
 pub struct InnerDeserializer<'a, Iter: Iterator<Item=u8> + 'a> (
-    &'a mut XmlIterator<Iter>,
+    &'a mut XmlIterator<Iter>, &'a mut bool
 );
+
+impl<'a, Iter: Iterator<Item=u8> + 'a> InnerDeserializer<'a, Iter> {
+    fn decode<T>(
+        xi: &mut XmlIterator<Iter>
+    ) -> (bool, Result<T, Error>)
+    where T : de::Deserialize
+    {
+        let mut is_seq = false;
+        let deser = de::Deserialize::deserialize(&mut InnerDeserializer(xi, &mut is_seq));
+        (is_seq, deser)
+    }
+}
 
 // TODO: this type should expect self.0.buf.is_empty()
 // but that can only be done after a SeqVisitor rehaul to get rid of the alloc
@@ -400,6 +412,7 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         println!("InnerDeserializer::visit_seq");
+        *self.1 = true;
         visitor.visit_seq(SeqVisitor::new(self.0))
     }
 
@@ -521,7 +534,9 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         println!("Deserializer::visit");
         expect!(self.rdr, StartTagName(_), "start tag name");
         try!(self.rdr.bump());
-        let v = try!(InnerDeserializer(&mut self.rdr).visit(visitor));
+        let is_seq = &mut false;
+        let v = try!(InnerDeserializer(&mut self.rdr, is_seq).visit(visitor));
+        assert!(!*is_seq);
         match try!(self.rdr.ch()) {
             EndTagName(_) => {},
             EmptyElementEnd(_) => {},
@@ -560,7 +575,9 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         println!("Deserializer::visit_map");
         expect!(self.rdr, StartTagName(_), "start tag name"); // TODO: named map
         try!(self.rdr.bump());
-        let v = try!(InnerDeserializer(&mut self.rdr).visit_map(visitor));
+        let is_seq = &mut false;
+        let v = try!(InnerDeserializer(&mut self.rdr, is_seq).visit_map(visitor));
+        assert!(!*is_seq);
         match try!(self.ch()) {
             EndTagName(_) | EmptyElementEnd(_) => {},
             _ => return Err(self.rdr.rdr.expected("end tag")),
@@ -742,14 +759,17 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             },
             Element => {
                 try!(self.de.bump());
-                let v = de::Deserialize::deserialize(&mut InnerDeserializer(&mut self.de));
+                let (is_seq, v) = InnerDeserializer::decode(&mut self.de);
                 let v = try!(v);
-                match try!(self.de.ch()) {
-                    EmptyElementEnd(_) => {},
-                    EndTagName(_) => {},
-                    _ => return Err(self.de.rdr.expected("tag close")),
+                println!("is_seq: {}", is_seq);
+                if !is_seq {
+                    match try!(self.de.ch()) {
+                        EmptyElementEnd(_) => {},
+                        EndTagName(_) => {},
+                        _ => return Err(self.de.rdr.expected("tag close")),
+                    }
+                    try!(self.de.bump());
                 }
-                try!(self.de.bump());
                 Ok(v)
             },
             Value => {
@@ -803,25 +823,32 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
     fn visit<T>(&mut self) -> Result<Option<T>, Error>
         where T: de::Deserialize,
     {
+        use self::Lexical::*;
         println!("SeqVisitor::visit: {:?}", (self.done, self.de.ch()));
         if self.done {
             return Ok(None);
         }
-        try!(self.de.bump());
-        let v = try!(de::Deserialize::deserialize(&mut InnerDeserializer(&mut self.de)));
-        match try!(self.de.bump()) {
-            Lexical::EndTagName(_) => {},
-            _ => unimplemented!(),
-        }
+        let (is_seq, v) = InnerDeserializer::decode(&mut self.de);
+        let v = try!(v);
+        assert!(!is_seq);
+        is_val!(self.de, EndTagName, "end tag");
         self.de.stash();
         try!(self.de.bump());
         // cannot match on bump here due to rust-bug in functions
         // with &mut self arg and & return value
-        match try!(self.de.ch()) {
-            Lexical::StartTagName(n) if n == self.de.stash_view() => {},
-            Lexical::StartTagName(_)
-            | Lexical::EndTagName(_) => self.done = true,
+        match match try!(self.de.ch()) {
+            StartTagName(n) if n == self.de.stash_view() => 0,
+            StartTagName(_) => 1,
+            Text(txt) if (|| txt.iter().all(|&c| b" \t\n\r".contains(&c)))() => 2,
             _ => unimplemented!()
+        } {
+            0 => { try!(self.de.bump()); },
+            1 => self.done = true,
+            2 => match try!(self.de.bump()) {
+                EndTagName(_) => self.done = true,
+                _ => unimplemented!(),
+            },
+            _ => unreachable!()
         }
         Ok(Some(v))
     }
