@@ -463,8 +463,8 @@ impl<'a> de::Deserializer for KeyDeserializer<'a> {
     fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        println!("{:?} keydeserializer::visit", self as *const Self);
-        println!("{:?} {:?}", self as *const Self, self.0);
+        println!("keydeserializer::visit");
+        println!("{:?}", self.0);
         match visitor.visit_str(self.0) {
             Ok(x) => Ok(x),
             Err(x) => {println!("err"); Err(x)},
@@ -696,7 +696,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             (&Inner, Text(_)) => 1,
             (&Inner, _) => 4,
             (&Value, EndTagName(_)) => return Ok(None),
-            (&Value, Text([])) => 3,
+            (&Value, Text(txt)) if txt.len() == 0 => 3,
             (&Value, Text(_)) => return Ok(Some(try!(KeyDeserializer::value_map()))),
             (&Element, EmptyElementEnd(_)) => 2,
             // need closure to work around https://github.com/rust-lang/rfcs/issues/1006

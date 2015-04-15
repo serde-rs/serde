@@ -43,6 +43,7 @@ pub enum Error {
     SyntaxError(ErrorCode, usize, usize),
     IoError(io::Error),
     MissingFieldError(&'static str),
+    UnknownField(String),
 }
 
 impl error::Error for Error {
@@ -51,6 +52,7 @@ impl error::Error for Error {
             Error::SyntaxError(..) => "syntax error",
             Error::IoError(ref error) => error::Error::description(error),
             Error::MissingFieldError(_) => "missing field",
+            Error::UnknownField(_) => "unknown field",
         }
     }
 
@@ -72,6 +74,9 @@ impl fmt::Display for Error {
             Error::IoError(ref error) => fmt::Display::fmt(error, fmt),
             Error::MissingFieldError(ref field) => {
                 write!(fmt, "missing field {}", field)
+            },
+            Error::UnknownField(ref field) => {
+                write!(fmt, "unknown field {}", field)
             }
         }
     }
@@ -86,6 +91,10 @@ impl From<io::Error> for Error {
 impl de::Error for Error {
     fn syntax_error() -> Error {
         Error::SyntaxError(SerdeExpectedSomeValue, 0, 0)
+    }
+
+    fn unknown_field_error(field: &str) -> Error {
+        Error::UnknownField(field.to_string())
     }
 
     fn end_of_stream_error() -> Error {
