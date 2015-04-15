@@ -98,6 +98,13 @@ fn test_parse_bool() {
 }
 
 #[test]
+fn test_parse_unit() {
+    test_parse_ok(&[
+        ("<bla/>", ()),
+    ]);
+}
+
+#[test]
 fn test_parse_f64() {
     test_parse_ok(&[
         ("<bla>3.0</bla>", 3.0f64),
@@ -185,13 +192,6 @@ fn test_parse_complexstruct() {
                         "xyz".to_string(),
                     ]
                 })
-            },
-        ),
-        (
-            "<Outer>
-            </Outer>",
-            Outer {
-                inner: None
             },
         ),
         (
