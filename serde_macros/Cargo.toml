@@ -12,9 +12,5 @@ plugin = true
 
 [dependencies]
 aster = "*"
-
-[dependencies.quasi]
-path= "../../rust-quasi"
-
-[dependencies.quasi_macros]
-path= "../../rust-quasi/quasi_macros"
+quasi = "*"
+quasi_macros = "*"
