@@ -177,6 +177,7 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn decode(&mut self) -> Result<InternalLexical, LexerError> {
+        self.buf.clear();
         match self.state {
             LexerState::Start => self.decode_normal(),
             LexerState::Tag => self.decode_tag(),
@@ -188,7 +189,6 @@ impl<Iter> XmlIterator<Iter>
     fn decode_attr_val(&mut self) -> Result<InternalLexical, LexerError> {
         let quot = self.rdr.find(|&ch| ch == b'\'' || ch == b'"');
         let quot = try!(quot.ok_or(LexerError::EOF));
-        self.buf.clear();
         self.buf.extend(self.rdr.by_ref().take_while(|&ch| ch != quot));
         // hack to detect EOF in take_while
         try!(self.peek_char());
@@ -199,7 +199,6 @@ impl<Iter> XmlIterator<Iter>
     fn decode_attr_name(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
         use self::LexerError::*;
-        self.buf.clear();
         loop {
             return match try!(self.next_char()) {
                 b'/' => match try!(self.next_char()) {
@@ -372,9 +371,17 @@ where Iter: Iterator<Item=u8>,
         println!("InnerDeserializer::visit");
         match try!(self.0.ch()) {
             StartTagClose => {
-                let v = expect_val!(self.0, Text, "text");
-                let v = try!(self.0.rdr.from_utf8(v));
-                visitor.visit_str(v)
+                match {
+                    let v = expect_val!(self.0, Text, "text");
+                    let v = try!(self.0.rdr.from_utf8(v));
+                    visitor.visit_str(v)
+                } { // try! is broken sometimes
+                    Ok(v) => {
+                        try!(self.0.bump());
+                        Ok(v)
+                    },
+                    Err(e) => Err(e),
+                }
             },
             EmptyElementEnd(_) => visitor.visit_unit(),
             _ => Err(self.0.rdr.expected("start tag close")),
@@ -516,7 +523,11 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         expect!(self.rdr, StartTagName(_), "start tag name");
         try!(self.rdr.bump());
         let v = try!(InnerDeserializer(&mut self.rdr).visit(visitor));
-        expect!(self.rdr, EndTagName(_), "end tag");
+        match try!(self.rdr.ch()) {
+            EndTagName(_) => {},
+            EmptyElementEnd(_) => {},
+            _ => return Err(self.rdr.rdr.expected("end tag")),
+        }
         expect!(self.rdr, EndOfFile, "end of file");
         Ok(v)
     }
@@ -635,6 +646,7 @@ enum ContentVisitorState {
     Attribute,
     Element,
     Value,
+    Inner,
 }
 
 impl <'a, Iter> ContentVisitor<'a, Iter>
@@ -664,17 +676,21 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             (&Attribute, StartTagClose) => 0,
             (&Attribute, AttributeName(n)) => return Ok(Some(try!(KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n)))))),
             (&Element, StartTagName(n)) => return Ok(Some(try!(KeyDeserializer::visit(try!(self.de.rdr.from_utf8(n)))))),
-            (&Element, Text(_)) => 1,
+            (&Inner, Text(_)) => 1,
+            (&Inner, _) => 4,
             (&Value, EndTagName(_)) => return Ok(None),
             (&Value, Text([])) => 3,
             (&Value, Text(_)) => return Ok(Some(try!(KeyDeserializer::value_map()))),
             (&Element, EmptyElementEnd(_)) => 2,
+            // need closure to work around https://github.com/rust-lang/rfcs/issues/1006
+            (&Element, Text(txt)) if (|| txt.iter().all(|&c| b" \t\n\r".contains(&c)))() => 5,
+            (&Element, EndTagName(_)) => return Ok(None),
             _ => unimplemented!()
         } {
             0 => {
                 // hack for Attribute, StartTagClose
                 try!(self.de.bump());
-                self.state = Element;
+                self.state = Inner;
                 self.visit_key()
             },
             1 => {
@@ -696,6 +712,14 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 try!(self.de.bump());
                 self.visit_key()
             },
+            4 => {
+                self.state = Element;
+                self.visit_key()
+            },
+            5 => {
+                try!(self.de.bump());
+                self.visit_key()
+            }
             _ => unreachable!()
         }
     }
@@ -716,7 +740,18 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 try!(self.de.bump());
                 Ok(v)
             },
-            Element => de::Deserialize::deserialize(&mut InnerDeserializer(&mut self.de)),
+            Element => {
+                try!(self.de.bump());
+                let v = de::Deserialize::deserialize(&mut InnerDeserializer(&mut self.de));
+                let v = try!(v);
+                match try!(self.de.ch()) {
+                    EmptyElementEnd(_) => {},
+                    EndTagName(_) => {},
+                    _ => return Err(self.de.rdr.expected("tag close")),
+                }
+                try!(self.de.bump());
+                Ok(v)
+            },
             Value => {
                 let v = {
                     let v = is_val!(self.de, Text, "text");
@@ -725,7 +760,8 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 };
                 try!(self.de.bump());
                 Ok(v)
-            }
+            },
+            Inner => unreachable!(),
         }
     }
 
