@@ -1,10 +1,10 @@
 #![deny(unused_must_use)]
 use xml::error::*;
-use xml::error::ErrorCode::*;
+use self::LexerError::*;
 
 use std::iter::Peekable;
 
-use std::str;
+use std::{str, char};
 
 #[derive(Debug, Copy, PartialEq, Clone)]
 pub enum Lexical<'a> {
@@ -94,7 +94,7 @@ impl<Iter> XmlIterator<Iter>
 {
 
     pub fn expected(&self, reason: &'static str) -> Error {
-        self.error(Expected(reason))
+        self.error(ErrorCode::Expected(reason))
     }
 
     pub fn error(&self, reason: ErrorCode) -> Error {
@@ -102,12 +102,12 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn lexer_error(&self, reason: LexerError) -> Error {
-        self.error(LexingError(reason))
+        self.error(ErrorCode::LexingError(reason))
     }
 
     pub fn from_utf8<'a>(&self, txt: &'a[u8]) -> Result<&'a str, Error> {
         let txt = str::from_utf8(txt);
-        txt.or(Err(self.error(NotUtf8)))
+        txt.or(Err(self.error(ErrorCode::NotUtf8)))
     }
 
     #[inline]
@@ -140,15 +140,6 @@ impl<Iter> XmlIterator<Iter>
 
     fn next_char(&mut self) -> Result<u8, LexerError> {
         self.rdr.next().ok_or(LexerError::EOF)
-    }
-
-    fn end(&mut self) -> Result<(), LexerError> {
-        while let Some(c) = self.rdr.next() {
-            if !b" \n\t\r".contains(&c) {
-                return Err(LexerError::ExpectedEOF);
-            }
-        }
-        Ok(())
     }
 
     fn decode(&mut self) -> Result<InternalLexical, LexerError> {
@@ -286,6 +277,95 @@ impl<Iter> XmlIterator<Iter>
         }
     }
 
+    fn decode_rest(&mut self, rest: &[u8], good: u8) -> Result<(), LexerError> {
+        for &c in rest {
+            if try!(self.next_char()) != c {
+                return Err(BadEscapeSequence);
+            }
+        }
+        self.buf.push(good);
+        Ok(())
+    }
+
+    fn decode_escaped_hex(&mut self) -> Result<(), LexerError> {
+        let mut n = 0;
+        let mut leading_zero = true;
+        loop {
+            match try!(self.next_char()) {
+                b';' => {
+                    //let mut buf = [0; 4];
+                    let ch = char::from_u32(n);
+                    let ch = try!(ch.ok_or(EscapedNotUtf8));
+                    //let bytes = ch.encode_utf8(&mut buf);
+                    //let bytes = try!(bytes.ok_or(EscapedNotUtf8));
+                    //self.buf.extend(buf[..bytes].iter().map(|&c| c));
+                    // FIXME: this allocation is required in order to be compatible with stable rust, which
+                    // doesn't support encoding a `char` into a stack buffer.
+                    self.buf.extend(ch.to_string().bytes());
+                    return Ok(());
+                },
+                b'0' if leading_zero => {},
+                c => {
+                    leading_zero = false;
+                    n = try!(n.checked_mul(16).ok_or(EscapedNotUtf8));
+                    let num = try!(hex_ch_to_num(c));
+                    n = try!(n.checked_add(num).ok_or(EscapedNotUtf8));
+                }
+            }
+        }
+    }
+
+    fn decode_escaped_num(&mut self) -> Result<(), LexerError> {
+        let mut n = match try!(self.next_char()) {
+            b'x' => return self.decode_escaped_hex(),
+            c => try!(ch_to_num(c)),
+        };
+        let mut leading_zero = n == 0;
+        loop {
+            match try!(self.next_char()) {
+                b';' => {
+                    //let mut buf = [0; 4];
+                    let ch = char::from_u32(n);
+                    let ch = try!(ch.ok_or(EscapedNotUtf8));
+                    //let bytes = ch.encode_utf8(&mut buf);
+                    //let bytes = try!(bytes.ok_or(EscapedNotUtf8));
+                    //self.buf.extend(buf[..bytes].iter().map(|&c| c));
+                    // FIXME: this allocation is required in order to be compatible with stable rust, which
+                    // doesn't support encoding a `char` into a stack buffer.
+                    self.buf.extend(ch.to_string().bytes());
+                    return Ok(());
+                },
+                b'0' if leading_zero => {},
+                c => {
+                    leading_zero = false;
+                    n = try!(n.checked_mul(10).ok_or(EscapedNotUtf8));
+                    let num = try!(ch_to_num(c));
+                    n = try!(n.checked_add(num).ok_or(EscapedNotUtf8));
+                }
+            }
+        }
+    }
+
+    fn decode_escaped(&mut self) -> Result<(), LexerError> {
+        match try!(self.next_char()) {
+            b'#' => return self.decode_escaped_num(),
+            b'l' => try!(self.decode_rest(b"t", b'<')),
+            b'g' => try!(self.decode_rest(b"t", b'>')),
+            b'a' => match try!(self.next_char()) {
+                b'p' => try!(self.decode_rest(b"os", b'\'')),
+                b'm' => try!(self.decode_rest(b"p", b'&')),
+                _ => return Err(BadEscapeSequence),
+            },
+            b'q' => try!(self.decode_rest(b"uot", b'"')),
+            _ => return Err(BadEscapeSequence),
+        }
+        if try!(self.next_char()) == b';' {
+            Ok(())
+        } else {
+            Err(BadEscapeSequence)
+        }
+    }
+
     fn decode_normal(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
         match self.rdr.next() {
@@ -312,9 +392,10 @@ impl<Iter> XmlIterator<Iter>
                     }
                 }
             },
-            // error: not in this state
-            Some(c) if b"'\"=>/".contains(&c) => unimplemented!(),
-            Some(b'&') => unimplemented!(),
+            Some(b'&') => {
+                try!(self.decode_escaped());
+                self.decode_normal()
+            },
             Some(c) => {
                 self.buf.push(c);
                 self.decode_normal()
@@ -358,6 +439,22 @@ impl<Iter> XmlIterator<Iter>
     }
 }
 
+fn hex_ch_to_num(ch: u8) -> Result<u32, LexerError> {
+    match ch {
+        b'0'...b'9' => Ok((ch as u32) - (b'0' as u32)),
+        b'a'...b'f' => Ok((ch as u32) + 10 - (b'a' as u32)),
+        b'A'...b'F' => Ok((ch as u32) + 10 - (b'A' as u32)),
+        _ => Err(NotAHex(ch)),
+    }
+}
+
+fn ch_to_num(ch: u8) -> Result<u32, LexerError> {
+    match ch {
+        b'0'...b'9' => Ok((ch as u32) - (b'0' as u32)),
+        _ => Err(NotANumber(ch)),
+    }
+}
+
 #[derive(Debug, Copy, PartialEq, Clone)]
 pub enum LexerError {
     EOF,
@@ -369,4 +466,9 @@ pub enum LexerError {
     ExpectedEq,
     BadComment,
     BadDeclaration,
+    BadEscapeSequence,
+    Unexpected(u8),
+    NotANumber(u8),
+    NotAHex(u8),
+    EscapedNotUtf8,
 }

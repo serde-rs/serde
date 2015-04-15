@@ -64,6 +64,18 @@ fn test_parse_string() {
         (
             "<bla>     </bla>",
             "     ".to_string(),
+        ),
+        (
+            "<bla>&lt;boom/&gt;</bla>",
+            "<boom/>".to_string(),
+        ),
+        (
+            "<bla>&#9835;</bla>",
+            "♫".to_string(),
+        ),
+        (
+            "<bla>&#x266B;</bla>",
+            "♫".to_string(),
         )
     ]);
 }
