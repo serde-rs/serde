@@ -76,6 +76,10 @@ fn test_parse_string() {
         (
             "<bla>&#x266B;</bla>",
             "♫".to_string(),
+        ),
+        (
+            "<bla>♫<![CDATA[<cookies/>]]>♫</bla>",
+            "♫<cookies/>♫".to_string(),
         )
     ]);
 }

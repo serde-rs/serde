@@ -237,11 +237,58 @@ impl<Iter> XmlIterator<Iter>
         }
     }
 
+    fn decode_comment_or_cdata(&mut self) -> Result<(), LexerError> {
+        match try!(self.next_char()) {
+            b'-' => self.decode_comment(),
+            b'[' => self.decode_cdata(),
+            _ => Err(BadCommentOrCDATA),
+        }
+    }
+
+    fn decode_cdata(&mut self) -> Result<(), LexerError> {
+        if try!(self.next_char()) != b'C' {
+            return Err(BadCDATA);
+        }
+        if try!(self.next_char()) != b'D' {
+            return Err(BadCDATA);
+        }
+        if try!(self.next_char()) != b'A' {
+            return Err(BadCDATA);
+        }
+        if try!(self.next_char()) != b'T' {
+            return Err(BadCDATA);
+        }
+        if try!(self.next_char()) != b'A' {
+            return Err(BadCDATA);
+        }
+        if try!(self.next_char()) != b'[' {
+            return Err(BadCDATA);
+        }
+        loop {
+            self.buf.extend(self.rdr.by_ref().take_while(|&c| c != b']'));
+            match try!(self.next_char()) {
+                b']' => {},
+                c => {
+                    self.buf.push(b']');
+                    self.buf.push(c);
+                    continue;
+                },
+            }
+            match try!(self.next_char()) {
+                b'>' => {},
+                c => {
+                    self.buf.push(b']');
+                    self.buf.push(b']');
+                    self.buf.push(c);
+                    continue;
+                },
+            }
+            return Ok(())
+        }
+    }
+
     fn decode_comment(&mut self) -> Result<(), LexerError> {
         use self::LexerError::*;
-        if try!(self.next_char()) != b'-' {
-            return Err(BadComment);
-        }
         if try!(self.next_char()) != b'-' {
             return Err(BadComment);
         }
@@ -375,7 +422,7 @@ impl<Iter> XmlIterator<Iter>
                     Ok(Text)
                 },
                 b'!' => {
-                    try!(self.decode_comment());
+                    try!(self.decode_comment_or_cdata());
                     self.decode_normal()
                 },
                 b'?' => {
@@ -465,6 +512,8 @@ pub enum LexerError {
     ExpectedEOF,
     ExpectedEq,
     BadComment,
+    BadCDATA,
+    BadCommentOrCDATA,
     BadDeclaration,
     BadEscapeSequence,
     Unexpected(u8),
