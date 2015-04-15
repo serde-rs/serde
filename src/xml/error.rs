@@ -16,6 +16,7 @@ pub enum ErrorCode {
     SerdeExpectedSomeValue,
     LexingError(super::de::LexerError),
     Expected(&'static str),
+    XmlDoesntSupportSeqofSeq,
 }
 
 impl fmt::Debug for ErrorCode {
@@ -30,6 +31,8 @@ impl fmt::Debug for ErrorCode {
             SerdeExpectedSomeValue => "serde expected some value".fmt(f),
             LexingError(e) => write!(f, "error during lexing: \"{:?}\"", e),
             Expected(what) => write!(f, "expected {}", what),
+            XmlDoesntSupportSeqofSeq => "xml doesn't support sequences of sequences.\
+            Please use a newtype".fmt(f),
         }
     }
 }

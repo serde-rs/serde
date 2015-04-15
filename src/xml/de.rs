@@ -830,7 +830,9 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
         }
         let (is_seq, v) = InnerDeserializer::decode(&mut self.de);
         let v = try!(v);
-        assert!(!is_seq);
+        if is_seq {
+            return Err(self.de.rdr.error(XmlDoesntSupportSeqofSeq));
+        }
         is_val!(self.de, EndTagName, "end tag");
         self.de.stash();
         try!(self.de.bump());
