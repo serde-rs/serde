@@ -17,7 +17,7 @@ use serde::ser;
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 enum Animal {
     Dog,
-    Frog(String, Vec<isize>),
+    Frog(String),
     Cat { age: usize, name: String },
 }
 
@@ -81,6 +81,44 @@ fn test_parse_string() {
             "<bla>♫<![CDATA[<cookies/>]]>♫</bla>",
             "♫<cookies/>♫".to_string(),
         )
+    ]);
+}
+
+#[test]
+fn test_parse_enum() {
+    use self::Animal::*;
+    test_parse_ok(&[
+        ("<Animal xsi:type=\"Dog\"/>", Dog),
+        //("<Animal xsi:type=\"Frog\">Quak</Animal>", Frog("Quak".to_string())),
+        (
+            "<Animal xsi:type=\"Cat\"><age>42</age><name>Shere Khan</name></Animal>",
+            Cat {
+                age: 42,
+                name: "Shere Khan".to_string(),
+            },
+        ),
+    ]);
+
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
+    struct Helper {
+        x: Animal,
+    }
+
+    test_parse_ok(&[
+        (
+            "<Helper><x xsi:type=\"Dog\"/></Helper>",
+            Helper { x: Dog },
+        ),
+        (
+            "<Helper><x xsi:type=\"Cat\">
+                <age>42</age>
+                <name>Shere Khan</name>
+            </x></Helper>",
+            Helper { x: Cat {
+                age: 42,
+                name: "Shere Khan".to_string(),
+            } },
+        ),
     ]);
 }
 

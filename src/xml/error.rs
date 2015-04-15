@@ -14,6 +14,7 @@ pub enum ErrorCode {
     InvalidOptionalElement,
     NotUtf8,
     SerdeExpectedSomeValue,
+    ExpectedEOF,
     LexingError(super::de::LexerError),
     Expected(&'static str),
     XmlDoesntSupportSeqofSeq,
@@ -33,6 +34,7 @@ impl fmt::Debug for ErrorCode {
             Expected(what) => write!(f, "expected {}", what),
             XmlDoesntSupportSeqofSeq => "xml doesn't support sequences of sequences.\
             Please use a newtype".fmt(f),
+            ExpectedEOF => "trailing characters".fmt(f),
         }
     }
 }

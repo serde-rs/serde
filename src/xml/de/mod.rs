@@ -52,8 +52,6 @@ impl<'a, Iter: Iterator<Item=u8> + 'a> InnerDeserializer<'a, Iter> {
     }
 }
 
-// TODO: this type should expect self.0.buf.is_empty()
-// but that can only be done after a SeqVisitor rehaul to get rid of the alloc
 impl<'a, Iter> de::Deserializer for InnerDeserializer<'a, Iter>
 where Iter: Iterator<Item=u8>,
 {
@@ -116,6 +114,14 @@ where Iter: Iterator<Item=u8>,
         where V: de::Visitor,
     {
         unimplemented!()
+    }
+
+    #[inline]
+    fn visit_enum<V>(&mut self, _enum: &str, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::EnumVisitor,
+    {
+        println!("InnerDeserializer::visit_enum");
+        visitor.visit(VariantVisitor(&mut self.0))
     }
 }
 
@@ -194,7 +200,7 @@ impl<Iter> Deserializer<Iter>
     fn end(&mut self) -> Result<(), Error> {
         match try!(self.ch()) {
             EndOfFile => Ok(()),
-            _ => unimplemented!(),
+            _ => Err(self.rdr.error(ExpectedEOF)),
         }
     }
 }
@@ -232,10 +238,15 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 
     #[inline]
-    fn visit_enum<V>(&mut self, _enum: &str, _visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self, _enum: &str, mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
-        unimplemented!()
+        expect!(self.rdr, StartTagName(_), "start tag name");
+        try!(self.rdr.bump());
+        let v = visitor.visit(VariantVisitor(&mut self.rdr));
+        let v = try!(v);
+        expect!(self.rdr, EndOfFile, "end of file");
+        Ok(v)
     }
 
     #[inline]
@@ -261,6 +272,49 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
         }
         expect!(self.rdr, EndOfFile, "end of file");
         Ok(v)
+    }
+}
+
+struct VariantVisitor<'a, Iter: Iterator<Item=u8> + 'a>
+(
+    &'a mut lexer::XmlIterator<Iter>,
+);
+
+impl<'a, Iter: 'a> de::VariantVisitor for VariantVisitor<'a, Iter>
+    where Iter: Iterator<Item=u8>
+{
+    type Error = Error;
+
+    fn visit_variant<V>(&mut self) -> Result<V, Self::Error>
+        where V: de::Deserialize
+    {
+        if b"xsi:type" != is_val!(self.0, AttributeName, "attribute name") {
+            return Err(self.0.error(Expected("attribute xsi:type")));
+        }
+        let v = expect_val!(self.0, AttributeValue, "attribute value");
+        let v = try!(self.0.from_utf8(v));
+        KeyDeserializer::visit(v)
+    }
+
+    /// `visit_unit` is called when deserializing a variant with no values.
+    fn visit_unit(&mut self) -> Result<(), Self::Error> {
+        expect!(self.0, EmptyElementEnd(_), "empty element end");
+        Ok(())
+    }
+
+    /// `visit_seq` is called when deserializing a tuple-like variant.
+    fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor
+    {
+        unimplemented!()
+    }
+
+    /// `visit_map` is called when deserializing a struct-like variant.
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor
+    {
+        try!(self.0.bump());
+        visitor.visit_map(ContentVisitor::new_attr(&mut self.0))
     }
 }
 
