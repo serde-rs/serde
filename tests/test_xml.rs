@@ -218,29 +218,41 @@ fn test_hugo_duncan2() {
     </DescribeVpcsResponse>"#;
     #[derive(PartialEq, Debug, Serialize, Deserialize)]
     #[allow(non_snake_case)]
-    struct Item {
+    struct VpcSet {
         vpcId: String,
         state: String,
     }
-    #[derive(PartialEq, Debug, Serialize, Deserialize)]
-    struct Helper {
-        item: Vec<Item>,
+
+    #[derive(PartialEq, Debug, Serialize)]
+    struct ItemVec<T: de::Deserialize>(Vec<T>);
+
+    impl<T: de::Deserialize> de::Deserialize for ItemVec<T> {
+        fn deserialize<D>(deserializer: &mut D) -> Result<ItemVec<T>, D::Error>
+            where D: de::Deserializer,
+        {
+            #[derive(PartialEq, Debug, Serialize, Deserialize)]
+            struct Helper<U> {
+                item: Vec<U>,
+            }
+            let h: Helper<_> = try!(de::Deserialize::deserialize(deserializer));
+            Ok(ItemVec(h.item))
+        }
     }
     #[derive(PartialEq, Debug, Serialize, Deserialize)]
     #[allow(non_snake_case)]
     struct DescribeVpcsResponse {
         requestId: String,
-        vpcSet: Helper,
+        vpcSet: ItemVec<VpcSet>,
     }
     test_parse_ok(&[
         (
             s,
             DescribeVpcsResponse {
                 requestId: "8d521e9a-509e-4ef6-bbb7-9f1ac0d49cd1".to_string(),
-                vpcSet: Helper { item: vec![ Item {
+                vpcSet: ItemVec(vec![ VpcSet {
                     vpcId: "vpc-ba0d18d8".to_string(),
                     state: "available".to_string(),
-                }]},
+                }]),
             },
         ),
     ]);
