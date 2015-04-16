@@ -155,6 +155,7 @@ impl<Iter> XmlIterator<Iter>
     fn decode_attr_val(&mut self) -> Result<InternalLexical, LexerError> {
         let quot = self.rdr.find(|&ch| ch == b'\'' || ch == b'"');
         let quot = try!(quot.ok_or(LexerError::EOF));
+        debug_assert!(self.buf.is_empty());
         self.buf.extend(self.rdr.by_ref().take_while(|&ch| ch != quot));
         // hack to detect EOF in take_while
         try!(self.peek_char());
@@ -185,32 +186,58 @@ impl<Iter> XmlIterator<Iter>
                 },
             }
         }
-        for c in &mut self.rdr {
-            if c == b'=' {
-                assert!(!self.buf.is_empty());
-                self.state = LexerState::AttributeValue;
-                return Ok(AttributeName);
-            }
-            if b"\n\r\t ".contains(&c) {
-                break;
-            }
-            self.buf.push(c);
+        fn next<T: Iterator<Item=u8>>(sel: &mut XmlIterator<T>) -> Result<InternalLexical, LexerError> {
+            sel.buf.clear();
+            try!(sel.decode_attr_val());
+            sel.buf.clear();
+            // recursion!
+            sel.decode_attr_name()
         }
-        for c in &mut self.rdr {
-            if c == b'=' {
-                assert!(!self.buf.is_empty());
-                self.state = LexerState::AttributeValue;
-                return Ok(AttributeName);
-            }
-            if !b"\n\r\t ".contains(&c) {
-                return Err(ExpectedEq);
+        fn done<T: Iterator<Item=u8>>(sel: &mut XmlIterator<T>) -> Result<InternalLexical, LexerError> {
+            debug_assert!(!sel.buf.is_empty());
+            if sel.buf == b"xmlns" {
+                next(sel)
+            } else {
+                sel.state = LexerState::AttributeValue;
+                Ok(AttributeName)
             }
         }
-        Err(EOF)
+        loop {
+            match try!(self.next_char()) {
+                b'=' => return done(self),
+
+                // whitespace -> search for `=`
+                b'\n' | b'\r' | b'\t' | b' ' => break,
+
+                // other namespaces are forwarded
+                b':' if self.buf == b"xmlns" => {
+                    let eq = self.rdr.find(|&ch| ch == b'=');
+                    let _ = try!(eq.ok_or(LexerError::EOF));
+                    return next(self)
+                },
+
+                c => self.buf.push(c),
+            }
+        }
+        loop {
+            match try!(self.next_char()) {
+                b'=' => return done(self),
+
+                // whitespace -> search for `=`
+                b'\n' | b'\r' | b'\t' | b' ' => continue,
+
+                // this is not the character you are looking for
+                _ => return Err(ExpectedEq),
+            }
+        }
     }
     fn decode_tag(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
         for c in &mut self.rdr {
+            if c == b':' {
+                self.buf.clear();
+                continue;
+            }
             if c == b'>' {
                 self.state = LexerState::Start;
                 return Ok(EndTagName)
@@ -229,6 +256,11 @@ impl<Iter> XmlIterator<Iter>
                     self.state = LexerState::AttributeName;
                     return Ok(StartTagName);
                 },
+                b':' => {
+                    self.buf.clear();
+                    self.rdr.next();
+                    continue;
+                }
                 c => {
                     self.buf.push(c);
                     self.rdr.next();

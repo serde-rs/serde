@@ -50,6 +50,27 @@ where T: PartialEq + Debug + ser::Serialize + de::Deserialize,
 }
 
 #[test]
+fn test_namespaces() {
+    #[derive(PartialEq, Serialize, Deserialize, Debug)]
+    struct Envelope {
+        subject: String,
+    }
+    let s = r#"
+    <?xml version="1.0" encoding="UTF-8"?>
+    <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+        <gesmes:subject>Reference rates</gesmes:subject>
+    </gesmes:Envelope>"#;
+    test_parse_ok(&[
+        (
+            s,
+            Envelope {
+                subject: "Reference rates".to_string(),
+            },
+        ),
+    ]);
+}
+
+#[test]
 fn test_parse_string() {
 
     test_parse_ok(&[
