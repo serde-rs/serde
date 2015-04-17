@@ -44,6 +44,7 @@ enum InternalLexical {
 
 enum LexerState {
     Start,
+    FirstAttribute,
     AttributeName,
     AttributeValue,
     Tag,
