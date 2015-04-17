@@ -562,7 +562,10 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
         if is_seq {
             return Err(self.de.error(XmlDoesntSupportSeqofSeq));
         }
-        is_val!(self.de, EndTagName, "end tag");
+        match try!(self.de.ch()) {
+            EndTagName(_) | EmptyElementEnd(_) => {},
+            _ => return Err(self.de.expected("end tag")),
+        }
         self.de.stash();
         try!(self.de.bump());
         // cannot match on bump here due to rust-bug in functions

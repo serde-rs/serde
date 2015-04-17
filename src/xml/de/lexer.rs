@@ -143,12 +143,18 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn decode(&mut self) -> Result<InternalLexical, LexerError> {
+        use self::LexerState::*;
+        if let FirstAttribute = self.state {
+            // for empty elements since they don't have a closing tag
+            // but we need the tag name to determine sequences
+            self.stash();
+        }
         self.buf.clear();
         match self.state {
-            LexerState::Start => self.decode_normal(),
-            LexerState::Tag => self.decode_tag(),
-            LexerState::AttributeName => self.decode_attr_name(),
-            LexerState::AttributeValue => self.decode_attr_val(),
+            Start => self.decode_normal(),
+            Tag => self.decode_tag(),
+            AttributeName | FirstAttribute => self.decode_attr_name(),
+            AttributeValue => self.decode_attr_val(),
         }
     }
 
@@ -171,6 +177,8 @@ impl<Iter> XmlIterator<Iter>
                 b'/' => match try!(self.next_char()) {
                     b'>' => {
                         self.state = LexerState::Start;
+                        self.stash();
+                        debug_assert!(!self.buf.is_empty());
                         Ok(EmptyElementEnd)
                     },
                     _ => Err(ExpectedLT),
@@ -253,7 +261,7 @@ impl<Iter> XmlIterator<Iter>
             match try!(self.peek_char()) {
                 b'\n' | b'\r' | b'\t' | b' ' | b'/' | b'>' => {
                     debug_assert!(!self.buf.is_empty());
-                    self.state = LexerState::AttributeName;
+                    self.state = LexerState::FirstAttribute;
                     return Ok(StartTagName);
                 },
                 b':' => {

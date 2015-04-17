@@ -256,19 +256,17 @@ fn test_nicolai86() {
         Sender: TheSender,
         Cube: OuterCube,
     }
-    let s = r#"
-    <?xml version="1.0" encoding="UTF-8"?>
-    <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
-        <gesmes:subject>Reference rates</gesmes:subject>
-        <gesmes:Sender>
-            <gesmes:name>European Central Bank</gesmes:name>
-        </gesmes:Sender>
-        <Cube> </Cube>
-    </gesmes:Envelope>"#;
-
     test_parse_ok(&[
         (
-            s,
+            r#"
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+                <gesmes:subject>Reference rates</gesmes:subject>
+                <gesmes:Sender>
+                    <gesmes:name>European Central Bank</gesmes:name>
+                </gesmes:Sender>
+                <Cube> </Cube>
+            </gesmes:Envelope>"#,
             Envelope {
                 subject: "Reference rates".to_string(),
                 Sender: TheSender {
@@ -276,6 +274,40 @@ fn test_nicolai86() {
                 },
                 Cube: OuterCube {
                     Cube: vec![],
+                }
+            },
+        ),
+        (
+            r#"
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+                <gesmes:subject>Reference rates</gesmes:subject>
+                <gesmes:Sender>
+                    <gesmes:name>European Central Bank</gesmes:name>
+                </gesmes:Sender>
+                <Cube><Cube>
+                    <Cube currency='GBP' rate='0.81725'/>
+                    <Cube currency='Latinum' rate='999999'/>
+                </Cube></Cube>
+            </gesmes:Envelope>"#,
+            Envelope {
+                subject: "Reference rates".to_string(),
+                Sender: TheSender {
+                    name: "European Central Bank".to_string(),
+                },
+                Cube: OuterCube {
+                    Cube: vec![InnerCube {
+                        Cube: vec![
+                            CurrencyCube {
+                                currency: "GBP".to_string(),
+                                rate: "0.81725".to_string(),
+                            },
+                            CurrencyCube {
+                                currency: "Latinum".to_string(),
+                                rate: "999999".to_string(),
+                            },
+                        ],
+                    }],
                 }
             },
         ),
@@ -485,7 +517,7 @@ fn test_parse_attributes() {
         }}
     ),
     (
-        r#"<C>  <c1 b1="What is the answer to the ultimate question?" b2="42">  
+        r#"<C>  <c1 b1="What is the answer to the ultimate question?" b2="42">
         </c1> </C>"#,
         C { c1: B {
             b1: "What is the answer to the ultimate question?".to_string(),
