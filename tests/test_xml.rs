@@ -225,6 +225,64 @@ fn test_parse_struct() {
 }
 
 #[test]
+fn test_nicolai86() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct TheSender {
+        name: String,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct CurrencyCube {
+        currency: String,
+        rate: String,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[allow(non_snake_case)]
+    struct InnerCube {
+        Cube: Vec<CurrencyCube>,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[allow(non_snake_case)]
+    struct OuterCube {
+        Cube: Vec<InnerCube>,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[allow(non_snake_case)]
+    struct Envelope {
+        subject: String,
+        Sender: TheSender,
+        Cube: OuterCube,
+    }
+    let s = r#"
+    <?xml version="1.0" encoding="UTF-8"?>
+    <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+        <gesmes:subject>Reference rates</gesmes:subject>
+        <gesmes:Sender>
+            <gesmes:name>European Central Bank</gesmes:name>
+        </gesmes:Sender>
+        <Cube> </Cube>
+    </gesmes:Envelope>"#;
+
+    test_parse_ok(&[
+        (
+            s,
+            Envelope {
+                subject: "Reference rates".to_string(),
+                Sender: TheSender {
+                    name: "European Central Bank".to_string(),
+                },
+                Cube: OuterCube {
+                    Cube: vec![],
+                }
+            },
+        ),
+    ]);
+}
+
+#[test]
 fn test_hugo_duncan2() {
     let s = r#"
     <?xml version="1.0" encoding="UTF-8"?>
@@ -414,6 +472,21 @@ fn test_parse_attributes() {
     test_parse_ok(&[
     (
         r#"<C><c1 b1="What is the answer to the ultimate question?" b2="42"/></C>"#,
+        C { c1: B {
+            b1: "What is the answer to the ultimate question?".to_string(),
+            b2: 42,
+        }}
+    ),
+    (
+        r#"<C><c1 b1="What is the answer to the ultimate question?" b2="42"/> </C>"#,
+        C { c1: B {
+            b1: "What is the answer to the ultimate question?".to_string(),
+            b2: 42,
+        }}
+    ),
+    (
+        r#"<C>  <c1 b1="What is the answer to the ultimate question?" b2="42">  
+        </c1> </C>"#,
         C { c1: B {
             b1: "What is the answer to the ultimate question?".to_string(),
             b2: 42,

@@ -156,7 +156,7 @@ impl<'a> de::Deserializer for KeyDeserializer<'a> {
         println!("{:?}", self.0);
         match visitor.visit_str(self.0) {
             Ok(x) => Ok(x),
-            Err(x) => {println!("err"); Err(x)},
+            Err(x) => { println!("err"); Err(x) },
         }
     }
 
@@ -426,7 +426,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
             (&Inner, Text(_)) => 1,
             (&Inner, _) => 4,
             (&Value, EndTagName(_)) => return Ok(None),
-            (&Value, Text(txt)) if txt.len() == 0 => 3,
+            (&Value, Text(txt)) if (|| txt.iter().all(|&c| b" \t\n\r".contains(&c)))() => 3,
             (&Value, Text(_)) => return Ok(Some(try!(KeyDeserializer::value_map()))),
             (&Element, EmptyElementEnd(_)) => 2,
             // need closure to work around https://github.com/rust-lang/rfcs/issues/1006
@@ -441,7 +441,7 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 self.visit_key()
             },
             1 => {
-                // hack for Element, Text
+                // hack for Inner, Text
                 self.state = Value;
                 self.visit_key()
             },
@@ -452,12 +452,13 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
                 try!(self.de.bump());
                 self.visit_key()
             },
-            3 => {
-                // hack for Value, Text([])
-                // happens when coming out of an empty element which is an inner value
-                // and then directly running into the `</`
-                try!(self.de.bump());
-                self.visit_key()
+            3 => match KeyDeserializer::value_map() {
+                Err(Error::UnknownField(_)) => {
+                    try!(self.de.bump());
+                    Ok(None)
+                },
+                Err(e) => Err(e),
+                Ok(x) => Ok(Some(x)),
             },
             4 => {
                 self.state = Element;
