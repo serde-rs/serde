@@ -235,10 +235,26 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 
     #[inline]
-    fn visit_option<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        unimplemented!()
+        println!("Deserializer::visit");
+        expect!(self.rdr, StartTagName(_), "start tag name");
+        let is_seq = &mut false;
+        let v = match try!(self.rdr.bump()) {
+            StartTagClose => visitor.visit_some(&mut InnerDeserializer(&mut self.rdr, is_seq)),
+            EmptyElementEnd(_) => visitor.visit_none(),
+            _ => Err(self.rdr.expected("start tag close")),
+        };
+        let v = try!(v);
+        assert!(!*is_seq);
+        match try!(self.rdr.ch()) {
+            EndTagName(_) => {},
+            EmptyElementEnd(_) => {},
+            _ => return Err(self.rdr.expected("end tag")),
+        }
+        expect!(self.rdr, EndOfFile, "end of file");
+        Ok(v)
     }
 
     #[inline]

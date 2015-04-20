@@ -225,6 +225,16 @@ fn test_parse_struct() {
 }
 
 #[test]
+fn test_option() {
+    test_parse_ok(&[
+        ("<a/>", None),
+        ("<a></a>", Some("".to_string())),
+        ("<a> </a>", Some(" ".to_string())),
+        ("<a>42</a>", Some("42".to_string())),
+    ]);
+}
+
+#[test]
 fn test_amoskvin() {
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
     struct Root {
