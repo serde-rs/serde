@@ -3,3 +3,4 @@ pub use self::error::{Error, ErrorCode};
 
 pub mod de;
 pub mod error;
+pub mod value;
