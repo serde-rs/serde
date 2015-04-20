@@ -225,6 +225,47 @@ fn test_parse_struct() {
 }
 
 #[test]
+fn test_amoskvin() {
+    #[derive(Debug, Deserialize, PartialEq, Serialize)]
+    struct Root {
+        foo: Vec<Foo>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq, Serialize)]
+    struct Foo {
+        a: String,
+        b: Option<String>,
+    }
+    test_parse_ok(&[
+        (
+            "
+<root>
+<foo>
+ <a>Hello</a>
+ <b>World</b>
+</foo>
+<foo>
+ <a>Hi</a>
+ <b/>
+</foo>
+</root>",
+        Root {
+            foo: vec![
+            Foo {
+                a: "Hello".to_string(),
+                b: Some("World".to_string()),
+            },
+            Foo {
+                a: "Hi".to_string(),
+                b: None,
+            }
+            ]
+        }
+        ),
+    ]);
+}
+
+#[test]
 fn test_nicolai86() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct TheSender {
