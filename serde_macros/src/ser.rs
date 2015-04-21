@@ -13,7 +13,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use field::struct_field_strs;
+use field::{Direction, struct_field_strs};
 
 pub fn expand_derive_serialize(
     cx: &mut ExtCtxt,
@@ -517,7 +517,7 @@ fn serialize_struct_visitor<I>(
 {
     let len = struct_def.fields.len();
 
-    let key_exprs = struct_field_strs(cx, builder, struct_def);
+    let key_exprs = struct_field_strs(cx, builder, struct_def, Direction::Serialize);
 
     let arms: Vec<ast::Arm> = key_exprs.iter()
         .zip(value_exprs)
