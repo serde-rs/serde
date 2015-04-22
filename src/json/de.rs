@@ -4,12 +4,11 @@ use std::str;
 
 use de;
 use super::error::{Error, ErrorCode};
+use iterator::LineColIterator;
 
-pub struct Deserializer<Iter> {
-    rdr: Iter,
+pub struct Deserializer<Iter: Iterator<Item=io::Result<u8>>> {
+    rdr: LineColIterator<Iter>,
     ch: Option<u8>,
-    line: usize,
-    col: usize,
     str_buf: Vec<u8>,
 }
 
@@ -20,10 +19,8 @@ impl<Iter> Deserializer<Iter>
     #[inline]
     pub fn new(rdr: Iter) -> Result<Deserializer<Iter>, Error> {
         let mut deserializer = Deserializer {
-            rdr: rdr,
+            rdr: LineColIterator::new(rdr),
             ch: None,
-            line: 1,
-            col: 0,
             str_buf: Vec::with_capacity(128),
         };
 
@@ -53,13 +50,6 @@ impl<Iter> Deserializer<Iter>
             None => None,
         };
 
-        if self.ch_is(b'\n') {
-            self.line += 1;
-            self.col = 1;
-        } else {
-            self.col += 1;
-        }
-
         Ok(())
     }
 
@@ -73,7 +63,7 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn error(&mut self, reason: ErrorCode) -> Error {
-        Error::SyntaxError(reason, self.line, self.col)
+        Error::SyntaxError(reason, self.rdr.line(), self.rdr.col())
     }
 
     fn parse_whitespace(&mut self) -> Result<(), Error> {
@@ -476,12 +466,12 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 }
 
-struct SeqVisitor<'a, Iter: 'a> {
+struct SeqVisitor<'a, Iter: 'a + Iterator<Item=io::Result<u8>>> {
     de: &'a mut Deserializer<Iter>,
     first: bool,
 }
 
-impl<'a, Iter> SeqVisitor<'a, Iter> {
+impl<'a, Iter: Iterator<Item=io::Result<u8>>> SeqVisitor<'a, Iter> {
     fn new(de: &'a mut Deserializer<Iter>) -> Self {
         SeqVisitor {
             de: de,
@@ -533,12 +523,12 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
     }
 }
 
-struct MapVisitor<'a, Iter: 'a> {
+struct MapVisitor<'a, Iter: 'a + Iterator<Item=io::Result<u8>>> {
     de: &'a mut Deserializer<Iter>,
     first: bool,
 }
 
-impl<'a, Iter> MapVisitor<'a, Iter> {
+impl<'a, Iter: Iterator<Item=io::Result<u8>>> MapVisitor<'a, Iter> {
     fn new(de: &'a mut Deserializer<Iter>) -> Self {
         MapVisitor {
             de: de,
