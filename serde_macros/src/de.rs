@@ -596,7 +596,7 @@ fn deserialize_struct_visitor(
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        field::struct_field_strs(cx, builder, struct_def),
+        field::struct_field_strs(cx, builder, struct_def, field::Direction::Deserialize),
     );
 
     let visit_map_expr = deserialize_map(

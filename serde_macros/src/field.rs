@@ -5,7 +5,19 @@ use syntax::ptr::P;
 
 use aster;
 
-fn field_rename(field: &ast::StructField) -> Option<&ast::Lit> {
+pub enum Direction {
+    Serialize,
+    Deserialize,
+}
+
+fn field_rename<'a>(
+    field: &'a ast::StructField,
+    direction: &Direction,
+) -> Option<&'a ast::Lit> {
+    let dir_attr = match *direction {
+        Direction::Serialize => "rename_serialize",
+        Direction::Deserialize => "rename_deserialize",
+    };
     field.node.attrs.iter()
         .find(|sa| {
             if let ast::MetaList(ref n, _) = sa.node.value.node {
@@ -19,7 +31,7 @@ fn field_rename(field: &ast::StructField) -> Option<&ast::Lit> {
                 attr::mark_used(&sa);
                 vals.iter().fold(None, |v, mi| {
                     if let ast::MetaNameValue(ref n, ref lit) = mi.node {
-                        if n == &"rename" {
+                        if n == &"rename" || n == &dir_attr {
                             Some(lit)
                         } else {
                             v
@@ -38,10 +50,11 @@ pub fn struct_field_strs(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_def: &ast::StructDef,
+    direction: Direction,
 ) -> Vec<P<ast::Expr>> {
     struct_def.fields.iter()
         .map(|field| {
-            match field_rename(field) {
+            match field_rename(field, &direction) {
                 Some(rename) => builder.expr().build_lit(P(rename.clone())),
                 None => {
                     match field.node.kind {

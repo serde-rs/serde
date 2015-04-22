@@ -20,6 +20,13 @@ struct Rename {
     a2: i32,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct DirectionRename {
+    a1: i32,
+    #[serde(rename_serialize="a3", rename_deserialize="a4")]
+    a2: i32,
+}
+
 #[test]
 fn test_default() {
     let deserialized_value: Default = json::from_str(&"{\"a1\":1,\"a2\":2}").unwrap();
@@ -36,5 +43,15 @@ fn test_rename() {
     assert_eq!(serialized_value, "{\"a1\":1,\"a3\":2}");
 
     let deserialized_value: Rename = json::from_str(&serialized_value).unwrap();
+    assert_eq!(value, deserialized_value);
+}
+
+#[test]
+fn test_direction_rename() {
+    let value = DirectionRename { a1: 1, a2: 2 };
+    let serialized_value = json::to_string(&value).unwrap();
+    assert_eq!(serialized_value, "{\"a1\":1,\"a3\":2}");
+
+    let deserialized_value = json::from_str("{\"a1\":1,\"a4\":2}").unwrap();
     assert_eq!(value, deserialized_value);
 }
