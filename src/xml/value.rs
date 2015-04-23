@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 use de;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Element {
-    attributes: BTreeMap<String, String>,
-    members: Content,
+    pub attributes: BTreeMap<String, String>,
+    pub members: Content,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Content {
-    Members(BTreeMap<String, Element>),
+    Members(BTreeMap<String, Vec<Element>>),
     Text(String),
     Nothing,
 }
@@ -61,7 +61,9 @@ impl de::Visitor for ElementVisitor {
                 },
                 Content::Text(_)=> unreachable!(),
                 Content::Members(mut map) => {
-                    map.insert(key, try!(visitor.visit_value()));
+                    map.entry(key)
+                       .or_insert(vec![])
+                       .push(try!(visitor.visit_value()));
                     content = Content::Members(map); // move back
                 },
                 Content::Nothing => {
@@ -69,7 +71,7 @@ impl de::Visitor for ElementVisitor {
                     match try!(visitor.visit_value()) {
                         Helper::Member(el) => {
                             let mut m = BTreeMap::new();
-                            m.insert(key, el);
+                            m.insert(key, vec![el]);
                             content = Content::Members(m);
                         },
                         Helper::Text(s) => {
@@ -86,4 +88,12 @@ impl de::Visitor for ElementVisitor {
             members: content,
         })
     }
+}
+
+/// Shortcut function to decode a Xml `Element` into a `T`
+pub fn from_value<T>(value: Element) -> Result<T, super::error::Error>
+    where T: de::Deserialize
+{
+    let mut de = super::de::value::Deserializer::new(value);
+    de::Deserialize::deserialize(&mut de)
 }

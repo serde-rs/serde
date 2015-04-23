@@ -7,9 +7,8 @@ extern crate serde;
 
 use std::fmt::Debug;
 
-use serde::xml::{
-    from_str,
-};
+use serde::xml::from_str;
+use serde::xml::value::{Element, from_value};
 
 use serde::de;
 use serde::ser;
@@ -45,6 +44,13 @@ where T: PartialEq + Debug + ser::Serialize + de::Deserialize,
 {
     for &(s, ref value) in errors {
         let v: T = from_str(s).unwrap();
+        assert_eq!(v, *value);
+
+        // Make sure we can deserialize into an `Element`.
+        let xml_value: Element = from_str(s).unwrap();
+
+        // Make sure we can deserialize from an `Element`.
+        let v: T = from_value(xml_value.clone()).unwrap();
         assert_eq!(v, *value);
     }
 }

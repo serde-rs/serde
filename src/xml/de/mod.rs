@@ -4,6 +4,7 @@ use xml::error::ErrorCode::*;
 use de;
 
 mod lexer;
+pub mod value;
 use self::lexer::Lexical::*;
 pub use self::lexer::LexerError;
 
