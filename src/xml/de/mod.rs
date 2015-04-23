@@ -3,6 +3,7 @@ use xml::error::*;
 use xml::error::ErrorCode::*;
 use de;
 
+use std::io;
 mod lexer;
 pub mod value;
 use self::lexer::Lexical::*;
@@ -33,15 +34,15 @@ macro_rules! is_val {
     }}
 }
 
-pub struct Deserializer<Iter: Iterator<Item=u8>> {
+pub struct Deserializer<Iter: Iterator<Item=io::Result<u8>>> {
     rdr: lexer::XmlIterator<Iter>,
 }
 
-pub struct InnerDeserializer<'a, Iter: Iterator<Item=u8> + 'a> (
+pub struct InnerDeserializer<'a, Iter: Iterator<Item=io::Result<u8>> + 'a> (
     &'a mut lexer::XmlIterator<Iter>, &'a mut bool
 );
 
-impl<'a, Iter: Iterator<Item=u8> + 'a> InnerDeserializer<'a, Iter> {
+impl<'a, Iter: Iterator<Item=io::Result<u8>> + 'a> InnerDeserializer<'a, Iter> {
     fn decode<T>(
         xi: &mut lexer::XmlIterator<Iter>
     ) -> (bool, Result<T, Error>)
@@ -54,7 +55,7 @@ impl<'a, Iter: Iterator<Item=u8> + 'a> InnerDeserializer<'a, Iter> {
 }
 
 impl<'a, Iter> de::Deserializer for InnerDeserializer<'a, Iter>
-where Iter: Iterator<Item=u8>,
+where Iter: Iterator<Item=io::Result<u8>>,
 {
     type Error = Error;
 
@@ -188,7 +189,7 @@ impl<'a> de::Deserializer for KeyDeserializer<'a> {
 }
 
 impl<Iter> Deserializer<Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     /// Creates the Xml parser.
     #[inline]
@@ -212,7 +213,7 @@ impl<Iter> Deserializer<Iter>
 
 
 impl<Iter> de::Deserializer for Deserializer<Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     type Error = Error;
 
@@ -296,13 +297,13 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 }
 
-struct VariantVisitor<'a, Iter: Iterator<Item=u8> + 'a>
+struct VariantVisitor<'a, Iter: Iterator<Item=io::Result<u8>> + 'a>
 (
     &'a mut lexer::XmlIterator<Iter>,
 );
 
 impl<'a, Iter: 'a> de::VariantVisitor for VariantVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>
+    where Iter: Iterator<Item=io::Result<u8>>
 {
     type Error = Error;
 
@@ -404,7 +405,7 @@ impl de::MapVisitor for EmptyMapVisitor {
 }
 
 struct ContentVisitor<'a, Iter: 'a>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     de: &'a mut lexer::XmlIterator<Iter>,
     state: ContentVisitorState,
@@ -419,7 +420,7 @@ enum ContentVisitorState {
 }
 
 impl <'a, Iter> ContentVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     fn new_attr(de: &'a mut lexer::XmlIterator<Iter>) -> Self {
         ContentVisitor {
@@ -430,7 +431,7 @@ impl <'a, Iter> ContentVisitor<'a, Iter>
 }
 
 impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>
+    where Iter: Iterator<Item=io::Result<u8>>
 {
     type Error = Error;
 
@@ -550,13 +551,13 @@ impl<'a, Iter> de::MapVisitor for ContentVisitor<'a, Iter>
     }
 }
 
-struct SeqVisitor<'a, Iter: 'a + Iterator<Item=u8>> {
+struct SeqVisitor<'a, Iter: 'a + Iterator<Item=io::Result<u8>>> {
     de: &'a mut lexer::XmlIterator<Iter>,
     done: bool,
 }
 
 impl<'a, Iter> SeqVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     fn new(de: &'a mut lexer::XmlIterator<Iter>) -> Self {
         SeqVisitor {
@@ -567,7 +568,7 @@ impl<'a, Iter> SeqVisitor<'a, Iter>
 }
 
 impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
     type Error = Error;
 
@@ -616,7 +617,7 @@ impl<'a, Iter> de::SeqVisitor for SeqVisitor<'a, Iter>
 
 /// Decodes an xml value from an `Iterator<u8>`.
 pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
-    where I: Iterator<Item=u8>,
+    where I: Iterator<Item=io::Result<u8>>,
           T: de::Deserialize
 {
     let mut de = Deserializer::new(iter);
@@ -631,5 +632,5 @@ pub fn from_iter<I, T>(iter: I) -> Result<T, Error>
 pub fn from_str<'a, T>(s: &'a str) -> Result<T, Error>
     where T: de::Deserialize
 {
-    from_iter(s.bytes())
+    from_iter(s.bytes().map(|c| Ok(c)))
 }

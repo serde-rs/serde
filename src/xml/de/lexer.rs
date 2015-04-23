@@ -1,10 +1,10 @@
 #![deny(unused_must_use)]
 use xml::error::*;
+use iterator;
 use self::LexerError::*;
 
-use std::iter::Peekable;
-
 use std::{str, char};
+use std::{io, convert};
 
 #[derive(Debug, Copy, PartialEq, Clone)]
 pub enum Lexical<'a> {
@@ -50,40 +50,8 @@ enum LexerState {
     Tag,
 }
 
-struct LineColIterator<Iter: Iterator<Item=u8>> {
-    rdr: Peekable<Iter>,
-    line: usize,
-    col: usize,
-}
-
-impl<Iter: Iterator<Item=u8>> LineColIterator<Iter> {
-    fn peek(&mut self) -> Option<u8> {
-        self.rdr.peek().map(|&c| c)
-    }
-}
-
-impl<Iter: Iterator<Item=u8>> Iterator for LineColIterator<Iter> {
-    type Item = u8;
-    fn next(&mut self) -> Option<u8> {
-        match self.rdr.next() {
-            None => None,
-            Some(b'\n') => {
-                self.line += 1;
-                self.col = 1;
-                print!(" -> \\n");
-                Some(b'\n')
-            },
-            Some(c) => {
-                print!(" -> {:?}", c as char);
-                self.col += 1;
-                Some(c)
-            },
-        }
-    }
-}
-
-pub struct XmlIterator<Iter: Iterator<Item=u8>> {
-    rdr: LineColIterator<Iter>,
+pub struct XmlIterator<Iter: Iterator<Item=io::Result<u8>>> {
+    rdr: iterator::LineColIterator<Iter>,
     buf: Vec<u8>,
     stash: Vec<u8>,
     state: LexerState,
@@ -91,7 +59,7 @@ pub struct XmlIterator<Iter: Iterator<Item=u8>> {
 }
 
 impl<Iter> XmlIterator<Iter>
-    where Iter: Iterator<Item=u8>,
+    where Iter: Iterator<Item=io::Result<u8>>,
 {
 
     pub fn expected(&self, reason: &'static str) -> Error {
@@ -99,7 +67,7 @@ impl<Iter> XmlIterator<Iter>
     }
 
     pub fn error(&self, reason: ErrorCode) -> Error {
-        Error::SyntaxError(reason, self.rdr.line, self.rdr.col)
+        Error::SyntaxError(reason, self.rdr.line(), self.rdr.col())
     }
 
     fn lexer_error(&self, reason: LexerError) -> Error {
@@ -114,11 +82,7 @@ impl<Iter> XmlIterator<Iter>
     #[inline]
     pub fn new(rdr: Iter) -> XmlIterator<Iter> {
         XmlIterator {
-            rdr: LineColIterator {
-                rdr: rdr.peekable(),
-                line: 1,
-                col: 1,
-            },
+            rdr: iterator::LineColIterator::new(rdr),
             buf: Vec::with_capacity(128),
             stash: Vec::new(),
             state: LexerState::Start,
@@ -136,11 +100,24 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn peek_char(&mut self) -> Result<u8, LexerError> {
-        self.rdr.peek().ok_or(LexerError::EOF)
+        match try!(self.rdr.peek().ok_or(LexerError::EOF)) {
+            &Ok(c) => Ok(c),
+            &Err(_) => Err(LexerError::Io),
+        }
     }
 
     fn next_char(&mut self) -> Result<u8, LexerError> {
-        self.rdr.next().ok_or(LexerError::EOF)
+        Ok(try!(try!(self.rdr.next().ok_or(LexerError::EOF))))
+    }
+
+    fn find(&mut self, chars: &[u8]) -> Result<u8, LexerError> {
+        for c in self.rdr.by_ref() {
+            let c = try!(c);
+            if chars.contains(&c) {
+                return Ok(c);
+            }
+        }
+        Err(LexerError::EOF)
     }
 
     fn decode(&mut self) -> Result<InternalLexical, LexerError> {
@@ -160,12 +137,14 @@ impl<Iter> XmlIterator<Iter>
     }
 
     fn decode_attr_val(&mut self) -> Result<InternalLexical, LexerError> {
-        let quot = self.rdr.find(|&ch| ch == b'\'' || ch == b'"');
-        let quot = try!(quot.ok_or(LexerError::EOF));
+        let quot = try!(self.find(b"'\""));
         debug_assert!(self.buf.is_empty());
-        self.buf.extend(self.rdr.by_ref().take_while(|&ch| ch != quot));
-        // hack to detect EOF in take_while
-        try!(self.peek_char());
+        loop {
+            match try!(self.next_char()) {
+                c if c == quot => break,
+                c => self.buf.push(c),
+            }
+        }
         self.state = LexerState::AttributeName;
         Ok(InternalLexical::AttributeValue)
     }
@@ -195,14 +174,14 @@ impl<Iter> XmlIterator<Iter>
                 },
             }
         }
-        fn next<T: Iterator<Item=u8>>(sel: &mut XmlIterator<T>) -> Result<InternalLexical, LexerError> {
+        fn next<T: Iterator<Item=io::Result<u8>>>(sel: &mut XmlIterator<T>) -> Result<InternalLexical, LexerError> {
             sel.buf.clear();
             try!(sel.decode_attr_val());
             sel.buf.clear();
             // recursion!
             sel.decode_attr_name()
         }
-        fn done<T: Iterator<Item=u8>>(sel: &mut XmlIterator<T>) -> Result<InternalLexical, LexerError> {
+        fn done<T: Iterator<Item=io::Result<u8>>>(sel: &mut XmlIterator<T>) -> Result<InternalLexical, LexerError> {
             debug_assert!(!sel.buf.is_empty());
             if sel.buf == b"xmlns" {
                 next(sel)
@@ -220,8 +199,7 @@ impl<Iter> XmlIterator<Iter>
 
                 // other namespaces are forwarded
                 b':' if self.buf == b"xmlns" => {
-                    let eq = self.rdr.find(|&ch| ch == b'=');
-                    let _ = try!(eq.ok_or(LexerError::EOF));
+                    try!(self.find(b"="));
                     return next(self)
                 },
 
@@ -242,18 +220,19 @@ impl<Iter> XmlIterator<Iter>
     }
     fn decode_tag(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
-        for c in &mut self.rdr {
-            if c == b':' {
-                self.buf.clear();
-                continue;
+        loop {
+            match try!(self.next_char()) {
+                b':' => {
+                    self.buf.clear();
+                    continue;
+                },
+                b'>' => {
+                    self.state = LexerState::Start;
+                    return Ok(EndTagName)
+                }
+                c => self.buf.push(c),
             }
-            if c == b'>' {
-                self.state = LexerState::Start;
-                return Ok(EndTagName)
-            }
-            self.buf.push(c);
         }
-        Err(LexerError::EOF)
     }
 
     fn decode_tag_name(&mut self) -> Result<InternalLexical, LexerError> {
@@ -306,7 +285,12 @@ impl<Iter> XmlIterator<Iter>
             return Err(BadCDATA);
         }
         loop {
-            self.buf.extend(self.rdr.by_ref().take_while(|&c| c != b']'));
+            loop {
+                match try!(self.next_char()) {
+                    b']' => break,
+                    c => self.buf.push(c),
+                }
+            }
             match try!(self.next_char()) {
                 b']' => {},
                 c => {
@@ -457,7 +441,7 @@ impl<Iter> XmlIterator<Iter>
     fn decode_normal(&mut self) -> Result<InternalLexical, LexerError> {
         use self::InternalLexical::*;
         match self.rdr.next() {
-            Some(b'<') => match try!(self.next_char()) {
+            Some(Ok(b'<')) => match try!(self.next_char()) {
                 b'/' => {
                     self.state = LexerState::Tag;
                     Ok(Text)
@@ -480,15 +464,16 @@ impl<Iter> XmlIterator<Iter>
                     }
                 }
             },
-            Some(b'&') => {
+            Some(Ok(b'&')) => {
                 try!(self.decode_escaped());
                 self.decode_normal()
             },
-            Some(c) => {
+            Some(Ok(c)) => {
                 self.buf.push(c);
                 self.decode_normal()
             },
             None => Ok(EndOfFile),
+            Some(Err(_)) => Err(LexerError::Io),
         }
     }
 
@@ -543,6 +528,12 @@ fn ch_to_num(ch: u8) -> Result<u32, LexerError> {
     }
 }
 
+impl convert::From<io::Error> for LexerError {
+    fn from(_: io::Error) -> LexerError {
+        LexerError::Io
+    }
+}
+
 #[derive(Debug, Copy, PartialEq, Clone)]
 pub enum LexerError {
     EOF,
@@ -561,4 +552,5 @@ pub enum LexerError {
     NotANumber(u8),
     NotAHex(u8),
     EscapedNotUtf8,
+    Io,
 }

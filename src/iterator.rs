@@ -15,12 +15,8 @@ impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
             rdr: iter.peekable(),
         }
     }
-    fn peek(&mut self) -> Option<u8> {
-        match self.rdr.peek() {
-            None => None,
-            Some(&Ok(c)) => Some(c),
-            Some(&Err(_)) => None,
-        }
+    pub fn peek(&mut self) -> Option<&io::Result<u8>> {
+        self.rdr.peek()
     }
     pub fn line(&self) -> usize { self.line }
     pub fn col(&self) -> usize { self.col }
