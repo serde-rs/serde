@@ -10,7 +10,7 @@ pub enum Direction {
     Deserialize,
 }
 
-fn field_rename<'a>(
+pub fn field_rename<'a>(
     field: &'a ast::StructField,
     direction: &Direction,
 ) -> Option<&'a ast::Lit> {
