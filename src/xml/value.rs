@@ -1,10 +1,26 @@
 use std::collections::BTreeMap;
 use de;
+use de::Error;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Element {
-    pub attributes: BTreeMap<String, String>,
+    pub attributes: BTreeMap<String, Vec<String>>,
     pub members: Content,
+}
+
+impl Element {
+    pub fn new_text(s: String) -> Element {
+        Element {
+            attributes: BTreeMap::new(),
+            members: Content::Text(s),
+        }
+    }
+    pub fn new_empty() -> Element {
+        Element {
+            attributes: BTreeMap::new(),
+            members: Content::Nothing,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -47,6 +63,18 @@ struct ElementVisitor;
 impl de::Visitor for ElementVisitor {
     type Value = Element;
 
+    fn visit_str<E>(&mut self, s: &str) -> Result<Element, E>
+        where E: Error,
+    {
+        Ok(Element::new_text(s.to_string()))
+    }
+
+    fn visit_string<E>(&mut self, s: String) -> Result<Element, E>
+        where E: Error,
+    {
+        Ok(Element::new_text(s))
+    }
+
     #[inline]
     fn visit_map<V>(&mut self, mut visitor: V) -> Result<Element, V::Error>
         where V: de::MapVisitor,
@@ -75,7 +103,7 @@ impl de::Visitor for ElementVisitor {
                             content = Content::Members(m);
                         },
                         Helper::Text(s) => {
-                            attributes.insert(key, s);
+                            attributes.entry(key).or_insert(vec![]).push(s);
                             content = Content::Nothing; // move back
                         }
                     }
