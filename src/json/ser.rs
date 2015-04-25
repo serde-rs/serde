@@ -1,5 +1,5 @@
 use std::io;
-use std::num::{Float, FpCategory};
+use std::num::FpCategory;
 use std::string::FromUtf8Error;
 
 use ser;
