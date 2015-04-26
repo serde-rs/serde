@@ -24,7 +24,7 @@ impl<W> Serializer<W>
     }
 }
 
-impl<W> Serializer<W, PrettyFormatter<'static>>
+impl<'a, W> Serializer<W, PrettyFormatter<'a>>
     where W: io::Write,
 {
     /// Creates a new JSON pretty print serializer.
@@ -309,13 +309,11 @@ pub struct PrettyFormatter<'a> {
     indent: &'a [u8],
 }
 
-impl PrettyFormatter<'static> {
+impl<'a> PrettyFormatter<'a> {
     fn new() -> Self {
         PrettyFormatter::with_indent(b"  ")
     }
-}
 
-impl<'a> PrettyFormatter<'a> {
     fn with_indent(indent: &'a [u8]) -> Self {
         PrettyFormatter {
             current_indent: 0,
