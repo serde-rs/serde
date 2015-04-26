@@ -639,9 +639,11 @@ fn deserialize_map(
     let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
         .zip(struct_def.fields.iter())
         .map(|(field_name, field)| {
-            let name_str = match field.node.kind {
-                ast::NamedField(name, _) => builder.expr().str(name),
-                ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+            let rename = field::field_rename(field, &field::Direction::Deserialize);
+            let name_str = match (rename, field.node.kind) {
+                (Some(rename), _) => builder.expr().build_lit(P(rename.clone())),
+                (None, ast::NamedField(name, _)) => builder.expr().str(name),
+                (None, ast::UnnamedField(_)) => panic!("struct contains unnamed fields"),
             };
 
             let missing_expr = if field::default_value(field) {
