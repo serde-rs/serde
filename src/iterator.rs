@@ -14,8 +14,21 @@ impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
             rdr: iter,
         }
     }
+
+    /// Report the current line inside the iterator.
     pub fn line(&self) -> usize { self.line }
+
+    /// Report the current column inside the iterator.
     pub fn col(&self) -> usize { self.col }
+
+    /// Gets a reference to the underlying iterator.
+    pub fn get_ref(&self) -> &Iter { &self.iter }
+
+    /// Gets a mutable reference to the underlying iterator.
+    pub fn get_mut(&self) -> &Iter { &self.iter }
+
+    /// Unwraps this `LineColIterator`, returning the underlying iterator.
+    pub fn into_inner(self) -> Iter { self.iter }
 }
 
 impl<Iter: Iterator<Item=io::Result<u8>>> Iterator for LineColIterator<Iter> {
