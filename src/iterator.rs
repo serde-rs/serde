@@ -1,8 +1,7 @@
-use std::iter::Peekable;
 use std::io;
 
 pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
-    rdr: Peekable<Iter>,
+    rdr: Iter,
     line: usize,
     col: usize,
 }
@@ -12,14 +11,7 @@ impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
         LineColIterator {
             line: 1,
             col: 0,
-            rdr: iter.peekable(),
-        }
-    }
-    fn peek(&mut self) -> Option<u8> {
-        match self.rdr.peek() {
-            None => None,
-            Some(&Ok(c)) => Some(c),
-            Some(&Err(_)) => None,
+            rdr: iter,
         }
     }
     pub fn line(&self) -> usize { self.line }
