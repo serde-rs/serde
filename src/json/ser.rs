@@ -295,16 +295,29 @@ impl Formatter for CompactFormatter {
     }
 }
 
-pub struct PrettyFormatter {
+pub struct PrettyFormatter<'a> {
     current_indent: usize,
-    indent: usize,
+    indent: &'a [u8],
 }
 
-impl Formatter for PrettyFormatter {
+impl<'a> PrettyFormatter<'a> {
+    fn new() -> Self {
+        PrettyFormatter::with_indent(b"  ")
+    }
+
+    fn with_indent(indent: &'a [u8]) -> Self {
+        PrettyFormatter {
+            current_indent: 0,
+            indent: indent,
+        }
+    }
+}
+
+impl<'a> Formatter for PrettyFormatter<'a> {
     fn open<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
         where W: io::Write,
     {
-        self.current_indent += self.indent;
+        self.current_indent += 1;
         writer.write_all(&[ch])
     }
 
@@ -317,7 +330,7 @@ impl Formatter for PrettyFormatter {
             try!(writer.write_all(b",\n"));
         }
 
-        spaces(writer, self.current_indent)
+        indent(writer, self.current_indent, self.indent)
     }
 
     fn colon<W>(&mut self, writer: &mut W) -> io::Result<()>
@@ -329,9 +342,9 @@ impl Formatter for PrettyFormatter {
     fn close<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
         where W: io::Write,
     {
-        self.current_indent -= self.indent;
+        self.current_indent -= 1;
         try!(writer.write(b"\n"));
-        try!(spaces(writer, self.current_indent));
+        try!(indent(writer, self.current_indent, self.indent));
 
         writer.write_all(&[ch])
     }
@@ -439,10 +452,7 @@ pub fn to_writer_pretty<W, T>(writer: &mut W, value: &T) -> io::Result<()>
     where W: io::Write,
           T: ser::Serialize,
 {
-    let mut ser = Serializer::new_with_formatter(writer, PrettyFormatter {
-        current_indent: 0,
-        indent: 2,
-    });
+    let mut ser = Serializer::new_with_formatter(writer, PrettyFormatter::new());
     try!(value.serialize(&mut ser));
     Ok(())
 }
@@ -489,20 +499,12 @@ pub fn to_string_pretty<T>(value: &T) -> Result<String, FromUtf8Error>
     String::from_utf8(vec)
 }
 
-fn spaces<W>(wr: &mut W, mut n: usize) -> io::Result<()>
+fn indent<W>(wr: &mut W, n: usize, s: &[u8]) -> io::Result<()>
     where W: io::Write,
 {
-    const LEN: usize = 16;
-    const BUF: &'static [u8; LEN] = &[b' '; 16];
-
-    while n >= LEN {
-        try!(wr.write_all(BUF));
-        n -= LEN;
+    for _ in 0 .. n {
+        try!(wr.write_all(s));
     }
 
-    if n > 0 {
-        wr.write_all(&BUF[..n])
-    } else {
-        Ok(())
-    }
+    Ok(())
 }
