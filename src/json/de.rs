@@ -3,8 +3,9 @@ use std::io;
 use std::str;
 
 use de;
+use iter::LineColIterator;
+
 use super::error::{Error, ErrorCode};
-use iterator::LineColIterator;
 
 pub struct Deserializer<Iter: Iterator<Item=io::Result<u8>>> {
     rdr: LineColIterator<Iter>,

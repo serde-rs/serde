@@ -1,7 +1,7 @@
 use std::io;
 
 pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
-    rdr: Iter,
+    iter: Iter,
     line: usize,
     col: usize,
 }
@@ -9,9 +9,9 @@ pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
 impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
     pub fn new(iter: Iter) -> LineColIterator<Iter> {
         LineColIterator {
+            iter: iter,
             line: 1,
             col: 0,
-            rdr: iter,
         }
     }
 
@@ -34,7 +34,7 @@ impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
 impl<Iter: Iterator<Item=io::Result<u8>>> Iterator for LineColIterator<Iter> {
     type Item = io::Result<u8>;
     fn next(&mut self) -> Option<io::Result<u8>> {
-        match self.rdr.next() {
+        match self.iter.next() {
             None => None,
             Some(Ok(b'\n')) => {
                 self.line += 1;

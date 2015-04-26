@@ -12,8 +12,8 @@ extern crate num;
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer, Error};
 
-pub mod ser;
-pub mod de;
-pub mod json;
 pub mod bytes;
-mod iterator;
+pub mod de;
+pub mod iter;
+pub mod json;
+pub mod ser;
