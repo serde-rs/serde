@@ -17,11 +17,20 @@ pub struct Serializer<W, F=CompactFormatter> {
 impl<W> Serializer<W>
     where W: io::Write,
 {
-    /// Creates a new JSON visitr whose output will be written to the writer
-    /// specified.
+    /// Creates a new JSON serializer.
     #[inline]
     pub fn new(writer: W) -> Serializer<W> {
-        Serializer::new_with_formatter(writer, CompactFormatter)
+        Serializer::with_formatter(writer, CompactFormatter)
+    }
+}
+
+impl<W> Serializer<W, PrettyFormatter<'static>>
+    where W: io::Write,
+{
+    /// Creates a new JSON pretty print serializer.
+    #[inline]
+    pub fn pretty(writer: W) -> Serializer<W, PrettyFormatter<'static>> {
+        Serializer::with_formatter(writer, PrettyFormatter::new())
     }
 }
 
@@ -29,10 +38,10 @@ impl<W, F> Serializer<W, F>
     where W: io::Write,
           F: Formatter,
 {
-    /// Creates a new JSON visitr whose output will be written to the writer
+    /// Creates a new JSON visitor whose output will be written to the writer
     /// specified.
     #[inline]
-    pub fn new_with_formatter(writer: W, formatter: F) -> Serializer<W, F> {
+    pub fn with_formatter(writer: W, formatter: F) -> Serializer<W, F> {
         Serializer {
             writer: writer,
             formatter: formatter,
@@ -300,11 +309,13 @@ pub struct PrettyFormatter<'a> {
     indent: &'a [u8],
 }
 
-impl<'a> PrettyFormatter<'a> {
+impl PrettyFormatter<'static> {
     fn new() -> Self {
         PrettyFormatter::with_indent(b"  ")
     }
+}
 
+impl<'a> PrettyFormatter<'a> {
     fn with_indent(indent: &'a [u8]) -> Self {
         PrettyFormatter {
             current_indent: 0,
@@ -452,7 +463,7 @@ pub fn to_writer_pretty<W, T>(writer: &mut W, value: &T) -> io::Result<()>
     where W: io::Write,
           T: ser::Serialize,
 {
-    let mut ser = Serializer::new_with_formatter(writer, PrettyFormatter::new());
+    let mut ser = Serializer::pretty(writer);
     try!(value.serialize(&mut ser));
     Ok(())
 }
