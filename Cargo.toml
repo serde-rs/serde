@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A serialization/deserialization framework"
@@ -15,4 +15,4 @@ rustc-serialize = "*"
 
 [dev-dependencies.serde_macros]
 path = "serde_macros/"
-version = "0.3.1"
+version = "0.3.2"
