@@ -19,7 +19,7 @@ impl<W> Serializer<W>
 {
     /// Creates a new JSON serializer.
     #[inline]
-    pub fn new(writer: W) -> Serializer<W> {
+    pub fn new(writer: W) -> Self {
         Serializer::with_formatter(writer, CompactFormatter)
     }
 }
@@ -29,7 +29,7 @@ impl<W> Serializer<W, PrettyFormatter<'static>>
 {
     /// Creates a new JSON pretty print serializer.
     #[inline]
-    pub fn pretty(writer: W) -> Serializer<W, PrettyFormatter<'static>> {
+    pub fn pretty(writer: W) -> Self {
         Serializer::with_formatter(writer, PrettyFormatter::new())
     }
 }
@@ -41,7 +41,7 @@ impl<W, F> Serializer<W, F>
     /// Creates a new JSON visitor whose output will be written to the writer
     /// specified.
     #[inline]
-    pub fn with_formatter(writer: W, formatter: F) -> Serializer<W, F> {
+    pub fn with_formatter(writer: W, formatter: F) -> Self {
         Serializer {
             writer: writer,
             formatter: formatter,
