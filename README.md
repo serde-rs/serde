@@ -1,7 +1,8 @@
 Serde Rust Serialization Framework
 ==================================
 
-[![Build Status](https://travis-ci.org/erickt/rust-serde.png?branch=master)](https://travis-ci.org/erickt/rust-serde)
+[![Build Status](https://api.travis-ci.org/serde-rs/serde.png?branch=master)](https://travis-ci.org/serde-rs/serde)
+[![Latest Version](https://img.shields.io/crates/v/serde.svg)](https://crates.io/crates/serde)
 
 Serde is a powerful framework that enables serialization libraries to
 generically serialize Rust data structures without the overhead of runtime type
@@ -9,7 +10,7 @@ information. In many situations, the handshake protocol between serializers and
 serializees can be completely optimized away, leaving Serde to perform roughly
 the same speed as a hand written serializer for a specific type.
 
-Documentation is available at http://erickt.github.io/rust-serde/serde
+Documentation is available at http://serde-rs.github.io/serde/serde
 
 Making a Type Serializable
 ==========================
@@ -17,9 +18,9 @@ Making a Type Serializable
 The simplest way to make a type serializable is to use the `serde_macros`
 syntax extension, which comes with a `#[derive(Serialize, Deserialize)]`
 annotation, which automatically generates implementations of 
-[Serialize](http://erickt.github.io/rust-serde/serde/ser/trait.Serialize.html)
+[Serialize](http://serde-rs.github.io/serde/serde/ser/trait.Serialize.html)
 and
-[Deserialize](http://erickt.github.io/rust-serde/serde/de/trait.Deserialize.html)
+[Deserialize](http://serde-rs.github.io/serde/serde/de/trait.Deserialize.html)
 for the annotated type:
 
 ```rust
@@ -38,11 +39,11 @@ struct Point {
 ```
 
 Serde bundles a high performance JSON serializer and deserializer,
-[serde::json](http://erickt.github.io/rust-serde/serde/json/index.html),
+[serde::json](http://serde-rs.github.io/serde/serde/json/index.html),
 which comes with the helper functions
-[to_string](http://erickt.github.io/rust-serde/serde/json/ser/fn.to_string.html)
+[to_string](http://serde-rs.github.io/serde/serde/json/ser/fn.to_string.html)
 and
-[from_str](http://erickt.github.io/rust-serde/serde/json/de/fn.from_str.html)
+[from_str](http://serde-rs.github.io/serde/serde/json/de/fn.from_str.html)
 that make it easy to go to and from JSON:
 
 ```rust
@@ -58,19 +59,19 @@ println!("{}", serialized_point); // prints: {"x":1,"y":2}
 let deserialize_point: Point = json::from_str(&serialized_point).unwrap();
 ```
 
-[serde::json](http://erickt.github.io/rust-serde/serde/json/index.html) also
+[serde::json](http://serde-rs.github.io/serde/serde/json/index.html) also
 supports a generic
-[Value](http://erickt.github.io/rust-serde/serde/json/value/enum.Value.html)
+[Value](http://serde-rs.github.io/serde/serde/json/value/enum.Value.html)
 type, which can represent any JSON value. Also, any
-[Serialize](http://erickt.github.io/rust-serde/serde/ser/trait.Serialize.html)
+[Serialize](http://serde-rs.github.io/serde/serde/ser/trait.Serialize.html)
 and
-[Deserialize](http://erickt.github.io/rust-serde/serde/de/trait.Deserialize.html)
+[Deserialize](http://serde-rs.github.io/serde/serde/de/trait.Deserialize.html)
 can be converted into a 
-[Value](http://erickt.github.io/rust-serde/serde/json/value/enum.Value.html)
+[Value](http://serde-rs.github.io/serde/serde/json/value/enum.Value.html)
 with the methods
-[to_value](http://erickt.github.io/rust-serde/serde/json/value/fn.to_value.html)
+[to_value](http://serde-rs.github.io/serde/serde/json/value/fn.to_value.html)
 and
-[from_value](http://erickt.github.io/rust-serde/serde/json/value/fn.from_value.html):
+[from_value](http://serde-rs.github.io/serde/serde/json/value/fn.from_value.html):
 
 ```rust
 let point = Point { x: 1, y: 2 };
@@ -86,9 +87,9 @@ Serialization without Macros
 
 Under the covers, Serde extensively uses the Visitor pattern to thread state
 between the
-[Serializer](http://erickt.github.io/rust-serde/serde/ser/trait.Serializer.html)
+[Serializer](http://serde-rs.github.io/serde/serde/ser/trait.Serializer.html)
 and
-[Serialize](http://erickt.github.io/rust-serde/serde/ser/trait.Serialize.html)
+[Serialize](http://serde-rs.github.io/serde/serde/ser/trait.Serialize.html)
 without the two having specific information about each other's concrete type.
 This has many of the same benefits as frameworks that use runtime type
 information without the overhead.  In fact, when compiling with optimizations,
@@ -97,7 +98,7 @@ nearly as fast as a hand written serializer format for a specific type.
 
 To see it in action, lets look at how a simple type like `i32` is serialized.
 The
-[Serializer](http://erickt.github.io/rust-serde/serde/ser/trait.Serializer.html)
+[Serializer](http://serde-rs.github.io/serde/serde/ser/trait.Serializer.html)
 is threaded through the type:
 
 ```rust
@@ -112,9 +113,9 @@ impl serde::Serialize for i32 {
 
 As you can see it's pretty simple. More complex types like `BTreeMap` need to
 pass a
-[MapVisitor](http://erickt.github.io/rust-serde/serde/ser/trait.MapVisitor.html)
+[MapVisitor](http://serde-rs.github.io/serde/serde/ser/trait.MapVisitor.html)
 to the 
-[Serializer](http://erickt.github.io/rust-serde/serde/ser/trait.Serializer.html)
+[Serializer](http://serde-rs.github.io/serde/serde/ser/trait.Serializer.html)
 in order to walk through the type:
 
 ```rust
@@ -224,11 +225,11 @@ Deserialization without Macros
 
 Deserialization is a little more complicated since there's a bit more error
 handling that needs to occur. Let's start with the simple `i32`
-[Deserialize](http://erickt.github.io/rust-serde/serde/de/trait.Deserialize.html)
+[Deserialize](http://serde-rs.github.io/serde/serde/de/trait.Deserialize.html)
 implementation. It passes a
-[Visitor](http://erickt.github.io/rust-serde/serde/de/trait.Visitor.html) to the
-[Deserializer](http://erickt.github.io/rust-serde/serde/de/trait.Deserializer.html).
-The [Visitor](http://erickt.github.io/rust-serde/serde/de/trait.Visitor.html)
+[Visitor](http://serde-rs.github.io/serde/serde/de/trait.Visitor.html) to the
+[Deserializer](http://serde-rs.github.io/serde/serde/de/trait.Deserializer.html).
+The [Visitor](http://serde-rs.github.io/serde/serde/de/trait.Visitor.html)
 can create the `i32` from a variety of different types:
 
 ```rust
@@ -263,9 +264,9 @@ impl serde::de::Visitor for I32Visitor {
 
 Since it's possible for this type to get passed an unexpected type, we need a
 way to error out. This is done by way of the
-[Error](http://erickt.github.io/rust-serde/serde/de/trait.Error.html) trait,
+[Error](http://serde-rs.github.io/serde/serde/de/trait.Error.html) trait,
 which allows a 
-[Deserialize](http://erickt.github.io/rust-serde/serde/de/trait.Deserialize.html)
+[Deserialize](http://serde-rs.github.io/serde/serde/de/trait.Deserialize.html)
 to generate an error for a few common error conditions. Here's how it could be used:
 
 ```rust
@@ -282,9 +283,9 @@ to generate an error for a few common error conditions. Here's how it could be u
 ```
 
 Maps follow a similar pattern as before, and use a
-[MapVisitor](http://erickt.github.io/rust-serde/serde/de/trait.MapVisitor.html)
+[MapVisitor](http://serde-rs.github.io/serde/serde/de/trait.MapVisitor.html)
 to walk through the values generated by the 
-[Deserializer](http://erickt.github.io/rust-serde/serde/de/trait.Deserializer.html).
+[Deserializer](http://serde-rs.github.io/serde/serde/de/trait.Deserializer.html).
 
 ```rust
 impl<K, V> serde::Deserialize for BTreeMap<K, V>
