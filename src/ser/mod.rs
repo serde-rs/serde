@@ -179,6 +179,10 @@ pub trait Serializer {
     fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize;
+
+    fn fmt() -> &'static str {
+        ""
+    }
 }
 
 pub trait SeqVisitor {

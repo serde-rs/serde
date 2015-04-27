@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use syntax::ast::{
     Ident,
     MetaItem,
@@ -353,7 +355,8 @@ fn deserialize_item_enum(
         cx,
         builder,
         enum_def.variants.iter()
-            .map(|variant| builder.expr().str(variant.node.name))
+            .map(|variant|
+                 field::FieldLit::Global(builder.expr().str(variant.node.name)))
             .collect()
     );
 
@@ -531,7 +534,7 @@ fn deserialize_struct_variant(
 fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    field_exprs: Vec<P<ast::Expr>>,
+    field_exprs: Vec<field::FieldLit>,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
     let field_idents: Vec<ast::Ident> = (0 .. field_exprs.len())
@@ -548,13 +551,79 @@ fn deserialize_field_visitor(
         )
         .build();
 
+
+    let fmts = field_exprs.iter()
+        .fold(HashSet::new(), |mut set, field_expr|
+              match field_expr {
+                  &field::FieldLit::Format{ref formats, default: _} => {
+                      for (fmt, _) in formats.iter() {
+                          set.insert(fmt.clone());
+                      };
+                      set
+                  },
+                  _ => set
+            });
+
     // Match arms to extract a field from a string
-    let field_arms: Vec<_> = field_idents.iter()
-        .zip(field_exprs.into_iter())
+    let default_field_arms: Vec<_> = field_idents.iter()
+        .zip(field_exprs.iter())
         .map(|(field_ident, field_expr)| {
-            quote_arm!(cx, $field_expr => { Ok(__Field::$field_ident) })
+            match field_expr {
+                &field::FieldLit::Global(ref expr) =>
+                    quote_arm!(cx, $expr => { Ok(__Field::$field_ident) }),
+                &field::FieldLit::Format{formats: _, ref default} =>
+                    quote_arm!(cx, $default => { Ok(__Field::$field_ident)})
+            }
         })
         .collect();
+
+    let body = if fmts.is_empty() {
+        quote_expr!(cx,
+                    match value {
+                        $default_field_arms,
+                        _ => Err(::serde::de::Error::unknown_field_error(value)),
+                    })
+    } else {
+        let field_arms : Vec<_> = fmts.iter()
+            .map(|fmt| {
+                field_idents.iter()
+                    .zip(field_exprs.iter())
+                    .map(|(field_ident, field_expr)| {
+                        match field_expr {
+                            &field::FieldLit::Global(ref expr) =>
+                                quote_arm!(cx,
+                                           $expr => { Ok(__Field::$field_ident) }),
+                            &field::FieldLit::Format{ref formats, ref default} => {
+                            let expr = formats.get(fmt).unwrap_or(default);
+                                quote_arm!(cx,
+                                           $expr => { Ok(__Field::$field_ident) })}}
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        let fmt_matches : Vec<_> = fmts.iter()
+            .zip(field_arms.iter())
+            .map(|(ref fmt, ref arms)| {
+                quote_arm!(cx, $fmt => {
+                    match value {
+                        $arms,
+                        _ => {
+                            Err(::serde::de::Error::unknown_field_error(value))
+                        }
+                    }})
+            })
+            .collect();
+
+        quote_expr!(cx,
+                    match D::fmt() {
+                        $fmt_matches,
+                        _ => match value {
+                            $default_field_arms,
+                            _ => Err(::serde::de::Error::unknown_field_error(value)),
+                        }
+                    })
+    };
 
     vec![
         field_enum,
@@ -565,26 +634,30 @@ fn deserialize_field_visitor(
                 fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
                     where D: ::serde::de::Deserializer,
                 {
-                    struct __FieldVisitor;
+                    use std::marker::PhantomData;
 
-                    impl ::serde::de::Visitor for __FieldVisitor {
+                    struct __FieldVisitor<D> {
+                        phantom: PhantomData<D>
+                    }
+
+                    impl<D> ::serde::de::Visitor for __FieldVisitor<D>
+                        where D: ::serde::de::Deserializer
+                    {
                         type Value = __Field;
 
                         fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<__Field, E>
                             where E: ::serde::de::Error,
                         {
-                            match value {
-                                $field_arms
-                                _ => Err(::serde::de::Error::unknown_field_error(value)),
-                            }
+                            $body
                         }
                     }
 
-                    deserializer.visit(__FieldVisitor)
+                    deserializer.visit(
+                        __FieldVisitor::<D>{ phantom: PhantomData })
                 }
             }
         ).unwrap(),
-    ]
+        ]
 }
 
 fn deserialize_struct_visitor(
@@ -596,7 +669,7 @@ fn deserialize_struct_visitor(
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        field::struct_field_strs(cx, builder, struct_def, field::Direction::Deserialize),
+        field::struct_field_strs(cx, builder, struct_def),
     );
 
     let visit_map_expr = deserialize_map(
@@ -639,11 +712,16 @@ fn deserialize_map(
     let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
         .zip(struct_def.fields.iter())
         .map(|(field_name, field)| {
-            let rename = field::field_rename(field, &field::Direction::Deserialize);
+            let rename = field::field_rename(builder, field);
             let name_str = match (rename, field.node.kind) {
-                (Some(rename), _) => builder.expr().build_lit(P(rename.clone())),
-                (None, ast::NamedField(name, _)) => builder.expr().str(name),
-                (None, ast::UnnamedField(_)) => panic!("struct contains unnamed fields"),
+                (field::Rename::Global(rename), _)
+                    => builder.expr().build_lit(P(rename.clone())),
+                (field::Rename::None, ast::NamedField(name, _))
+                    => builder.expr().str(name),
+                (field::Rename::None, ast::UnnamedField(_))
+                    => panic!("struct contains unnamed fields"),
+                (field::Rename::Format(renames), _)
+                    => builder.expr().str("fixme"),
             };
 
             let missing_expr = if field::default_value(field) {

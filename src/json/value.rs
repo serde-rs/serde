@@ -571,6 +571,11 @@ impl ser::Serializer for Serializer {
 
         Ok(())
     }
+
+    #[inline]
+    fn fmt() -> &'static str {
+        "value"
+    }
 }
 
 pub struct Deserializer {
@@ -676,6 +681,11 @@ impl de::Deserializer for Deserializer {
             Some(_) => Err(de::Error::syntax_error()),
             None => Ok(value)
         }
+    }
+
+    #[inline]
+    fn fmt() -> &'static str {
+        "value"
     }
 }
 

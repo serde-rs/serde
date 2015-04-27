@@ -13,7 +13,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use field::{Direction, struct_field_strs};
+use field::{FieldLit, struct_field_strs};
 
 pub fn expand_derive_serialize(
     cx: &mut ExtCtxt,
@@ -517,12 +517,29 @@ fn serialize_struct_visitor<I>(
 {
     let len = struct_def.fields.len();
 
-    let key_exprs = struct_field_strs(cx, builder, struct_def, Direction::Serialize);
+    let key_exprs = struct_field_strs(cx, builder, struct_def);
 
-    let arms: Vec<ast::Arm> = key_exprs.iter()
+    let arms: Vec<ast::Arm> = key_exprs.into_iter()
         .zip(value_exprs)
         .enumerate()
-        .map(|(i, (key_expr, value_expr))| {
+        .map(|(i, (field, value_expr))| {
+            let key_expr = match field {
+                FieldLit::Global(x) => x,
+                FieldLit::Format{formats, default} => {
+                    let arms = formats.iter()
+                        .map(|(fmt, lit)| {
+                            quote_arm!(cx, $fmt => { $lit })
+                        })
+                        .collect::<Vec<_>>();
+                    quote_expr!(cx,
+                        {
+                            match S::fmt() {
+                                $arms,
+                                _ => $default
+                            }
+                        })
+                },
+            };
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
