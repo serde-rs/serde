@@ -533,7 +533,7 @@ fn serialize_struct_visitor<I>(
                         .collect::<Vec<_>>();
                     quote_expr!(cx,
                         {
-                            match S::fmt() {
+                            match S::format() {
                                 $arms,
                                 _ => $default
                             }

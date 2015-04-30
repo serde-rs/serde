@@ -114,7 +114,7 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    fn fmt() -> &'static str {
+    fn format() -> &'static str {
         ""
     }
 }

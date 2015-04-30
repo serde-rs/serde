@@ -258,7 +258,7 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn fmt() -> &'static str {
+    fn format() -> &'static str {
         "json"
     }
 }

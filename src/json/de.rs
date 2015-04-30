@@ -465,7 +465,7 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 
     #[inline]
-    fn fmt() -> &'static str {
+    fn format() -> &'static str {
         "json"
     }
 }

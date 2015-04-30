@@ -573,7 +573,7 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn fmt() -> &'static str {
+    fn format() -> &'static str {
         "value"
     }
 }
@@ -684,7 +684,7 @@ impl de::Deserializer for Deserializer {
     }
 
     #[inline]
-    fn fmt() -> &'static str {
+    fn format() -> &'static str {
         "value"
     }
 }

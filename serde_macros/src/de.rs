@@ -616,7 +616,7 @@ fn deserialize_field_visitor(
             .collect();
 
         quote_expr!(cx,
-                    match D::fmt() {
+                    match D::format() {
                         $fmt_matches,
                         _ => match value {
                             $default_field_arms,

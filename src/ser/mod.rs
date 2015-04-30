@@ -180,7 +180,7 @@ pub trait Serializer {
         where K: Serialize,
               V: Serialize;
 
-    fn fmt() -> &'static str {
+    fn format() -> &'static str {
         ""
     }
 }
