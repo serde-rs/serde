@@ -551,7 +551,6 @@ fn deserialize_field_visitor(
         )
         .build();
 
-
     let fmts = field_exprs.iter()
         .fold(HashSet::new(), |mut set, field_expr|
               match field_expr {

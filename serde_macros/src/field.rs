@@ -10,7 +10,6 @@ use aster;
 pub enum Rename<'a> {
     None,
     Global(&'a ast::Lit),
-    // Format(HashMap<InternedString, &'a ast::Lit>)
     Format(HashMap<P<ast::Expr>, &'a ast::Lit>)
 }
 
@@ -47,10 +46,8 @@ pub fn field_rename<'a>(
                                             |item|
                                             match item.node {
                                                 ast::MetaNameValue(ref n, ref lit) =>
-                                                    Some((// (n.to_owned(), lit)
-                                                        builder.expr().str(n),
-                                                        lit
-                                                        )),
+                                                    Some((builder.expr().str(n),
+                                                          lit)),
                                                 _ => None
                                             }));
                                 Some(Rename::Format(m))
