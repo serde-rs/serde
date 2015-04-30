@@ -1047,7 +1047,7 @@ fn test_missing_renamed_field() {
 fn test_missing_fmt_renamed_field() {
     #[derive(Debug, PartialEq, Deserialize)]
     struct Foo {
-        #[serde(rename(json="y", value="z"))]
+        #[serde(rename(json="y"))]
         x: Option<u32>,
     }
 
@@ -1061,7 +1061,7 @@ fn test_missing_fmt_renamed_field() {
     assert_eq!(value, Foo { x: None });
 
     let value : Foo = from_value(Value::Object(treemap!(
-        "z".to_string() => Value::I64(5)
+        "y".to_string() => Value::I64(5)
             ))).unwrap();
     assert_eq!(value, Foo { x: Some(5) });
 }

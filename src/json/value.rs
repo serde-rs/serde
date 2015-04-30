@@ -574,7 +574,7 @@ impl ser::Serializer for Serializer {
 
     #[inline]
     fn format() -> &'static str {
-        "value"
+        "json"
     }
 }
 
@@ -685,7 +685,7 @@ impl de::Deserializer for Deserializer {
 
     #[inline]
     fn format() -> &'static str {
-        "value"
+        "json"
     }
 }
 
