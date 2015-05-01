@@ -395,7 +395,7 @@ fn deserialize_item_enum(
         builder,
         enum_def.variants.iter()
             .map(|variant|
-                 attr::FieldAttrs::Global(builder.expr().str(variant.node.name)))
+                 attr::FieldAttrs::new(builder.expr().str(variant.node.name)))
             .collect()
     );
 
@@ -702,7 +702,7 @@ fn deserialize_struct_visitor(
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        field::struct_field_strs(cx, builder, struct_def),
+        field::struct_field_attrs(cx, builder, struct_def),
     );
 
     let visit_map_expr = deserialize_map(
@@ -744,7 +744,7 @@ fn deserialize_map(
 
     let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
         .zip(struct_def.fields.iter())
-        .zip(field::struct_field_strs(cx, builder, struct_def).iter())
+        .zip(field::struct_field_attrs(cx, builder, struct_def).iter())
         .map(|((field_name, field), field_attr)| {
             let missing_expr = if field::default_value(field) {
                 quote_expr!(cx, ::std::default::Default::default())
