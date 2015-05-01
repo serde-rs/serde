@@ -395,7 +395,9 @@ fn deserialize_item_enum(
         builder,
         enum_def.variants.iter()
             .map(|variant|
-                 attr::FieldAttrs::new(builder.expr().str(variant.node.name)))
+                 attr::FieldAttrs::new(
+                     true,
+                     builder.expr().str(variant.node.name)))
             .collect()
     );
 
@@ -743,10 +745,9 @@ fn deserialize_map(
         .collect();
 
     let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
-        .zip(struct_def.fields.iter())
         .zip(field::struct_field_attrs(cx, builder, struct_def).iter())
-        .map(|((field_name, field), field_attr)| {
-            let missing_expr = if field::default_value(field) {
+        .map(|(field_name, field_attr)| {
+            let missing_expr = if field_attr.use_default() {
                 quote_expr!(cx, ::std::default::Default::default())
             } else {
                 let formats = field_attr.formats();

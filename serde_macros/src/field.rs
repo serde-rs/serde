@@ -50,10 +50,18 @@ fn rename<'a>(
     }
 }
 
-fn field_rename_attrs<'a>(
+pub fn default_value(mi: &ast::MetaItem) -> bool {
+    if let ast::MetaItem_::MetaWord(ref n) = mi.node {
+        n == &"default"
+    } else {
+        false
+    }
+}
+
+fn field_attrs<'a>(
     builder: &aster::AstBuilder,
     field: &'a ast::StructField,
-) -> Rename<'a> {
+) -> (Rename<'a>, bool) {
     field.node.attrs.iter()
         .find(|sa| {
             if let ast::MetaList(ref n, _) = sa.node.value.node {
@@ -65,14 +73,15 @@ fn field_rename_attrs<'a>(
         .and_then(|sa| {
             if let ast::MetaList(_, ref vals) = sa.node.value.node {
                 attr::mark_used(&sa);
-                vals.iter().fold(None, |v, mi| {
-                    v.or(rename(builder, mi))
-                })
+                Some((vals.iter()
+                      .fold(None, |v, mi| v.or(rename(builder, mi)))
+                      .unwrap_or(Rename::None),
+                      vals.iter().any(|mi| default_value(mi))))
             } else {
-                None
+                Some((Rename::None, false))
             }
         })
-        .unwrap_or(Rename::None)
+        .unwrap_or((Rename::None, false))
 }
 
 pub fn struct_field_attrs(
@@ -82,30 +91,33 @@ pub fn struct_field_attrs(
 ) -> Vec<FieldAttrs> {
     struct_def.fields.iter()
         .map(|field| {
-            match field_rename_attrs(builder, field) {
-                Rename::Global(rename) =>
+            match field_attrs(builder, field) {
+                (Rename::Global(rename), default_value) =>
                     FieldAttrs::new(
+                        default_value,
                         builder.expr().build_lit(P(rename.clone()))),
-                Rename::Format(renames) => {
+                (Rename::Format(renames), default_value) => {
                     let mut res = HashMap::new();
                     res.extend(
                         renames.into_iter()
                             .map(|(k,v)|
                                  (k, builder.expr().build_lit(P(v.clone())))));
                     FieldAttrs::new_with_formats(
-                        default_field(cx, builder, field.node.kind),
+                        default_value,
+                        default_field_name(cx, builder, field.node.kind),
                         res)
                 },
-                Rename::None => {
+                (Rename::None, default_value) => {
                     FieldAttrs::new(
-                        default_field(cx, builder, field.node.kind))
+                        default_value,
+                        default_field_name(cx, builder, field.node.kind))
                 }
             }
         })
         .collect()
 }
 
-fn default_field(
+fn default_field_name(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     kind: ast::StructFieldKind,
@@ -118,29 +130,4 @@ fn default_field(
             cx.bug("struct has named and unnamed fields")
         }
     }
-}
-
-
-pub fn default_value(field: &ast::StructField) -> bool {
-    field.node.attrs.iter()
-        .any(|sa| {
-             if let ast::MetaItem_::MetaList(ref n, ref vals) = sa.node.value.node {
-                 if n == &"serde" {
-                     attr::mark_used(&sa);
-                     vals.iter()
-                         .map(|mi|
-                              if let ast::MetaItem_::MetaWord(ref n) = mi.node {
-                                  n == &"default"
-                              } else {
-                                  false
-                              })
-                         .any(|x| x)
-                 } else {
-                     false
-                 }
-             }
-             else {
-                 false
-             }
-        })
 }
