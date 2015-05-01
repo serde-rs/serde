@@ -418,7 +418,7 @@ fn fmt_f32_or_null<W>(wr: &mut W, value: f32) -> io::Result<()>
     match value.classify() {
         FpCategory::Nan | FpCategory::Infinite => wr.write_all(b"null"),
         _ => {
-            let s = value.to_string();
+            let s = format!("{:?}", value);
             try!(wr.write_all(s.as_bytes()));
             if !s.contains('.') {
                 try!(wr.write_all(b".0"))
@@ -434,7 +434,7 @@ fn fmt_f64_or_null<W>(wr: &mut W, value: f64) -> io::Result<()>
     match value.classify() {
         FpCategory::Nan | FpCategory::Infinite => wr.write_all(b"null"),
         _ => {
-            let s = value.to_string();
+            let s = format!("{:?}", value);
             try!(wr.write_all(s.as_bytes()));
             if !s.contains('.') {
                 try!(wr.write_all(b".0"))
