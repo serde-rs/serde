@@ -10,9 +10,10 @@ use syntax::ext::base::Decorator;
 use syntax::parse::token;
 use rustc::plugin::Registry;
 
-mod ser;
-mod de;
+mod attr;
 mod field;
+mod de;
+mod ser;
 
 #[plugin_registrar]
 #[doc(hidden)]

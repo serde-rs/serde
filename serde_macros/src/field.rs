@@ -7,6 +7,8 @@ use syntax::ptr::P;
 
 use aster;
 
+use attr::FieldAttrs;
+
 pub enum Rename<'a> {
     None,
     Global(&'a ast::Lit),
@@ -65,24 +67,16 @@ pub fn field_rename<'a>(
         .unwrap_or(Rename::None)
 }
 
-pub enum FieldLit {
-    Global(P<ast::Expr>),
-    Format{
-        formats: HashMap<P<ast::Expr>, P<ast::Expr>>,
-        default: P<ast::Expr>,
-    }
-}
-
 pub fn struct_field_strs(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_def: &ast::StructDef,
-) -> Vec<FieldLit> {
+) -> Vec<FieldAttrs> {
     struct_def.fields.iter()
         .map(|field| {
             match field_rename(builder, field) {
                 Rename::Global(rename) =>
-                    FieldLit::Global(
+                    FieldAttrs::Global(
                         builder.expr().build_lit(P(rename.clone()))),
                 Rename::Format(renames) => {
                     let mut res = HashMap::new();
@@ -90,13 +84,13 @@ pub fn struct_field_strs(
                         renames.into_iter()
                             .map(|(k,v)|
                                  (k, builder.expr().build_lit(P(v.clone())))));
-                    FieldLit::Format{
+                    FieldAttrs::Format{
                         formats: res,
                         default: default_field(cx, builder, field.node.kind),
                     }
                 },
                 Rename::None => {
-                    FieldLit::Global(
+                    FieldAttrs::Global(
                         default_field(cx, builder, field.node.kind))
                 }
             }

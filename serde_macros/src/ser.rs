@@ -13,7 +13,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use field::{FieldLit, struct_field_strs};
+use field::struct_field_strs;
 
 pub fn expand_derive_serialize(
     cx: &mut ExtCtxt,
@@ -523,23 +523,7 @@ fn serialize_struct_visitor<I>(
         .zip(value_exprs)
         .enumerate()
         .map(|(i, (field, value_expr))| {
-            let key_expr = match field {
-                FieldLit::Global(x) => x,
-                FieldLit::Format{formats, default} => {
-                    let arms = formats.iter()
-                        .map(|(fmt, lit)| {
-                            quote_arm!(cx, $fmt => { $lit })
-                        })
-                        .collect::<Vec<_>>();
-                    quote_expr!(cx,
-                        {
-                            match S::format() {
-                                $arms,
-                                _ => $default
-                            }
-                        })
-                },
-            };
+            let key_expr = field.serializer_key_expr(cx);
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
