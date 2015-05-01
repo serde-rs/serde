@@ -208,6 +208,7 @@ fn deserialize_visitor(
 fn deserializer_ty_param(builder: &aster::AstBuilder) -> ast::TyParam {
     builder.ty_param("__D")
         .trait_bound(builder.path()
+                     .global()
                      .segment("serde").build()
                      .segment("de").build()
                      .id("Deserializer")
