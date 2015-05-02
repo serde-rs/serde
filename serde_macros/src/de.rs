@@ -361,8 +361,8 @@ fn deserialize_item_enum(
     let variant_arms: Vec<_> = enum_def.variants.iter()
         .enumerate()
         .map(|(i, variant)| {
-            let variant_name = builder.expr().path()
-                .id("__Field").id(format!("__field{}", i))
+            let variant_name = builder.pat().enum_()
+                .id("__Field").id(format!("__field{}", i)).build()
                 .build();
 
             let expr = deserialize_variant(
