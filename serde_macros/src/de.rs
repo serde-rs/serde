@@ -163,7 +163,7 @@ fn deserialize_visitor(
 ) -> (P<ast::Item>, P<ast::Ty>, P<ast::Expr>, ast::Generics) {
     if trait_generics.ty_params.is_empty() && forward_tys.is_empty() {
         (
-           builder.item().tuple_struct("__Visitor").build(),
+            builder.item().tuple_struct("__Visitor").build(),
             builder.ty().id("__Visitor"),
             builder.expr().id("__Visitor"),
             trait_generics.clone(),
@@ -693,7 +693,7 @@ fn deserialize_field_visitor(
                 }
             }
         ).unwrap(),
-        ]
+    ]
 }
 
 fn deserialize_struct_visitor(
