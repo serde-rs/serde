@@ -307,89 +307,87 @@ impl<Iter> Deserializer<Iter>
     fn parse_string(&mut self) -> Result<(), Error> {
         self.str_buf.clear();
 
-        let mut escape = false;
-
         loop {
             let ch = match try!(self.next_char()) {
                 Some(ch) => ch,
                 None => { return Err(self.error(ErrorCode::EOFWhileParsingString)); }
             };
 
-            if escape {
-                match ch {
-                    b'"' => self.str_buf.push(b'"'),
-                    b'\\' => self.str_buf.push(b'\\'),
-                    b'/' => self.str_buf.push(b'/'),
-                    b'b' => self.str_buf.push(b'\x08'),
-                    b'f' => self.str_buf.push(b'\x0c'),
-                    b'n' => self.str_buf.push(b'\n'),
-                    b'r' => self.str_buf.push(b'\r'),
-                    b't' => self.str_buf.push(b'\t'),
-                    b'u' => {
-                        let c = match try!(self.decode_hex_escape()) {
-                            0xDC00 ... 0xDFFF => {
-                                return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
-                            }
+            match ch {
+                b'"' => {
+                    try!(self.bump());
+                    return Ok(());
+                }
+                b'\\' => {
+                    let ch = match try!(self.next_char()) {
+                        Some(ch) => ch,
+                        None => { return Err(self.error(ErrorCode::EOFWhileParsingString)); }
+                    };
 
-                            // Non-BMP characters are encoded as a sequence of
-                            // two hex escapes, representing UTF-16 surrogates.
-                            n1 @ 0xD800 ... 0xDBFF => {
-                                match (try!(self.next_char()), try!(self.next_char())) {
-                                    (Some(b'\\'), Some(b'u')) => (),
-                                    _ => {
-                                        return Err(self.error(ErrorCode::UnexpectedEndOfHexEscape));
-                                    }
-                                }
-
-                                let n2 = try!(self.decode_hex_escape());
-
-                                if n2 < 0xDC00 || n2 > 0xDFFF {
+                    match ch {
+                        b'"' => self.str_buf.push(b'"'),
+                        b'\\' => self.str_buf.push(b'\\'),
+                        b'/' => self.str_buf.push(b'/'),
+                        b'b' => self.str_buf.push(b'\x08'),
+                        b'f' => self.str_buf.push(b'\x0c'),
+                        b'n' => self.str_buf.push(b'\n'),
+                        b'r' => self.str_buf.push(b'\r'),
+                        b't' => self.str_buf.push(b'\t'),
+                        b'u' => {
+                            let c = match try!(self.decode_hex_escape()) {
+                                0xDC00 ... 0xDFFF => {
                                     return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
                                 }
 
-                                let n = (((n1 - 0xD800) as u32) << 10 |
-                                          (n2 - 0xDC00) as u32) + 0x1_0000;
+                                // Non-BMP characters are encoded as a sequence of
+                                // two hex escapes, representing UTF-16 surrogates.
+                                n1 @ 0xD800 ... 0xDBFF => {
+                                    match (try!(self.next_char()), try!(self.next_char())) {
+                                        (Some(b'\\'), Some(b'u')) => (),
+                                        _ => {
+                                            return Err(self.error(ErrorCode::UnexpectedEndOfHexEscape));
+                                        }
+                                    }
 
-                                match char::from_u32(n as u32) {
-                                    Some(c) => c,
-                                    None => {
-                                        return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
+                                    let n2 = try!(self.decode_hex_escape());
+
+                                    if n2 < 0xDC00 || n2 > 0xDFFF {
+                                        return Err(self.error(ErrorCode::LoneLeadingSurrogateInHexEscape));
+                                    }
+
+                                    let n = (((n1 - 0xD800) as u32) << 10 |
+                                              (n2 - 0xDC00) as u32) + 0x1_0000;
+
+                                    match char::from_u32(n as u32) {
+                                        Some(c) => c,
+                                        None => {
+                                            return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
+                                        }
                                     }
                                 }
-                            }
 
-                            n => {
-                                match char::from_u32(n as u32) {
-                                    Some(c) => c,
-                                    None => {
-                                        return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
+                                n => {
+                                    match char::from_u32(n as u32) {
+                                        Some(c) => c,
+                                        None => {
+                                            return Err(self.error(ErrorCode::InvalidUnicodeCodePoint));
+                                        }
                                     }
                                 }
-                            }
-                        };
+                            };
 
-                        // FIXME: this allocation is required in order to be compatible with stable
-                        // rust, which doesn't support encoding a `char` into a stack buffer.
-                        let buf = c.to_string();
-                        self.str_buf.extend(buf.bytes());
-                    }
-                    _ => {
-                        return Err(self.error(ErrorCode::InvalidEscape));
+                            // FIXME: this allocation is required in order to be compatible with stable
+                            // rust, which doesn't support encoding a `char` into a stack buffer.
+                            let buf = c.to_string();
+                            self.str_buf.extend(buf.bytes());
+                        }
+                        _ => {
+                            return Err(self.error(ErrorCode::InvalidEscape));
+                        }
                     }
                 }
-                escape = false;
-            } else {
-                match ch {
-                    b'"' => {
-                        try!(self.bump());
-                        return Ok(());
-                    }
-                    b'\\' => {
-                        escape = true;
-                    }
-                    ch => {
-                        self.str_buf.push(ch);
-                    }
+                ch => {
+                    self.str_buf.push(ch);
                 }
             }
         }
