@@ -180,6 +180,10 @@ pub trait Serializer {
         where K: Serialize,
               V: Serialize;
 
+    /// Specify a format string for the serializer.
+    ///
+    /// The serializer format is used to determine which format
+    /// specific field attributes should be used with the serializer.
     fn format() -> &'static str {
         ""
     }
