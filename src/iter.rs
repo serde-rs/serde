@@ -2,7 +2,7 @@ use std::io;
 use std::iter::Peekable;
 
 pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
-    iter: Peekable<Iter>,
+    iter: Iter,
     line: usize,
     col: usize,
 }
@@ -10,7 +10,7 @@ pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
 impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
     pub fn new(iter: Iter) -> LineColIterator<Iter> {
         LineColIterator {
-            iter: iter.peekable(),
+            iter: iter,
             line: 1,
             col: 0,
         }
@@ -23,14 +23,16 @@ impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
     pub fn col(&self) -> usize { self.col }
 
     /// Gets a reference to the underlying iterator.
-    pub fn get_ref(&self) -> &Peekable<Iter> { &self.iter }
+    pub fn get_ref(&self) -> &Iter { &self.iter }
 
     /// Gets a mutable reference to the underlying iterator.
-    pub fn get_mut(&mut self) -> &mut Peekable<Iter> { &mut self.iter }
+    pub fn get_mut(&mut self) -> &mut Iter { &mut self.iter }
 
     /// Unwraps this `LineColIterator`, returning the underlying iterator.
-    pub fn into_inner(self) -> Peekable<Iter> { self.iter }
+    pub fn into_inner(self) -> Iter { self.iter }
+}
 
+impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Peekable<Iter>> {
     /// peeks at the next value
     pub fn peek(&mut self) -> Option<&io::Result<u8>> { self.iter.peek() }
 }
