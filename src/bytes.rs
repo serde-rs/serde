@@ -1,6 +1,9 @@
 //! Helper module to enable serializing bytes more efficiently
 
 use std::ops;
+use std::fmt;
+use std::ascii;
+use std::char;
 
 use ser;
 use de;
@@ -8,8 +11,15 @@ use de;
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `Bytes` wraps a `&[u8]` in order to serialize into a byte array.
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Bytes<'a> {
     bytes: &'a [u8],
+}
+
+impl<'a> fmt::Debug for Bytes<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "b\"{}\"", escape_bytestring(self.bytes))
+    }
 }
 
 impl<'a> From<&'a [u8]> for Bytes<'a> {
@@ -25,6 +35,12 @@ impl<'a> From<&'a Vec<u8>> for Bytes<'a> {
         Bytes {
             bytes: &bytes,
         }
+    }
+}
+
+impl<'a> Into<&'a [u8]> for Bytes<'a> {
+    fn into(self) -> &'a [u8] {
+        self.bytes
     }
 }
 
@@ -46,7 +62,7 @@ impl<'a> ser::Serialize for Bytes<'a> {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `ByteBuf` wraps a `Vec<u8>` in order to hook into serialize and from deserialize a byte array.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ByteBuf {
     bytes: Vec<u8>,
 }
@@ -62,6 +78,16 @@ impl ByteBuf {
         ByteBuf {
             bytes: Vec::with_capacity(cap)
         }
+    }
+
+    pub fn as_vec(self) -> Vec<u8> {
+        self.bytes
+    }
+}
+
+impl fmt::Debug for ByteBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "b\"{}\"", escape_bytestring(self.bytes.as_ref()))
     }
 }
 
@@ -171,4 +197,16 @@ impl de::Deserialize for ByteBuf {
     {
         deserializer.visit_bytes(ByteBufVisitor)
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+fn escape_bytestring(bytes: &[u8]) -> String {
+    let mut result = String::new();
+    for &b in bytes {
+        for esc in ascii::escape_default(b) {
+            result.push(char::from_u32(esc as u32).unwrap());
+        }
+    }
+    result
 }

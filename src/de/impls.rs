@@ -3,6 +3,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::path;
 use std::rc::Rc;
+use std::str;
 use std::sync::Arc;
 
 use num::FromPrimitive;
@@ -197,6 +198,24 @@ impl Visitor for StringVisitor {
         where E: Error,
     {
         Ok(v)
+    }
+
+    fn visit_bytes<E>(&mut self, v: &[u8]) -> Result<String, E>
+        where E: Error,
+    {
+        match str::from_utf8(v) {
+            Ok(s) => Ok(s.to_string()),
+            Err(_) => Err(Error::syntax_error()),
+        }
+    }
+
+    fn visit_byte_buf<'a, E>(&mut self, v: Vec<u8>) -> Result<String, E>
+        where E: Error,
+    {
+        match String::from_utf8(v) {
+            Ok(s) => Ok(s),
+            Err(_) => Err(Error::syntax_error()),
+        }
     }
 }
 

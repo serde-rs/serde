@@ -12,6 +12,7 @@ use std::hash::Hash;
 use std::vec;
 
 use de;
+use bytes;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -407,5 +408,58 @@ impl<K, V> ValueDeserializer for HashMap<K, V>
     fn into_deserializer(self) -> MapDeserializer<hash_map::IntoIter<K, V>, K, V> {
         let len = self.len();
         MapDeserializer::new(self.into_iter(), len)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl<'a> ValueDeserializer for bytes::Bytes<'a>
+{
+    type Deserializer = BytesDeserializer<'a>;
+
+    fn into_deserializer(self) -> BytesDeserializer<'a> {
+        BytesDeserializer(Some(self.into()))
+    }
+}
+
+pub struct BytesDeserializer<'a> (Option<&'a [u8]>);
+
+impl<'a> de::Deserializer for BytesDeserializer<'a> {
+    type Error = Error;
+
+    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        match self.0.take() {
+            Some(bytes) => visitor.visit_bytes(bytes),
+            None => Err(de::Error::end_of_stream_error()),
+        }
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl ValueDeserializer for bytes::ByteBuf
+{
+    type Deserializer = ByteBufDeserializer;
+
+    fn into_deserializer(self) -> Self::Deserializer {
+        ByteBufDeserializer(Some(self.as_vec()))
+    }
+}
+
+pub struct ByteBufDeserializer(Option<Vec<u8>>);
+
+impl de::Deserializer for ByteBufDeserializer {
+    type Error = Error;
+
+    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        match self.0.take() {
+            Some(bytes) => visitor.visit_byte_buf(bytes),
+            None => Err(de::Error::end_of_stream_error()),
+        }
     }
 }
