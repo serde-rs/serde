@@ -15,6 +15,7 @@ use serde::de::{self, Deserialize, Deserializer};
 use serde::json::ser::escape_str;
 use serde::json;
 use serde::ser::{self, Serialize, Serializer};
+use std::str::FromStr;
 
 use rustc_serialize::Encodable;
 
@@ -51,6 +52,11 @@ impl rustc_serialize::Decodable for HttpProtocol {
             None => Err(d.error("cannot convert from usize")),
         }
     }
+}
+
+impl FromStr for HttpProtocol {
+    type Err = ();
+    fn from_str(s: &str) -> Result<HttpProtocol, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for HttpProtocol {
@@ -99,6 +105,11 @@ enum HttpMethod {
     PROPFIND,
     MKCOL,
     PATCH,
+}
+
+impl FromStr for HttpMethod {
+    type Err = ();
+    fn from_str(s: &str) -> Result<HttpMethod, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for HttpMethod {
@@ -165,6 +176,11 @@ enum CacheStatus {
     Hit,
 }
 
+impl FromStr for CacheStatus {
+    type Err = ();
+    fn from_str(s: &str) -> Result<CacheStatus, ()> { unimplemented!() }
+}
+
 impl FromPrimitive for CacheStatus {
     fn from_i64(i: i64) -> Option<CacheStatus> {
         FromPrimitive::from_u64(i as u64)
@@ -229,6 +245,11 @@ enum OriginProtocol {
     HTTPS,
 }
 
+impl FromStr for OriginProtocol {
+    type Err = ();
+    fn from_str(s: &str) -> Result<OriginProtocol, ()> { unimplemented!() }
+}
+
 impl FromPrimitive for OriginProtocol {
     fn from_i64(i: i64) -> Option<OriginProtocol> {
         FromPrimitive::from_u64(i as u64)
@@ -284,6 +305,11 @@ enum ZonePlan {
     PRO,
     BIZ,
     ENT,
+}
+
+impl FromStr for ZonePlan {
+    type Err = ();
+    fn from_str(s: &str) -> Result<ZonePlan, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for ZonePlan {
@@ -594,6 +620,11 @@ enum Country {
 	ZA,
 	ZM,
 	ZW,
+}
+
+impl FromStr for Country {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Country, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for Country {
