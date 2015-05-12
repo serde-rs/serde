@@ -445,7 +445,7 @@ impl ValueDeserializer for bytes::ByteBuf
     type Deserializer = ByteBufDeserializer;
 
     fn into_deserializer(self) -> Self::Deserializer {
-        ByteBufDeserializer(Some(self.as_vec()))
+        ByteBufDeserializer(Some(self.into()))
     }
 }
 

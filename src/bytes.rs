@@ -78,10 +78,6 @@ impl ByteBuf {
             bytes: Vec::with_capacity(cap)
         }
     }
-
-    pub fn as_vec(self) -> Vec<u8> {
-        self.bytes
-    }
 }
 
 impl fmt::Debug for ByteBuf {
@@ -90,19 +86,16 @@ impl fmt::Debug for ByteBuf {
     }
 }
 
-/*
-// Disabled: triggers conflict with From implementation below
 impl Into<Vec<u8>> for ByteBuf {
     fn into(self) -> Vec<u8> {
         self.bytes
     }
 }
-*/
 
-impl<T> From<T> for ByteBuf where T: Into<Vec<u8>> {
-    fn from(bytes: T) -> Self {
+impl From<Vec<u8>> for ByteBuf {
+    fn from(bytes: Vec<u8>) -> Self {
         ByteBuf {
-            bytes: bytes.into(),
+            bytes: bytes,
         }
     }
 }
