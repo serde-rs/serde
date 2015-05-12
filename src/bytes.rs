@@ -3,7 +3,6 @@
 use std::ops;
 use std::fmt;
 use std::ascii;
-use std::char;
 
 use ser;
 use de;
@@ -90,6 +89,15 @@ impl fmt::Debug for ByteBuf {
         write!(f, "b\"{}\"", escape_bytestring(self.bytes.as_ref()))
     }
 }
+
+/*
+// Disabled: triggers conflict with From implementation below
+impl Into<Vec<u8>> for ByteBuf {
+    fn into(self) -> Vec<u8> {
+        self.bytes
+    }
+}
+*/
 
 impl<T> From<T> for ByteBuf where T: Into<Vec<u8>> {
     fn from(bytes: T) -> Self {
@@ -205,7 +213,7 @@ fn escape_bytestring(bytes: &[u8]) -> String {
     let mut result = String::new();
     for &b in bytes {
         for esc in ascii::escape_default(b) {
-            result.push(char::from_u32(esc as u32).unwrap());
+            result.push(esc as char);
         }
     }
     result
