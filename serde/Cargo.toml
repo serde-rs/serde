@@ -1,0 +1,13 @@
+[package]
+name = "serde"
+version = "0.3.3"
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "A generic serialization/deserialization framework"
+repository = "https://github.com/serde-rs/serde"
+documentation = "http://serde-rs.github.io/serde/serde"
+readme = "README.md"
+keywords = ["serialization"]
+
+[dependencies]
+num = "*"
