@@ -170,7 +170,7 @@ fn deserialize_visitor(
         )
     } else {
         let placeholders : Vec<_> = trait_generics.ty_params.iter()
-            .map(|_| builder.ty().id("_"))
+            .map(|t| builder.ty().id(t.ident))
             .collect();
         let mut trait_generics = trait_generics.clone();
         let mut ty_params = forward_ty_params.clone();
