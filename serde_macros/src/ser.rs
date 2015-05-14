@@ -276,7 +276,7 @@ fn serialize_variant(
                         $type_name,
                         $variant_name,
                     )
-                },
+                }
             )
         }
         ast::TupleVariantKind(ref args) => {
@@ -488,11 +488,11 @@ fn serialize_tuple_struct_visitor(
             $where_clause {
                 #[inline]
                 fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
-                    where S: ::serde::ser::Serializer,
+                    where S: ::serde::ser::Serializer
                 {
                     match self.state {
                         $arms
-                        _ => Ok(None),
+                        _ => Ok(None)
                     }
                 }
 
@@ -572,7 +572,7 @@ fn serialize_struct_visitor<I>(
                 {
                     match self.state {
                         $arms
-                        _ => Ok(None),
+                        _ => Ok(None)
                     }
                 }
 

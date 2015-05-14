@@ -309,7 +309,7 @@ fn deserialize_seq(
             let name = builder.id(format!("__field{}", i));
             quote_stmt!(cx,
                 let $name = match try!(visitor.visit()) {
-                    Some(value) => value,
+                    Some(value) => { value },
                     None => {
                         return Err(::serde::de::Error::end_of_stream_error());
                     }
@@ -622,8 +622,8 @@ fn deserialize_field_visitor(
         // No formats specific attributes, so no match on format required
         quote_expr!(cx,
                     match value {
-                        $default_field_arms,
-                        _ => Err(::serde::de::Error::unknown_field_error(value)),
+                        $default_field_arms
+                        _ => { Err(::serde::de::Error::unknown_field_error(value)) }
                     })
     } else {
         let field_arms : Vec<_> = formats.iter()
@@ -643,7 +643,7 @@ fn deserialize_field_visitor(
             .map(|(ref fmt, ref arms)| {
                 quote_arm!(cx, $fmt => {
                     match value {
-                        $arms,
+                        $arms
                         _ => {
                             Err(::serde::de::Error::unknown_field_error(value))
                         }
@@ -653,10 +653,10 @@ fn deserialize_field_visitor(
 
         quote_expr!(cx,
                     match __D::format() {
-                        $fmt_matches,
+                        $fmt_matches
                         _ => match value {
-                            $default_field_arms,
-                            _ => Err(::serde::de::Error::unknown_field_error(value)),
+                            $default_field_arms
+                            _ => { Err(::serde::de::Error::unknown_field_error(value)) }
                         }
                     })
     };
@@ -766,8 +766,8 @@ fn deserialize_map(
                         cx,
                         try!(visitor.missing_field(
                             match __D::format() {
-                                $arms,
-                                _ => $default
+                                $arms
+                                _ => { $default }
                             })))
                 }
             };
@@ -775,7 +775,7 @@ fn deserialize_map(
             quote_stmt!(cx,
                 let $field_name = match $field_name {
                     Some($field_name) => $field_name,
-                    None => $missing_expr,
+                    None => $missing_expr
                 };
             ).unwrap()
         })

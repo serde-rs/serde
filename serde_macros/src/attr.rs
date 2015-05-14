@@ -75,8 +75,8 @@ impl FieldAttrs {
                 quote_expr!(cx,
                             {
                                 match S::format() {
-                                    $arms,
-                                    _ => $default
+                                    $arms
+                                    _ => { $default }
                                 }
                             })
             },
