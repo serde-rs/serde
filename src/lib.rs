@@ -16,4 +16,5 @@ pub mod bytes;
 pub mod de;
 pub mod iter;
 pub mod json;
+pub mod yaml;
 pub mod ser;
