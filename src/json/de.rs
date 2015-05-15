@@ -463,6 +463,11 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
             Err(self.error(ErrorCode::ExpectedSomeValue))
         }
     }
+
+    #[inline]
+    fn format() -> &'static str {
+        "json"
+    }
 }
 
 struct SeqVisitor<'a, Iter: 'a + Iterator<Item=io::Result<u8>>> {

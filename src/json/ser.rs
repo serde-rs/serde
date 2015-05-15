@@ -256,6 +256,11 @@ impl<W, F> ser::Serializer for Serializer<W, F>
         try!(self.formatter.colon(&mut self.writer));
         value.serialize(self)
     }
+
+    #[inline]
+    fn format() -> &'static str {
+        "json"
+    }
 }
 
 pub trait Formatter {

@@ -21,11 +21,21 @@ struct Rename {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct DirectionRename {
+struct FormatRename {
     a1: i32,
-    #[serde(rename_serialize="a3", rename_deserialize="a4")]
+    #[serde(rename(xml= "a4", json="a5"))]
     a2: i32,
 }
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+enum SerEnum<A> {
+    Map {
+        a: i8,
+        #[serde(rename(xml= "c", json="d"))]
+        b: A,
+    },
+}
+
 
 #[test]
 fn test_default() {
@@ -47,11 +57,23 @@ fn test_rename() {
 }
 
 #[test]
-fn test_direction_rename() {
-    let value = DirectionRename { a1: 1, a2: 2 };
+fn test_format_rename() {
+    let value = FormatRename { a1: 1, a2: 2 };
     let serialized_value = json::to_string(&value).unwrap();
-    assert_eq!(serialized_value, "{\"a1\":1,\"a3\":2}");
+    assert_eq!(serialized_value, "{\"a1\":1,\"a5\":2}");
 
-    let deserialized_value = json::from_str("{\"a1\":1,\"a4\":2}").unwrap();
+    let deserialized_value = json::from_str("{\"a1\":1,\"a5\":2}").unwrap();
+    assert_eq!(value, deserialized_value);
+}
+
+#[test]
+fn test_enum_format_rename() {
+    let s1 = String::new();
+    let value = SerEnum::Map { a: 0i8, b: s1 };
+    let serialized_value = json::to_string(&value).unwrap();
+    let ans = "{\"Map\":{\"a\":0,\"d\":\"\"}}";
+    assert_eq!(serialized_value, ans);
+
+    let deserialized_value = json::from_str(ans).unwrap();
     assert_eq!(value, deserialized_value);
 }

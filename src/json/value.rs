@@ -571,6 +571,11 @@ impl ser::Serializer for Serializer {
 
         Ok(())
     }
+
+    #[inline]
+    fn format() -> &'static str {
+        "json"
+    }
 }
 
 pub struct Deserializer {
@@ -676,6 +681,11 @@ impl de::Deserializer for Deserializer {
             Some(_) => Err(de::Error::syntax_error()),
             None => Ok(value)
         }
+    }
+
+    #[inline]
+    fn format() -> &'static str {
+        "json"
     }
 }
 

@@ -104,7 +104,7 @@ pub trait Serializer {
     fn visit_str(&mut self, value: &str) -> Result<(), Self::Error>;
 
     /// `visit_bytes` is a hook that enables those serialization formats that support serializing
-    /// byte slices separately from generic arrays. By default it serializes as a regular array. 
+    /// byte slices separately from generic arrays. By default it serializes as a regular array.
     #[inline]
     fn visit_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error> {
         self.visit_seq(impls::SeqIteratorVisitor::new(value.iter(), Some(value.len())))
@@ -179,6 +179,14 @@ pub trait Serializer {
     fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize;
+
+    /// Specify a format string for the serializer.
+    ///
+    /// The serializer format is used to determine which format
+    /// specific field attributes should be used with the serializer.
+    fn format() -> &'static str {
+        ""
+    }
 }
 
 pub trait SeqVisitor {

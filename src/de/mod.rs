@@ -113,6 +113,15 @@ pub trait Deserializer {
     {
         self.visit(visitor)
     }
+
+    /// Specify a format string for the deserializer.
+    ///
+    /// The deserializer format is used to determine which format
+    /// specific field attributes should be used with the
+    /// deserializer.
+    fn format() -> &'static str {
+        ""
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
