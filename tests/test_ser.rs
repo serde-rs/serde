@@ -380,6 +380,24 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_array {
+        [0; 0] => vec![
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        [1, 2, 3] => vec![
+            Token::SeqStart(Some(3)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+
+                Token::SeqSep,
+                Token::I32(3),
+            Token::SeqEnd,
+        ],
+    }
     test_vec {
         Vec::<isize>::new() => vec![
             Token::SeqStart(Some(0)),
