@@ -464,9 +464,10 @@ macro_rules! array_impls {
                     where V: SeqVisitor,
                 {
                     $(
-                        let $name = try!(visitor.visit().and_then(
-                            |value| value.ok_or(Error::end_of_stream_error()))
-                        );
+                        let $name = match try!(visitor.visit()) {
+                            Some(val) => val,
+                            None => { return Err(Error::end_of_stream_error()); }
+                        };
                     )+;
 
                     try!(visitor.end());
