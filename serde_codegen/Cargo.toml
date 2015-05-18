@@ -5,8 +5,20 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
 repository = "https://github.com/erickt/rust-serde"
+build = "build.rs"
+
+[features]
+default = ["with-syntex"]
+nightly = ["quasi_macros"]
+with-syntex = ["quasi/with-syntex", "quasi_codegen/with-syntex", "syntex", "syntex_syntax"]
+
+[build-dependencies]
+quasi_codegen = { verision = "*", optional = true }
+syntex = { version = "*", optional = true }
 
 [dependencies]
-aster = "*"
-quasi = "*"
-quasi_macros = "*"
+aster = { version = "*", default-features = false }
+quasi = { verision = "*", default-features = false }
+quasi_macros = { version = "*", optional = true }
+syntex = { version = "*", optional = true }
+syntex_syntax = { version = "*", optional = true }

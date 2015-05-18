@@ -1,7 +1,6 @@
-#![feature(custom_attribute, custom_derive, plugin, test)]
-#![plugin(serde_macros)]
+#![feature(test)]
 
 extern crate serde;
 extern crate test;
 
-include!("test.rs.in");
+include!(concat!(env!("OUT_DIR"), "/test.rs"));

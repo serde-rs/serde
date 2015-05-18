@@ -7,7 +7,7 @@ use syntax::attr;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 
-use super::attr::FieldAttrs;
+use attr::FieldAttrs;
 
 enum Rename<'a> {
     None,

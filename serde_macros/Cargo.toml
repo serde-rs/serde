@@ -11,4 +11,9 @@ name = "serde_macros"
 plugin = true
 
 [dependencies]
-serde_codegen = { version = "*", path = "../serde_codegen" }
+serde_codegen = { version = "*", path = "../serde_codegen", default-features = false, features = ["nightly"] }
+
+[dev-dependencies]
+num = "*"
+rustc-serialize = "*"
+serde = { version = "*", path = "../serde" }

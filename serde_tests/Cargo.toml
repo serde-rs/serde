@@ -8,14 +8,18 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "http://serde-rs.github.io/serde/serde"
 readme = "README.md"
 keywords = ["serialization"]
+build = "build.rs"
 
-[dependencies]
-num = "*"
+[build-dependencies]
+syntex = { version = "*", optional = true }
+syntex_syntax = { version = "*" }
+serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
+num = "*"
 rustc-serialize = "*"
 serde = { version = "*", path = "../serde" }
-serde_macros = { version = "*", path = "../serde_macros" }
+syntex = "*"
 
 [[test]]
 name = "test"

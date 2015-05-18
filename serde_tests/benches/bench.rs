@@ -1,9 +1,8 @@
-#![feature(custom_attribute, custom_derive, plugin, test)]
-#![plugin(serde_macros)]
+#![feature(test)]
 
+extern crate num;
+extern crate rustc_serialize;
 extern crate serde;
 extern crate test;
 
-mod syntax {
-    include!("bench.rs.in");
-}
+include!(concat!(env!("OUT_DIR"), "/bench.rs"));
