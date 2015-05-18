@@ -50,7 +50,7 @@ fn rename<'a>(
     }
 }
 
-pub fn default_value(mi: &ast::MetaItem) -> bool {
+fn default_value(mi: &ast::MetaItem) -> bool {
     if let ast::MetaItem_::MetaWord(ref n) = mi.node {
         n == &"default"
     } else {
