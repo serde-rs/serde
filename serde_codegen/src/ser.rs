@@ -1,3 +1,5 @@
+use aster;
+
 use syntax::ast::{
     Ident,
     MetaItem,
@@ -7,21 +9,29 @@ use syntax::ast::{
 };
 use syntax::ast;
 use syntax::codemap::Span;
-use syntax::ext::base::ExtCtxt;
+use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
-
-use aster;
 
 use field::struct_field_attrs;
 
 pub fn expand_derive_serialize(
     cx: &mut ExtCtxt,
     span: Span,
-    _mitem: &MetaItem,
-    item: &Item,
-    push: &mut FnMut(P<ast::Item>)
+    meta_item: &MetaItem,
+    annotatable: Annotatable,
+    push: &mut FnMut(Annotatable)
 ) {
+    let item = match annotatable {
+        Annotatable::Item(item) => item,
+        _ => {
+            cx.span_err(
+                meta_item.span,
+                "`derive` may only be applied to structs and enums");
+            return;
+        }
+    };
+
     let builder = aster::AstBuilder::new().span(span);
 
     let generics = match item.node {
@@ -43,7 +53,7 @@ pub fn expand_derive_serialize(
     let body = serialize_body(
         cx,
         &builder,
-        item,
+        &item,
         &impl_generics,
         ty.clone(),
     );
@@ -61,7 +71,7 @@ pub fn expand_derive_serialize(
         }
     ).unwrap();
 
-    push(impl_item)
+    push(Annotatable::Item(impl_item))
 }
 
 fn serialize_body(

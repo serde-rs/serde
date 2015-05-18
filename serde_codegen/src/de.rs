@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
+use aster;
+
 use syntax::ast::{
+    self,
     Ident,
     MetaItem,
     Item,
@@ -8,14 +11,11 @@ use syntax::ast::{
     StructDef,
     EnumDef,
 };
-use syntax::ast;
 use syntax::codemap::Span;
-use syntax::ext::base::ExtCtxt;
+use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::owned_slice::OwnedSlice;
 use syntax::ptr::P;
-
-use aster;
 
 use attr;
 use field;
@@ -23,10 +23,20 @@ use field;
 pub fn expand_derive_deserialize(
     cx: &mut ExtCtxt,
     span: Span,
-    _mitem: &MetaItem,
-    item: &Item,
-    push: &mut FnMut(P<ast::Item>)
+    meta_item: &MetaItem,
+    annotatable: Annotatable,
+    push: &mut FnMut(Annotatable)
 ) {
+    let item = match annotatable {
+        Annotatable::Item(item) => item,
+        _ => {
+            cx.span_err(
+                meta_item.span,
+                "`derive` may only be applied to structs and enums");
+            return;
+        }
+    };
+
     let builder = aster::AstBuilder::new().span(span);
 
     let generics = match item.node {
@@ -48,7 +58,7 @@ pub fn expand_derive_deserialize(
     let body = deserialize_body(
         cx,
         &builder,
-        item,
+        &item,
         &impl_generics,
         ty.clone(),
     );
@@ -66,7 +76,7 @@ pub fn expand_derive_deserialize(
         }
     ).unwrap();
 
-    push(impl_item)
+    push(Annotatable::Item(impl_item))
 }
 
 fn deserialize_body(
@@ -661,49 +671,47 @@ fn deserialize_field_visitor(
                     })
     };
 
-    vec![
-        field_enum,
+    let impl_item = quote_item!(cx,
+        impl ::serde::de::Deserialize for __Field {
+            #[inline]
+            fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
+                where D: ::serde::de::Deserializer,
+            {
+                use std::marker::PhantomData;
 
-        quote_item!(cx,
-            impl ::serde::de::Deserialize for __Field {
-                #[inline]
-                fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
-                    where D: ::serde::de::Deserializer,
-                {
-                    use std::marker::PhantomData;
-
-                    struct __FieldVisitor<D> {
-                        phantom: PhantomData<D>
-                    }
-
-                    impl<__D> ::serde::de::Visitor for __FieldVisitor<__D>
-                        where __D: ::serde::de::Deserializer
-                    {
-                        type Value = __Field;
-
-                        fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<__Field, E>
-                            where E: ::serde::de::Error,
-                        {
-                            $body
-                        }
-
-                        fn visit_bytes<E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, E>
-                            where E: ::serde::de::Error,
-                        {
-                            // TODO: would be better to generate a byte string literal match
-                            match ::std::str::from_utf8(value) {
-                                Ok(s) => self.visit_str(s),
-                                _ => Err(::serde::de::Error::syntax_error()),
-                            }
-                        }
-                    }
-
-                    deserializer.visit(
-                        __FieldVisitor::<D>{ phantom: PhantomData })
+                struct __FieldVisitor<D> {
+                    phantom: PhantomData<D>
                 }
+
+                impl<__D> ::serde::de::Visitor for __FieldVisitor<__D>
+                    where __D: ::serde::de::Deserializer
+                {
+                    type Value = __Field;
+
+                    fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<__Field, E>
+                        where E: ::serde::de::Error,
+                    {
+                        $body
+                    }
+
+                    fn visit_bytes<E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, E>
+                        where E: ::serde::de::Error,
+                    {
+                        // TODO: would be better to generate a byte string literal match
+                        match ::std::str::from_utf8(value) {
+                            Ok(s) => self.visit_str(s),
+                            _ => Err(::serde::de::Error::syntax_error()),
+                        }
+                    }
+                }
+
+                deserializer.visit(
+                    __FieldVisitor::<D>{ phantom: PhantomData })
             }
-        ).unwrap(),
-    ]
+        }
+    ).unwrap();
+
+    vec![field_enum, impl_item]
 }
 
 fn deserialize_struct_visitor(

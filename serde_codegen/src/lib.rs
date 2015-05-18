@@ -14,11 +14,11 @@ mod ser;
 pub fn register(reg: &mut rustc::plugin::Registry) {
     reg.register_syntax_extension(
         syntax::parse::token::intern("derive_Serialize"),
-        syntax::ext::base::Decorator(
+        syntax::ext::base::MultiDecorator(
             Box::new(ser::expand_derive_serialize)));
 
     reg.register_syntax_extension(
         syntax::parse::token::intern("derive_Deserialize"),
-        syntax::ext::base::Decorator(
+        syntax::ext::base::MultiDecorator(
             Box::new(de::expand_derive_deserialize)));
 }
