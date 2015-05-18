@@ -1,15 +1,8 @@
-#![feature(custom_derive, collections, plugin, test)]
-#![allow(non_camel_case_types)]
-#![plugin(serde_macros)]
-
-extern crate num;
-extern crate rustc_serialize;
-extern crate serde;
-extern crate test;
-
 use std::io::{self, Read, Write};
 use num::FromPrimitive;
 use test::Bencher;
+
+use rustc_serialize;
 
 use serde::de::{self, Deserialize, Deserializer};
 use serde::json::ser::escape_str;
@@ -32,6 +25,7 @@ struct Http {
     request_uri: String,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum HttpProtocol {
     HTTP_PROTOCOL_UNKNOWN,
@@ -92,6 +86,7 @@ impl de::Deserialize for HttpProtocol {
     }
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum HttpMethod {
     METHOD_UNKNOWN,
@@ -168,6 +163,7 @@ impl de::Deserialize for HttpMethod {
     }
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum CacheStatus {
     CACHESTATUS_UNKNOWN,
@@ -238,6 +234,7 @@ struct Origin {
     protocol: OriginProtocol,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum OriginProtocol {
     ORIGIN_PROTOCOL_UNKNOWN,
@@ -298,6 +295,7 @@ impl de::Deserialize for OriginProtocol {
     }
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum ZonePlan {
     ZONEPLAN_UNKNOWN,
@@ -1018,9 +1016,17 @@ impl MyMemWriter0 {
 
 
 impl Write for MyMemWriter0 {
+    #[cfg(feature = "nightly")]
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.buf.push_all(buf);
+        Ok(buf.len())
+    }
+
+    #[cfg(not(feature = "nightly"))]
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.buf.extend(buf.iter().cloned());
         Ok(buf.len())
     }
 

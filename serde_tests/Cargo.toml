@@ -16,3 +16,11 @@ num = "*"
 rustc-serialize = "*"
 serde = { version = "*", path = "../serde" }
 serde_macros = { version = "*", path = "../serde_macros" }
+
+[[test]]
+name = "test"
+path = "tests/test.rs"
+
+[[bench]]
+name = "bench"
+path = "benches/bench.rs"

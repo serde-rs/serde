@@ -1,9 +1,3 @@
-#![feature(custom_attribute, custom_derive, plugin, test)]
-#![plugin(serde_macros)]
-
-extern crate test;
-extern crate serde;
-
 use serde::json;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

@@ -1,17 +1,7 @@
-#![feature(custom_derive, plugin, test)]
-#![plugin(serde_macros)]
-
-extern crate serde;
-extern crate rustc_serialize;
-extern crate test;
-
 use test::Bencher;
-
 use rustc_serialize::{Decoder, Decodable};
-
+use serde;
 use serde::de::{Deserializer, Deserialize};
-
-use Animal::{Dog, Frog};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -408,7 +398,7 @@ mod deserializer {
 #[bench]
 fn bench_decoder_dog(b: &mut Bencher) {
     b.iter(|| {
-        let animal = Dog;
+        let animal = Animal::Dog;
 
         let mut d = decoder::AnimalDecoder::new(animal.clone());
         let value: Animal = Decodable::decode(&mut d).unwrap();
@@ -420,7 +410,7 @@ fn bench_decoder_dog(b: &mut Bencher) {
 #[bench]
 fn bench_decoder_frog(b: &mut Bencher) {
     b.iter(|| {
-        let animal = Frog("Henry".to_string(), 349);
+        let animal = Animal::Frog("Henry".to_string(), 349);
 
         let mut d = decoder::AnimalDecoder::new(animal.clone());
         let value: Animal = Decodable::decode(&mut d).unwrap();
@@ -432,7 +422,7 @@ fn bench_decoder_frog(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_dog(b: &mut Bencher) {
     b.iter(|| {
-        let animal = Dog;
+        let animal = Animal::Dog;
 
         let mut d = deserializer::AnimalDeserializer::new(animal.clone());
         let value: Animal = Deserialize::deserialize(&mut d).unwrap();
@@ -444,7 +434,7 @@ fn bench_deserializer_dog(b: &mut Bencher) {
 #[bench]
 fn bench_deserializer_frog(b: &mut Bencher) {
     b.iter(|| {
-        let animal = Frog("Henry".to_string(), 349);
+        let animal = Animal::Frog("Henry".to_string(), 349);
 
         let mut d = deserializer::AnimalDeserializer::new(animal.clone());
         let value: Animal = Deserialize::deserialize(&mut d).unwrap();

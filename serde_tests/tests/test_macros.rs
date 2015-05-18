@@ -1,8 +1,3 @@
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
-
-extern crate serde;
-
 use std::collections::BTreeMap;
 use serde::json::{self, Value};
 

@@ -1,0 +1,7 @@
+mod test_annotations;
+mod test_bytes;
+mod test_de;
+mod test_json;
+mod test_json_builder;
+mod test_macros;
+mod test_ser;

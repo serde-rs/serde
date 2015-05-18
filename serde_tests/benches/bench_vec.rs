@@ -1,15 +1,9 @@
-#![feature(plugin, test)]
-#![plugin(serde_macros)]
-
-extern crate serde;
-extern crate rustc_serialize;
-extern crate test;
-
 use std::fmt::Debug;
 use test::Bencher;
 
 use rustc_serialize::{Decoder, Decodable};
 
+use serde;
 use serde::de::{Deserializer, Deserialize};
 
 //////////////////////////////////////////////////////////////////////////////

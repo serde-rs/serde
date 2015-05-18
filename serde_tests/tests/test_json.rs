@@ -1,9 +1,3 @@
-#![feature(custom_derive, plugin, test, custom_attribute)]
-#![plugin(serde_macros)]
-
-extern crate test;
-extern crate serde;
-
 use std::fmt::Debug;
 use std::collections::BTreeMap;
 

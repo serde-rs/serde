@@ -1,9 +1,3 @@
-#![feature(custom_derive, plugin, test)]
-#![plugin(serde_macros)]
-
-extern crate test;
-extern crate serde;
-
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::iter;
 use std::vec;

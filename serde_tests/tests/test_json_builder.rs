@@ -1,5 +1,3 @@
-extern crate serde;
-
 use std::collections::BTreeMap;
 
 use serde::json::value::Value;
