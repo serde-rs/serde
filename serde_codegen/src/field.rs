@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+use aster;
+
 use syntax::ast;
 use syntax::attr;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
-
-use aster;
 
 use super::attr::FieldAttrs;
 
