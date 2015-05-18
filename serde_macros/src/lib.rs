@@ -1,28 +1,10 @@
-#![feature(custom_derive, plugin, plugin_registrar, rustc_private, unboxed_closures)]
-#![plugin(quasi_macros)]
+#![feature(plugin_registrar, rustc_private)]
 
-extern crate aster;
-extern crate quasi;
+extern crate serde_codegen;
 extern crate rustc;
-extern crate syntax;
-
-use syntax::ext::base::Decorator;
-use syntax::parse::token;
-use rustc::plugin::Registry;
-
-mod attr;
-mod field;
-mod de;
-mod ser;
 
 #[plugin_registrar]
 #[doc(hidden)]
-pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(
-        token::intern("derive_Serialize"),
-        Decorator(Box::new(ser::expand_derive_serialize)));
-
-    reg.register_syntax_extension(
-        token::intern("derive_Deserialize"),
-        Decorator(Box::new(de::expand_derive_deserialize)));
+pub fn plugin_registrar(reg: &mut rustc::plugin::Registry) {
+    serde_codegen::register(reg);
 }

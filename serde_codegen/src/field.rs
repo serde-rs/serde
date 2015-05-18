@@ -7,7 +7,7 @@ use syntax::ptr::P;
 
 use aster;
 
-use attr::FieldAttrs;
+use super::attr::FieldAttrs;
 
 enum Rename<'a> {
     None,
