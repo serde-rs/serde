@@ -1,6 +1,8 @@
 //! Helper module to enable serializing bytes more efficiently
 
 use std::ops;
+use std::fmt;
+use std::ascii;
 
 use ser;
 use de;
@@ -8,8 +10,15 @@ use de;
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `Bytes` wraps a `&[u8]` in order to serialize into a byte array.
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Bytes<'a> {
     bytes: &'a [u8],
+}
+
+impl<'a> fmt::Debug for Bytes<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "b\"{}\"", escape_bytestring(self.bytes))
+    }
 }
 
 impl<'a> From<&'a [u8]> for Bytes<'a> {
@@ -25,6 +34,12 @@ impl<'a> From<&'a Vec<u8>> for Bytes<'a> {
         Bytes {
             bytes: &bytes,
         }
+    }
+}
+
+impl<'a> Into<&'a [u8]> for Bytes<'a> {
+    fn into(self) -> &'a [u8] {
+        self.bytes
     }
 }
 
@@ -46,7 +61,7 @@ impl<'a> ser::Serialize for Bytes<'a> {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `ByteBuf` wraps a `Vec<u8>` in order to hook into serialize and from deserialize a byte array.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ByteBuf {
     bytes: Vec<u8>,
 }
@@ -65,10 +80,22 @@ impl ByteBuf {
     }
 }
 
-impl<T> From<T> for ByteBuf where T: Into<Vec<u8>> {
-    fn from(bytes: T) -> Self {
+impl fmt::Debug for ByteBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "b\"{}\"", escape_bytestring(self.bytes.as_ref()))
+    }
+}
+
+impl Into<Vec<u8>> for ByteBuf {
+    fn into(self) -> Vec<u8> {
+        self.bytes
+    }
+}
+
+impl From<Vec<u8>> for ByteBuf {
+    fn from(bytes: Vec<u8>) -> Self {
         ByteBuf {
-            bytes: bytes.into(),
+            bytes: bytes,
         }
     }
 }
@@ -171,4 +198,16 @@ impl de::Deserialize for ByteBuf {
     {
         deserializer.visit_bytes(ByteBufVisitor)
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+fn escape_bytestring(bytes: &[u8]) -> String {
+    let mut result = String::new();
+    for &b in bytes {
+        for esc in ascii::escape_default(b) {
+            result.push(esc as char);
+        }
+    }
+    result
 }

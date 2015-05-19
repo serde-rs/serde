@@ -272,10 +272,10 @@ pub trait Visitor {
         Err(Error::syntax_error())
     }
 
-    fn visit_byte_buf<E>(&mut self, _v: Vec<u8>) -> Result<Self::Value, E>
+    fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax_error())
+        self.visit_bytes(&v)
     }
 }
 

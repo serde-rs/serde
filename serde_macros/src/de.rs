@@ -686,6 +686,16 @@ fn deserialize_field_visitor(
                         {
                             $body
                         }
+
+                        fn visit_bytes<E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, E>
+                            where E: ::serde::de::Error,
+                        {
+                            // TODO: would be better to generate a byte string literal match
+                            match ::std::str::from_utf8(value) {
+                                Ok(s) => self.visit_str(s),
+                                _ => Err(::serde::de::Error::syntax_error()),
+                            }
+                        }
                     }
 
                     deserializer.visit(
