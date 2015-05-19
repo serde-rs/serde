@@ -46,6 +46,22 @@ impl Value {
         Some(target)
     }
 
+    /// Looks up a value by path.
+    ///
+    /// This is a convenience method that splits the path by `'.'`
+    /// and then feeds the sequence of keys into the `find_path`
+    /// method.
+    ///
+    /// ``` ignore
+    /// let obj: Value = json::from_str(r#"{"x": {"a": 1}}"#).unwrap();
+    ///
+    /// assert!(obj.lookup("x.a").unwrap() == &Value::U64(1));
+    /// ```
+    pub fn lookup<'a>(&'a self, path: &'a str) -> Option<&'a Value> {
+        let paths = path.split('.').collect::<Vec<&str>>();
+        self.find_path(&paths)
+    }
+
     /// If the `Value` is an Object, performs a depth-first search until
     /// a value associated with the provided key is found. If no value is found
     /// or the `Value` is not an Object, returns None.

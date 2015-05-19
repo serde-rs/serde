@@ -1065,3 +1065,12 @@ fn test_missing_fmt_renamed_field() {
             ))).unwrap();
     assert_eq!(value, Foo { x: Some(5) });
 }
+
+#[test]
+fn test_lookup() {
+    let obj: Value = json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
+
+    assert!(obj.lookup("x.a").unwrap() == &Value::U64(1));
+    assert!(obj.lookup("y").unwrap() == &Value::U64(2));
+    assert!(obj.lookup("z").is_none());
+}
