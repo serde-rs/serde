@@ -5,7 +5,6 @@ use std::path;
 use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
-use std::str;
 
 use num::FromPrimitive;
 
