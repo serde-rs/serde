@@ -180,7 +180,7 @@ impl<Iter> Deserializer<Iter>
     }
 
     fn parse_integer(&mut self) -> Result<u64, Error> {
-        let mut res = 0;
+        let mut accum: u64 = 0;
 
         match self.ch_or_null() {
             b'0' => {
@@ -198,8 +198,17 @@ impl<Iter> Deserializer<Iter>
                 while !self.eof() {
                     match self.ch_or_null() {
                         c @ b'0' ... b'9' => {
-                            res *= 10;
-                            res += (c as u64) - (b'0' as u64);
+                            macro_rules! try_or_invalid {
+                                ($e: expr) => {
+                                    match $e {
+                                        Some(v) => v,
+                                        None => { return Err(self.error(ErrorCode::InvalidNumber)); }
+                                    }
+                                }
+                            }
+                            accum = try_or_invalid!(accum.checked_mul(10));
+                            accum = try_or_invalid!(accum.checked_add((c as u64) - ('0' as u64)));
+
                             try!(self.bump());
                         }
                         _ => break,
@@ -209,7 +218,7 @@ impl<Iter> Deserializer<Iter>
             _ => { return Err(self.error(ErrorCode::InvalidNumber)); }
         }
 
-        Ok(res)
+        Ok(accum)
     }
 
     fn parse_decimal(&mut self, res: f64) -> Result<f64, Error> {
