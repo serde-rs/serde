@@ -130,6 +130,53 @@ impl<'a, T> Serialize for &'a [T]
     }
 }
 
+macro_rules! array_impls {
+    ($len:expr) => {
+        impl<T> Serialize for [T; $len] where T: Serialize {
+            #[inline]
+            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: Serializer,
+            {
+                serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some($len)))
+            }
+        }
+    }
+}
+
+array_impls!(0);
+array_impls!(1);
+array_impls!(2);
+array_impls!(3);
+array_impls!(4);
+array_impls!(5);
+array_impls!(6);
+array_impls!(7);
+array_impls!(8);
+array_impls!(9);
+array_impls!(10);
+array_impls!(11);
+array_impls!(12);
+array_impls!(13);
+array_impls!(14);
+array_impls!(15);
+array_impls!(16);
+array_impls!(17);
+array_impls!(18);
+array_impls!(19);
+array_impls!(20);
+array_impls!(21);
+array_impls!(22);
+array_impls!(23);
+array_impls!(24);
+array_impls!(25);
+array_impls!(26);
+array_impls!(27);
+array_impls!(28);
+array_impls!(29);
+array_impls!(30);
+array_impls!(31);
+array_impls!(32);
+
 impl<T> Serialize for Vec<T> where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>

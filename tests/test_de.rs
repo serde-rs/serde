@@ -652,6 +652,46 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_array {
+        [0; 0] => vec![
+            Token::Unit,
+        ],
+        [0; 0] => vec![
+            Token::SeqStart(0),
+            Token::SeqEnd,
+        ],
+        ([0; 0], [1], [2, 3]) => vec![
+            Token::SeqStart(3),
+                Token::SeqSep,
+                Token::SeqStart(0),
+                Token::SeqEnd,
+
+                Token::SeqSep,
+                Token::SeqStart(1),
+                    Token::SeqSep,
+                    Token::I32(1),
+                Token::SeqEnd,
+
+                Token::SeqSep,
+                Token::SeqStart(2),
+                    Token::SeqSep,
+                    Token::I32(2),
+
+                    Token::SeqSep,
+                    Token::I32(3),
+                Token::SeqEnd,
+            Token::SeqEnd,
+        ],
+        [0; 0] => vec![
+            Token::Name("Anything"),
+            Token::Unit,
+        ],
+        [0; 0] => vec![
+            Token::Name("Anything"),
+            Token::SeqStart(0),
+            Token::SeqEnd,
+        ],
+    }
     test_tuple {
         (1,) => vec![
             Token::SeqStart(1),
