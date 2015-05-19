@@ -37,8 +37,8 @@ impl Value {
     /// Otherwise, it will return the `Value` associated with the final key.
     pub fn find_path<'a>(&'a self, keys: &[&str]) -> Option<&'a Value>{
         let mut target = self;
-        for key in keys.iter() {
-            match target.find(*key) {
+        for key in keys {
+            match target.find(key) {
                 Some(t) => { target = t; },
                 None => return None
             }
@@ -58,8 +58,14 @@ impl Value {
     /// assert!(obj.lookup("x.a").unwrap() == &Value::U64(1));
     /// ```
     pub fn lookup<'a>(&'a self, path: &'a str) -> Option<&'a Value> {
-        let paths = path.split('.').collect::<Vec<&str>>();
-        self.find_path(&paths)
+        let mut target = self;
+        for key in path.split('.') {
+            match target.find(key) {
+                Some(t) => { target = t; },
+                None => return None
+            }
+        }
+        Some(target)
     }
 
     /// If the `Value` is an Object, performs a depth-first search until

@@ -1067,6 +1067,15 @@ fn test_missing_fmt_renamed_field() {
 }
 
 #[test]
+fn test_find_path() {
+    let obj: Value = json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
+
+    assert!(obj.find_path(&["x", "a"]).unwrap() == &Value::U64(1));
+    assert!(obj.find_path(&["y"]).unwrap() == &Value::U64(2));
+    assert!(obj.find_path(&["z"]).is_none());
+}
+
+#[test]
 fn test_lookup() {
     let obj: Value = json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
 
