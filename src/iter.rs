@@ -1,4 +1,5 @@
 use std::io;
+use std::iter::Peekable;
 
 pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
     iter: Iter,
@@ -25,10 +26,15 @@ impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
     pub fn get_ref(&self) -> &Iter { &self.iter }
 
     /// Gets a mutable reference to the underlying iterator.
-    pub fn get_mut(&self) -> &Iter { &self.iter }
+    pub fn get_mut(&mut self) -> &mut Iter { &mut self.iter }
 
     /// Unwraps this `LineColIterator`, returning the underlying iterator.
     pub fn into_inner(self) -> Iter { self.iter }
+}
+
+impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Peekable<Iter>> {
+    /// peeks at the next value
+    pub fn peek(&mut self) -> Option<&io::Result<u8>> { self.iter.peek() }
 }
 
 impl<Iter: Iterator<Item=io::Result<u8>>> Iterator for LineColIterator<Iter> {

@@ -127,7 +127,7 @@ pub trait Deserializer {
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Visitor {
-    type Value;
+    type Value: Deserialize;
 
     fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
         where E: Error,

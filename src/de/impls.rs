@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::str;
 
 use num::FromPrimitive;
 
@@ -56,6 +57,16 @@ impl Visitor for BoolVisitor {
     {
         Ok(v)
     }
+
+    fn visit_str<E>(&mut self, s: &str) -> Result<bool, E>
+        where E: Error,
+    {
+        match s.trim() {
+            "true" => Ok(true),
+            "false" => Ok(false),
+            _ => Err(Error::syntax_error()),
+        }
+    }
 }
 
 impl Deserialize for bool {
@@ -96,7 +107,7 @@ impl<T> PrimitiveVisitor<T> {
 }
 
 impl<
-    T: Deserialize + FromPrimitive
+    T: Deserialize + FromPrimitive + str::FromStr
 > Visitor for PrimitiveVisitor<T> {
     type Value = T;
 
@@ -112,6 +123,13 @@ impl<
     impl_deserialize_num_method!(u64, visit_u64, from_u64);
     impl_deserialize_num_method!(f32, visit_f32, from_f32);
     impl_deserialize_num_method!(f64, visit_f64, from_f64);
+
+    #[inline]
+    fn visit_str<E>(&mut self, v: &str) -> Result<T, E>
+        where E: Error,
+    {
+        str::FromStr::from_str(v.trim()).or(Err(Error::syntax_error()))
+    }
 }
 
 macro_rules! impl_deserialize_num {
@@ -394,7 +412,7 @@ impl<T> Deserialize for Vec<T>
     fn deserialize<D>(deserializer: &mut D) -> Result<Vec<T>, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(VecVisitor::new())
+        deserializer.visit_seq(VecVisitor::new())
     }
 }
 
@@ -572,7 +590,7 @@ macro_rules! tuple_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit($visitor { marker: PhantomData })
+                    deserializer.visit_seq($visitor { marker: PhantomData })
                 }
             }
         )+
