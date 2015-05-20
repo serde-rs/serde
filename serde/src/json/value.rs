@@ -57,7 +57,7 @@ impl Value {
     ///
     /// assert!(obj.lookup("x.a").unwrap() == &Value::U64(1));
     /// ```
-    pub fn lookup<'a>(&'a self, path: &'a str) -> Option<&'a Value> {
+    pub fn lookup<'a>(&'a self, path: &str) -> Option<&'a Value> {
         let mut target = self;
         for key in path.split('.') {
             match target.find(key) {
