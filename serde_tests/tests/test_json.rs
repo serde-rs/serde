@@ -703,6 +703,7 @@ fn test_parse_number_errors() {
         ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
         ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
         ("777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 20)),
+        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 22)),
     ]);
 }
 
