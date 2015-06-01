@@ -24,11 +24,11 @@ pub fn expand_derive_deserialize(
     cx: &mut ExtCtxt,
     span: Span,
     meta_item: &MetaItem,
-    annotatable: Annotatable,
+    annotatable: &Annotatable,
     push: &mut FnMut(Annotatable)
 ) {
     let item = match annotatable {
-        Annotatable::Item(item) => item,
+        &Annotatable::Item(ref item) => item,
         _ => {
             cx.span_err(
                 meta_item.span,
