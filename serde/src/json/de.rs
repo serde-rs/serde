@@ -249,7 +249,7 @@ impl<Iter> Deserializer<Iter>
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64, Error> {
         try!(self.bump());
 
-        let mut exp = 0;
+        let mut exp: u64 = 0;
         let mut neg_exp = false;
 
         if self.ch_is(b'+') {
@@ -267,8 +267,16 @@ impl<Iter> Deserializer<Iter>
         while !self.eof() {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
-                    exp *= 10;
-                    exp += (c as i32) - (b'0' as i32);
+                    macro_rules! try_or_invalid {
+                        ($e: expr) => {
+                            match $e {
+                                Some(v) => v,
+                                None => { return Err(self.error(ErrorCode::InvalidNumber)); }
+                            }
+                        }
+                    }
+                    exp = try_or_invalid!(exp.checked_mul(10));
+                    exp = try_or_invalid!(exp.checked_add((c as u64) - (b'0' as u64)));
 
                     try!(self.bump());
                 }
@@ -276,7 +284,7 @@ impl<Iter> Deserializer<Iter>
             }
         }
 
-        let exp: f64 = 10_f64.powi(exp);
+        let exp: f64 = 10_f64.powf(exp as f64);
         if neg_exp {
             res /= exp;
         } else {
