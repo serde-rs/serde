@@ -1,4 +1,5 @@
 use std::char;
+use std::i32;
 use std::io;
 use std::str;
 
@@ -11,6 +12,15 @@ pub struct Deserializer<Iter: Iterator<Item=io::Result<u8>>> {
     rdr: LineColIterator<Iter>,
     ch: Option<u8>,
     str_buf: Vec<u8>,
+}
+
+macro_rules! try_or_invalid {
+    ($self_:expr, $e:expr) => {
+        match $e {
+            Some(v) => v,
+            None => { return Err($self_.error(ErrorCode::InvalidNumber)); }
+        }
+    }
 }
 
 impl<Iter> Deserializer<Iter>
@@ -198,16 +208,8 @@ impl<Iter> Deserializer<Iter>
                 while !self.eof() {
                     match self.ch_or_null() {
                         c @ b'0' ... b'9' => {
-                            macro_rules! try_or_invalid {
-                                ($e: expr) => {
-                                    match $e {
-                                        Some(v) => v,
-                                        None => { return Err(self.error(ErrorCode::InvalidNumber)); }
-                                    }
-                                }
-                            }
-                            accum = try_or_invalid!(accum.checked_mul(10));
-                            accum = try_or_invalid!(accum.checked_add((c as u64) - ('0' as u64)));
+                            accum = try_or_invalid!(self, accum.checked_mul(10));
+                            accum = try_or_invalid!(self, accum.checked_add((c as u64) - ('0' as u64)));
 
                             try!(self.bump());
                         }
@@ -267,16 +269,8 @@ impl<Iter> Deserializer<Iter>
         while !self.eof() {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
-                    macro_rules! try_or_invalid {
-                        ($e: expr) => {
-                            match $e {
-                                Some(v) => v,
-                                None => { return Err(self.error(ErrorCode::InvalidNumber)); }
-                            }
-                        }
-                    }
-                    exp = try_or_invalid!(exp.checked_mul(10));
-                    exp = try_or_invalid!(exp.checked_add((c as u64) - (b'0' as u64)));
+                    exp = try_or_invalid!(self, exp.checked_mul(10));
+                    exp = try_or_invalid!(self, exp.checked_add((c as u64) - (b'0' as u64)));
 
                     try!(self.bump());
                 }
@@ -284,7 +278,12 @@ impl<Iter> Deserializer<Iter>
             }
         }
 
-        let exp: f64 = 10_f64.powf(exp as f64);
+        let exp = if exp <= i32::MAX as u64 {
+            10_f64.powi(exp as i32)
+        } else {
+            return Err(self.error(ErrorCode::InvalidNumber));
+        };
+
         if neg_exp {
             res /= exp;
         } else {
