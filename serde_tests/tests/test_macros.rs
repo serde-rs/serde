@@ -123,6 +123,14 @@ enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
     },
 }
 
+#[derive(Serialize)]
+enum Lifetimes<'a> {
+    LifetimeSeq(&'a i32),
+    NoLifetimeSeq(i32),
+    LifetimeMap { a: &'a i32 },
+    NoLifetimeMap { a: i32 },
+}
+
 #[test]
 fn test_named_unit() {
     let named_unit = NamedUnit;
@@ -436,5 +444,34 @@ fn test_de_enum_map() {
             e: e,
             //f: f,
         }
+    );
+}
+
+#[test]
+fn test_lifetimes() {
+    let value = 5;
+    let lifetime = Lifetimes::LifetimeSeq(&value);
+    assert_eq!(
+        json::to_string(&lifetime).unwrap(),
+        "{\"LifetimeSeq\":[5]}"
+    );
+
+    let lifetime = Lifetimes::NoLifetimeSeq(5);
+    assert_eq!(
+        json::to_string(&lifetime).unwrap(),
+        "{\"NoLifetimeSeq\":[5]}"
+    );
+
+    let value = 5;
+    let lifetime = Lifetimes::LifetimeMap { a: &value };
+    assert_eq!(
+        json::to_string(&lifetime).unwrap(),
+        "{\"LifetimeMap\":{\"a\":5}}"
+    );
+
+    let lifetime = Lifetimes::NoLifetimeMap { a: 5 };
+    assert_eq!(
+        json::to_string(&lifetime).unwrap(),
+        "{\"NoLifetimeMap\":{\"a\":5}}"
     );
 }
