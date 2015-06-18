@@ -280,7 +280,7 @@ fn deserialize_tuple_struct(
             impl_generics,
             vec![deserializer_ty_param(builder)],
             vec![deserializer_ty_arg(builder)],
-                );
+        );
 
     let visit_seq_expr = deserialize_seq(
         cx,
