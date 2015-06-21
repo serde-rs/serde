@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -852,5 +853,15 @@ impl<T: Deserialize> Deserialize for Rc<T> {
     {
         let val = try!(Deserialize::deserialize(deserializer));
         Ok(Rc::new(val))
+    }
+}
+
+impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deserialize, {
+    #[inline]
+    fn deserialize<D>(deserializer: &mut D) -> Result<Cow<'a, T>, D::Error>
+        where D: Deserializer,
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(Cow::Owned(val))
     }
 }

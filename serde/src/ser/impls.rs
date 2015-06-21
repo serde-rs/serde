@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
 use std::path;
@@ -510,6 +511,15 @@ impl<T> Serialize for Rc<T> where T: Serialize, {
 }
 
 impl<T> Serialize for Arc<T> where T: Serialize, {
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        (**self).serialize(serializer)
+    }
+}
+
+impl<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned, {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
