@@ -174,7 +174,7 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
 ```
 
 Serializing structs follow this same pattern. In fact, structs are represented
-as a named map. It's visitor uses a simple state machine to iterate through all
+as a named map. Its visitor uses a simple state machine to iterate through all
 the fields:
 
 ```rust
