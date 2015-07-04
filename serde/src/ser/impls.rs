@@ -339,7 +339,7 @@ macro_rules! tuple_impls {
                         $(
                             $state => {
                                 self.state += 1;
-                                Ok(Some(try!(serializer.visit_seq_elt(&e!(self.tuple.$idx)))))
+                                Ok(Some(try!(serializer.visit_tuple_elt(&e!(self.tuple.$idx)))))
                             }
                         )+
                         _ => {
@@ -358,7 +358,7 @@ macro_rules! tuple_impls {
             {
                 #[inline]
                 fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-                    serializer.visit_seq($TupleVisitor::new(self))
+                    serializer.visit_tuple($TupleVisitor::new(self))
                 }
             }
         )+

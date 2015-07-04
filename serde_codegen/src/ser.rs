@@ -476,7 +476,7 @@ fn serialize_tuple_struct_visitor(
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(serializer.visit_seq_elt(&$expr));
+                    let v = try!(serializer.visit_named_seq_elt(&$expr));
                     Ok(Some(v))
                 }
             )
@@ -559,7 +559,7 @@ fn serialize_struct_visitor<I>(
                     Ok(
                         Some(
                             try!(
-                                serializer.visit_map_elt(
+                                serializer.visit_named_map_elt(
                                     $key_expr,
                                     $value_expr,
                                 )
