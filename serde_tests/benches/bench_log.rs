@@ -50,7 +50,7 @@ impl rustc_serialize::Decodable for HttpProtocol {
 
 impl FromStr for HttpProtocol {
     type Err = ();
-    fn from_str(s: &str) -> Result<HttpProtocol, ()> { unimplemented!() }
+    fn from_str(_s: &str) -> Result<HttpProtocol, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for HttpProtocol {
@@ -104,7 +104,7 @@ enum HttpMethod {
 
 impl FromStr for HttpMethod {
     type Err = ();
-    fn from_str(s: &str) -> Result<HttpMethod, ()> { unimplemented!() }
+    fn from_str(_s: &str) -> Result<HttpMethod, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for HttpMethod {
@@ -174,7 +174,7 @@ enum CacheStatus {
 
 impl FromStr for CacheStatus {
     type Err = ();
-    fn from_str(s: &str) -> Result<CacheStatus, ()> { unimplemented!() }
+    fn from_str(_s: &str) -> Result<CacheStatus, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for CacheStatus {
@@ -244,7 +244,7 @@ enum OriginProtocol {
 
 impl FromStr for OriginProtocol {
     type Err = ();
-    fn from_str(s: &str) -> Result<OriginProtocol, ()> { unimplemented!() }
+    fn from_str(_s: &str) -> Result<OriginProtocol, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for OriginProtocol {
@@ -307,7 +307,7 @@ enum ZonePlan {
 
 impl FromStr for ZonePlan {
     type Err = ();
-    fn from_str(s: &str) -> Result<ZonePlan, ()> { unimplemented!() }
+    fn from_str(_s: &str) -> Result<ZonePlan, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for ZonePlan {
@@ -622,7 +622,7 @@ enum Country {
 
 impl FromStr for Country {
     type Err = ();
-    fn from_str(s: &str) -> Result<Country, ()> { unimplemented!() }
+    fn from_str(_s: &str) -> Result<Country, ()> { unimplemented!() }
 }
 
 impl FromPrimitive for Country {
