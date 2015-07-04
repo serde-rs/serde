@@ -195,7 +195,10 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
+    fn visit_struct<V>(&mut self,
+                       name: &str,
+                       _fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -324,7 +327,9 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
         de::Deserializer::visit(self.de, visitor)
     }
 
-    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_map<V>(&mut self,
+                    _fields: &'static [&'static str],
+                    visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self.de, visitor)

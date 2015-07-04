@@ -229,7 +229,10 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
-    fn visit_struct<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_struct<V>(&mut self,
+                       _name: &str,
+                       _fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.visit_map(visitor)
@@ -576,7 +579,9 @@ pub trait VariantVisitor {
     }
 
     /// `visit_map` is called when deserializing a struct-like variant.
-    fn visit_map<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_map<V>(&mut self,
+                    _fields: &'static [&'static str],
+                    _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
         Err(Error::syntax_error())
@@ -602,10 +607,12 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_seq(visitor)
     }
 
-    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+    fn visit_map<V>(&mut self,
+                    fields: &'static [&'static str],
+                    visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
-        (**self).visit_map(visitor)
+        (**self).visit_map(fields, visitor)
     }
 }
 

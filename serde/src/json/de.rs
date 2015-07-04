@@ -649,7 +649,9 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
         de::Deserializer::visit(self, visitor)
     }
 
-    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_map<V>(&mut self,
+                    _fields: &'static [&'static str],
+                    visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         try!(self.parse_object_colon());

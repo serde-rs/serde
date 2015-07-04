@@ -398,7 +398,10 @@ mod deserializer {
             }
         }
 
-        fn visit_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
+        fn visit_struct<V>(&mut self,
+                           name: &str,
+                           _fields: &'static [&'static str],
+                           mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
