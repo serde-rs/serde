@@ -120,7 +120,7 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<'a, T> Serialize for &'a [T]
+impl<T> Serialize for [T]
     where T: Serialize,
 {
     #[inline]
