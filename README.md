@@ -187,7 +187,7 @@ impl serde::Serialize for Point {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer
     {
-        serializer.visit_named_map("Point", PointMapVisitor {
+        serializer.visit_struct("Point", PointMapVisitor {
             value: self,
             state: 0,
         })
@@ -383,7 +383,7 @@ impl serde::Deserialize for Point {
     fn deserialize<D>(deserializer: &mut D) -> Result<Point, D::Error>
         where D: serde::de::Deserializer
     {
-        deserializer.visit_named_map("Point", PointVisitor)
+        deserializer.visit_struct("Point", PointVisitor)
     }
 }
 

@@ -24,17 +24,17 @@ pub enum Token<'a> {
     Option(bool),
 
     Unit,
-    NamedUnit(&'a str),
+    UnitStruct(&'a str),
     EnumUnit(&'a str, &'a str),
 
     SeqStart(Option<usize>),
-    NamedSeqStart(&'a str, Option<usize>),
+    TupleStructStart(&'a str, Option<usize>),
     EnumSeqStart(&'a str, &'a str, Option<usize>),
     SeqSep,
     SeqEnd,
 
     MapStart(Option<usize>),
-    NamedMapStart(&'a str, Option<usize>),
+    StructStart(&'a str, Option<usize>),
     EnumMapStart(&'a str, &'a str, Option<usize>),
     MapSep,
     MapEnd,
@@ -80,8 +80,8 @@ impl<'a> Serializer for AssertSerializer<'a> {
         Ok(())
     }
 
-    fn visit_named_unit(&mut self, name: &str) -> Result<(), ()> {
-        assert_eq!(self.iter.next().unwrap(), Token::NamedUnit(name));
+    fn visit_unit_struct(&mut self, name: &str) -> Result<(), ()> {
+        assert_eq!(self.iter.next().unwrap(), Token::UnitStruct(name));
         Ok(())
     }
 
@@ -188,12 +188,12 @@ impl<'a> Serializer for AssertSerializer<'a> {
         self.visit_sequence(visitor)
     }
 
-    fn visit_named_seq<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+    fn visit_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
         where V: SeqVisitor
     {
         let len = visitor.len();
 
-        assert_eq!(self.iter.next().unwrap(), Token::NamedSeqStart(name, len));
+        assert_eq!(self.iter.next().unwrap(), Token::TupleStructStart(name, len));
 
         self.visit_sequence(visitor)
     }
@@ -228,12 +228,12 @@ impl<'a> Serializer for AssertSerializer<'a> {
         self.visit_mapping(visitor)
     }
 
-    fn visit_named_map<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+    fn visit_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
         where V: MapVisitor
     {
         let len = visitor.len();
 
-        assert_eq!(self.iter.next().unwrap(), Token::NamedMapStart(name, len));
+        assert_eq!(self.iter.next().unwrap(), Token::StructStart(name, len));
 
         self.visit_mapping(visitor)
     }
@@ -262,13 +262,13 @@ impl<'a> Serializer for AssertSerializer<'a> {
 //////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize)]
-struct NamedUnit;
+struct UnitStruct;
 
 #[derive(Serialize)]
-struct NamedSeq(i32, i32, i32);
+struct TupleStruct(i32, i32, i32);
 
 #[derive(Serialize)]
-struct NamedMap {
+struct Struct {
     a: i32,
     b: i32,
     c: i32,
@@ -480,12 +480,12 @@ declare_tests! {
             Token::MapEnd,
         ],
     }
-    test_named_unit {
-        NamedUnit => vec![Token::NamedUnit("NamedUnit")],
+    test_unit_struct {
+        UnitStruct => vec![Token::UnitStruct("UnitStruct")],
     }
-    test_named_seq {
-        NamedSeq(1, 2, 3) => vec![
-            Token::NamedSeqStart("NamedSeq", Some(3)),
+    test_tuple_struct {
+        TupleStruct(1, 2, 3) => vec![
+            Token::TupleStructStart("TupleStruct", Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
 
@@ -497,9 +497,9 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
-    test_named_map {
-        NamedMap { a: 1, b: 2, c: 3 } => vec![
-            Token::NamedMapStart("NamedMap", Some(3)),
+    test_struct {
+        Struct { a: 1, b: 2, c: 3 } => vec![
+            Token::StructStart("Struct", Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
                 Token::I32(1),

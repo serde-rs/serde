@@ -169,7 +169,7 @@ fn serialize_unit_struct(
 ) -> P<ast::Expr> {
     let type_name = builder.expr().str(type_ident);
 
-    quote_expr!(cx, serializer.visit_named_unit($type_name))
+    quote_expr!(cx, serializer.visit_unit_struct($type_name))
 }
 
 fn serialize_tuple_struct(
@@ -194,7 +194,7 @@ fn serialize_tuple_struct(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.visit_named_seq($type_name, Visitor {
+        serializer.visit_tuple_struct($type_name, Visitor {
             value: self,
             state: 0,
             _structure_ty: ::std::marker::PhantomData,
@@ -226,7 +226,7 @@ fn serialize_struct(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.visit_named_map($type_name, Visitor {
+        serializer.visit_struct($type_name, Visitor {
             value: self,
             state: 0,
             _structure_ty: ::std::marker::PhantomData,
@@ -476,7 +476,7 @@ fn serialize_tuple_struct_visitor(
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    let v = try!(serializer.visit_named_seq_elt(&$expr));
+                    let v = try!(serializer.visit_tuple_struct_elt(&$expr));
                     Ok(Some(v))
                 }
             )
@@ -559,7 +559,7 @@ fn serialize_struct_visitor<I>(
                     Ok(
                         Some(
                             try!(
-                                serializer.visit_named_map_elt(
+                                serializer.visit_struct_elt(
                                     $key_expr,
                                     $value_expr,
                                 )

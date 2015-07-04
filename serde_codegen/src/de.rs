@@ -260,7 +260,7 @@ fn deserialize_unit_struct(
             }
         }
 
-        deserializer.visit_named_unit($type_name, __Visitor)
+        deserializer.visit_unit_struct($type_name, __Visitor)
     })
 }
 
@@ -304,7 +304,7 @@ fn deserialize_tuple_struct(
             }
         }
 
-        deserializer.visit_named_seq($type_name, $visitor_expr)
+        deserializer.visit_tuple_struct($type_name, $visitor_expr)
     })
 }
 
@@ -385,7 +385,7 @@ fn deserialize_struct(
             }
         }
 
-        deserializer.visit_named_map($type_name, $visitor_expr)
+        deserializer.visit_struct($type_name, $visitor_expr)
     })
 }
 

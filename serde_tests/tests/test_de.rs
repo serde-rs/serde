@@ -161,7 +161,7 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_named_unit<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
+    fn visit_unit_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -178,7 +178,7 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_named_seq<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
+    fn visit_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -195,7 +195,7 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_named_map<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
+    fn visit_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -334,13 +334,13 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
 //////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Clone, PartialEq, Debug, Deserialize)]
-struct NamedUnit;
+struct UnitStruct;
 
 #[derive(PartialEq, Debug, Deserialize)]
-struct NamedSeq(i32, i32, i32);
+struct TupleStruct(i32, i32, i32);
 
 #[derive(PartialEq, Debug, Deserialize)]
-struct NamedMap {
+struct Struct {
     a: i32,
     b: i32,
     c: i32,
@@ -498,19 +498,19 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
-    test_named_unit {
-        NamedUnit => vec![Token::Unit],
-        NamedUnit => vec![
-            Token::Name("NamedUnit"),
+    test_unit_struct {
+        UnitStruct => vec![Token::Unit],
+        UnitStruct => vec![
+            Token::Name("UnitStruct"),
             Token::Unit,
         ],
-        NamedUnit => vec![
+        UnitStruct => vec![
             Token::SeqStart(0),
             Token::SeqEnd,
         ],
     }
-    test_named_seq {
-        NamedSeq(1, 2, 3) => vec![
+    test_tuple_struct {
+        TupleStruct(1, 2, 3) => vec![
             Token::SeqStart(3),
                 Token::SeqSep,
                 Token::I32(1),
@@ -522,8 +522,8 @@ declare_tests! {
                 Token::I32(3),
             Token::SeqEnd,
         ],
-        NamedSeq(1, 2, 3) => vec![
-            Token::Name("NamedSeq"),
+        TupleStruct(1, 2, 3) => vec![
+            Token::Name("TupleStruct"),
             Token::SeqStart(3),
                 Token::SeqSep,
                 Token::I32(1),
@@ -818,8 +818,8 @@ declare_tests! {
             Token::MapEnd,
         ],
     }
-    test_named_map {
-        NamedMap { a: 1, b: 2, c: 3 } => vec![
+    test_struct {
+        Struct { a: 1, b: 2, c: 3 } => vec![
             Token::MapStart(3),
                 Token::MapSep,
                 Token::Str("a"),
@@ -834,8 +834,8 @@ declare_tests! {
                 Token::I32(3),
             Token::MapEnd,
         ],
-        NamedMap { a: 1, b: 2, c: 3 } => vec![
-            Token::Name("NamedMap"),
+        Struct { a: 1, b: 2, c: 3 } => vec![
+            Token::Name("Struct"),
             Token::MapStart(3),
                 Token::MapSep,
                 Token::Str("a"),
