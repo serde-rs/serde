@@ -48,7 +48,7 @@ impl Deserialize for () {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct BoolVisitor;
+pub struct BoolVisitor;
 
 impl Visitor for BoolVisitor {
     type Value = bool;
