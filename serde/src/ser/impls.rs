@@ -5,6 +5,9 @@ use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
 
+#[cfg(feature = "nightly")]
+use core::nonzero::{NonZero, Zeroable};
+
 use super::{
     Serialize,
     Serializer,
@@ -545,3 +548,10 @@ impl Serialize for path::PathBuf {
         self.to_str().unwrap().serialize(serializer)
     }
 }
+
+impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+        (**self).serialize(serializer)
+    }
+}
+

@@ -11,3 +11,7 @@ keywords = ["serialization"]
 
 [dependencies]
 num = "*"
+
+[features]
+nightly = []
+

@@ -9,6 +9,11 @@ use std::sync::Arc;
 
 use num::FromPrimitive;
 
+#[cfg(feature = "nightly")]
+use core::nonzero::{NonZero, Zeroable};
+#[cfg(feature = "nightly")]
+use std::num::Zero;
+
 use de::{
     Deserialize,
     Deserializer,
@@ -865,3 +870,18 @@ impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deser
         Ok(Cow::Owned(val))
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable + Zero {
+    fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
+        let value = try!(Deserialize::deserialize(deserializer));
+        if value == Zero::zero() {
+            return Err(Error::syntax_error())
+        }
+        unsafe {
+            Ok(NonZero::new(value))
+        }
+    }
+}
+
