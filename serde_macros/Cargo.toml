@@ -1,6 +1,6 @@
 [package]
 name = "serde_macros"
-version = "0.4.3"
+version = "0.4.4"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -10,13 +10,10 @@ repository = "https://github.com/erickt/rust-serde"
 name = "serde_macros"
 plugin = true
 
-[features]
-default = ["serde/nightly"]
-
 [dependencies]
 serde_codegen = { version = "*", path = "../serde_codegen", default-features = false, features = ["nightly"] }
 
 [dev-dependencies]
 num = "*"
 rustc-serialize = "*"
-serde = { version = "*", path = "../serde" }
+serde = { version = "*", path = "../serde", features = ["nightly"] }
