@@ -6,9 +6,12 @@
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
 #![doc(html_root_url="http://erickt.github.io/rust-serde")]
-#![cfg_attr(feature = "nightly", feature(core, nonzero, zero_one))]
+#![cfg_attr(feature = "nightly", feature(collections, core, enumset, nonzero, step_trait, vecmap, zero_one))]
 
 extern crate num;
+
+#[cfg(feature = "nightly")]
+extern crate collections;
 
 #[cfg(feature = "nightly")]
 extern crate core;

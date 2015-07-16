@@ -1,7 +1,25 @@
 use std::borrow::Cow;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{
+    BinaryHeap,
+    BTreeMap,
+    BTreeSet,
+    LinkedList,
+    HashMap,
+    HashSet,
+    VecDeque,
+};
+#[cfg(feature = "nightly")]
+use collections::enum_set::{CLike, EnumSet};
+#[cfg(feature = "nightly")]
+use std::collections::vec_map::VecMap;
 use std::hash::Hash;
+#[cfg(feature = "nightly")]
+use std::iter;
 use std::marker::PhantomData;
+#[cfg(feature = "nightly")]
+use std::num;
+#[cfg(feature = "nightly")]
+use std::ops;
 use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -124,7 +142,7 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<'a, T> Serialize for &'a [T]
+impl<T> Serialize for [T]
     where T: Serialize,
 {
     #[inline]
@@ -182,12 +200,16 @@ array_impls!(30);
 array_impls!(31);
 array_impls!(32);
 
-impl<T> Serialize for Vec<T> where T: Serialize {
+///////////////////////////////////////////////////////////////////////////////
+
+impl<T> Serialize for BinaryHeap<T>
+    where T: Serialize + Ord
+{
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        (&self[..]).serialize(serializer)
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -202,9 +224,64 @@ impl<T> Serialize for BTreeSet<T>
     }
 }
 
+#[cfg(feature = "nightly")]
+impl<T> Serialize for EnumSet<T>
+    where T: Serialize + CLike
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+    }
+}
+
 impl<T> Serialize for HashSet<T>
     where T: Serialize + Eq + Hash,
 {
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+    }
+}
+
+impl<T> Serialize for LinkedList<T>
+    where T: Serialize,
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<A> Serialize for ops::Range<A>
+    where A: Serialize + Clone + iter::Step + num::One,
+          for<'a> &'a A: ops::Add<&'a A, Output = A>,
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
+        serializer.visit_seq(SeqIteratorVisitor::new(self.clone(), len))
+    }
+}
+
+impl<T> Serialize for Vec<T> where T: Serialize {
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        (&self[..]).serialize(serializer)
+    }
+}
+
+impl<T> Serialize for VecDeque<T> where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -462,8 +539,7 @@ impl<K, V> Serialize for HashMap<K, V>
     }
 }
 
-// FIXME: `VecMap` is unstable.
-/*
+#[cfg(feature = "nightly")]
 impl<V> Serialize for VecMap<V>
     where V: Serialize,
 {
@@ -474,7 +550,6 @@ impl<V> Serialize for VecMap<V>
         serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
