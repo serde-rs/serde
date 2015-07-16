@@ -10,6 +10,9 @@ repository = "https://github.com/erickt/rust-serde"
 name = "serde_macros"
 plugin = true
 
+[features]
+default = ["serde/nightly"]
+
 [dependencies]
 serde_codegen = { version = "*", path = "../serde_codegen", default-features = false, features = ["nightly"] }
 
