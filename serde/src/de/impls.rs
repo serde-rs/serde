@@ -1,5 +1,17 @@
 use std::borrow::Cow;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{
+    BinaryHeap,
+    BTreeMap,
+    BTreeSet,
+    LinkedList,
+    HashMap,
+    HashSet,
+    VecDeque,
+};
+#[cfg(feature = "nightly")]
+use collections::enum_set::{CLike, EnumSet};
+#[cfg(feature = "nightly")]
+use collections::vec_map::VecMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::path;
@@ -289,159 +301,131 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub struct BTreeSetVisitor<T> {
-    marker: PhantomData<T>,
-}
+macro_rules! set_impl {
+    (
+        $ty:ty,
+        < $($constraints:ident),* >,
+        $visitor_name:ident,
+        $visitor:ident,
+        $ctor:expr,
+        $with_capacity:expr,
+        $insert:expr
+    ) => {
+        pub struct $visitor_name<T> {
+            marker: PhantomData<T>,
+        }
 
-impl<T> BTreeSetVisitor<T> {
-    pub fn new() -> Self {
-        BTreeSetVisitor {
-            marker: PhantomData,
+        impl<T> $visitor_name<T> {
+            pub fn new() -> Self {
+                $visitor_name {
+                    marker: PhantomData,
+                }
+            }
+        }
+
+        impl<T> Visitor for $visitor_name<T>
+            where T: $($constraints +)*,
+        {
+            type Value = $ty;
+
+            #[inline]
+            fn visit_unit<E>(&mut self) -> Result<$ty, E>
+                where E: Error,
+            {
+                Ok($ctor)
+            }
+
+            #[inline]
+            fn visit_seq<V>(&mut self, mut $visitor: V) -> Result<$ty, V::Error>
+                where V: SeqVisitor,
+            {
+                let mut values = $with_capacity;
+
+                while let Some(value) = try!($visitor.visit()) {
+                    $insert(&mut values, value);
+                }
+
+                try!($visitor.end());
+
+                Ok(values)
+            }
+        }
+
+        impl<T> Deserialize for $ty
+            where T: $($constraints +)*,
+        {
+            fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
+                where D: Deserializer,
+            {
+                deserializer.visit($visitor_name::new())
+            }
         }
     }
 }
 
-impl<T> Visitor for BTreeSetVisitor<T>
-    where T: Deserialize + Eq + Ord,
-{
-    type Value = BTreeSet<T>;
+set_impl!(
+    BinaryHeap<T>,
+    <Deserialize, Ord>,
+    BinaryHeapVisitor,
+    visitor,
+    BinaryHeap::new(),
+    BinaryHeap::with_capacity(visitor.size_hint().0),
+    BinaryHeap::push);
 
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<BTreeSet<T>, E>
-        where E: Error,
-    {
-        Ok(BTreeSet::new())
-    }
+set_impl!(
+    BTreeSet<T>,
+    <Deserialize, Eq, Ord>,
+    BTreeSetVisitor,
+    visitor,
+    BTreeSet::new(),
+    BTreeSet::new(),
+    BTreeSet::insert);
 
-    #[inline]
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<BTreeSet<T>, V::Error>
-        where V: SeqVisitor,
-    {
-        let mut values = BTreeSet::new();
+#[cfg(feature = "nightly")]
+set_impl!(
+    EnumSet<T>,
+    <Deserialize, CLike>,
+    EnumSetVisitor,
+    visitor,
+    EnumSet::new(),
+    EnumSet::new(),
+    EnumSet::insert);
 
-        while let Some(value) = try!(visitor.visit()) {
-            values.insert(value);
-        }
+set_impl!(
+    LinkedList<T>,
+    <Deserialize>,
+    LinkedListVisitor,
+    visitor,
+    LinkedList::new(),
+    LinkedList::new(),
+    LinkedList::push_back);
 
-        try!(visitor.end());
+set_impl!(
+    HashSet<T>,
+    <Deserialize, Eq, Hash>,
+    HashSetVisitor,
+    visitor,
+    HashSet::new(),
+    HashSet::with_capacity(visitor.size_hint().0),
+    HashSet::insert);
 
-        Ok(values)
-    }
-}
+set_impl!(
+    Vec<T>,
+    <Deserialize>,
+    VecVisitor,
+    visitor,
+    Vec::new(),
+    Vec::with_capacity(visitor.size_hint().0),
+    Vec::push);
 
-impl<T> Deserialize for BTreeSet<T>
-    where T: Deserialize + Eq + Ord,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<BTreeSet<T>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit(BTreeSetVisitor::new())
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub struct HashSetVisitor<T> {
-    marker: PhantomData<T>,
-}
-
-impl<T> HashSetVisitor<T> {
-    pub fn new() -> Self {
-        HashSetVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<T> Visitor for HashSetVisitor<T>
-    where T: Deserialize + Eq + Hash,
-{
-    type Value = HashSet<T>;
-
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<HashSet<T>, E>
-        where E: Error,
-    {
-        Ok(HashSet::new())
-    }
-
-    #[inline]
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<HashSet<T>, V::Error>
-        where V: SeqVisitor,
-    {
-        let (len, _) = visitor.size_hint();
-        let mut values = HashSet::with_capacity(len);
-
-        while let Some(value) = try!(visitor.visit()) {
-            values.insert(value);
-        }
-
-        try!(visitor.end());
-
-        Ok(values)
-    }
-}
-
-impl<T> Deserialize for HashSet<T>
-    where T: Deserialize + Eq + Hash,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<HashSet<T>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit(HashSetVisitor::new())
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub struct VecVisitor<T> {
-    marker: PhantomData<T>,
-}
-
-impl<T> VecVisitor<T> {
-    pub fn new() -> Self {
-        VecVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<T> Visitor for VecVisitor<T> where T: Deserialize {
-    type Value = Vec<T>;
-
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<Vec<T>, E>
-        where E: Error,
-    {
-        Ok(Vec::new())
-    }
-
-    #[inline]
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Vec<T>, V::Error>
-        where V: SeqVisitor,
-    {
-        let (len, _) = visitor.size_hint();
-        let mut values = Vec::with_capacity(len);
-
-        while let Some(value) = try!(visitor.visit()) {
-            values.push(value);
-        }
-
-        try!(visitor.end());
-
-        Ok(values)
-    }
-}
-
-impl<T> Deserialize for Vec<T>
-    where T: Deserialize,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<Vec<T>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit_seq(VecVisitor::new())
-    }
-}
+set_impl!(
+    VecDeque<T>,
+    <Deserialize>,
+    VecDequeVisitor,
+    visitor,
+    VecDeque::new(),
+    VecDeque::with_capacity(visitor.size_hint().0),
+    VecDeque::push_back);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -641,123 +625,96 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub struct BTreeMapVisitor<K, V> {
-    marker: PhantomData<BTreeMap<K, V>>,
-}
+macro_rules! map_impl {
+    (
+        $ty:ty,
+        < $($constraints:ident),* >,
+        $visitor_name:ident,
+        $visitor:ident,
+        $ctor:expr,
+        $with_capacity:expr,
+        $insert:expr
+    ) => {
+        pub struct $visitor_name<K, V> {
+            marker: PhantomData<$ty>,
+        }
 
-impl<K, V> BTreeMapVisitor<K, V> {
-    #[inline]
-    pub fn new() -> Self {
-        BTreeMapVisitor {
-            marker: PhantomData,
+        impl<K, V> $visitor_name<K, V> {
+            pub fn new() -> Self {
+                $visitor_name {
+                    marker: PhantomData,
+                }
+            }
+        }
+
+        impl<K, V> Visitor for $visitor_name<K, V>
+            where K: $($constraints +)*,
+                  V: Deserialize,
+        {
+            type Value = $ty;
+
+            #[inline]
+            fn visit_unit<E>(&mut self) -> Result<$ty, E>
+                where E: Error,
+            {
+                Ok($ctor)
+            }
+
+            #[inline]
+            fn visit_map<Visitor>(&mut self, mut $visitor: Visitor) -> Result<$ty, Visitor::Error>
+                where Visitor: MapVisitor,
+            {
+                let mut values = $with_capacity;
+
+                while let Some((key, value)) = try!($visitor.visit()) {
+                    $insert(&mut values, key, value);
+                }
+
+                try!($visitor.end());
+
+                Ok(values)
+            }
+        }
+
+        impl<K, V> Deserialize for $ty
+            where K: $($constraints +)*,
+                  V: Deserialize,
+        {
+            fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
+                where D: Deserializer,
+            {
+                deserializer.visit($visitor_name::new())
+            }
         }
     }
 }
 
-impl<K, V> Visitor for BTreeMapVisitor<K, V>
-    where K: Deserialize + Ord,
-          V: Deserialize
-{
-    type Value = BTreeMap<K, V>;
+map_impl!(
+    BTreeMap<K, V>,
+    <Deserialize, Eq, Ord>,
+    BTreeMapVisitor,
+    visitor,
+    BTreeMap::new(),
+    BTreeMap::new(),
+    BTreeMap::insert);
 
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<BTreeMap<K, V>, E>
-        where E: Error,
-    {
-        Ok(BTreeMap::new())
-    }
-
-    #[inline]
-    fn visit_map<Visitor>(&mut self, mut visitor: Visitor) -> Result<BTreeMap<K, V>, Visitor::Error>
-        where Visitor: MapVisitor,
-    {
-        let mut values = BTreeMap::new();
-
-        while let Some((key, value)) = try!(visitor.visit()) {
-            values.insert(key, value);
-        }
-
-        try!(visitor.end());
-
-        Ok(values)
-    }
-}
-
-impl<K, V> Deserialize for BTreeMap<K, V>
-    where K: Deserialize + Eq + Ord,
-          V: Deserialize,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit(BTreeMapVisitor::new())
-    }
-}
+map_impl!(
+    HashMap<K, V>,
+    <Deserialize, Eq, Hash>,
+    HashMapVisitor,
+    visitor,
+    HashMap::new(),
+    HashMap::with_capacity(visitor.size_hint().0),
+    HashMap::insert);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub struct HashMapVisitor<K, V> {
-    marker: PhantomData<HashMap<K, V>>,
-}
-
-impl<K, V> HashMapVisitor<K, V> {
-    #[inline]
-    pub fn new() -> Self {
-        HashMapVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<K, V> Visitor for HashMapVisitor<K, V>
-    where K: Deserialize + Eq + Hash,
-          V: Deserialize,
-{
-    type Value = HashMap<K, V>;
-
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<HashMap<K, V>, E>
-        where E: Error,
-    {
-        Ok(HashMap::new())
-    }
-
-    #[inline]
-    fn visit_map<V_>(&mut self, mut visitor: V_) -> Result<HashMap<K, V>, V_::Error>
-        where V_: MapVisitor,
-    {
-        let (len, _) = visitor.size_hint();
-        let mut values = HashMap::with_capacity(len);
-
-        while let Some((key, value)) = try!(visitor.visit()) {
-            values.insert(key, value);
-        }
-
-        try!(visitor.end());
-
-        Ok(values)
-    }
-}
-
-impl<K, V> Deserialize for HashMap<K, V>
-    where K: Deserialize + Eq + Hash,
-          V: Deserialize,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<HashMap<K, V>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit(HashMapVisitor::new())
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-// FIXME: `VecMap` is unstable.
-/*
+#[cfg(feature = "nightly")]
 pub struct VecMapVisitor<V> {
     marker: PhantomData<VecMap<V>>,
 }
 
+#[cfg(feature = "nightly")]
 impl<V> VecMapVisitor<V> {
     #[inline]
     pub fn new() -> Self {
@@ -767,6 +724,7 @@ impl<V> VecMapVisitor<V> {
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<V> Visitor for VecMapVisitor<V>
     where V: Deserialize,
 {
@@ -796,6 +754,7 @@ impl<V> Visitor for VecMapVisitor<V>
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<V> Deserialize for VecMap<V>
     where V: Deserialize,
 {
@@ -805,7 +764,6 @@ impl<V> Deserialize for VecMap<V>
         deserializer.visit(VecMapVisitor::new())
     }
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
