@@ -876,7 +876,7 @@ impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deser
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(nightly)]
+#[cfg(feature = "nightly")]
 impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable + Zero {
     fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
         let value = try!(Deserialize::deserialize(deserializer));
@@ -1014,4 +1014,3 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                                 Visitor::<D, T, E>(PhantomData, PhantomData, PhantomData))
     }
 }
-

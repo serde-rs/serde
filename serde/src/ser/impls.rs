@@ -639,7 +639,7 @@ impl Serialize for path::PathBuf {
     }
 }
 
-#[cfg(nightly)]
+#[cfg(feature = "nightly")]
 impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         (**self).serialize(serializer)
