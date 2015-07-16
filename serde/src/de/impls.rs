@@ -62,7 +62,7 @@ impl Deserialize for () {
     fn deserialize<D>(deserializer: &mut D) -> Result<(), D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(UnitVisitor)
+        deserializer.visit_unit(UnitVisitor)
     }
 }
 
@@ -94,7 +94,7 @@ impl Deserialize for bool {
     fn deserialize<D>(deserializer: &mut D) -> Result<bool, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(BoolVisitor)
+        deserializer.visit_bool(BoolVisitor)
     }
 }
 
@@ -154,30 +154,30 @@ impl<
 }
 
 macro_rules! impl_deserialize_num {
-    ($ty:ty) => {
+    ($ty:ty, $method:ident) => {
         impl Deserialize for $ty {
             #[inline]
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.visit(PrimitiveVisitor::new())
+                deserializer.$method(PrimitiveVisitor::new())
             }
         }
     }
 }
 
-impl_deserialize_num!(isize);
-impl_deserialize_num!(i8);
-impl_deserialize_num!(i16);
-impl_deserialize_num!(i32);
-impl_deserialize_num!(i64);
-impl_deserialize_num!(usize);
-impl_deserialize_num!(u8);
-impl_deserialize_num!(u16);
-impl_deserialize_num!(u32);
-impl_deserialize_num!(u64);
-impl_deserialize_num!(f32);
-impl_deserialize_num!(f64);
+impl_deserialize_num!(isize, visit_isize);
+impl_deserialize_num!(i8, visit_i8);
+impl_deserialize_num!(i16, visit_i16);
+impl_deserialize_num!(i32, visit_i32);
+impl_deserialize_num!(i64, visit_i64);
+impl_deserialize_num!(usize, visit_usize);
+impl_deserialize_num!(u8, visit_u8);
+impl_deserialize_num!(u16, visit_u16);
+impl_deserialize_num!(u32, visit_u32);
+impl_deserialize_num!(u64, visit_u64);
+impl_deserialize_num!(f32, visit_f32);
+impl_deserialize_num!(f64, visit_f64);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -215,7 +215,7 @@ impl Deserialize for char {
     fn deserialize<D>(deserializer: &mut D) -> Result<char, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(CharVisitor)
+        deserializer.visit_char(CharVisitor)
     }
 }
 
@@ -261,7 +261,7 @@ impl Deserialize for String {
     fn deserialize<D>(deserializer: &mut D) -> Result<String, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(StringVisitor)
+        deserializer.visit_string(StringVisitor)
     }
 }
 
@@ -357,7 +357,7 @@ macro_rules! set_impl {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.visit($visitor_name::new())
+                deserializer.visit_seq($visitor_name::new())
             }
         }
     }
@@ -466,7 +466,7 @@ impl<T> Deserialize for [T; 0]
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(ArrayVisitor0::new())
+        deserializer.visit_seq(ArrayVisitor0::new())
     }
 }
 
@@ -511,7 +511,7 @@ macro_rules! array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit($visitor::new())
+                    deserializer.visit_seq($visitor::new())
                 }
             }
         )+
@@ -601,7 +601,7 @@ macro_rules! tuple_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit_seq($visitor { marker: PhantomData })
+                    deserializer.visit_tuple($visitor { marker: PhantomData })
                 }
             }
         )+
@@ -683,7 +683,7 @@ macro_rules! map_impl {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.visit($visitor_name::new())
+                deserializer.visit_map($visitor_name::new())
             }
         }
     }
@@ -761,7 +761,7 @@ impl<V> Deserialize for VecMap<V>
     fn deserialize<D>(deserializer: &mut D) -> Result<VecMap<V>, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit(VecMapVisitor::new())
+        deserializer.visit_map(VecMapVisitor::new())
     }
 }
 

@@ -25,18 +25,164 @@ pub trait Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// `Deserializer` is an abstract trait that can deserialize values into a `Visitor`.
+/// `Deserializer` is a trait that can deserialize values by threading a `Visitor` trait through a
+/// value. It supports two entry point styles which enables different kinds of deserialization.
+///
+/// 1) The `visit` method. File formats like JSON embed the type of it's construct in it's file
+///    format. This allows the `Deserializer` to deserialize into a generic type like
+///    `json::Value`, which can represent all JSON types.
+///
+/// 2) The `visit_*` methods. File formats like bincode do not embed in it's format how to decode
+///    it's values. It relies instead on the `Deserialize` type to hint to the `Deserializer` with
+///    the `visit_*` methods how it should parse the next value. One downside though to only
+///    supporting the `visit_*` types is that it does not allow for deserializing into a generic
+///    `json::Value`-esque type.
 pub trait Deserializer {
     type Error: Error;
 
-    /// The `visit` method walks a visitor through a value as it is being deserialized.
+    /// This method walks a visitor through a value as it is being deserialized.
     fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
-    /// The `visit_option` method allows a `Deserialize` type to inform the `Deserializer` that
-    /// it's expecting an optional value. This allows deserializers that encode an optional value
-    /// as a nullable value to convert the null value into a `None`, and a regular value as
-    /// `Some(value)`.
+    /// This method hints that the `Deserialize` type is expecting a `bool` value.
+    #[inline]
+    fn visit_bool<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `usize` value.
+    #[inline]
+    fn visit_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `u8` value.
+    #[inline]
+    fn visit_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `u16` value.
+    #[inline]
+    fn visit_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `u32` value.
+    #[inline]
+    fn visit_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `u64` value.
+    #[inline]
+    fn visit_u64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `isize` value.
+    #[inline]
+    fn visit_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `i8` value.
+    #[inline]
+    fn visit_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `i16` value.
+    #[inline]
+    fn visit_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `i32` value.
+    #[inline]
+    fn visit_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `i64` value.
+    #[inline]
+    fn visit_i64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a `f32` value.
+    #[inline]
+    fn visit_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a `f64` value.
+    #[inline]
+    fn visit_f64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a `char` value.
+    #[inline]
+    fn visit_char<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a `&str` value.
+    #[inline]
+    fn visit_str<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a `String` value.
+    #[inline]
+    fn visit_string<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit_str(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `unit` value.
+    #[inline]
+    fn visit_unit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an `Option` value. This allows
+    /// deserializers that encode an optional value as a nullable value to convert the null value
+    /// into a `None`, and a regular value as `Some(value)`.
     #[inline]
     fn visit_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -44,9 +190,8 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    /// The `visit_seq` method allows a `Deserialize` type to inform the `Deserializer` that it's
-    /// expecting a sequence of values. This allows deserializers to parse sequences that aren't
-    /// tagged as sequences.
+    /// This method hints that the `Deserialize` type is expecting a sequence value. This allows
+    /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
     fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -54,9 +199,8 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    /// The `visit_map` method allows a `Deserialize` type to inform the `Deserializer` that it's
-    /// expecting a map of values. This allows deserializers to parse sequences that aren't tagged
-    /// as maps.
+    /// This method hints that the `Deserialize` type is expecting a map of values. This allows
+    /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
     fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -64,9 +208,8 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    /// The `visit_named_unit` method allows a `Deserialize` type to inform the `Deserializer` that
-    /// it's expecting a named unit. This allows deserializers to a named unit that aren't tagged
-    /// as a named unit.
+    /// This method hints that the `Deserialize` type is expecting a named unit. This allows
+    /// deserializers to a named unit that aren't tagged as a named unit.
     #[inline]
     fn visit_named_unit<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -74,9 +217,8 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    /// The `visit_named_seq` method allows a `Deserialize` type to inform the `Deserializer` that
-    /// it's expecting a named sequence of values. This allows deserializers to parse sequences
-    /// that aren't tagged as sequences.
+    /// This method hints that the `Deserialize` type is expecting a named sequence.
+    /// This allows deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
     fn visit_named_seq<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -84,9 +226,8 @@ pub trait Deserializer {
         self.visit_seq(visitor)
     }
 
-    /// The `visit_named_map` method allows a `Deserialize` type to inform the `Deserializer` that
-    /// it's expecting a map of values. This allows deserializers to parse sequences that aren't
-    /// tagged as maps.
+    /// This method hints that the `Deserialize` type is expecting a named map.  This allows
+    /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
     fn visit_named_map<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -94,9 +235,18 @@ pub trait Deserializer {
         self.visit_map(visitor)
     }
 
-    /// The `visit_enum` method allows a `Deserialize` type to inform the `Deserializer` that it's
-    /// expecting an enum value. This allows deserializers that provide a custom enumeration
-    /// serialization to properly deserialize the type.
+    /// This method hints that the `Deserialize` type is expecting a tuple value. This allows
+    /// deserializers that provide a custom tuple serialization to properly deserialize the type.
+    #[inline]
+    fn visit_tuple<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting an enum value. This allows
+    /// deserializers that provide a custom enumeration serialization to properly deserialize the
+    /// type.
     #[inline]
     fn visit_enum<V>(&mut self, _enum: &str, _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
@@ -104,9 +254,9 @@ pub trait Deserializer {
         Err(Error::syntax_error())
     }
 
-    /// The `visit_bytes` method allows a `Deserialize` type to inform the `Deserializer` that it's
-    /// expecting a `Vec<u8>`. This allows deserializers that provide a custom byte vector
-    /// serialization to properly deserialize the type.
+    /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
+    /// deserializers that provide a custom byte vector serialization to properly deserialize the
+    /// type.
     #[inline]
     fn visit_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
