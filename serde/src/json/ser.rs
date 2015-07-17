@@ -3,6 +3,7 @@ use std::num::FpCategory;
 use std::string::FromUtf8Error;
 
 use ser;
+use ser::Serialize;
 
 /// A structure for implementing serialization to JSON.
 pub struct Serializer<W, F=CompactFormatter> {
@@ -61,6 +62,7 @@ impl<W, F> ser::Serializer for Serializer<W, F>
           F: Formatter,
 {
     type Error = io::Error;
+    type Variant = String;
 
     #[inline]
     fn visit_bool(&mut self, value: bool) -> io::Result<()> {
@@ -159,10 +161,10 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> io::Result<()> {
+    fn visit_enum_unit(&mut self, _name: &str, variant: Self::Variant) -> io::Result<()> {
         try!(self.formatter.open(&mut self.writer, b'{'));
         try!(self.formatter.comma(&mut self.writer, true));
-        try!(self.visit_str(variant));
+        try!(variant.serialize(self));
         try!(self.formatter.colon(&mut self.writer));
         try!(self.writer.write_all(b"[]"));
         self.formatter.close(&mut self.writer, b'}')
@@ -190,12 +192,12 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
+    fn visit_enum_seq<V>(&mut self, _name: &str, variant: Self::Variant, visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
         try!(self.formatter.open(&mut self.writer, b'{'));
         try!(self.formatter.comma(&mut self.writer, true));
-        try!(self.visit_str(variant));
+        try!(variant.serialize(self));
         try!(self.formatter.colon(&mut self.writer));
         try!(self.visit_seq(visitor));
         self.formatter.close(&mut self.writer, b'}')
@@ -232,12 +234,12 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
+    fn visit_enum_map<V>(&mut self, _name: &str, variant: Self::Variant, visitor: V) -> io::Result<()>
         where V: ser::MapVisitor,
     {
         try!(self.formatter.open(&mut self.writer, b'{'));
         try!(self.formatter.comma(&mut self.writer, true));
-        try!(self.visit_str(variant));
+        try!(variant.serialize(self));
         try!(self.formatter.colon(&mut self.writer));
         try!(self.visit_map(visitor));
 
@@ -261,6 +263,17 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     fn format() -> &'static str {
         "json"
     }
+    
+    #[inline]
+    fn result_variant_ok(&self) -> Self::Variant {
+      "Ok".to_string()
+    }
+    
+    #[inline]
+    fn result_variant_err(&self) -> Self::Variant {
+      "Err".to_string()
+    }
+
 }
 
 pub trait Formatter {

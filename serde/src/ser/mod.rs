@@ -13,6 +13,7 @@ pub trait Serialize {
 
 pub trait Serializer {
     type Error;
+    type Variant: Serialize;
 
     /// `visit_bool` serializes a `bool` value.
     fn visit_bool(&mut self, v: bool) -> Result<(), Self::Error>;
@@ -118,9 +119,9 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_enum_unit<V>(&mut self,
+    fn visit_enum_unit(&mut self,
                        _name: &str,
-                       _variant: V) -> Result<(), Self::Error> {
+                       _variant: Self::Variant) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
@@ -166,9 +167,9 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_enum_seq<V, T>(&mut self,
+    fn visit_enum_seq<V>(&mut self,
                          _name: &'static str,
-                         _variant: T,
+                         _variant: Self::Variant,
                          visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
@@ -207,13 +208,13 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_enum_map<V, T>(&mut self,
+    fn visit_enum_map<V>(&mut self,
                          _name: &'static str,
-                         variant: T,
+                         _variant: Self::Variant,
                          visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
-        self.visit_named_map(variant, visitor)
+        self.visit_map(visitor)
     }
 
     #[inline]
@@ -223,6 +224,10 @@ pub trait Serializer {
     {
         self.visit_named_map_elt(key, value)
     }
+
+    fn result_variant_ok(&self) -> Self::Variant;
+    
+    fn result_variant_err(&self) -> Self::Variant;
 
     /// Specify a format string for the serializer.
     ///

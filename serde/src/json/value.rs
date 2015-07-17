@@ -8,6 +8,7 @@ use num::NumCast;
 
 use de;
 use ser;
+use ser::Serialize;
 use super::error::Error;
 
 #[derive(Clone, PartialEq)]
@@ -398,6 +399,7 @@ impl Serializer {
 
 impl ser::Serializer for Serializer {
     type Error = ();
+    type Variant = String;
 
     #[inline]
     fn visit_bool(&mut self, value: bool) -> Result<(), ()> {
@@ -458,9 +460,9 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> Result<(), ()> {
+    fn visit_enum_unit(&mut self, _name: &str, variant: Self::Variant) -> Result<(), ()> {
         let mut values = BTreeMap::new();
-        values.insert(variant.to_string(), Value::Array(vec![]));
+        values.insert(variant, Value::Array(vec![]));
 
         self.state.push(State::Value(Value::Object(values)));
 
@@ -489,7 +491,7 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> Result<(), ()>
+    fn visit_enum_seq<V>(&mut self, _name: &str, variant: Self::Variant, visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor,
     {
         try!(self.visit_seq(visitor));
@@ -501,7 +503,7 @@ impl ser::Serializer for Serializer {
 
         let mut object = BTreeMap::new();
 
-        object.insert(variant.to_string(), value);
+        object.insert(variant, value);
 
         self.state.push(State::Value(Value::Object(object)));
 
@@ -548,7 +550,7 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> Result<(), ()>
+    fn visit_enum_map<V>(&mut self, _name: &str, variant: Self::Variant, visitor: V) -> Result<(), ()>
         where V: ser::MapVisitor,
     {
         try!(self.visit_map(visitor));
@@ -560,7 +562,7 @@ impl ser::Serializer for Serializer {
 
         let mut object = BTreeMap::new();
 
-        object.insert(variant.to_string(), value);
+        object.insert(variant, value);
 
         self.state.push(State::Value(Value::Object(object)));
 
@@ -597,6 +599,16 @@ impl ser::Serializer for Serializer {
     #[inline]
     fn format() -> &'static str {
         "json"
+    }
+    
+    #[inline]
+    fn result_variant_ok(&self) -> Self::Variant {
+      "Ok".to_string()
+    }
+    
+    #[inline]
+    fn result_variant_err(&self) -> Self::Variant {
+      "Err".to_string()
     }
 }
 
