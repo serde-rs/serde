@@ -472,6 +472,22 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
+    fn visit_enum_simple<T>(&mut self,
+                            _name: &str,
+                            variant: &str,
+                            value: T,
+                            ) -> Result<(), ()>
+        where T: ser::Serialize,
+    {
+        let mut values = BTreeMap::new();
+        values.insert(variant.to_string(), to_value(&value));
+
+        self.state.push(State::Value(Value::Object(values)));
+
+        Ok(())
+    }
+
+    #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor,
     {

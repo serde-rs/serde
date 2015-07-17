@@ -473,13 +473,13 @@ fn test_lifetimes() {
     let lifetime = Lifetimes::LifetimeSeq(&value);
     assert_eq!(
         serde_json::to_string(&lifetime).unwrap(),
-        "{\"LifetimeSeq\":[5]}"
+        "{\"LifetimeSeq\":5}"
     );
 
     let lifetime = Lifetimes::NoLifetimeSeq(5);
     assert_eq!(
         serde_json::to_string(&lifetime).unwrap(),
-        "{\"NoLifetimeSeq\":[5]}"
+        "{\"NoLifetimeSeq\":5}"
     );
 
     let value = 5;

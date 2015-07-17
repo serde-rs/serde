@@ -27,6 +27,8 @@ pub enum Token<'a> {
     UnitStruct(&'a str),
     EnumUnit(&'a str, &'a str),
 
+    EnumSimple(&'a str, &'a str),
+
     SeqStart(Option<usize>),
     TupleStructStart(&'a str, Option<usize>),
     EnumSeqStart(&'a str, &'a str, Option<usize>),
@@ -78,6 +80,17 @@ impl<'a> Serializer for AssertSerializer<'a> {
     fn visit_unit(&mut self) -> Result<(), ()> {
         assert_eq!(self.iter.next(), Some(Token::Unit));
         Ok(())
+    }
+
+    fn visit_enum_simple<T>(&mut self,
+                            name: &str,
+                            variant: &str,
+                            value: T,
+                            ) -> Result<(), ()>
+        where T: Serialize,
+    {
+        assert_eq!(self.iter.next(), Some(Token::EnumSimple(name, variant)));
+        value.serialize(self)
     }
 
     fn visit_unit_struct(&mut self, name: &str) -> Result<(), ()> {
@@ -301,6 +314,7 @@ struct Struct {
 #[derive(Serialize)]
 enum Enum {
     Unit,
+    One(i32),
     Seq(i32, i32),
     Map { a: i32, b: i32 },
 }
@@ -554,6 +568,7 @@ declare_tests! {
     }
     test_enum {
         Enum::Unit => vec![Token::EnumUnit("Enum", "Unit")],
+        Enum::One(42) => vec![Token::EnumSimple("Enum", "One"), Token::I32(42)],
         Enum::Seq(1, 2) => vec![
             Token::EnumSeqStart("Enum", "Seq", Some(2)),
                 Token::SeqSep,

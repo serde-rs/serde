@@ -172,6 +172,22 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
+    fn visit_enum_simple<T>(&mut self,
+                            _name: &str,
+                            variant: &str,
+                            value: T,
+                            ) -> io::Result<()>
+        where T: ser::Serialize,
+    {
+        try!(self.formatter.open(&mut self.writer, b'{'));
+        try!(self.formatter.comma(&mut self.writer, true));
+        try!(self.visit_str(variant));
+        try!(self.formatter.colon(&mut self.writer));
+        try!(value.serialize(self));
+        self.formatter.close(&mut self.writer, b'}')
+    }
+
+    #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
