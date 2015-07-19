@@ -168,18 +168,18 @@ pub trait Serializer {
     #[inline]
     fn visit_enum_seq<V>(&mut self,
                          _name: &'static str,
-                         _variant: &'static str,
+                         variant: &'static str,
                          visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
-        self.visit_tuple(visitor)
+        self.visit_named_seq(variant, visitor)
     }
 
     #[inline]
     fn visit_enum_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize
     {
-        self.visit_tuple_elt(value)
+        self.visit_named_seq_elt(value)
     }
 
     fn visit_map<V>(&mut self, visitor: V) -> Result<(), Self::Error>
