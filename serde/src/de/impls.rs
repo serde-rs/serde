@@ -858,126 +858,75 @@ impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable +
 
 ///////////////////////////////////////////////////////////////////////////////
 
+
 impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
     fn deserialize<D>(deserializer: &mut D) -> Result<Result<T, E>, D::Error>
                       where D: Deserializer {
         enum Field {
-            Field0,
-            Field1,
+            Ok,
+            Err,
         }
 
         impl Deserialize for Field {
             #[inline]
             fn deserialize<D>(deserializer: &mut D) -> Result<Field, D::Error>
-                              where D: Deserializer {
-                struct FieldVisitor<D> {
-                    phantom: PhantomData<D>,
-                }
+                where D: Deserializer
+            {
+                struct FieldVisitor;
 
-                impl<D> ::de::Visitor for FieldVisitor<D> where D: Deserializer {
+                impl ::de::Visitor for FieldVisitor {
                     type Value = Field;
 
                     fn visit_str<E>(&mut self, value: &str) -> Result<Field, E> where E: Error {
                         match value {
-                            "Ok" => Ok(Field::Field0),
-                            "Err" => Ok(Field::Field1),
+                            "Ok" => Ok(Field::Ok),
+                            "Err" => Ok(Field::Err),
                             _ => Err(Error::unknown_field_error(value)),
                         }
                     }
 
                     fn visit_bytes<E>(&mut self, value: &[u8]) -> Result<Field, E> where E: Error {
-                        match str::from_utf8(value) {
-                            Ok(s) => self.visit_str(s),
-                            _ => Err(Error::syntax_error()),
+                        match value {
+                            b"Ok" => Ok(Field::Ok),
+                            b"Err" => Ok(Field::Err),
+                            _ => {
+                                match str::from_utf8(value) {
+                                    Ok(value) => Err(Error::unknown_field_error(value)),
+                                    Err(_) => Err(Error::syntax_error()),
+                                }
+                            }
                         }
                     }
                 }
 
-                deserializer.visit(FieldVisitor::<D> {
-                    phantom: PhantomData,
-                })
+                deserializer.visit(FieldVisitor)
             }
         }
 
-        struct Visitor<D, T, E>(PhantomData<D>, PhantomData<T>, PhantomData<E>)
-                                where D: Deserializer, T: Deserialize, E: Deserialize;
+        struct Visitor<T, E>(PhantomData<Result<T, E>>);
 
-        impl<D, T, E> EnumVisitor for Visitor<D, T, E> where D: Deserializer,
-                                                             T: Deserialize,
-                                                             E: Deserialize {
+        impl<T, E> EnumVisitor for Visitor<T, E>
+            where T: Deserialize,
+                  E: Deserialize
+        {
             type Value = Result<T, E>;
 
             fn visit<V>(&mut self, mut visitor: V) -> Result<Result<T, E>, V::Error>
-                        where V: VariantVisitor {
-                match match visitor.visit_variant() {
-                          Ok(val) => val,
-                          Err(err) => return Err(From::from(err)),
-                      } {
-                    Field::Field0 => {
-                        struct Visitor<D, T, E>(PhantomData<D>, PhantomData<T>, PhantomData<E>)
-                                                where D: Deserializer,
-                                                      T: Deserialize,
-                                                      E: Deserialize;
-                        impl <D, T, E> ::de::Visitor for Visitor<D, T, E> where D: Deserializer,
-                                                                                T: Deserialize,
-                                                                                E: Deserialize {
-                            type Value = Result<T, E>;
-
-                            fn visit_seq<V>(&mut self, mut visitor: V)
-                                            -> Result<Result<T, E>, V::Error> where V: SeqVisitor {
-                                let field0 = match match visitor.visit() {
-                                          Ok(val) => val,
-                                          Err(err) => return Err(From::from(err)),
-                                      } {
-                                    Some(value) => value,
-                                    None => return Err(Error::end_of_stream_error()),
-                                };
-                                match visitor.end() {
-                                    Ok(val) => val,
-                                    Err(err) => return Err(From::from(err)),
-                                };
-                                Ok(Result::Ok(field0))
-                            }
-                        }
-                        visitor.visit_seq(Visitor::<D, T, E>(PhantomData,
-                                                             PhantomData,
-                                                             PhantomData))
+                where V: VariantVisitor
+            {
+                match try!(visitor.visit_variant()) {
+                    Field::Ok => {
+                        let (value,) = try!(visitor.visit_seq(TupleVisitor1::new()));
+                        Ok(Ok(value))
                     }
-                    Field::Field1 => {
-                        struct Visitor<D, T, E>(PhantomData<D>, PhantomData<T>, PhantomData<E>)
-                                                where D: Deserializer,
-                                                      T: Deserialize,
-                                                      E: Deserialize;
-                        impl <D, T, E> ::de::Visitor for Visitor<D, T, E> where D: Deserializer,
-                                                                                T: Deserialize,
-                                                                                E: Deserialize {
-                            type Value = Result<T, E>;
-
-                            fn visit_seq<V>(&mut self, mut visitor: V)
-                                            -> Result<Result<T, E>, V::Error> where V: SeqVisitor {
-                                let field0 = match match visitor.visit() {
-                                          Ok(val) => val,
-                                          Err(err) => return Err(From::from(err)),
-                                      } {
-                                    Some(value) => value,
-                                    None => return Err(Error::end_of_stream_error()),
-                                };
-                                match visitor.end() {
-                                    Ok(val) => val,
-                                    Err(err) => return Err(From::from(err)),
-                                };
-                                Ok(Result::Err(field0))
-                            }
-                        }
-                        visitor.visit_seq(Visitor::<D, T, E>(PhantomData,
-                                                             PhantomData,
-                                                             PhantomData))
+                    Field::Err => {
+                        let (value,) = try!(visitor.visit_seq(TupleVisitor1::new()));
+                        Ok(Err(value))
                     }
                 }
             }
         }
 
-        deserializer.visit_enum("Result",
-                                Visitor::<D, T, E>(PhantomData, PhantomData, PhantomData))
+        deserializer.visit_enum("Result", Visitor(PhantomData))
     }
 }

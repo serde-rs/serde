@@ -15,7 +15,6 @@ use std::collections::vec_map::VecMap;
 use std::hash::Hash;
 #[cfg(feature = "nightly")]
 use std::iter;
-use std::marker::PhantomData;
 #[cfg(feature = "nightly")]
 use std::num;
 #[cfg(feature = "nightly")]
@@ -612,31 +611,17 @@ impl<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned, {
 impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         match *self {
-            Result::Ok(ref field0) => {
-                struct Visitor<'a, T, E>
-                    where T: Serialize + 'a,
-                          E: Serialize + 'a
-                {
-                    state: usize,
-                    value: (&'a T,),
-                    _structure_ty: PhantomData<&'a Result<T, E>>,
-                }
+            Result::Ok(ref value) => {
+                struct Visitor<'a, T: 'a>(Option<&'a T>);
 
-                impl<'a, T, E> SeqVisitor for Visitor<'a, T, E> where T: Serialize + 'a,
-                                                                      E: Serialize + 'a {
+                impl<'a, T> SeqVisitor for Visitor<'a, T> where T: Serialize + 'a {
                     #[inline]
                     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                                where S: Serializer {
-                        match self.state {
-                            0 => {
-                                self.state += 1;
-                                let v = match serializer.visit_seq_elt(&self.value.0) {
-                                    Ok(val) => val,
-                                    Err(err) => return Err(From::from(err)),
-                                };
-                                Ok(Some(v))
-                            }
-                            _ => Ok(None),
+                        where S: Serializer
+                    {
+                        match self.0.take() {
+                            Some(value) => Ok(Some(try!(serializer.visit_seq_elt(value)))),
+                            None => Ok(None),
                         }
                     }
 
@@ -646,40 +631,18 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                     }
                 }
 
-                let field0: &T = field0;
-                let data: PhantomData<&Result<&T,E>> = PhantomData;
-                let visitor = Visitor {
-                    value: (&field0,),
-                    state: 0,
-                    _structure_ty: data
-                };
-                serializer.visit_enum_seq("Result", 0, "Ok", visitor)
+                serializer.visit_enum_seq("Result", 0, "Ok", Visitor(Some(value)))
             }
-            Result::Err(ref field0) => {
-                struct Visitor<'a, T, E>
-                    where T: Serialize + 'a,
-                          E: Serialize + 'a
-                {
-                    state: usize,
-                    value: (&'a E,),
-                    _structure_ty: PhantomData<&'a Result<T, E>>,
-                }
+            Result::Err(ref value) => {
+                struct Visitor<'a, E: 'a>(Option<&'a E>);
 
-                impl<'a, T, E> SeqVisitor for Visitor<'a, T, E> where T: Serialize + 'a,
-                                                                      E: Serialize + 'a {
+                impl<'a, E> SeqVisitor for Visitor<'a, E> where E: Serialize + 'a {
                     #[inline]
                     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
                                 where S: Serializer {
-                        match self.state {
-                            0 => {
-                                self.state += 1;
-                                let v = match serializer.visit_seq_elt(&self.value.0) {
-                                    Ok(val) => val,
-                                    Err(err) => return Err(From::from(err)),
-                                };
-                                Ok(Some(v))
-                            }
-                            _ => Ok(None),
+                        match self.0.take() {
+                            Some(value) => Ok(Some(try!(serializer.visit_seq_elt(value)))),
+                            None => Ok(None),
                         }
                     }
 
@@ -689,14 +652,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                     }
                 }
 
-                let field0: &E = field0;
-                let data: PhantomData<&Result<T,&E>> = PhantomData;
-                let visitor = Visitor {
-                    value: (&field0,),
-                    state: 0,
-                    _structure_ty: data
-                };
-                serializer.visit_enum_seq("Result", 1, "Err", visitor)
+                serializer.visit_enum_seq("Result", 1, "Err", Visitor(Some(value)))
             }
         }
     }
