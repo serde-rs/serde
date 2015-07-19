@@ -567,7 +567,7 @@ macro_rules! tuple_impls {
     () => {};
     ($($visitor:ident => ($($name:ident),+),)+) => {
         $(
-            struct $visitor<$($name,)+> {
+            pub struct $visitor<$($name,)+> {
                 marker: PhantomData<($($name,)+)>,
             }
 
