@@ -21,7 +21,6 @@ pub struct FieldAttrs {
 }
 
 impl FieldAttrs {
-
     /// Create a FieldAttr with a single default field name
     pub fn new(default_value: bool, name: P<ast::Expr>) -> FieldAttrs {
         FieldAttrs {
@@ -35,7 +34,7 @@ impl FieldAttrs {
         default_value: bool,
         default_name: P<ast::Expr>,
         formats: HashMap<P<ast::Expr>, P<ast::Expr>>,
-        ) -> FieldAttrs {
+    ) -> FieldAttrs {
         FieldAttrs {
             names:  FieldNames::Format {
                 formats: formats,

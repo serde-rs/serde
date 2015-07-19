@@ -89,7 +89,11 @@ impl<'a> Serializer for AssertSerializer<'a> {
                        name: &str,
                        _variant_index: usize,
                        variant: &str) -> Result<(), ()> {
-        assert_eq!(self.iter.next().unwrap(), Token::EnumUnit(name, variant));
+        assert_eq!(
+            self.iter.next().unwrap(),
+            Token::EnumUnit(name, variant)
+        );
+
         Ok(())
     }
 
@@ -196,7 +200,10 @@ impl<'a> Serializer for AssertSerializer<'a> {
     {
         let len = visitor.len();
 
-        assert_eq!(self.iter.next().unwrap(), Token::TupleStructStart(name, len));
+        assert_eq!(
+            self.iter.next().unwrap(),
+            Token::TupleStructStart(name, len)
+        );
 
         self.visit_sequence(visitor)
     }
@@ -210,7 +217,10 @@ impl<'a> Serializer for AssertSerializer<'a> {
     {
         let len = visitor.len();
 
-        assert_eq!(self.iter.next().unwrap(), Token::EnumSeqStart(name, variant, len));
+        assert_eq!(
+            self.iter.next().unwrap(),
+            Token::EnumSeqStart(name, variant, len)
+        );
 
         self.visit_sequence(visitor)
     }
@@ -237,7 +247,10 @@ impl<'a> Serializer for AssertSerializer<'a> {
     {
         let len = visitor.len();
 
-        assert_eq!(self.iter.next().unwrap(), Token::StructStart(name, len));
+        assert_eq!(
+            self.iter.next().unwrap(),
+            Token::StructStart(name, len)
+        );
 
         self.visit_mapping(visitor)
     }
@@ -251,7 +264,10 @@ impl<'a> Serializer for AssertSerializer<'a> {
     {
         let len = visitor.len();
 
-        assert_eq!(self.iter.next().unwrap(), Token::EnumMapStart(name, variant, len));
+        assert_eq!(
+            self.iter.next().unwrap(),
+            Token::EnumMapStart(name, variant, len)
+        );
 
         self.visit_mapping(visitor)
     }

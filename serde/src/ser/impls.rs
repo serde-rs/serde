@@ -613,7 +613,10 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         match *self {
             Result::Ok(ref field0) => {
-                struct Visitor<'a, T, E> where T: Serialize + 'a, E: Serialize + 'a {
+                struct Visitor<'a, T, E>
+                    where T: Serialize + 'a,
+                          E: Serialize + 'a
+                {
                     state: usize,
                     value: (&'a T,),
                     _structure_ty: PhantomData<&'a Result<T, E>>,
@@ -653,7 +656,10 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                 serializer.visit_enum_seq("Result", 0, "Ok", visitor)
             }
             Result::Err(ref field0) => {
-                struct Visitor<'a, T, E> where T: Serialize + 'a, E: Serialize + 'a {
+                struct Visitor<'a, T, E>
+                    where T: Serialize + 'a,
+                          E: Serialize + 'a
+                {
                     state: usize,
                     value: (&'a E,),
                     _structure_ty: PhantomData<&'a Result<T, E>>,
