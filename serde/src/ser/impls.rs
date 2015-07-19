@@ -650,7 +650,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                     state: 0,
                     _structure_ty: data
                 };
-                serializer.visit_enum_seq("Result", "Ok", visitor)
+                serializer.visit_enum_seq("Result", 0, "Ok", visitor)
             }
             Result::Err(ref field0) => {
                 struct Visitor<'a, T, E> where T: Serialize + 'a, E: Serialize + 'a {
@@ -690,7 +690,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                     state: 0,
                     _structure_ty: data
                 };
-                serializer.visit_enum_seq("Result", "Err", visitor)
+                serializer.visit_enum_seq("Result", 1, "Err", visitor)
             }
         }
     }

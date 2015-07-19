@@ -458,7 +458,10 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> Result<(), ()> {
+    fn visit_enum_unit(&mut self,
+                       _name: &str,
+                       _variant_index: usize,
+                       variant: &str) -> Result<(), ()> {
         let mut values = BTreeMap::new();
         values.insert(variant.to_string(), Value::Array(vec![]));
 
@@ -489,7 +492,11 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> Result<(), ()>
+    fn visit_enum_seq<V>(&mut self,
+                         _name: &str,
+                         _variant_index: usize,
+                         variant: &str,
+                         visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor,
     {
         try!(self.visit_seq(visitor));
@@ -548,7 +555,11 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> Result<(), ()>
+    fn visit_enum_map<V>(&mut self,
+                         _name: &str,
+                         _variant_index: usize,
+                         variant: &str,
+                         visitor: V) -> Result<(), ()>
         where V: ser::MapVisitor,
     {
         try!(self.visit_map(visitor));

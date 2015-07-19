@@ -243,7 +243,8 @@ fn serialize_item_enum(
     enum_def: &ast::EnumDef,
 ) -> P<ast::Expr> {
     let arms: Vec<ast::Arm> = enum_def.variants.iter()
-        .map(|variant| {
+        .enumerate()
+        .map(|(variant_index, variant)| {
             serialize_variant(
                 cx,
                 builder,
@@ -251,6 +252,7 @@ fn serialize_item_enum(
                 impl_generics,
                 ty.clone(),
                 variant,
+                variant_index,
             )
         })
         .collect();
@@ -269,6 +271,7 @@ fn serialize_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     variant: &ast::Variant,
+    variant_index: usize,
 ) -> ast::Arm {
     let type_name = builder.expr().str(type_ident);
     let variant_ident = variant.node.name;
@@ -285,6 +288,7 @@ fn serialize_variant(
                     ::serde::ser::Serializer::visit_enum_unit(
                         serializer,
                         $type_name,
+                        $variant_index,
                         $variant_name,
                     )
                 }
@@ -304,6 +308,7 @@ fn serialize_variant(
                 cx,
                 builder,
                 type_name,
+                variant_index,
                 variant_name,
                 generics,
                 ty,
@@ -340,6 +345,7 @@ fn serialize_variant(
                 cx,
                 builder,
                 type_name,
+                variant_index,
                 variant_name,
                 generics,
                 ty,
@@ -356,6 +362,7 @@ fn serialize_tuple_variant(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     type_name: P<ast::Expr>,
+    variant_index: usize,
     variant_name: P<ast::Expr>,
     generics: &ast::Generics,
     structure_ty: P<ast::Ty>,
@@ -395,7 +402,7 @@ fn serialize_tuple_variant(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.visit_enum_seq($type_name, $variant_name, Visitor {
+        serializer.visit_enum_seq($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
             _structure_ty: ::std::marker::PhantomData,
@@ -407,6 +414,7 @@ fn serialize_struct_variant(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     type_name: P<ast::Expr>,
+    variant_index: usize,
     variant_name: P<ast::Expr>,
     generics: &ast::Generics,
     structure_ty: P<ast::Ty>,
@@ -451,7 +459,7 @@ fn serialize_struct_variant(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.visit_enum_map($type_name, $variant_name, Visitor {
+        serializer.visit_enum_map($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
             _structure_ty: ::std::marker::PhantomData,

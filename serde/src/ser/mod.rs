@@ -120,6 +120,7 @@ pub trait Serializer {
     #[inline]
     fn visit_enum_unit(&mut self,
                        _name: &str,
+                       _variant_index: usize,
                        _variant: &str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
@@ -168,6 +169,7 @@ pub trait Serializer {
     #[inline]
     fn visit_enum_seq<V>(&mut self,
                          _name: &'static str,
+                         _variant_index: usize,
                          variant: &'static str,
                          visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
@@ -209,6 +211,7 @@ pub trait Serializer {
     #[inline]
     fn visit_enum_map<V>(&mut self,
                          _name: &'static str,
+                         _variant_index: usize,
                          variant: &'static str,
                          visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,

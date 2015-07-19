@@ -159,7 +159,10 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_unit(&mut self, _name: &str, variant: &str) -> io::Result<()> {
+    fn visit_enum_unit(&mut self,
+                       _name: &str,
+                       _variant_index: usize,
+                       variant: &str) -> io::Result<()> {
         try!(self.formatter.open(&mut self.writer, b'{'));
         try!(self.formatter.comma(&mut self.writer, true));
         try!(self.visit_str(variant));
@@ -190,7 +193,11 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_seq<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
+    fn visit_enum_seq<V>(&mut self,
+                         _name: &str,
+                         _variant_index: usize,
+                         variant: &str,
+                         visitor: V) -> io::Result<()>
         where V: ser::SeqVisitor,
     {
         try!(self.formatter.open(&mut self.writer, b'{'));
@@ -232,7 +239,11 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_map<V>(&mut self, _name: &str, variant: &str, visitor: V) -> io::Result<()>
+    fn visit_enum_map<V>(&mut self,
+                         _name: &str,
+                         _variant_index: usize,
+                         variant: &str,
+                         visitor: V) -> io::Result<()>
         where V: ser::MapVisitor,
     {
         try!(self.formatter.open(&mut self.writer, b'{'));
