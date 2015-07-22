@@ -39,7 +39,7 @@ struct Point {
 ```
 
 Serde bundles a high performance JSON serializer and deserializer,
-[serde::json](http://serde-rs.github.io/serde/serde/json/index.html),
+[serde_json](http://serde-rs.github.io/serde/serde_json/index.html),
 which comes with the helper functions
 [to_string](http://serde-rs.github.io/serde/serde/json/ser/fn.to_string.html)
 and
@@ -47,7 +47,7 @@ and
 that make it easy to go to and from JSON:
 
 ```rust
-use serde::json;
+use serde_json;
 
 ...
 
@@ -59,7 +59,7 @@ println!("{}", serialized_point); // prints: {"x":1,"y":2}
 let deserialize_point: Point = json::from_str(&serialized_point).unwrap();
 ```
 
-[serde::json](http://serde-rs.github.io/serde/serde/json/index.html) also
+[serde_json](http://serde-rs.github.io/serde/serde_json/index.html) also
 supports a generic
 [Value](http://serde-rs.github.io/serde/serde/json/value/enum.Value.html)
 type, which can represent any JSON value. Also, any
