@@ -11,7 +11,7 @@ keywords = ["serialization"]
 build = "build.rs"
 
 [build-dependencies]
-syntex = { version = "*", optional = true }
+syntex = { version = "*" }
 syntex_syntax = { version = "*" }
 serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
