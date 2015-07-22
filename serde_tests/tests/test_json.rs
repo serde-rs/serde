@@ -891,7 +891,7 @@ fn test_parse_struct() {
                     Inner { a: (), b: 2, c: vec!["abc".to_string(), "xyz".to_string()] }
                 ]
             },
-        )
+        ),
     ]);
 
     let v: Outer = from_str("{}").unwrap();
@@ -900,6 +900,22 @@ fn test_parse_struct() {
         v,
         Outer {
             inner: vec![],
+        }
+    );
+
+    let v: Outer = from_str(
+        "[
+            [
+                [ null, 2, [\"abc\", \"xyz\"] ]
+            ]
+        ]").unwrap();
+
+    assert_eq!(
+        v,
+        Outer {
+            inner: vec![
+                Inner { a: (), b: 2, c: vec!["abc".to_string(), "xyz".to_string()] }
+            ],
         }
     );
 }
@@ -934,7 +950,7 @@ fn test_parse_enum_errors() {
         ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::UnknownField("unknown".to_string()), 1, 11)),
         ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
         ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 10)),
-        ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
+        ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 9)),
     ]);
 }
 

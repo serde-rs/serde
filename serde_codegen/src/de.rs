@@ -356,6 +356,51 @@ fn deserialize_seq(
     })
 }
 
+fn deserialize_struct_as_seq(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    struct_path: ast::Path,
+    struct_def: &StructDef,
+) -> P<ast::Expr> {
+    let let_values: Vec<P<ast::Stmt>> = (0 .. struct_def.fields.len())
+        .map(|i| {
+            let name = builder.id(format!("__field{}", i));
+            quote_stmt!(cx,
+                let $name = match try!(visitor.visit()) {
+                    Some(value) => { value },
+                    None => {
+                        return Err(::serde::de::Error::end_of_stream_error());
+                    }
+                };
+            ).unwrap()
+        })
+        .collect();
+
+    let result = builder.expr().struct_path(struct_path)
+        .with_id_exprs(
+            struct_def.fields.iter()
+                .enumerate()
+                .map(|(i, field)| {
+                    (
+                        match field.node.kind {
+                            ast::NamedField(name, _) => name.clone(),
+                            ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+                        },
+                        builder.expr().id(format!("__field{}", i)),
+                    )
+                })
+        )
+        .build();
+
+    quote_expr!(cx, {
+        $let_values
+
+        try!(visitor.end());
+
+        Ok($result)
+    })
+}
+
 fn deserialize_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
@@ -373,11 +418,20 @@ fn deserialize_struct(
         vec![deserializer_ty_arg(builder)],
     );
 
-    let (field_visitor, fields_stmt, visit_map_expr,) = deserialize_struct_visitor(
+    let type_path = builder.path().id(type_ident).build();
+
+    let visit_seq_expr = deserialize_struct_as_seq(
+        cx,
+        builder,
+        type_path.clone(),
+        struct_def
+    );
+
+    let (field_visitor, fields_stmt, visit_map_expr) = deserialize_struct_visitor(
         cx,
         builder,
         struct_def,
-        builder.path().id(type_ident).build(),
+        type_path.clone()
     );
 
     let type_name = builder.expr().str(type_ident);
@@ -389,6 +443,13 @@ fn deserialize_struct(
 
         impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
+
+            #[inline]
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
+                where __V: ::serde::de::SeqVisitor,
+            {
+                $visit_seq_expr
+            }
 
             #[inline]
             fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
@@ -573,11 +634,23 @@ fn deserialize_struct_variant(
 ) -> P<ast::Expr> {
     let where_clause = &generics.where_clause;
 
+    let type_path = builder.path()
+        .id(type_ident)
+        .id(variant_ident)
+        .build();
+
+    let visit_seq_expr = deserialize_struct_as_seq(
+        cx,
+        builder,
+        type_path.clone(),
+        struct_def
+    );
+
     let (field_visitor, fields_stmt, field_expr) = deserialize_struct_visitor(
         cx,
         builder,
         struct_def,
-        builder.path().id(type_ident).id(variant_ident).build(),
+        type_path
     );
 
     let (visitor_item, visitor_ty, visitor_expr, visitor_generics) =
@@ -595,6 +668,13 @@ fn deserialize_struct_variant(
 
         impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
+
+            #[inline]
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
+                where __V: ::serde::de::SeqVisitor,
+            {
+                $visit_seq_expr
+            }
 
             fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::MapVisitor,
