@@ -214,7 +214,7 @@ pub trait Deserializer {
     fn visit_unit_struct<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_unit(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
@@ -223,7 +223,7 @@ pub trait Deserializer {
     fn visit_tuple_struct<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_seq(visitor)
+        self.visit_tuple(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
@@ -244,7 +244,7 @@ pub trait Deserializer {
     fn visit_tuple<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_seq(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an enum value. This allows
@@ -264,7 +264,7 @@ pub trait Deserializer {
     fn visit_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_seq(visitor)
     }
 
     /// Specify a format string for the deserializer.
