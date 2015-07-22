@@ -573,6 +573,15 @@ macro_rules! tuple_impls {
 
             impl<
                 $($name: Deserialize,)+
+            > $visitor<$($name,)+> {
+                fn new() -> Self {
+                    $visitor { marker: PhantomData }
+                }
+            }
+
+
+            impl<
+                $($name: Deserialize,)+
             > Visitor for $visitor<$($name,)+> {
                 type Value = ($($name,)+);
 
@@ -601,7 +610,7 @@ macro_rules! tuple_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit_tuple($visitor { marker: PhantomData })
+                    deserializer.visit_tuple($visitor::new())
                 }
             }
         )+
