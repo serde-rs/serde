@@ -676,6 +676,7 @@ fn deserialize_struct_variant(
                 $visit_seq_expr
             }
 
+            #[inline]
             fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::MapVisitor,
             {
