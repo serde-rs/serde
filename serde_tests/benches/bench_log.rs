@@ -5,9 +5,9 @@ use test::Bencher;
 use rustc_serialize;
 
 use serde::de::{self, Deserialize, Deserializer};
-use serde::json::ser::escape_str;
-use serde::json;
 use serde::ser::{self, Serialize, Serializer};
+use serde_json::ser::escape_str;
+use serde_json;
 use std::str::FromStr;
 
 use rustc_serialize::Encodable;
@@ -1123,18 +1123,18 @@ fn bench_encoder(b: &mut Bencher) {
 #[test]
 fn test_serializer() {
     let log = Log::new();
-    let json = json::to_vec(&log);
+    let json = serde_json::to_vec(&log);
     assert_eq!(json, JSON_STR.as_bytes());
 }
 
 #[bench]
 fn bench_serializer(b: &mut Bencher) {
     let log = Log::new();
-    let json = json::to_vec(&log);
+    let json = serde_json::to_vec(&log);
     b.bytes = json.len() as u64;
 
     b.iter(|| {
-        let _ = json::to_vec(&log);
+        let _ = serde_json::to_vec(&log);
     });
 }
 
@@ -1142,7 +1142,7 @@ fn bench_serializer(b: &mut Bencher) {
 fn test_serializer_vec() {
     let log = Log::new();
     let wr = Vec::with_capacity(1024);
-    let mut serializer = json::Serializer::new(wr);
+    let mut serializer = serde_json::Serializer::new(wr);
     log.serialize(&mut serializer).unwrap();
 
     let json = serializer.into_inner();
@@ -1152,7 +1152,7 @@ fn test_serializer_vec() {
 #[bench]
 fn bench_serializer_vec(b: &mut Bencher) {
     let log = Log::new();
-    let json = json::to_vec(&log);
+    let json = serde_json::to_vec(&log);
     b.bytes = json.len() as u64;
 
     let mut wr = Vec::with_capacity(1024);
@@ -1160,7 +1160,7 @@ fn bench_serializer_vec(b: &mut Bencher) {
     b.iter(|| {
         wr.clear();
 
-        let mut serializer = json::Serializer::new(wr.by_ref());
+        let mut serializer = serde_json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
@@ -1169,7 +1169,7 @@ fn bench_serializer_vec(b: &mut Bencher) {
 #[bench]
 fn bench_serializer_slice(b: &mut Bencher) {
     let log = Log::new();
-    let json = json::to_vec(&log);
+    let json = serde_json::to_vec(&log);
     b.bytes = json.len() as u64;
 
     let mut buf = [0; 1024];
@@ -1178,7 +1178,7 @@ fn bench_serializer_slice(b: &mut Bencher) {
         for item in buf.iter_mut(){ *item = 0; }
         let mut wr = &mut buf[..];
 
-        let mut serializer = json::Serializer::new(wr.by_ref());
+        let mut serializer = serde_json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
@@ -1191,7 +1191,7 @@ fn test_serializer_my_mem_writer0() {
     let mut wr = MyMemWriter0::with_capacity(1024);
 
     {
-        let mut serializer = json::Serializer::new(wr.by_ref());
+        let mut serializer = serde_json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     }
@@ -1202,7 +1202,7 @@ fn test_serializer_my_mem_writer0() {
 #[bench]
 fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
     let log = Log::new();
-    let json = json::to_vec(&log);
+    let json = serde_json::to_vec(&log);
     b.bytes = json.len() as u64;
 
     let mut wr = MyMemWriter0::with_capacity(1024);
@@ -1210,7 +1210,7 @@ fn bench_serializer_my_mem_writer0(b: &mut Bencher) {
     b.iter(|| {
         wr.buf.clear();
 
-        let mut serializer = json::Serializer::new(wr.by_ref());
+        let mut serializer = serde_json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
@@ -1223,7 +1223,7 @@ fn test_serializer_my_mem_writer1() {
     let mut wr = MyMemWriter1::with_capacity(1024);
 
     {
-        let mut serializer = json::Serializer::new(wr.by_ref());
+        let mut serializer = serde_json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     }
@@ -1234,7 +1234,7 @@ fn test_serializer_my_mem_writer1() {
 #[bench]
 fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
     let log = Log::new();
-    let json = json::to_vec(&log);
+    let json = serde_json::to_vec(&log);
     b.bytes = json.len() as u64;
 
     let mut wr = MyMemWriter1::with_capacity(1024);
@@ -1242,7 +1242,7 @@ fn bench_serializer_my_mem_writer1(b: &mut Bencher) {
     b.iter(|| {
         wr.buf.clear();
 
-        let mut serializer = json::Serializer::new(wr.by_ref());
+        let mut serializer = serde_json::Serializer::new(wr.by_ref());
         log.serialize(&mut serializer).unwrap();
         let _json = serializer.into_inner();
     });
@@ -1593,6 +1593,6 @@ fn bench_deserializer(b: &mut Bencher) {
     b.bytes = JSON_STR.len() as u64;
 
     b.iter(|| {
-        let _log: Log = json::from_str(JSON_STR).unwrap();
+        let _log: Log = serde_json::from_str(JSON_STR).unwrap();
     });
 }

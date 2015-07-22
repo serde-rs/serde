@@ -19,6 +19,7 @@ serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-sy
 num = "*"
 rustc-serialize = "*"
 serde = { version = "*", path = "../serde" }
+serde_json = { version = "*", path = "../serde_json" }
 syntex = "*"
 
 [[test]]

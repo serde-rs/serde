@@ -1,0 +1,14 @@
+[package]
+name = "serde_json"
+version = "0.5.0"
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "A JSON serialization file format"
+repository = "https://github.com/serde-rs/serde"
+documentation = "http://serde-rs.github.io/serde/serde"
+readme = "README.md"
+keywords = ["serialization", "json"]
+
+[dependencies]
+num = "*"
+serde = { version = "*", path = "../serde" }

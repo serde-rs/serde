@@ -10,8 +10,9 @@
 
 use std::collections::BTreeMap;
 
-use ser::{self, Serialize};
-use json::value::{self, Value};
+use serde::ser::{self, Serialize};
+
+use value::{self, Value};
 
 pub struct ArrayBuilder {
     array: Vec<Value>,

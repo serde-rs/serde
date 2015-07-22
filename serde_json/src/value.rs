@@ -6,9 +6,10 @@ use std::vec;
 
 use num::NumCast;
 
-use de;
-use ser;
-use super::error::Error;
+use serde::de;
+use serde::ser;
+
+use error::Error;
 
 #[derive(Clone, PartialEq)]
 pub enum Value {

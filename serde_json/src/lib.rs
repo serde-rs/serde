@@ -92,6 +92,9 @@
 //! }
 //! ```
 
+extern crate num;
+extern crate serde;
+
 pub use self::de::{Deserializer, from_str};
 pub use self::error::{Error, ErrorCode};
 pub use self::ser::{

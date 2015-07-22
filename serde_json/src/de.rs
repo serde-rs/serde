@@ -3,8 +3,8 @@ use std::i32;
 use std::io;
 use std::str;
 
-use de;
-use iter::LineColIterator;
+use serde::de;
+use serde::iter::LineColIterator;
 
 use super::error::{Error, ErrorCode};
 

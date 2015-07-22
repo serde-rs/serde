@@ -2,7 +2,7 @@ use std::error;
 use std::fmt;
 use std::io;
 
-use de;
+use serde::de;
 
 /// The errors that can arise while parsing a JSON stream.
 #[derive(Clone, PartialEq)]

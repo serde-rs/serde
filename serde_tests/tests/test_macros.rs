@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use serde::json::{self, Value};
+use serde_json::{self, Value};
 
 macro_rules! btreemap {
     () => {
@@ -136,19 +136,19 @@ fn test_named_unit() {
     let named_unit = NamedUnit;
 
     assert_eq!(
-        json::to_string(&named_unit).unwrap(),
+        serde_json::to_string(&named_unit).unwrap(),
         "null".to_string()
     );
 
     assert_eq!(
-        json::to_value(&named_unit),
+        serde_json::to_value(&named_unit),
         Value::Null
     );
 
-    let v: NamedUnit = json::from_str("null").unwrap();
+    let v: NamedUnit = serde_json::from_str("null").unwrap();
     assert_eq!(v, named_unit);
 
-    let v: NamedUnit = json::from_value(Value::Null).unwrap();
+    let v: NamedUnit = serde_json::from_value(Value::Null).unwrap();
     assert_eq!(v, named_unit);
 }
 
@@ -160,25 +160,25 @@ fn test_ser_named_tuple() {
     let named_tuple = SerNamedTuple(&a, &mut b, c);
 
     assert_eq!(
-        json::to_string(&named_tuple).unwrap(),
+        serde_json::to_string(&named_tuple).unwrap(),
         "[5,6,7]"
     );
 
     assert_eq!(
-        json::to_value(&named_tuple),
+        serde_json::to_value(&named_tuple),
         Value::Array(vec![Value::U64(5), Value::U64(6), Value::U64(7)])
     );
 }
 
 #[test]
 fn test_de_named_tuple() {
-    let v: DeNamedTuple<i32, i32, i32> = json::from_str("[1,2,3]").unwrap();
+    let v: DeNamedTuple<i32, i32, i32> = serde_json::from_str("[1,2,3]").unwrap();
     assert_eq!(
         v,
         DeNamedTuple(1, 2, 3)
     );
 
-    let v: Value = json::from_str("[1,2,3]").unwrap();
+    let v: Value = serde_json::from_str("[1,2,3]").unwrap();
     assert_eq!(
         v,
         Value::Array(vec![
@@ -201,12 +201,12 @@ fn test_ser_named_map() {
     };
 
     assert_eq!(
-        json::to_string(&named_map).unwrap(),
+        serde_json::to_string(&named_map).unwrap(),
         "{\"a\":5,\"b\":6,\"c\":7}"
     );
 
     assert_eq!(
-        json::to_value(&named_map),
+        serde_json::to_value(&named_map),
         Value::Object(btreemap![
             "a".to_string() => Value::U64(5),
             "b".to_string() => Value::U64(6),
@@ -223,12 +223,12 @@ fn test_de_named_map() {
         c: 7,
     };
 
-    let v2: DeNamedMap<i32, i32, i32> = json::from_str(
+    let v2: DeNamedMap<i32, i32, i32> = serde_json::from_str(
         "{\"a\":5,\"b\":6,\"c\":7}"
     ).unwrap();
     assert_eq!(v, v2);
 
-    let v2 = json::from_value(Value::Object(btreemap![
+    let v2 = serde_json::from_value(Value::Object(btreemap![
         "a".to_string() => Value::U64(5),
         "b".to_string() => Value::U64(6),
         "c".to_string() => Value::U64(7)
@@ -239,12 +239,12 @@ fn test_de_named_map() {
 #[test]
 fn test_ser_enum_unit() {
     assert_eq!(
-        json::to_string(&SerEnum::Unit::<u32, u32, u32>).unwrap(),
+        serde_json::to_string(&SerEnum::Unit::<u32, u32, u32>).unwrap(),
         "{\"Unit\":[]}"
     );
 
     assert_eq!(
-        json::to_value(&SerEnum::Unit::<u32, u32, u32>),
+        serde_json::to_value(&SerEnum::Unit::<u32, u32, u32>),
         Value::Object(btreemap!(
             "Unit".to_string() => Value::Array(vec![]))
         )
@@ -261,7 +261,7 @@ fn test_ser_enum_seq() {
     //let f = 6;
 
     assert_eq!(
-        json::to_string(&SerEnum::Seq(
+        serde_json::to_string(&SerEnum::Seq(
             a,
             b,
             &c,
@@ -273,7 +273,7 @@ fn test_ser_enum_seq() {
     );
 
     assert_eq!(
-        json::to_value(&SerEnum::Seq(
+        serde_json::to_value(&SerEnum::Seq(
             a,
             b,
             &c,
@@ -304,7 +304,7 @@ fn test_ser_enum_map() {
     //let f = 6;
 
     assert_eq!(
-        json::to_string(&SerEnum::Map {
+        serde_json::to_string(&SerEnum::Map {
             a: a,
             b: b,
             c: &c,
@@ -316,7 +316,7 @@ fn test_ser_enum_map() {
     );
 
     assert_eq!(
-        json::to_value(&SerEnum::Map {
+        serde_json::to_value(&SerEnum::Map {
             a: a,
             b: b,
             c: &c,
@@ -339,13 +339,13 @@ fn test_ser_enum_map() {
 
 #[test]
 fn test_de_enum_unit() {
-    let v: DeEnum<_, _, _> = json::from_str("{\"Unit\":[]}").unwrap();
+    let v: DeEnum<_, _, _> = serde_json::from_str("{\"Unit\":[]}").unwrap();
     assert_eq!(
         v,
         DeEnum::Unit::<u32, u32, u32>
     );
 
-    let v: DeEnum<_, _, _> = json::from_value(Value::Object(btreemap!(
+    let v: DeEnum<_, _, _> = serde_json::from_value(Value::Object(btreemap!(
         "Unit".to_string() => Value::Array(vec![]))
     )).unwrap();
     assert_eq!(
@@ -363,7 +363,7 @@ fn test_de_enum_seq() {
     let e = 5;
     //let f = 6;
 
-    let v: DeEnum<_, _, _> = json::from_str("{\"Seq\":[1,2,3,5]}").unwrap();
+    let v: DeEnum<_, _, _> = serde_json::from_str("{\"Seq\":[1,2,3,5]}").unwrap();
     assert_eq!(
         v,
         DeEnum::Seq(
@@ -376,7 +376,7 @@ fn test_de_enum_seq() {
         )
     );
 
-    let v: DeEnum<_, _, _> = json::from_value(Value::Object(btreemap!(
+    let v: DeEnum<_, _, _> = serde_json::from_value(Value::Object(btreemap!(
         "Seq".to_string() => Value::Array(vec![
             Value::U64(1),
             Value::U64(2),
@@ -408,7 +408,7 @@ fn test_de_enum_map() {
     let e = 5;
     //let f = 6;
 
-    let v: DeEnum<_, _, _> = json::from_str(
+    let v: DeEnum<_, _, _> = serde_json::from_str(
         "{\"Map\":{\"a\":1,\"b\":2,\"c\":3,\"e\":5}}"
     ).unwrap();
     assert_eq!(
@@ -423,7 +423,7 @@ fn test_de_enum_map() {
         }
     );
 
-    let v: DeEnum<_, _, _> = json::from_value(Value::Object(btreemap!(
+    let v: DeEnum<_, _, _> = serde_json::from_value(Value::Object(btreemap!(
         "Map".to_string() => Value::Object(btreemap![
             "a".to_string() => Value::U64(1),
             "b".to_string() => Value::U64(2),
@@ -452,26 +452,26 @@ fn test_lifetimes() {
     let value = 5;
     let lifetime = Lifetimes::LifetimeSeq(&value);
     assert_eq!(
-        json::to_string(&lifetime).unwrap(),
+        serde_json::to_string(&lifetime).unwrap(),
         "{\"LifetimeSeq\":[5]}"
     );
 
     let lifetime = Lifetimes::NoLifetimeSeq(5);
     assert_eq!(
-        json::to_string(&lifetime).unwrap(),
+        serde_json::to_string(&lifetime).unwrap(),
         "{\"NoLifetimeSeq\":[5]}"
     );
 
     let value = 5;
     let lifetime = Lifetimes::LifetimeMap { a: &value };
     assert_eq!(
-        json::to_string(&lifetime).unwrap(),
+        serde_json::to_string(&lifetime).unwrap(),
         "{\"LifetimeMap\":{\"a\":5}}"
     );
 
     let lifetime = Lifetimes::NoLifetimeMap { a: 5 };
     assert_eq!(
-        json::to_string(&lifetime).unwrap(),
+        serde_json::to_string(&lifetime).unwrap(),
         "{\"NoLifetimeMap\":{\"a\":5}}"
     );
 }

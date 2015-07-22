@@ -22,5 +22,4 @@ pub use de::{Deserialize, Deserializer, Error};
 pub mod bytes;
 pub mod de;
 pub mod iter;
-pub mod json;
 pub mod ser;

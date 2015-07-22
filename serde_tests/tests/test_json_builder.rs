@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use serde::json::value::Value;
-use serde::json::builder::{ArrayBuilder, ObjectBuilder};
+use serde_json::value::Value;
+use serde_json::builder::{ArrayBuilder, ObjectBuilder};
 
 #[test]
 fn test_array_builder() {

@@ -2,7 +2,7 @@ use std::io;
 use std::num::FpCategory;
 use std::string::FromUtf8Error;
 
-use ser;
+use serde::ser;
 
 /// A structure for implementing serialization to JSON.
 pub struct Serializer<W, F=CompactFormatter> {

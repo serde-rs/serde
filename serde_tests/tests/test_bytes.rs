@@ -1,7 +1,7 @@
 use serde;
 use serde::Serialize;
 use serde::bytes::{ByteBuf, Bytes};
-use serde::json;
+use serde_json;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -144,11 +144,11 @@ impl serde::Deserializer for BytesDeserializer {
 fn test_bytes_ser_json() {
     let buf = vec![];
     let bytes = Bytes::from(&buf);
-    assert_eq!(json::to_string(&bytes).unwrap(), "[]".to_string());
+    assert_eq!(serde_json::to_string(&bytes).unwrap(), "[]".to_string());
 
     let buf = vec![1, 2, 3];
     let bytes = Bytes::from(&buf);
-    assert_eq!(json::to_string(&bytes).unwrap(), "[1,2,3]".to_string());
+    assert_eq!(serde_json::to_string(&bytes).unwrap(), "[1,2,3]".to_string());
 }
 
 #[test]
@@ -167,10 +167,10 @@ fn test_bytes_ser_bytes() {
 #[test]
 fn test_byte_buf_ser_json() {
     let bytes = ByteBuf::new();
-    assert_eq!(json::to_string(&bytes).unwrap(), "[]".to_string());
+    assert_eq!(serde_json::to_string(&bytes).unwrap(), "[]".to_string());
 
     let bytes = ByteBuf::from(vec![1, 2, 3]);
-    assert_eq!(json::to_string(&bytes).unwrap(), "[1,2,3]".to_string());
+    assert_eq!(serde_json::to_string(&bytes).unwrap(), "[1,2,3]".to_string());
 }
 
 #[test]
@@ -189,11 +189,11 @@ fn test_byte_buf_ser_bytes() {
 #[test]
 fn test_byte_buf_de_json() {
     let bytes = ByteBuf::new();
-    let v: ByteBuf = json::from_str("[]").unwrap();
+    let v: ByteBuf = serde_json::from_str("[]").unwrap();
     assert_eq!(v, bytes);
 
     let bytes = ByteBuf::from(vec![1, 2, 3]);
-    let v: ByteBuf = json::from_str("[1, 2, 3]").unwrap();
+    let v: ByteBuf = serde_json::from_str("[1, 2, 3]").unwrap();
     assert_eq!(v, bytes);
 }
 

@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use serde::de;
 use serde::ser;
 
-use serde::json::{
+use serde_json::{
     self,
     Value,
     from_str,
@@ -12,7 +12,7 @@ use serde::json::{
     to_value,
 };
 
-use serde::json::error::{Error, ErrorCode};
+use serde_json::error::{Error, ErrorCode};
 
 macro_rules! treemap {
     ($($k:expr => $v:expr),*) => ({
@@ -48,11 +48,11 @@ fn test_encode_ok<T>(errors: &[(T, &str)])
     for &(ref value, out) in errors {
         let out = out.to_string();
 
-        let s = json::to_string(value).unwrap();
+        let s = serde_json::to_string(value).unwrap();
         assert_eq!(s, out);
 
         let v = to_value(&value);
-        let s = json::to_string(&v).unwrap();
+        let s = serde_json::to_string(&v).unwrap();
         assert_eq!(s, out);
     }
 }
@@ -63,11 +63,11 @@ fn test_pretty_encode_ok<T>(errors: &[(T, &str)])
     for &(ref value, out) in errors {
         let out = out.to_string();
 
-        let s = json::to_string_pretty(value).unwrap();
+        let s = serde_json::to_string_pretty(value).unwrap();
         assert_eq!(s, out);
 
         let v = to_value(&value);
-        let s = json::to_string_pretty(&v).unwrap();
+        let s = serde_json::to_string_pretty(&v).unwrap();
         assert_eq!(s, out);
     }
 }
@@ -1080,7 +1080,7 @@ fn test_missing_fmt_renamed_field() {
 
 #[test]
 fn test_find_path() {
-    let obj: Value = json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
+    let obj: Value = serde_json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
 
     assert!(obj.find_path(&["x", "a"]).unwrap() == &Value::U64(1));
     assert!(obj.find_path(&["y"]).unwrap() == &Value::U64(2));
@@ -1089,7 +1089,7 @@ fn test_find_path() {
 
 #[test]
 fn test_lookup() {
-    let obj: Value = json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
+    let obj: Value = serde_json::from_str(r#"{"x": {"a": 1}, "y": 2}"#).unwrap();
 
     assert!(obj.lookup("x.a").unwrap() == &Value::U64(1));
     assert!(obj.lookup("y").unwrap() == &Value::U64(2));
