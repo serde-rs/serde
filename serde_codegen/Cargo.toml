@@ -10,7 +10,7 @@ build = "build.rs"
 [features]
 default = ["with-syntex"]
 nightly = ["quasi_macros"]
-with-syntex = ["quasi/with-syntex", "quasi_codegen/with-syntex", "syntex", "syntex_syntax"]
+with-syntex = ["quasi/with-syntex", "quasi_codegen", "quasi_codegen/with-syntex", "syntex", "syntex_syntax"]
 
 [build-dependencies]
 quasi_codegen = { verision = "*", optional = true }
