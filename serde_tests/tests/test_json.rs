@@ -1,5 +1,6 @@
-use std::fmt::Debug;
 use std::collections::BTreeMap;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use serde::de;
 use serde::ser;
@@ -1078,4 +1079,175 @@ fn test_lookup() {
     assert!(obj.lookup("x.a").unwrap() == &Value::U64(1));
     assert!(obj.lookup("y").unwrap() == &Value::U64(2));
     assert!(obj.lookup("z").is_none());
+}
+
+#[test]
+fn test_serialize_seq_with_no_len() {
+    #[derive(Clone, Debug, PartialEq)]
+    struct MyVec<T>(Vec<T>);
+
+    impl<T> ser::Serialize for MyVec<T>
+        where T: ser::Serialize,
+    {
+        #[inline]
+        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where S: ser::Serializer,
+        {
+            serializer.visit_seq(ser::impls::SeqIteratorVisitor::new(self.0.iter(), None))
+        }
+    }
+
+    struct Visitor<T> {
+        marker: PhantomData<MyVec<T>>,
+    }
+
+    impl<T> de::Visitor for Visitor<T>
+        where T: de::Deserialize,
+    {
+        type Value = MyVec<T>;
+
+        #[inline]
+        fn visit_unit<E>(&mut self) -> Result<MyVec<T>, E>
+            where E: de::Error,
+        {
+            Ok(MyVec(Vec::new()))
+        }
+
+        #[inline]
+        fn visit_seq<V>(&mut self, mut visitor: V) -> Result<MyVec<T>, V::Error>
+            where V: de::SeqVisitor,
+        {
+            let mut values = Vec::new();
+
+            while let Some(value) = try!(visitor.visit()) {
+                values.push(value);
+            }
+
+            try!(visitor.end());
+
+            Ok(MyVec(values))
+        }
+    }
+
+    impl<T> de::Deserialize for MyVec<T>
+        where T: de::Deserialize,
+    {
+        fn deserialize<D>(deserializer: &mut D) -> Result<MyVec<T>, D::Error>
+            where D: de::Deserializer,
+        {
+            deserializer.visit_map(Visitor { marker: PhantomData })
+        }
+    }
+
+    let mut vec = Vec::new();
+    vec.push(MyVec(Vec::new()));
+    vec.push(MyVec(Vec::new()));
+    let vec: MyVec<MyVec<u32>> = MyVec(vec);
+
+    test_encode_ok(&[
+        (
+            vec.clone(),
+            "[[],[]]",
+        ),
+    ]);
+
+    let s = json::to_string_pretty(&vec).unwrap();
+    assert_eq!(
+        s,
+        concat!(
+            "[\n",
+            "  [\n",
+            "  ],\n",
+            "  [\n",
+            "  ]\n",
+            "]"
+        )
+    );
+}
+
+#[test]
+fn test_serialize_map_with_no_len() {
+    #[derive(Clone, Debug, PartialEq)]
+    struct Map<K, V>(BTreeMap<K, V>);
+
+    impl<K, V> ser::Serialize for Map<K, V>
+        where K: ser::Serialize + Ord,
+              V: ser::Serialize,
+    {
+        #[inline]
+        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where S: ser::Serializer,
+        {
+            serializer.visit_map(ser::impls::MapIteratorVisitor::new(self.0.iter(), None))
+        }
+    }
+
+    struct Visitor<K, V> {
+        marker: PhantomData<Map<K, V>>,
+    }
+
+    impl<K, V> de::Visitor for Visitor<K, V>
+        where K: de::Deserialize + Eq + Ord,
+              V: de::Deserialize,
+    {
+        type Value = Map<K, V>;
+
+        #[inline]
+        fn visit_unit<E>(&mut self) -> Result<Map<K, V>, E>
+            where E: de::Error,
+        {
+            Ok(Map(BTreeMap::new()))
+        }
+
+        #[inline]
+        fn visit_map<Visitor>(&mut self, mut visitor: Visitor) -> Result<Map<K, V>, Visitor::Error>
+            where Visitor: de::MapVisitor,
+        {
+            let mut values = BTreeMap::new();
+
+            while let Some((key, value)) = try!(visitor.visit()) {
+                values.insert(key, value);
+            }
+
+            try!(visitor.end());
+
+            Ok(Map(values))
+        }
+    }
+
+    impl<K, V> de::Deserialize for Map<K, V>
+        where K: de::Deserialize + Eq + Ord,
+              V: de::Deserialize,
+    {
+        fn deserialize<D>(deserializer: &mut D) -> Result<Map<K, V>, D::Error>
+            where D: de::Deserializer,
+        {
+            deserializer.visit_map(Visitor { marker: PhantomData })
+        }
+    }
+
+    let mut map = BTreeMap::new();
+    map.insert("a", Map(BTreeMap::new()));
+    map.insert("b", Map(BTreeMap::new()));
+    let map: Map<_, Map<u32, u32>> = Map(map);
+
+    test_encode_ok(&[
+        (
+            map.clone(),
+            "{\"a\":{},\"b\":{}}",
+        ),
+    ]);
+
+    let s = json::to_string_pretty(&map).unwrap();
+    assert_eq!(
+        s,
+        concat!(
+            "{\n",
+            "  \"a\": {\n",
+            "  },\n",
+            "  \"b\": {\n",
+            "  }\n",
+            "}"
+        )
+    );
 }
