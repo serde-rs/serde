@@ -767,7 +767,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
         }
     }
 
-    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_map<V>(&mut self, _fields: &'static[&'static str], visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         if let Value::Object(fields) = self.val.take().unwrap() {
