@@ -206,9 +206,11 @@ impl<W, F> ser::Serializer for Serializer<W, F>
         where T: ser::Serialize,
     {
         try!(self.formatter.comma(&mut self.writer, self.first));
+        try!(value.serialize(self));
+
         self.first = false;
 
-        value.serialize(self)
+        Ok(())
     }
 
     #[inline]
@@ -250,11 +252,14 @@ impl<W, F> ser::Serializer for Serializer<W, F>
               V: ser::Serialize,
     {
         try!(self.formatter.comma(&mut self.writer, self.first));
-        self.first = false;
 
         try!(key.serialize(self));
         try!(self.formatter.colon(&mut self.writer));
-        value.serialize(self)
+        try!(value.serialize(self));
+
+        self.first = false;
+
+        Ok(())
     }
 
     #[inline]
