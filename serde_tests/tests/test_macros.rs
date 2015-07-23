@@ -131,6 +131,26 @@ enum Lifetimes<'a> {
     NoLifetimeMap { a: i32 },
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct GenericStruct<T> {
+    x: T,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct GenericTupleStruct<T>(T);
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum GenericEnumSeq<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum GenericEnumMap<T, E> {
+    Ok { x: T },
+    Err { x: E },
+}
+
 #[test]
 fn test_named_unit() {
     let named_unit = NamedUnit;
@@ -473,5 +493,31 @@ fn test_lifetimes() {
     assert_eq!(
         serde_json::to_string(&lifetime).unwrap(),
         "{\"NoLifetimeMap\":{\"a\":5}}"
+    );
+}
+
+#[test]
+fn test_generic() {
+    macro_rules! declare_tests {
+        ($($ty:ty : $value:expr => $str:expr,)+) => {
+            $({
+                let value: $ty = $value;
+
+                let string = serde_json::to_string(&value).unwrap();
+                assert_eq!(string, $str);
+
+                let expected: $ty = serde_json::from_str(&string).unwrap();
+                assert_eq!(value, expected);
+            })+
+        }
+    }
+
+    declare_tests!(
+        GenericStruct<u32> : GenericStruct { x: 5 } => "{\"x\":5}",
+        GenericTupleStruct<u32> : GenericTupleStruct(5) => "[5]",
+        GenericEnumSeq<u32, u32> : GenericEnumSeq::Ok(5) => "{\"Ok\":[5]}",
+        GenericEnumSeq<u32, u32> : GenericEnumSeq::Err(5) => "{\"Err\":[5]}",
+        GenericEnumMap<u32, u32> : GenericEnumMap::Ok { x: 5 } => "{\"Ok\":{\"x\":5}}",
+        GenericEnumMap<u32, u32> : GenericEnumMap::Err { x: 5 } => "{\"Err\":{\"x\":5}}",
     );
 }
