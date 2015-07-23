@@ -16,14 +16,20 @@ pub enum FieldNames {
 
 /// Represents field attribute information
 pub struct FieldAttrs {
+    skip_serializing_field: bool,
     names: FieldNames,
     use_default: bool,
 }
 
 impl FieldAttrs {
     /// Create a FieldAttr with a single default field name
-    pub fn new(default_value: bool, name: P<ast::Expr>) -> FieldAttrs {
+    pub fn new(
+        skip_serializing_field: bool,
+        default_value: bool,
+        name: P<ast::Expr>,
+    ) -> FieldAttrs {
         FieldAttrs {
+            skip_serializing_field: skip_serializing_field,
             names: FieldNames::Global(name),
             use_default: default_value,
         }
@@ -31,12 +37,14 @@ impl FieldAttrs {
 
     /// Create a FieldAttr with format specific field names
     pub fn new_with_formats(
+        skip_serializing_field: bool,
         default_value: bool,
         default_name: P<ast::Expr>,
         formats: HashMap<P<ast::Expr>, P<ast::Expr>>,
     ) -> FieldAttrs {
         FieldAttrs {
-            names:  FieldNames::Format {
+            skip_serializing_field: skip_serializing_field,
+            names: FieldNames::Format {
                 formats: formats,
                 default: default_name,
             },
@@ -103,5 +111,10 @@ impl FieldAttrs {
     /// Predicate for using a field's default value
     pub fn use_default(&self) -> bool {
         self.use_default
+    }
+
+    /// Predicate for ignoring a field when serializing a value
+    pub fn skip_serializing_field(&self) -> bool {
+        self.skip_serializing_field
     }
 }
