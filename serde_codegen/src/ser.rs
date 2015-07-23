@@ -55,10 +55,7 @@ pub fn expand_derive_serialize(
         &builder,
         &item,
         &impl_generics,
-        builder.ty()
-            .ref_()
-            .lifetime("'__a")
-            .build_ty(ty.clone()),
+        ty.clone(),
     );
 
     let where_clause = &impl_generics.where_clause;
@@ -184,7 +181,10 @@ fn serialize_tuple_struct(
         cx,
         builder,
         ty.clone(),
-        ty,
+        builder.ty()
+            .ref_()
+            .lifetime("'__a")
+            .build_ty(ty.clone()),
         fields,
         impl_generics,
     );
@@ -197,7 +197,7 @@ fn serialize_tuple_struct(
         serializer.visit_tuple_struct($type_name, Visitor {
             value: self,
             state: 0,
-            _structure_ty: ::std::marker::PhantomData,
+            _structure_ty: ::std::marker::PhantomData::<&$ty>,
         })
     })
 }
@@ -215,7 +215,10 @@ fn serialize_struct(
         cx,
         builder,
         ty.clone(),
-        ty,
+        builder.ty()
+            .ref_()
+            .lifetime("'__a")
+            .build_ty(ty.clone()),
         struct_def,
         impl_generics,
         fields.iter().map(|field| quote_expr!(cx, &self.value.$field)),
@@ -229,7 +232,7 @@ fn serialize_struct(
         serializer.visit_struct($type_name, Visitor {
             value: self,
             state: 0,
-            _structure_ty: ::std::marker::PhantomData,
+            _structure_ty: ::std::marker::PhantomData::<&$ty>,
         })
     })
 }
@@ -383,7 +386,7 @@ fn serialize_tuple_variant(
     let (visitor_struct, visitor_impl) = serialize_tuple_struct_visitor(
         cx,
         builder,
-        structure_ty,
+        structure_ty.clone(),
         variant_ty,
         args.len(),
         generics,
@@ -392,9 +395,7 @@ fn serialize_tuple_variant(
     let value_expr = builder.expr().tuple()
         .with_exprs(
             fields.iter().map(|field| {
-                builder.expr()
-                    .addr_of()
-                    .id(field)
+                builder.expr().id(field)
             })
         )
         .build();
@@ -405,7 +406,7 @@ fn serialize_tuple_variant(
         serializer.visit_enum_seq($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
-            _structure_ty: ::std::marker::PhantomData,
+            _structure_ty: ::std::marker::PhantomData::<&$structure_ty>,
         })
     })
 }
@@ -435,9 +436,7 @@ fn serialize_struct_variant(
     let value_expr = builder.expr().tuple()
         .with_exprs(
             fields.iter().map(|field| {
-                builder.expr()
-                    .addr_of()
-                    .id(field)
+                builder.expr().id(field)
             })
         )
         .build();
@@ -445,7 +444,7 @@ fn serialize_struct_variant(
     let (visitor_struct, visitor_impl) = serialize_struct_visitor(
         cx,
         builder,
-        structure_ty,
+        structure_ty.clone(),
         value_ty,
         struct_def,
         generics,
@@ -462,7 +461,7 @@ fn serialize_struct_variant(
         serializer.visit_enum_map($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
-            _structure_ty: ::std::marker::PhantomData,
+            _structure_ty: ::std::marker::PhantomData::<&$structure_ty>,
         })
     })
 }
@@ -502,19 +501,12 @@ fn serialize_tuple_struct_visitor(
         .strip_bounds()
         .build();
 
-    // Variants don't necessarily reference all generic lifetimes and type parameters,
-    // so to avoid a compilation failure, we'll just add a phantom type to capture these
-    // unused values.
-    let structure_ty = builder.ty()
-        .phantom_data()
-        .build(structure_ty);
-
     (
         quote_item!(cx,
             struct Visitor $visitor_impl_generics $where_clause {
                 state: usize,
                 value: $variant_ty,
-                _structure_ty: $structure_ty,
+                _structure_ty: ::std::marker::PhantomData<&'__a $structure_ty>,
             }
         ).unwrap(),
 
@@ -590,19 +582,12 @@ fn serialize_struct_visitor<I>(
         .strip_bounds()
         .build();
 
-    // Variants don't necessarily reference all generic lifetimes and type parameters,
-    // so to avoid a compilation failure, we'll just add a phantom type to capture these
-    // unused values.
-    let structure_ty = builder.ty()
-        .phantom_data()
-        .build(structure_ty);
-
     (
         quote_item!(cx,
             struct Visitor $visitor_impl_generics $where_clause {
                 state: usize,
                 value: $variant_ty,
-                _structure_ty: $structure_ty,
+                _structure_ty: ::std::marker::PhantomData<&'__a $structure_ty>,
             }
         ).unwrap(),
 
