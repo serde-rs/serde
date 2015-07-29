@@ -483,6 +483,7 @@ fn deserialize_item_enum(
         enum_def.variants.iter()
             .map(|variant|
                  attr::FieldAttrs::new(
+                     false,
                      true,
                      builder.expr().str(variant.node.name)))
             .collect()

@@ -550,6 +550,7 @@ fn serialize_struct_visitor<I>(
 
     let arms: Vec<ast::Arm> = field_attrs.into_iter()
         .zip(value_exprs)
+        .filter(|&(ref field, _)| !field.skip_serializing_field())
         .enumerate()
         .map(|(i, (field, value_expr))| {
             let key_expr = field.serializer_key_expr(cx);

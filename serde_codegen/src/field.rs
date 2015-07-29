@@ -58,10 +58,18 @@ fn default_value(mi: &ast::MetaItem) -> bool {
     }
 }
 
+fn skip_serializing_field(mi: &ast::MetaItem) -> bool {
+    if let ast::MetaItem_::MetaWord(ref n) = mi.node {
+        n == &"skip_serializing"
+    } else {
+        false
+    }
+}
+
 fn field_attrs<'a>(
     builder: &aster::AstBuilder,
     field: &'a ast::StructField,
-) -> (Rename<'a>, bool) {
+) -> (Rename<'a>, bool, bool) {
     field.node.attrs.iter()
         .find(|sa| {
             if let ast::MetaList(ref n, _) = sa.node.value.node {
@@ -73,15 +81,18 @@ fn field_attrs<'a>(
         .and_then(|sa| {
             if let ast::MetaList(_, ref vals) = sa.node.value.node {
                 attr::mark_used(&sa);
-                Some((vals.iter()
-                      .fold(None, |v, mi| v.or(rename(builder, mi)))
-                      .unwrap_or(Rename::None),
-                      vals.iter().any(|mi| default_value(mi))))
+                Some((
+                    vals.iter()
+                        .fold(None, |v, mi| v.or(rename(builder, mi)))
+                        .unwrap_or(Rename::None),
+                    vals.iter().any(|mi| default_value(mi)),
+                    vals.iter().any(|mi| skip_serializing_field(mi)),
+                ))
             } else {
-                Some((Rename::None, false))
+                Some((Rename::None, false, false))
             }
         })
-        .unwrap_or((Rename::None, false))
+        .unwrap_or((Rename::None, false, false))
 }
 
 pub fn struct_field_attrs(
@@ -92,23 +103,26 @@ pub fn struct_field_attrs(
     struct_def.fields.iter()
         .map(|field| {
             match field_attrs(builder, field) {
-                (Rename::Global(rename), default_value) =>
+                (Rename::Global(rename), default_value, skip_serializing_field) =>
                     FieldAttrs::new(
+                        skip_serializing_field,
                         default_value,
                         builder.expr().build_lit(P(rename.clone()))),
-                (Rename::Format(renames), default_value) => {
+                (Rename::Format(renames), default_value, skip_serializing_field) => {
                     let mut res = HashMap::new();
                     res.extend(
                         renames.into_iter()
                             .map(|(k,v)|
                                  (k, builder.expr().build_lit(P(v.clone())))));
                     FieldAttrs::new_with_formats(
+                        skip_serializing_field,
                         default_value,
                         default_field_name(cx, builder, field.node.kind),
                         res)
                 },
-                (Rename::None, default_value) => {
+                (Rename::None, default_value, skip_serializing_field) => {
                     FieldAttrs::new(
+                        skip_serializing_field,
                         default_value,
                         default_field_name(cx, builder, field.node.kind))
                 }

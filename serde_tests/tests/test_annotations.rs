@@ -1,3 +1,4 @@
+use std::default;
 use serde_json;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -30,6 +31,12 @@ enum SerEnum<A> {
     },
 }
 
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+struct SkipSerializingFields<A: default::Default> {
+    a: i8,
+    #[serde(skip_serializing, default)]
+    b: A,
+}
 
 #[test]
 fn test_default() {
@@ -70,4 +77,14 @@ fn test_enum_format_rename() {
 
     let deserialized_value = serde_json::from_str(ans).unwrap();
     assert_eq!(value, deserialized_value);
+}
+
+#[test]
+fn test_skip_serializing_fields() {
+    let value = SkipSerializingFields { a: 1, b: 2 };
+    let serialized_value = serde_json::to_string(&value).unwrap();
+    assert_eq!(serialized_value, "{\"a\":1}");
+
+    let deserialized_value: SkipSerializingFields<_> = serde_json::from_str(&serialized_value).unwrap();
+    assert_eq!(SkipSerializingFields { a: 1, b: 0 }, deserialized_value);
 }
