@@ -160,8 +160,8 @@ pub trait Serializer {
 
     #[inline]
     fn visit_tuple_struct<V>(&mut self,
-                          _name: &'static str,
-                          visitor: V) -> Result<(), Self::Error>
+                             _name: &'static str,
+                             visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.visit_tuple(visitor)
@@ -201,8 +201,8 @@ pub trait Serializer {
 
     #[inline]
     fn visit_struct<V>(&mut self,
-                          _name: &'static str,
-                          visitor: V) -> Result<(), Self::Error>
+                       _name: &'static str,
+                       visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.visit_map(visitor)
