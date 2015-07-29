@@ -27,7 +27,7 @@ pub enum Token<'a> {
     UnitStruct(&'a str),
     EnumUnit(&'a str, &'a str),
 
-    EnumSimple(&'a str, &'a str),
+    EnumNewtype(&'a str, &'a str),
 
     SeqStart(Option<usize>),
     TupleStructStart(&'a str, Option<usize>),
@@ -82,15 +82,14 @@ impl<'a> Serializer for AssertSerializer<'a> {
         Ok(())
     }
 
-    fn visit_enum_simple<T>(&mut self,
-                            name: &str,
-                            _variant_index: usize,
-                            variant: &str,
-                            value: T,
-                            ) -> Result<(), ()>
+    fn visit_newtype_variant<T>(&mut self,
+                                name: &str,
+                                _variant_index: usize,
+                                variant: &str,
+                                value: T) -> Result<(), ()>
         where T: Serialize,
     {
-        assert_eq!(self.iter.next(), Some(Token::EnumSimple(name, variant)));
+        assert_eq!(self.iter.next(), Some(Token::EnumNewtype(name, variant)));
         value.serialize(self)
     }
 
@@ -397,11 +396,11 @@ declare_tests! {
     }
     test_result {
         Ok::<i32, i32>(0) => vec![
-            Token::EnumSimple("Result", "Ok"),
+            Token::EnumNewtype("Result", "Ok"),
             Token::I32(0),
         ],
         Err::<i32, i32>(1) => vec![
-            Token::EnumSimple("Result", "Err"),
+            Token::EnumNewtype("Result", "Err"),
             Token::I32(1),
         ],
     }
@@ -565,7 +564,7 @@ declare_tests! {
     }
     test_enum {
         Enum::Unit => vec![Token::EnumUnit("Enum", "Unit")],
-        Enum::One(42) => vec![Token::EnumSimple("Enum", "One"), Token::I32(42)],
+        Enum::One(42) => vec![Token::EnumNewtype("Enum", "One"), Token::I32(42)],
         Enum::Seq(1, 2) => vec![
             Token::EnumSeqStart("Enum", "Seq", Some(2)),
                 Token::SeqSep,
