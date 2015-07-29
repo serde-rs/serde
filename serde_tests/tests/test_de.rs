@@ -327,17 +327,17 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
         de::Deserialize::deserialize(self.de)
     }
 
-    fn visit_seq<V>(&mut self,
-                    _len: usize,
-                    visitor: V) -> Result<V::Value, Error>
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self.de, visitor)
     }
 
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, Error>
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self.de, visitor)

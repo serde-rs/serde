@@ -648,17 +648,17 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
         de::Deserialize::deserialize(self)
     }
 
-    fn visit_seq<V>(&mut self,
-                    _len: usize,
-                    visitor: V) -> Result<V::Value, Error>
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self, visitor)
     }
 
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, Error>
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self, visitor)

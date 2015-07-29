@@ -584,17 +584,19 @@ pub trait VariantVisitor {
         Err(Error::syntax_error())
     }
 
-    /// `visit_seq` is called when deserializing a tuple-like variant.
-    fn visit_seq<V>(&mut self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
+    /// `visit_tuple` is called when deserializing a tuple-like variant.
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
         Err(Error::syntax_error())
     }
 
-    /// `visit_map` is called when deserializing a struct-like variant.
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    _visitor: V) -> Result<V::Value, Self::Error>
+    /// `visit_struct` is called when deserializing a struct-like variant.
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
         Err(Error::syntax_error())
@@ -618,18 +620,20 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_simple()
     }
 
-    fn visit_seq<V>(&mut self, len: usize, visitor: V) -> Result<V::Value, T::Error>
+    fn visit_tuple<V>(&mut self,
+                      len: usize,
+                      visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
-        (**self).visit_seq(len, visitor)
+        (**self).visit_tuple(len, visitor)
     }
 
-    fn visit_map<V>(&mut self,
+    fn visit_struct<V>(&mut self,
                     fields: &'static [&'static str],
                     visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
-        (**self).visit_map(fields, visitor)
+        (**self).visit_struct(fields, visitor)
     }
 }
 

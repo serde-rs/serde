@@ -641,7 +641,7 @@ fn deserialize_tuple_variant(
             }
         }
 
-        visitor.visit_seq($fields, $visitor_expr)
+        visitor.visit_tuple($fields, $visitor_expr)
     })
 }
 
@@ -708,7 +708,7 @@ fn deserialize_struct_variant(
 
         $fields_stmt
 
-        visitor.visit_map(FIELDS, $visitor_expr)
+        visitor.visit_struct(FIELDS, $visitor_expr)
     })
 }
 
