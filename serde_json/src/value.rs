@@ -472,6 +472,22 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
+    fn visit_enum_simple<T>(&mut self,
+                            _name: &str,
+                            variant: &str,
+                            value: T,
+                            ) -> Result<(), ()>
+        where T: ser::Serialize,
+    {
+        let mut values = BTreeMap::new();
+        values.insert(variant.to_string(), to_value(&value));
+
+        self.state.push(State::Value(Value::Object(values)));
+
+        Ok(())
+    }
+
+    #[inline]
     fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor,
     {
@@ -687,39 +703,86 @@ impl de::Deserializer for Deserializer {
 
         let mut iter = value.into_iter();
 
-        let value = match iter.next() {
-            Some((variant, Value::Array(fields))) => {
-                self.value = Some(Value::String(variant));
-
-                let len = fields.len();
-                try!(visitor.visit(SeqDeserializer {
-                    de: self,
-                    iter: fields.into_iter(),
-                    len: len,
-                }))
-            }
-            Some((variant, Value::Object(fields))) => {
-                let len = fields.len();
-                try!(visitor.visit(MapDeserializer {
-                    de: self,
-                    iter: fields.into_iter(),
-                    value: Some(Value::String(variant)),
-                    len: len,
-                }))
-            }
-            Some(_) => { return Err(de::Error::syntax_error()); }
-            None => { return Err(de::Error::syntax_error()); }
+        let (variant, value) = match iter.next() {
+            Some(v) => v,
+            None => return Err(de::Error::syntax_error()),
         };
 
+        // enums are encoded in json as maps with a single key:value pair
         match iter.next() {
             Some(_) => Err(de::Error::syntax_error()),
-            None => Ok(value)
+            None => visitor.visit(VariantDeserializer {
+                de: self,
+                val: Some(value),
+                variant: Some(Value::String(variant)),
+            }),
         }
     }
 
     #[inline]
     fn format() -> &'static str {
         "json"
+    }
+}
+
+struct VariantDeserializer<'a> {
+    de: &'a mut Deserializer,
+    val: Option<Value>,
+    variant: Option<Value>,
+}
+
+impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
+    type Error = Error;
+
+    fn visit_variant<V>(&mut self) -> Result<V, Error>
+        where V: de::Deserialize,
+    {
+        de::Deserialize::deserialize(&mut Deserializer::new(self.variant.take().unwrap()))
+    }
+
+    fn visit_unit(&mut self) -> Result<(), Error>
+    {
+        de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))
+    }
+
+    fn visit_simple<D: de::Deserialize>(&mut self) -> Result<D, Error>
+    {
+        de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))
+    }
+
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        if let Value::Array(fields) = self.val.take().unwrap() {
+            de::Deserializer::visit(
+                &mut SeqDeserializer {
+                    de: self.de,
+                    len: fields.len(),
+                    iter: fields.into_iter(),
+                },
+                visitor,
+            )
+        } else {
+            Err(de::Error::syntax_error())
+        }
+    }
+
+    fn visit_map<V>(&mut self, _fields: &'static[&'static str], visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        if let Value::Object(fields) = self.val.take().unwrap() {
+            de::Deserializer::visit(
+                &mut MapDeserializer {
+                    de: self.de,
+                    len: fields.len(),
+                    iter: fields.into_iter(),
+                    value: None,
+                },
+                visitor,
+            )
+        } else {
+            Err(de::Error::syntax_error())
+        }
     }
 }
 
@@ -770,35 +833,6 @@ impl<'a> de::SeqVisitor for SeqDeserializer<'a> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len, Some(self.len))
-    }
-}
-
-impl<'a> de::VariantVisitor for SeqDeserializer<'a> {
-    type Error = Error;
-
-    fn visit_variant<V>(&mut self) -> Result<V, Error>
-        where V: de::Deserialize,
-    {
-        de::Deserialize::deserialize(self.de)
-    }
-
-    fn visit_unit(&mut self) -> Result<(), Error>
-    {
-        de::Deserialize::deserialize(self)
-    }
-
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        de::Deserializer::visit(self, visitor)
-    }
-
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        de::Deserializer::visit(self, visitor)
     }
 }
 
@@ -881,35 +915,6 @@ impl<'a> de::Deserializer for MapDeserializer<'a> {
     {
         println!("MapDeserializer!");
         visitor.visit_map(self)
-    }
-}
-
-impl<'a> de::VariantVisitor for MapDeserializer<'a> {
-    type Error = Error;
-
-    fn visit_variant<V>(&mut self) -> Result<V, Error>
-        where V: de::Deserialize,
-    {
-        self.de.value = self.value.take();
-        de::Deserialize::deserialize(self.de)
-    }
-
-    fn visit_unit(&mut self) -> Result<(), Error> {
-        de::Deserialize::deserialize(self)
-    }
-
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        de::Deserializer::visit(self, visitor)
-    }
-
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        de::Deserializer::visit(self, visitor)
     }
 }
 

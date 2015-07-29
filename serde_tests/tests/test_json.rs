@@ -28,7 +28,7 @@ enum Animal {
     Dog,
     Frog(String, Vec<isize>),
     Cat { age: usize, name: String },
-
+    AntHive(Vec<String>),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -534,6 +534,10 @@ fn test_write_enum() {
             Animal::Cat { age: 5, name: "Kate".to_string() },
             "{\"Cat\":{\"age\":5,\"name\":\"Kate\"}}"
         ),
+        (
+            Animal::AntHive(vec!["Bob".to_string(), "Stuart".to_string()]),
+            "{\"AntHive\":[\"Bob\",\"Stuart\"]}",
+        ),
     ]);
 
     test_pretty_encode_ok(&[
@@ -975,6 +979,10 @@ fn test_parse_enum() {
         (
             " { \"Cat\" : { \"age\" : 5 , \"name\" : \"Kate\" } } ",
             Animal::Cat { age: 5, name: "Kate".to_string() },
+        ),
+        (
+            " { \"AntHive\" : [\"Bob\", \"Stuart\"] } ",
+            Animal::AntHive(vec!["Bob".to_string(), "Stuart".to_string()]),
         ),
     ]);
 

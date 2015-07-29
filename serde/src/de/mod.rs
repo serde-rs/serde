@@ -571,6 +571,11 @@ pub trait VariantVisitor {
         Err(Error::syntax_error())
     }
 
+    /// `visit_simple` is called when deserializing a variant with a single value.
+    fn visit_simple<T: Deserialize>(&mut self) -> Result<T, Self::Error> {
+        Err(Error::syntax_error())
+    }
+
     /// `visit_seq` is called when deserializing a tuple-like variant.
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
@@ -599,6 +604,10 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
 
     fn visit_unit(&mut self) -> Result<(), T::Error> {
         (**self).visit_unit()
+    }
+
+    fn visit_simple<D: Deserialize>(&mut self) -> Result<D, T::Error> {
+        (**self).visit_simple()
     }
 
     fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>

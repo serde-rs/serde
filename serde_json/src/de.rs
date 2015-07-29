@@ -632,20 +632,22 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
     fn visit_variant<V>(&mut self) -> Result<V, Error>
         where V: de::Deserialize
     {
-        de::Deserialize::deserialize(self)
+        let val = try!(de::Deserialize::deserialize(self));
+        try!(self.parse_object_colon());
+        Ok(val)
     }
 
     fn visit_unit(&mut self) -> Result<(), Error> {
-        try!(self.parse_object_colon());
+        de::Deserialize::deserialize(self)
+    }
 
+    fn visit_simple<T: de::Deserialize>(&mut self) -> Result<T, Error> {
         de::Deserialize::deserialize(self)
     }
 
     fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        try!(self.parse_object_colon());
-
         de::Deserializer::visit(self, visitor)
     }
 
@@ -654,8 +656,6 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
                     visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        try!(self.parse_object_colon());
-
         de::Deserializer::visit(self, visitor)
     }
 }

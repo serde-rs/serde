@@ -61,12 +61,12 @@
 //! //#![feature(custom_derive, plugin)]
 //! //#![plugin(serde_macros)]
 //!
-//! extern crate serde;
+//! extern crate serde_json;
 //!
-//! use serde_json::{self, Value};
+//! use serde_json::Value;
 //!
 //! fn main() {
-//!     let data: Value = json::from_str("{\"foo\": 13, \"bar\": \"baz\"}").unwrap();
+//!     let data: Value = serde_json::from_str("{\"foo\": 13, \"bar\": \"baz\"}").unwrap();
 //!     println!("data: {:?}", data);
 //!     // data: {"bar":"baz","foo":13}
 //!     println!("object? {}", data.is_object());

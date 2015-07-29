@@ -473,13 +473,13 @@ fn test_lifetimes() {
     let lifetime = Lifetimes::LifetimeSeq(&value);
     assert_eq!(
         serde_json::to_string(&lifetime).unwrap(),
-        "{\"LifetimeSeq\":[5]}"
+        "{\"LifetimeSeq\":5}"
     );
 
     let lifetime = Lifetimes::NoLifetimeSeq(5);
     assert_eq!(
         serde_json::to_string(&lifetime).unwrap(),
-        "{\"NoLifetimeSeq\":[5]}"
+        "{\"NoLifetimeSeq\":5}"
     );
 
     let value = 5;
@@ -515,8 +515,8 @@ fn test_generic() {
     declare_tests!(
         GenericStruct<u32> : GenericStruct { x: 5 } => "{\"x\":5}",
         GenericTupleStruct<u32> : GenericTupleStruct(5) => "[5]",
-        GenericEnumSeq<u32, u32> : GenericEnumSeq::Ok(5) => "{\"Ok\":[5]}",
-        GenericEnumSeq<u32, u32> : GenericEnumSeq::Err(5) => "{\"Err\":[5]}",
+        GenericEnumSeq<u32, u32> : GenericEnumSeq::Ok(5) => "{\"Ok\":5}",
+        GenericEnumSeq<u32, u32> : GenericEnumSeq::Err(5) => "{\"Err\":5}",
         GenericEnumMap<u32, u32> : GenericEnumMap::Ok { x: 5 } => "{\"Ok\":{\"x\":5}}",
         GenericEnumMap<u32, u32> : GenericEnumMap::Err { x: 5 } => "{\"Err\":{\"x\":5}}",
     );

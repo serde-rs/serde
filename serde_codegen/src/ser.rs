@@ -296,7 +296,25 @@ fn serialize_variant(
                     )
                 }
             )
-        }
+        },
+        ast::TupleVariantKind(ref args) if args.len() == 1 => {
+            let field = builder.id("__simple_value");
+            let field = builder.pat().ref_id(field);
+            let pat = builder.pat().enum_()
+                .id(type_ident).id(variant_ident).build()
+                .with_pats(Some(field).into_iter())
+                .build();
+            quote_arm!(cx,
+                $pat => {
+                    ::serde::ser::Serializer::visit_enum_simple(
+                        serializer,
+                        $type_name,
+                        $variant_name,
+                        __simple_value,
+                    )
+                }
+            )
+        },
         ast::TupleVariantKind(ref args) => {
             let fields: Vec<ast::Ident> = (0 .. args.len())
                 .map(|i| builder.id(format!("__field{}", i)))
