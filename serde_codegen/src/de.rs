@@ -574,7 +574,7 @@ fn deserialize_variant(
         }
         ast::TupleVariantKind(ref args) if args.len() == 1 => {
             quote_expr!(cx, {
-                let val = try!(visitor.visit_simple());
+                let val = try!(visitor.visit_newtype());
                 Ok($type_ident::$variant_ident(val))
             })
         }

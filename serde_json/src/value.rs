@@ -747,7 +747,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
         de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))
     }
 
-    fn visit_simple<T>(&mut self) -> Result<T, Error>
+    fn visit_newtype<T>(&mut self) -> Result<T, Error>
         where T: de::Deserialize,
     {
         de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))

@@ -644,7 +644,9 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
         de::Deserialize::deserialize(self)
     }
 
-    fn visit_simple<T: de::Deserialize>(&mut self) -> Result<T, Error> {
+    fn visit_newtype<T>(&mut self) -> Result<T, Error>
+        where T: de::Deserialize,
+    {
         de::Deserialize::deserialize(self)
     }
 

@@ -579,8 +579,8 @@ pub trait VariantVisitor {
         Err(Error::syntax_error())
     }
 
-    /// `visit_simple` is called when deserializing a variant with a single value.
-    fn visit_simple<T>(&mut self) -> Result<T, Self::Error>
+    /// `visit_newtype` is called when deserializing a variant with a single value.
+    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: Deserialize,
     {
         Err(Error::syntax_error())
@@ -618,10 +618,10 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_unit()
     }
 
-    fn visit_simple<D>(&mut self) -> Result<D, T::Error>
+    fn visit_newtype<D>(&mut self) -> Result<D, T::Error>
         where D: Deserialize,
     {
-        (**self).visit_simple()
+        (**self).visit_newtype()
     }
 
     fn visit_tuple<V>(&mut self,
