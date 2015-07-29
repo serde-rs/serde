@@ -39,15 +39,6 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn visit_enum_simple<T>(&mut self,
-                            _name: &str,
-                            _variant_index: usize,
-                            _variant: &str,
-                            _value: T) -> Result<(), Error>
-    {
-        Err(Error)
-    }
-
     fn visit_bool(&mut self, _v: bool) -> Result<(), Error> {
         Err(Error)
     }

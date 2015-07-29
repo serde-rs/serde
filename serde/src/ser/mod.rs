@@ -131,7 +131,14 @@ pub trait Serializer {
                             variant_index: usize,
                             variant: &'static str,
                             value: T) -> Result<(), Self::Error>
-        where T: Serialize;
+        where T: Serialize,
+    {
+        self.visit_tuple_variant(
+            name,
+            variant_index,
+            variant,
+            Some(value))
+    }
 
     fn visit_none(&mut self) -> Result<(), Self::Error>;
 
