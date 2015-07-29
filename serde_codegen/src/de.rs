@@ -318,7 +318,7 @@ fn deserialize_tuple_struct(
             }
         }
 
-        deserializer.visit_tuple_struct($type_name, $visitor_expr)
+        deserializer.visit_tuple_struct($type_name, $fields, $visitor_expr)
     })
 }
 
@@ -489,6 +489,19 @@ fn deserialize_item_enum(
             .collect()
     );
 
+    let variants_expr = builder.expr().addr_of().slice()
+        .with_exprs(
+            enum_def.variants.iter()
+                .map(|variant| {
+                    builder.expr().str(variant.node.name)
+                })
+        )
+        .build();
+
+    let variants_stmt = quote_stmt!(cx,
+        const VARIANTS: &'static [&'static str] = $variants_expr;
+    ).unwrap();
+
     // Match arms to extract a variant from a string
     let variant_arms: Vec<_> = enum_def.variants.iter()
         .enumerate()
@@ -535,7 +548,9 @@ fn deserialize_item_enum(
             }
         }
 
-        deserializer.visit_enum($type_name, $visitor_expr)
+        $variants_stmt
+
+        deserializer.visit_enum($type_name, VARIANTS, $visitor_expr)
     })
 }
 
@@ -626,7 +641,7 @@ fn deserialize_tuple_variant(
             }
         }
 
-        visitor.visit_seq($visitor_expr)
+        visitor.visit_seq($fields, $visitor_expr)
     })
 }
 

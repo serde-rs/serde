@@ -692,7 +692,10 @@ impl de::Deserializer for Deserializer {
     }
 
     #[inline]
-    fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self,
+                     _name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
         let value = match self.value.take() {
@@ -750,7 +753,9 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
         de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))
     }
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_seq<V>(&mut self,
+                    _len: usize,
+                    visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         if let Value::Array(fields) = self.val.take().unwrap() {
@@ -767,7 +772,9 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
         }
     }
 
-    fn visit_map<V>(&mut self, _fields: &'static[&'static str], visitor: V) -> Result<V::Value, Error>
+    fn visit_map<V>(&mut self,
+                    _fields: &'static[&'static str],
+                    visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         if let Value::Object(fields) = self.val.take().unwrap() {

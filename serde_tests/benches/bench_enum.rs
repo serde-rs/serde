@@ -288,7 +288,10 @@ mod deserializer {
         }
 
         #[inline]
-        fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+        fn visit_enum<V>(&mut self,
+                         _name: &str,
+                         _variants: &[&str],
+                         mut visitor: V) -> Result<V::Value, Error>
             where V: de::EnumVisitor,
         {
             match self.stack.pop() {
@@ -350,7 +353,9 @@ mod deserializer {
             de::Deserialize::deserialize(self.de)
         }
 
-        fn visit_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn visit_tuple<V>(&mut self,
+                          _len: usize,
+                          mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             visitor.visit_seq(self)

@@ -136,7 +136,10 @@ impl<'a> de::Deserializer for StrDeserializer<'a> {
         }
     }
 
-    fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self,
+                     _name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
         visitor.visit(self)
@@ -182,7 +185,10 @@ impl de::Deserializer for StringDeserializer {
         }
     }
 
-    fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self,
+                     _name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
         visitor.visit(self)

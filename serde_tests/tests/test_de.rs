@@ -143,7 +143,10 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_enum<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self,
+                     name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
         match self.tokens.next() {
@@ -178,7 +181,10 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
+    fn visit_tuple_struct<V>(&mut self,
+                             name: &str,
+                             _len: usize,
+                             visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -321,7 +327,9 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
         de::Deserialize::deserialize(self.de)
     }
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_seq<V>(&mut self,
+                    _len: usize,
+                    visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self.de, visitor)

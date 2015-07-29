@@ -565,7 +565,7 @@ array_impls! {
 
 macro_rules! tuple_impls {
     () => {};
-    ($($visitor:ident => ($($name:ident),+),)+) => {
+    ($($len:expr => $visitor:ident => ($($name:ident),+),)+) => {
         $(
             pub struct $visitor<$($name,)+> {
                 marker: PhantomData<($($name,)+)>,
@@ -610,7 +610,7 @@ macro_rules! tuple_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit_tuple($visitor::new())
+                    deserializer.visit_tuple($len, $visitor::new())
                 }
             }
         )+
@@ -618,18 +618,18 @@ macro_rules! tuple_impls {
 }
 
 tuple_impls! {
-    TupleVisitor1 => (T0),
-    TupleVisitor2 => (T0, T1),
-    TupleVisitor3 => (T0, T1, T2),
-    TupleVisitor4 => (T0, T1, T2, T3),
-    TupleVisitor5 => (T0, T1, T2, T3, T4),
-    TupleVisitor6 => (T0, T1, T2, T3, T4, T5),
-    TupleVisitor7 => (T0, T1, T2, T3, T4, T5, T6),
-    TupleVisitor8 => (T0, T1, T2, T3, T4, T5, T6, T7),
-    TupleVisitor9 => (T0, T1, T2, T3, T4, T5, T6, T7, T8),
-    TupleVisitor10 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
-    TupleVisitor11 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
-    TupleVisitor12 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
+    1 => TupleVisitor1 => (T0),
+    2 => TupleVisitor2 => (T0, T1),
+    3 => TupleVisitor3 => (T0, T1, T2),
+    4 => TupleVisitor4 => (T0, T1, T2, T3),
+    5 => TupleVisitor5 => (T0, T1, T2, T3, T4),
+    6 => TupleVisitor6 => (T0, T1, T2, T3, T4, T5),
+    7 => TupleVisitor7 => (T0, T1, T2, T3, T4, T5, T6),
+    8 => TupleVisitor8 => (T0, T1, T2, T3, T4, T5, T6, T7),
+    9 => TupleVisitor9 => (T0, T1, T2, T3, T4, T5, T6, T7, T8),
+    10 => TupleVisitor10 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
+    11 => TupleVisitor11 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
+    12 => TupleVisitor12 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -916,17 +916,19 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
             {
                 match try!(visitor.visit_variant()) {
                     Field::Ok => {
-                        let (value,) = try!(visitor.visit_seq(TupleVisitor1::new()));
+                        let (value,) = try!(visitor.visit_seq(1, TupleVisitor1::new()));
                         Ok(Ok(value))
                     }
                     Field::Err => {
-                        let (value,) = try!(visitor.visit_seq(TupleVisitor1::new()));
+                        let (value,) = try!(visitor.visit_seq(1, TupleVisitor1::new()));
                         Ok(Err(value))
                     }
                 }
             }
         }
 
-        deserializer.visit_enum("Result", Visitor(PhantomData))
+        const VARIANTS: &'static [&'static str] = &["Ok", "Err"];
+
+        deserializer.visit_enum("Result", VARIANTS, Visitor(PhantomData))
     }
 }

@@ -454,7 +454,10 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 
     #[inline]
-    fn visit_enum<V>(&mut self, _name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self,
+                     _name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
         try!(self.parse_whitespace());
@@ -645,7 +648,9 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
         de::Deserialize::deserialize(self)
     }
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
+    fn visit_seq<V>(&mut self,
+                    _len: usize,
+                    visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         de::Deserializer::visit(self, visitor)
