@@ -474,6 +474,7 @@ impl ser::Serializer for Serializer {
     #[inline]
     fn visit_enum_simple<T>(&mut self,
                             _name: &str,
+                            _variant_index: usize,
                             variant: &str,
                             value: T,
                             ) -> Result<(), ()>

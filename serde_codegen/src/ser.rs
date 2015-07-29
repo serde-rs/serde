@@ -309,6 +309,7 @@ fn serialize_variant(
                     ::serde::ser::Serializer::visit_enum_simple(
                         serializer,
                         $type_name,
+                        $variant_index,
                         $variant_name,
                         __simple_value,
                     )

@@ -84,6 +84,7 @@ impl<'a> Serializer for AssertSerializer<'a> {
 
     fn visit_enum_simple<T>(&mut self,
                             name: &str,
+                            _variant_index: usize,
                             variant: &str,
                             value: T,
                             ) -> Result<(), ()>

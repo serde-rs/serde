@@ -127,9 +127,10 @@ pub trait Serializer {
 
     #[inline]
     fn visit_enum_simple<T>(&mut self,
-                            _name: &str,
-                            _variant: &str,
-                            _value: T) -> Result<(), Self::Error>
+                            name: &'static str,
+                            variant_index: usize,
+                            variant: &'static str,
+                            value: T) -> Result<(), Self::Error>
         where T: Serialize;
 
     fn visit_none(&mut self) -> Result<(), Self::Error>;
