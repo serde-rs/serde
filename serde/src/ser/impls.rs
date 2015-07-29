@@ -631,7 +631,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                     }
                 }
 
-                serializer.visit_enum_seq("Result", 0, "Ok", Visitor(Some(value)))
+                serializer.visit_tuple_variant("Result", 0, "Ok", Visitor(Some(value)))
             }
             Result::Err(ref value) => {
                 struct Visitor<'a, E: 'a>(Option<&'a E>);
@@ -652,7 +652,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                     }
                 }
 
-                serializer.visit_enum_seq("Result", 1, "Err", Visitor(Some(value)))
+                serializer.visit_tuple_variant("Result", 1, "Err", Visitor(Some(value)))
             }
         }
     }

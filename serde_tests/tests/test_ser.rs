@@ -98,10 +98,10 @@ impl<'a> Serializer for AssertSerializer<'a> {
         Ok(())
     }
 
-    fn visit_enum_unit(&mut self,
-                       name: &str,
-                       _variant_index: usize,
-                       variant: &str) -> Result<(), ()> {
+    fn visit_unit_variant(&mut self,
+                          name: &str,
+                          _variant_index: usize,
+                          variant: &str) -> Result<(), ()> {
         assert_eq!(
             self.iter.next().unwrap(),
             Token::EnumUnit(name, variant)
@@ -221,11 +221,11 @@ impl<'a> Serializer for AssertSerializer<'a> {
         self.visit_sequence(visitor)
     }
 
-    fn visit_enum_seq<V>(&mut self,
-                         name: &str,
-                         _variant_index: usize,
-                         variant: &str,
-                         visitor: V) -> Result<(), ()>
+    fn visit_tuple_variant<V>(&mut self,
+                              name: &str,
+                              _variant_index: usize,
+                              variant: &str,
+                              visitor: V) -> Result<(), ()>
         where V: SeqVisitor
     {
         let len = visitor.len();
@@ -268,11 +268,11 @@ impl<'a> Serializer for AssertSerializer<'a> {
         self.visit_mapping(visitor)
     }
 
-    fn visit_enum_map<V>(&mut self,
-                         name: &str,
-                         _variant_index: usize,
-                         variant: &str,
-                         visitor: V) -> Result<(), ()>
+    fn visit_struct_variant<V>(&mut self,
+                               name: &str,
+                               _variant_index: usize,
+                               variant: &str,
+                               visitor: V) -> Result<(), ()>
         where V: MapVisitor
     {
         let len = visitor.len();
