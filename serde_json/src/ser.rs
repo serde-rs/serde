@@ -172,12 +172,11 @@ impl<W, F> ser::Serializer for Serializer<W, F>
     }
 
     #[inline]
-    fn visit_enum_simple<T>(&mut self,
-                            _name: &str,
-                            _variant_index: usize,
-                            variant: &str,
-                            value: T,
-                            ) -> io::Result<()>
+    fn visit_newtype_variant<T>(&mut self,
+                                _name: &str,
+                                _variant_index: usize,
+                                variant: &str,
+                                value: T) -> io::Result<()>
         where T: ser::Serialize,
     {
         try!(self.formatter.open(&mut self.writer, b'{'));

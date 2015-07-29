@@ -125,12 +125,15 @@ pub trait Serializer {
         self.visit_unit()
     }
 
+    /// The `visit_newtype_variant` allows a variant with a single item to be more efficiently
+    /// serialized than a variant with multiple items. By default it just serializes the value as a
+    /// tuple variant sequence.
     #[inline]
-    fn visit_enum_simple<T>(&mut self,
-                            name: &'static str,
-                            variant_index: usize,
-                            variant: &'static str,
-                            value: T) -> Result<(), Self::Error>
+    fn visit_newtype_variant<T>(&mut self,
+                                name: &'static str,
+                                variant_index: usize,
+                                variant: &'static str,
+                                value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
         self.visit_tuple_variant(

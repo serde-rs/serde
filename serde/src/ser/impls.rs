@@ -632,10 +632,10 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         match *self {
             Result::Ok(ref value) => {
-                serializer.visit_enum_simple("Result", 0, "Ok", value)
+                serializer.visit_newtype_variant("Result", 0, "Ok", value)
             }
             Result::Err(ref value) => {
-                serializer.visit_enum_simple("Result", 1, "Err", value)
+                serializer.visit_newtype_variant("Result", 1, "Err", value)
             }
         }
     }

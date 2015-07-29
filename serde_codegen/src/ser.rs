@@ -306,7 +306,7 @@ fn serialize_variant(
                 .build();
             quote_arm!(cx,
                 $pat => {
-                    ::serde::ser::Serializer::visit_enum_simple(
+                    ::serde::ser::Serializer::visit_newtype_variant(
                         serializer,
                         $type_name,
                         $variant_index,
