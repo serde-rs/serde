@@ -211,7 +211,9 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a named unit. This allows
     /// deserializers to a named unit that aren't tagged as a named unit.
     #[inline]
-    fn visit_unit_struct<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_unit_struct<V>(&mut self,
+                            _name: &'static str,
+                            visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.visit_unit(visitor)
@@ -221,7 +223,7 @@ pub trait Deserializer {
     /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
     fn visit_tuple_struct<V>(&mut self,
-                             _name: &str,
+                             _name: &'static str,
                              len: usize,
                              visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -233,7 +235,7 @@ pub trait Deserializer {
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
     fn visit_struct<V>(&mut self,
-                       _name: &str,
+                       _name: &'static str,
                        _fields: &'static [&'static str],
                        visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -255,7 +257,7 @@ pub trait Deserializer {
     /// type.
     #[inline]
     fn visit_enum<V>(&mut self,
-                     _enum: &str,
+                     _enum: &'static str,
                      _variants: &'static [&'static str],
                      _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
@@ -395,7 +397,7 @@ pub trait Visitor {
     }
 
     #[inline]
-    fn visit_unit_struct<E>(&mut self, _name: &str) -> Result<Self::Value, E>
+    fn visit_unit_struct<E>(&mut self, _name: &'static str) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_unit()

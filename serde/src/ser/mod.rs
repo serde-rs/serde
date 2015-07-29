@@ -113,15 +113,15 @@ pub trait Serializer {
     fn visit_unit(&mut self) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_unit_struct(&mut self, _name: &str) -> Result<(), Self::Error> {
+    fn visit_unit_struct(&mut self, _name: &'static str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
     #[inline]
     fn visit_enum_unit(&mut self,
-                       _name: &str,
+                       _name: &'static str,
                        _variant_index: usize,
-                       _variant: &str) -> Result<(), Self::Error> {
+                       _variant: &'static str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
