@@ -765,10 +765,10 @@ fn deserialize_field_visitor(
     let str_body = if formats.is_empty() {
         // No formats specific attributes, so no match on format required
         quote_expr!(cx,
-                    match value {
-                        $default_field_arms
-                        _ => { Err(::serde::de::Error::unknown_field_error(value)) }
-                    })
+            match value {
+                $default_field_arms
+                _ => { Err(::serde::de::Error::unknown_field_error(value)) }
+            })
     } else {
         let field_arms: Vec<_> = formats.iter()
             .map(|fmt| {

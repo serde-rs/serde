@@ -42,8 +42,7 @@ impl serde::Serializer for BytesSerializer {
     fn visit_enum_simple<T>(&mut self,
                             _name: &str,
                             _variant: &str,
-                            _value: T,
-                            ) -> Result<(), Error>
+                            _value: T) -> Result<(), Error>
     {
         Err(Error)
     }

@@ -126,8 +126,8 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
     {
         match self.iter.next() {
             Some(value) => {
-                let value = try!(serializer.visit_seq_elt(value));
-                Ok(Some(value))
+                try!(serializer.visit_seq_elt(value));
+                Ok(Some(()))
             }
             None => Ok(None),
         }
