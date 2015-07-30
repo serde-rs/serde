@@ -22,6 +22,7 @@ enum Token {
     Char(char),
     Str(&'static str),
     String(String),
+    Bytes(&'static [u8]),
 
     Option(bool),
 
@@ -103,6 +104,7 @@ impl Deserializer for TokenDeserializer {
             Some(Token::Char(v)) => visitor.visit_char(v),
             Some(Token::Str(v)) => visitor.visit_str(v),
             Some(Token::String(v)) => visitor.visit_string(v),
+            Some(Token::Bytes(v)) => visitor.visit_bytes(v),
             Some(Token::Option(false)) => visitor.visit_none(),
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),
@@ -975,6 +977,26 @@ declare_tests! {
                     Token::Str("c"),
                     Token::I32(3),
                 Token::MapEnd,
+            Token::EnumEnd,
+        ],
+    }
+    test_enum_unit_usize {
+        Enum::Unit => vec![
+            Token::EnumStart("Enum"),
+                Token::Usize(0),
+
+                Token::EnumUnit,
+                Token::Unit,
+            Token::EnumEnd,
+        ],
+    }
+    test_enum_unit_bytes {
+        Enum::Unit => vec![
+            Token::EnumStart("Enum"),
+                Token::Bytes(b"Unit"),
+
+                Token::EnumUnit,
+                Token::Unit,
             Token::EnumEnd,
         ],
     }
