@@ -137,18 +137,17 @@ pub struct GenericStruct<T> {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct GenericTupleStruct<T>(T);
+pub struct GenericNewtypeStruct<T>(T);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum GenericEnumSeq<T, E> {
-    Ok(T),
-    Err(E),
-}
+pub struct GenericTupleStruct<T, U>(T, U);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum GenericEnumMap<T, E> {
-    Ok { x: T },
-    Err { x: E },
+pub enum GenericEnum<T, U> {
+    Unit,
+    Newtype(T),
+    Seq(T, U),
+    Map { x: T, y: U },
 }
 
 #[test]
@@ -496,28 +495,42 @@ fn test_lifetimes() {
     );
 }
 
-#[test]
-fn test_generic() {
-    macro_rules! declare_tests {
-        ($($ty:ty : $value:expr => $str:expr,)+) => {
-            $({
-                let value: $ty = $value;
+macro_rules! declare_tests {
+    ($($name:ident { $($ty:ty : $value:expr => $str:expr,)+ })+) => {
+        $(
+            #[test]
+            fn $name() {
+                $(
+                    let value: $ty = $value;
 
-                let string = serde_json::to_string(&value).unwrap();
-                assert_eq!(string, $str);
+                    let string = serde_json::to_string(&value).unwrap();
+                    assert_eq!(string, $str);
 
-                let expected: $ty = serde_json::from_str(&string).unwrap();
-                assert_eq!(value, expected);
-            })+
-        }
+                    let expected: $ty = serde_json::from_str(&string).unwrap();
+                    assert_eq!(value, expected);
+                )+
+            }
+        )+
     }
+}
 
-    declare_tests!(
+declare_tests! {
+    test_generic_struct {
         GenericStruct<u32> : GenericStruct { x: 5 } => "{\"x\":5}",
-        GenericTupleStruct<u32> : GenericTupleStruct(5) => "[5]",
-        GenericEnumSeq<u32, u32> : GenericEnumSeq::Ok(5) => "{\"Ok\":5}",
-        GenericEnumSeq<u32, u32> : GenericEnumSeq::Err(5) => "{\"Err\":5}",
-        GenericEnumMap<u32, u32> : GenericEnumMap::Ok { x: 5 } => "{\"Ok\":{\"x\":5}}",
-        GenericEnumMap<u32, u32> : GenericEnumMap::Err { x: 5 } => "{\"Err\":{\"x\":5}}",
-    );
+    }
+    test_generic_newtype_struct {
+        GenericNewtypeStruct<u32> : GenericNewtypeStruct(5) => "5",
+    }
+    test_generic_tuple_struct {
+        GenericTupleStruct<u32, u32> : GenericTupleStruct(5, 6) => "[5,6]",
+    }
+    test_generic_enum_newtype {
+        GenericEnum<u32, u32> : GenericEnum::Newtype(5) => "{\"Newtype\":5}",
+    }
+    test_generic_enum_seq {
+        GenericEnum<u32, u32> : GenericEnum::Seq(5, 6) => "{\"Seq\":[5,6]}",
+    }
+    test_generic_enum_map {
+        GenericEnum<u32, u32> : GenericEnum::Map { x: 5, y: 6 } => "{\"Map\":{\"x\":5,\"y\":6}}",
+    }
 }

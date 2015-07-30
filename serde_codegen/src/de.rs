@@ -129,15 +129,24 @@ fn deserialize_item_struct(
         }
     }
 
-    match (named_fields.is_empty(), unnamed_fields == 0) {
-        (true, true) => {
+    match (named_fields.is_empty(), unnamed_fields) {
+        (true, 0) => {
             deserialize_unit_struct(
                 cx,
                 &builder,
                 item.ident,
             )
         }
-        (true, false) => {
+        (true, 1) => {
+            deserialize_newtype_struct(
+                cx,
+                &builder,
+                item.ident,
+                impl_generics,
+                ty,
+            )
+        }
+        (true, _) => {
             deserialize_tuple_struct(
                 cx,
                 &builder,
@@ -147,7 +156,7 @@ fn deserialize_item_struct(
                 unnamed_fields,
             )
         }
-        (false, true) => {
+        (false, 0) => {
             deserialize_struct(
                 cx,
                 &builder,
@@ -157,7 +166,7 @@ fn deserialize_item_struct(
                 struct_def,
             )
         }
-        (false, false) => {
+        (false, _) => {
             cx.bug("struct has named and unnamed fields")
         }
     }
@@ -275,6 +284,58 @@ fn deserialize_unit_struct(
         }
 
         deserializer.visit_unit_struct($type_name, __Visitor)
+    })
+}
+
+fn deserialize_newtype_struct(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    type_ident: Ident,
+    impl_generics: &ast::Generics,
+    ty: P<ast::Ty>,
+) -> P<ast::Expr> {
+    let where_clause = &impl_generics.where_clause;
+
+    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) =
+        deserialize_visitor(
+            builder,
+            impl_generics,
+            vec![deserializer_ty_param(builder)],
+            vec![deserializer_ty_arg(builder)],
+        );
+
+    let visit_seq_expr = deserialize_seq(
+        cx,
+        builder,
+        builder.path().id(type_ident).build(),
+        1,
+    );
+
+    let type_name = builder.expr().str(type_ident);
+
+    quote_expr!(cx, {
+        $visitor_item
+
+        impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
+            type Value = $ty;
+
+            #[inline]
+            fn visit_newtype_struct<D>(&mut self, deserializer: &mut D) -> Result<Self::Value, D::Error>
+                where D: ::serde::de::Deserializer,
+            {
+                let value = try!(::serde::de::Deserialize::deserialize(deserializer));
+                Ok($type_ident(value))
+            }
+
+            #[inline]
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
+                where __V: ::serde::de::SeqVisitor,
+            {
+                $visit_seq_expr
+            }
+        }
+
+        deserializer.visit_newtype_struct($type_name, $visitor_expr)
     })
 }
 

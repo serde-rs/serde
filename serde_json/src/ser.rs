@@ -158,6 +158,16 @@ impl<W, F> ser::Serializer for Serializer<W, F>
         self.writer.write_all(b"null")
     }
 
+    /// Override `visit_newtype_struct` to serialize newtypes without an object wrapper.
+    #[inline]
+    fn visit_newtype_struct<T>(&mut self,
+                               _name: &'static str,
+                               value: T) -> Result<(), Self::Error>
+        where T: ser::Serialize,
+    {
+        value.serialize(self)
+    }
+
     #[inline]
     fn visit_unit_variant(&mut self,
                           _name: &str,
