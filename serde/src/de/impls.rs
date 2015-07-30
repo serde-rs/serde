@@ -877,6 +877,14 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                 impl ::de::Visitor for FieldVisitor {
                     type Value = Field;
 
+                    fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E> where E: Error {
+                        match value {
+                            0 => Ok(Field::Ok),
+                            1 => Ok(Field::Err),
+                            _ => Err(Error::unknown_field_error(&value.to_string())),
+                        }
+                    }
+
                     fn visit_str<E>(&mut self, value: &str) -> Result<Field, E> where E: Error {
                         match value {
                             "Ok" => Ok(Field::Ok),
