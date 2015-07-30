@@ -5,7 +5,7 @@
 //! handshake protocol between serializers and serializees can be completely optimized away,
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
-#![doc(html_root_url="http://erickt.github.io/rust-serde")]
+#![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
 #![cfg_attr(feature = "nightly", feature(collections, core, enumset, nonzero, step_trait, vecmap, zero_one))]
 
 extern crate num;

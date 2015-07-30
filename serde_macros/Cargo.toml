@@ -4,7 +4,7 @@ version = "0.5.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
-repository = "https://github.com/erickt/rust-serde"
+repository = "https://github.com/serde-rs/serde"
 
 [lib]
 name = "serde_macros"
