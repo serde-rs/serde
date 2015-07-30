@@ -632,47 +632,10 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         match *self {
             Result::Ok(ref value) => {
-                struct Visitor<'a, T: 'a>(Option<&'a T>);
-
-                impl<'a, T> SeqVisitor for Visitor<'a, T> where T: Serialize + 'a {
-                    #[inline]
-                    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                        where S: Serializer
-                    {
-                        match self.0.take() {
-                            Some(value) => Ok(Some(try!(serializer.visit_seq_elt(value)))),
-                            None => Ok(None),
-                        }
-                    }
-
-                    #[inline]
-                    fn len(&self) -> Option<usize> {
-                        Some(1)
-                    }
-                }
-
-                serializer.visit_tuple_variant("Result", 0, "Ok", Visitor(Some(value)))
+                serializer.visit_enum_simple("Result", 0, "Ok", value)
             }
             Result::Err(ref value) => {
-                struct Visitor<'a, E: 'a>(Option<&'a E>);
-
-                impl<'a, E> SeqVisitor for Visitor<'a, E> where E: Serialize + 'a {
-                    #[inline]
-                    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                                where S: Serializer {
-                        match self.0.take() {
-                            Some(value) => Ok(Some(try!(serializer.visit_seq_elt(value)))),
-                            None => Ok(None),
-                        }
-                    }
-
-                    #[inline]
-                    fn len(&self) -> Option<usize> {
-                        Some(1)
-                    }
-                }
-
-                serializer.visit_tuple_variant("Result", 1, "Err", Visitor(Some(value)))
+                serializer.visit_enum_simple("Result", 1, "Err", value)
             }
         }
     }

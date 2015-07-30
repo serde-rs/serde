@@ -539,23 +539,17 @@ declare_tests! {
             Token::EnumStart("Result"),
                 Token::Str("Ok"),
 
-                Token::EnumSeq,
-                Token::SeqStart(1),
-                    Token::SeqSep,
-                    Token::I32(0),
-                Token::SeqEnd,
-            Token::EnumEnd,
+                Token::EnumSimple,
+                Token::I32(0),
+            Token::SeqEnd,
         ],
         Err::<i32, i32>(1) => vec![
             Token::EnumStart("Result"),
                 Token::Str("Err"),
 
-                Token::EnumSeq,
-                Token::SeqStart(1),
-                    Token::SeqSep,
-                    Token::I32(1),
-                Token::SeqEnd,
-            Token::EnumEnd,
+                Token::EnumSimple,
+                Token::I32(1),
+            Token::SeqEnd,
         ],
     }
     test_unit {

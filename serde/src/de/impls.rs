@@ -916,11 +916,11 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
             {
                 match try!(visitor.visit_variant()) {
                     Field::Ok => {
-                        let (value,) = try!(visitor.visit_tuple(1, TupleVisitor1::new()));
+                        let value = try!(visitor.visit_simple());
                         Ok(Ok(value))
                     }
                     Field::Err => {
-                        let (value,) = try!(visitor.visit_tuple(1, TupleVisitor1::new()));
+                        let value = try!(visitor.visit_simple());
                         Ok(Err(value))
                     }
                 }

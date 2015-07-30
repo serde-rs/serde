@@ -396,16 +396,12 @@ declare_tests! {
     }
     test_result {
         Ok::<i32, i32>(0) => vec![
-            Token::EnumSeqStart("Result", "Ok", Some(1)),
-            Token::SeqSep,
+            Token::EnumSimple("Result", "Ok"),
             Token::I32(0),
-            Token::SeqEnd,
         ],
         Err::<i32, i32>(1) => vec![
-            Token::EnumSeqStart("Result", "Err", Some(1)),
-            Token::SeqSep,
+            Token::EnumSimple("Result", "Err"),
             Token::I32(1),
-            Token::SeqEnd,
         ],
     }
     test_slice {
