@@ -38,6 +38,10 @@ enum Token {
     MapEnd,
 
     EnumStart(&'static str),
+    EnumUnit,
+    EnumSimple,
+    EnumSeq,
+    EnumMap,
     EnumEnd,
 }
 
@@ -324,7 +328,25 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
     }
 
     fn visit_unit(&mut self) -> Result<(), Error> {
-        de::Deserialize::deserialize(self.de)
+        match self.de.tokens.next() {
+            Some(Token::EnumUnit) => {
+                de::Deserialize::deserialize(self.de)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
+    }
+
+    fn visit_simple<T>(&mut self) -> Result<T, Self::Error>
+        where T: de::Deserialize,
+    {
+        match self.de.tokens.next() {
+            Some(Token::EnumSimple) => {
+                de::Deserialize::deserialize(self.de)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
     }
 
     fn visit_tuple<V>(&mut self,
@@ -332,7 +354,13 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
                       visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        de::Deserializer::visit(self.de, visitor)
+        match self.de.tokens.next() {
+            Some(Token::EnumSeq) => {
+                de::Deserializer::visit(self.de, visitor)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
     }
 
     fn visit_struct<V>(&mut self,
@@ -340,7 +368,13 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
                        visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        de::Deserializer::visit(self.de, visitor)
+        match self.de.tokens.next() {
+            Some(Token::EnumMap) => {
+                de::Deserializer::visit(self.de, visitor)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
     }
 }
 
@@ -362,6 +396,7 @@ struct Struct {
 #[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
     Unit,
+    Simple(i32),
     Seq(i32, i32, i32),
     Map { a: i32, b: i32, c: i32 }
 }
@@ -503,6 +538,8 @@ declare_tests! {
         Ok::<i32, i32>(0) => vec![
             Token::EnumStart("Result"),
                 Token::Str("Ok"),
+
+                Token::EnumSeq,
                 Token::SeqStart(1),
                     Token::SeqSep,
                     Token::I32(0),
@@ -512,6 +549,8 @@ declare_tests! {
         Err::<i32, i32>(1) => vec![
             Token::EnumStart("Result"),
                 Token::Str("Err"),
+
+                Token::EnumSeq,
                 Token::SeqStart(1),
                     Token::SeqSep,
                     Token::I32(1),
@@ -888,7 +927,19 @@ declare_tests! {
         Enum::Unit => vec![
             Token::EnumStart("Enum"),
                 Token::Str("Unit"),
+
+                Token::EnumUnit,
                 Token::Unit,
+            Token::EnumEnd,
+        ],
+    }
+    test_enum_simple {
+        Enum::Simple(1) => vec![
+            Token::EnumStart("Enum"),
+                Token::Str("Simple"),
+
+                Token::EnumSimple,
+                Token::I32(1),
             Token::EnumEnd,
         ],
     }
@@ -896,6 +947,8 @@ declare_tests! {
         Enum::Seq(1, 2, 3) => vec![
             Token::EnumStart("Enum"),
                 Token::Str("Seq"),
+
+                Token::EnumSeq,
                 Token::SeqStart(3),
                     Token::SeqSep,
                     Token::I32(1),
@@ -913,6 +966,8 @@ declare_tests! {
         Enum::Map { a: 1, b: 2, c: 3 } => vec![
             Token::EnumStart("Enum"),
                 Token::Str("Map"),
+
+                Token::EnumMap,
                 Token::MapStart(3),
                     Token::MapSep,
                     Token::Str("a"),
