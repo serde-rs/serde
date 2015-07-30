@@ -97,6 +97,26 @@ impl<T> Serialize for Option<T> where T: Serialize {
     }
 }
 
+impl<T> SeqVisitor for Option<T> where T: Serialize {
+    #[inline]
+    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+        where S: Serializer,
+    {
+        match self.take() {
+            Some(value) => {
+                try!(serializer.visit_seq_elt(value));
+                Ok(Some(()))
+            }
+            None => Ok(None),
+        }
+    }
+
+    #[inline]
+    fn len(&self) -> Option<usize> {
+        Some(if self.is_some() { 1 } else { 0 })
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 pub struct SeqIteratorVisitor<Iter> {
