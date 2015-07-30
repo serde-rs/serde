@@ -311,6 +311,7 @@ fn deserialize_tuple_struct(
         impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
+            #[inline]
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: ::serde::de::SeqVisitor,
             {
