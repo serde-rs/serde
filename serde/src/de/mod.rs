@@ -211,7 +211,9 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a named unit. This allows
     /// deserializers to a named unit that aren't tagged as a named unit.
     #[inline]
-    fn visit_unit_struct<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_unit_struct<V>(&mut self,
+                            _name: &'static str,
+                            visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.visit_unit(visitor)
@@ -220,17 +222,20 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
-    fn visit_tuple_struct<V>(&mut self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_tuple_struct<V>(&mut self,
+                             _name: &'static str,
+                             len: usize,
+                             visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_tuple(visitor)
+        self.visit_tuple(len, visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
     fn visit_struct<V>(&mut self,
-                       _name: &str,
+                       _name: &'static str,
                        _fields: &'static [&'static str],
                        visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
@@ -241,7 +246,7 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a tuple value. This allows
     /// deserializers that provide a custom tuple serialization to properly deserialize the type.
     #[inline]
-    fn visit_tuple<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_tuple<V>(&mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.visit_seq(visitor)
@@ -251,7 +256,10 @@ pub trait Deserializer {
     /// deserializers that provide a custom enumeration serialization to properly deserialize the
     /// type.
     #[inline]
-    fn visit_enum<V>(&mut self, _enum: &str, _visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_enum<V>(&mut self,
+                     _enum: &'static str,
+                     _variants: &'static [&'static str],
+                     _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
     {
         Err(Error::syntax_error())
@@ -389,7 +397,7 @@ pub trait Visitor {
     }
 
     #[inline]
-    fn visit_unit_struct<E>(&mut self, _name: &str) -> Result<Self::Value, E>
+    fn visit_unit_struct<E>(&mut self, _name: &'static str) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_unit()
@@ -572,21 +580,25 @@ pub trait VariantVisitor {
     }
 
     /// `visit_simple` is called when deserializing a variant with a single value.
-    fn visit_simple<T: Deserialize>(&mut self) -> Result<T, Self::Error> {
+    fn visit_simple<T>(&mut self) -> Result<T, Self::Error>
+        where T: Deserialize,
+    {
         Err(Error::syntax_error())
     }
 
-    /// `visit_seq` is called when deserializing a tuple-like variant.
-    fn visit_seq<V>(&mut self, _visitor: V) -> Result<V::Value, Self::Error>
+    /// `visit_tuple` is called when deserializing a tuple-like variant.
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
         Err(Error::syntax_error())
     }
 
-    /// `visit_map` is called when deserializing a struct-like variant.
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    _visitor: V) -> Result<V::Value, Self::Error>
+    /// `visit_struct` is called when deserializing a struct-like variant.
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
         Err(Error::syntax_error())
@@ -606,22 +618,26 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_unit()
     }
 
-    fn visit_simple<D: Deserialize>(&mut self) -> Result<D, T::Error> {
+    fn visit_simple<D>(&mut self) -> Result<D, T::Error>
+        where D: Deserialize,
+    {
         (**self).visit_simple()
     }
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, T::Error>
+    fn visit_tuple<V>(&mut self,
+                      len: usize,
+                      visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
-        (**self).visit_seq(visitor)
+        (**self).visit_tuple(len, visitor)
     }
 
-    fn visit_map<V>(&mut self,
+    fn visit_struct<V>(&mut self,
                     fields: &'static [&'static str],
                     visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
-        (**self).visit_map(fields, visitor)
+        (**self).visit_struct(fields, visitor)
     }
 }
 

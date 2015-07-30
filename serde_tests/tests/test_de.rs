@@ -22,6 +22,7 @@ enum Token {
     Char(char),
     Str(&'static str),
     String(String),
+    Bytes(&'static [u8]),
 
     Option(bool),
 
@@ -38,6 +39,10 @@ enum Token {
     MapEnd,
 
     EnumStart(&'static str),
+    EnumUnit,
+    EnumSimple,
+    EnumSeq,
+    EnumMap,
     EnumEnd,
 }
 
@@ -99,6 +104,7 @@ impl Deserializer for TokenDeserializer {
             Some(Token::Char(v)) => visitor.visit_char(v),
             Some(Token::Str(v)) => visitor.visit_str(v),
             Some(Token::String(v)) => visitor.visit_string(v),
+            Some(Token::Bytes(v)) => visitor.visit_bytes(v),
             Some(Token::Option(false)) => visitor.visit_none(),
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),
@@ -143,7 +149,10 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_enum<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_enum<V>(&mut self,
+                     name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Error>
         where V: de::EnumVisitor,
     {
         match self.tokens.next() {
@@ -178,7 +187,10 @@ impl Deserializer for TokenDeserializer {
         }
     }
 
-    fn visit_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
+    fn visit_tuple_struct<V>(&mut self,
+                             name: &str,
+                             _len: usize,
+                             visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -318,21 +330,53 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
     }
 
     fn visit_unit(&mut self) -> Result<(), Error> {
-        de::Deserialize::deserialize(self.de)
+        match self.de.tokens.next() {
+            Some(Token::EnumUnit) => {
+                de::Deserialize::deserialize(self.de)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
     }
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
+    fn visit_simple<T>(&mut self) -> Result<T, Self::Error>
+        where T: de::Deserialize,
     {
-        de::Deserializer::visit(self.de, visitor)
+        match self.de.tokens.next() {
+            Some(Token::EnumSimple) => {
+                de::Deserialize::deserialize(self.de)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
     }
 
-    fn visit_map<V>(&mut self,
-                    _fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, Error>
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        de::Deserializer::visit(self.de, visitor)
+        match self.de.tokens.next() {
+            Some(Token::EnumSeq) => {
+                de::Deserializer::visit(self.de, visitor)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
+    }
+
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        match self.de.tokens.next() {
+            Some(Token::EnumMap) => {
+                de::Deserializer::visit(self.de, visitor)
+            }
+            Some(_) => Err(Error::SyntaxError),
+            None => Err(Error::EndOfStreamError),
+        }
     }
 }
 
@@ -354,6 +398,7 @@ struct Struct {
 #[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
     Unit,
+    Simple(i32),
     Seq(i32, i32, i32),
     Map { a: i32, b: i32, c: i32 }
 }
@@ -495,20 +540,18 @@ declare_tests! {
         Ok::<i32, i32>(0) => vec![
             Token::EnumStart("Result"),
                 Token::Str("Ok"),
-                Token::SeqStart(1),
-                    Token::SeqSep,
-                    Token::I32(0),
-                Token::SeqEnd,
-            Token::EnumEnd,
+
+                Token::EnumSimple,
+                Token::I32(0),
+            Token::SeqEnd,
         ],
         Err::<i32, i32>(1) => vec![
             Token::EnumStart("Result"),
                 Token::Str("Err"),
-                Token::SeqStart(1),
-                    Token::SeqSep,
-                    Token::I32(1),
-                Token::SeqEnd,
-            Token::EnumEnd,
+
+                Token::EnumSimple,
+                Token::I32(1),
+            Token::SeqEnd,
         ],
     }
     test_unit {
@@ -880,7 +923,19 @@ declare_tests! {
         Enum::Unit => vec![
             Token::EnumStart("Enum"),
                 Token::Str("Unit"),
+
+                Token::EnumUnit,
                 Token::Unit,
+            Token::EnumEnd,
+        ],
+    }
+    test_enum_simple {
+        Enum::Simple(1) => vec![
+            Token::EnumStart("Enum"),
+                Token::Str("Simple"),
+
+                Token::EnumSimple,
+                Token::I32(1),
             Token::EnumEnd,
         ],
     }
@@ -888,6 +943,8 @@ declare_tests! {
         Enum::Seq(1, 2, 3) => vec![
             Token::EnumStart("Enum"),
                 Token::Str("Seq"),
+
+                Token::EnumSeq,
                 Token::SeqStart(3),
                     Token::SeqSep,
                     Token::I32(1),
@@ -905,6 +962,8 @@ declare_tests! {
         Enum::Map { a: 1, b: 2, c: 3 } => vec![
             Token::EnumStart("Enum"),
                 Token::Str("Map"),
+
+                Token::EnumMap,
                 Token::MapStart(3),
                     Token::MapSep,
                     Token::Str("a"),
@@ -918,6 +977,26 @@ declare_tests! {
                     Token::Str("c"),
                     Token::I32(3),
                 Token::MapEnd,
+            Token::EnumEnd,
+        ],
+    }
+    test_enum_unit_usize {
+        Enum::Unit => vec![
+            Token::EnumStart("Enum"),
+                Token::Usize(0),
+
+                Token::EnumUnit,
+                Token::Unit,
+            Token::EnumEnd,
+        ],
+    }
+    test_enum_unit_bytes {
+        Enum::Unit => vec![
+            Token::EnumStart("Enum"),
+                Token::Bytes(b"Unit"),
+
+                Token::EnumUnit,
+                Token::Unit,
             Token::EnumEnd,
         ],
     }

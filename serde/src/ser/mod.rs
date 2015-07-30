@@ -113,25 +113,32 @@ pub trait Serializer {
     fn visit_unit(&mut self) -> Result<(), Self::Error>;
 
     #[inline]
-    fn visit_unit_struct(&mut self, _name: &str) -> Result<(), Self::Error> {
+    fn visit_unit_struct(&mut self, _name: &'static str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
     #[inline]
-    fn visit_enum_unit(&mut self,
-                       _name: &str,
-                       _variant_index: usize,
-                       _variant: &str) -> Result<(), Self::Error> {
+    fn visit_unit_variant(&mut self,
+                          _name: &'static str,
+                          _variant_index: usize,
+                          _variant: &'static str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
     #[inline]
     fn visit_enum_simple<T>(&mut self,
-                            _name: &str,
-                            _variant: &str,
-                            _value: T,
-                            ) -> Result<(), Self::Error>
-        where T: Serialize;
+                            name: &'static str,
+                            variant_index: usize,
+                            variant: &'static str,
+                            value: T) -> Result<(), Self::Error>
+        where T: Serialize,
+    {
+        self.visit_tuple_variant(
+            name,
+            variant_index,
+            variant,
+            Some(value))
+    }
 
     fn visit_none(&mut self) -> Result<(), Self::Error>;
 
@@ -160,8 +167,8 @@ pub trait Serializer {
 
     #[inline]
     fn visit_tuple_struct<V>(&mut self,
-                          _name: &'static str,
-                          visitor: V) -> Result<(), Self::Error>
+                             _name: &'static str,
+                             visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.visit_tuple(visitor)
@@ -175,18 +182,18 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_enum_seq<V>(&mut self,
-                         _name: &'static str,
-                         _variant_index: usize,
-                         variant: &'static str,
-                         visitor: V) -> Result<(), Self::Error>
+    fn visit_tuple_variant<V>(&mut self,
+                              _name: &'static str,
+                              _variant_index: usize,
+                              variant: &'static str,
+                              visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.visit_tuple_struct(variant, visitor)
     }
 
     #[inline]
-    fn visit_enum_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
+    fn visit_tuple_variant_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize
     {
         self.visit_tuple_struct_elt(value)
@@ -201,15 +208,17 @@ pub trait Serializer {
 
     #[inline]
     fn visit_struct<V>(&mut self,
-                          _name: &'static str,
-                          visitor: V) -> Result<(), Self::Error>
+                       _name: &'static str,
+                       visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.visit_map(visitor)
     }
 
     #[inline]
-    fn visit_struct_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
+    fn visit_struct_elt<K, V>(&mut self,
+                              key: K,
+                              value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize,
     {
@@ -217,18 +226,20 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_enum_map<V>(&mut self,
-                         _name: &'static str,
-                         _variant_index: usize,
-                         variant: &'static str,
-                         visitor: V) -> Result<(), Self::Error>
+    fn visit_struct_variant<V>(&mut self,
+                               _name: &'static str,
+                               _variant_index: usize,
+                               variant: &'static str,
+                               visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.visit_struct(variant, visitor)
     }
 
     #[inline]
-    fn visit_enum_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
+    fn visit_struct_variant_elt<K, V>(&mut self,
+                                      key: K,
+                                      value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize,
     {

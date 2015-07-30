@@ -288,7 +288,7 @@ fn serialize_variant(
 
             quote_arm!(cx,
                 $pat => {
-                    ::serde::ser::Serializer::visit_enum_unit(
+                    ::serde::ser::Serializer::visit_unit_variant(
                         serializer,
                         $type_name,
                         $variant_index,
@@ -309,6 +309,7 @@ fn serialize_variant(
                     ::serde::ser::Serializer::visit_enum_simple(
                         serializer,
                         $type_name,
+                        $variant_index,
                         $variant_name,
                         __simple_value,
                     )
@@ -421,7 +422,7 @@ fn serialize_tuple_variant(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.visit_enum_seq($type_name, $variant_index, $variant_name, Visitor {
+        serializer.visit_tuple_variant($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
             _structure_ty: ::std::marker::PhantomData::<&$structure_ty>,
@@ -476,7 +477,7 @@ fn serialize_struct_variant(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.visit_enum_map($type_name, $variant_index, $variant_name, Visitor {
+        serializer.visit_struct_variant($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
             _structure_ty: ::std::marker::PhantomData::<&$structure_ty>,

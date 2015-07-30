@@ -97,6 +97,26 @@ impl<T> Serialize for Option<T> where T: Serialize {
     }
 }
 
+impl<T> SeqVisitor for Option<T> where T: Serialize {
+    #[inline]
+    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
+        where S: Serializer,
+    {
+        match self.take() {
+            Some(value) => {
+                try!(serializer.visit_seq_elt(value));
+                Ok(Some(()))
+            }
+            None => Ok(None),
+        }
+    }
+
+    #[inline]
+    fn len(&self) -> Option<usize> {
+        Some(if self.is_some() { 1 } else { 0 })
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 pub struct SeqIteratorVisitor<Iter> {
@@ -126,8 +146,8 @@ impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
     {
         match self.iter.next() {
             Some(value) => {
-                let value = try!(serializer.visit_seq_elt(value));
-                Ok(Some(value))
+                try!(serializer.visit_seq_elt(value));
+                Ok(Some(()))
             }
             None => Ok(None),
         }
@@ -612,47 +632,10 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         match *self {
             Result::Ok(ref value) => {
-                struct Visitor<'a, T: 'a>(Option<&'a T>);
-
-                impl<'a, T> SeqVisitor for Visitor<'a, T> where T: Serialize + 'a {
-                    #[inline]
-                    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                        where S: Serializer
-                    {
-                        match self.0.take() {
-                            Some(value) => Ok(Some(try!(serializer.visit_seq_elt(value)))),
-                            None => Ok(None),
-                        }
-                    }
-
-                    #[inline]
-                    fn len(&self) -> Option<usize> {
-                        Some(1)
-                    }
-                }
-
-                serializer.visit_enum_seq("Result", 0, "Ok", Visitor(Some(value)))
+                serializer.visit_enum_simple("Result", 0, "Ok", value)
             }
             Result::Err(ref value) => {
-                struct Visitor<'a, E: 'a>(Option<&'a E>);
-
-                impl<'a, E> SeqVisitor for Visitor<'a, E> where E: Serialize + 'a {
-                    #[inline]
-                    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                                where S: Serializer {
-                        match self.0.take() {
-                            Some(value) => Ok(Some(try!(serializer.visit_seq_elt(value)))),
-                            None => Ok(None),
-                        }
-                    }
-
-                    #[inline]
-                    fn len(&self) -> Option<usize> {
-                        Some(1)
-                    }
-                }
-
-                serializer.visit_enum_seq("Result", 1, "Err", Visitor(Some(value)))
+                serializer.visit_enum_simple("Result", 1, "Err", value)
             }
         }
     }
