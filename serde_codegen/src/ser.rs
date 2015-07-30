@@ -124,15 +124,22 @@ fn serialize_item_struct(
         }
     }
 
-    match (named_fields.is_empty(), unnamed_fields == 0) {
-        (true, true) => {
+    match (named_fields.is_empty(), unnamed_fields) {
+        (true, 0) => {
             serialize_unit_struct(
                 cx,
                 &builder,
                 item.ident,
             )
         }
-        (true, false) => {
+        (true, 1) => {
+            serialize_newtype_struct(
+                cx,
+                &builder,
+                item.ident,
+            )
+        }
+        (true, _) => {
             serialize_tuple_struct(
                 cx,
                 &builder,
@@ -142,7 +149,7 @@ fn serialize_item_struct(
                 unnamed_fields,
             )
         }
-        (false, true) => {
+        (false, 0) => {
             serialize_struct(
                 cx,
                 &builder,
@@ -153,7 +160,7 @@ fn serialize_item_struct(
                 named_fields,
             )
         }
-        (false, false) => {
+        (false, _) => {
             cx.bug("struct has named and unnamed fields")
         }
     }
@@ -167,6 +174,16 @@ fn serialize_unit_struct(
     let type_name = builder.expr().str(type_ident);
 
     quote_expr!(cx, serializer.visit_unit_struct($type_name))
+}
+
+fn serialize_newtype_struct(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    type_ident: Ident
+) -> P<ast::Expr> {
+    let type_name = builder.expr().str(type_ident);
+
+    quote_expr!(cx, serializer.visit_newtype_struct($type_name, &self.0))
 }
 
 fn serialize_tuple_struct(
