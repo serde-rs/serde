@@ -125,12 +125,27 @@ pub trait Serializer {
         self.visit_unit()
     }
 
+    /// The `visit_newtype_struct` allows a tuple struct with a single element, also known as a
+    /// newtyped value, to be more efficiently serialized than a tuple struct with multiple items.
+    /// By default it just serializes the value as a tuple struct sequence.
     #[inline]
-    fn visit_enum_simple<T>(&mut self,
-                            name: &'static str,
-                            variant_index: usize,
-                            variant: &'static str,
-                            value: T) -> Result<(), Self::Error>
+    fn visit_newtype_struct<T>(&mut self,
+                               name: &'static str,
+                               value: T) -> Result<(), Self::Error>
+        where T: Serialize,
+    {
+        self.visit_tuple_struct(name, Some(value))
+    }
+
+    /// The `visit_newtype_variant` allows a variant with a single item to be more efficiently
+    /// serialized than a variant with multiple items. By default it just serializes the value as a
+    /// tuple variant sequence.
+    #[inline]
+    fn visit_newtype_variant<T>(&mut self,
+                                name: &'static str,
+                                variant_index: usize,
+                                variant: &'static str,
+                                value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
         self.visit_tuple_variant(

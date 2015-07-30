@@ -472,12 +472,11 @@ impl ser::Serializer for Serializer {
     }
 
     #[inline]
-    fn visit_enum_simple<T>(&mut self,
-                            _name: &str,
-                            _variant_index: usize,
-                            variant: &str,
-                            value: T,
-                            ) -> Result<(), ()>
+    fn visit_newtype_variant<T>(&mut self,
+                                _name: &str,
+                                _variant_index: usize,
+                                variant: &str,
+                                value: T) -> Result<(), ()>
         where T: ser::Serialize,
     {
         let mut values = BTreeMap::new();
@@ -748,7 +747,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
         de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))
     }
 
-    fn visit_simple<T>(&mut self) -> Result<T, Error>
+    fn visit_newtype<T>(&mut self) -> Result<T, Error>
         where T: de::Deserialize,
     {
         de::Deserialize::deserialize(&mut Deserializer::new(self.val.take().unwrap()))

@@ -208,8 +208,8 @@ pub trait Deserializer {
         self.visit(visitor)
     }
 
-    /// This method hints that the `Deserialize` type is expecting a named unit. This allows
-    /// deserializers to a named unit that aren't tagged as a named unit.
+    /// This method hints that the `Deserialize` type is expecting a unit struct. This allows
+    /// deserializers to a unit struct that aren't tagged as a unit struct.
     #[inline]
     fn visit_unit_struct<V>(&mut self,
                             _name: &'static str,
@@ -217,6 +217,17 @@ pub trait Deserializer {
         where V: Visitor,
     {
         self.visit_unit(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a . This allows
+    /// deserializers to a named unit that aren't tagged as a named unit.
+    #[inline]
+    fn visit_newtype_struct<V>(&mut self,
+                               name: &'static str,
+                               visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.visit_tuple_struct(name, 1, visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
@@ -415,6 +426,12 @@ pub trait Visitor {
         Err(Error::syntax_error())
     }
 
+    fn visit_newtype_struct<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
+        where D: Deserializer,
+    {
+        Err(Error::syntax_error())
+    }
+
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
@@ -579,8 +596,8 @@ pub trait VariantVisitor {
         Err(Error::syntax_error())
     }
 
-    /// `visit_simple` is called when deserializing a variant with a single value.
-    fn visit_simple<T>(&mut self) -> Result<T, Self::Error>
+    /// `visit_newtype` is called when deserializing a variant with a single value.
+    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: Deserialize,
     {
         Err(Error::syntax_error())
@@ -618,10 +635,10 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_unit()
     }
 
-    fn visit_simple<D>(&mut self) -> Result<D, T::Error>
+    fn visit_newtype<D>(&mut self) -> Result<D, T::Error>
         where D: Deserialize,
     {
-        (**self).visit_simple()
+        (**self).visit_newtype()
     }
 
     fn visit_tuple<V>(&mut self,

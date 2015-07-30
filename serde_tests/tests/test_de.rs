@@ -40,7 +40,7 @@ enum Token {
 
     EnumStart(&'static str),
     EnumUnit,
-    EnumSimple,
+    EnumNewtype,
     EnumSeq,
     EnumMap,
     EnumEnd,
@@ -339,11 +339,11 @@ impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
         }
     }
 
-    fn visit_simple<T>(&mut self) -> Result<T, Self::Error>
+    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: de::Deserialize,
     {
         match self.de.tokens.next() {
-            Some(Token::EnumSimple) => {
+            Some(Token::EnumNewtype) => {
                 de::Deserialize::deserialize(self.de)
             }
             Some(_) => Err(Error::SyntaxError),
@@ -541,7 +541,7 @@ declare_tests! {
             Token::EnumStart("Result"),
                 Token::Str("Ok"),
 
-                Token::EnumSimple,
+                Token::EnumNewtype,
                 Token::I32(0),
             Token::SeqEnd,
         ],
@@ -549,7 +549,7 @@ declare_tests! {
             Token::EnumStart("Result"),
                 Token::Str("Err"),
 
-                Token::EnumSimple,
+                Token::EnumNewtype,
                 Token::I32(1),
             Token::SeqEnd,
         ],
@@ -934,7 +934,7 @@ declare_tests! {
             Token::EnumStart("Enum"),
                 Token::Str("Simple"),
 
-                Token::EnumSimple,
+                Token::EnumNewtype,
                 Token::I32(1),
             Token::EnumEnd,
         ],

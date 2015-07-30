@@ -454,6 +454,15 @@ impl<Iter> de::Deserializer for Deserializer<Iter>
     }
 
     #[inline]
+    fn visit_newtype_struct<V>(&mut self,
+                               _name: &str,
+                               mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        visitor.visit_newtype_struct(self)
+    }
+
+    #[inline]
     fn visit_enum<V>(&mut self,
                      _name: &str,
                      _variants: &'static [&'static str],
@@ -644,7 +653,9 @@ impl<Iter> de::VariantVisitor for Deserializer<Iter>
         de::Deserialize::deserialize(self)
     }
 
-    fn visit_simple<T: de::Deserialize>(&mut self) -> Result<T, Error> {
+    fn visit_newtype<T>(&mut self) -> Result<T, Error>
+        where T: de::Deserialize,
+    {
         de::Deserialize::deserialize(self)
     }
 
