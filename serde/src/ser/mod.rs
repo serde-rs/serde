@@ -231,11 +231,10 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_struct_elt<K, V>(&mut self,
-                              key: K,
-                              value: V) -> Result<(), Self::Error>
-        where K: Serialize,
-              V: Serialize,
+    fn visit_struct_elt<V>(&mut self,
+                           key: &'static str,
+                           value: V) -> Result<(), Self::Error>
+        where V: Serialize,
     {
         self.visit_map_elt(key, value)
     }
@@ -252,11 +251,10 @@ pub trait Serializer {
     }
 
     #[inline]
-    fn visit_struct_variant_elt<K, V>(&mut self,
-                                      key: K,
-                                      value: V) -> Result<(), Self::Error>
-        where K: Serialize,
-              V: Serialize,
+    fn visit_struct_variant_elt<V>(&mut self,
+                                   key: &'static str,
+                                   value: V) -> Result<(), Self::Error>
+        where V: Serialize,
     {
         self.visit_struct_elt(key, value)
     }
