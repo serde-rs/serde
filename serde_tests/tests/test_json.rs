@@ -724,6 +724,7 @@ fn test_parse_i64() {
 #[test]
 fn test_parse_u64() {
     test_parse_ok(vec![
+        ("0", 0u64),
         ("3", 3u64),
         ("1234", 1234),
     ]);
@@ -732,6 +733,7 @@ fn test_parse_u64() {
 #[test]
 fn test_parse_f64() {
     test_parse_ok(vec![
+        ("0.0", 0.0f64),
         ("3.0", 3.0f64),
         ("3.1", 3.1),
         ("-1.2", -1.2),
