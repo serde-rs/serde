@@ -920,7 +920,6 @@ impl<'a> de::Deserializer for MapDeserializer<'a> {
     fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        println!("MapDeserializer!");
         visitor.visit_map(self)
     }
 }
