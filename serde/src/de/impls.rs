@@ -574,7 +574,7 @@ macro_rules! tuple_impls {
             impl<
                 $($name: Deserialize,)+
             > $visitor<$($name,)+> {
-                fn new() -> Self {
+                pub fn new() -> Self {
                     $visitor { marker: PhantomData }
                 }
             }
