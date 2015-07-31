@@ -596,11 +596,14 @@ pub trait VariantVisitor {
         Err(Error::syntax_error())
     }
 
-    /// `visit_newtype` is called when deserializing a variant with a single value.
+    /// `visit_newtype` is called when deserializing a variant with a single value. By default this
+    /// uses the `visit_tuple` method to deserialize the value.
+    #[inline]
     fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: Deserialize,
     {
-        Err(Error::syntax_error())
+        let (value,) = try!(self.visit_tuple(1, impls::TupleVisitor1::new()));
+        Ok(value)
     }
 
     /// `visit_tuple` is called when deserializing a tuple-like variant.
