@@ -26,9 +26,11 @@ after_success: |
   (cd serde && cargo doc --no-deps) &&
   (cd serde_codegen && cargo doc --no-deps) &&
   (cd serde_macros && cargo doc --no-deps) &&
+  (cd serde_json && cargo doc --no-deps) &&
   cp -r serde/target/doc target/doc/serde &&
   cp -r serde_codegen/target/doc target/doc/serde_codegen &&
   cp -r serde_macros/target/doc target/doc/serde_macros &&
+  cp -r serde_json/target/doc target/doc/serde_json &&
   echo "<meta http-equiv=refresh content=0;url=`echo $TRAVIS_REPO_SLUG | cut -d '/' -f 2`/index.html>" > target/doc/index.html &&
   sudo pip install ghp-import &&
   ghp-import -n target/doc &&
