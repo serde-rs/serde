@@ -708,7 +708,7 @@ fn test_parse_number_errors() {
         ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
         ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
         ("777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 20)),
-        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 22)),
+        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 23)),
     ]);
 }
 
@@ -735,13 +735,21 @@ fn test_parse_f64() {
     test_parse_ok(vec![
         ("0.0", 0.0f64),
         ("3.0", 3.0f64),
+        ("3.00", 3.0f64),
         ("3.1", 3.1),
         ("-1.2", -1.2),
         ("0.4", 0.4),
         ("0.4e5", 0.4e5),
+        ("0.4e+5", 0.4e5),
         ("0.4e15", 0.4e15),
-        ("0.4e-01", 0.4e-01),
-        (" 0.4e-01 ", 0.4e-01),
+        ("0.4e+15", 0.4e15),
+        ("0.4e-01", 0.4e-1),
+        (" 0.4e-01 ", 0.4e-1),
+        ("0.4e-001", 0.4e-1),
+        ("0.4e-0", 0.4e0),
+        ("0.00e00", 0.0),
+        ("0.00e+00", 0.0),
+        ("0.00e-00", 0.0),
     ]);
 }
 

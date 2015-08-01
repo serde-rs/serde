@@ -222,17 +222,20 @@ impl<Iter> Deserializer<Iter>
         Ok(accum)
     }
 
-    fn parse_decimal(&mut self, res: f64) -> Result<f64> {
+    fn parse_decimal(&mut self, mut res: f64) -> Result<f64> {
         try!(self.bump());
+
+        let mut dec = 0.1;
 
         // Make sure a digit follows the decimal place.
         match self.ch_or_null() {
-            b'0' ... b'9' => (),
+            c @ b'0' ... b'9' => {
+                try!(self.bump());
+                res += (((c as u64) - (b'0' as u64)) as f64) * dec;
+            }
              _ => { return Err(self.error(ErrorCode::InvalidNumber)); }
         }
 
-        let mut res = res;
-        let mut dec = 1.0;
         while !self.eof() {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
@@ -250,30 +253,30 @@ impl<Iter> Deserializer<Iter>
     fn parse_exponent(&mut self, mut res: f64) -> Result<f64> {
         try!(self.bump());
 
-        let mut exp: u64 = 0;
-        let mut neg_exp = false;
-
-        if self.ch_is(b'+') {
-            try!(self.bump());
-        } else if self.ch_is(b'-') {
-            try!(self.bump());
-            neg_exp = true;
-        }
+        let pos = match self.ch_or_null() {
+            b'+' => { try!(self.bump()); true }
+            b'-' => { try!(self.bump()); false }
+            _ => { true }
+        };
 
         // Make sure a digit follows the exponent place.
-        match self.ch_or_null() {
-            b'0' ... b'9' => (),
+        let mut exp = match self.ch_or_null() {
+            c @ b'0' ... b'9' => {
+                try!(self.bump());
+                (c as u64) - (b'0' as u64)
+            }
             _ => { return Err(self.error(ErrorCode::InvalidNumber)); }
-        }
-        while !self.eof() {
+        };
+
+        loop {
             match self.ch_or_null() {
                 c @ b'0' ... b'9' => {
+                    try!(self.bump());
+
                     exp = try_or_invalid!(self, exp.checked_mul(10));
                     exp = try_or_invalid!(self, exp.checked_add((c as u64) - (b'0' as u64)));
-
-                    try!(self.bump());
                 }
-                _ => break
+                _ => { break; }
             }
         }
 
@@ -283,10 +286,10 @@ impl<Iter> Deserializer<Iter>
             return Err(self.error(ErrorCode::InvalidNumber));
         };
 
-        if neg_exp {
-            res /= exp;
-        } else {
+        if pos {
             res *= exp;
+        } else {
+            res /= exp;
         }
 
         Ok(res)
