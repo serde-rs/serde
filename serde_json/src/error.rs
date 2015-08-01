@@ -1,6 +1,7 @@
 use std::error;
 use std::fmt;
 use std::io;
+use std::result;
 
 use serde::de;
 
@@ -183,3 +184,6 @@ impl de::Error for Error {
         Error::MissingFieldError(field)
     }
 }
+
+/// Helper alias for `Result` objects that return a JSON `Error`.
+pub type Result<T> = result::Result<T, Error>;
