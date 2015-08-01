@@ -108,7 +108,13 @@ impl<Iter> Deserializer<Iter>
                 try!(self.parse_ident(b"alse"));
                 visitor.visit_bool(false)
             }
-            b'0' ... b'9' | b'-' => self.parse_number(visitor),
+            b'-' => {
+                try!(self.bump());
+                self.parse_number(false, visitor)
+            }
+            b'0' ... b'9' => {
+                self.parse_number(true, visitor)
+            }
             b'"' => {
                 try!(self.parse_string());
                 let s = str::from_utf8(&self.str_buf).unwrap();
@@ -145,16 +151,9 @@ impl<Iter> Deserializer<Iter>
         Ok(())
     }
 
-    fn parse_number<V>(&mut self, mut visitor: V) -> Result<V::Value>
+    fn parse_number<V>(&mut self, pos: bool, mut visitor: V) -> Result<V::Value>
         where V: de::Visitor,
     {
-        let mut neg = false;
-
-        if self.ch_is(b'-') {
-            try!(self.bump());
-            neg = true;
-        }
-
         let res = try!(self.parse_integer());
 
         if self.ch_is(b'.') || self.ch_is(b'e') || self.ch_is(b'E') {
@@ -168,13 +167,15 @@ impl<Iter> Deserializer<Iter>
                 res = try!(self.parse_exponent(res));
             }
 
-            if neg {
-                visitor.visit_f64(-res)
-            } else {
+            if pos {
                 visitor.visit_f64(res)
+            } else {
+                visitor.visit_f64(-res)
             }
         } else {
-            if neg {
+            if pos {
+                visitor.visit_u64(res)
+            } else {
                 let res = -(res as i64);
 
                 // Make sure we didn't underflow.
@@ -183,8 +184,6 @@ impl<Iter> Deserializer<Iter>
                 } else {
                     visitor.visit_i64(res)
                 }
-            } else {
-                visitor.visit_u64(res)
             }
         }
     }
