@@ -156,33 +156,25 @@ impl<Iter> Deserializer<Iter>
     {
         let res = try!(self.parse_integer());
 
-        if self.ch_is(b'.') || self.ch_is(b'e') || self.ch_is(b'E') {
-            let mut res = res as f64;
-
-            if self.ch_is(b'.') {
-                res = try!(self.parse_decimal(res));
+        match self.ch_or_null() {
+            b'.' => {
+                self.parse_decimal(pos, res as f64, visitor)
             }
-
-            if self.ch_is(b'e') || self.ch_is(b'E') {
-                res = try!(self.parse_exponent(res));
+            b'e' | b'E' => {
+                self.parse_exponent(pos, res as f64, visitor)
             }
-
-            if pos {
-                visitor.visit_f64(res)
-            } else {
-                visitor.visit_f64(-res)
-            }
-        } else {
-            if pos {
-                visitor.visit_u64(res)
-            } else {
-                let res = -(res as i64);
-
-                // Make sure we didn't underflow.
-                if res > 0 {
-                    Err(self.error(ErrorCode::InvalidNumber))
+            _ => {
+                if pos {
+                    visitor.visit_u64(res)
                 } else {
-                    visitor.visit_i64(res)
+                    let res = -(res as i64);
+
+                    // Make sure we didn't underflow.
+                    if res > 0 {
+                        Err(self.error(ErrorCode::InvalidNumber))
+                    } else {
+                        visitor.visit_i64(res)
+                    }
                 }
             }
         }
@@ -222,7 +214,12 @@ impl<Iter> Deserializer<Iter>
         Ok(accum)
     }
 
-    fn parse_decimal(&mut self, mut res: f64) -> Result<f64> {
+    fn parse_decimal<V>(&mut self,
+                        pos: bool,
+                        mut res: f64,
+                        mut visitor: V) -> Result<V::Value>
+        where V: de::Visitor,
+    {
         try!(self.bump());
 
         let mut dec = 0.1;
@@ -247,13 +244,30 @@ impl<Iter> Deserializer<Iter>
             }
         }
 
-        Ok(res)
+        match self.ch_or_null() {
+            b'e' | b'E' => {
+                self.parse_exponent(pos, res, visitor)
+            }
+            _ => {
+                if pos {
+                    visitor.visit_f64(res)
+                } else {
+                    visitor.visit_f64(-res)
+                }
+            }
+        }
+
     }
 
-    fn parse_exponent(&mut self, mut res: f64) -> Result<f64> {
+    fn parse_exponent<V>(&mut self,
+                         pos: bool,
+                         mut res: f64,
+                         mut visitor: V) -> Result<V::Value>
+        where V: de::Visitor,
+    {
         try!(self.bump());
 
-        let pos = match self.ch_or_null() {
+        let pos_exp = match self.ch_or_null() {
             b'+' => { try!(self.bump()); true }
             b'-' => { try!(self.bump()); false }
             _ => { true }
@@ -286,13 +300,17 @@ impl<Iter> Deserializer<Iter>
             return Err(self.error(ErrorCode::InvalidNumber));
         };
 
-        if pos {
+        if pos_exp {
             res *= exp;
         } else {
             res /= exp;
         }
 
-        Ok(res)
+        if pos {
+            visitor.visit_f64(res)
+        } else {
+            visitor.visit_f64(-res)
+        }
     }
 
     fn decode_hex_escape(&mut self) -> Result<u16> {
