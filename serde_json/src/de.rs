@@ -167,7 +167,7 @@ impl<Iter> Deserializer<Iter>
                 if pos {
                     visitor.visit_u64(res)
                 } else {
-                    let res = -(res as i64);
+                    let res = (res as i64).wrapping_neg();
 
                     // Make sure we didn't underflow.
                     if res > 0 {

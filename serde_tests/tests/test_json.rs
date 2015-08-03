@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::i64;
 use std::marker::PhantomData;
+use std::u64;
 
 use serde::de;
 use serde::ser;
@@ -83,11 +85,22 @@ fn test_write_null() {
 }
 
 #[test]
+fn test_write_u64() {
+    let tests = &[
+        (3u64, "3"),
+        (u64::MAX, &u64::MAX.to_string()),
+    ];
+    test_encode_ok(tests);
+    test_pretty_encode_ok(tests);
+}
+
+#[test]
 fn test_write_i64() {
     let tests = &[
         (3i64, "3"),
         (-2i64, "-2"),
         (-1234i64, "-1234"),
+        (i64::MIN, &i64::MIN.to_string()),
     ];
     test_encode_ok(tests);
     test_pretty_encode_ok(tests);
@@ -95,11 +108,18 @@ fn test_write_i64() {
 
 #[test]
 fn test_write_f64() {
+    let min_string = f64::MIN.to_string();
+    let max_string = f64::MAX.to_string();
+    let epsilon_string = f64::EPSILON.to_string();
+
     let tests = &[
         (3.0, "3.0"),
         (3.1, "3.1"),
         (-1.5, "-1.5"),
         (0.5, "0.5"),
+        (f64::MIN, &min_string),
+        (f64::MAX, &max_string),
+        (f64::EPSILON, &epsilon_string),
     ];
     test_encode_ok(tests);
     test_pretty_encode_ok(tests);
@@ -621,7 +641,7 @@ fn test_write_option() {
     ]);
 }
 
-fn test_parse_ok<T>(errors: Vec<(&'static str, T)>)
+fn test_parse_ok<T>(errors: Vec<(&str, T)>)
     where T: Clone + Debug + PartialEq + ser::Serialize + de::Deserialize,
 {
     for (s, value) in errors {
@@ -718,6 +738,8 @@ fn test_parse_i64() {
         ("-2", -2),
         ("-1234", -1234),
         (" -1234 ", -1234),
+        (&i64::MIN.to_string(), i64::MIN),
+        (&i64::MAX.to_string(), i64::MAX),
     ]);
 }
 
@@ -727,6 +749,7 @@ fn test_parse_u64() {
         ("0", 0u64),
         ("3", 3u64),
         ("1234", 1234),
+        (&u64::MAX.to_string(), u64::MAX),
     ]);
 }
 
