@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::f64;
 use std::fmt::Debug;
 use std::i64;
 use std::marker::PhantomData;
@@ -108,12 +109,12 @@ fn test_write_i64() {
 
 #[test]
 fn test_write_f64() {
-    let min_string = f64::MIN.to_string();
-    let max_string = f64::MAX.to_string();
-    let epsilon_string = f64::EPSILON.to_string();
+    let min_string = format!("{:?}", f64::MIN);
+    let max_string = format!("{:?}", f64::MAX);
+    let epsilon_string = format!("{:?}", f64::EPSILON);
 
     let tests = &[
-        (3.0, "3.0"),
+        (3.0, "3"),
         (3.1, "3.1"),
         (-1.5, "-1.5"),
         (0.5, "0.5"),
@@ -727,7 +728,6 @@ fn test_parse_number_errors() {
         ("1e", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
         ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
         ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
-        ("777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 20)),
         ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 23)),
     ]);
 }
@@ -773,6 +773,9 @@ fn test_parse_f64() {
         ("0.00e00", 0.0),
         ("0.00e+00", 0.0),
         ("0.00e-00", 0.0),
+        (&format!("{:?}", (i64::MIN as f64) - 1.0), (i64::MIN as f64) - 1.0),
+        (&format!("{:?}", (u64::MAX as f64) + 1.0), (u64::MAX as f64) + 1.0),
+        (&format!("{:?}", f64::EPSILON), f64::EPSILON),
     ]);
 }
 

@@ -110,10 +110,10 @@ impl<Iter> Deserializer<Iter>
             }
             b'-' => {
                 try!(self.bump());
-                self.parse_number(false, visitor)
+                self.parse_integer(false, visitor)
             }
             b'0' ... b'9' => {
-                self.parse_number(true, visitor)
+                self.parse_integer(true, visitor)
             }
             b'"' => {
                 try!(self.parse_string());
@@ -151,11 +151,114 @@ impl<Iter> Deserializer<Iter>
         Ok(())
     }
 
-    fn parse_number<V>(&mut self, pos: bool, mut visitor: V) -> Result<V::Value>
+    fn parse_integer<V>(&mut self, pos: bool, visitor: V) -> Result<V::Value>
         where V: de::Visitor,
     {
-        let res = try!(self.parse_integer());
+        match self.ch_or_null() {
+            b'0' => {
+                try!(self.bump());
 
+                // There can be only one leading '0'.
+                match self.ch_or_null() {
+                    b'0' ... b'9' => {
+                        Err(self.error(ErrorCode::InvalidNumber))
+                    }
+                    _ => {
+                        self.parse_number(pos, 0, visitor)
+                    }
+                }
+            },
+            c @ b'1' ... b'9' => {
+                try!(self.bump());
+
+                let mut res: u64 = (c as u64) - ('0' as u64);
+
+                loop {
+                    match self.ch_or_null() {
+                        c @ b'0' ... b'9' => {
+                            try!(self.bump());
+
+                            let digit = (c as u64) - ('0' as u64);
+
+                            // We need to be careful with overflow. If we can, try to keep the
+                            // number as a `u64` until we grow too large. At that point, switch to
+                            // parsing the value as a `f64`.
+                            match res.checked_mul(10) {
+                                Some(res_) => {
+                                    res = res_;
+                                    match res.checked_add(digit) {
+                                        Some(res_) => { res = res_; }
+                                        None => {
+                                            return self.parse_float(
+                                                pos,
+                                                (res as f64) + (digit as f64),
+                                                visitor);
+                                        }
+                                    }
+                                }
+                                None => {
+                                    return self.parse_float(
+                                        pos,
+                                        (res as f64) * 10.0 + (digit as f64),
+                                        visitor);
+                                }
+                            }
+                        }
+                        _ => {
+                            return self.parse_number(pos, res, visitor);
+                        }
+                    }
+                }
+            }
+            _ => {
+                Err(self.error(ErrorCode::InvalidNumber))
+            }
+        }
+    }
+
+    fn parse_float<V>(&mut self,
+                      pos: bool,
+                      mut res: f64,
+                      mut visitor: V) -> Result<V::Value>
+        where V: de::Visitor,
+    {
+        loop {
+            match self.ch_or_null() {
+                c @ b'0' ... b'9' => {
+                    try!(self.bump());
+
+                    let digit = (c as u64) - ('0' as u64);
+
+                    res *= 10.0;
+                    res += digit as f64;
+                }
+                _ => {
+                    match self.ch_or_null() {
+                        b'.' => {
+                            return self.parse_decimal(pos, res, visitor);
+                        }
+                        b'e' | b'E' => {
+                            return self.parse_exponent(pos, res, visitor);
+                        }
+                        _ => {
+                            if !pos {
+                                res = -res;
+                            }
+
+                            return visitor.visit_f64(res);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn parse_number<V>(&mut self,
+                       pos: bool,
+                       res: u64,
+                       mut visitor: V) -> Result<V::Value>
+        where V: de::Visitor,
+    {
         match self.ch_or_null() {
             b'.' => {
                 self.parse_decimal(pos, res as f64, visitor)
@@ -167,51 +270,17 @@ impl<Iter> Deserializer<Iter>
                 if pos {
                     visitor.visit_u64(res)
                 } else {
-                    let res = (res as i64).wrapping_neg();
+                    let res_i64 = (res as i64).wrapping_neg();
 
-                    // Make sure we didn't underflow.
-                    if res > 0 {
-                        Err(self.error(ErrorCode::InvalidNumber))
+                    // Convert into a float if we underflow.
+                    if res_i64 > 0 {
+                        visitor.visit_f64(-(res as f64))
                     } else {
-                        visitor.visit_i64(res)
+                        visitor.visit_i64(res_i64)
                     }
                 }
             }
         }
-    }
-
-    fn parse_integer(&mut self) -> Result<u64> {
-        let mut accum: u64 = 0;
-
-        match self.ch_or_null() {
-            b'0' => {
-                try!(self.bump());
-
-                // There can be only one leading '0'.
-                match self.ch_or_null() {
-                    b'0' ... b'9' => {
-                        return Err(self.error(ErrorCode::InvalidNumber));
-                    }
-                    _ => ()
-                }
-            },
-            b'1' ... b'9' => {
-                while !self.eof() {
-                    match self.ch_or_null() {
-                        c @ b'0' ... b'9' => {
-                            accum = try_or_invalid!(self, accum.checked_mul(10));
-                            accum = try_or_invalid!(self, accum.checked_add((c as u64) - ('0' as u64)));
-
-                            try!(self.bump());
-                        }
-                        _ => break,
-                    }
-                }
-            }
-            _ => { return Err(self.error(ErrorCode::InvalidNumber)); }
-        }
-
-        Ok(accum)
     }
 
     fn parse_decimal<V>(&mut self,
