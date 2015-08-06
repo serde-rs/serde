@@ -728,7 +728,7 @@ fn test_parse_number_errors() {
         ("1e", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
         ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
         ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
-        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 23)),
+        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 22)),
     ]);
 }
 
@@ -804,8 +804,8 @@ fn test_parse_string() {
 #[test]
 fn test_parse_list() {
     test_parse_err::<Vec<f64>>(vec![
-        ("[", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 1)),
-        ("[ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
+        ("[", Error::SyntaxError(ErrorCode::EOFWhileParsingList, 1, 1)),
+        ("[ ", Error::SyntaxError(ErrorCode::EOFWhileParsingList, 1, 2)),
         ("[1", Error::SyntaxError(ErrorCode::EOFWhileParsingList,  1, 2)),
         ("[1,", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 3)),
         ("[1,]", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 4)),
@@ -856,8 +856,8 @@ fn test_parse_list() {
 #[test]
 fn test_parse_object() {
     test_parse_err::<BTreeMap<String, u32>>(vec![
-        ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 1)),
-        ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 2)),
+        ("{", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 1)),
+        ("{ ", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 2)),
         ("{1", Error::SyntaxError(ErrorCode::KeyMustBeAString, 1, 2)),
         ("{ \"a\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 5)),
         ("{\"a\"", Error::SyntaxError(ErrorCode::EOFWhileParsingObject, 1, 4)),
@@ -909,7 +909,7 @@ fn test_parse_struct() {
     test_parse_err::<Outer>(vec![
         ("5", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 1)),
         ("\"hello\"", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 7)),
-        ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 15)),
+        ("{\"inner\": true}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 14)),
     ]);
 
     test_parse_ok(vec![
@@ -988,9 +988,9 @@ fn test_parse_enum_errors() {
         ("{}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 2)),
         ("{\"Dog\":", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 7)),
         ("{\"Dog\":}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
-        ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::UnknownField("unknown".to_string()), 1, 11)),
-        ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
-        ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 10)),
+        ("{\"unknown\":[]}", Error::SyntaxError(ErrorCode::UnknownField("unknown".to_string()), 1, 10)),
+        ("{\"Dog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 8)),
+        ("{\"Frog\":{}}", Error::SyntaxError(ErrorCode::ExpectedSomeValue, 1, 9)),
         ("{\"Cat\":[]}", Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 1, 9)),
     ]);
 }
@@ -1310,4 +1310,41 @@ fn test_serialize_map_with_no_len() {
             "}"
         )
     );
+}
+
+#[test]
+fn test_deserialize_from_stream() {
+    use std::net;
+    use std::io::Read;
+    use std::thread;
+    use serde::Deserialize;
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Message {
+        message: String,
+    }
+
+    let l = net::TcpListener::bind("localhost:20000").unwrap();
+
+    thread::spawn(|| {
+        let l = l;
+        for stream in l.incoming() {
+            let mut stream = stream.unwrap();
+            let read_stream = stream.try_clone().unwrap();
+
+            let mut de = serde_json::Deserializer::new(read_stream.bytes());
+            let request = Message::deserialize(&mut de).unwrap();
+            let response = Message { message: request.message };
+            serde_json::to_writer(&mut stream, &response).unwrap();
+        }
+    });
+
+    let mut stream = net::TcpStream::connect("localhost:20000").unwrap();
+    let request = Message { message: "hi there".to_string() };
+    serde_json::to_writer(&mut stream, &request).unwrap();
+
+    let mut de = serde_json::Deserializer::new(stream.bytes());
+    let response = Message::deserialize(&mut de).unwrap();
+
+    assert_eq!(request, response);
 }
