@@ -183,19 +183,8 @@ impl<Iter> Deserializer<Iter>
                             // We need to be careful with overflow. If we can, try to keep the
                             // number as a `u64` until we grow too large. At that point, switch to
                             // parsing the value as a `f64`.
-                            match res.checked_mul(10) {
-                                Some(res_) => {
-                                    res = res_;
-                                    match res.checked_add(digit) {
-                                        Some(res_) => { res = res_; }
-                                        None => {
-                                            return self.parse_float(
-                                                pos,
-                                                (res as f64) + (digit as f64),
-                                                visitor);
-                                        }
-                                    }
-                                }
+                            match res.checked_mul(10).and_then(|val| val.checked_add(digit)) {
+                                Some(res_) => { res = res_; }
                                 None => {
                                     return self.parse_float(
                                         pos,
