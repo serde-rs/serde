@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
+use std::f64;
 use std::fmt::Debug;
+use std::i64;
 use std::marker::PhantomData;
+use std::u64;
 
 use serde::de;
 use serde::ser;
@@ -83,11 +86,22 @@ fn test_write_null() {
 }
 
 #[test]
+fn test_write_u64() {
+    let tests = &[
+        (3u64, "3"),
+        (u64::MAX, &u64::MAX.to_string()),
+    ];
+    test_encode_ok(tests);
+    test_pretty_encode_ok(tests);
+}
+
+#[test]
 fn test_write_i64() {
     let tests = &[
         (3i64, "3"),
         (-2i64, "-2"),
         (-1234i64, "-1234"),
+        (i64::MIN, &i64::MIN.to_string()),
     ];
     test_encode_ok(tests);
     test_pretty_encode_ok(tests);
@@ -95,11 +109,18 @@ fn test_write_i64() {
 
 #[test]
 fn test_write_f64() {
+    let min_string = format!("{:?}", f64::MIN);
+    let max_string = format!("{:?}", f64::MAX);
+    let epsilon_string = format!("{:?}", f64::EPSILON);
+
     let tests = &[
-        (3.0, "3.0"),
+        (3.0, "3"),
         (3.1, "3.1"),
         (-1.5, "-1.5"),
         (0.5, "0.5"),
+        (f64::MIN, &min_string),
+        (f64::MAX, &max_string),
+        (f64::EPSILON, &epsilon_string),
     ];
     test_encode_ok(tests);
     test_pretty_encode_ok(tests);
@@ -621,7 +642,7 @@ fn test_write_option() {
     ]);
 }
 
-fn test_parse_ok<T>(errors: Vec<(&'static str, T)>)
+fn test_parse_ok<T>(errors: Vec<(&str, T)>)
     where T: Clone + Debug + PartialEq + ser::Serialize + de::Deserialize,
 {
     for (s, value) in errors {
@@ -707,8 +728,7 @@ fn test_parse_number_errors() {
         ("1e", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 2)),
         ("1e+", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 3)),
         ("1a", Error::SyntaxError(ErrorCode::TrailingCharacters, 1, 2)),
-        ("777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 20)),
-        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 22)),
+        ("1e777777777777777777777777777", Error::SyntaxError(ErrorCode::InvalidNumber, 1, 23)),
     ]);
 }
 
@@ -718,28 +738,44 @@ fn test_parse_i64() {
         ("-2", -2),
         ("-1234", -1234),
         (" -1234 ", -1234),
+        (&i64::MIN.to_string(), i64::MIN),
+        (&i64::MAX.to_string(), i64::MAX),
     ]);
 }
 
 #[test]
 fn test_parse_u64() {
     test_parse_ok(vec![
+        ("0", 0u64),
         ("3", 3u64),
         ("1234", 1234),
+        (&u64::MAX.to_string(), u64::MAX),
     ]);
 }
 
 #[test]
 fn test_parse_f64() {
     test_parse_ok(vec![
+        ("0.0", 0.0f64),
         ("3.0", 3.0f64),
+        ("3.00", 3.0f64),
         ("3.1", 3.1),
         ("-1.2", -1.2),
         ("0.4", 0.4),
         ("0.4e5", 0.4e5),
+        ("0.4e+5", 0.4e5),
         ("0.4e15", 0.4e15),
-        ("0.4e-01", 0.4e-01),
-        (" 0.4e-01 ", 0.4e-01),
+        ("0.4e+15", 0.4e15),
+        ("0.4e-01", 0.4e-1),
+        (" 0.4e-01 ", 0.4e-1),
+        ("0.4e-001", 0.4e-1),
+        ("0.4e-0", 0.4e0),
+        ("0.00e00", 0.0),
+        ("0.00e+00", 0.0),
+        ("0.00e-00", 0.0),
+        (&format!("{:?}", (i64::MIN as f64) - 1.0), (i64::MIN as f64) - 1.0),
+        (&format!("{:?}", (u64::MAX as f64) + 1.0), (u64::MAX as f64) + 1.0),
+        (&format!("{:?}", f64::EPSILON), f64::EPSILON),
     ]);
 }
 
