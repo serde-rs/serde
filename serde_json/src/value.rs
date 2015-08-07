@@ -723,6 +723,15 @@ impl de::Deserializer for Deserializer {
     }
 
     #[inline]
+    fn visit_newtype_struct<V>(&mut self,
+                               _name: &'static str,
+                               mut visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
+    {
+        visitor.visit_newtype_struct(self)
+    }
+
+    #[inline]
     fn format() -> &'static str {
         "json"
     }
