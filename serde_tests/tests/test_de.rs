@@ -68,7 +68,7 @@ enum Error {
 }
 
 impl de::Error for Error {
-    fn syntax() -> Error { Error::SyntaxError }
+    fn syntax(_: &str) -> Error { Error::SyntaxError }
 
     fn end_of_stream() -> Error { Error::EndOfStreamError }
 

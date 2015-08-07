@@ -152,7 +152,7 @@ impl From<de::value::Error> for Error {
     fn from(error: de::value::Error) -> Error {
         match error {
             de::value::Error::SyntaxError => {
-                de::Error::syntax()
+                Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)
             }
             de::value::Error::EndOfStreamError => {
                 de::Error::end_of_stream()
@@ -168,7 +168,7 @@ impl From<de::value::Error> for Error {
 }
 
 impl de::Error for Error {
-    fn syntax() -> Error {
+    fn syntax(_: &str) -> Error {
         Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)
     }
 

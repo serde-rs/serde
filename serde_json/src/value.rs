@@ -700,7 +700,7 @@ impl de::Deserializer for Deserializer {
     {
         let value = match self.value.take() {
             Some(Value::Object(value)) => value,
-            Some(_) => { return Err(de::Error::syntax()); }
+            Some(_) => { return Err(de::Error::syntax("expected an enum")); }
             None => { return Err(de::Error::end_of_stream()); }
         };
 
@@ -708,12 +708,12 @@ impl de::Deserializer for Deserializer {
 
         let (variant, value) = match iter.next() {
             Some(v) => v,
-            None => return Err(de::Error::syntax()),
+            None => return Err(de::Error::syntax("expected a variant name")),
         };
 
         // enums are encoded in json as maps with a single key:value pair
         match iter.next() {
-            Some(_) => Err(de::Error::syntax()),
+            Some(_) => Err(de::Error::syntax("expected map")),
             None => visitor.visit(VariantDeserializer {
                 de: self,
                 val: Some(value),
@@ -768,7 +768,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
                 visitor,
             )
         } else {
-            Err(de::Error::syntax())
+            Err(de::Error::syntax("expected a tuple"))
         }
     }
 
@@ -788,7 +788,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
                 visitor,
             )
         } else {
-            Err(de::Error::syntax())
+            Err(de::Error::syntax("expected a struct"))
         }
     }
 }

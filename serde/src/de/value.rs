@@ -24,9 +24,9 @@ pub enum Error {
 }
 
 impl de::Error for Error {
-    fn syntax() -> Self { Error::SyntaxError }
+    fn syntax(_: &str) -> Self { Error::SyntaxError }
     fn end_of_stream() -> Self { Error::EndOfStreamError }
-    fn unknown_field(field: &str) -> Self { Error::UnknownFieldError(field.to_string()) }
+    fn unknown_field(field: &str) -> Self { Error::UnknownFieldError(String::from(field)) }
     fn missing_field(field: &'static str) -> Self { Error::MissingFieldError(field) }
 }
 
@@ -374,7 +374,7 @@ impl<I, K, V> de::MapVisitor for MapDeserializer<I, K, V>
                 let mut de = value.into_deserializer();
                 de::Deserialize::deserialize(&mut de)
             }
-            None => Err(de::Error::syntax())
+            None => Err(de::Error::syntax("expected a map value"))
         }
     }
 

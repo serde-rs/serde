@@ -6,7 +6,7 @@ pub mod value;
 ///////////////////////////////////////////////////////////////////////////////
 
 pub trait Error {
-    fn syntax() -> Self;
+    fn syntax(msg: &str) -> Self;
 
     fn end_of_stream() -> Self;
 
@@ -273,7 +273,7 @@ pub trait Deserializer {
                      _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected an enum"))
     }
 
     /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
@@ -304,7 +304,7 @@ pub trait Visitor {
     fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a bool"))
     }
 
     fn visit_isize<E>(&mut self, v: isize) -> Result<Self::Value, E>
@@ -334,7 +334,7 @@ pub trait Visitor {
     fn visit_i64<E>(&mut self, _v: i64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a i64"))
     }
 
     fn visit_usize<E>(&mut self, v: usize) -> Result<Self::Value, E>
@@ -364,7 +364,7 @@ pub trait Visitor {
     fn visit_u64<E>(&mut self, _v: u64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a u64"))
     }
 
     fn visit_f32<E>(&mut self, v: f32) -> Result<Self::Value, E>
@@ -376,7 +376,7 @@ pub trait Visitor {
     fn visit_f64<E>(&mut self, _v: f64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a f64"))
     }
 
     #[inline]
@@ -391,7 +391,7 @@ pub trait Visitor {
     fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a str"))
     }
 
     #[inline]
@@ -404,7 +404,7 @@ pub trait Visitor {
     fn visit_unit<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a unit"))
     }
 
     #[inline]
@@ -417,37 +417,37 @@ pub trait Visitor {
     fn visit_none<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected an Option::None"))
     }
 
     fn visit_some<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected an Option::Some"))
     }
 
     fn visit_newtype_struct<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a newtype struct"))
     }
 
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a sequence"))
     }
 
     fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a map"))
     }
 
     fn visit_bytes<E>(&mut self, _v: &[u8]) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a &[u8]"))
     }
 
     fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<Self::Value, E>
@@ -593,7 +593,7 @@ pub trait VariantVisitor {
 
     /// `visit_unit` is called when deserializing a variant with no values.
     fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a univ variant"))
     }
 
     /// `visit_newtype` is called when deserializing a variant with a single value. By default this
@@ -612,7 +612,7 @@ pub trait VariantVisitor {
                       _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a tuple variant"))
     }
 
     /// `visit_struct` is called when deserializing a struct-like variant.
@@ -621,7 +621,7 @@ pub trait VariantVisitor {
                        _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        Err(Error::syntax())
+        Err(Error::syntax("expected a struct variant"))
     }
 }
 

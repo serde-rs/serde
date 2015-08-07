@@ -85,7 +85,7 @@ impl Visitor for BoolVisitor {
         match s.trim() {
             "true" => Ok(true),
             "false" => Ok(false),
-            _ => Err(Error::syntax()),
+            _ => Err(Error::syntax("expected `true` or `false`")),
         }
     }
 }
@@ -108,7 +108,7 @@ macro_rules! impl_deserialize_num_method {
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => Err(Error::syntax()),
+                None => Err(Error::syntax("expected a number")),
             }
         }
     }
@@ -149,7 +149,7 @@ impl<
     fn visit_str<E>(&mut self, v: &str) -> Result<T, E>
         where E: Error,
     {
-        str::FromStr::from_str(v.trim()).or(Err(Error::syntax()))
+        str::FromStr::from_str(v.trim()).or(Err(Error::syntax("expected a str")))
     }
 }
 
@@ -200,7 +200,7 @@ impl Visitor for CharVisitor {
         let mut iter = v.chars();
         if let Some(v) = iter.next() {
             if iter.next().is_some() {
-                Err(Error::syntax())
+                Err(Error::syntax("expected a character"))
             } else {
                 Ok(v)
             }
@@ -243,7 +243,7 @@ impl Visitor for StringVisitor {
     {
         match str::from_utf8(v) {
             Ok(s) => Ok(s.to_string()),
-            Err(_) => Err(Error::syntax()),
+            Err(_) => Err(Error::syntax("expected utf8 `&[u8]`")),
         }
     }
 
@@ -252,7 +252,7 @@ impl Visitor for StringVisitor {
     {
         match String::from_utf8(v) {
             Ok(s) => Ok(s),
-            Err(_) => Err(Error::syntax()),
+            Err(_) => Err(Error::syntax("expected utf8 `&[u8]`")),
         }
     }
 }
@@ -848,7 +848,7 @@ impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable +
     fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
         let value = try!(Deserialize::deserialize(deserializer));
         if value == Zero::zero() {
-            return Err(Error::syntax())
+            return Err(Error::syntax("expected a non-zero value"))
         }
         unsafe {
             Ok(NonZero::new(value))
@@ -900,7 +900,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                             _ => {
                                 match str::from_utf8(value) {
                                     Ok(value) => Err(Error::unknown_field(value)),
-                                    Err(_) => Err(Error::syntax()),
+                                    Err(_) => Err(Error::syntax("expected a `&[u8]`")),
                                 }
                             }
                         }

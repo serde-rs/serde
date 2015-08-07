@@ -804,7 +804,7 @@ fn deserialize_field_visitor(
     let index_body = quote_expr!(cx,
         match value {
             $index_field_arms
-            _ => { Err(::serde::de::Error::syntax()) }
+            _ => { Err(::serde::de::Error::syntax("expected a field")) }
         }
     );
 
@@ -903,7 +903,13 @@ fn deserialize_field_visitor(
                         // TODO: would be better to generate a byte string literal match
                         match ::std::str::from_utf8(value) {
                             Ok(s) => self.visit_str(s),
-                            _ => Err(::serde::de::Error::syntax()),
+                            _ => {
+                                Err(
+                                    ::serde::de::Error::syntax(
+                                        "could not convert a byte string to a String"
+                                    )
+                                )
+                            }
                         }
                     }
                 }

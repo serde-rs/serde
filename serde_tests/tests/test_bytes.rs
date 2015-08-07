@@ -9,7 +9,7 @@ use serde_json;
 struct Error;
 
 impl serde::de::Error for Error {
-    fn syntax() -> Error { Error }
+    fn syntax(_: &str) -> Error { Error }
 
     fn end_of_stream() -> Error { Error }
 
