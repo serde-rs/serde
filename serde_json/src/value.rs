@@ -650,7 +650,7 @@ impl de::Deserializer for Deserializer {
     {
         let value = match self.value.take() {
             Some(value) => value,
-            None => { return Err(de::Error::end_of_stream_error()); }
+            None => { return Err(de::Error::end_of_stream()); }
         };
 
         match value {
@@ -687,7 +687,7 @@ impl de::Deserializer for Deserializer {
         match self.value {
             Some(Value::Null) => visitor.visit_none(),
             Some(_) => visitor.visit_some(self),
-            None => Err(de::Error::end_of_stream_error()),
+            None => Err(de::Error::end_of_stream()),
         }
     }
 
@@ -700,20 +700,20 @@ impl de::Deserializer for Deserializer {
     {
         let value = match self.value.take() {
             Some(Value::Object(value)) => value,
-            Some(_) => { return Err(de::Error::syntax_error()); }
-            None => { return Err(de::Error::end_of_stream_error()); }
+            Some(_) => { return Err(de::Error::syntax("expected an enum")); }
+            None => { return Err(de::Error::end_of_stream()); }
         };
 
         let mut iter = value.into_iter();
 
         let (variant, value) = match iter.next() {
             Some(v) => v,
-            None => return Err(de::Error::syntax_error()),
+            None => return Err(de::Error::syntax("expected a variant name")),
         };
 
         // enums are encoded in json as maps with a single key:value pair
         match iter.next() {
-            Some(_) => Err(de::Error::syntax_error()),
+            Some(_) => Err(de::Error::syntax("expected map")),
             None => visitor.visit(VariantDeserializer {
                 de: self,
                 val: Some(value),
@@ -768,7 +768,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
                 visitor,
             )
         } else {
-            Err(de::Error::syntax_error())
+            Err(de::Error::syntax("expected a tuple"))
         }
     }
 
@@ -788,7 +788,7 @@ impl<'a> de::VariantVisitor for VariantDeserializer<'a> {
                 visitor,
             )
         } else {
-            Err(de::Error::syntax_error())
+            Err(de::Error::syntax("expected a struct"))
         }
     }
 }
@@ -834,7 +834,7 @@ impl<'a> de::SeqVisitor for SeqDeserializer<'a> {
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream_error())
+            Err(de::Error::end_of_stream())
         }
     }
 
@@ -879,7 +879,7 @@ impl<'a> de::MapVisitor for MapDeserializer<'a> {
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream_error())
+            Err(de::Error::end_of_stream())
         }
     }
 

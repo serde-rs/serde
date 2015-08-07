@@ -17,13 +17,13 @@ pub enum Error {
 }
 
 impl serde::de::Error for Error {
-    fn syntax_error() -> Error { Error::SyntaxError }
+    fn syntax(_: &str) -> Error { Error::SyntaxError }
 
-    fn end_of_stream_error() -> Error { Error::EndOfStream }
+    fn end_of_stream() -> Error { Error::EndOfStream }
 
-    fn unknown_field_error(_: &str) -> Error { Error::SyntaxError }
+    fn unknown_field(_: &str) -> Error { Error::SyntaxError }
 
-    fn missing_field_error(_: &'static str) -> Error {
+    fn missing_field(_: &'static str) -> Error {
         Error::MissingField
     }
 }
@@ -347,17 +347,17 @@ mod deserializer {
 
     impl de::Deserializer<Error> for IsizeDeserializer {
         #[inline]
-        fn end_of_stream_error(&mut self) -> Error {
+        fn end_of_stream(&mut self) -> Error {
             EndOfStream
         }
 
         #[inline]
-        fn syntax_error(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> Error {
+        fn syntax(&mut self, _token: de::Token, _expected: &[de::TokenKind]) -> Error {
             SyntaxError
         }
 
         #[inline]
-        fn unexpected_name_error(&mut self, _token: de::Token) -> Error {
+        fn unexpected_name(&mut self, _token: de::Token) -> Error {
             SyntaxError
         }
 

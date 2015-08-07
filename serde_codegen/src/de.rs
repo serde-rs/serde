@@ -397,7 +397,7 @@ fn deserialize_seq(
                 let $name = match try!(visitor.visit()) {
                     Some(value) => { value },
                     None => {
-                        return Err(::serde::de::Error::end_of_stream_error());
+                        return Err(::serde::de::Error::end_of_stream());
                     }
                 };
             ).unwrap()
@@ -431,7 +431,7 @@ fn deserialize_struct_as_seq(
                 let $name = match try!(visitor.visit()) {
                     Some(value) => { value },
                     None => {
-                        return Err(::serde::de::Error::end_of_stream_error());
+                        return Err(::serde::de::Error::end_of_stream());
                     }
                 };
             ).unwrap()
@@ -804,7 +804,7 @@ fn deserialize_field_visitor(
     let index_body = quote_expr!(cx,
         match value {
             $index_field_arms
-            _ => { Err(::serde::de::Error::syntax_error()) }
+            _ => { Err(::serde::de::Error::syntax("expected a field")) }
         }
     );
 
@@ -829,7 +829,7 @@ fn deserialize_field_visitor(
         quote_expr!(cx,
             match value {
                 $default_field_arms
-                _ => { Err(::serde::de::Error::unknown_field_error(value)) }
+                _ => { Err(::serde::de::Error::unknown_field(value)) }
             })
     } else {
         let field_arms: Vec<_> = formats.iter()
@@ -851,7 +851,7 @@ fn deserialize_field_visitor(
                     match value {
                         $arms
                         _ => {
-                            Err(::serde::de::Error::unknown_field_error(value))
+                            Err(::serde::de::Error::unknown_field(value))
                         }
                     }})
             })
@@ -862,7 +862,7 @@ fn deserialize_field_visitor(
                 $fmt_matches
                 _ => match value {
                     $default_field_arms
-                    _ => { Err(::serde::de::Error::unknown_field_error(value)) }
+                    _ => { Err(::serde::de::Error::unknown_field(value)) }
                 }
             }
         )
@@ -903,7 +903,13 @@ fn deserialize_field_visitor(
                         // TODO: would be better to generate a byte string literal match
                         match ::std::str::from_utf8(value) {
                             Ok(s) => self.visit_str(s),
-                            _ => Err(::serde::de::Error::syntax_error()),
+                            _ => {
+                                Err(
+                                    ::serde::de::Error::syntax(
+                                        "could not convert a byte string to a String"
+                                    )
+                                )
+                            }
                         }
                     }
                 }

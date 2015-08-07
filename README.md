@@ -275,7 +275,7 @@ to generate an error for a few common error conditions. Here's how it could be u
     fn visit_string<E>(&mut self, _: String) -> Result<i32, E>
         where E: Error,
     {
-        Err(serde::de::Error::syntax_error())
+        Err(serde::de::Error::syntax("expect a string"))
     }
 
     ...
@@ -366,7 +366,7 @@ impl serde::Deserialize for PointField {
                 match value {
                     "x" => Ok(Field::X),
                     "y" => Ok(Field::Y),
-                    _ => Err(serde::de::Error::syntax_error()),
+                    _ => Err(serde::de::Error::syntax("expected x or y")),
                 }
             }
         }
