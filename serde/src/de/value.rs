@@ -24,10 +24,10 @@ pub enum Error {
 }
 
 impl de::Error for Error {
-    fn syntax_error() -> Self { Error::SyntaxError }
-    fn end_of_stream_error() -> Self { Error::EndOfStreamError }
-    fn unknown_field_error(field: &str) -> Self { Error::UnknownFieldError(field.to_string()) }
-    fn missing_field_error(field: &'static str) -> Self { Error::MissingFieldError(field) }
+    fn syntax() -> Self { Error::SyntaxError }
+    fn end_of_stream() -> Self { Error::EndOfStreamError }
+    fn unknown_field(field: &str) -> Self { Error::UnknownFieldError(field.to_string()) }
+    fn missing_field(field: &'static str) -> Self { Error::MissingFieldError(field) }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -89,7 +89,7 @@ macro_rules! primitive_deserializer {
             {
                 match self.0.take() {
                     Some(v) => visitor.$method(v),
-                    None => Err(de::Error::end_of_stream_error()),
+                    None => Err(de::Error::end_of_stream()),
                 }
             }
         }
@@ -132,7 +132,7 @@ impl<'a> de::Deserializer for StrDeserializer<'a> {
     {
         match self.0.take() {
             Some(v) => visitor.visit_str(v),
-            None => Err(de::Error::end_of_stream_error()),
+            None => Err(de::Error::end_of_stream()),
         }
     }
 
@@ -181,7 +181,7 @@ impl de::Deserializer for StringDeserializer {
     {
         match self.0.take() {
             Some(string) => visitor.visit_string(string),
-            None => Err(de::Error::end_of_stream_error()),
+            None => Err(de::Error::end_of_stream()),
         }
     }
 
@@ -261,7 +261,7 @@ impl<I, T> de::SeqVisitor for SeqDeserializer<I>
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream_error())
+            Err(de::Error::end_of_stream())
         }
     }
 
@@ -374,7 +374,7 @@ impl<I, K, V> de::MapVisitor for MapDeserializer<I, K, V>
                 let mut de = value.into_deserializer();
                 de::Deserialize::deserialize(&mut de)
             }
-            None => Err(de::Error::syntax_error())
+            None => Err(de::Error::syntax())
         }
     }
 
@@ -382,7 +382,7 @@ impl<I, K, V> de::MapVisitor for MapDeserializer<I, K, V>
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream_error())
+            Err(de::Error::end_of_stream())
         }
     }
 
@@ -438,7 +438,7 @@ impl<'a> de::Deserializer for BytesDeserializer<'a> {
     {
         match self.0.take() {
             Some(bytes) => visitor.visit_bytes(bytes),
-            None => Err(de::Error::end_of_stream_error()),
+            None => Err(de::Error::end_of_stream()),
         }
     }
 }
@@ -465,7 +465,7 @@ impl de::Deserializer for ByteBufDeserializer {
     {
         match self.0.take() {
             Some(bytes) => visitor.visit_byte_buf(bytes),
-            None => Err(de::Error::end_of_stream_error()),
+            None => Err(de::Error::end_of_stream()),
         }
     }
 }

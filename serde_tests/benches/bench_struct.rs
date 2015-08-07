@@ -33,13 +33,13 @@ pub enum Error {
 }
 
 impl serde::de::Error for Error {
-    fn syntax_error() -> Error { Error::SyntaxError }
+    fn syntax() -> Error { Error::SyntaxError }
 
-    fn end_of_stream_error() -> Error { Error::EndOfStream }
+    fn end_of_stream() -> Error { Error::EndOfStream }
 
-    fn unknown_field_error(_: &str) -> Error { Error::SyntaxError }
+    fn unknown_field(_: &str) -> Error { Error::SyntaxError }
 
-    fn missing_field_error(_: &'static str) -> Error {
+    fn missing_field(_: &'static str) -> Error {
         Error::MissingField
     }
 }

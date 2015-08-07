@@ -9,13 +9,13 @@ use serde_json;
 struct Error;
 
 impl serde::de::Error for Error {
-    fn syntax_error() -> Error { Error }
+    fn syntax() -> Error { Error }
 
-    fn end_of_stream_error() -> Error { Error }
+    fn end_of_stream() -> Error { Error }
 
-    fn unknown_field_error(_field: &str) -> Error { Error }
+    fn unknown_field(_field: &str) -> Error { Error }
 
-    fn missing_field_error(_field: &'static str) -> Error { Error }
+    fn missing_field(_field: &'static str) -> Error { Error }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

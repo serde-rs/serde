@@ -68,15 +68,15 @@ enum Error {
 }
 
 impl de::Error for Error {
-    fn syntax_error() -> Error { Error::SyntaxError }
+    fn syntax() -> Error { Error::SyntaxError }
 
-    fn end_of_stream_error() -> Error { Error::EndOfStreamError }
+    fn end_of_stream() -> Error { Error::EndOfStreamError }
 
-    fn unknown_field_error(field: &str) -> Error {
+    fn unknown_field(field: &str) -> Error {
         Error::UnknownFieldError(field.to_string())
     }
 
-    fn missing_field_error(field: &'static str) -> Error {
+    fn missing_field(field: &'static str) -> Error {
         Error::MissingFieldError(field)
     }
 }

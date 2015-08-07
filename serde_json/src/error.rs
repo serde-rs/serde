@@ -152,35 +152,35 @@ impl From<de::value::Error> for Error {
     fn from(error: de::value::Error) -> Error {
         match error {
             de::value::Error::SyntaxError => {
-                de::Error::syntax_error()
+                de::Error::syntax()
             }
             de::value::Error::EndOfStreamError => {
-                de::Error::end_of_stream_error()
+                de::Error::end_of_stream()
             }
             de::value::Error::UnknownFieldError(field) => {
                 Error::SyntaxError(ErrorCode::UnknownField(field), 0, 0)
             }
             de::value::Error::MissingFieldError(field) => {
-                de::Error::missing_field_error(field)
+                de::Error::missing_field(field)
             }
         }
     }
 }
 
 impl de::Error for Error {
-    fn syntax_error() -> Error {
+    fn syntax() -> Error {
         Error::SyntaxError(ErrorCode::ExpectedSomeValue, 0, 0)
     }
 
-    fn end_of_stream_error() -> Error {
+    fn end_of_stream() -> Error {
         Error::SyntaxError(ErrorCode::EOFWhileParsingValue, 0, 0)
     }
 
-    fn unknown_field_error(field: &str) -> Error {
+    fn unknown_field(field: &str) -> Error {
         Error::SyntaxError(ErrorCode::UnknownField(field.to_string()), 0, 0)
     }
 
-    fn missing_field_error(field: &'static str) -> Error {
+    fn missing_field(field: &'static str) -> Error {
         Error::MissingFieldError(field)
     }
 }
