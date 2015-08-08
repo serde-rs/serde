@@ -320,7 +320,7 @@ fn deserialize_newtype_struct(
             type Value = $ty;
 
             #[inline]
-            fn visit_newtype_struct<D>(&mut self, deserializer: &mut D) -> Result<Self::Value, D::Error>
+            fn visit_newtype_struct<D>(&mut self, deserializer: &mut D) -> ::std::result::Result<Self::Value, D::Error>
                 where D: ::serde::de::Deserializer,
             {
                 let value = try!(::serde::de::Deserialize::deserialize(deserializer));
