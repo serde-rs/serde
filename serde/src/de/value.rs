@@ -261,7 +261,7 @@ impl<I, T> de::SeqVisitor for SeqDeserializer<I>
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream())
+            Err(de::Error::length_mismatch(self.len))
         }
     }
 
@@ -382,7 +382,7 @@ impl<I, K, V> de::MapVisitor for MapDeserializer<I, K, V>
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream())
+            Err(de::Error::length_mismatch(self.len))
         }
     }
 
