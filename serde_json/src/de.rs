@@ -54,8 +54,14 @@ impl<Iter> Deserializer<Iter>
         match self.ch {
             Some(ch) => Ok(Some(ch)),
             None => {
-                self.ch = try!(self.next_char());
-                Ok(self.ch)
+                match self.rdr.next() {
+                    Some(Err(err)) => Err(Error::IoError(err)),
+                    Some(Ok(ch)) => {
+                        self.ch = Some(ch);
+                        Ok(self.ch)
+                    }
+                    None => Ok(None),
+                }
             }
         }
     }

@@ -5,7 +5,9 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
 repository = "https://github.com/serde-rs/serde"
+documentation = "https://serde-rs.github.io/serde/serde_codegen/serde_codegen/index.html"
 build = "build.rs"
+keywords = ["serde", "serialization"]
 
 [features]
 default = ["with-syntex"]
