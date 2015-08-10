@@ -34,6 +34,7 @@ use de::{
     Error,
     MapVisitor,
     SeqVisitor,
+    Type,
     VariantVisitor,
     Visitor,
 };
@@ -85,7 +86,7 @@ impl Visitor for BoolVisitor {
         match s.trim() {
             "true" => Ok(true),
             "false" => Ok(false),
-            _ => Err(Error::syntax("expected `true` or `false`")),
+            _ => Err(Error::type_mismatch(Type::Bool)),
         }
     }
 }
@@ -101,14 +102,14 @@ impl Deserialize for bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserialize_num_method {
-    ($src_ty:ty, $method:ident, $from_method:ident) => {
+    ($src_ty:ty, $method:ident, $from_method:ident, $ty:expr) => {
         #[inline]
         fn $method<E>(&mut self, v: $src_ty) -> Result<T, E>
             where E: Error,
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => Err(Error::syntax("expected a number")),
+                None => Err(Error::type_mismatch($ty)),
             }
         }
     }
@@ -132,24 +133,24 @@ impl<
 > Visitor for PrimitiveVisitor<T> {
     type Value = T;
 
-    impl_deserialize_num_method!(isize, visit_isize, from_isize);
-    impl_deserialize_num_method!(i8, visit_i8, from_i8);
-    impl_deserialize_num_method!(i16, visit_i16, from_i16);
-    impl_deserialize_num_method!(i32, visit_i32, from_i32);
-    impl_deserialize_num_method!(i64, visit_i64, from_i64);
-    impl_deserialize_num_method!(usize, visit_usize, from_usize);
-    impl_deserialize_num_method!(u8, visit_u8, from_u8);
-    impl_deserialize_num_method!(u16, visit_u16, from_u16);
-    impl_deserialize_num_method!(u32, visit_u32, from_u32);
-    impl_deserialize_num_method!(u64, visit_u64, from_u64);
-    impl_deserialize_num_method!(f32, visit_f32, from_f32);
-    impl_deserialize_num_method!(f64, visit_f64, from_f64);
+    impl_deserialize_num_method!(isize, visit_isize, from_isize, Type::Isize);
+    impl_deserialize_num_method!(i8, visit_i8, from_i8, Type::I8);
+    impl_deserialize_num_method!(i16, visit_i16, from_i16, Type::I16);
+    impl_deserialize_num_method!(i32, visit_i32, from_i32, Type::I32);
+    impl_deserialize_num_method!(i64, visit_i64, from_i64, Type::I64);
+    impl_deserialize_num_method!(usize, visit_usize, from_usize, Type::Usize);
+    impl_deserialize_num_method!(u8, visit_u8, from_u8, Type::U8);
+    impl_deserialize_num_method!(u16, visit_u16, from_u16, Type::U16);
+    impl_deserialize_num_method!(u32, visit_u32, from_u32, Type::U32);
+    impl_deserialize_num_method!(u64, visit_u64, from_u64, Type::U64);
+    impl_deserialize_num_method!(f32, visit_f32, from_f32, Type::F32);
+    impl_deserialize_num_method!(f64, visit_f64, from_f64, Type::F64);
 
     #[inline]
     fn visit_str<E>(&mut self, v: &str) -> Result<T, E>
         where E: Error,
     {
-        str::FromStr::from_str(v.trim()).or(Err(Error::syntax("expected a str")))
+        str::FromStr::from_str(v.trim()).or(Err(Error::type_mismatch(Type::Str)))
     }
 }
 
@@ -200,7 +201,7 @@ impl Visitor for CharVisitor {
         let mut iter = v.chars();
         if let Some(v) = iter.next() {
             if iter.next().is_some() {
-                Err(Error::syntax("expected a character"))
+                Err(Error::type_mismatch(Type::Char))
             } else {
                 Ok(v)
             }
@@ -243,7 +244,7 @@ impl Visitor for StringVisitor {
     {
         match str::from_utf8(v) {
             Ok(s) => Ok(s.to_string()),
-            Err(_) => Err(Error::syntax("expected utf8 `&[u8]`")),
+            Err(_) => Err(Error::type_mismatch(Type::String)),
         }
     }
 
@@ -252,7 +253,7 @@ impl Visitor for StringVisitor {
     {
         match String::from_utf8(v) {
             Ok(s) => Ok(s),
-            Err(_) => Err(Error::syntax("expected utf8 `&[u8]`")),
+            Err(_) => Err(Error::type_mismatch(Type::String)),
         }
     }
 }
@@ -900,7 +901,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                             _ => {
                                 match str::from_utf8(value) {
                                     Ok(value) => Err(Error::unknown_field(value)),
-                                    Err(_) => Err(Error::syntax("expected a `&[u8]`")),
+                                    Err(_) => Err(Error::type_mismatch(Type::String)),
                                 }
                             }
                         }

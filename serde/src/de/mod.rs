@@ -5,14 +5,65 @@ pub mod value;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Error {
+/// `Error` is a trait that allows a `Deserialize` to generically create a
+/// `Deserializer` error.
+pub trait Error: Sized {
+    /// Raised when there is general error when deserializing a type.
     fn syntax(msg: &str) -> Self;
 
+    /// Raised when a fixed sized sequence or map was passed in the wrong amount of arguments.
+    fn length_mismatch(_len: usize) -> Self {
+        Error::syntax("incorrect length")
+    }
+
+    /// Raised when a `Deserialize` was passed an incorrect type.
+    fn type_mismatch(_type: Type) -> Self {
+        Error::syntax("incorrect type")
+    }
+
+    /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
 
+    /// Raised when a `Deserialize` struct type received an unexpected struct field.
     fn unknown_field(field: &str) -> Self;
 
+    /// Raised when a `Deserialize` struct type did not receive a field.
     fn missing_field(field: &'static str) -> Self;
+}
+
+/// `Type` represents all the primitive types that can be deserialized. This is used by
+/// `Error::kind_mismatch`.
+pub enum Type {
+    Bool,
+    Usize,
+    U8,
+    U16,
+    U32,
+    U64,
+    Isize,
+    I8,
+    I16,
+    I32,
+    I64,
+    F32,
+    F64,
+    Char,
+    Str,
+    String,
+    Unit,
+    Option,
+    Seq,
+    Map,
+    UnitStruct,
+    NewtypeStruct,
+    TupleStruct,
+    Struct,
+    Tuple,
+    Enum,
+    StructVariant,
+    TupleVariant,
+    UnitVariant,
+    Bytes,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -304,7 +355,7 @@ pub trait Visitor {
     fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a bool"))
+        Err(Error::type_mismatch(Type::Bool))
     }
 
     fn visit_isize<E>(&mut self, v: isize) -> Result<Self::Value, E>
@@ -334,7 +385,7 @@ pub trait Visitor {
     fn visit_i64<E>(&mut self, _v: i64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a i64"))
+        Err(Error::type_mismatch(Type::I64))
     }
 
     fn visit_usize<E>(&mut self, v: usize) -> Result<Self::Value, E>
@@ -364,7 +415,7 @@ pub trait Visitor {
     fn visit_u64<E>(&mut self, _v: u64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a u64"))
+        Err(Error::type_mismatch(Type::U64))
     }
 
     fn visit_f32<E>(&mut self, v: f32) -> Result<Self::Value, E>
@@ -376,7 +427,7 @@ pub trait Visitor {
     fn visit_f64<E>(&mut self, _v: f64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a f64"))
+        Err(Error::type_mismatch(Type::F64))
     }
 
     #[inline]
@@ -391,7 +442,7 @@ pub trait Visitor {
     fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a str"))
+        Err(Error::type_mismatch(Type::Str))
     }
 
     #[inline]
@@ -404,7 +455,7 @@ pub trait Visitor {
     fn visit_unit<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a unit"))
+        Err(Error::type_mismatch(Type::Unit))
     }
 
     #[inline]
@@ -417,37 +468,37 @@ pub trait Visitor {
     fn visit_none<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected an Option::None"))
+        Err(Error::type_mismatch(Type::Option))
     }
 
     fn visit_some<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
-        Err(Error::syntax("expected an Option::Some"))
+        Err(Error::type_mismatch(Type::Option))
     }
 
     fn visit_newtype_struct<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
-        Err(Error::syntax("expected a newtype struct"))
+        Err(Error::type_mismatch(Type::NewtypeStruct))
     }
 
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
-        Err(Error::syntax("expected a sequence"))
+        Err(Error::type_mismatch(Type::Seq))
     }
 
     fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
     {
-        Err(Error::syntax("expected a map"))
+        Err(Error::type_mismatch(Type::Map))
     }
 
     fn visit_bytes<E>(&mut self, _v: &[u8]) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::syntax("expected a &[u8]"))
+        Err(Error::type_mismatch(Type::Bytes))
     }
 
     fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<Self::Value, E>
@@ -593,7 +644,7 @@ pub trait VariantVisitor {
 
     /// `visit_unit` is called when deserializing a variant with no values.
     fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Err(Error::syntax("expected a univ variant"))
+        Err(Error::type_mismatch(Type::UnitVariant))
     }
 
     /// `visit_newtype` is called when deserializing a variant with a single value. By default this
@@ -612,7 +663,7 @@ pub trait VariantVisitor {
                       _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        Err(Error::syntax("expected a tuple variant"))
+        Err(Error::type_mismatch(Type::TupleVariant))
     }
 
     /// `visit_struct` is called when deserializing a struct-like variant.
@@ -621,7 +672,7 @@ pub trait VariantVisitor {
                        _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        Err(Error::syntax("expected a struct variant"))
+        Err(Error::type_mismatch(Type::StructVariant))
     }
 }
 

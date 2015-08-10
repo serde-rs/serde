@@ -843,7 +843,7 @@ impl<'a> de::SeqVisitor for SeqDeserializer<'a> {
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream())
+            Err(de::Error::length_mismatch(self.len))
         }
     }
 
@@ -888,7 +888,7 @@ impl<'a> de::MapVisitor for MapDeserializer<'a> {
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::end_of_stream())
+            Err(de::Error::length_mismatch(self.len))
         }
     }
 
