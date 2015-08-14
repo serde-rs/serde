@@ -108,7 +108,7 @@ pub trait Deserializer {
     fn visit_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u8` value.
@@ -116,7 +116,7 @@ pub trait Deserializer {
     fn visit_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u16` value.
@@ -124,7 +124,7 @@ pub trait Deserializer {
     fn visit_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u32` value.
@@ -132,7 +132,7 @@ pub trait Deserializer {
     fn visit_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u64` value.
@@ -148,7 +148,7 @@ pub trait Deserializer {
     fn visit_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i8` value.
@@ -156,7 +156,7 @@ pub trait Deserializer {
     fn visit_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i16` value.
@@ -164,7 +164,7 @@ pub trait Deserializer {
     fn visit_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i32` value.
@@ -172,7 +172,7 @@ pub trait Deserializer {
     fn visit_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i64` value.
@@ -188,7 +188,7 @@ pub trait Deserializer {
     fn visit_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.visit_f64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `f64` value.
