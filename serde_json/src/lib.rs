@@ -95,7 +95,13 @@
 extern crate num;
 extern crate serde;
 
-pub use self::de::{Deserializer, from_str};
+pub use self::de::{
+    Deserializer,
+    from_iter,
+    from_reader,
+    from_slice,
+    from_str,
+};
 pub use self::error::{Error, ErrorCode, Result};
 pub use self::ser::{
     Serializer,
