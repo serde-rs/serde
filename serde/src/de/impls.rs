@@ -10,8 +10,6 @@ use std::collections::{
 };
 #[cfg(feature = "nightly")]
 use collections::enum_set::{CLike, EnumSet};
-#[cfg(feature = "nightly")]
-use collections::vec_map::VecMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::path;
@@ -716,64 +714,6 @@ map_impl!(
     HashMap::new(),
     HashMap::with_capacity(visitor.size_hint().0),
     HashMap::insert);
-
-///////////////////////////////////////////////////////////////////////////////
-
-#[cfg(feature = "nightly")]
-pub struct VecMapVisitor<V> {
-    marker: PhantomData<VecMap<V>>,
-}
-
-#[cfg(feature = "nightly")]
-impl<V> VecMapVisitor<V> {
-    #[inline]
-    pub fn new() -> Self {
-        VecMapVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-#[cfg(feature = "nightly")]
-impl<V> Visitor for VecMapVisitor<V>
-    where V: Deserialize,
-{
-    type Value = VecMap<V>;
-
-    #[inline]
-    fn visit_unit<E>(&mut self) -> Result<VecMap<V>, E>
-        where E: Error,
-    {
-        Ok(VecMap::new())
-    }
-
-    #[inline]
-    fn visit_map<V_>(&mut self, mut visitor: V_) -> Result<VecMap<V>, V_::Error>
-        where V_: MapVisitor,
-    {
-        let (len, _) = visitor.size_hint();
-        let mut values = VecMap::with_capacity(len);
-
-        while let Some((key, value)) = try!(visitor.visit()) {
-            values.insert(key, value);
-        }
-
-        try!(visitor.end());
-
-        Ok(values)
-    }
-}
-
-#[cfg(feature = "nightly")]
-impl<V> Deserialize for VecMap<V>
-    where V: Deserialize,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<VecMap<V>, D::Error>
-        where D: Deserializer,
-    {
-        deserializer.visit_map(VecMapVisitor::new())
-    }
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 

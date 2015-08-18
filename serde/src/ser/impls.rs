@@ -10,8 +10,6 @@ use std::collections::{
 };
 #[cfg(feature = "nightly")]
 use collections::enum_set::{CLike, EnumSet};
-#[cfg(feature = "nightly")]
-use std::collections::vec_map::VecMap;
 use std::hash::Hash;
 #[cfg(feature = "nightly")]
 use std::iter;
@@ -549,18 +547,6 @@ impl<K, V> Serialize for BTreeMap<K, V>
 impl<K, V> Serialize for HashMap<K, V>
     where K: Serialize + Eq + Hash,
           V: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
-    }
-}
-
-#[cfg(feature = "nightly")]
-impl<V> Serialize for VecMap<V>
-    where V: Serialize,
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>

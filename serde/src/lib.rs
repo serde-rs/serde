@@ -6,7 +6,7 @@
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
 #![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
-#![cfg_attr(feature = "nightly", feature(collections, core, enumset, nonzero, step_trait, vecmap, zero_one))]
+#![cfg_attr(feature = "nightly", feature(collections, core, enumset, nonzero, step_trait, zero_one))]
 
 extern crate num;
 
