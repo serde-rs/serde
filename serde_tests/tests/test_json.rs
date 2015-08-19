@@ -1348,3 +1348,16 @@ fn test_deserialize_from_stream() {
 
     assert_eq!(request, response);
 }
+
+#[test]
+fn test_serialize_rejects_non_key_maps() {
+    let map = treemap!(
+        1 => 2,
+        3 => 4
+    );
+
+    match serde_json::to_vec(&map).unwrap_err() {
+        serde_json::Error::SyntaxError(serde_json::ErrorCode::KeyMustBeAString, 0, 0) => {}
+        _ => panic!("integers used as keys"),
+    }
+}
