@@ -68,7 +68,7 @@ pub enum Type {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-pub trait Deserialize {
+pub trait Deserialize: Sized {
     /// Deserialize this value given this `Deserializer`.
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer;
