@@ -61,7 +61,7 @@ fn main() {
 
     println!("{}", serialized);
 
-    let deserialized: Point = serde_json::from_str(&serialized_point).unwrap();
+    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
 
     println!("{:?}", deserialized);
 }
@@ -119,7 +119,7 @@ fn main() {
 
     println!("{}", serialized);
 
-    let deserialized: Point = serde_json::from_str(&serialized_point).unwrap();
+    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
 
     println!("{:?}", deserialized);
 }
