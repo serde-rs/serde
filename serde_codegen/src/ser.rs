@@ -580,9 +580,12 @@ fn serialize_struct_visitor<I>(
 ) -> (P<ast::Item>, P<ast::Item>)
     where I: Iterator<Item=P<ast::Expr>>,
 {
-    let len = struct_def.fields.len();
-
     let field_attrs = struct_field_attrs(cx, builder, struct_def);
+
+    let len = struct_def.fields.len() - field_attrs.iter()
+        .fold(0, |sum, field| {
+            sum + if field.skip_serializing_field() { 1 } else { 0 }
+        });
 
     let arms: Vec<ast::Arm> = field_attrs.into_iter()
         .zip(value_exprs)
