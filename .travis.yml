@@ -1,37 +1,41 @@
-sudo: false
 language: rust
+sudo: false
+
 rust:
   - stable
   - beta
   - nightly
+
+addons:
+  apt:
+    packages:
+    - libcurl4-openssl-dev
+    - libelf-dev
+    - libdw-dev
+
+before_script:
+- |
+    pip install 'travis-cargo<0.2' --user &&
+    export PATH=$HOME/.local/bin:$PATH
+
+script:
+- |
+    (cd serde && travis-cargo build) &&
+    (cd serde && travis-cargo test) &&
+    (cd serde_tests && travis-cargo test) &&
+    (cd serde_macros && travis-cargo --only nightly test) &&
+    (cd serde_macros && travis-cargo --only nightly bench) &&
+    (cd serde && travis-cargo --only stable doc) &&
+    (cd serde_codegen && travis-cargo --only stable doc)
+
+after_success:
+- (cd serde && travis-cargo --only stable doc-upload)
+- (cd serde_tests && travis-cargo coveralls --no-sudo)
+
 env:
   global:
-    secure: HO41LMpMXkF2In9+1sxWVu7fgolL+y9+4Q5PI6wZX2L5pDwpPJCjxaQarQXCEnoIxED1PlP03JuF7ULNz0zw1ylYhAOfOSdkxFZRnE2wMZqq6qvXBHwyMiDrAociIzoPKSGv7JVrKPsjsnd+96K6xxueIodQZrmAdyq7N/M82Mc=
-  matrix:
-    - CRATE=serde_tests TARGET=test
-matrix:
-  include:
-    - rust: nightly
-      env: CRATE=serde_macros TARGET=test
-    - rust: nightly
-      env: CRATE=serde_macros TARGET=bench
-    - rust: nightly
-      env: CRATE=serde_tests TARGET=bench
-script:
-  - (cd $CRATE && cargo $TARGET)
-after_success: |
-  [ $TRAVIS_BRANCH = "master" ] &&
-  [ $TRAVIS_PULL_REQUEST  = false ] &&
-  mkdir -p target/doc &&
-  (cd serde && cargo doc --no-deps) &&
-  (cd serde_codegen && cargo doc --no-deps) &&
-  (cd serde_macros && cargo doc --no-deps) &&
-  (cd serde_json && cargo doc --no-deps) &&
-  cp -r serde/target/doc target/doc/serde &&
-  cp -r serde_codegen/target/doc target/doc/serde_codegen &&
-  cp -r serde_macros/target/doc target/doc/serde_macros &&
-  cp -r serde_json/target/doc target/doc/serde_json &&
-  echo "<meta http-equiv=refresh content=0;url=`echo $TRAVIS_REPO_SLUG | cut -d '/' -f 2`/index.html>" > target/doc/index.html &&
-  pip install ghp-import &&
-  ghp-import -n target/doc &&
-  git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+    # override the default `--features unstable` used for the nightly branch (optional)
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+
+    # encrypted github token for doc upload (see `GH_TOKEN` link above)
+    - secure: HO41LMpMXkF2In9+1sxWVu7fgolL+y9+4Q5PI6wZX2L5pDwpPJCjxaQarQXCEnoIxED1PlP03JuF7ULNz0zw1ylYhAOfOSdkxFZRnE2wMZqq6qvXBHwyMiDrAociIzoPKSGv7JVrKPsjsnd+96K6xxueIodQZrmAdyq7N/M82Mc=
