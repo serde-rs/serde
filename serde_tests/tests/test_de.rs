@@ -1,384 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::iter;
-use std::vec;
 
-use serde::de::{self, Deserialize, Deserializer, Visitor};
+use serde::de::{Deserializer, Visitor};
 
-#[derive(Debug)]
-enum Token {
-    Bool(bool),
-    Isize(isize),
-    I8(i8),
-    I16(i16),
-    I32(i32),
-    I64(i64),
-    Usize(usize),
-    U8(u8),
-    U16(u16),
-    U32(u32),
-    U64(u64),
-    F32(f32),
-    F64(f64),
-    Char(char),
-    Str(&'static str),
-    String(String),
-    Bytes(&'static [u8]),
-
-    Option(bool),
-
-    Name(&'static str),
-
-    Unit,
-
-    SeqStart(usize),
-    SeqSep,
-    SeqEnd,
-
-    MapStart(usize),
-    MapSep,
-    MapEnd,
-
-    EnumStart(&'static str),
-    EnumUnit,
-    EnumNewtype,
-    EnumSeq,
-    EnumMap,
-    EnumEnd,
-}
-
-struct TokenDeserializer {
-    tokens: iter::Peekable<vec::IntoIter<Token>>,
-}
-
-impl<'a> TokenDeserializer {
-    fn new(tokens: Vec<Token>) -> TokenDeserializer {
-        TokenDeserializer {
-            tokens: tokens.into_iter().peekable(),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Debug)]
-enum Error {
-    SyntaxError,
-    EndOfStreamError,
-    UnknownFieldError(String),
-    MissingFieldError(&'static str),
-    InvalidName(&'static str),
-}
-
-impl de::Error for Error {
-    fn syntax(_: &str) -> Error { Error::SyntaxError }
-
-    fn end_of_stream() -> Error { Error::EndOfStreamError }
-
-    fn unknown_field(field: &str) -> Error {
-        Error::UnknownFieldError(field.to_string())
-    }
-
-    fn missing_field(field: &'static str) -> Error {
-        Error::MissingFieldError(field)
-    }
-}
-
-impl Deserializer for TokenDeserializer {
-    type Error = Error;
-
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: Visitor,
-    {
-        match self.tokens.next() {
-            Some(Token::Bool(v)) => visitor.visit_bool(v),
-            Some(Token::Isize(v)) => visitor.visit_isize(v),
-            Some(Token::I8(v)) => visitor.visit_i8(v),
-            Some(Token::I16(v)) => visitor.visit_i16(v),
-            Some(Token::I32(v)) => visitor.visit_i32(v),
-            Some(Token::I64(v)) => visitor.visit_i64(v),
-            Some(Token::Usize(v)) => visitor.visit_usize(v),
-            Some(Token::U8(v)) => visitor.visit_u8(v),
-            Some(Token::U16(v)) => visitor.visit_u16(v),
-            Some(Token::U32(v)) => visitor.visit_u32(v),
-            Some(Token::U64(v)) => visitor.visit_u64(v),
-            Some(Token::F32(v)) => visitor.visit_f32(v),
-            Some(Token::F64(v)) => visitor.visit_f64(v),
-            Some(Token::Char(v)) => visitor.visit_char(v),
-            Some(Token::Str(v)) => visitor.visit_str(v),
-            Some(Token::String(v)) => visitor.visit_string(v),
-            Some(Token::Bytes(v)) => visitor.visit_bytes(v),
-            Some(Token::Option(false)) => visitor.visit_none(),
-            Some(Token::Option(true)) => visitor.visit_some(self),
-            Some(Token::Unit) => visitor.visit_unit(),
-            Some(Token::SeqStart(len)) => {
-                visitor.visit_seq(TokenDeserializerSeqVisitor {
-                    de: self,
-                    len: len,
-                })
-            }
-            Some(Token::MapStart(len)) => {
-                visitor.visit_map(TokenDeserializerMapVisitor {
-                    de: self,
-                    len: len,
-                })
-            }
-            Some(Token::Name(_)) => self.visit(visitor),
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    /// Hook into `Option` deserializing so we can treat `Unit` as a
-    /// `None`, or a regular value as `Some(value)`.
-    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: Visitor,
-    {
-        match self.tokens.peek() {
-            Some(&Token::Option(false)) => {
-                self.tokens.next();
-                visitor.visit_none()
-            }
-            Some(&Token::Option(true)) => {
-                self.tokens.next();
-                visitor.visit_some(self)
-            }
-            Some(&Token::Unit) => {
-                self.tokens.next();
-                visitor.visit_none()
-            }
-            Some(_) => visitor.visit_some(self),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_enum<V>(&mut self,
-                     name: &str,
-                     _variants: &'static [&'static str],
-                     mut visitor: V) -> Result<V::Value, Error>
-        where V: de::EnumVisitor,
-    {
-        match self.tokens.next() {
-            Some(Token::EnumStart(n)) => {
-                if name == n {
-                    visitor.visit(TokenDeserializerVariantVisitor {
-                        de: self,
-                    })
-                } else {
-                    Err(Error::SyntaxError)
-                }
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_unit_struct<V>(&mut self, name: &str, visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        match self.tokens.peek() {
-            Some(&Token::Name(n)) => {
-                if name == n {
-                    self.tokens.next();
-                    self.visit_seq(visitor)
-                } else {
-                    Err(Error::InvalidName(n))
-                }
-            }
-            Some(_) => self.visit(visitor),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_tuple_struct<V>(&mut self,
-                             name: &str,
-                             _len: usize,
-                             visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        match self.tokens.peek() {
-            Some(&Token::Name(n)) => {
-                if name == n {
-                    self.tokens.next();
-                    self.visit_seq(visitor)
-                } else {
-                    Err(Error::InvalidName(n))
-                }
-            }
-            Some(_) => self.visit_seq(visitor),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_struct<V>(&mut self,
-                       name: &str,
-                       _fields: &'static [&'static str],
-                       visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        match self.tokens.peek() {
-            Some(&Token::Name(n)) => {
-                if name == n {
-                    self.tokens.next();
-                    self.visit_map(visitor)
-                } else {
-                    Err(Error::InvalidName(n))
-                }
-            }
-            Some(_) => self.visit_map(visitor),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-struct TokenDeserializerSeqVisitor<'a> {
-    de: &'a mut TokenDeserializer,
-    len: usize,
-}
-
-impl<'a> de::SeqVisitor for TokenDeserializerSeqVisitor<'a> {
-    type Error = Error;
-
-    fn visit<T>(&mut self) -> Result<Option<T>, Error>
-        where T: Deserialize,
-    {
-        match self.de.tokens.peek() {
-            Some(&Token::SeqSep) => {
-                self.len -= 1;
-                self.de.tokens.next();
-                Ok(Some(try!(Deserialize::deserialize(self.de))))
-            }
-            Some(&Token::SeqEnd) => Ok(None),
-            Some(_) => {
-                Err(Error::SyntaxError)
-            }
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn end(&mut self) -> Result<(), Error> {
-        assert_eq!(self.len, 0);
-        match self.de.tokens.next() {
-            Some(Token::SeqEnd) => Ok(()),
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-struct TokenDeserializerMapVisitor<'a> {
-    de: &'a mut TokenDeserializer,
-    len: usize,
-}
-
-impl<'a> de::MapVisitor for TokenDeserializerMapVisitor<'a> {
-    type Error = Error;
-
-    fn visit_key<K>(&mut self) -> Result<Option<K>, Error>
-        where K: Deserialize,
-    {
-        match self.de.tokens.peek() {
-            Some(&Token::MapSep) => {
-                self.de.tokens.next();
-                self.len -= 1;
-                Ok(Some(try!(Deserialize::deserialize(self.de))))
-            }
-            Some(&Token::MapEnd) => Ok(None),
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_value<V>(&mut self) -> Result<V, Error>
-        where V: Deserialize,
-    {
-        Ok(try!(Deserialize::deserialize(self.de)))
-    }
-
-    fn end(&mut self) -> Result<(), Error> {
-        assert_eq!(self.len, 0);
-        match self.de.tokens.next() {
-            Some(Token::MapEnd) => Ok(()),
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-struct TokenDeserializerVariantVisitor<'a> {
-    de: &'a mut TokenDeserializer,
-}
-
-impl<'a> de::VariantVisitor for TokenDeserializerVariantVisitor<'a> {
-    type Error = Error;
-
-    fn visit_variant<V>(&mut self) -> Result<V, Error>
-        where V: de::Deserialize,
-    {
-        de::Deserialize::deserialize(self.de)
-    }
-
-    fn visit_unit(&mut self) -> Result<(), Error> {
-        match self.de.tokens.next() {
-            Some(Token::EnumUnit) => {
-                de::Deserialize::deserialize(self.de)
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
-        where T: de::Deserialize,
-    {
-        match self.de.tokens.next() {
-            Some(Token::EnumNewtype) => {
-                de::Deserialize::deserialize(self.de)
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_tuple<V>(&mut self,
-                      _len: usize,
-                      visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        match self.de.tokens.next() {
-            Some(Token::EnumSeq) => {
-                de::Deserializer::visit(self.de, visitor)
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-
-    fn visit_struct<V>(&mut self,
-                       _fields: &'static [&'static str],
-                       visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        match self.de.tokens.next() {
-            Some(Token::EnumMap) => {
-                de::Deserializer::visit(self.de, visitor)
-            }
-            Some(_) => Err(Error::SyntaxError),
-            None => Err(Error::EndOfStreamError),
-        }
-    }
-}
+use token::{Token, assert_de_tokens};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -405,66 +29,12 @@ enum Enum {
 
 //////////////////////////////////////////////////////////////////////////
 
-macro_rules! btreeset {
-    () => {
-        BTreeSet::new()
-    };
-    ($($value:expr),+) => {
-        {
-            let mut set = BTreeSet::new();
-            $(set.insert($value);)+
-            set
-        }
-    }
-}
-
-macro_rules! btreemap {
-    () => {
-        BTreeMap::new()
-    };
-    ($($key:expr => $value:expr),+) => {
-        {
-            let mut map = BTreeMap::new();
-            $(map.insert($key, $value);)+
-            map
-        }
-    }
-}
-
-macro_rules! hashset {
-    () => {
-        HashSet::new()
-    };
-    ($($value:expr),+) => {
-        {
-            let mut set = HashSet::new();
-            $(set.insert($value);)+
-            set
-        }
-    }
-}
-
-macro_rules! hashmap {
-    () => {
-        HashMap::new()
-    };
-    ($($key:expr => $value:expr),+) => {
-        {
-            let mut map = HashMap::new();
-            $(map.insert($key, $value);)+
-            map
-        }
-    }
-}
-
 macro_rules! declare_test {
     ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
         #[test]
         fn $name() {
             $(
-                let mut de = TokenDeserializer::new($tokens);
-                let value: Result<_, Error> = Deserialize::deserialize(&mut de);
-                assert_eq!(value, Ok($value));
+                assert_de_tokens(&$value, $tokens);
             )+
         }
     }
@@ -539,47 +109,47 @@ declare_tests! {
     test_result {
         Ok::<i32, i32>(0) => vec![
             Token::EnumStart("Result"),
-                Token::Str("Ok"),
-
-                Token::EnumNewtype,
-                Token::I32(0),
-            Token::SeqEnd,
+            Token::Str("Ok"),
+            Token::I32(0),
         ],
         Err::<i32, i32>(1) => vec![
             Token::EnumStart("Result"),
-                Token::Str("Err"),
-
-                Token::EnumNewtype,
-                Token::I32(1),
-            Token::SeqEnd,
+            Token::Str("Err"),
+            Token::I32(1),
         ],
     }
     test_unit {
         () => vec![Token::Unit],
         () => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         () => vec![
-            Token::Name("Anything"),
-            Token::SeqStart(0),
+            Token::SeqStart(None),
+            Token::SeqEnd,
+        ],
+        () => vec![
+            Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
     test_unit_struct {
         UnitStruct => vec![Token::Unit],
         UnitStruct => vec![
-            Token::Name("UnitStruct"),
-            Token::Unit,
+            Token::UnitStruct("UnitStruct"),
         ],
         UnitStruct => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        UnitStruct => vec![
+            Token::SeqStart(None),
             Token::SeqEnd,
         ],
     }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
 
@@ -591,8 +161,31 @@ declare_tests! {
             Token::SeqEnd,
         ],
         TupleStruct(1, 2, 3) => vec![
-            Token::Name("TupleStruct"),
-            Token::SeqStart(3),
+            Token::SeqStart(None),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+
+                Token::SeqSep,
+                Token::I32(3),
+            Token::SeqEnd,
+        ],
+        TupleStruct(1, 2, 3) => vec![
+            Token::TupleStructStart("TupleStruct", Some(3)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+
+                Token::SeqSep,
+                Token::I32(3),
+            Token::SeqEnd,
+        ],
+        TupleStruct(1, 2, 3) => vec![
+            Token::TupleStructStart("TupleStruct", None),
                 Token::SeqSep,
                 Token::I32(1),
 
@@ -609,23 +202,23 @@ declare_tests! {
             Token::Unit,
         ],
         BTreeSet::<isize>::new() => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         btreeset![btreeset![], btreeset![1], btreeset![2, 3]] => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep,
-                Token::SeqStart(0),
+                Token::SeqStart(Some(0)),
                 Token::SeqEnd,
 
                 Token::SeqSep,
-                Token::SeqStart(1),
+                Token::SeqStart(Some(1)),
                     Token::SeqSep,
                     Token::I32(1),
                 Token::SeqEnd,
 
                 Token::SeqSep,
-                Token::SeqStart(2),
+                Token::SeqStart(Some(2)),
                     Token::SeqSep,
                     Token::I32(2),
 
@@ -635,12 +228,10 @@ declare_tests! {
             Token::SeqEnd,
         ],
         BTreeSet::<isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::Unit,
+            Token::UnitStruct("Anything"),
         ],
         BTreeSet::<isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::SeqStart(0),
+            Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
@@ -649,11 +240,11 @@ declare_tests! {
             Token::Unit,
         ],
         HashSet::<isize>::new() => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         hashset![1, 2, 3] => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
 
@@ -665,12 +256,10 @@ declare_tests! {
             Token::SeqEnd,
         ],
         HashSet::<isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::Unit,
+            Token::UnitStruct("Anything"),
         ],
         HashSet::<isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::SeqStart(0),
+            Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
@@ -679,23 +268,23 @@ declare_tests! {
             Token::Unit,
         ],
         Vec::<isize>::new() => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         vec![vec![], vec![1], vec![2, 3]] => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep,
-                Token::SeqStart(0),
+                Token::SeqStart(Some(0)),
                 Token::SeqEnd,
 
                 Token::SeqSep,
-                Token::SeqStart(1),
+                Token::SeqStart(Some(1)),
                     Token::SeqSep,
                     Token::I32(1),
                 Token::SeqEnd,
 
                 Token::SeqSep,
-                Token::SeqStart(2),
+                Token::SeqStart(Some(2)),
                     Token::SeqSep,
                     Token::I32(2),
 
@@ -705,12 +294,10 @@ declare_tests! {
             Token::SeqEnd,
         ],
         Vec::<isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::Unit,
+            Token::UnitStruct("Anything"),
         ],
         Vec::<isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::SeqStart(0),
+            Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
@@ -719,23 +306,23 @@ declare_tests! {
             Token::Unit,
         ],
         [0; 0] => vec![
-            Token::SeqStart(0),
+            Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
         ([0; 0], [1], [2, 3]) => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep,
-                Token::SeqStart(0),
+                Token::SeqStart(Some(0)),
                 Token::SeqEnd,
 
                 Token::SeqSep,
-                Token::SeqStart(1),
+                Token::SeqStart(Some(1)),
                     Token::SeqSep,
                     Token::I32(1),
                 Token::SeqEnd,
 
                 Token::SeqSep,
-                Token::SeqStart(2),
+                Token::SeqStart(Some(2)),
                     Token::SeqSep,
                     Token::I32(2),
 
@@ -745,24 +332,22 @@ declare_tests! {
             Token::SeqEnd,
         ],
         [0; 0] => vec![
-            Token::Name("Anything"),
-            Token::Unit,
+            Token::UnitStruct("Anything"),
         ],
         [0; 0] => vec![
-            Token::Name("Anything"),
-            Token::SeqStart(0),
+            Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
     test_tuple {
         (1,) => vec![
-            Token::SeqStart(1),
+            Token::SeqStart(Some(1)),
                 Token::SeqSep,
                 Token::I32(1),
             Token::SeqEnd,
         ],
         (1, 2, 3) => vec![
-            Token::SeqStart(3),
+            Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
 
@@ -779,18 +364,18 @@ declare_tests! {
             Token::Unit,
         ],
         BTreeMap::<isize, isize>::new() => vec![
-            Token::MapStart(0),
+            Token::MapStart(Some(0)),
             Token::MapEnd,
         ],
         btreemap![1 => 2] => vec![
-            Token::MapStart(1),
+            Token::MapStart(Some(1)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
         btreemap![1 => 2, 3 => 4] => vec![
-            Token::MapStart(2),
+            Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
@@ -801,15 +386,15 @@ declare_tests! {
             Token::MapEnd,
         ],
         btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => vec![
-            Token::MapStart(2),
+            Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
-                Token::MapStart(0),
+                Token::MapStart(Some(0)),
                 Token::MapEnd,
 
                 Token::MapSep,
                 Token::I32(2),
-                Token::MapStart(2),
+                Token::MapStart(Some(2)),
                     Token::MapSep,
                     Token::I32(3),
                     Token::I32(4),
@@ -821,12 +406,10 @@ declare_tests! {
             Token::MapEnd,
         ],
         BTreeMap::<isize, isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::Unit,
+            Token::UnitStruct("Anything"),
         ],
         BTreeMap::<isize, isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::MapStart(0),
+            Token::StructStart("Anything", Some(0)),
             Token::MapEnd,
         ],
     }
@@ -835,18 +418,18 @@ declare_tests! {
             Token::Unit,
         ],
         HashMap::<isize, isize>::new() => vec![
-            Token::MapStart(0),
+            Token::MapStart(Some(0)),
             Token::MapEnd,
         ],
         hashmap![1 => 2] => vec![
-            Token::MapStart(1),
+            Token::MapStart(Some(1)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
         hashmap![1 => 2, 3 => 4] => vec![
-            Token::MapStart(2),
+            Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
@@ -857,15 +440,15 @@ declare_tests! {
             Token::MapEnd,
         ],
         hashmap![1 => hashmap![], 2 => hashmap![3 => 4, 5 => 6]] => vec![
-            Token::MapStart(2),
+            Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
-                Token::MapStart(0),
+                Token::MapStart(Some(0)),
                 Token::MapEnd,
 
                 Token::MapSep,
                 Token::I32(2),
-                Token::MapStart(2),
+                Token::MapStart(Some(2)),
                     Token::MapSep,
                     Token::I32(3),
                     Token::I32(4),
@@ -877,18 +460,16 @@ declare_tests! {
             Token::MapEnd,
         ],
         HashMap::<isize, isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::Unit,
+            Token::UnitStruct("Anything"),
         ],
         HashMap::<isize, isize>::new() => vec![
-            Token::Name("Anything"),
-            Token::MapStart(0),
+            Token::StructStart("Anything", Some(0)),
             Token::MapEnd,
         ],
     }
     test_struct {
         Struct { a: 1, b: 2, c: 3 } => vec![
-            Token::MapStart(3),
+            Token::MapStart(Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -903,8 +484,7 @@ declare_tests! {
             Token::MapEnd,
         ],
         Struct { a: 1, b: 2, c: 3 } => vec![
-            Token::Name("Struct"),
-            Token::MapStart(3),
+            Token::StructStart("Struct", Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -921,83 +501,58 @@ declare_tests! {
     }
     test_enum_unit {
         Enum::Unit => vec![
-            Token::EnumStart("Enum"),
-                Token::Str("Unit"),
-
-                Token::EnumUnit,
-                Token::Unit,
-            Token::EnumEnd,
+            Token::EnumUnit("Enum", "Unit"),
         ],
     }
     test_enum_simple {
         Enum::Simple(1) => vec![
-            Token::EnumStart("Enum"),
-                Token::Str("Simple"),
-
-                Token::EnumNewtype,
-                Token::I32(1),
-            Token::EnumEnd,
+            Token::EnumNewtype("Enum", "Simple"),
+            Token::I32(1),
         ],
     }
     test_enum_seq {
         Enum::Seq(1, 2, 3) => vec![
-            Token::EnumStart("Enum"),
-                Token::Str("Seq"),
+            Token::EnumSeqStart("Enum", "Seq", Some(3)),
+                Token::SeqSep,
+                Token::I32(1),
 
-                Token::EnumSeq,
-                Token::SeqStart(3),
-                    Token::SeqSep,
-                    Token::I32(1),
+                Token::SeqSep,
+                Token::I32(2),
 
-                    Token::SeqSep,
-                    Token::I32(2),
-
-                    Token::SeqSep,
-                    Token::I32(3),
-                Token::SeqEnd,
-            Token::EnumEnd,
+                Token::SeqSep,
+                Token::I32(3),
+            Token::SeqEnd,
         ],
     }
     test_enum_map {
         Enum::Map { a: 1, b: 2, c: 3 } => vec![
-            Token::EnumStart("Enum"),
-                Token::Str("Map"),
+            Token::EnumMapStart("Enum", "Map", Some(3)),
+                Token::MapSep,
+                Token::Str("a"),
+                Token::I32(1),
 
-                Token::EnumMap,
-                Token::MapStart(3),
-                    Token::MapSep,
-                    Token::Str("a"),
-                    Token::I32(1),
+                Token::MapSep,
+                Token::Str("b"),
+                Token::I32(2),
 
-                    Token::MapSep,
-                    Token::Str("b"),
-                    Token::I32(2),
-
-                    Token::MapSep,
-                    Token::Str("c"),
-                    Token::I32(3),
-                Token::MapEnd,
-            Token::EnumEnd,
+                Token::MapSep,
+                Token::Str("c"),
+                Token::I32(3),
+            Token::MapEnd,
         ],
     }
     test_enum_unit_usize {
         Enum::Unit => vec![
             Token::EnumStart("Enum"),
-                Token::Usize(0),
-
-                Token::EnumUnit,
-                Token::Unit,
-            Token::EnumEnd,
+            Token::Usize(0),
+            Token::Unit,
         ],
     }
     test_enum_unit_bytes {
         Enum::Unit => vec![
             Token::EnumStart("Enum"),
-                Token::Bytes(b"Unit"),
-
-                Token::EnumUnit,
-                Token::Unit,
-            Token::EnumEnd,
+            Token::Bytes(b"Unit"),
+            Token::Unit,
         ],
     }
 }

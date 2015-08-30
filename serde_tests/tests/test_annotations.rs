@@ -1,5 +1,6 @@
 use std::default;
-use serde_json;
+
+use token::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Default {
@@ -18,7 +19,7 @@ struct Rename {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct FormatRename {
     a1: i32,
-    #[serde(rename(xml= "a4", json="a5"))]
+    #[serde(rename(xml= "a4", token="a5"))]
     a2: i32,
 }
 
@@ -26,7 +27,7 @@ struct FormatRename {
 enum SerEnum<A> {
     Map {
         a: i8,
-        #[serde(rename(xml= "c", json="d"))]
+        #[serde(rename(xml= "c", token="d"))]
         b: A,
     },
 }
@@ -40,51 +41,131 @@ struct SkipSerializingFields<A: default::Default> {
 
 #[test]
 fn test_default() {
-    let deserialized_value: Default = serde_json::from_str(&"{\"a1\":1,\"a2\":2}").unwrap();
-    assert_eq!(deserialized_value, Default { a1: 1, a2: 2 });
+    assert_de_tokens(
+        &Default { a1: 1, a2: 2 },
+        vec![
+            Token::StructStart("Default", Some(2)),
 
-    let deserialized_value: Default = serde_json::from_str(&"{\"a1\":1}").unwrap();
-    assert_eq!(deserialized_value, Default { a1: 1, a2: 0 });
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a2"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &Default { a1: 1, a2: 0 },
+        vec![
+            Token::StructStart("Default", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapEnd,
+        ]
+    );
 }
 
 #[test]
 fn test_rename() {
-    let value = Rename { a1: 1, a2: 2 };
-    let serialized_value = serde_json::to_string(&value).unwrap();
-    assert_eq!(serialized_value, "{\"a1\":1,\"a3\":2}");
+    assert_tokens(
+        &Rename { a1: 1, a2: 2 },
+        vec![
+            Token::StructStart("Rename", Some(2)),
 
-    let deserialized_value: Rename = serde_json::from_str(&serialized_value).unwrap();
-    assert_eq!(value, deserialized_value);
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a3"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
 }
 
 #[test]
 fn test_format_rename() {
-    let value = FormatRename { a1: 1, a2: 2 };
-    let serialized_value = serde_json::to_string(&value).unwrap();
-    assert_eq!(serialized_value, "{\"a1\":1,\"a5\":2}");
+    assert_tokens(
+        &FormatRename { a1: 1, a2: 2 },
+        vec![
+            Token::StructStart("FormatRename", Some(2)),
 
-    let deserialized_value = serde_json::from_str("{\"a1\":1,\"a5\":2}").unwrap();
-    assert_eq!(value, deserialized_value);
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a5"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
 }
 
 #[test]
 fn test_enum_format_rename() {
-    let s1 = String::new();
-    let value = SerEnum::Map { a: 0i8, b: s1 };
-    let serialized_value = serde_json::to_string(&value).unwrap();
-    let ans = "{\"Map\":{\"a\":0,\"d\":\"\"}}";
-    assert_eq!(serialized_value, ans);
+    assert_tokens(
+        &SerEnum::Map {
+            a: 0,
+            b: String::new(),
+        },
+        vec![
+            Token::EnumMapStart("SerEnum", "Map", Some(2)),
 
-    let deserialized_value = serde_json::from_str(ans).unwrap();
-    assert_eq!(value, deserialized_value);
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("d"),
+            Token::Str(""),
+
+            Token::MapEnd,
+        ]
+    );
 }
 
 #[test]
 fn test_skip_serializing_fields() {
-    let value = SkipSerializingFields { a: 1, b: 2 };
-    let serialized_value = serde_json::to_string(&value).unwrap();
-    assert_eq!(serialized_value, "{\"a\":1}");
+    assert_ser_tokens(
+        &SkipSerializingFields {
+            a: 1,
+            b: 2,
+        },
+        &[
+            Token::StructStart("SkipSerializingFields", Some(1)),
 
-    let deserialized_value: SkipSerializingFields<_> = serde_json::from_str(&serialized_value).unwrap();
-    assert_eq!(SkipSerializingFields { a: 1, b: 0 }, deserialized_value);
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &SkipSerializingFields {
+            a: 1,
+            b: 0,
+        },
+        vec![
+            Token::StructStart("SkipSerializingFields", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
 }

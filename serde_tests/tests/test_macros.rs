@@ -1,18 +1,4 @@
-use std::collections::BTreeMap;
-use serde_json::{self, Value};
-
-macro_rules! btreemap {
-    () => {
-        BTreeMap::new()
-    };
-    ($($key:expr => $value:expr),+) => {
-        {
-            let mut map = BTreeMap::new();
-            $(map.insert($key, $value);)+
-            map
-        }
-    }
-}
+use token::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens};
 
 /*
 trait Trait {
@@ -83,7 +69,7 @@ enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
     },
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
     Unit,
     Seq(
@@ -152,23 +138,10 @@ pub enum GenericEnum<T, U> {
 
 #[test]
 fn test_named_unit() {
-    let named_unit = NamedUnit;
-
-    assert_eq!(
-        serde_json::to_string(&named_unit).unwrap(),
-        "null".to_string()
+    assert_tokens(
+        &NamedUnit,
+        vec![Token::UnitStruct("NamedUnit")]
     );
-
-    assert_eq!(
-        serde_json::to_value(&named_unit),
-        Value::Null
-    );
-
-    let v: NamedUnit = serde_json::from_str("null").unwrap();
-    assert_eq!(v, named_unit);
-
-    let v: NamedUnit = serde_json::from_value(Value::Null).unwrap();
-    assert_eq!(v, named_unit);
 }
 
 #[test]
@@ -176,35 +149,41 @@ fn test_ser_named_tuple() {
     let a = 5;
     let mut b = 6;
     let c = 7;
-    let named_tuple = SerNamedTuple(&a, &mut b, c);
+    assert_ser_tokens(
+        &SerNamedTuple(&a, &mut b, c),
+        &[
+            Token::TupleStructStart("SerNamedTuple", Some(3)),
+            Token::SeqSep,
+            Token::I32(5),
 
-    assert_eq!(
-        serde_json::to_string(&named_tuple).unwrap(),
-        "[5,6,7]"
-    );
+            Token::SeqSep,
+            Token::I32(6),
 
-    assert_eq!(
-        serde_json::to_value(&named_tuple),
-        Value::Array(vec![Value::U64(5), Value::U64(6), Value::U64(7)])
+            Token::SeqSep,
+            Token::I32(7),
+
+            Token::SeqEnd,
+        ],
     );
 }
 
 #[test]
 fn test_de_named_tuple() {
-    let v: DeNamedTuple<i32, i32, i32> = serde_json::from_str("[1,2,3]").unwrap();
-    assert_eq!(
-        v,
-        DeNamedTuple(1, 2, 3)
-    );
+    assert_de_tokens(
+        &DeNamedTuple(5, 6, 7),
+        vec![
+            Token::TupleStructStart("DeNamedTuple", Some(3)),
+            Token::SeqSep,
+            Token::I32(5),
 
-    let v: Value = serde_json::from_str("[1,2,3]").unwrap();
-    assert_eq!(
-        v,
-        Value::Array(vec![
-            Value::U64(1),
-            Value::U64(2),
-            Value::U64(3),
-        ])
+            Token::SeqSep,
+            Token::I32(6),
+
+            Token::SeqSep,
+            Token::I32(7),
+
+            Token::SeqEnd,
+        ]
     );
 }
 
@@ -213,60 +192,68 @@ fn test_ser_named_map() {
     let a = 5;
     let mut b = 6;
     let c = 7;
-    let named_map = SerNamedMap {
-        a: &a,
-        b: &mut b,
-        c: c,
-    };
 
-    assert_eq!(
-        serde_json::to_string(&named_map).unwrap(),
-        "{\"a\":5,\"b\":6,\"c\":7}"
-    );
+    assert_ser_tokens(
+        &SerNamedMap {
+            a: &a,
+            b: &mut b,
+            c: c,
+        },
+        &[
+            Token::StructStart("SerNamedMap", Some(3)),
 
-    assert_eq!(
-        serde_json::to_value(&named_map),
-        Value::Object(btreemap![
-            "a".to_string() => Value::U64(5),
-            "b".to_string() => Value::U64(6),
-            "c".to_string() => Value::U64(7)
-        ])
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I32(5),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::I32(6),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::I32(7),
+
+            Token::MapEnd,
+        ]
     );
 }
 
 #[test]
 fn test_de_named_map() {
-    let v = DeNamedMap {
-        a: 5,
-        b: 6,
-        c: 7,
-    };
+    assert_de_tokens(
+        &DeNamedMap {
+            a: 5,
+            b: 6,
+            c: 7,
+        },
+        vec![
+            Token::StructStart("DeNamedMap", Some(3)),
 
-    let v2: DeNamedMap<i32, i32, i32> = serde_json::from_str(
-        "{\"a\":5,\"b\":6,\"c\":7}"
-    ).unwrap();
-    assert_eq!(v, v2);
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I32(5),
 
-    let v2 = serde_json::from_value(Value::Object(btreemap![
-        "a".to_string() => Value::U64(5),
-        "b".to_string() => Value::U64(6),
-        "c".to_string() => Value::U64(7)
-    ])).unwrap();
-    assert_eq!(v, v2);
+            Token::MapSep,
+            Token::Str("b"),
+            Token::I32(6),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::I32(7),
+
+            Token::MapEnd,
+        ]
+    );
 }
 
 #[test]
 fn test_ser_enum_unit() {
-    assert_eq!(
-        serde_json::to_string(&SerEnum::Unit::<u32, u32, u32>).unwrap(),
-        "{\"Unit\":[]}"
-    );
-
-    assert_eq!(
-        serde_json::to_value(&SerEnum::Unit::<u32, u32, u32>),
-        Value::Object(btreemap!(
-            "Unit".to_string() => Value::Array(vec![]))
-        )
+    assert_ser_tokens(
+        &SerEnum::Unit::<u32, u32, u32>,
+        &[
+            Token::EnumUnit("SerEnum", "Unit"),
+        ]
     );
 }
 
@@ -279,37 +266,32 @@ fn test_ser_enum_seq() {
     let mut e = 5;
     //let f = 6;
 
-    assert_eq!(
-        serde_json::to_string(&SerEnum::Seq(
+    assert_ser_tokens(
+        &SerEnum::Seq(
             a,
             b,
             &c,
             //d,
             &mut e,
             //f,
-        )).unwrap(),
-        "{\"Seq\":[1,2,3,5]}".to_string()
-    );
+        ),
+        &[
+            Token::EnumSeqStart("SerEnum", "Seq", Some(4)),
 
-    assert_eq!(
-        serde_json::to_value(&SerEnum::Seq(
-            a,
-            b,
-            &c,
-            //d,
-            &mut e,
-            //e,
-        )),
-        Value::Object(btreemap!(
-            "Seq".to_string() => Value::Array(vec![
-                Value::U64(1),
-                Value::U64(2),
-                Value::U64(3),
-                //Value::U64(4),
-                Value::U64(5),
-                //Value::U64(6),
-            ])
-        ))
+            Token::SeqSep,
+            Token::I8(1),
+
+            Token::SeqSep,
+            Token::I32(2),
+
+            Token::SeqSep,
+            Token::I32(3),
+
+            Token::SeqSep,
+            Token::I32(5),
+
+            Token::SeqEnd,
+        ],
     );
 }
 
@@ -322,54 +304,46 @@ fn test_ser_enum_map() {
     let mut e = 5;
     //let f = 6;
 
-    assert_eq!(
-        serde_json::to_string(&SerEnum::Map {
+    assert_ser_tokens(
+        &SerEnum::Map {
             a: a,
             b: b,
             c: &c,
             //d: d,
             e: &mut e,
             //f: f,
-        }).unwrap(),
-        "{\"Map\":{\"a\":1,\"b\":2,\"c\":3,\"e\":5}}".to_string()
-    );
+        },
+        &[
+            Token::EnumMapStart("SerEnum", "Map", Some(4)),
 
-    assert_eq!(
-        serde_json::to_value(&SerEnum::Map {
-            a: a,
-            b: b,
-            c: &c,
-            //d: d,
-            e: &mut e,
-            //f: f,
-        }),
-        Value::Object(btreemap!(
-            "Map".to_string() => Value::Object(btreemap![
-                "a".to_string() => Value::U64(1),
-                "b".to_string() => Value::U64(2),
-                "c".to_string() => Value::U64(3),
-                //"d".to_string() => Value::U64(4)
-                "e".to_string() => Value::U64(5)
-                //"f".to_string() => Value::U64(6)
-            ])
-        ))
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::I32(3),
+
+            Token::MapSep,
+            Token::Str("e"),
+            Token::I32(5),
+
+            Token::MapEnd,
+        ],
     );
 }
 
 #[test]
 fn test_de_enum_unit() {
-    let v: DeEnum<_, _, _> = serde_json::from_str("{\"Unit\":[]}").unwrap();
-    assert_eq!(
-        v,
-        DeEnum::Unit::<u32, u32, u32>
-    );
-
-    let v: DeEnum<_, _, _> = serde_json::from_value(Value::Object(btreemap!(
-        "Unit".to_string() => Value::Array(vec![]))
-    )).unwrap();
-    assert_eq!(
-        v,
-        DeEnum::Unit::<u32, u32, u32>
+    assert_tokens(
+        &DeEnum::Unit::<u32, u32, u32>,
+        vec![
+            Token::EnumUnit("DeEnum", "Unit"),
+        ],
     );
 }
 
@@ -382,39 +356,32 @@ fn test_de_enum_seq() {
     let e = 5;
     //let f = 6;
 
-    let v: DeEnum<_, _, _> = serde_json::from_str("{\"Seq\":[1,2,3,5]}").unwrap();
-    assert_eq!(
-        v,
-        DeEnum::Seq(
+    assert_tokens(
+        &DeEnum::Seq(
             a,
             b,
             c,
             //d,
             e,
             //f,
-        )
-    );
+        ),
+        vec![
+            Token::EnumSeqStart("DeEnum", "Seq", Some(4)),
 
-    let v: DeEnum<_, _, _> = serde_json::from_value(Value::Object(btreemap!(
-        "Seq".to_string() => Value::Array(vec![
-            Value::U64(1),
-            Value::U64(2),
-            Value::U64(3),
-            //Value::U64(4),
-            Value::U64(5),
-            //Value::U64(6),
-        ])
-    ))).unwrap();
-    assert_eq!(
-        v,
-        DeEnum::Seq(
-            a,
-            b,
-            c,
-            //d,
-            e,
-            //e,
-        )
+            Token::SeqSep,
+            Token::I8(1),
+
+            Token::SeqSep,
+            Token::I32(2),
+
+            Token::SeqSep,
+            Token::I32(3),
+
+            Token::SeqSep,
+            Token::I32(5),
+
+            Token::SeqEnd,
+        ],
     );
 }
 
@@ -427,110 +394,186 @@ fn test_de_enum_map() {
     let e = 5;
     //let f = 6;
 
-    let v: DeEnum<_, _, _> = serde_json::from_str(
-        "{\"Map\":{\"a\":1,\"b\":2,\"c\":3,\"e\":5}}"
-    ).unwrap();
-    assert_eq!(
-        v,
-        DeEnum::Map {
+    assert_tokens(
+        &DeEnum::Map {
             a: a,
             b: b,
             c: c,
             //d: d,
             e: e,
             //f: f,
-        }
-    );
+        },
+        vec![
+            Token::EnumMapStart("DeEnum", "Map", Some(4)),
 
-    let v: DeEnum<_, _, _> = serde_json::from_value(Value::Object(btreemap!(
-        "Map".to_string() => Value::Object(btreemap![
-            "a".to_string() => Value::U64(1),
-            "b".to_string() => Value::U64(2),
-            "c".to_string() => Value::U64(3),
-            //"d".to_string() => Value::U64(4)
-            "e".to_string() => Value::U64(5)
-            //"f".to_string() => Value::U64(6)
-        ])
-    ))).unwrap();
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
 
-    assert_eq!(
-        v,
-        DeEnum::Map {
-            a: a,
-            b: b,
-            c: c,
-            //d: d,
-            e: e,
-            //f: f,
-        }
+            Token::MapSep,
+            Token::Str("b"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::I32(3),
+
+            Token::MapSep,
+            Token::Str("e"),
+            Token::I32(5),
+
+            Token::MapEnd,
+        ],
     );
 }
 
 #[test]
 fn test_lifetimes() {
     let value = 5;
-    let lifetime = Lifetimes::LifetimeSeq(&value);
-    assert_eq!(
-        serde_json::to_string(&lifetime).unwrap(),
-        "{\"LifetimeSeq\":5}"
+
+    assert_ser_tokens(
+        &Lifetimes::LifetimeSeq(&value),
+        &[
+            Token::EnumNewtype("Lifetimes", "LifetimeSeq"),
+            Token::I32(5),
+        ]
     );
 
-    let lifetime = Lifetimes::NoLifetimeSeq(5);
-    assert_eq!(
-        serde_json::to_string(&lifetime).unwrap(),
-        "{\"NoLifetimeSeq\":5}"
+    assert_ser_tokens(
+        &Lifetimes::NoLifetimeSeq(5),
+        &[
+            Token::EnumNewtype("Lifetimes", "NoLifetimeSeq"),
+            Token::I32(5),
+        ]
     );
 
-    let value = 5;
-    let lifetime = Lifetimes::LifetimeMap { a: &value };
-    assert_eq!(
-        serde_json::to_string(&lifetime).unwrap(),
-        "{\"LifetimeMap\":{\"a\":5}}"
+    assert_ser_tokens(
+        &Lifetimes::LifetimeMap { a: &value },
+        &[
+            Token::EnumMapStart("Lifetimes", "LifetimeMap", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I32(5),
+
+            Token::MapEnd,
+        ]
     );
 
-    let lifetime = Lifetimes::NoLifetimeMap { a: 5 };
-    assert_eq!(
-        serde_json::to_string(&lifetime).unwrap(),
-        "{\"NoLifetimeMap\":{\"a\":5}}"
+    assert_ser_tokens(
+        &Lifetimes::NoLifetimeMap { a: 5 },
+        &[
+            Token::EnumMapStart("Lifetimes", "NoLifetimeMap", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I32(5),
+
+            Token::MapEnd,
+        ]
     );
 }
 
-macro_rules! declare_tests {
-    ($($name:ident { $($ty:ty : $value:expr => $str:expr,)+ })+) => {
-        $(
-            #[test]
-            fn $name() {
-                $(
-                    let value: $ty = $value;
+#[test]
+fn test_generic_struct() {
+    assert_tokens(
+        &GenericStruct { x: 5u32 },
+        vec![
+            Token::StructStart("GenericStruct", Some(1)),
 
-                    let string = serde_json::to_string(&value).unwrap();
-                    assert_eq!(string, $str);
+            Token::MapSep,
+            Token::Str("x"),
+            Token::U32(5),
 
-                    let expected: $ty = serde_json::from_str(&string).unwrap();
-                    assert_eq!(value, expected);
-                )+
-            }
-        )+
-    }
+            Token::MapEnd,
+        ]
+    );
 }
 
-declare_tests! {
-    test_generic_struct {
-        GenericStruct<u32> : GenericStruct { x: 5 } => "{\"x\":5}",
-    }
-    test_generic_newtype_struct {
-        GenericNewtypeStruct<u32> : GenericNewtypeStruct(5) => "5",
-    }
-    test_generic_tuple_struct {
-        GenericTupleStruct<u32, u32> : GenericTupleStruct(5, 6) => "[5,6]",
-    }
-    test_generic_enum_newtype {
-        GenericEnum<u32, u32> : GenericEnum::Newtype(5) => "{\"Newtype\":5}",
-    }
-    test_generic_enum_seq {
-        GenericEnum<u32, u32> : GenericEnum::Seq(5, 6) => "{\"Seq\":[5,6]}",
-    }
-    test_generic_enum_map {
-        GenericEnum<u32, u32> : GenericEnum::Map { x: 5, y: 6 } => "{\"Map\":{\"x\":5,\"y\":6}}",
-    }
+#[test]
+fn test_generic_newtype_struct() {
+    assert_tokens(
+        &GenericNewtypeStruct(5u32),
+        vec![
+            Token::StructNewtype("GenericNewtypeStruct"),
+            Token::U32(5),
+        ]
+    );
+}
+
+#[test]
+fn test_generic_tuple_struct() {
+    assert_tokens(
+        &GenericTupleStruct(5u32, 6u32),
+        vec![
+            Token::TupleStructStart("GenericTupleStruct", Some(2)),
+
+            Token::SeqSep,
+            Token::U32(5),
+
+            Token::SeqSep,
+            Token::U32(6),
+
+            Token::SeqEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_generic_enum_unit() {
+    assert_tokens(
+        &GenericEnum::Unit::<u32, u32>,
+        vec![
+            Token::EnumUnit("GenericEnum", "Unit"),
+        ]
+    );
+}
+
+#[test]
+fn test_generic_enum_newtype() {
+    assert_tokens(
+        &GenericEnum::Newtype::<u32, u32>(5),
+        vec![
+            Token::EnumNewtype("GenericEnum", "Newtype"),
+            Token::U32(5),
+        ]
+    );
+}
+
+#[test]
+fn test_generic_enum_seq() {
+    assert_tokens(
+        &GenericEnum::Seq::<u32, u32>(5, 6),
+        vec![
+            Token::EnumSeqStart("GenericEnum", "Seq", Some(2)),
+
+            Token::SeqSep,
+            Token::U32(5),
+
+            Token::SeqSep,
+            Token::U32(6),
+
+            Token::SeqEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_generic_enum_map() {
+    assert_tokens(
+        &GenericEnum::Map::<u32, u32> { x: 5, y: 6 },
+        vec![
+            Token::EnumMapStart("GenericEnum", "Map", Some(2)),
+
+            Token::MapSep,
+            Token::Str("x"),
+            Token::U32(5),
+
+            Token::MapSep,
+            Token::Str("y"),
+            Token::U32(6),
+
+            Token::MapEnd,
+        ]
+    );
 }

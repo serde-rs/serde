@@ -16,6 +16,7 @@ use bytes;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     SyntaxError,
     EndOfStreamError,
