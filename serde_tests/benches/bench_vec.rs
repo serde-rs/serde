@@ -504,14 +504,14 @@ fn run_decoder<
     assert_eq!(Ok(value), v);
 }
 
-fn run_deserializer<
-    D: Deserializer<Error=E>,
-    E: Debug,
-    T: Clone + PartialEq + Debug + Deserialize
->(mut d: D, value: T) {
-    let v: T = Deserialize::deserialize(&mut d).unwrap();
+fn run_deserializer<D, T>(mut d: D, value: T)
+    where D: Deserializer,
+          D::Error: Debug + PartialEq,
+          T: Clone + PartialEq + Debug + Deserialize
+{
+    let v = T::deserialize(&mut d);
 
-    assert_eq!(value, v);
+    assert_eq!(Ok(value), v);
 }
 
 #[bench]
