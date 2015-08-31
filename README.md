@@ -488,23 +488,23 @@ impl serde::Deserialize for PointField {
     fn deserialize<D>(deserializer: &mut D) -> Result<PointField, D::Error>
         where D: serde::de::Deserializer
     {
-        struct FieldVisitor;
+        struct PointFieldVisitor;
 
-        impl serde::de::Visitor for FieldVisitor {
-            type Value = Field;
+        impl serde::de::Visitor for PointFieldVisitor {
+            type Value = PointField;
 
             fn visit_str<E>(&mut self, value: &str) -> Result<PointField, E>
                 where E: serde::de::Error
             {
                 match value {
-                    "x" => Ok(Field::X),
-                    "y" => Ok(Field::Y),
+                    "x" => Ok(PointField::X),
+                    "y" => Ok(PointField::Y),
                     _ => Err(serde::de::Error::syntax("expected x or y")),
                 }
             }
         }
 
-        deserializer.visit(FieldVisitor)
+        deserializer.visit(PointFieldVisitor)
     }
 }
 ```
@@ -516,7 +516,8 @@ impl serde::Deserialize for Point {
     fn deserialize<D>(deserializer: &mut D) -> Result<Point, D::Error>
         where D: serde::de::Deserializer
     {
-        deserializer.visit_struct("Point", PointVisitor)
+        static FIELDS: &'static [&'static str] = &["x", "y"];
+        deserializer.visit_struct("Point", FIELDS, PointVisitor)
     }
 }
 
@@ -525,9 +526,7 @@ struct PointVisitor;
 impl serde::de::Visitor for PointVisitor {
     type Value = Point;
 
-    fn visit_struct<V>(&mut self,
-                       _fields: &[&str],
-                       mut visitor: V) -> Result<Point, V::Error>
+    fn visit_map<V>(&mut self, mut visitor: V) -> Result<Point, V::Error>
         where V: serde::de::MapVisitor
     {
         let mut x = None;
@@ -535,8 +534,8 @@ impl serde::de::Visitor for PointVisitor {
 
         loop {
             match try!(visitor.visit_key()) {
-                Some(Field::X) => { x = Some(try!(visitor.visit_value())); }
-                Some(Field::Y) => { y = Some(try!(visitor.visit_value())); }
+                Some(PointField::X) => { x = Some(try!(visitor.visit_value())); }
+                Some(PointField::Y) => { y = Some(try!(visitor.visit_value())); }
                 None => { break; }
             }
         }
