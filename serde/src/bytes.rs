@@ -1,7 +1,5 @@
 //! Helper module to enable serializing bytes more efficiently
 
-#![allow(missing_docs)]
-
 use std::ops;
 use std::fmt;
 use std::ascii;
@@ -62,19 +60,21 @@ impl<'a> ser::Serialize for Bytes<'a> {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// `ByteBuf` wraps a `Vec<u8>` in order to hook into serialize and from deserialize a byte array.
+/// `ByteBuf` wraps a `Vec<u8>` and serializes as a byte array.
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ByteBuf {
     bytes: Vec<u8>,
 }
 
 impl ByteBuf {
+    /// Construct a new, empty `ByteBuf`.
     pub fn new() -> Self {
         ByteBuf {
             bytes: Vec::new(),
         }
     }
 
+    /// Construct a new, empty `ByteBuf` with the specified capacity.
     pub fn with_capacity(cap: usize) -> Self {
         ByteBuf {
             bytes: Vec::with_capacity(cap)
@@ -144,6 +144,7 @@ impl ser::Serialize for ByteBuf {
     }
 }
 
+/// This type implements the `serde::de::Visitor` trait for a `ByteBuf`.
 pub struct ByteBufVisitor;
 
 impl de::Visitor for ByteBufVisitor {
