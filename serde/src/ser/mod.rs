@@ -4,14 +4,18 @@ pub mod impls;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A trait that describes a type that can be serialized by a `Serializer`.
 pub trait Serialize {
+    /// Serializes this value into this serializer.
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A trait that describes a type that can serialize a stream of values into the underlying format.
 pub trait Serializer {
+    /// The error type that can be returned if some error occurs during serialization.
     type Error;
 
     /// `visit_bool` serializes a `bool` value.
@@ -110,13 +114,20 @@ pub trait Serializer {
         self.visit_seq(impls::SeqIteratorVisitor::new(value.iter(), Some(value.len())))
     }
 
+    /// Serializes a `()` value.
     fn visit_unit(&mut self) -> Result<(), Self::Error>;
 
+    /// Serializes a unit struct value.
+    ///
+    /// By default, unit structs are serialized as a `()`.
     #[inline]
     fn visit_unit_struct(&mut self, _name: &'static str) -> Result<(), Self::Error> {
         self.visit_unit()
     }
 
+    /// Serializes a unit variant, otherwise known as a variant with no arguments.
+    ///
+    /// By default, unit variants are serialized as a `()`.
     #[inline]
     fn visit_unit_variant(&mut self,
                           _name: &'static str,
@@ -155,17 +166,27 @@ pub trait Serializer {
             Some(value))
     }
 
+    /// Serializes a `None` value.
     fn visit_none(&mut self) -> Result<(), Self::Error>;
 
+    /// Serializes a `Some(...)` value.
     fn visit_some<V>(&mut self, value: V) -> Result<(), Self::Error>
         where V: Serialize;
 
+    /// Serializes a sequence.
+    ///
+    /// Callees of this method need to construct a `SeqVisitor`, which iterates through each item
+    /// in the sequence.
     fn visit_seq<V>(&mut self, visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor;
 
+    /// Serializes a sequence element.
     fn visit_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize;
 
+    /// Serializes a tuple.
+    ///
+    /// By default this serializes a tuple as a sequence.
     #[inline]
     fn visit_tuple<V>(&mut self, visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
@@ -173,6 +194,9 @@ pub trait Serializer {
         self.visit_seq(visitor)
     }
 
+    /// Serializes a tuple element.
+    ///
+    /// By default, tuples are serialized as a sequence.
     #[inline]
     fn visit_tuple_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize
@@ -180,6 +204,9 @@ pub trait Serializer {
         self.visit_seq_elt(value)
     }
 
+    /// Serializes a tuple struct.
+    ///
+    /// By default, tuple structs are serialized as a tuple.
     #[inline]
     fn visit_tuple_struct<V>(&mut self,
                              _name: &'static str,
@@ -189,6 +216,9 @@ pub trait Serializer {
         self.visit_tuple(visitor)
     }
 
+    /// Serializes a tuple struct element.
+    ///
+    /// By default, tuple struct elements are serialized as a tuple element.
     #[inline]
     fn visit_tuple_struct_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize
@@ -196,6 +226,9 @@ pub trait Serializer {
         self.visit_tuple_elt(value)
     }
 
+    /// Serializes a tuple variant.
+    ///
+    /// By default, tuple variants are serialized as a tuple struct.
     #[inline]
     fn visit_tuple_variant<V>(&mut self,
                               _name: &'static str,
@@ -207,6 +240,9 @@ pub trait Serializer {
         self.visit_tuple_struct(variant, visitor)
     }
 
+    /// Serializes a tuple element.
+    ///
+    /// By default, tuples are serialized as a sequence.
     #[inline]
     fn visit_tuple_variant_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize
@@ -214,13 +250,21 @@ pub trait Serializer {
         self.visit_tuple_struct_elt(value)
     }
 
+    /// Serializes a map.
+    ///
+    /// Callees of this method need to construct a `MapVisitor`, which iterates through each item
+    /// in the map.
     fn visit_map<V>(&mut self, visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor;
 
+    /// Serializes a map element (key-value pair).
     fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
         where K: Serialize,
               V: Serialize;
 
+    /// Serializes a struct.
+    ///
+    /// By default, structs are serialized as a map with the field name as the key.
     #[inline]
     fn visit_struct<V>(&mut self,
                        _name: &'static str,
@@ -230,6 +274,9 @@ pub trait Serializer {
         self.visit_map(visitor)
     }
 
+    /// Serializes an element of a struct.
+    ///
+    /// By default, struct elements are serialized as a map element with the field name as the key.
     #[inline]
     fn visit_struct_elt<V>(&mut self,
                            key: &'static str,
@@ -239,6 +286,9 @@ pub trait Serializer {
         self.visit_map_elt(key, value)
     }
 
+    /// Serializes a struct variant.
+    ///
+    /// By default, struct variants are serialized as a struct.
     #[inline]
     fn visit_struct_variant<V>(&mut self,
                                _name: &'static str,
@@ -250,6 +300,9 @@ pub trait Serializer {
         self.visit_struct(variant, visitor)
     }
 
+    /// Serializes an element of a struct variant.
+    ///
+    /// By default, struct variant elements are serialized as a struct element.
     #[inline]
     fn visit_struct_variant_elt<V>(&mut self,
                                    key: &'static str,
@@ -268,7 +321,12 @@ pub trait Serializer {
     }
 }
 
+/// A trait that is used by a `Serialize` to iterate through a sequence.
 pub trait SeqVisitor {
+    /// Serializes a sequence item in the serializer.
+    ///
+    /// This returns `Ok(Some(()))` when there are more items to serialize, or `Ok(None)` when
+    /// complete.
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: Serializer;
 
@@ -279,7 +337,12 @@ pub trait SeqVisitor {
     }
 }
 
+/// A trait that is used by a `Serializer` to iterate through a map.
 pub trait MapVisitor {
+    /// Serializes a map item in the serializer.
+    ///
+    /// This returns `Ok(Some(()))` when there are more items to serialize, or `Ok(None)` when
+    /// complete.
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
         where S: Serializer;
 

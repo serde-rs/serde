@@ -1,5 +1,7 @@
 //! Helper module to enable serializing bytes more efficiently
 
+#![allow(missing_docs)]
+
 use std::ops;
 use std::fmt;
 use std::ascii;

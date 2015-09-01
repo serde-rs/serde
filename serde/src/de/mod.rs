@@ -1,5 +1,7 @@
 //! Generic deserialization framework.
 
+#![allow(missing_docs)]
+
 pub mod impls;
 pub mod value;
 
