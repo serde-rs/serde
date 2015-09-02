@@ -713,21 +713,3 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_struct(fields, visitor)
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub trait EnumSeqVisitor {
-    type Value;
-
-    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: SeqVisitor;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub trait EnumMapVisitor {
-    type Value;
-
-    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: MapVisitor;
-}
