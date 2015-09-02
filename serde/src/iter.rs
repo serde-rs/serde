@@ -1,8 +1,9 @@
-#![allow(missing_docs)]
+//! Module that contains helper iterators.
 
 use std::io;
 use std::iter::Peekable;
 
+/// Iterator over a byte stream that tracks the current position's line and column.
 pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
     iter: Iter,
     line: usize,
@@ -10,6 +11,7 @@ pub struct LineColIterator<Iter: Iterator<Item=io::Result<u8>>> {
 }
 
 impl<Iter: Iterator<Item=io::Result<u8>>> LineColIterator<Iter> {
+    /// Construct a new `LineColIterator<Iter>`.
     pub fn new(iter: Iter) -> LineColIterator<Iter> {
         LineColIterator {
             iter: iter,
