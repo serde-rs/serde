@@ -1,4 +1,4 @@
-#![allow(missing_docs)]
+//! This module contains `Deserialize` and `Visitor` implementations.
 
 use std::borrow::Cow;
 use std::collections::{
@@ -41,6 +41,7 @@ use de::{
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A visitor that produces a `()`.
 pub struct UnitVisitor;
 
 impl Visitor for UnitVisitor {
@@ -69,6 +70,7 @@ impl Deserialize for () {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A visitor that produces a `bool`.
 pub struct BoolVisitor;
 
 impl Visitor for BoolVisitor {
@@ -115,11 +117,13 @@ macro_rules! impl_deserialize_num_method {
     }
 }
 
+/// A visitor that produces a primitive type.
 pub struct PrimitiveVisitor<T> {
     marker: PhantomData<T>,
 }
 
 impl<T> PrimitiveVisitor<T> {
+    /// Construct a new `PrimitiveVisitor`.
     #[inline]
     pub fn new() -> Self {
         PrimitiveVisitor {
@@ -302,7 +306,7 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-macro_rules! set_impl {
+macro_rules! seq_impl {
     (
         $ty:ty,
         < $($constraints:ident),* >,
@@ -312,11 +316,13 @@ macro_rules! set_impl {
         $with_capacity:expr,
         $insert:expr
     ) => {
+        /// A visitor that produces a sequence.
         pub struct $visitor_name<T> {
             marker: PhantomData<T>,
         }
 
         impl<T> $visitor_name<T> {
+            /// Construct a new sequence visitor.
             pub fn new() -> Self {
                 $visitor_name {
                     marker: PhantomData,
@@ -364,7 +370,7 @@ macro_rules! set_impl {
     }
 }
 
-set_impl!(
+seq_impl!(
     BinaryHeap<T>,
     <Deserialize, Ord>,
     BinaryHeapVisitor,
@@ -373,7 +379,7 @@ set_impl!(
     BinaryHeap::with_capacity(visitor.size_hint().0),
     BinaryHeap::push);
 
-set_impl!(
+seq_impl!(
     BTreeSet<T>,
     <Deserialize, Eq, Ord>,
     BTreeSetVisitor,
@@ -383,7 +389,7 @@ set_impl!(
     BTreeSet::insert);
 
 #[cfg(feature = "nightly")]
-set_impl!(
+seq_impl!(
     EnumSet<T>,
     <Deserialize, CLike>,
     EnumSetVisitor,
@@ -392,7 +398,7 @@ set_impl!(
     EnumSet::new(),
     EnumSet::insert);
 
-set_impl!(
+seq_impl!(
     LinkedList<T>,
     <Deserialize>,
     LinkedListVisitor,
@@ -401,7 +407,7 @@ set_impl!(
     LinkedList::new(),
     LinkedList::push_back);
 
-set_impl!(
+seq_impl!(
     HashSet<T>,
     <Deserialize, Eq, Hash>,
     HashSetVisitor,
@@ -410,7 +416,7 @@ set_impl!(
     HashSet::with_capacity(visitor.size_hint().0),
     HashSet::insert);
 
-set_impl!(
+seq_impl!(
     Vec<T>,
     <Deserialize>,
     VecVisitor,
@@ -419,7 +425,7 @@ set_impl!(
     Vec::with_capacity(visitor.size_hint().0),
     Vec::push);
 
-set_impl!(
+seq_impl!(
     VecDeque<T>,
     <Deserialize>,
     VecDequeVisitor,
@@ -435,6 +441,7 @@ struct ArrayVisitor0<T> {
 }
 
 impl<T> ArrayVisitor0<T> {
+    /// Construct a `ArrayVisitor0<T>`.
     pub fn new() -> Self {
         ArrayVisitor0 {
             marker: PhantomData,
@@ -479,6 +486,7 @@ macro_rules! array_impls {
             }
 
             impl<T> $visitor<T> {
+                /// Construct a `ArrayVisitor*<T>`.
                 pub fn new() -> Self {
                     $visitor {
                         marker: PhantomData
@@ -568,6 +576,7 @@ macro_rules! tuple_impls {
     () => {};
     ($($len:expr => $visitor:ident => ($($name:ident),+),)+) => {
         $(
+            /// Construct a tuple visitor.
             pub struct $visitor<$($name,)+> {
                 marker: PhantomData<($($name,)+)>,
             }
@@ -575,6 +584,7 @@ macro_rules! tuple_impls {
             impl<
                 $($name: Deserialize,)+
             > $visitor<$($name,)+> {
+                /// Construct a `TupleVisitor*<T>`.
                 pub fn new() -> Self {
                     $visitor { marker: PhantomData }
                 }
@@ -645,11 +655,13 @@ macro_rules! map_impl {
         $with_capacity:expr,
         $insert:expr
     ) => {
+        /// A visitor that produces a map.
         pub struct $visitor_name<K, V> {
             marker: PhantomData<$ty>,
         }
 
         impl<K, V> $visitor_name<K, V> {
+            /// Construct a `MapVisitor*<T>`.
             pub fn new() -> Self {
                 $visitor_name {
                     marker: PhantomData,
