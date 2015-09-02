@@ -34,40 +34,100 @@ pub trait Error: Sized {
 /// `Type` represents all the primitive types that can be deserialized. This is used by
 /// `Error::kind_mismatch`.
 pub enum Type {
+    /// Represents a `bool` type.
     Bool,
+
+    /// Represents a `usize` type.
     Usize,
+
+    /// Represents a `u8` type.
     U8,
+
+    /// Represents a `u16` type.
     U16,
+
+    /// Represents a `u32` type.
     U32,
+
+    /// Represents a `u64` type.
     U64,
+
+    /// Represents a `isize` type.
     Isize,
+
+    /// Represents a `i8` type.
     I8,
+
+    /// Represents a `i16` type.
     I16,
+
+    /// Represents a `i32` type.
     I32,
+
+    /// Represents a `i64` type.
     I64,
+
+    /// Represents a `f32` type.
     F32,
+
+    /// Represents a `f64` type.
     F64,
+
+    /// Represents a `char` type.
     Char,
+
+    /// Represents a `&str` type.
     Str,
+
+    /// Represents a `String` type.
     String,
+
+    /// Represents a `()` type.
     Unit,
+
+    /// Represents an `Option<T>` type.
     Option,
+
+    /// Represents a sequence type.
     Seq,
+
+    /// Represents a map type.
     Map,
+
+    /// Represents a unit struct type.
     UnitStruct,
+
+    /// Represents a newtype type.
     NewtypeStruct,
+
+    /// Represents a tuple struct type.
     TupleStruct,
+
+    /// Represents a struct type.
     Struct,
+
+    /// Represents a tuple type.
     Tuple,
+
+    /// Represents an `enum` type.
     Enum,
+
+    /// Represents a struct variant.
     StructVariant,
+
+    /// Represents a tuple variant.
     TupleVariant,
+
+    /// Represents a unit variant.
     UnitVariant,
+
+    /// Represents a `&[u8]` type.
     Bytes,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// `Deserialize` represents a type that can be deserialized.
 pub trait Deserialize: Sized {
     /// Deserialize this value given this `Deserializer`.
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
@@ -89,6 +149,7 @@ pub trait Deserialize: Sized {
 ///    supporting the `visit_*` types is that it does not allow for deserializing into a generic
 ///    `json::Value`-esque type.
 pub trait Deserializer {
+    /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
     /// This method walks a visitor through a value as it is being deserialized.
@@ -349,87 +410,103 @@ pub trait Deserializer {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// This trait represents a visitor that walks through a deserializer.
 pub trait Visitor {
+    /// The value produced by this visitor.
     type Value: Deserialize;
 
+    /// `visit_bool` deserializes a `bool` into a `Value`.
     fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::Bool))
     }
 
+    /// `visit_isize` deserializes a `isize` into a `Value`.
     fn visit_isize<E>(&mut self, v: isize) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i8` deserializes a `i8` into a `Value`.
     fn visit_i8<E>(&mut self, v: i8) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i16` deserializes a `i16` into a `Value`.
     fn visit_i16<E>(&mut self, v: i16) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i32` deserializes a `i32` into a `Value`.
     fn visit_i32<E>(&mut self, v: i32) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_i64(v as i64)
     }
 
+    /// `visit_i64` deserializes a `i64` into a `Value`.
     fn visit_i64<E>(&mut self, _v: i64) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::I64))
     }
 
+    /// `visit_usize` deserializes a `usize` into a `Value`.
     fn visit_usize<E>(&mut self, v: usize) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u8` deserializes a `u8` into a `Value`.
     fn visit_u8<E>(&mut self, v: u8) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u16` deserializes a `u16` into a `Value`.
     fn visit_u16<E>(&mut self, v: u16) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u32` deserializes a `u32` into a `Value`.
     fn visit_u32<E>(&mut self, v: u32) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_u64(v as u64)
     }
 
+    /// `visit_u64` deserializes a `u64` into a `Value`.
     fn visit_u64<E>(&mut self, _v: u64) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::U64))
     }
 
+    /// `visit_f32` deserializes a `f32` into a `Value`.
     fn visit_f32<E>(&mut self, v: f32) -> Result<Self::Value, E>
         where E: Error,
     {
         self.visit_f64(v as f64)
     }
 
+    /// `visit_f64` deserializes a `f64` into a `Value`.
     fn visit_f64<E>(&mut self, _v: f64) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::F64))
     }
 
+    /// `visit_char` deserializes a `char` into a `Value`.
     #[inline]
     fn visit_char<E>(&mut self, v: char) -> Result<Self::Value, E>
         where E: Error,
@@ -439,12 +516,14 @@ pub trait Visitor {
         self.visit_string(v.to_string())
     }
 
+    /// `visit_str` deserializes a `&str` into a `Value`.
     fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::Str))
     }
 
+    /// `visit_string` deserializes a `String` into a `Value`.
     #[inline]
     fn visit_string<E>(&mut self, v: String) -> Result<Self::Value, E>
         where E: Error,
@@ -452,12 +531,14 @@ pub trait Visitor {
         self.visit_str(&v)
     }
 
+    /// `visit_unit` deserializes a `()` into a `Value`.
     fn visit_unit<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::Unit))
     }
 
+    /// `visit_unit_struct` deserializes a unit struct into a `Value`.
     #[inline]
     fn visit_unit_struct<E>(&mut self, _name: &'static str) -> Result<Self::Value, E>
         where E: Error,
@@ -465,42 +546,49 @@ pub trait Visitor {
         self.visit_unit()
     }
 
+    /// `visit_none` deserializes a none value into a `Value`.
     fn visit_none<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::Option))
     }
 
+    /// `visit_some` deserializes a value into a `Value`.
     fn visit_some<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
         Err(Error::type_mismatch(Type::Option))
     }
 
+    /// `visit_newtype_struct` deserializes a value into a `Value`.
     fn visit_newtype_struct<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
         Err(Error::type_mismatch(Type::NewtypeStruct))
     }
 
+    /// `visit_bool` deserializes a `SeqVisitor` into a `Value`.
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
         Err(Error::type_mismatch(Type::Seq))
     }
 
+    /// `visit_map` deserializes a `MapVisitor` into a `Value`.
     fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
     {
         Err(Error::type_mismatch(Type::Map))
     }
 
+    /// `visit_bytes` deserializes a `&[u8]` into a `Value`.
     fn visit_bytes<E>(&mut self, _v: &[u8]) -> Result<Self::Value, E>
         where E: Error,
     {
         Err(Error::type_mismatch(Type::Bytes))
     }
 
+    /// `visit_byte_buf` deserializes a `Vec<u8>` into a `Value`.
     fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<Self::Value, E>
         where E: Error,
     {
@@ -510,14 +598,23 @@ pub trait Visitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// `SeqVisitor` visits each item in a sequence.
+///
+/// This is a trait that a `Deserializer` passes to a `Visitor` implementation, which deserializes
+/// each item in a sequence.
 pub trait SeqVisitor {
+    /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
+    /// This returns a `Ok(Some(value))` for the next value in the sequence, or `Ok(None)` if there
+    /// are no more remaining items.
     fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
         where T: Deserialize;
 
+    /// This signals to the `SeqVisitor` that the `Visitor` does not expect any more items.
     fn end(&mut self) -> Result<(), Self::Error>;
 
+    /// Return the lower and upper bound of items remaining in the sequence.
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
@@ -547,9 +644,15 @@ impl<'a, V> SeqVisitor for &'a mut V where V: SeqVisitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// `MapVisitor` visits each item in a sequence.
+///
+/// This is a trait that a `Deserializer` passes to a `Visitor` implementation.
 pub trait MapVisitor {
+    /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
+    /// This returns a `Ok(Some((key, value)))` for the next (key-value) pair in the map, or
+    /// `Ok(None)` if there are no more remaining items.
     #[inline]
     fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
         where K: Deserialize,
@@ -564,19 +667,25 @@ pub trait MapVisitor {
         }
     }
 
+    /// This returns a `Ok(Some(key))` for the next key in the map, or `Ok(None)` if there are no
+    /// more remaining items.
     fn visit_key<K>(&mut self) -> Result<Option<K>, Self::Error>
         where K: Deserialize;
 
+    /// This returns a `Ok(value)` for the next value in the map.
     fn visit_value<V>(&mut self) -> Result<V, Self::Error>
         where V: Deserialize;
 
+    /// This signals to the `MapVisitor` that the `Visitor` does not expect any more items.
     fn end(&mut self) -> Result<(), Self::Error>;
 
+    /// Return the lower and upper bound of items remaining in the sequence.
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
     }
 
+    /// Report that there 
     fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
         where V: Deserialize,
     {
@@ -625,8 +734,10 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
 /// `EnumVisitor` is a visitor that is created by the `Deserialize` and passed to the
 /// `Deserializer` in order to deserialize enums.
 pub trait EnumVisitor {
+    /// The value produced by this visitor.
     type Value;
 
+    /// Visit the specific variant with the `VariantVisitor`.
     fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
         where V: VariantVisitor;
 }
@@ -636,6 +747,7 @@ pub trait EnumVisitor {
 /// `VariantVisitor` is a visitor that is created by the `Deserializer` and passed to the
 /// `Deserialize` in order to deserialize a specific enum variant.
 pub trait VariantVisitor {
+    /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
     /// `visit_variant` is called to identify which variant to deserialize.
@@ -710,22 +822,4 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
     {
         (**self).visit_struct(fields, visitor)
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub trait EnumSeqVisitor {
-    type Value;
-
-    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: SeqVisitor;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-pub trait EnumMapVisitor {
-    type Value;
-
-    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: MapVisitor;
 }

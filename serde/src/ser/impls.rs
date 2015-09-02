@@ -1,3 +1,5 @@
+//! Implementations for all of Rust's builtin types.
+
 use std::borrow::Cow;
 use std::collections::{
     BinaryHeap,
@@ -117,6 +119,27 @@ impl<T> SeqVisitor for Option<T> where T: Serialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A `serde::Visitor` for sequence iterators.
+///
+/// # Examples
+///
+/// ```
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::impls::SeqIteratorVisitor;
+///
+/// struct Seq(Vec<u32>);
+///
+/// impl Serialize for Seq {
+///     fn serialize<S>(&self, ser: &mut S) -> Result<(), S::Error>
+///         where S: Serializer,
+///     {
+///         ser.visit_seq(SeqIteratorVisitor::new(
+///             self.0.iter(),
+///             Some(self.0.len()),
+///         ))
+///     }
+/// }
+/// ```
 pub struct SeqIteratorVisitor<Iter> {
     iter: Iter,
     len: Option<usize>,
@@ -125,6 +148,7 @@ pub struct SeqIteratorVisitor<Iter> {
 impl<T, Iter> SeqIteratorVisitor<Iter>
     where Iter: Iterator<Item=T>
 {
+    /// Construct a new `SeqIteratorVisitor<Iter>`.
     #[inline]
     pub fn new(iter: Iter, len: Option<usize>) -> SeqIteratorVisitor<Iter> {
         SeqIteratorVisitor {
@@ -332,12 +356,14 @@ macro_rules! tuple_impls {
         }
     )+) => {
         $(
+            /// A tuple visitor.
             pub struct $TupleVisitor<'a, $($T: 'a),+> {
                 tuple: &'a ($($T,)+),
                 state: u8,
             }
 
             impl<'a, $($T: 'a),+> $TupleVisitor<'a, $($T),+> {
+                /// Construct a new, empty `TupleVisitor`.
                 pub fn new(tuple: &'a ($($T,)+)) -> $TupleVisitor<'a, $($T),+> {
                     $TupleVisitor {
                         tuple: tuple,
@@ -489,6 +515,28 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A `serde::Visitor` for (key, value) map iterators.
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::HashMap;
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::impls::MapIteratorVisitor;
+///
+/// struct Map(HashMap<u32, u32>);
+///
+/// impl Serialize for Map {
+///     fn serialize<S>(&self, ser: &mut S) -> Result<(), S::Error>
+///         where S: Serializer,
+///     {
+///         ser.visit_map(MapIteratorVisitor::new(
+///             self.0.iter(),
+///             Some(self.0.len()),
+///         ))
+///     }
+/// }
+/// ```
 pub struct MapIteratorVisitor<Iter> {
     iter: Iter,
     len: Option<usize>,
@@ -497,6 +545,7 @@ pub struct MapIteratorVisitor<Iter> {
 impl<K, V, Iter> MapIteratorVisitor<Iter>
     where Iter: Iterator<Item=(K, V)>
 {
+    /// Construct a new `MapIteratorVisitor<Iter>`.
     #[inline]
     pub fn new(iter: Iter, len: Option<usize>) -> MapIteratorVisitor<Iter> {
         MapIteratorVisitor {

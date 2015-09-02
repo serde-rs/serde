@@ -1,3 +1,5 @@
+//! This module supports deserializing from primitives with the `ValueDeserializer` trait.
+
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -16,11 +18,19 @@ use bytes;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// This represents all the possible errors that can occur using the `ValueDeserializer`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
+    /// The value had some syntatic error.
     SyntaxError,
+
+    /// EOF while deserializing a value.
     EndOfStreamError,
+
+    /// Unknown field in struct.
     UnknownFieldError(String),
+
+    /// Struct is missing a field.
     MissingFieldError(&'static str),
 }
 
@@ -33,9 +43,12 @@ impl de::Error for Error {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// This trait converts primitive types into a deserializer.
 pub trait ValueDeserializer {
+    /// The actual deserializer type.
     type Deserializer: de::Deserializer<Error=Error>;
 
+    /// Convert this value into a deserializer.
     fn into_deserializer(self) -> Self::Deserializer;
 }
 
@@ -72,6 +85,7 @@ impl de::Deserializer for UnitDeserializer {
 
 macro_rules! primitive_deserializer {
     ($ty:ty, $name:ident, $method:ident) => {
+        /// A helper deserializer that deserializes a number.
         pub struct $name(Option<$ty>);
 
         impl ValueDeserializer for $ty {
@@ -212,12 +226,14 @@ impl<'a> de::VariantVisitor for StringDeserializer {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A helper deserializer that deserializes a sequence.
 pub struct SeqDeserializer<I> {
     iter: I,
     len: usize,
 }
 
 impl<I> SeqDeserializer<I> {
+    /// Construct a new `SeqDeserializer<I>`.
     pub fn new(iter: I, len: usize) -> Self {
         SeqDeserializer {
             iter: iter,
@@ -308,6 +324,7 @@ impl<T> ValueDeserializer for HashSet<T>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A helper deserializer that deserializes a map.
 pub struct MapDeserializer<I, K, V>
     where I: Iterator<Item=(K, V)>,
           K: ValueDeserializer,
@@ -323,6 +340,7 @@ impl<I, K, V> MapDeserializer<I, K, V>
           K: ValueDeserializer,
           V: ValueDeserializer,
 {
+    /// Construct a new `MapDeserializer<I, K, V>`.
     pub fn new(iter: I, len: usize) -> Self {
         MapDeserializer {
             iter: iter,
@@ -429,6 +447,7 @@ impl<'a> ValueDeserializer for bytes::Bytes<'a>
     }
 }
 
+/// A helper deserializer that deserializes a `&[u8]`.
 pub struct BytesDeserializer<'a> (Option<&'a [u8]>);
 
 impl<'a> de::Deserializer for BytesDeserializer<'a> {
@@ -456,6 +475,7 @@ impl ValueDeserializer for bytes::ByteBuf
     }
 }
 
+/// A helper deserializer that deserializes a `Vec<u8>`.
 pub struct ByteBufDeserializer(Option<Vec<u8>>);
 
 impl de::Deserializer for ByteBufDeserializer {
