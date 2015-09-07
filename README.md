@@ -578,6 +578,21 @@ impl serde::de::Visitor for PointVisitor {
 }
 ```
 
+Annotations
+===========
+
+`serde_codegen` and `serde_macros` support annotations that help to customize
+how types are serialized. Here are the supported annotations:
+
+| Annotation                                   | Function                                                       |
+| ----------                                   | --------                                                       |
+| `#[serde(rename(json="name1", xml="name2"))` | Serialize this field with the given name for the given formats |
+| `#[serde(default)`                           | If the value is not specified, use the `Default::default()`    |
+| `#[serde(rename="name")`                     | Serialize this field with the given name                       |
+| `#[serde(skip_serializing)`                  | Do not serialize this value                                    |
+| `#[serde(skip_serializing_if_empty)`         | Do not serialize this value if `$value.is_empty()` is `true`   |
+| `#[serde(skip_serializing_if_none)`          | Do not serialize this value if `$value.is_none()` is `true`    |
+
 Serialization Formats Using Serde
 =================================
 
