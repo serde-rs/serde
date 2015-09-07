@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use syntax::ast;
+use syntax::attr;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 
@@ -21,6 +22,8 @@ pub enum FieldNames {
 #[derive(Debug)]
 pub struct FieldAttrs {
     skip_serializing_field: bool,
+    skip_serializing_field_if_empty: bool,
+    skip_serializing_field_if_none: bool,
     names: FieldNames,
     use_default: bool,
 }
@@ -44,10 +47,10 @@ impl FieldAttrs {
     ///
     /// The resulting expression assumes that `S` refers to a type
     /// that implements `Serializer`.
-    pub fn serializer_key_expr(self, cx: &ExtCtxt) -> P<ast::Expr> {
+    pub fn serializer_key_expr(&self, cx: &ExtCtxt) -> P<ast::Expr> {
         match self.names {
-            FieldNames::Global(name) => name,
-            FieldNames::Format { formats, default } => {
+            FieldNames::Global(ref name) => name.clone(),
+            FieldNames::Format { ref formats, ref default } => {
                 let arms = formats.iter()
                     .map(|(fmt, lit)| {
                         quote_arm!(cx, $fmt => { $lit })
@@ -90,11 +93,21 @@ impl FieldAttrs {
     pub fn skip_serializing_field(&self) -> bool {
         self.skip_serializing_field
     }
+
+    pub fn skip_serializing_field_if_empty(&self) -> bool {
+        self.skip_serializing_field_if_empty
+    }
+
+    pub fn skip_serializing_field_if_none(&self) -> bool {
+        self.skip_serializing_field_if_none
+    }
 }
 
 pub struct FieldAttrsBuilder<'a> {
     builder: &'a aster::AstBuilder,
     skip_serializing_field: bool,
+    skip_serializing_field_if_empty: bool,
+    skip_serializing_field_if_none: bool,
     name: Option<P<ast::Expr>>,
     format_rename: HashMap<P<ast::Expr>, P<ast::Expr>>,
     use_default: bool,
@@ -105,6 +118,8 @@ impl<'a> FieldAttrsBuilder<'a> {
         FieldAttrsBuilder {
             builder: builder,
             skip_serializing_field: false,
+            skip_serializing_field_if_empty: false,
+            skip_serializing_field_if_none: false,
             name: None,
             format_rename: HashMap::new(),
             use_default: false,
@@ -129,6 +144,7 @@ impl<'a> FieldAttrsBuilder<'a> {
     pub fn attr(self, attr: &ast::Attribute) -> FieldAttrsBuilder<'a> {
         match attr.node.value.node {
             ast::MetaList(ref name, ref items) if name == &"serde" => {
+                attr::mark_used(&attr);
                 items.iter().fold(self, FieldAttrsBuilder::meta_item)
             }
             _ => {
@@ -164,6 +180,12 @@ impl<'a> FieldAttrsBuilder<'a> {
             ast::MetaWord(ref name) if name == &"skip_serializing" => {
                 self.skip_serializing_field()
             }
+            ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
+                self.skip_serializing_field_if_empty()
+            }
+            ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
+                self.skip_serializing_field_if_none()
+            }
             _ => {
                 // Ignore unknown meta variables for now.
                 self
@@ -173,6 +195,16 @@ impl<'a> FieldAttrsBuilder<'a> {
 
     pub fn skip_serializing_field(mut self) -> FieldAttrsBuilder<'a> {
         self.skip_serializing_field = true;
+        self
+    }
+
+    pub fn skip_serializing_field_if_empty(mut self) -> FieldAttrsBuilder<'a> {
+        self.skip_serializing_field_if_empty = true;
+        self
+    }
+
+    pub fn skip_serializing_field_if_none(mut self) -> FieldAttrsBuilder<'a> {
+        self.skip_serializing_field_if_none = true;
         self
     }
 
@@ -204,6 +236,8 @@ impl<'a> FieldAttrsBuilder<'a> {
 
         FieldAttrs {
             skip_serializing_field: self.skip_serializing_field,
+            skip_serializing_field_if_empty: self.skip_serializing_field_if_empty,
+            skip_serializing_field_if_none: self.skip_serializing_field_if_none,
             names: names,
             use_default: self.use_default,
         }
