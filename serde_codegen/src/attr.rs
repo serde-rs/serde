@@ -5,7 +5,10 @@ use syntax::ast;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 
+use aster;
+
 /// Represents field name information
+#[derive(Debug)]
 pub enum FieldNames {
     Global(P<ast::Expr>),
     Format{
@@ -15,6 +18,7 @@ pub enum FieldNames {
 }
 
 /// Represents field attribute information
+#[derive(Debug)]
 pub struct FieldAttrs {
     skip_serializing_field: bool,
     names: FieldNames,
@@ -22,36 +26,6 @@ pub struct FieldAttrs {
 }
 
 impl FieldAttrs {
-    /// Create a FieldAttr with a single default field name
-    pub fn new(
-        skip_serializing_field: bool,
-        default_value: bool,
-        name: P<ast::Expr>,
-    ) -> FieldAttrs {
-        FieldAttrs {
-            skip_serializing_field: skip_serializing_field,
-            names: FieldNames::Global(name),
-            use_default: default_value,
-        }
-    }
-
-    /// Create a FieldAttr with format specific field names
-    pub fn new_with_formats(
-        skip_serializing_field: bool,
-        default_value: bool,
-        default_name: P<ast::Expr>,
-        formats: HashMap<P<ast::Expr>, P<ast::Expr>>,
-    ) -> FieldAttrs {
-        FieldAttrs {
-            skip_serializing_field: skip_serializing_field,
-            names: FieldNames::Format {
-                formats: formats,
-                default: default_name,
-            },
-            use_default: default_value,
-        }
-    }
-
     /// Return a set of formats that the field has attributes for.
     pub fn formats(&self) -> HashSet<P<ast::Expr>> {
         match self.names {
@@ -72,20 +46,19 @@ impl FieldAttrs {
     /// that implements `Serializer`.
     pub fn serializer_key_expr(self, cx: &ExtCtxt) -> P<ast::Expr> {
         match self.names {
-            FieldNames::Global(x) => x,
-            FieldNames::Format{formats, default} => {
+            FieldNames::Global(name) => name,
+            FieldNames::Format { formats, default } => {
                 let arms = formats.iter()
                     .map(|(fmt, lit)| {
                         quote_arm!(cx, $fmt => { $lit })
                     })
                     .collect::<Vec<_>>();
                 quote_expr!(cx,
-                            {
-                                match S::format() {
-                                    $arms
-                                    _ => { $default }
-                                }
-                            })
+                    match S::format() {
+                        $arms
+                        _ => { $default }
+                    }
+                )
             },
         }
     }
@@ -94,17 +67,17 @@ impl FieldAttrs {
     pub fn default_key_expr(&self) -> &P<ast::Expr> {
         match self.names {
             FieldNames::Global(ref expr) => expr,
-            FieldNames::Format{formats: _, ref default} => default
+            FieldNames::Format{formats: _, ref default} => default,
         }
     }
 
     /// Return the field name for the field in the specified format.
     pub fn key_expr(&self, format: &P<ast::Expr>) -> &P<ast::Expr> {
         match self.names {
-            FieldNames::Global(ref expr) =>
-                expr,
-            FieldNames::Format{ref formats, ref default} =>
+            FieldNames::Global(ref expr) => expr,
+            FieldNames::Format { ref formats, ref default } => {
                 formats.get(format).unwrap_or(default)
+            }
         }
     }
 
@@ -116,5 +89,123 @@ impl FieldAttrs {
     /// Predicate for ignoring a field when serializing a value
     pub fn skip_serializing_field(&self) -> bool {
         self.skip_serializing_field
+    }
+}
+
+pub struct FieldAttrsBuilder<'a> {
+    builder: &'a aster::AstBuilder,
+    skip_serializing_field: bool,
+    name: Option<P<ast::Expr>>,
+    format_rename: HashMap<P<ast::Expr>, P<ast::Expr>>,
+    use_default: bool,
+}
+
+impl<'a> FieldAttrsBuilder<'a> {
+    pub fn new(builder: &'a aster::AstBuilder) -> FieldAttrsBuilder<'a> {
+        FieldAttrsBuilder {
+            builder: builder,
+            skip_serializing_field: false,
+            name: None,
+            format_rename: HashMap::new(),
+            use_default: false,
+        }
+    }
+
+    pub fn field(mut self, field: &ast::StructField) -> FieldAttrsBuilder<'a> {
+        match field.node.kind {
+            ast::NamedField(name, _) => {
+                self.name = Some(self.builder.expr().str(name));
+            }
+            ast::UnnamedField(_) => { }
+        };
+
+        self.attrs(&field.node.attrs)
+    }
+
+    pub fn attrs(self, attrs: &[ast::Attribute]) -> FieldAttrsBuilder<'a> {
+        attrs.iter().fold(self, FieldAttrsBuilder::attr)
+    }
+
+    pub fn attr(self, attr: &ast::Attribute) -> FieldAttrsBuilder<'a> {
+        match attr.node.value.node {
+            ast::MetaList(ref name, ref items) if name == &"serde" => {
+                items.iter().fold(self, FieldAttrsBuilder::meta_item)
+            }
+            _ => {
+                self
+            }
+        }
+    }
+
+    pub fn meta_item(mut self, meta_item: &P<ast::MetaItem>) -> FieldAttrsBuilder<'a> {
+        match meta_item.node {
+            ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                let expr = self.builder.expr().build_lit(P(lit.clone()));
+
+                self.name(expr)
+            }
+            ast::MetaList(ref name, ref items) if name == &"rename" => {
+                for item in items {
+                    match item.node {
+                        ast::MetaNameValue(ref name, ref lit) => {
+                            let name = self.builder.expr().str(name);
+                            let expr = self.builder.expr().build_lit(P(lit.clone()));
+
+                            self = self.format_rename(name, expr);
+                        }
+                        _ => { }
+                    }
+                }
+                self
+            }
+            ast::MetaWord(ref name) if name == &"default" => {
+                self.default()
+            }
+            ast::MetaWord(ref name) if name == &"skip_serializing" => {
+                self.skip_serializing_field()
+            }
+            _ => {
+                // Ignore unknown meta variables for now.
+                self
+            }
+        }
+    }
+
+    pub fn skip_serializing_field(mut self) -> FieldAttrsBuilder<'a> {
+        self.skip_serializing_field = true;
+        self
+    }
+
+    pub fn name(mut self, name: P<ast::Expr>) -> FieldAttrsBuilder<'a> {
+        self.name = Some(name);
+        self
+    }
+
+    pub fn format_rename(mut self, format: P<ast::Expr>, name: P<ast::Expr>) -> FieldAttrsBuilder<'a> {
+        self.format_rename.insert(format, name);
+        self
+    }
+
+    pub fn default(mut self) -> FieldAttrsBuilder<'a> {
+        self.use_default = true;
+        self
+    }
+
+    pub fn build(self) -> FieldAttrs {
+        let name = self.name.expect("here");
+        let names = if self.format_rename.is_empty() {
+            FieldNames::Global(name)
+        } else {
+            FieldNames::Format {
+                formats: self.format_rename,
+                default: name,
+            }
+        };
+
+        FieldAttrs {
+            skip_serializing_field: self.skip_serializing_field,
+            names: names,
+            use_default: self.use_default,
+        }
     }
 }
