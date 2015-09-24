@@ -1,4 +1,6 @@
 use serde;
+use std::fmt;
+use std::error;
 use serde::Serialize;
 use serde::bytes::{ByteBuf, Bytes};
 
@@ -15,6 +17,22 @@ impl serde::de::Error for Error {
     fn unknown_field(_field: &str) -> Error { Error }
 
     fn missing_field(_field: &'static str) -> Error { Error }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

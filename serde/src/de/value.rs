@@ -11,6 +11,8 @@ use std::collections::{
     hash_set,
 };
 use std::hash::Hash;
+use std::error;
+use std::fmt;
 use std::vec;
 
 use de;
@@ -39,6 +41,27 @@ impl de::Error for Error {
     fn end_of_stream() -> Self { Error::EndOfStreamError }
     fn unknown_field(field: &str) -> Self { Error::UnknownFieldError(String::from(field)) }
     fn missing_field(field: &'static str) -> Self { Error::MissingFieldError(field) }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            Error::SyntaxError => formatter.write_str("SyntaxError"),
+            Error::EndOfStreamError => formatter.write_str("EndOfStreamError"),
+            Error::UnknownFieldError(ref field) => formatter.write_str(format!("Unknown field: {}", field).as_ref()),
+            Error::MissingFieldError(ref field) => formatter.write_str(format!("Missing field: {}", field).as_ref()),
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

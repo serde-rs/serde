@@ -1,5 +1,6 @@
 use std::fmt;
 use std::iter;
+use std::error;
 
 use serde::{ser, de};
 use serde::de::value::{self, ValueDeserializer};
@@ -330,6 +331,22 @@ impl de::Error for Error {
 
     fn missing_field(field: &'static str) -> Error {
         Error::MissingFieldError(field)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
     }
 }
 
