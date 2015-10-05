@@ -17,8 +17,8 @@ Documentation is available at:
 * [serde\_json](https://serde-rs.github.io/serde/serde_json/serde_json/index.html)
 * [serde\_codegen](https://serde-rs.github.io/serde/serde_codegen/serde_codegen/index.html)
 
-Using Serde
-===========
+Using Serde with Nightly Rust and serde\_macros
+===============================================
 
 Here is a simple example that demonstrates how to use Serde by serializing and
 deserializing to JSON. Serde comes with some powerful code generation libraries
@@ -75,6 +75,9 @@ When run, it produces:
 {"x":1,"y":2}
 Point { x: 1, y: 2 }
 ```
+
+Using Serde with Stable Rust, syntex, and serde\_codegen
+========================================================
 
 Stable Rust is a little more complicated because it does not yet support
 compiler plugins. Instead we need to use the code generation library
@@ -215,6 +218,19 @@ include!(concat!(env!("OUT_DIR"), "/main.rs"));
 
 The `src/main.rs.in` is the same as before.
 
+Then to run with stable:
+
+```
+% cargo build
+...
+```
+
+Or with nightly:
+
+```rust
+% cargo build --features nightly --no-default-features
+...
+
 Serialization without Macros
 ============================
 
@@ -311,6 +327,8 @@ as a named map. Its visitor uses a simple state machine to iterate through all
 the fields:
 
 ```rust
+extern crate serde;
+
 struct Point {
     x: i32,
     y: i32,
@@ -479,6 +497,13 @@ deserializes an enum variant from a string. So for our `Point` example from
 before, we need to generate:
 
 ```rust
+extern crate serde;
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
 enum PointField {
     X,
     Y,
@@ -507,11 +532,7 @@ impl serde::Deserialize for PointField {
         deserializer.visit(PointFieldVisitor)
     }
 }
-```
 
-This is then used in our actual deserializer:
-
-```rust
 impl serde::Deserialize for Point {
     fn deserialize<D>(deserializer: &mut D) -> Result<Point, D::Error>
         where D: serde::de::Deserializer
@@ -556,6 +577,21 @@ impl serde::de::Visitor for PointVisitor {
     }
 }
 ```
+
+Annotations
+===========
+
+`serde_codegen` and `serde_macros` support annotations that help to customize
+how types are serialized. Here are the supported annotations:
+
+| Annotation                                   | Function                                                       |
+| ----------                                   | --------                                                       |
+| `#[serde(rename(json="name1", xml="name2"))` | Serialize this field with the given name for the given formats |
+| `#[serde(default)`                           | If the value is not specified, use the `Default::default()`    |
+| `#[serde(rename="name")`                     | Serialize this field with the given name                       |
+| `#[serde(skip_serializing)`                  | Do not serialize this value                                    |
+| `#[serde(skip_serializing_if_empty)`         | Do not serialize this value if `$value.is_empty()` is `true`   |
+| `#[serde(skip_serializing_if_none)`          | Do not serialize this value if `$value.is_none()` is `true`    |
 
 Serialization Formats Using Serde
 =================================

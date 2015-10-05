@@ -580,23 +580,31 @@ fn serialize_struct_visitor<I>(
 ) -> (P<ast::Item>, P<ast::Item>)
     where I: Iterator<Item=P<ast::Expr>>,
 {
+    let value_exprs = value_exprs.collect::<Vec<_>>();
+
     let field_attrs = struct_field_attrs(cx, builder, struct_def);
 
-    let len = struct_def.fields.len() - field_attrs.iter()
-        .fold(0, |sum, field| {
-            sum + if field.skip_serializing_field() { 1 } else { 0 }
-        });
-
-    let arms: Vec<ast::Arm> = field_attrs.into_iter()
-        .zip(value_exprs)
+    let arms: Vec<ast::Arm> = field_attrs.iter()
+        .zip(value_exprs.iter())
         .filter(|&(ref field, _)| !field.skip_serializing_field())
         .enumerate()
-        .map(|(i, (field, value_expr))| {
+        .map(|(i, (ref field, value_expr))| {
             let key_expr = field.serializer_key_expr(cx);
+
+            let stmt = if field.skip_serializing_field_if_empty() {
+                quote_stmt!(cx, if $value_expr.is_empty() { continue; })
+            } else if field.skip_serializing_field_if_none() {
+                quote_stmt!(cx, if $value_expr.is_none() { continue; })
+            } else {
+                quote_stmt!(cx, {})
+            };
+
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    Ok(
+                    $stmt
+
+                    return Ok(
                         Some(
                             try!(
                                 serializer.visit_struct_elt(
@@ -605,7 +613,7 @@ fn serialize_struct_visitor<I>(
                                 )
                             )
                         )
-                    )
+                    );
                 }
             )
         })
@@ -621,6 +629,21 @@ fn serialize_struct_visitor<I>(
     let visitor_generics = builder.from_generics(visitor_impl_generics.clone())
         .strip_bounds()
         .build();
+
+    let len = field_attrs.iter()
+        .zip(value_exprs.iter())
+        .map(|(field, value_expr)| {
+            if field.skip_serializing_field() {
+                quote_expr!(cx, 0)
+            } else if field.skip_serializing_field_if_empty() {
+                quote_expr!(cx, if $value_expr.is_empty() { 0 } else { 1 })
+            } else if field.skip_serializing_field_if_none() {
+                quote_expr!(cx, if $value_expr.is_none() { 0 } else { 1 })
+            } else {
+                quote_expr!(cx, 1)
+            }
+        })
+        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     (
         quote_item!(cx,
@@ -640,9 +663,11 @@ fn serialize_struct_visitor<I>(
                 fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
                     where S: ::serde::ser::Serializer,
                 {
-                    match self.state {
-                        $arms
-                        _ => Ok(None)
+                    loop {
+                        match self.state {
+                            $arms
+                            _ => { return Ok(None); }
+                        }
                     }
                 }
 

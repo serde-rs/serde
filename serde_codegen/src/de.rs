@@ -543,11 +543,13 @@ fn deserialize_item_enum(
         cx,
         builder,
         enum_def.variants.iter()
-            .map(|variant|
-                 attr::FieldAttrs::new(
-                     false,
-                     true,
-                     builder.expr().str(variant.node.name)))
+            .map(|variant| {
+                let expr = builder.expr().str(variant.node.name);
+                 attr::FieldAttrsBuilder::new(builder)
+                    .name(expr)
+                    .default()
+                    .build()
+            })
             .collect()
     );
 
