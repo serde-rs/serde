@@ -22,31 +22,31 @@ use bytes;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// The value had some syntatic error.
-    SyntaxError(String),
+    Syntax(String),
 
     /// The value had an incorrect type.
-    TypeError(de::Type),
+    Type(de::Type),
 
     /// The value had an invalid length.
-    LengthError(usize),
+    Length(usize),
 
     /// EOF while deserializing a value.
-    EndOfStreamError,
+    EndOfStream,
 
     /// Unknown field in struct.
-    UnknownFieldError(String),
+    UnknownField(String),
 
     /// Struct is missing a field.
-    MissingFieldError(&'static str),
+    MissingField(&'static str),
 }
 
 impl de::Error for Error {
-    fn syntax(msg: &str) -> Self { Error::SyntaxError(String::from(msg)) }
-    fn type_mismatch(type_: de::Type) -> Self { Error::TypeError(type_) }
-    fn length_mismatch(len: usize) -> Self { Error::LengthError(len) }
-    fn end_of_stream() -> Self { Error::EndOfStreamError }
-    fn unknown_field(field: &str) -> Self { Error::UnknownFieldError(String::from(field)) }
-    fn missing_field(field: &'static str) -> Self { Error::MissingFieldError(field) }
+    fn syntax(msg: &str) -> Self { Error::Syntax(String::from(msg)) }
+    fn type_mismatch(type_: de::Type) -> Self { Error::Type(type_) }
+    fn length_mismatch(len: usize) -> Self { Error::Length(len) }
+    fn end_of_stream() -> Self { Error::EndOfStream }
+    fn unknown_field(field: &str) -> Self { Error::UnknownField(String::from(field)) }
+    fn missing_field(field: &'static str) -> Self { Error::MissingField(field) }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
