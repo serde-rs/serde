@@ -593,7 +593,7 @@ fn deserialize_item_enum(
             impl_generics,
             vec![deserializer_ty_param(builder)],
             vec![deserializer_ty_arg(builder)],
-                );
+        );
 
     quote_expr!(cx, {
         $variant_visitor
@@ -683,7 +683,7 @@ fn deserialize_tuple_variant(
             generics,
             vec![deserializer_ty_param(builder)],
             vec![deserializer_ty_arg(builder)],
-                );
+        );
 
     let visit_seq_expr = deserialize_seq(
         cx,
@@ -745,7 +745,7 @@ fn deserialize_struct_variant(
             generics,
             vec![deserializer_ty_param(builder)],
             vec![deserializer_ty_arg(builder)],
-                );
+        );
 
     quote_expr!(cx, {
         $field_visitor
