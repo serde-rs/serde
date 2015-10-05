@@ -22,7 +22,13 @@ use bytes;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// The value had some syntatic error.
-    SyntaxError,
+    SyntaxError(String),
+
+    /// The value had an incorrect type.
+    TypeError(de::Type),
+
+    /// The value had an invalid length.
+    LengthError(usize),
 
     /// EOF while deserializing a value.
     EndOfStreamError,
@@ -35,7 +41,9 @@ pub enum Error {
 }
 
 impl de::Error for Error {
-    fn syntax(_: &str) -> Self { Error::SyntaxError }
+    fn syntax(msg: &str) -> Self { Error::SyntaxError(String::from(msg)) }
+    fn type_mismatch(type_: de::Type) -> Self { Error::TypeError(type_) }
+    fn length_mismatch(len: usize) -> Self { Error::LengthError(len) }
     fn end_of_stream() -> Self { Error::EndOfStreamError }
     fn unknown_field(field: &str) -> Self { Error::UnknownFieldError(String::from(field)) }
     fn missing_field(field: &'static str) -> Self { Error::MissingFieldError(field) }
