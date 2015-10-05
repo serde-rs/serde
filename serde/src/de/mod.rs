@@ -7,7 +7,7 @@ pub mod value;
 
 /// `Error` is a trait that allows a `Deserialize` to generically create a
 /// `Deserializer` error.
-pub trait Error: Sized {
+pub trait Error: From<value::Error> + Sized {
     /// Raised when there is general error when deserializing a type.
     fn syntax(msg: &str) -> Self;
 
