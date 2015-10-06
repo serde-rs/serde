@@ -230,6 +230,7 @@ Or with nightly:
 ```rust
 % cargo build --features nightly --no-default-features
 ...
+```
 
 Serialization without Macros
 ============================
