@@ -362,6 +362,38 @@ impl<T, E> ValueDeserializer<E> for HashSet<T>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A helper deserializer that deserializes a sequence using a `SeqVisitor`.
+pub struct SeqVisitorDeserializer<V_, E> {
+    visitor: V_,
+    marker: PhantomData<E>,
+}
+
+impl<V_, E> SeqVisitorDeserializer<V_, E>
+    where V_: de::SeqVisitor<Error = E>,
+          E: de::Error,
+{
+    /// Construct a new `SeqVisitorDeserializer<V_, E>`.
+    pub fn new(visitor: V_) -> Self {
+        SeqVisitorDeserializer{
+            visitor: visitor,
+            marker: PhantomData
+        }
+    }
+}
+
+impl<V_, E> de::Deserializer for SeqVisitorDeserializer<V_, E>
+    where V_: de::SeqVisitor<Error = E>,
+          E: de::Error,
+{
+    type Error = E;
+
+    fn visit<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_seq(&mut self.visitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 /// A helper deserializer that deserializes a map.
 pub struct MapDeserializer<I, K, V, E>
     where I: Iterator<Item=(K, V)>,
@@ -479,6 +511,38 @@ impl<K, V, E> ValueDeserializer<E> for HashMap<K, V>
     fn into_deserializer(self) -> Self::Deserializer {
         let len = self.len();
         MapDeserializer::new(self.into_iter(), len)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// A helper deserializer that deserializes a map using a `MapVisitor`.
+pub struct MapVisitorDeserializer<V_, E> {
+    visitor: V_,
+    marker: PhantomData<E>,
+}
+
+impl<V_, E> MapVisitorDeserializer<V_, E>
+    where V_: de::MapVisitor<Error = E>,
+          E: de::Error,
+{
+    /// Construct a new `MapVisitorDeserializer<V_, E>`.
+    pub fn new(visitor: V_) -> Self {
+        MapVisitorDeserializer{
+            visitor: visitor,
+            marker: PhantomData
+        }
+    }
+}
+
+impl<V_, E> de::Deserializer for MapVisitorDeserializer<V_, E>
+    where V_: de::MapVisitor<Error = E>,
+          E: de::Error,
+{
+    type Error = E;
+
+    fn visit<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_map(&mut self.visitor)
     }
 }
 
