@@ -81,13 +81,13 @@ impl<E> de::Deserializer for UnitDeserializer<E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_unit()
     }
 
-    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_none()
@@ -116,7 +116,7 @@ macro_rules! primitive_deserializer {
         {
             type Error = E;
 
-            fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+            fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
                 where V: de::Visitor,
             {
                 match self.0.take() {
@@ -163,7 +163,7 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         match self.0.take() {
@@ -172,7 +172,7 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
         }
     }
 
-    fn visit_enum<V>(&mut self,
+    fn deserialize_enum<V>(&mut self,
                      _name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Self::Error>
@@ -218,7 +218,7 @@ impl<E> de::Deserializer for StringDeserializer<E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         match self.0.take() {
@@ -227,7 +227,7 @@ impl<E> de::Deserializer for StringDeserializer<E>
         }
     }
 
-    fn visit_enum<V>(&mut self,
+    fn deserialize_enum<V>(&mut self,
                      _name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Self::Error>
@@ -282,7 +282,7 @@ impl<I, T, E> de::Deserializer for SeqDeserializer<I, E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_seq(self)
@@ -387,7 +387,7 @@ impl<V_, E> de::Deserializer for SeqVisitorDeserializer<V_, E>
 {
     type Error = E;
 
-    fn visit<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
+    fn deserialize<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
         visitor.visit_seq(&mut self.visitor)
     }
 }
@@ -432,7 +432,7 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
 {
     type Error = E;
 
-    fn visit<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
         visitor.visit_map(self)
@@ -541,7 +541,7 @@ impl<V_, E> de::Deserializer for MapVisitorDeserializer<V_, E>
 {
     type Error = E;
 
-    fn visit<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
+    fn deserialize<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
         visitor.visit_map(&mut self.visitor)
     }
 }
@@ -566,7 +566,7 @@ impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         match self.0.take() {
@@ -597,7 +597,7 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         match self.0.take() {
