@@ -592,9 +592,9 @@ fn serialize_struct_visitor<I>(
             let key_expr = field.serializer_key_expr(cx);
 
             let stmt = if field.skip_serializing_field_if_empty() {
-                quote_stmt!(cx, if $value_expr.is_empty() { continue; })
+                quote_stmt!(cx, if ($value_expr).is_empty() { continue; })
             } else if field.skip_serializing_field_if_none() {
-                quote_stmt!(cx, if $value_expr.is_none() { continue; })
+                quote_stmt!(cx, if ($value_expr).is_none() { continue; })
             } else {
                 quote_stmt!(cx, {})
             };
@@ -636,9 +636,9 @@ fn serialize_struct_visitor<I>(
             if field.skip_serializing_field() {
                 quote_expr!(cx, 0)
             } else if field.skip_serializing_field_if_empty() {
-                quote_expr!(cx, if $value_expr.is_empty() { 0 } else { 1 })
+                quote_expr!(cx, if ($value_expr).is_empty() { 0 } else { 1 })
             } else if field.skip_serializing_field_if_none() {
-                quote_expr!(cx, if $value_expr.is_none() { 0 } else { 1 })
+                quote_expr!(cx, if ($value_expr).is_none() { 0 } else { 1 })
             } else {
                 quote_expr!(cx, 1)
             }
