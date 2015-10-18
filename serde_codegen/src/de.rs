@@ -4,12 +4,11 @@ use aster;
 
 use syntax::ast::{
     self,
-    Ident,
-    MetaItem,
-    Item,
-    Expr,
-    StructDef,
     EnumDef,
+    Expr,
+    Ident,
+    Item,
+    MetaItem,
 };
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
@@ -87,14 +86,14 @@ fn deserialize_body(
     ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     match item.node {
-        ast::ItemStruct(ref struct_def, _) => {
+        ast::ItemStruct(ref variant_data, _) => {
             deserialize_item_struct(
                 cx,
                 builder,
                 item,
                 impl_generics,
                 ty,
-                struct_def,
+                variant_data,
             )
         }
         ast::ItemEnum(ref enum_def, _) => {
@@ -117,27 +116,17 @@ fn deserialize_item_struct(
     item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    struct_def: &ast::StructDef,
+    variant_data: &ast::VariantData,
 ) -> P<ast::Expr> {
-    let mut named_fields = vec![];
-    let mut unnamed_fields = 0;
-
-    for field in struct_def.fields.iter() {
-        match field.node.kind {
-            ast::NamedField(name, _) => { named_fields.push(name); }
-            ast::UnnamedField(_) => { unnamed_fields += 1; }
-        }
-    }
-
-    match (named_fields.is_empty(), unnamed_fields) {
-        (true, 0) => {
+    match *variant_data {
+        ast::VariantData::Unit(_) => {
             deserialize_unit_struct(
                 cx,
                 &builder,
                 item.ident,
             )
         }
-        (true, 1) => {
+        ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
             deserialize_newtype_struct(
                 cx,
                 &builder,
@@ -146,28 +135,33 @@ fn deserialize_item_struct(
                 ty,
             )
         }
-        (true, _) => {
+        ast::VariantData::Tuple(ref fields, _) => {
+            if fields.iter().any(|field| !field.node.kind.is_unnamed()) {
+                cx.bug("tuple struct has named fields")
+            }
+
             deserialize_tuple_struct(
                 cx,
                 &builder,
                 item.ident,
                 impl_generics,
                 ty,
-                unnamed_fields,
+                fields.len(),
             )
         }
-        (false, 0) => {
+        ast::VariantData::Struct(ref fields, _) => {
+            if fields.iter().any(|field| field.node.kind.is_unnamed()) {
+                cx.bug("struct has unnamed fields")
+            }
+
             deserialize_struct(
                 cx,
                 &builder,
                 item.ident,
                 impl_generics,
                 ty,
-                struct_def,
+                fields,
             )
-        }
-        (false, _) => {
-            cx.bug("struct has named and unnamed fields")
         }
     }
 }
@@ -422,9 +416,9 @@ fn deserialize_struct_as_seq(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
-    struct_def: &StructDef,
+    fields: &[ast::StructField],
 ) -> P<ast::Expr> {
-    let let_values: Vec<P<ast::Stmt>> = (0 .. struct_def.fields.len())
+    let let_values: Vec<P<ast::Stmt>> = (0 .. fields.len())
         .map(|i| {
             let name = builder.id(format!("__field{}", i));
             quote_stmt!(cx,
@@ -440,13 +434,13 @@ fn deserialize_struct_as_seq(
 
     let result = builder.expr().struct_path(struct_path)
         .with_id_exprs(
-            struct_def.fields.iter()
+            fields.iter()
                 .enumerate()
                 .map(|(i, field)| {
                     (
                         match field.node.kind {
                             ast::NamedField(name, _) => name.clone(),
-                            ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+                            ast::UnnamedField(_) => cx.bug("struct contains unnamed fields"),
                         },
                         builder.expr().id(format!("__field{}", i)),
                     )
@@ -469,7 +463,7 @@ fn deserialize_struct(
     type_ident: Ident,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    struct_def: &StructDef,
+    fields: &[ast::StructField],
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
 
@@ -486,14 +480,14 @@ fn deserialize_struct(
         cx,
         builder,
         type_path.clone(),
-        struct_def
+        fields,
     );
 
     let (field_visitor, fields_stmt, visit_map_expr) = deserialize_struct_visitor(
         cx,
         builder,
-        struct_def,
-        type_path.clone()
+        type_path.clone(),
+        fields,
     );
 
     let type_name = builder.expr().str(type_ident);
@@ -628,20 +622,20 @@ fn deserialize_variant(
 ) -> P<ast::Expr> {
     let variant_ident = variant.node.name;
 
-    match variant.node.kind {
-        ast::TupleVariantKind(ref args) if args.is_empty() => {
+    match *variant.node.data {
+        ast::VariantData::Unit(_) => {
             quote_expr!(cx, {
                 try!(visitor.visit_unit());
                 Ok($type_ident::$variant_ident)
             })
         }
-        ast::TupleVariantKind(ref args) if args.len() == 1 => {
+        ast::VariantData::Tuple(ref args, _) if args.len() == 1 => {
             quote_expr!(cx, {
                 let val = try!(visitor.visit_newtype());
                 Ok($type_ident::$variant_ident(val))
             })
         }
-        ast::TupleVariantKind(ref args) => {
+        ast::VariantData::Tuple(ref fields, _) => {
             deserialize_tuple_variant(
                 cx,
                 builder,
@@ -649,10 +643,10 @@ fn deserialize_variant(
                 variant_ident,
                 generics,
                 ty,
-                args.len(),
+                fields.len(),
             )
         }
-        ast::StructVariantKind(ref struct_def) => {
+        ast::VariantData::Struct(ref fields, _) => {
             deserialize_struct_variant(
                 cx,
                 builder,
@@ -660,7 +654,7 @@ fn deserialize_variant(
                 variant_ident,
                 generics,
                 ty,
-                struct_def,
+                fields,
             )
         }
     }
@@ -716,7 +710,7 @@ fn deserialize_struct_variant(
     variant_ident: ast::Ident,
     generics: &ast::Generics,
     ty: P<ast::Ty>,
-    struct_def: &ast::StructDef,
+    fields: &[ast::StructField],
 ) -> P<ast::Expr> {
     let where_clause = &generics.where_clause;
 
@@ -729,14 +723,14 @@ fn deserialize_struct_variant(
         cx,
         builder,
         type_path.clone(),
-        struct_def
+        fields,
     );
 
     let (field_visitor, fields_stmt, field_expr) = deserialize_struct_visitor(
         cx,
         builder,
-        struct_def,
-        type_path
+        type_path,
+        fields,
     );
 
     let (visitor_item, visitor_ty, visitor_expr, visitor_generics) =
@@ -791,7 +785,7 @@ fn deserialize_field_visitor(
         .enum_("__Field")
         .with_variants(
             field_idents.iter().map(|field_ident| {
-                builder.variant(field_ident).tuple().build()
+                builder.variant(field_ident).unit()
             })
         )
         .build();
@@ -927,25 +921,25 @@ fn deserialize_field_visitor(
 fn deserialize_struct_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    struct_def: &ast::StructDef,
     struct_path: ast::Path,
+    fields: &[ast::StructField],
 ) -> (Vec<P<ast::Item>>, P<ast::Stmt>, P<ast::Expr>) {
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        field::struct_field_attrs(cx, builder, struct_def),
+        field::struct_field_attrs(cx, builder, fields),
     );
 
     let visit_map_expr = deserialize_map(
         cx,
         builder,
         struct_path,
-        struct_def,
+        fields,
     );
 
     let fields_expr = builder.expr().addr_of().slice()
         .with_exprs(
-            struct_def.fields.iter()
+            fields.iter()
                 .map(|field| {
                     match field.node.kind {
                         ast::NamedField(name, _) => builder.expr().str(name),
@@ -966,10 +960,10 @@ fn deserialize_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
-    struct_def: &StructDef,
+    fields: &[ast::StructField],
 ) -> P<ast::Expr> {
     // Create the field names for the fields.
-    let field_names: Vec<ast::Ident> = (0 .. struct_def.fields.len())
+    let field_names: Vec<ast::Ident> = (0 .. fields.len())
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
@@ -990,7 +984,7 @@ fn deserialize_map(
         .collect();
 
     let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
-        .zip(field::struct_field_attrs(cx, builder, struct_def).iter())
+        .zip(field::struct_field_attrs(cx, builder, fields).iter())
         .map(|(field_name, field_attr)| {
             let missing_expr = if field_attr.use_default() {
                 quote_expr!(cx, ::std::default::Default::default())
@@ -1027,7 +1021,7 @@ fn deserialize_map(
 
     let result = builder.expr().struct_path(struct_path)
         .with_id_exprs(
-            struct_def.fields.iter()
+            fields.iter()
                 .zip(field_names.iter())
                 .map(|(field, field_name)| {
                     (

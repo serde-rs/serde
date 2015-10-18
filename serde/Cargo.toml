@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -10,8 +10,7 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 
 [dependencies]
-num = "*"
+num = "^0.1.27"
 
 [features]
 nightly = []
-
