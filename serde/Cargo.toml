@@ -9,8 +9,9 @@ documentation = "https://serde-rs.github.io/serde/serde/serde/index.html"
 readme = "../README.md"
 keywords = ["serde", "serialization"]
 
-[dependencies]
-num = "^0.1.27"
+[dependencies.num]
+version = "^0.1.27"
+default-features = false
 
 [features]
 nightly = []
