@@ -679,7 +679,8 @@ impl<'a, I> de::VariantVisitor for DeserializerVariantVisitor<'a, I>
             | Some(&Token::EnumNewtype(_, v))
             | Some(&Token::EnumSeqStart(_, v, _))
             | Some(&Token::EnumMapStart(_, v, _)) => {
-                let value = try!(de::Deserialize::deserialize(&mut v.into_deserializer()));
+                let mut de = ValueDeserializer::<Error>::into_deserializer(v);
+                let value = try!(de::Deserialize::deserialize(&mut de));
                 Ok(value)
             }
             Some(_) => {
