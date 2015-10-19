@@ -262,7 +262,7 @@ mod deserializer {
         type Error = Error;
 
         #[inline]
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
@@ -288,7 +288,7 @@ mod deserializer {
         }
 
         #[inline]
-        fn visit_enum<V>(&mut self,
+        fn deserialize_enum<V>(&mut self,
                          _name: &str,
                          _variants: &[&str],
                          mut visitor: V) -> Result<V::Value, Error>
