@@ -39,6 +39,20 @@ struct SkipSerializingFields<A: default::Default> {
     b: A,
 }
 
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+struct SkipSerializingIfEmptyFields<A: default::Default> {
+    a: i8,
+    #[serde(skip_serializing_if_empty, default)]
+    b: Vec<A>,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+struct SkipSerializingIfNoneFields<A: default::Default> {
+    a: i8,
+    #[serde(skip_serializing_if_none, default)]
+    b: Option<A>,
+}
+
 #[test]
 fn test_default() {
     assert_de_tokens(
@@ -164,6 +178,164 @@ fn test_skip_serializing_fields() {
             Token::MapSep,
             Token::Str("a"),
             Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_skip_serializing_fields_if_empty() {
+    assert_ser_tokens(
+        &SkipSerializingIfEmptyFields::<i32> {
+            a: 1,
+            b: vec![],
+        },
+        &[
+            Token::StructStart("SkipSerializingIfEmptyFields", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &SkipSerializingIfEmptyFields::<i32> {
+            a: 1,
+            b: vec![],
+        },
+        vec![
+            Token::StructStart("SkipSerializingIfEmptyFields", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &SkipSerializingIfEmptyFields {
+            a: 1,
+            b: vec![2],
+        },
+        &[
+            Token::StructStart("SkipSerializingIfEmptyFields", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::SeqStart(Some(1)),
+            Token::SeqSep,
+            Token::I32(2),
+            Token::SeqEnd,
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &SkipSerializingIfEmptyFields {
+            a: 1,
+            b: vec![2],
+        },
+        vec![
+            Token::StructStart("SkipSerializingIfEmptyFields", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::SeqStart(Some(1)),
+            Token::SeqSep,
+            Token::I32(2),
+            Token::SeqEnd,
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_skip_serializing_fields_if_none() {
+    assert_ser_tokens(
+        &SkipSerializingIfNoneFields::<i32> {
+            a: 1,
+            b: None,
+        },
+        &[
+            Token::StructStart("SkipSerializingIfNoneFields", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &SkipSerializingIfNoneFields::<i32> {
+            a: 1,
+            b: None,
+        },
+        vec![
+            Token::StructStart("SkipSerializingIfNoneFields", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &SkipSerializingIfNoneFields {
+            a: 1,
+            b: Some(2),
+        },
+        &[
+            Token::StructStart("SkipSerializingIfNoneFields", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::Option(true),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &SkipSerializingIfNoneFields {
+            a: 1,
+            b: Some(2),
+        },
+        vec![
+            Token::StructStart("SkipSerializingIfNoneFields", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::Option(true),
+            Token::I32(2),
 
             Token::MapEnd,
         ]

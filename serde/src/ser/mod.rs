@@ -337,7 +337,7 @@ pub trait SeqVisitor {
     }
 }
 
-/// A trait that is used by a `Serializer` to iterate through a map.
+/// A trait that is used by a `Serialize` to iterate through a map.
 pub trait MapVisitor {
     /// Serializes a map item in the serializer.
     ///

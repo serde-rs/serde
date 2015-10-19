@@ -5,7 +5,6 @@ use syntax::ast::{
     MetaItem,
     Item,
     Expr,
-    StructDef,
 };
 use syntax::ast;
 use syntax::codemap::Span;
@@ -82,14 +81,14 @@ fn serialize_body(
     ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     match item.node {
-        ast::ItemStruct(ref struct_def, _) => {
+        ast::ItemStruct(ref variant_data, _) => {
             serialize_item_struct(
                 cx,
                 builder,
                 item,
                 impl_generics,
                 ty,
-                struct_def,
+                variant_data,
             )
         }
         ast::ItemEnum(ref enum_def, _) => {
@@ -112,56 +111,50 @@ fn serialize_item_struct(
     item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    struct_def: &ast::StructDef,
+    variant_data: &ast::VariantData,
 ) -> P<ast::Expr> {
-    let mut named_fields = vec![];
-    let mut unnamed_fields = 0;
-
-    for field in struct_def.fields.iter() {
-        match field.node.kind {
-            ast::NamedField(name, _) => { named_fields.push(name); }
-            ast::UnnamedField(_) => { unnamed_fields += 1; }
-        }
-    }
-
-    match (named_fields.is_empty(), unnamed_fields) {
-        (true, 0) => {
+    match *variant_data {
+        ast::VariantData::Unit(_) => {
             serialize_unit_struct(
                 cx,
                 &builder,
                 item.ident,
             )
         }
-        (true, 1) => {
+        ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
             serialize_newtype_struct(
                 cx,
                 &builder,
                 item.ident,
             )
         }
-        (true, _) => {
+        ast::VariantData::Tuple(ref fields, _) => {
+            if fields.iter().any(|field| !field.node.kind.is_unnamed()) {
+                cx.bug("tuple struct has named fields")
+            }
+
             serialize_tuple_struct(
                 cx,
                 &builder,
                 item.ident,
                 impl_generics,
                 ty,
-                unnamed_fields,
+                fields.len(),
             )
         }
-        (false, 0) => {
+        ast::VariantData::Struct(ref fields, _) => {
+            if fields.iter().any(|field| field.node.kind.is_unnamed()) {
+                cx.bug("struct has unnamed fields")
+            }
+
             serialize_struct(
                 cx,
                 &builder,
                 item.ident,
                 impl_generics,
                 ty,
-                struct_def,
-                named_fields,
+                fields,
             )
-        }
-        (false, _) => {
-            cx.bug("struct has named and unnamed fields")
         }
     }
 }
@@ -225,8 +218,7 @@ fn serialize_struct(
     type_ident: Ident,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    struct_def: &StructDef,
-    fields: Vec<Ident>,
+    fields: &[ast::StructField],
 ) -> P<ast::Expr> {
     let (visitor_struct, visitor_impl) = serialize_struct_visitor(
         cx,
@@ -236,9 +228,12 @@ fn serialize_struct(
             .ref_()
             .lifetime("'__a")
             .build_ty(ty.clone()),
-        struct_def,
+        fields,
         impl_generics,
-        fields.iter().map(|field| quote_expr!(cx, &self.value.$field)),
+        fields.iter().map(|field| {
+            let name = field.node.ident().expect("struct has unnamed field");
+            quote_expr!(cx, &self.value.$name)
+        })
     );
 
     let type_name = builder.expr().str(type_ident);
@@ -297,8 +292,8 @@ fn serialize_variant(
     let variant_ident = variant.node.name;
     let variant_name = builder.expr().str(variant_ident);
 
-    match variant.node.kind {
-        ast::TupleVariantKind(ref args) if args.is_empty() => {
+    match *variant.node.data {
+        ast::VariantData::Unit(_) => {
             let pat = builder.pat().enum_()
                 .id(type_ident).id(variant_ident).build()
                 .build();
@@ -314,7 +309,7 @@ fn serialize_variant(
                 }
             )
         },
-        ast::TupleVariantKind(ref args) if args.len() == 1 => {
+        ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
             let field = builder.id("__simple_value");
             let field = builder.pat().ref_id(field);
             let pat = builder.pat().enum_()
@@ -333,14 +328,17 @@ fn serialize_variant(
                 }
             )
         },
-        ast::TupleVariantKind(ref args) => {
-            let fields: Vec<ast::Ident> = (0 .. args.len())
+        ast::VariantData::Tuple(ref fields, _) => {
+            let field_names: Vec<ast::Ident> = (0 .. fields.len())
                 .map(|i| builder.id(format!("__field{}", i)))
                 .collect();
 
             let pat = builder.pat().enum_()
                 .id(type_ident).id(variant_ident).build()
-                .with_pats(fields.iter().map(|field| builder.pat().ref_id(field)))
+                .with_pats(
+                    field_names.iter()
+                        .map(|field| builder.pat().ref_id(field))
+                )
                 .build();
 
             let expr = serialize_tuple_variant(
@@ -351,22 +349,22 @@ fn serialize_variant(
                 variant_name,
                 generics,
                 ty,
-                args,
                 fields,
+                field_names,
             );
 
             quote_arm!(cx, $pat => { $expr })
         }
-        ast::StructVariantKind(ref struct_def) => {
-            let fields: Vec<_> = (0 .. struct_def.fields.len())
+        ast::VariantData::Struct(ref fields, _) => {
+            let field_names: Vec<_> = (0 .. fields.len())
                 .map(|i| builder.id(format!("__field{}", i)))
                 .collect();
 
             let pat = builder.pat().struct_()
                 .id(type_ident).id(variant_ident).build()
                 .with_pats(
-                    fields.iter()
-                        .zip(struct_def.fields.iter())
+                    field_names.iter()
+                        .zip(fields.iter())
                         .map(|(id, field)| {
                             let name = match field.node.kind {
                                 ast::NamedField(name, _) => name,
@@ -388,8 +386,8 @@ fn serialize_variant(
                 variant_name,
                 generics,
                 ty,
-                struct_def,
                 fields,
+                field_names,
             );
 
             quote_arm!(cx, $pat => { $expr })
@@ -405,16 +403,16 @@ fn serialize_tuple_variant(
     variant_name: P<ast::Expr>,
     generics: &ast::Generics,
     structure_ty: P<ast::Ty>,
-    args: &[ast::VariantArg],
-    fields: Vec<Ident>,
+    fields: &[ast::StructField],
+    field_names: Vec<Ident>,
 ) -> P<ast::Expr> {
     let variant_ty = builder.ty().tuple()
         .with_tys(
-            args.iter().map(|arg| {
+            fields.iter().map(|field| {
                 builder.ty()
                     .ref_()
                     .lifetime("'__a")
-                    .build_ty(arg.ty.clone())
+                    .build_ty(field.node.ty.clone())
             })
         )
         .build();
@@ -424,13 +422,13 @@ fn serialize_tuple_variant(
         builder,
         structure_ty.clone(),
         variant_ty,
-        args.len(),
+        fields.len(),
         generics,
     );
 
     let value_expr = builder.expr().tuple()
         .with_exprs(
-            fields.iter().map(|field| {
+            field_names.iter().map(|field| {
                 builder.expr().id(field)
             })
         )
@@ -455,12 +453,12 @@ fn serialize_struct_variant(
     variant_name: P<ast::Expr>,
     generics: &ast::Generics,
     structure_ty: P<ast::Ty>,
-    struct_def: &ast::StructDef,
-    fields: Vec<Ident>,
+    fields: &[ast::StructField],
+    field_names: Vec<Ident>,
 ) -> P<ast::Expr> {
     let value_ty = builder.ty().tuple()
         .with_tys(
-            struct_def.fields.iter().map(|field| {
+            fields.iter().map(|field| {
                 builder.ty()
                     .ref_()
                     .lifetime("'__a")
@@ -471,7 +469,7 @@ fn serialize_struct_variant(
 
     let value_expr = builder.expr().tuple()
         .with_exprs(
-            fields.iter().map(|field| {
+            field_names.iter().map(|field| {
                 builder.expr().id(field)
             })
         )
@@ -482,9 +480,9 @@ fn serialize_struct_variant(
         builder,
         structure_ty.clone(),
         value_ty,
-        struct_def,
+        fields,
         generics,
-        (0 .. fields.len()).map(|i| {
+        (0 .. field_names.len()).map(|i| {
             builder.expr()
                 .tup_field(i)
                 .field("value").self_()
@@ -574,29 +572,37 @@ fn serialize_struct_visitor<I>(
     builder: &aster::AstBuilder,
     structure_ty: P<ast::Ty>,
     variant_ty: P<ast::Ty>,
-    struct_def: &StructDef,
+    fields: &[ast::StructField],
     generics: &ast::Generics,
     value_exprs: I,
 ) -> (P<ast::Item>, P<ast::Item>)
     where I: Iterator<Item=P<ast::Expr>>,
 {
-    let field_attrs = struct_field_attrs(cx, builder, struct_def);
+    let value_exprs = value_exprs.collect::<Vec<_>>();
 
-    let len = struct_def.fields.len() - field_attrs.iter()
-        .fold(0, |sum, field| {
-            sum + if field.skip_serializing_field() { 1 } else { 0 }
-        });
+    let field_attrs = struct_field_attrs(cx, builder, fields);
 
-    let arms: Vec<ast::Arm> = field_attrs.into_iter()
-        .zip(value_exprs)
+    let arms: Vec<ast::Arm> = field_attrs.iter()
+        .zip(value_exprs.iter())
         .filter(|&(ref field, _)| !field.skip_serializing_field())
         .enumerate()
-        .map(|(i, (field, value_expr))| {
+        .map(|(i, (ref field, value_expr))| {
             let key_expr = field.serializer_key_expr(cx);
+
+            let stmt = if field.skip_serializing_field_if_empty() {
+                quote_stmt!(cx, if ($value_expr).is_empty() { continue; })
+            } else if field.skip_serializing_field_if_none() {
+                quote_stmt!(cx, if ($value_expr).is_none() { continue; })
+            } else {
+                quote_stmt!(cx, {})
+            };
+
             quote_arm!(cx,
                 $i => {
                     self.state += 1;
-                    Ok(
+                    $stmt
+
+                    return Ok(
                         Some(
                             try!(
                                 serializer.visit_struct_elt(
@@ -605,7 +611,7 @@ fn serialize_struct_visitor<I>(
                                 )
                             )
                         )
-                    )
+                    );
                 }
             )
         })
@@ -621,6 +627,21 @@ fn serialize_struct_visitor<I>(
     let visitor_generics = builder.from_generics(visitor_impl_generics.clone())
         .strip_bounds()
         .build();
+
+    let len = field_attrs.iter()
+        .zip(value_exprs.iter())
+        .map(|(field, value_expr)| {
+            if field.skip_serializing_field() {
+                quote_expr!(cx, 0)
+            } else if field.skip_serializing_field_if_empty() {
+                quote_expr!(cx, if ($value_expr).is_empty() { 0 } else { 1 })
+            } else if field.skip_serializing_field_if_none() {
+                quote_expr!(cx, if ($value_expr).is_none() { 0 } else { 1 })
+            } else {
+                quote_expr!(cx, 1)
+            }
+        })
+        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     (
         quote_item!(cx,
@@ -640,9 +661,11 @@ fn serialize_struct_visitor<I>(
                 fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
                     where S: ::serde::ser::Serializer,
                 {
-                    match self.state {
-                        $arms
-                        _ => Ok(None)
+                    loop {
+                        match self.state {
+                            $arms
+                            _ => { return Ok(None); }
+                        }
                     }
                 }
 
