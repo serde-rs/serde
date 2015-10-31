@@ -378,7 +378,7 @@ mod deserializer {
         type Error = Error;
 
         #[inline]
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.state {
@@ -437,7 +437,7 @@ mod deserializer {
         type Error = Error;
 
         #[inline]
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.state {

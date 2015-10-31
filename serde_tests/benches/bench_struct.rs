@@ -356,7 +356,7 @@ mod deserializer {
     impl de::Deserializer for OuterDeserializer {
         type Error = Error;
 
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
@@ -398,7 +398,7 @@ mod deserializer {
             }
         }
 
-        fn visit_struct<V>(&mut self,
+        fn deserialize_struct<V>(&mut self,
                            name: &str,
                            _fields: &'static [&'static str],
                            mut visitor: V) -> Result<V::Value, Error>

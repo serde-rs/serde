@@ -89,12 +89,12 @@ impl<'a, I> ser::Serializer for Serializer<I>
 {
     type Error = ();
 
-    fn visit_unit(&mut self) -> Result<(), ()> {
+    fn serialize_unit(&mut self) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Unit));
         Ok(())
     }
 
-    fn visit_newtype_variant<T>(&mut self,
+    fn serialize_newtype_variant<T>(&mut self,
                                 name: &str,
                                 _variant_index: usize,
                                 variant: &str,
@@ -105,12 +105,12 @@ impl<'a, I> ser::Serializer for Serializer<I>
         value.serialize(self)
     }
 
-    fn visit_unit_struct(&mut self, name: &str) -> Result<(), ()> {
+    fn serialize_unit_struct(&mut self, name: &str) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::UnitStruct(name)));
         Ok(())
     }
 
-    fn visit_unit_variant(&mut self,
+    fn serialize_unit_variant(&mut self,
                           name: &str,
                           _variant_index: usize,
                           variant: &str) -> Result<(), ()> {
@@ -119,87 +119,87 @@ impl<'a, I> ser::Serializer for Serializer<I>
         Ok(())
     }
 
-    fn visit_bool(&mut self, v: bool) -> Result<(), ()> {
+    fn serialize_bool(&mut self, v: bool) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Bool(v)));
         Ok(())
     }
 
-    fn visit_isize(&mut self, v: isize) -> Result<(), ()> {
+    fn serialize_isize(&mut self, v: isize) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Isize(v)));
         Ok(())
     }
 
-    fn visit_i8(&mut self, v: i8) -> Result<(), ()> {
+    fn serialize_i8(&mut self, v: i8) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::I8(v)));
         Ok(())
     }
 
-    fn visit_i16(&mut self, v: i16) -> Result<(), ()> {
+    fn serialize_i16(&mut self, v: i16) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::I16(v)));
         Ok(())
     }
 
-    fn visit_i32(&mut self, v: i32) -> Result<(), ()> {
+    fn serialize_i32(&mut self, v: i32) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::I32(v)));
         Ok(())
     }
 
-    fn visit_i64(&mut self, v: i64) -> Result<(), ()> {
+    fn serialize_i64(&mut self, v: i64) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::I64(v)));
         Ok(())
     }
 
-    fn visit_usize(&mut self, v: usize) -> Result<(), ()> {
+    fn serialize_usize(&mut self, v: usize) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Usize(v)));
         Ok(())
     }
 
-    fn visit_u8(&mut self, v: u8) -> Result<(), ()> {
+    fn serialize_u8(&mut self, v: u8) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::U8(v)));
         Ok(())
     }
 
-    fn visit_u16(&mut self, v: u16) -> Result<(), ()> {
+    fn serialize_u16(&mut self, v: u16) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::U16(v)));
         Ok(())
     }
 
-    fn visit_u32(&mut self, v: u32) -> Result<(), ()> {
+    fn serialize_u32(&mut self, v: u32) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::U32(v)));
         Ok(())
     }
 
-    fn visit_u64(&mut self, v: u64) -> Result<(), ()> {
+    fn serialize_u64(&mut self, v: u64) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::U64(v)));
         Ok(())
     }
 
-    fn visit_f32(&mut self, v: f32) -> Result<(), ()> {
+    fn serialize_f32(&mut self, v: f32) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::F32(v)));
         Ok(())
     }
 
-    fn visit_f64(&mut self, v: f64) -> Result<(), ()> {
+    fn serialize_f64(&mut self, v: f64) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::F64(v)));
         Ok(())
     }
 
-    fn visit_char(&mut self, v: char) -> Result<(), ()> {
+    fn serialize_char(&mut self, v: char) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Char(v)));
         Ok(())
     }
 
-    fn visit_str(&mut self, v: &str) -> Result<(), ()> {
+    fn serialize_str(&mut self, v: &str) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Str(v)));
         Ok(())
     }
 
-    fn visit_none(&mut self) -> Result<(), ()> {
+    fn serialize_none(&mut self) -> Result<(), ()> {
         assert_eq!(self.tokens.next(), Some(&Token::Option(false)));
         Ok(())
     }
 
-    fn visit_some<V>(&mut self, value: V) -> Result<(), ()>
+    fn serialize_some<V>(&mut self, value: V) -> Result<(), ()>
         where V: ser::Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::Option(true)));
@@ -207,7 +207,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
     }
 
 
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<(), ()>
+    fn serialize_seq<V>(&mut self, visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor
     {
         let len = visitor.len();
@@ -217,7 +217,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_sequence(visitor)
     }
 
-    fn visit_newtype_struct<T>(&mut self,
+    fn serialize_newtype_struct<T>(&mut self,
                                name: &'static str,
                                value: T) -> Result<(), ()>
         where T: ser::Serialize,
@@ -226,7 +226,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         value.serialize(self)
     }
 
-    fn visit_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+    fn serialize_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
         where V: ser::SeqVisitor
     {
         let len = visitor.len();
@@ -236,7 +236,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_sequence(visitor)
     }
 
-    fn visit_tuple_variant<V>(&mut self,
+    fn serialize_tuple_variant<V>(&mut self,
                               name: &str,
                               _variant_index: usize,
                               variant: &str,
@@ -250,14 +250,14 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_sequence(visitor)
     }
 
-    fn visit_seq_elt<T>(&mut self, value: T) -> Result<(), ()>
+    fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), ()>
         where T: ser::Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::SeqSep));
         value.serialize(self)
     }
 
-    fn visit_map<V>(&mut self, visitor: V) -> Result<(), ()>
+    fn serialize_map<V>(&mut self, visitor: V) -> Result<(), ()>
         where V: ser::MapVisitor
     {
         let len = visitor.len();
@@ -267,7 +267,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_mapping(visitor)
     }
 
-    fn visit_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+    fn serialize_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
         where V: ser::MapVisitor
     {
         let len = visitor.len();
@@ -277,7 +277,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_mapping(visitor)
     }
 
-    fn visit_struct_variant<V>(&mut self,
+    fn serialize_struct_variant<V>(&mut self,
                                name: &str,
                                _variant_index: usize,
                                variant: &str,
@@ -291,7 +291,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_mapping(visitor)
     }
 
-    fn visit_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), ()>
+    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), ()>
         where K: ser::Serialize,
               V: ser::Serialize,
     {
@@ -376,7 +376,7 @@ impl<I> de::Deserializer for Deserializer<I>
 {
     type Error = Error;
 
-    fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         println!("visit {:?}", self.tokens.peek());
@@ -416,7 +416,7 @@ impl<I> de::Deserializer for Deserializer<I>
 
     /// Hook into `Option` deserializing so we can treat `Unit` as a
     /// `None`, or a regular value as `Some(value)`.
-    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+    fn deserialize_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -437,7 +437,7 @@ impl<I> de::Deserializer for Deserializer<I>
         }
     }
 
-    fn visit_enum<V>(&mut self,
+    fn deserialize_enum<V>(&mut self,
                      name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Error>
@@ -467,7 +467,7 @@ impl<I> de::Deserializer for Deserializer<I>
         }
     }
 
-    fn visit_unit_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
+    fn deserialize_unit_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
         match self.tokens.peek() {
@@ -479,12 +479,12 @@ impl<I> de::Deserializer for Deserializer<I>
                     Err(Error::InvalidName(n))
                 }
             }
-            Some(_) => self.visit(visitor),
+            Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfStreamError),
         }
     }
 
-    fn visit_newtype_struct<V>(&mut self,
+    fn deserialize_newtype_struct<V>(&mut self,
                                name: &str,
                                mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
@@ -498,12 +498,12 @@ impl<I> de::Deserializer for Deserializer<I>
                     Err(Error::InvalidName(n))
                 }
             }
-            Some(_) => self.visit(visitor),
+            Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfStreamError),
         }
     }
 
-    fn visit_tuple_struct<V>(&mut self,
+    fn deserialize_tuple_struct<V>(&mut self,
                              name: &str,
                              len: usize,
                              mut visitor: V) -> Result<V::Value, Error>
@@ -530,12 +530,12 @@ impl<I> de::Deserializer for Deserializer<I>
                 self.tokens.next();
                 self.visit_seq(Some(len), visitor)
             }
-            Some(_) => self.visit(visitor),
+            Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfStreamError),
         }
     }
 
-    fn visit_struct<V>(&mut self,
+    fn deserialize_struct<V>(&mut self,
                        name: &str,
                        fields: &'static [&'static str],
                        visitor: V) -> Result<V::Value, Error>
@@ -554,7 +554,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 self.tokens.next();
                 self.visit_map(Some(fields.len()), visitor)
             }
-            Some(_) => self.visit(visitor),
+            Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfStreamError),
         }
     }

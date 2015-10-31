@@ -277,7 +277,7 @@ fn deserialize_unit_struct(
             }
         }
 
-        deserializer.visit_unit_struct($type_name, __Visitor)
+        deserializer.deserialize_unit_struct($type_name, __Visitor)
     })
 }
 
@@ -329,7 +329,7 @@ fn deserialize_newtype_struct(
             }
         }
 
-        deserializer.visit_newtype_struct($type_name, $visitor_expr)
+        deserializer.deserialize_newtype_struct($type_name, $visitor_expr)
     })
 }
 
@@ -374,7 +374,7 @@ fn deserialize_tuple_struct(
             }
         }
 
-        deserializer.visit_tuple_struct($type_name, $fields, $visitor_expr)
+        deserializer.deserialize_tuple_struct($type_name, $fields, $visitor_expr)
     })
 }
 
@@ -517,7 +517,7 @@ fn deserialize_struct(
 
         $fields_stmt
 
-        deserializer.visit_struct($type_name, FIELDS, $visitor_expr)
+        deserializer.deserialize_struct($type_name, FIELDS, $visitor_expr)
     })
 }
 
@@ -608,7 +608,7 @@ fn deserialize_item_enum(
 
         $variants_stmt
 
-        deserializer.visit_enum($type_name, VARIANTS, $visitor_expr)
+        deserializer.deserialize_enum($type_name, VARIANTS, $visitor_expr)
     })
 }
 
@@ -910,7 +910,7 @@ fn deserialize_field_visitor(
                     }
                 }
 
-                deserializer.visit(__FieldVisitor::<D>{ phantom: PhantomData })
+                deserializer.deserialize(__FieldVisitor::<D>{ phantom: PhantomData })
             }
         }
     ).unwrap();
