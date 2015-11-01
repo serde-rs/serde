@@ -622,7 +622,7 @@ fn deserialize_variant(
 ) -> P<ast::Expr> {
     let variant_ident = variant.node.name;
 
-    match *variant.node.data {
+    match variant.node.data {
         ast::VariantData::Unit(_) => {
             quote_expr!(cx, {
                 try!(visitor.visit_unit());

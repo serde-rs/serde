@@ -1,6 +1,6 @@
 [package]
 name = "serde_tests"
-version = "0.5.0"
+version = "0.6.2"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -11,15 +11,15 @@ keywords = ["serialization"]
 build = "build.rs"
 
 [build-dependencies]
-syntex = { version = "*" }
-syntex_syntax = { version = "*" }
+syntex = { version = "^0.17.0" }
+syntex_syntax = { version = "^0.19.1" }
 serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
-num = "*"
-rustc-serialize = "*"
+num = "^0.1.27"
+rustc-serialize = "^0.3.16"
 serde = { version = "*", path = "../serde" }
-syntex = "*"
+syntex = "^0.17.0"
 
 [[test]]
 name = "test"

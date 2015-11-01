@@ -292,7 +292,7 @@ fn serialize_variant(
     let variant_ident = variant.node.name;
     let variant_name = builder.expr().str(variant_ident);
 
-    match *variant.node.data {
+    match variant.node.data {
         ast::VariantData::Unit(_) => {
             let pat = builder.pat().enum_()
                 .id(type_ident).id(variant_ident).build()
