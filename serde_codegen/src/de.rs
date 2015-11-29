@@ -65,7 +65,6 @@ pub fn expand_derive_deserialize(
     let where_clause = &impl_generics.where_clause;
 
     let impl_item = quote_item!(cx,
-        #[automatically_derived]
         impl $impl_generics ::serde::de::Deserialize for $ty $where_clause {
             fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<$ty, __D::Error>
                 where __D: ::serde::de::Deserializer,

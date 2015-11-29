@@ -60,7 +60,6 @@ pub fn expand_derive_serialize(
     let where_clause = &impl_generics.where_clause;
 
     let impl_item = quote_item!(cx,
-        #[automatically_derived]
         impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
             fn serialize<__S>(&self, serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
                 where __S: ::serde::ser::Serializer,
