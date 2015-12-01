@@ -1,5 +1,10 @@
 use std::collections::BTreeMap;
 
+use num::FromPrimitive;
+use num::bigint::{BigInt, BigUint};
+use num::complex::Complex;
+use num::rational::Ratio;
+
 use token::Token;
 
 //////////////////////////////////////////////////////////////////////////
@@ -257,6 +262,35 @@ declare_ser_tests! {
                 Token::Str("b"),
                 Token::I32(2),
             Token::MapEnd,
+        ],
+    }
+    test_num_bigint {
+        BigInt::from_i64(123).unwrap() => &[Token::Str("123")],
+        BigInt::from_i64(-123).unwrap() => &[Token::Str("-123")],
+    }
+    test_num_biguint {
+        BigUint::from_i64(123).unwrap() => &[Token::Str("123")],
+    }
+    test_num_complex {
+        Complex::new(1, 2) => &[
+            Token::SeqStart(Some(2)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+            Token::SeqEnd,
+        ],
+    }
+    test_num_ratio {
+        Ratio::new(1, 2) => &[
+            Token::SeqStart(Some(2)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+            Token::SeqEnd,
         ],
     }
 }

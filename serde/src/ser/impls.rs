@@ -700,3 +700,37 @@ impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
         (**self).serialize(serializer)
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "num-bigint")]
+impl Serialize for ::num::bigint::BigInt {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+        self.to_str_radix(10).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "num-bigint")]
+impl Serialize for ::num::bigint::BigUint {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+        self.to_str_radix(10).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "num-complex")]
+impl<T> Serialize for ::num::complex::Complex<T>
+    where T: Serialize + Clone + ::num::Num
+{
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+        (&self.re, &self.im).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "num-rational")]
+impl<T> Serialize for ::num::rational::Ratio<T>
+    where T: Serialize + Clone + ::num::Integer + PartialOrd
+{
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+        (self.numer(), self.denom()).serialize(serializer)
+    }
+}

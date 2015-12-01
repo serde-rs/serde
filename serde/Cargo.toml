@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.6.1"
+version = "0.6.6"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -14,3 +14,7 @@ num = "^0.1.27"
 
 [features]
 nightly = []
+num-impls = ["num-bigint", "num-complex", "num-rational"]
+num-bigint = ["num/bigint"]
+num-complex = ["num/complex"]
+num-rational = ["num/rational"]

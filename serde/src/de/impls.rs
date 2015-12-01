@@ -895,3 +895,87 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
         deserializer.visit_enum("Result", VARIANTS, Visitor(PhantomData))
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "num-bigint")]
+impl Deserialize for ::num::bigint::BigInt {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        use ::num::Num;
+        use ::num::bigint::BigInt;
+
+        struct BigIntVisitor;
+
+        impl Visitor for BigIntVisitor {
+            type Value = BigInt;
+
+            fn visit_str<E>(&mut self, s: &str) -> Result<Self::Value, E>
+                where E: Error,
+            {
+                match BigInt::from_str_radix(s, 10) {
+                    Ok(v) => Ok(v),
+                    Err(err) => Err(Error::invalid_value(&err.to_string())),
+                }
+            }
+        }
+
+        deserializer.visit(BigIntVisitor)
+    }
+}
+
+#[cfg(feature = "num-bigint")]
+impl Deserialize for ::num::bigint::BigUint {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        use ::num::Num;
+        use ::num::bigint::BigUint;
+
+        struct BigUintVisitor;
+
+        impl Visitor for BigUintVisitor {
+            type Value = ::num::bigint::BigUint;
+
+            fn visit_str<E>(&mut self, s: &str) -> Result<Self::Value, E>
+                where E: Error,
+            {
+                match BigUint::from_str_radix(s, 10) {
+                    Ok(v) => Ok(v),
+                    Err(err) => Err(Error::invalid_value(&err.to_string())),
+                }
+            }
+        }
+
+        deserializer.visit(BigUintVisitor)
+    }
+}
+
+#[cfg(feature = "num-complex")]
+impl<T> Deserialize for ::num::complex::Complex<T>
+    where T: Deserialize + Clone + ::num::Num
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let (re, im) = try!(Deserialize::deserialize(deserializer));
+        Ok(::num::complex::Complex::new(re, im))
+    }
+}
+
+#[cfg(feature = "num-rational")]
+impl<T> Deserialize for ::num::rational::Ratio<T>
+    where T: Deserialize + Clone + ::num::Integer + PartialOrd
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let (numer, denom) = try!(Deserialize::deserialize(deserializer));
+        if denom == ::num::Zero::zero() {
+            Err(Error::invalid_value("denominator is zero"))
+        } else {
+            Ok(::num::rational::Ratio::new_raw(numer, denom))
+        }
+    }
+}

@@ -18,7 +18,7 @@ serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-sy
 [dev-dependencies]
 num = "^0.1.27"
 rustc-serialize = "^0.3.16"
-serde = { version = "*", path = "../serde" }
+serde = { version = "*", path = "../serde", features = ["num-impls"] }
 syntex = "^0.22.0"
 
 [[test]]

@@ -1,6 +1,7 @@
 #![feature(test, custom_attribute, custom_derive, plugin)]
 #![plugin(serde_macros)]
 
+extern crate num;
 extern crate serde;
 extern crate test;
 
