@@ -12,7 +12,7 @@ build = "build.rs"
 
 [build-dependencies]
 syntex = { version = "^0.22.0" }
-syntex_syntax = { version = "^0.22.0" }
+syntex_syntax = { version = "^0.23.0" }
 serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
