@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use test::Bencher;
+use std::fmt;
+use std::error;
 
 use rustc_serialize::{Decoder, Decodable};
 
@@ -41,6 +43,22 @@ impl serde::de::Error for Error {
 
     fn missing_field(_: &'static str) -> Error {
         Error::MissingField
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
     }
 }
 
