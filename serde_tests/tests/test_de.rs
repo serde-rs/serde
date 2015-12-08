@@ -1,5 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
+use num::FromPrimitive;
+use num::bigint::{BigInt, BigUint};
+use num::complex::Complex;
+use num::rational::Ratio;
+
 use serde::de::{Deserializer, Visitor};
 
 use token::{Token, assert_de_tokens};
@@ -553,6 +558,35 @@ declare_tests! {
             Token::EnumStart("Enum"),
             Token::Bytes(b"Unit"),
             Token::Unit,
+        ],
+    }
+    test_num_bigint {
+        BigInt::from_i64(123).unwrap() => vec![Token::Str("123")],
+        BigInt::from_i64(-123).unwrap() => vec![Token::Str("-123")],
+    }
+    test_num_biguint {
+        BigUint::from_i64(123).unwrap() => vec![Token::Str("123")],
+    }
+    test_num_complex {
+        Complex::new(1, 2) => vec![
+            Token::SeqStart(Some(2)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+            Token::SeqEnd,
+        ],
+    }
+    test_num_ratio {
+        Ratio::new(1, 2) => vec![
+            Token::SeqStart(Some(2)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+            Token::SeqEnd,
         ],
     }
 }

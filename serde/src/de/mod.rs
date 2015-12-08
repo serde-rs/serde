@@ -21,6 +21,11 @@ pub trait Error: Sized {
         Error::syntax("incorrect type")
     }
 
+    /// Raised when a `Deserialize` was passed an incorrect value.
+    fn invalid_value(msg: &str) -> Self {
+        Error::syntax(msg)
+    }
+
     /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
 
