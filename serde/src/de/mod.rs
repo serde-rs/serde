@@ -40,7 +40,7 @@ pub trait Error: Sized + error::Error {
 
 /// `Type` represents all the primitive types that can be deserialized. This is used by
 /// `Error::kind_mismatch`.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Type {
     /// Represents a `bool` type.
     Bool,

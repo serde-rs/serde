@@ -55,10 +55,12 @@ impl de::Error for Error {
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            Error::SyntaxError => formatter.write_str("SyntaxError"),
-            Error::EndOfStreamError => formatter.write_str("EndOfStreamError"),
-            Error::UnknownFieldError(ref field) => formatter.write_str(format!("Unknown field: {}", field).as_ref()),
-            Error::MissingFieldError(ref field) => formatter.write_str(format!("Missing field: {}", field).as_ref()),
+            Error::Syntax(ref s) => write!(formatter, "Syntax error: {}", s),
+            Error::Type(ty) => write!(formatter, "Invalid type: {:?}", ty),
+            Error::Length(len) => write!(formatter, "Invalid length: {}", len),
+            Error::EndOfStream => formatter.write_str("EndOfStreamError"),
+            Error::UnknownField(ref field) => write!(formatter, "Unknown field: {}", field),
+            Error::MissingField(ref field) => write!(formatter, "Missing field: {}", field),
         }
     }
 }
