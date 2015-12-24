@@ -4,7 +4,6 @@ use syntax::ast::{
     Ident,
     MetaItem,
     Item,
-    Expr,
 };
 use syntax::ast;
 use syntax::codemap::Span;

@@ -5,7 +5,6 @@ use aster;
 use syntax::ast::{
     self,
     EnumDef,
-    Expr,
     Ident,
     Item,
     MetaItem,
@@ -13,7 +12,6 @@ use syntax::ast::{
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
-use syntax::owned_slice::OwnedSlice;
 use syntax::ptr::P;
 
 use attr;
@@ -187,7 +185,7 @@ fn deserialize_visitor(
         let mut trait_generics = trait_generics.clone();
         let mut ty_params = forward_ty_params.clone();
         ty_params.extend(trait_generics.ty_params.into_vec());
-        trait_generics.ty_params = OwnedSlice::from_vec(ty_params);
+        trait_generics.ty_params = P::from_vec(ty_params);
 
         (
             builder.item().tuple_struct("__Visitor")
