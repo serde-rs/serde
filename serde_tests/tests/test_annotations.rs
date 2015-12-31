@@ -53,6 +53,25 @@ struct SkipSerializingIfNoneFields<A: default::Default> {
     b: Option<A>,
 }
 
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+struct AddSerializer(i8);
+impl AddSerializer {
+    fn new(v: &i8) -> Self { AddSerializer(*v + 1) }
+}
+
+impl Into<i8> for AddSerializer {
+    fn into(self) -> i8 {
+        self.0 - 1
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+struct SerializerFields {
+    a: i8,
+    #[serde(serializer="AddSerializer::new", deserializer="AddSerializer")]
+    b: i8,
+}
+
 #[test]
 fn test_default() {
     assert_de_tokens(
@@ -100,6 +119,51 @@ fn test_rename() {
             Token::MapSep,
             Token::Str("a3"),
             Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_serializer() {
+    assert_ser_tokens(
+        &SerializerFields {
+            a: 1,
+            b: 2,
+        },
+        &[
+            Token::StructStart("SerializerFields", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::StructNewtype("AddSerializer"),
+            Token::I8(3),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &SerializerFields {
+            a: 1,
+            b: 2,
+        },
+        vec![
+            Token::StructStart("SerializerFields", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::StructNewtype("AddSerializer"),
+            Token::I8(3),
 
             Token::MapEnd,
         ]

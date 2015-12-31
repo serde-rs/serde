@@ -11,6 +11,7 @@ use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
+use quasi::ExtParseUtils;
 
 use field::struct_field_attrs;
 
@@ -587,6 +588,12 @@ fn serialize_struct_visitor<I>(
         .enumerate()
         .map(|(i, (ref field, value_expr))| {
             let key_expr = field.serializer_key_expr(cx);
+            let value_expr = if let Some(serializer) = field.serializer() {
+                let serializer = cx.parse_expr(serializer.into());
+                quote_expr!(cx, ($serializer)($value_expr))
+            } else {
+                value_expr.clone()
+            };
 
             let stmt = if field.skip_serializing_field_if_empty() {
                 quote_stmt!(cx, if ($value_expr).is_empty() { continue; })

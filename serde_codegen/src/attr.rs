@@ -25,6 +25,8 @@ pub struct FieldAttrs {
     skip_serializing_field_if_empty: bool,
     skip_serializing_field_if_none: bool,
     names: FieldNames,
+    serializer: Option<String>,
+    deserializer: Option<String>,
     use_default: bool,
 }
 
@@ -41,6 +43,16 @@ impl FieldAttrs {
             },
             _ => HashSet::new()
         }
+    }
+
+    /// Return the serializer for the field
+    pub fn serializer(&self) -> Option<&str> {
+        self.serializer.as_ref().map(AsRef::as_ref)
+    }
+
+    /// Return the deserializer for the field
+    pub fn deserializer(&self) -> Option<&str> {
+        self.deserializer.as_ref().map(AsRef::as_ref)
     }
 
     /// Return an expression for the field key name for serialisation.
@@ -108,6 +120,8 @@ pub struct FieldAttrsBuilder<'a> {
     skip_serializing_field: bool,
     skip_serializing_field_if_empty: bool,
     skip_serializing_field_if_none: bool,
+    serializer: Option<String>,
+    deserializer: Option<String>,
     name: Option<P<ast::Expr>>,
     format_rename: HashMap<P<ast::Expr>, P<ast::Expr>>,
     use_default: bool,
@@ -120,6 +134,8 @@ impl<'a> FieldAttrsBuilder<'a> {
             skip_serializing_field: false,
             skip_serializing_field_if_empty: false,
             skip_serializing_field_if_none: false,
+            serializer: None,
+            deserializer: None,
             name: None,
             format_rename: HashMap::new(),
             use_default: false,
@@ -174,6 +190,20 @@ impl<'a> FieldAttrsBuilder<'a> {
                 }
                 self
             }
+            ast::MetaNameValue(ref name, ref lit) if name == &"serializer" => {
+                if let ast::Lit_::LitStr(ref lit, _) = lit.node {
+                    self.serializer(lit[..].into())
+                } else {
+                    unreachable!()
+                }
+            }
+            ast::MetaNameValue(ref name, ref lit) if name == &"deserializer" => {
+                if let ast::Lit_::LitStr(ref lit, _) = lit.node {
+                    self.deserializer(lit[..].into())
+                } else {
+                    unreachable!()
+                }
+            }
             ast::MetaWord(ref name) if name == &"default" => {
                 self.default()
             }
@@ -208,6 +238,16 @@ impl<'a> FieldAttrsBuilder<'a> {
         self
     }
 
+    pub fn serializer(mut self, value: String) -> FieldAttrsBuilder<'a> {
+        self.serializer = Some(value);
+        self
+    }
+
+    pub fn deserializer(mut self, value: String) -> FieldAttrsBuilder<'a> {
+        self.deserializer = Some(value);
+        self
+    }
+
     pub fn name(mut self, name: P<ast::Expr>) -> FieldAttrsBuilder<'a> {
         self.name = Some(name);
         self
@@ -238,6 +278,8 @@ impl<'a> FieldAttrsBuilder<'a> {
             skip_serializing_field: self.skip_serializing_field,
             skip_serializing_field_if_empty: self.skip_serializing_field_if_empty,
             skip_serializing_field_if_none: self.skip_serializing_field_if_none,
+            serializer: self.serializer,
+            deserializer: self.deserializer,
             names: names,
             use_default: self.use_default,
         }
