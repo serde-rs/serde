@@ -978,13 +978,13 @@ fn deserialize_map(
         .map(|(field_name, field_attr)| {
             let visit_value = if let Some(deserializer) = field_attr.deserializer() {
                 let deserializer = cx.parse_expr(deserializer.into());
-                quote_expr!(cx, Some(try!(visitor.visit_value::<$deserializer>()).into()))
+                quote_expr!(cx, ::std::convert::Into::into(try!(visitor.visit_value::<$deserializer>())))
             } else {
-                quote_expr!(cx, Some(try!(visitor.visit_value())))
+                quote_expr!(cx, try!(visitor.visit_value()))
             };
             quote_arm!(cx,
                 __Field::$field_name => {
-                    $field_name = $visit_value;
+                    $field_name = Some($visit_value);
                 }
             )
         })
