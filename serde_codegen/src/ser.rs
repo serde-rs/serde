@@ -589,7 +589,37 @@ fn serialize_struct_visitor<I>(
         .map(|(i, (ref field, value_expr))| {
             let key_expr = field.serializer_key_expr(cx);
             let value_expr = if let Some(serializer) = field.serializer() {
+                use aster::invoke::Invoke;
+                use syntax::parse::token::keywords::Keyword;
+                use syntax::fold::{noop_fold_expr, Folder};
+
+                struct SelfFolder<'a>(&'a ExtCtxt<'a>, &'a aster::AstBuilder);
+                impl<'a> Folder for SelfFolder<'a> {
+                    fn fold_expr(&mut self, e: P<Expr>) -> P<Expr> {
+                        let self_path = if let ast::Expr_::ExprPath(None, ref path) = e.node {
+                            if path.segments.len() == 1 && path.segments[0].identifier == self.0.ident_of("self") {
+                                true
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        };
+
+                        if self_path {
+                            if let ast::Expr_::ExprPath(None, path) = e.and_then(|e| e.node) {
+                                self.1.expr().field("value").invoke(path)
+                            } else {
+                                unreachable!()
+                            }
+                        } else {
+                            e.map(|e| noop_fold_expr(e, self))
+                        }
+                    }
+                }
+
                 let serializer = cx.parse_expr(serializer.into());
+                let serializer = SelfFolder(cx, builder).fold_expr(serializer);
                 quote_expr!(cx, ($serializer)($value_expr))
             } else {
                 value_expr.clone()
