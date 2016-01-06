@@ -2,7 +2,7 @@ use syntax::ast;
 use syntax::ext::base::ExtCtxt;
 
 use aster;
-use attr::{FieldAttrs, FieldAttrsBuilder};
+use attr::{ContainerAttrs, ContainerAttrsBuilder, FieldAttrs, FieldAttrsBuilder};
 
 pub fn struct_field_attrs(
     _cx: &ExtCtxt,
@@ -14,4 +14,11 @@ pub fn struct_field_attrs(
             FieldAttrsBuilder::new(builder).field(field).build()
         })
         .collect()
+}
+
+pub fn container_attrs(
+    _cx: &ExtCtxt,
+    container: &ast::Item,
+) -> ContainerAttrs {
+    ContainerAttrsBuilder::new().attrs(container.attrs()).build()
 }

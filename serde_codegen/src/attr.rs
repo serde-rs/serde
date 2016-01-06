@@ -243,3 +243,66 @@ impl<'a> FieldAttrsBuilder<'a> {
         }
     }
 }
+
+/// Represents container (e.g. struct) attribute information
+#[derive(Debug)]
+pub struct ContainerAttrs {
+    disallow_unknown: bool,
+}
+
+impl ContainerAttrs {
+    pub fn disallow_unknown(&self) -> bool {
+        self.disallow_unknown
+    }
+}
+
+pub struct ContainerAttrsBuilder {
+    disallow_unknown: bool,
+}
+
+impl ContainerAttrsBuilder {
+    pub fn new() -> ContainerAttrsBuilder {
+        ContainerAttrsBuilder {
+            disallow_unknown: false,
+        }
+    }
+
+    pub fn attrs(self, attrs: &[ast::Attribute]) -> ContainerAttrsBuilder {
+        attrs.iter().fold(self, ContainerAttrsBuilder::attr)
+    }
+
+    pub fn attr(self, attr: &ast::Attribute) -> ContainerAttrsBuilder {
+        match attr.node.value.node {
+            ast::MetaList(ref name, ref items) if name == &"serde" => {
+                attr::mark_used(&attr);
+                items.iter().fold(self, ContainerAttrsBuilder::meta_item)
+            }
+            _ => {
+                self
+            }
+        }
+    }
+
+    pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> ContainerAttrsBuilder {
+        match meta_item.node {
+            ast::MetaWord(ref name) if name == &"disallow_unknown" => {
+                self.disallow_unknown()
+            }
+            _ => {
+                // Ignore unknown meta variables for now.
+                self
+            }
+        }
+    }
+
+    pub fn disallow_unknown(mut self) -> ContainerAttrsBuilder {
+        self.disallow_unknown = true;
+        self
+    }
+
+    pub fn build(self) -> ContainerAttrs {
+        ContainerAttrs {
+            disallow_unknown: self.disallow_unknown,
+        }
+    }
+}

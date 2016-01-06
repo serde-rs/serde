@@ -898,6 +898,110 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A target for deserializers that want to ignore data. Implements
+/// Deserialize and silently eats data given to it.
+pub struct IgnoredAny;
+
+impl Deserialize for IgnoredAny {
+    #[inline]
+    fn deserialize<D>(deserializer: &mut D) -> Result<IgnoredAny, D::Error>
+        where D: Deserializer,
+    {
+        struct IgnoredAnyVisitor;
+
+        impl Visitor for IgnoredAnyVisitor {
+            type Value = IgnoredAny;
+
+            #[inline]
+            fn visit_bool<E>(&mut self, _: bool) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_i64<E>(&mut self, _: i64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_u64<E>(&mut self, _: u64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_f64<E>(&mut self, _: f64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_str<E>(&mut self, _: &str) -> Result<IgnoredAny, E>
+                where E: Error,
+            {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_none<E>(&mut self) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_some<D>(&mut self, _: &mut D) -> Result<IgnoredAny, D::Error>
+                where D: Deserializer,
+            {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_newtype_struct<D>(&mut self, _: &mut D) -> Result<IgnoredAny, D::Error>
+                where D: Deserializer,
+            {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_unit<E>(&mut self) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_seq<V>(&mut self, mut visitor: V) -> Result<IgnoredAny, V::Error>
+                where V: SeqVisitor,
+            {
+                while let Some(_) = try!(visitor.visit::<IgnoredAny>()) {
+                    // Gobble
+                }
+
+                try!(visitor.end());
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_map<V>(&mut self, mut visitor: V) -> Result<IgnoredAny, V::Error>
+                where V: MapVisitor,
+            {
+                while let Some((_, _)) = try!(visitor.visit::<IgnoredAny, IgnoredAny>()) {
+                    // Gobble
+                }
+
+                try!(visitor.end());
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_bytes<E>(&mut self, _: &[u8]) -> Result<IgnoredAny, E>
+                where E: Error,
+            {
+                Ok(IgnoredAny)
+            }
+        }
+
+        deserializer.visit(IgnoredAnyVisitor)
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
 #[cfg(feature = "num-bigint")]
 impl Deserialize for ::num::bigint::BigInt {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
