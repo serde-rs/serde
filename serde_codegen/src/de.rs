@@ -15,6 +15,7 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::owned_slice::OwnedSlice;
 use syntax::ptr::P;
+use quasi::ExtParseUtils;
 
 use attr;
 use field;
@@ -973,10 +974,17 @@ fn deserialize_map(
 
     // Match arms to extract a value for a field.
     let value_arms: Vec<ast::Arm> = field_names.iter()
-        .map(|field_name| {
+        .zip(field::struct_field_attrs(cx, builder, fields).iter())
+        .map(|(field_name, field_attr)| {
+            let visit_value = if let Some(deserializer) = field_attr.deserializer() {
+                let deserializer = cx.parse_expr(deserializer.into());
+                quote_expr!(cx, ::std::convert::Into::into(try!(visitor.visit_value::<$deserializer>())))
+            } else {
+                quote_expr!(cx, try!(visitor.visit_value()))
+            };
             quote_arm!(cx,
                 __Field::$field_name => {
-                    $field_name = Some(try!(visitor.visit_value()));
+                    $field_name = Some($visit_value);
                 }
             )
         })
