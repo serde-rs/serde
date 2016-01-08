@@ -19,7 +19,7 @@ pub enum FieldNames {
     }
 }
 
-/// Represents field attribute information
+/// Represents field or variant attribute information
 #[derive(Debug)]
 pub struct FieldAttrs {
     skip_serializing_field: bool,
@@ -147,6 +147,11 @@ impl<'a> FieldAttrsBuilder<'a> {
         }
 
         Ok(self)
+    }
+
+    pub fn variant(mut self, variant: &ast::Variant) -> Result<FieldAttrsBuilder<'a>, ()> {
+        self.name = Some(self.builder.expr().str(variant.node.name));
+        self.attrs(&variant.node.attrs)
     }
 
     pub fn attr(mut self, attr: &ast::Attribute) -> Result<FieldAttrsBuilder<'a>, ()> {

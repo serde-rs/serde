@@ -4,6 +4,7 @@ use std::error;
 
 use serde::{ser, de};
 use serde::de::value::{self, ValueDeserializer};
+use serde::de::impls::RenamedDeserializer;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token<'a> {
@@ -695,8 +696,10 @@ impl<'a, I> de::VariantVisitor for DeserializerVariantVisitor<'a, I>
             | Some(&Token::EnumNewtype(_, v))
             | Some(&Token::EnumSeqStart(_, v, _))
             | Some(&Token::EnumMapStart(_, v, _)) => {
-                let mut de = ValueDeserializer::<Error>::into_deserializer(v);
-                let value = try!(de::Deserialize::deserialize(&mut de));
+                let value_de = ValueDeserializer::<Error>::into_deserializer(v);
+                let mut renamed_de =
+                    RenamedDeserializer::<_, Deserializer<I>>::rename_deserializer(value_de);
+                let value = try!(de::Deserialize::deserialize(&mut renamed_de));
                 Ok(value)
             }
             Some(_) => {

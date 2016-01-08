@@ -1,5 +1,6 @@
 use syntax::ast;
 use syntax::ext::base::ExtCtxt;
+use syntax::ptr;
 
 use aster;
 use attr;
@@ -13,6 +14,22 @@ pub fn struct_field_attrs(
     for field in fields {
         let builder = attr::FieldAttrsBuilder::new(cx, builder);
         let builder = try!(builder.field(field));
+        let attr = builder.build();
+        attrs.push(attr);
+    }
+
+    Ok(attrs)
+}
+
+pub fn variant_attrs(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    variants: &[ptr::P<ast::Variant>],
+) -> Result<Vec<attr::FieldAttrs>, ()> {
+    let mut attrs = vec![];
+    for variant in variants {
+        let builder = attr::FieldAttrsBuilder::new(cx, builder);
+        let builder = try!(builder.variant(variant));
         let attr = builder.build();
         attrs.push(attr);
     }
