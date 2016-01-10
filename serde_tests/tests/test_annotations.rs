@@ -1,12 +1,25 @@
 use std::default;
 
-use token::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens};
+use token::{
+    Error,
+    Token,
+    assert_tokens,
+    assert_ser_tokens,
+    assert_de_tokens,
+    assert_de_tokens_error
+};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Default {
     a1: i32,
     #[serde(default)]
     a2: i32,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(disallow_unknown)]
+struct DisallowUnknown {
+    a1: i32,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -83,6 +96,59 @@ fn test_default() {
 
             Token::MapEnd,
         ]
+    );
+}
+
+#[test]
+fn test_ignore_unknown() {
+    // 'Default' allows unknown. Basic smoke test of ignore...
+    assert_de_tokens(
+        &Default { a1: 1, a2: 2},
+        vec![
+            Token::StructStart("Default", Some(5)),
+
+            Token::MapSep,
+            Token::Str("whoops1"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("whoops2"),
+            Token::SeqStart(Some(1)),
+            Token::SeqSep,
+            Token::I32(2),
+            Token::SeqEnd,
+
+            Token::MapSep,
+            Token::Str("a2"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("whoops3"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens_error::<DisallowUnknown>(
+        vec![
+            Token::StructStart("DisallowUnknown", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("whoops"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ],
+        Error::UnknownFieldError("whoops".to_owned())
     );
 }
 
