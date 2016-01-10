@@ -10,7 +10,7 @@
 //! [github repository](https://github.com/serde-rs/serde)
 
 #![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
-#![cfg_attr(feature = "nightly", feature(collections, core, enumset, nonzero, step_trait, zero_one))]
+#![cfg_attr(feature = "nightly", feature(collections, enumset, nonzero, step_trait, zero_one))]
 
 #![deny(missing_docs)]
 
