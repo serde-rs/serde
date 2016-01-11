@@ -567,7 +567,7 @@ fn deserialize_item_enum(
         const VARIANTS: &'static [&'static str] = $variants_expr;
     ).unwrap();
 
-    let ignored_arm = if !container_attrs.disallow_unknown() {
+    let ignored_arm = if !container_attrs.deny_unknown_fields() {
         Some(quote_arm!(cx, __Field::__ignore => { Err(::serde::de::Error::end_of_stream()) }))
     } else {
         None
@@ -800,7 +800,7 @@ fn deserialize_field_visitor(
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
-    let ignore_variant = if !container_attrs.disallow_unknown() {
+    let ignore_variant = if !container_attrs.deny_unknown_fields() {
         let skip_ident = builder.id("__ignore");
         Some(builder.variant(skip_ident).unit())
     } else {
@@ -848,7 +848,7 @@ fn deserialize_field_visitor(
         })
         .collect();
 
-    let fallthrough_arm_expr = if !container_attrs.disallow_unknown() {
+    let fallthrough_arm_expr = if !container_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
         quote_expr!(cx, Err(::serde::de::Error::unknown_field(value)))
@@ -1012,7 +1012,7 @@ fn deserialize_map(
 
 
     // Visit ignored values to consume them
-    let ignored_arm = if !container_attrs.disallow_unknown() {
+    let ignored_arm = if !container_attrs.deny_unknown_fields() {
         Some(quote_arm!(cx,
             _ => { try!(visitor.visit_value::<::serde::de::impls::IgnoredAny>()); }
         ))

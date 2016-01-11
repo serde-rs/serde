@@ -247,23 +247,23 @@ impl<'a> FieldAttrsBuilder<'a> {
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
 pub struct ContainerAttrs {
-    disallow_unknown: bool,
+    deny_unknown_fields: bool,
 }
 
 impl ContainerAttrs {
-    pub fn disallow_unknown(&self) -> bool {
-        self.disallow_unknown
+    pub fn deny_unknown_fields(&self) -> bool {
+        self.deny_unknown_fields
     }
 }
 
 pub struct ContainerAttrsBuilder {
-    disallow_unknown: bool,
+    deny_unknown_fields: bool,
 }
 
 impl ContainerAttrsBuilder {
     pub fn new() -> ContainerAttrsBuilder {
         ContainerAttrsBuilder {
-            disallow_unknown: false,
+            deny_unknown_fields: false,
         }
     }
 
@@ -285,8 +285,8 @@ impl ContainerAttrsBuilder {
 
     pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> ContainerAttrsBuilder {
         match meta_item.node {
-            ast::MetaWord(ref name) if name == &"disallow_unknown" => {
-                self.disallow_unknown()
+            ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
+                self.deny_unknown_fields()
             }
             _ => {
                 // Ignore unknown meta variables for now.
@@ -295,14 +295,14 @@ impl ContainerAttrsBuilder {
         }
     }
 
-    pub fn disallow_unknown(mut self) -> ContainerAttrsBuilder {
-        self.disallow_unknown = true;
+    pub fn deny_unknown_fields(mut self) -> ContainerAttrsBuilder {
+        self.deny_unknown_fields = true;
         self
     }
 
     pub fn build(self) -> ContainerAttrs {
         ContainerAttrs {
-            disallow_unknown: self.disallow_unknown,
+            deny_unknown_fields: self.deny_unknown_fields,
         }
     }
 }

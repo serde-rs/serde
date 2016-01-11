@@ -17,7 +17,7 @@ struct Default {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(disallow_unknown)]
+#[serde(deny_unknown_fields)]
 struct DisallowUnknown {
     a1: i32,
 }

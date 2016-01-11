@@ -600,7 +600,7 @@ Structure Annotations:
 
 | Annotation                  | Function                                                                                                                                           |
 | ----------                  | --------                                                                                                                                           |
-| `#[serde(disallow_unknown)` | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
+| `#[serde(deny_unknown_fields)` | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
 
 
 Serialization Formats Using Serde
