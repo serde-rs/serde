@@ -310,7 +310,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
 //////////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, PartialEq, Debug)]
-enum Error {
+pub enum Error {
     SyntaxError,
     EndOfStreamError,
     UnknownFieldError(String),
@@ -644,7 +644,7 @@ impl<'a, I> de::MapVisitor for DeserializerMapVisitor<'a, I>
         match self.de.tokens.peek() {
             Some(&Token::MapSep) => {
                 self.de.tokens.next();
-                self.len = self.len.map(|len| len - 1);
+                self.len = self.len.map(|len| if len > 0 { len - 1} else { 0 });
                 Ok(Some(try!(de::Deserialize::deserialize(self.de))))
             }
             Some(&Token::MapEnd) => Ok(None),
@@ -796,6 +796,57 @@ pub fn assert_de_tokens<T>(value: &T, tokens: Vec<Token<'static>>)
     let mut de = Deserializer::new(tokens.into_iter());
     let v: Result<T, Error> = de::Deserialize::deserialize(&mut de);
     assert_eq!(v.as_ref(), Ok(value));
+    assert_eq!(de.tokens.next(), None);
+}
+
+// Expect an error deserializing tokens into a T
+pub fn assert_de_tokens_error<T>(tokens: Vec<Token<'static>>, error: Error)
+    where T: de::Deserialize + PartialEq + fmt::Debug,
+{
+    let mut de = Deserializer::new(tokens.into_iter());
+    let v: Result<T, Error> = de::Deserialize::deserialize(&mut de);
+    assert_eq!(v.as_ref(), Err(&error));
+}
+
+// Tests that the given token stream is ignorable when embedded in
+// an otherwise normal struct
+pub fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
+    #[derive(PartialEq, Debug, Deserialize)]
+    struct IgnoreBase {
+        a: i32,
+    }
+
+    let expected = IgnoreBase{a: 1};
+
+    // Embed the tokens to be ignored in the normal token
+    // stream for an IgnoreBase type
+    let concated_tokens : Vec<Token<'static>> = vec![
+            Token::MapStart(Some(2)),
+                Token::MapSep,
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::MapSep,
+                Token::Str("ignored")
+        ]
+        .into_iter()
+        .chain(ignorable_tokens.into_iter())
+        .chain(vec![
+            Token::MapEnd,
+        ].into_iter())
+        .collect();
+
+    let mut de = Deserializer::new(concated_tokens.into_iter());
+    let v: Result<IgnoreBase, Error> = de::Deserialize::deserialize(&mut de);
+
+    // We run this test on every token stream for convenience, but
+    // some token streams don't make sense embedded as a map value,
+    // so we ignore those. SyntaxError is the real sign of trouble.
+    if let Err(Error::UnexpectedToken(_)) = v {
+        return;
+    }
+
+    assert_eq!(v.as_ref(), Ok(&expected));
     assert_eq!(de.tokens.next(), None);
 }
 
