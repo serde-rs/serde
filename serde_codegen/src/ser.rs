@@ -63,6 +63,7 @@ pub fn expand_derive_serialize(
             fn serialize<__S>(&self, serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
                 where __S: ::serde::ser::Serializer,
             {
+                use ::serde::ser::empty::Empty;
                 $body
             }
         }
