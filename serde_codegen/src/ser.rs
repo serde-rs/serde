@@ -57,6 +57,36 @@ pub fn expand_derive_serialize(
     );
 
     let where_clause = &impl_generics.where_clause;
+    /*
+        First attempt
+        ```
+        let use_empty = builder.item()
+            .attr().allow(&["unused_imports"])
+            .use_().ids(&["serde", "ser", "empty", "Empty"])
+            .build().build();
+        ```
+        Was used as:
+        ```
+        {
+            $use_empty;
+            $body
+        }
+        ```
+    */
+    /*
+        Second attempt
+        ```
+        let allow_unused_imports = builder.attr().allow(&["unused_imports"]).build();
+        ```
+        Was used as:
+        ```
+        {
+            $allow_unused_imports use ::serde::ser::empty::Empty;
+            $body
+        }
+        ```
+    */
+
 
     let impl_item = quote_item!(cx,
         impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
