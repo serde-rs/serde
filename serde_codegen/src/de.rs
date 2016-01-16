@@ -29,7 +29,7 @@ pub fn expand_derive_deserialize(
         _ => {
             cx.span_err(
                 meta_item.span,
-                "`derive` may only be applied to structs and enums");
+                "`#[derive(Deserialize)]` may only be applied to structs and enums");
             return;
         }
     };
@@ -39,7 +39,12 @@ pub fn expand_derive_deserialize(
     let generics = match item.node {
         ast::ItemStruct(_, ref generics) => generics,
         ast::ItemEnum(_, ref generics) => generics,
-        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive(Deserialize)]")
+        _ => {
+            cx.span_err(
+                meta_item.span,
+                "`#[derive(Deserialize)]` may only be applied to structs and enums");
+            return;
+        }
     };
 
     let impl_generics = builder.from_generics(generics.clone())
@@ -90,6 +95,7 @@ fn deserialize_body(
                 item,
                 impl_generics,
                 ty,
+                item.span,
                 variant_data,
             )
         }
@@ -103,7 +109,10 @@ fn deserialize_body(
                 enum_def,
             )
         }
-        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive(Deserialize)]")
+        _ => {
+            cx.span_bug(item.span,
+                        "expected ItemStruct or ItemEnum in #[derive(Deserialize)]")
+        }
     }
 }
 
@@ -113,6 +122,7 @@ fn deserialize_item_struct(
     item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
+    span: Span,
     variant_data: &ast::VariantData,
 ) -> P<ast::Expr> {
     match *variant_data {
@@ -134,7 +144,7 @@ fn deserialize_item_struct(
         }
         ast::VariantData::Tuple(ref fields, _) => {
             if fields.iter().any(|field| !field.node.kind.is_unnamed()) {
-                cx.bug("tuple struct has named fields")
+                cx.span_bug(span, "tuple struct has named fields")
             }
 
             deserialize_tuple_struct(
@@ -148,7 +158,7 @@ fn deserialize_item_struct(
         }
         ast::VariantData::Struct(ref fields, _) => {
             if fields.iter().any(|field| field.node.kind.is_unnamed()) {
-                cx.bug("struct has unnamed fields")
+                cx.span_bug(span, "struct has unnamed fields")
             }
 
             deserialize_struct(
@@ -437,7 +447,9 @@ fn deserialize_struct_as_seq(
                     (
                         match field.node.kind {
                             ast::NamedField(name, _) => name.clone(),
-                            ast::UnnamedField(_) => cx.bug("struct contains unnamed fields"),
+                            ast::UnnamedField(_) => {
+                                cx.span_bug(field.span, "struct contains unnamed fields")
+                            }
                         },
                         builder.expr().id(format!("__field{}", i)),
                     )
@@ -940,7 +952,9 @@ fn deserialize_struct_visitor(
                 .map(|field| {
                     match field.node.kind {
                         ast::NamedField(name, _) => builder.expr().str(name),
-                        ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+                        ast::UnnamedField(_) => {
+                            cx.span_bug(field.span, "struct contains unnamed fields")
+                        }
                     }
                 })
         )
@@ -1024,7 +1038,9 @@ fn deserialize_map(
                     (
                         match field.node.kind {
                             ast::NamedField(name, _) => name.clone(),
-                            ast::UnnamedField(_) => panic!("struct contains unnamed fields"),
+                            ast::UnnamedField(_) => {
+                                cx.span_bug(field.span, "struct contains unnamed fields")
+                            }
                         },
                         builder.expr().id(field_name),
                     )
