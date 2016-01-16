@@ -7,7 +7,7 @@ use num::rational::Ratio;
 
 use serde::de::{Deserializer, Visitor};
 
-use token::{Token, assert_de_tokens};
+use token::{Error, Token, assert_de_tokens, assert_de_tokens_ignore};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -39,7 +39,11 @@ macro_rules! declare_test {
         #[test]
         fn $name() {
             $(
+                // Test ser/de roundtripping
                 assert_de_tokens(&$value, $tokens);
+
+                // Test that the tokens are ignorable
+                assert_de_tokens_ignore($tokens);
             )+
         }
     }
