@@ -25,7 +25,7 @@ pub fn expand_derive_serialize(
         _ => {
             cx.span_err(
                 meta_item.span,
-                "`derive` may only be applied to structs and enums");
+                "`#[derive(Serialize)]` may only be applied to structs and enums");
             return;
         }
     };
@@ -35,7 +35,12 @@ pub fn expand_derive_serialize(
     let generics = match item.node {
         ast::ItemStruct(_, ref generics) => generics,
         ast::ItemEnum(_, ref generics) => generics,
-        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive(Serialize)]")
+        _ => {
+            cx.span_err(
+                meta_item.span,
+                "`#[derive(Serialize)]` may only be applied to structs and enums");
+            return;
+        }
     };
 
     let impl_generics = builder.from_generics(generics.clone())
@@ -86,6 +91,7 @@ fn serialize_body(
                 item,
                 impl_generics,
                 ty,
+                item.span,
                 variant_data,
             )
         }
@@ -99,7 +105,10 @@ fn serialize_body(
                 enum_def,
             )
         }
-        _ => cx.bug("expected ItemStruct or ItemEnum in #[derive(Serialize)]")
+        _ => {
+            cx.span_bug(item.span,
+                        "expected ItemStruct or ItemEnum in #[derive(Serialize)]")
+        }
     }
 }
 
@@ -109,6 +118,7 @@ fn serialize_item_struct(
     item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
+    span: Span,
     variant_data: &ast::VariantData,
 ) -> P<ast::Expr> {
     match *variant_data {
@@ -128,7 +138,7 @@ fn serialize_item_struct(
         }
         ast::VariantData::Tuple(ref fields, _) => {
             if fields.iter().any(|field| !field.node.kind.is_unnamed()) {
-                cx.bug("tuple struct has named fields")
+                cx.span_bug(span, "tuple struct has named fields")
             }
 
             serialize_tuple_struct(
@@ -142,7 +152,7 @@ fn serialize_item_struct(
         }
         ast::VariantData::Struct(ref fields, _) => {
             if fields.iter().any(|field| field.node.kind.is_unnamed()) {
-                cx.bug("struct has unnamed fields")
+                cx.span_bug(span, "struct has unnamed fields")
             }
 
             serialize_struct(
@@ -367,7 +377,7 @@ fn serialize_variant(
                             let name = match field.node.kind {
                                 ast::NamedField(name, _) => name,
                                 ast::UnnamedField(_) => {
-                                    cx.bug("struct variant has unnamed fields")
+                                    cx.span_bug(field.span, "struct variant has unnamed fields")
                                 }
                             };
 
