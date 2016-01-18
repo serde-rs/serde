@@ -25,7 +25,7 @@ serde = { version = "*", path = "../serde", features = ["num-impls"] }
 syntex = "^0.26.0"
 
 [dependencies]
-clippy = { version = "^0.0.35", optional = true }
+clippy = { version = "^0.0.36", optional = true }
 
 [[test]]
 name = "test"
