@@ -18,6 +18,9 @@ extern crate syntax;
 #[cfg(not(feature = "with-syntex"))]
 extern crate rustc_plugin;
 
+#[cfg(not(feature = "with-syntex"))]
+use syntax::feature_gate::AttributeType;
+
 #[cfg(feature = "with-syntex")]
 include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 
@@ -72,4 +75,6 @@ pub fn register(reg: &mut rustc_plugin::Registry) {
         syntax::parse::token::intern("derive_Deserialize"),
         syntax::ext::base::MultiDecorator(
             Box::new(de::expand_derive_deserialize)));
+
+    reg.register_attribute("serde".to_owned(), AttributeType::Normal);
 }

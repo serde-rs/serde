@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use syntax::ast;
 use syntax::attr;
 use syntax::ext::base::ExtCtxt;
+use syntax::print::pprust::meta_item_to_string;
 use syntax::ptr::P;
 
 use aster;
@@ -104,6 +105,7 @@ impl FieldAttrs {
 }
 
 pub struct FieldAttrsBuilder<'a> {
+    cx: &'a ExtCtxt<'a>,
     builder: &'a aster::AstBuilder,
     skip_serializing_field: bool,
     skip_serializing_field_if_empty: bool,
@@ -114,8 +116,10 @@ pub struct FieldAttrsBuilder<'a> {
 }
 
 impl<'a> FieldAttrsBuilder<'a> {
-    pub fn new(builder: &'a aster::AstBuilder) -> FieldAttrsBuilder<'a> {
+    pub fn new(cx: &'a ExtCtxt<'a>,
+               builder: &'a aster::AstBuilder) -> FieldAttrsBuilder<'a> {
         FieldAttrsBuilder {
+            cx: cx,
             builder: builder,
             skip_serializing_field: false,
             skip_serializing_field_if_empty: false,
@@ -126,7 +130,7 @@ impl<'a> FieldAttrsBuilder<'a> {
         }
     }
 
-    pub fn field(mut self, field: &ast::StructField) -> FieldAttrsBuilder<'a> {
+    pub fn field(mut self, field: &ast::StructField) -> Result<FieldAttrsBuilder<'a>, ()> {
         match field.node.kind {
             ast::NamedField(name, _) => {
                 self.name = Some(self.builder.expr().str(name));
@@ -137,28 +141,36 @@ impl<'a> FieldAttrsBuilder<'a> {
         self.attrs(&field.node.attrs)
     }
 
-    pub fn attrs(self, attrs: &[ast::Attribute]) -> FieldAttrsBuilder<'a> {
-        attrs.iter().fold(self, FieldAttrsBuilder::attr)
+    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<FieldAttrsBuilder<'a>, ()> {
+        for attr in attrs {
+            self = try!(self.attr(attr));
+        }
+
+        Ok(self)
     }
 
-    pub fn attr(self, attr: &ast::Attribute) -> FieldAttrsBuilder<'a> {
+    pub fn attr(mut self, attr: &ast::Attribute) -> Result<FieldAttrsBuilder<'a>, ()> {
         match attr.node.value.node {
             ast::MetaList(ref name, ref items) if name == &"serde" => {
                 attr::mark_used(&attr);
-                items.iter().fold(self, FieldAttrsBuilder::meta_item)
+                for item in items {
+                    self = try!(self.meta_item(item));
+                }
+
+                Ok(self)
             }
             _ => {
-                self
+                Ok(self)
             }
         }
     }
 
-    pub fn meta_item(mut self, meta_item: &P<ast::MetaItem>) -> FieldAttrsBuilder<'a> {
+    pub fn meta_item(mut self, meta_item: &P<ast::MetaItem>) -> Result<FieldAttrsBuilder<'a>, ()> {
         match meta_item.node {
             ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
                 let expr = self.builder.expr().build_lit(P(lit.clone()));
 
-                self.name(expr)
+                Ok(self.name(expr))
             }
             ast::MetaList(ref name, ref items) if name == &"rename" => {
                 for item in items {
@@ -172,23 +184,27 @@ impl<'a> FieldAttrsBuilder<'a> {
                         _ => { }
                     }
                 }
-                self
+
+                Ok(self)
             }
             ast::MetaWord(ref name) if name == &"default" => {
-                self.default()
+                Ok(self.default())
             }
             ast::MetaWord(ref name) if name == &"skip_serializing" => {
-                self.skip_serializing_field()
+                Ok(self.skip_serializing_field())
             }
             ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
-                self.skip_serializing_field_if_empty()
+                Ok(self.skip_serializing_field_if_empty())
             }
             ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
-                self.skip_serializing_field_if_none()
+                Ok(self.skip_serializing_field_if_none())
             }
             _ => {
-                // Ignore unknown meta variables for now.
-                self
+                self.cx.span_err(
+                    meta_item.span,
+                    &format!("unknown serde field attribute `{}`",
+                             meta_item_to_string(meta_item)));
+                Err(())
             }
         }
     }
@@ -241,5 +257,61 @@ impl<'a> FieldAttrsBuilder<'a> {
             names: names,
             use_default: self.use_default,
         }
+    }
+}
+
+/// Represents container (e.g. struct) attribute information
+#[derive(Debug)]
+pub struct ContainerAttrs;
+
+pub struct ContainerAttrsBuilder<'a> {
+    cx: &'a ExtCtxt<'a>,
+}
+
+impl<'a> ContainerAttrsBuilder<'a> {
+    pub fn new(cx: &'a ExtCtxt) -> Self {
+        ContainerAttrsBuilder {
+            cx: cx,
+        }
+    }
+
+    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<Self, ()> {
+        for attr in attrs {
+            self = try!(self.attr(attr));
+        }
+
+        Ok(self)
+    }
+
+    pub fn attr(mut self, attr: &ast::Attribute) -> Result<Self, ()> {
+        match attr.node.value.node {
+            ast::MetaList(ref name, ref items) if name == &"serde" => {
+                attr::mark_used(&attr);
+                for item in items {
+                    self = try!(self.meta_item(item));
+                }
+
+                Ok(self)
+            }
+            _ => {
+                Ok(self)
+            }
+        }
+    }
+
+    pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> Result<Self, ()> {
+        match meta_item.node {
+            _ => {
+                self.cx.span_err(
+                    meta_item.span,
+                    &format!("unknown serde container attribute `{}`",
+                             meta_item_to_string(meta_item)));
+                Err(())
+            }
+        }
+    }
+
+    pub fn build(self) -> ContainerAttrs {
+        ContainerAttrs
     }
 }
