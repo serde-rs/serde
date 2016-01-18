@@ -17,5 +17,5 @@ num-impls = ["num-bigint", "num-complex", "num-rational"]
 num-rational = ["num/rational"]
 
 [dependencies]
-clippy = { version = "^0.0.35", optional = true }
+clippy = { version = "^0.0.36", optional = true }
 num = { version = "^0.1.27", default-features = false }
