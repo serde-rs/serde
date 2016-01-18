@@ -14,10 +14,10 @@ plugin = true
 
 [dependencies]
 clippy = "^0.0.36"
-serde_codegen = { version = "*", path = "../serde_codegen", default-features = false, features = ["nightly"] }
+serde_codegen = { version = "^0.6.10", path = "../serde_codegen", default-features = false, features = ["nightly"] }
 
 [dev-dependencies]
 compiletest_rs = "^0.0.11"
 num = "^0.1.27"
 rustc-serialize = "^0.3.16"
-serde = { version = "*", path = "../serde", features = ["nightly", "num-impls"] }
+serde = { version = "^0.6.10", path = "../serde", features = ["nightly", "num-impls"] }
