@@ -559,7 +559,6 @@ fn deserialize_item_enum(
                 let expr = builder.expr().str(variant.node.name);
                  attr::FieldAttrsBuilder::new(builder)
                     .name(expr)
-                    .default()
                     .build()
             })
             .collect(),
