@@ -154,7 +154,9 @@ impl<
     fn visit_str<E>(&mut self, v: &str) -> Result<T, E>
         where E: Error,
     {
-        str::FromStr::from_str(v.trim()).or(Err(Error::type_mismatch(Type::Str)))
+        str::FromStr::from_str(v.trim()).or_else(|_| {
+            Err(Error::type_mismatch(Type::Str))
+        })
     }
 }
 
