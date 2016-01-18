@@ -1,4 +1,6 @@
 #![feature(test)]
+#![cfg_attr(feature = "nightly", feature(plugin))]
+#![cfg_attr(feature = "nightly", plugin(clippy))]
 
 extern crate num;
 extern crate rustc_serialize;

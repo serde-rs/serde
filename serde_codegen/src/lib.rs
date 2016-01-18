@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "nightly", plugin(clippy))]
+#![cfg_attr(feature = "nightly", allow(used_underscore_binding))]
 #![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 #![cfg_attr(not(feature = "with-syntex"), plugin(quasi_macros))]
 
@@ -15,6 +17,9 @@ extern crate syntax;
 
 #[cfg(not(feature = "with-syntex"))]
 extern crate rustc_plugin;
+
+#[cfg(not(feature = "with-syntex"))]
+use syntax::feature_gate::AttributeType;
 
 #[cfg(feature = "with-syntex")]
 include!(concat!(env!("OUT_DIR"), "/lib.rs"));
@@ -70,4 +75,6 @@ pub fn register(reg: &mut rustc_plugin::Registry) {
         syntax::parse::token::intern("derive_Deserialize"),
         syntax::ext::base::MultiDecorator(
             Box::new(de::expand_derive_deserialize)));
+
+    reg.register_attribute("serde".to_owned(), AttributeType::Normal);
 }

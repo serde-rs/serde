@@ -1,4 +1,5 @@
-#![feature(plugin_registrar, rustc_private)]
+#![feature(plugin, plugin_registrar, rustc_private)]
+#![plugin(clippy)]
 
 extern crate serde_codegen;
 extern crate rustc_plugin;

@@ -566,8 +566,8 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
     {
         match self.iter.next() {
             Some((key, value)) => {
-                let value = try!(serializer.serialize_map_elt(key, value));
-                Ok(Some(value))
+                try!(serializer.serialize_map_elt(key, value));
+                Ok(Some(()))
             }
             None => Ok(None)
         }
