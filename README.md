@@ -398,7 +398,7 @@ struct I32Visitor;
 impl serde::de::Visitor for I32Visitor {
     type Value = i32;
 
-    fn visit_i16<E>(&mut self, value: i16) -> Result<i16, E>
+    fn visit_i16<E>(&mut self, value: i16) -> Result<i32, E>
         where E: Error,
     {
         self.visit_i32(value as i32)
@@ -585,6 +585,8 @@ Annotations
 `serde_codegen` and `serde_macros` support annotations that help to customize
 how types are serialized. Here are the supported annotations:
 
+Field Annotations:
+
 | Annotation                                   | Function                                                       |
 | ----------                                   | --------                                                       |
 | `#[serde(rename(json="name1", xml="name2"))` | Serialize this field with the given name for the given formats |
@@ -593,6 +595,13 @@ how types are serialized. Here are the supported annotations:
 | `#[serde(skip_serializing)`                  | Do not serialize this value                                    |
 | `#[serde(skip_serializing_if_empty)`         | Do not serialize this value if `$value.is_empty()` is `true`   |
 | `#[serde(skip_serializing_if_none)`          | Do not serialize this value if `$value.is_none()` is `true`    |
+
+Structure Annotations:
+
+| Annotation                  | Function                                                                                                                                           |
+| ----------                  | --------                                                                                                                                           |
+| `#[serde(deny_unknown_fields)` | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
+
 
 Serialization Formats Using Serde
 =================================
