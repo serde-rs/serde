@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "nightly", plugin(clippy))]
+#![cfg_attr(feature = "nightly", allow(used_underscore_binding))]
 #![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 #![cfg_attr(not(feature = "with-syntex"), plugin(quasi_macros))]
 

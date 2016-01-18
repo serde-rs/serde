@@ -63,7 +63,7 @@ declare_ser_tests! {
     }
     test_str {
         "abc" => &[Token::Str("abc")],
-        "abc".to_string() => &[Token::Str("abc")],
+        "abc".to_owned() => &[Token::Str("abc")],
     }
     test_option {
         None::<i32> => &[Token::Option(false)],

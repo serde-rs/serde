@@ -95,12 +95,12 @@ declare_tests! {
     test_char {
         'a' => vec![Token::Char('a')],
         'a' => vec![Token::Str("a")],
-        'a' => vec![Token::String("a".to_string())],
+        'a' => vec![Token::String("a".to_owned())],
     }
     test_string {
-        "abc".to_string() => vec![Token::Str("abc")],
-        "abc".to_string() => vec![Token::String("abc".to_string())],
-        "a".to_string() => vec![Token::Char('a')],
+        "abc".to_owned() => vec![Token::Str("abc")],
+        "abc".to_owned() => vec![Token::String("abc".to_owned())],
+        "a".to_owned() => vec![Token::Char('a')],
     }
     test_option {
         None::<i32> => vec![Token::Unit],

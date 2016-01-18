@@ -32,7 +32,7 @@ impl FieldAttrs {
     /// Return a set of formats that the field has attributes for.
     pub fn formats(&self) -> HashSet<P<ast::Expr>> {
         match self.names {
-            FieldNames::Format{ref formats, default: _} => {
+            FieldNames::Format { ref formats, .. } => {
                 let mut set = HashSet::new();
                 for (fmt, _) in formats.iter() {
                     set.insert(fmt.clone());
@@ -70,7 +70,7 @@ impl FieldAttrs {
     pub fn default_key_expr(&self) -> &P<ast::Expr> {
         match self.names {
             FieldNames::Global(ref expr) => expr,
-            FieldNames::Format{formats: _, ref default} => default,
+            FieldNames::Format { ref default, .. } => default,
         }
     }
 

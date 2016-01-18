@@ -234,7 +234,7 @@ impl Visitor for StringVisitor {
     fn visit_str<E>(&mut self, v: &str) -> Result<String, E>
         where E: Error,
     {
-        Ok(v.to_string())
+        Ok(v.to_owned())
     }
 
     fn visit_string<E>(&mut self, v: String) -> Result<String, E>
@@ -247,12 +247,12 @@ impl Visitor for StringVisitor {
         where E: Error,
     {
         match str::from_utf8(v) {
-            Ok(s) => Ok(s.to_string()),
+            Ok(s) => Ok(s.to_owned()),
             Err(_) => Err(Error::type_mismatch(Type::String)),
         }
     }
 
-    fn visit_byte_buf<'a, E>(&mut self, v: Vec<u8>) -> Result<String, E>
+    fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<String, E>
         where E: Error,
     {
         match String::from_utf8(v) {

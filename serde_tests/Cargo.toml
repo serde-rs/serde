@@ -10,6 +10,9 @@ readme = "README.md"
 keywords = ["serialization"]
 build = "build.rs"
 
+[features]
+nightly = ["clippy", "serde/nightly"]
+
 [build-dependencies]
 syntex = { version = "^0.26.0" }
 syntex_syntax = { version = "^0.26.0" }
@@ -20,6 +23,9 @@ num = "^0.1.27"
 rustc-serialize = "^0.3.16"
 serde = { version = "*", path = "../serde", features = ["num-impls"] }
 syntex = "^0.26.0"
+
+[dependencies]
+clippy = { version = "^0.0.35", optional = true }
 
 [[test]]
 name = "test"
