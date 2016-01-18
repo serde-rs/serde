@@ -398,7 +398,7 @@ struct I32Visitor;
 impl serde::de::Visitor for I32Visitor {
     type Value = i32;
 
-    fn visit_i16<E>(&mut self, value: i16) -> Result<i16, E>
+    fn visit_i16<E>(&mut self, value: i16) -> Result<i32, E>
         where E: Error,
     {
         self.visit_i32(value as i32)
