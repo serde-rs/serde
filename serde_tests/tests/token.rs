@@ -326,7 +326,7 @@ impl de::Error for Error {
     fn end_of_stream() -> Error { Error::EndOfStreamError }
 
     fn unknown_field(field: &str) -> Error {
-        Error::UnknownFieldError(field.to_string())
+        Error::UnknownFieldError(field.to_owned())
     }
 
     fn missing_field(field: &'static str) -> Error {
@@ -396,7 +396,6 @@ impl<I> de::Deserializer for Deserializer<I>
     fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: de::Visitor,
     {
-        println!("visit {:?}", self.tokens.peek());
         match self.tokens.next() {
             Some(Token::Bool(v)) => visitor.visit_bool(v),
             Some(Token::Isize(v)) => visitor.visit_isize(v),

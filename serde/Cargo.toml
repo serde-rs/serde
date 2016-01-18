@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.6.7"
+version = "0.6.10"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -9,13 +9,13 @@ documentation = "https://serde-rs.github.io/serde/serde/serde/index.html"
 readme = "../README.md"
 keywords = ["serde", "serialization"]
 
-[dependencies.num]
-version = "^0.1.27"
-default-features = false
-
 [features]
-nightly = []
-num-impls = ["num-bigint", "num-complex", "num-rational"]
+nightly = ["clippy"]
 num-bigint = ["num/bigint"]
 num-complex = ["num/complex"]
+num-impls = ["num-bigint", "num-complex", "num-rational"]
 num-rational = ["num/rational"]
+
+[dependencies]
+clippy = { version = "^0.0.36", optional = true }
+num = { version = "^0.1.27", default-features = false }

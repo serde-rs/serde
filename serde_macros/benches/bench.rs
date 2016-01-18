@@ -1,4 +1,5 @@
 #![feature(custom_attribute, custom_derive, plugin, test)]
+#![plugin(clippy)]
 #![plugin(serde_macros)]
 
 extern crate num;

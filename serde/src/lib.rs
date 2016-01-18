@@ -10,7 +10,10 @@
 //! [github repository](https://github.com/serde-rs/serde)
 
 #![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
-#![cfg_attr(feature = "nightly", feature(collections, enumset, nonzero, step_trait, zero_one))]
+#![cfg_attr(feature = "nightly", feature(collections, enumset, nonzero, plugin, step_trait,
+                                         zero_one))]
+#![cfg_attr(feature = "nightly", plugin(clippy))]
+#![cfg_attr(feature = "nightly", allow(linkedlist))]
 
 #![deny(missing_docs)]
 

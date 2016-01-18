@@ -6,3 +6,5 @@ extern crate serde;
 extern crate test;
 
 include!("../../serde_tests/tests/test.rs.in");
+
+mod compile_tests;

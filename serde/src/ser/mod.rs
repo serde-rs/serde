@@ -323,6 +323,7 @@ pub trait Serializer {
 }
 
 /// A trait that is used by a `Serialize` to iterate through a sequence.
+#[cfg_attr(feature = "nightly", allow(len_without_is_empty))]
 pub trait SeqVisitor {
     /// Serializes a sequence item in the serializer.
     ///
@@ -339,6 +340,7 @@ pub trait SeqVisitor {
 }
 
 /// A trait that is used by a `Serialize` to iterate through a map.
+#[cfg_attr(feature = "nightly", allow(len_without_is_empty))]
 pub trait MapVisitor {
     /// Serializes a map item in the serializer.
     ///
