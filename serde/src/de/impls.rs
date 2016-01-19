@@ -755,7 +755,7 @@ impl Deserialize for path::PathBuf {
     fn deserialize<D>(deserializer: &mut D) -> Result<path::PathBuf, D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize(PathBufVisitor)
+        deserializer.deserialize_string(PathBufVisitor)
     }
 }
 
