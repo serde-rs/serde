@@ -607,11 +607,6 @@ fn serialize_struct_visitor<I>(
 
     let field_attrs = try!(field::struct_field_attrs(cx, builder, fields));
 
-    let use_empty = builder.item()
-        .attr().allow(&["unused_imports"])
-        .use_().ids(&["serde", "ser", "empty", "Empty"])
-        .build().build();
-
     let arms: Vec<ast::Arm> = field_attrs.iter()
         .zip(value_exprs.iter())
         .filter(|&(ref field, _)| !field.skip_serializing_field())
@@ -620,7 +615,7 @@ fn serialize_struct_visitor<I>(
             let key_expr = field.serializer_key_expr(cx);
 
             let stmt = if field.omit_empty_field() {
-                quote_stmt!(cx, { $use_empty; if ($value_expr).is_empty() { continue; } })
+                quote_stmt!(cx, if ::serde::ser::empty::Empty::is_empty(&$value_expr) { continue; } )
             } else {
                 quote_stmt!(cx, {})
             };
@@ -662,7 +657,7 @@ fn serialize_struct_visitor<I>(
             if field.skip_serializing_field() {
                 quote_expr!(cx, 0)
             } else if field.omit_empty_field() {
-                quote_expr!(cx, { $use_empty; if ($value_expr).is_empty() { 0 } else { 1 } })
+                quote_expr!(cx, if ::serde::ser::empty::Empty::is_empty(&$value_expr) { 0 } else { 1 } )
             } else {
                 quote_expr!(cx, 1)
             }

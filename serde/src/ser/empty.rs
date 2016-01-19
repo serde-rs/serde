@@ -16,3 +16,78 @@ impl<T> Empty for Option<T> {
 		self.is_none()
 	}
 }
+
+impl<'a, T: Empty> Empty for &'a T {
+    fn is_empty(&self) -> bool {
+        Empty::is_empty(*self)
+    }
+}
+
+impl<T> Empty for [T] {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
+impl Empty for str {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
+use std;
+use std::collections as c;
+
+impl<K: std::hash::Hash + Eq, V> Empty for c::HashMap<K, V> {
+    fn is_empty(&self) -> bool {
+        c::HashMap::is_empty(self)
+    }
+}
+
+impl<T: std::hash::Hash + Eq> Empty for c::HashSet<T> {
+    fn is_empty(&self) -> bool {
+        c::HashSet::is_empty(self)
+    }
+}
+
+impl<K, V> Empty for c::BTreeMap<K, V> {
+    fn is_empty(&self) -> bool {
+        c::BTreeMap::is_empty(self)
+    }
+}
+
+impl<T: Ord> Empty for c::BTreeSet<T> {
+    fn is_empty(&self) -> bool {
+        c::BTreeSet::is_empty(self)
+    }
+}
+
+impl<T: Ord> Empty for c::binary_heap::BinaryHeap<T> {
+    fn is_empty(&self) -> bool {
+        c::binary_heap::BinaryHeap::is_empty(self)
+    }
+}
+
+impl<T> Empty for c::linked_list::LinkedList<T> {
+    fn is_empty(&self) -> bool {
+        c::linked_list::LinkedList::is_empty(self)
+    }
+}
+
+impl Empty for String {
+    fn is_empty(&self) -> bool {
+        String::is_empty(self)
+    }
+}
+
+impl<T> Empty for Vec<T> {
+    fn is_empty(&self) -> bool {
+        Vec::is_empty(self)
+    }
+}
+
+impl<T> Empty for c::vec_deque::VecDeque<T> {
+    fn is_empty(&self) -> bool {
+        c::VecDeque::is_empty(self)
+    }
+}
