@@ -579,6 +579,69 @@ impl serde::de::Visitor for PointVisitor {
 }
 ```
 
+Design Considerations and tradeoffs for Serializers and Deserializers
+=====================================================================
+
+Serde serialization and deserialization implementations are written in such a
+way that they err on being able to represent more values, and also provide
+better error messages when they are passed an incorrect type to deserialize
+from. For example, by default, it is a syntax error to deserialize a `String`
+into an `Option<String>`. This is implemented such that it is possible to
+distinguish between the values `None` and `Some(())`, if the serialization
+format supports option types.
+
+However, many formats do not have option types, and represents optional values
+as either a `null`, or some other value. Serde `Serializer`s and
+`Deserializer`s can opt-in support for this. For serialization, this is pretty
+easy. Simply implement these methods:
+
+```rust
+...
+
+    fn visit_none(&mut self) -> Result<(), Self::Error> {
+        self.visit_unit()
+    }
+
+    fn visit_some<T>(&mut self, value: T) -> Result<(), Self::Error> {
+        value.serialize(self)
+    }
+...
+```
+
+For deserialization, this can be implemented by way of the
+`Deserializer::visit_option` hook, which presumes that there is some ability to peek at what is the
+next value in the serialized token stream. This following example is from
+[serde_tests::TokenDeserializer](https://github.com/serde-rs/serde/blob/master/serde_tests/tests/token.rs#L435-L454),
+where it checks to see if the next value is an `Option`, a `()`, or some other
+value:
+
+```rust
+...
+
+    fn visit_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        where V: de::Visitor,
+    {
+        match self.tokens.peek() {
+            Some(&Token::Option(false)) => {
+                self.tokens.next();
+                visitor.visit_none()
+            }
+            Some(&Token::Option(true)) => {
+                self.tokens.next();
+                visitor.visit_some(self)
+            }
+            Some(&Token::Unit) => {
+                self.tokens.next();
+                visitor.visit_none()
+            }
+            Some(_) => visitor.visit_some(self),
+            None => Err(Error::EndOfStreamError),
+        }
+    }
+
+...
+```
+
 Annotations
 ===========
 
