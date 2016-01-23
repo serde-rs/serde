@@ -1,6 +1,6 @@
 [package]
 name = "serde_tests"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -25,7 +25,7 @@ serde = { version = "*", path = "../serde", features = ["num-impls"] }
 syntex = "^0.26.0"
 
 [dependencies]
-clippy = { version = "^0.0.36", optional = true }
+clippy = { version = "^0.0.37", optional = true }
 
 [[test]]
 name = "test"
