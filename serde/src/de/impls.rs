@@ -284,6 +284,13 @@ impl<
     type Value = Option<T>;
 
     #[inline]
+    fn visit_unit<E>(&mut self) -> Result<Option<T>, E>
+        where E: Error,
+    {
+        Ok(None)
+    }
+
+    #[inline]
     fn visit_none<E>(&mut self) -> Result<Option<T>, E>
         where E: Error,
     {
