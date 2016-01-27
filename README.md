@@ -13,9 +13,9 @@ the same speed as a hand written serializer for a specific type.
 
 Documentation is available at:
 
-* [serde](https://serde-rs.github.io/serde/serde/serde/index.html)
-* [serde\_json](https://serde-rs.github.io/serde/serde_json/serde_json/index.html)
-* [serde\_codegen](https://serde-rs.github.io/serde/serde_codegen/serde_codegen/index.html)
+* [serde](https://serde-rs.github.io/serde/serde/serde/serde/index.html)
+* [serde\_json](https://serde-rs.github.io/serde/serde/serde_json/serde_json/index.html)
+* [serde\_codegen](https://serde-rs.github.io/serde/serde/serde_codegen/serde_codegen/index.html)
 
 Using Serde with Nightly Rust and serde\_macros
 ===============================================
@@ -237,9 +237,9 @@ Serialization without Macros
 
 Under the covers, Serde extensively uses the Visitor pattern to thread state
 between the
-[Serializer](http://serde-rs.github.io/serde/serde/ser/trait.Serializer.html)
+[Serializer](http://serde-rs.github.io/serde/serde/serde/ser/trait.Serializer.html)
 and
-[Serialize](http://serde-rs.github.io/serde/serde/ser/trait.Serialize.html)
+[Serialize](http://serde-rs.github.io/serde/serde/serde/ser/trait.Serialize.html)
 without the two having specific information about each other's concrete type.
 This has many of the same benefits as frameworks that use runtime type
 information without the overhead.  In fact, when compiling with optimizations,
@@ -248,7 +248,7 @@ nearly as fast as a hand written serializer format for a specific type.
 
 To see it in action, lets look at how a simple type like `i32` is serialized.
 The
-[Serializer](http://serde-rs.github.io/serde/serde/ser/trait.Serializer.html)
+[Serializer](http://serde-rs.github.io/serde/serde/serde/ser/trait.Serializer.html)
 is threaded through the type:
 
 ```rust
@@ -256,16 +256,16 @@ impl serde::Serialize for i32 {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer,
     {
-        serializer.visit_i32(*self)
+        serializer.serialize_i32(*self)
     }
 }
 ```
 
 As you can see it's pretty simple. More complex types like `BTreeMap` need to
 pass a
-[MapVisitor](http://serde-rs.github.io/serde/serde/ser/trait.MapVisitor.html)
+[MapVisitor](http://serde-rs.github.io/serde/serde/serde/ser/trait.MapVisitor.html)
 to the 
-[Serializer](http://serde-rs.github.io/serde/serde/ser/trait.Serializer.html)
+[Serializer](http://serde-rs.github.io/serde/serde/serde/ser/trait.Serializer.html)
 in order to walk through the type:
 
 ```rust
@@ -277,7 +277,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -309,7 +309,7 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
     {
         match self.iter.next() {
             Some((key, value)) => {
-                let value = try!(serializer.visit_map_elt(key, value));
+                let value = try!(serializer.serialize_map_elt(key, value));
                 Ok(Some(value))
             }
             None => Ok(None)
@@ -339,7 +339,7 @@ impl serde::Serialize for Point {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer
     {
-        serializer.visit_struct("Point", PointMapVisitor {
+        serializer.serialize_struct("Point", PointMapVisitor {
             value: self,
             state: 0,
         })
@@ -358,11 +358,11 @@ impl<'a> serde::ser::MapVisitor for PointMapVisitor<'a> {
         match self.state {
             0 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_struct_elt("x", &self.value.x))))
+                Ok(Some(try!(serializer.serialize_struct_elt("x", &self.value.x))))
             }
             1 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_struct_elt("y", &self.value.y))))
+                Ok(Some(try!(serializer.serialize_struct_elt("y", &self.value.y))))
             }
             _ => {
                 Ok(None)
@@ -377,11 +377,11 @@ Deserialization without Macros
 
 Deserialization is a little more complicated since there's a bit more error
 handling that needs to occur. Let's start with the simple `i32`
-[Deserialize](http://serde-rs.github.io/serde/serde/de/trait.Deserialize.html)
+[Deserialize](http://serde-rs.github.io/serde/serde/serde/de/trait.Deserialize.html)
 implementation. It passes a
-[Visitor](http://serde-rs.github.io/serde/serde/de/trait.Visitor.html) to the
-[Deserializer](http://serde-rs.github.io/serde/serde/de/trait.Deserializer.html).
-The [Visitor](http://serde-rs.github.io/serde/serde/de/trait.Visitor.html)
+[Visitor](http://serde-rs.github.io/serde/serde/serde/de/trait.Visitor.html) to the
+[Deserializer](http://serde-rs.github.io/serde/serde/serde/de/trait.Deserializer.html).
+The [Visitor](http://serde-rs.github.io/serde/serde/serde/de/trait.Visitor.html)
 can create the `i32` from a variety of different types:
 
 ```rust
@@ -389,7 +389,7 @@ impl Deserialize for i32 {
     fn deserialize<D>(deserializer: &mut D) -> Result<i32, D::Error>
         where D: serde::Deserializer,
     {
-        deserializer.visit(I32Visitor)
+        deserializer.deserialize(I32Visitor)
     }
 }
 
@@ -416,9 +416,9 @@ impl serde::de::Visitor for I32Visitor {
 
 Since it's possible for this type to get passed an unexpected type, we need a
 way to error out. This is done by way of the
-[Error](http://serde-rs.github.io/serde/serde/de/trait.Error.html) trait,
+[Error](http://serde-rs.github.io/serde/serde/serde/de/trait.Error.html) trait,
 which allows a 
-[Deserialize](http://serde-rs.github.io/serde/serde/de/trait.Deserialize.html)
+[Deserialize](http://serde-rs.github.io/serde/serde/serde/de/trait.Deserialize.html)
 to generate an error for a few common error conditions. Here's how it could be used:
 
 ```rust
@@ -435,9 +435,9 @@ to generate an error for a few common error conditions. Here's how it could be u
 ```
 
 Maps follow a similar pattern as before, and use a
-[MapVisitor](http://serde-rs.github.io/serde/serde/de/trait.MapVisitor.html)
+[MapVisitor](http://serde-rs.github.io/serde/serde/serde/de/trait.MapVisitor.html)
 to walk through the values generated by the 
-[Deserializer](http://serde-rs.github.io/serde/serde/de/trait.Deserializer.html).
+[Deserializer](http://serde-rs.github.io/serde/serde/serde/de/trait.Deserializer.html).
 
 ```rust
 impl<K, V> serde::Deserialize for BTreeMap<K, V>
@@ -447,7 +447,7 @@ impl<K, V> serde::Deserialize for BTreeMap<K, V>
     fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
         where D: serde::Deserializer,
     {
-        deserializer.visit(BTreeMapVisitor::new())
+        deserializer.deserialize(BTreeMapVisitor::new())
     }
 }
 
@@ -530,7 +530,7 @@ impl serde::Deserialize for PointField {
             }
         }
 
-        deserializer.visit(PointFieldVisitor)
+        deserializer.deserialize(PointFieldVisitor)
     }
 }
 
@@ -539,7 +539,7 @@ impl serde::Deserialize for Point {
         where D: serde::de::Deserializer
     {
         static FIELDS: &'static [&'static str] = &["x", "y"];
-        deserializer.visit_struct("Point", FIELDS, PointVisitor)
+        deserializer.deserialize_struct("Point", FIELDS, PointVisitor)
     }
 }
 
