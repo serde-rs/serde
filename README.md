@@ -256,7 +256,7 @@ impl serde::Serialize for i32 {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer,
     {
-        serializer.visit_i32(*self)
+        serializer.serialize_i32(*self)
     }
 }
 ```
@@ -277,7 +277,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
     }
 }
 
@@ -309,7 +309,7 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
     {
         match self.iter.next() {
             Some((key, value)) => {
-                let value = try!(serializer.visit_map_elt(key, value));
+                let value = try!(serializer.serialize_map_elt(key, value));
                 Ok(Some(value))
             }
             None => Ok(None)
@@ -339,7 +339,7 @@ impl serde::Serialize for Point {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer
     {
-        serializer.visit_struct("Point", PointMapVisitor {
+        serializer.serialize_struct("Point", PointMapVisitor {
             value: self,
             state: 0,
         })
@@ -358,11 +358,11 @@ impl<'a> serde::ser::MapVisitor for PointMapVisitor<'a> {
         match self.state {
             0 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_struct_elt("x", &self.value.x))))
+                Ok(Some(try!(serializer.serialize_struct_elt("x", &self.value.x))))
             }
             1 => {
                 self.state += 1;
-                Ok(Some(try!(serializer.visit_struct_elt("y", &self.value.y))))
+                Ok(Some(try!(serializer.serialize_struct_elt("y", &self.value.y))))
             }
             _ => {
                 Ok(None)
@@ -389,7 +389,7 @@ impl Deserialize for i32 {
     fn deserialize<D>(deserializer: &mut D) -> Result<i32, D::Error>
         where D: serde::Deserializer,
     {
-        deserializer.visit(I32Visitor)
+        deserializer.deserialize(I32Visitor)
     }
 }
 
@@ -447,7 +447,7 @@ impl<K, V> serde::Deserialize for BTreeMap<K, V>
     fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
         where D: serde::Deserializer,
     {
-        deserializer.visit(BTreeMapVisitor::new())
+        deserializer.deserialize(BTreeMapVisitor::new())
     }
 }
 
@@ -530,7 +530,7 @@ impl serde::Deserialize for PointField {
             }
         }
 
-        deserializer.visit(PointFieldVisitor)
+        deserializer.deserialize(PointFieldVisitor)
     }
 }
 
@@ -539,7 +539,7 @@ impl serde::Deserialize for Point {
         where D: serde::de::Deserializer
     {
         static FIELDS: &'static [&'static str] = &["x", "y"];
-        deserializer.visit_struct("Point", FIELDS, PointVisitor)
+        deserializer.deserialize_struct("Point", FIELDS, PointVisitor)
     }
 }
 
