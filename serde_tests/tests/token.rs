@@ -64,7 +64,7 @@ impl<'a, I> Serializer<I>
         }
     }
 
-    fn visit_sequence<V>(&mut self, mut visitor: V) -> Result<(), ()>
+    fn visit_sequence<V>(&mut self, mut visitor: V) -> Result<(), Error>
         where V: ser::SeqVisitor
     {
         while let Some(()) = try!(visitor.visit(self)) { }
@@ -74,7 +74,7 @@ impl<'a, I> Serializer<I>
         Ok(())
     }
 
-    fn visit_mapping<V>(&mut self, mut visitor: V) -> Result<(), ()>
+    fn visit_mapping<V>(&mut self, mut visitor: V) -> Result<(), Error>
         where V: ser::MapVisitor
     {
         while let Some(()) = try!(visitor.visit(self)) { }
@@ -88,9 +88,9 @@ impl<'a, I> Serializer<I>
 impl<'a, I> ser::Serializer for Serializer<I>
     where I: Iterator<Item=&'a Token<'a>>,
 {
-    type Error = ();
+    type Error = Error;
 
-    fn serialize_unit(&mut self) -> Result<(), ()> {
+    fn serialize_unit(&mut self) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Unit));
         Ok(())
     }
@@ -99,14 +99,14 @@ impl<'a, I> ser::Serializer for Serializer<I>
                                 name: &str,
                                 _variant_index: usize,
                                 variant: &str,
-                                value: T) -> Result<(), ()>
+                                value: T) -> Result<(), Error>
         where T: ser::Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::EnumNewtype(name, variant)));
         value.serialize(self)
     }
 
-    fn serialize_unit_struct(&mut self, name: &str) -> Result<(), ()> {
+    fn serialize_unit_struct(&mut self, name: &str) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::UnitStruct(name)));
         Ok(())
     }
@@ -114,93 +114,93 @@ impl<'a, I> ser::Serializer for Serializer<I>
     fn serialize_unit_variant(&mut self,
                           name: &str,
                           _variant_index: usize,
-                          variant: &str) -> Result<(), ()> {
+                          variant: &str) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::EnumUnit(name, variant)));
 
         Ok(())
     }
 
-    fn serialize_bool(&mut self, v: bool) -> Result<(), ()> {
+    fn serialize_bool(&mut self, v: bool) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Bool(v)));
         Ok(())
     }
 
-    fn serialize_isize(&mut self, v: isize) -> Result<(), ()> {
+    fn serialize_isize(&mut self, v: isize) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Isize(v)));
         Ok(())
     }
 
-    fn serialize_i8(&mut self, v: i8) -> Result<(), ()> {
+    fn serialize_i8(&mut self, v: i8) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::I8(v)));
         Ok(())
     }
 
-    fn serialize_i16(&mut self, v: i16) -> Result<(), ()> {
+    fn serialize_i16(&mut self, v: i16) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::I16(v)));
         Ok(())
     }
 
-    fn serialize_i32(&mut self, v: i32) -> Result<(), ()> {
+    fn serialize_i32(&mut self, v: i32) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::I32(v)));
         Ok(())
     }
 
-    fn serialize_i64(&mut self, v: i64) -> Result<(), ()> {
+    fn serialize_i64(&mut self, v: i64) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::I64(v)));
         Ok(())
     }
 
-    fn serialize_usize(&mut self, v: usize) -> Result<(), ()> {
+    fn serialize_usize(&mut self, v: usize) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Usize(v)));
         Ok(())
     }
 
-    fn serialize_u8(&mut self, v: u8) -> Result<(), ()> {
+    fn serialize_u8(&mut self, v: u8) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::U8(v)));
         Ok(())
     }
 
-    fn serialize_u16(&mut self, v: u16) -> Result<(), ()> {
+    fn serialize_u16(&mut self, v: u16) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::U16(v)));
         Ok(())
     }
 
-    fn serialize_u32(&mut self, v: u32) -> Result<(), ()> {
+    fn serialize_u32(&mut self, v: u32) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::U32(v)));
         Ok(())
     }
 
-    fn serialize_u64(&mut self, v: u64) -> Result<(), ()> {
+    fn serialize_u64(&mut self, v: u64) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::U64(v)));
         Ok(())
     }
 
-    fn serialize_f32(&mut self, v: f32) -> Result<(), ()> {
+    fn serialize_f32(&mut self, v: f32) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::F32(v)));
         Ok(())
     }
 
-    fn serialize_f64(&mut self, v: f64) -> Result<(), ()> {
+    fn serialize_f64(&mut self, v: f64) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::F64(v)));
         Ok(())
     }
 
-    fn serialize_char(&mut self, v: char) -> Result<(), ()> {
+    fn serialize_char(&mut self, v: char) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Char(v)));
         Ok(())
     }
 
-    fn serialize_str(&mut self, v: &str) -> Result<(), ()> {
+    fn serialize_str(&mut self, v: &str) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Str(v)));
         Ok(())
     }
 
-    fn serialize_none(&mut self) -> Result<(), ()> {
+    fn serialize_none(&mut self) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Option(false)));
         Ok(())
     }
 
-    fn serialize_some<V>(&mut self, value: V) -> Result<(), ()>
+    fn serialize_some<V>(&mut self, value: V) -> Result<(), Error>
         where V: ser::Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::Option(true)));
@@ -208,7 +208,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
     }
 
 
-    fn serialize_seq<V>(&mut self, visitor: V) -> Result<(), ()>
+    fn serialize_seq<V>(&mut self, visitor: V) -> Result<(), Error>
         where V: ser::SeqVisitor
     {
         let len = visitor.len();
@@ -220,14 +220,14 @@ impl<'a, I> ser::Serializer for Serializer<I>
 
     fn serialize_newtype_struct<T>(&mut self,
                                name: &'static str,
-                               value: T) -> Result<(), ()>
+                               value: T) -> Result<(), Error>
         where T: ser::Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::StructNewtype(name)));
         value.serialize(self)
     }
 
-    fn serialize_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+    fn serialize_tuple_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), Error>
         where V: ser::SeqVisitor
     {
         let len = visitor.len();
@@ -241,7 +241,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
                               name: &str,
                               _variant_index: usize,
                               variant: &str,
-                              visitor: V) -> Result<(), ()>
+                              visitor: V) -> Result<(), Error>
         where V: ser::SeqVisitor
     {
         let len = visitor.len();
@@ -251,14 +251,14 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_sequence(visitor)
     }
 
-    fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), ()>
+    fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), Error>
         where T: ser::Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::SeqSep));
         value.serialize(self)
     }
 
-    fn serialize_map<V>(&mut self, visitor: V) -> Result<(), ()>
+    fn serialize_map<V>(&mut self, visitor: V) -> Result<(), Error>
         where V: ser::MapVisitor
     {
         let len = visitor.len();
@@ -268,7 +268,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_mapping(visitor)
     }
 
-    fn serialize_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), ()>
+    fn serialize_struct<V>(&mut self, name: &str, visitor: V) -> Result<(), Error>
         where V: ser::MapVisitor
     {
         let len = visitor.len();
@@ -282,7 +282,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
                                name: &str,
                                _variant_index: usize,
                                variant: &str,
-                               visitor: V) -> Result<(), ()>
+                               visitor: V) -> Result<(), Error>
         where V: ser::MapVisitor
     {
         let len = visitor.len();
@@ -292,7 +292,7 @@ impl<'a, I> ser::Serializer for Serializer<I>
         self.visit_mapping(visitor)
     }
 
-    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), ()>
+    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Error>
         where K: ser::Serialize,
               V: ser::Serialize,
     {
@@ -316,8 +316,17 @@ pub enum Error {
     UnknownFieldError(String),
     MissingFieldError(&'static str),
     InvalidName(&'static str),
+    InvalidValue(String),
     UnexpectedToken(Token<'static>),
     ValueError(value::Error),
+}
+
+impl ser::Error for Error {
+    fn syntax(_: &str) -> Error { Error::SyntaxError }
+
+    fn invalid_value(msg: &str) -> Error {
+        Error::InvalidValue(msg.to_owned())
+    }
 }
 
 impl de::Error for Error {
@@ -789,6 +798,15 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
     assert_eq!(ser.tokens.next(), None);
 }
 
+// Expect an error deserializing tokens into a T
+pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
+    where T: ser::Serialize + PartialEq + fmt::Debug,
+{
+    let mut ser = Serializer::new(tokens.iter());
+    let v: Result<(), Error> = ser::Serialize::serialize(value, &mut ser);
+    assert_eq!(v.as_ref(), Err(&error));
+}
+
 pub fn assert_de_tokens<T>(value: &T, tokens: Vec<Token<'static>>)
     where T: de::Deserialize + PartialEq + fmt::Debug,
 {
@@ -804,7 +822,7 @@ pub fn assert_de_tokens_error<T>(tokens: Vec<Token<'static>>, error: Error)
 {
     let mut de = Deserializer::new(tokens.into_iter());
     let v: Result<T, Error> = de::Deserialize::deserialize(&mut de);
-    assert_eq!(v.as_ref(), Err(&error));
+    assert_eq!(v, Err(error));
 }
 
 // Tests that the given token stream is ignorable when embedded in

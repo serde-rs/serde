@@ -27,6 +27,7 @@ use std::sync::Arc;
 use core::nonzero::{NonZero, Zeroable};
 
 use super::{
+    Error,
     Serialize,
     Serializer,
     SeqVisitor,
@@ -682,7 +683,10 @@ impl Serialize for path::Path {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        self.to_str().unwrap().serialize(serializer)
+        match self.to_str() {
+            Some(s) => s.serialize(serializer),
+            None => Err(Error::invalid_value("Path contains invalid UTF-8 characters")),
+        }
     }
 }
 
@@ -690,7 +694,7 @@ impl Serialize for path::PathBuf {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        self.to_str().unwrap().serialize(serializer)
+        self.as_path().serialize(serializer)
     }
 }
 

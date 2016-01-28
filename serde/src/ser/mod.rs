@@ -1,6 +1,22 @@
 //! Generic serialization framework.
 
+use std::error;
+
 pub mod impls;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// `Error` is a trait that allows a `Serialize` to generically create a
+/// `Serializer` error.
+pub trait Error: Sized + error::Error {
+    /// Raised when there is general error when deserializing a type.
+    fn syntax(msg: &str) -> Self;
+
+    /// Raised when a `Serialize` was passed an incorrect value.
+    fn invalid_value(msg: &str) -> Self {
+        Error::syntax(msg)
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -16,7 +32,7 @@ pub trait Serialize {
 /// A trait that describes a type that can serialize a stream of values into the underlying format.
 pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
-    type Error;
+    type Error: Error;
 
     /// Serializes a `bool` value.
     fn serialize_bool(&mut self, v: bool) -> Result<(), Self::Error>;

@@ -9,6 +9,12 @@ use serde::bytes::{ByteBuf, Bytes};
 #[derive(Debug, PartialEq)]
 struct Error;
 
+impl serde::ser::Error for Error {
+    fn syntax(_: &str) -> Error { Error }
+
+    fn invalid_value(_field: &str) -> Error { Error }
+}
+
 impl serde::de::Error for Error {
     fn syntax(_: &str) -> Error { Error }
 
