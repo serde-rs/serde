@@ -1004,7 +1004,8 @@ impl Deserialize for IgnoredAny {
             }
         }
 
-        deserializer.deserialize(IgnoredAnyVisitor)
+        // TODO maybe not necessary with impl specialization
+        deserializer.deserialize_ignored_any(IgnoredAnyVisitor)
     }
 }
 

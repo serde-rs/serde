@@ -416,6 +416,15 @@ pub trait Deserializer {
         self.deserialize(visitor)
     }
 
+    /// This method hints that the `Deserialize` type needs to deserialize a value whose type
+    /// doesn't matter because it is ignored.
+    #[inline]
+    fn deserialize_ignored_any<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor
+    {
+        self.deserialize(visitor)
+    }
+
     /// Specify a format string for the deserializer.
     ///
     /// The deserializer format is used to determine which format
