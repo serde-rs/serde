@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::path::PathBuf;
 
 use num::FromPrimitive;
 use num::bigint::{BigInt, BigUint};
@@ -587,6 +588,11 @@ declare_tests! {
                 Token::SeqSep,
                 Token::I32(2),
             Token::SeqEnd,
+        ],
+    }
+    test_path_buf {
+        PathBuf::from("/usr/local/lib") => vec![
+            Token::String("/usr/local/lib".to_owned()),
         ],
     }
 }
