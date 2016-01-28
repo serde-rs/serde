@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 use num::FromPrimitive;
 use num::bigint::{BigInt, BigUint};
@@ -291,6 +292,16 @@ declare_ser_tests! {
                 Token::SeqSep,
                 Token::I32(2),
             Token::SeqEnd,
+        ],
+    }
+    test_path {
+        Path::new("/usr/local/lib") => &[
+            Token::Str("/usr/local/lib"),
+        ],
+    }
+    test_path_buf {
+        PathBuf::from("/usr/local/lib") => &[
+            Token::Str("/usr/local/lib"),
         ],
     }
 }
