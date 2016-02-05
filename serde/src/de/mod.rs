@@ -406,11 +406,11 @@ pub trait Deserializer {
         self.deserialize_seq(visitor)
     }
 
-    /// This method hints that the `Deserialize` type is expecting some sort of struct key mapping.
-    /// This allows deserializers to choose between &str, usize, or &[u8] to properly deserialize a
-    /// struct key.
+    /// This method hints that the `Deserialize` type is expecting some sort of struct field
+    /// mapping.  This allows deserializers to choose between &str, usize, or &[u8] to properly
+    /// deserialize a struct field.
     #[inline]
-    fn deserialize_struct_key<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize(visitor)

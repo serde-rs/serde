@@ -949,7 +949,7 @@ fn deserialize_field_visitor(
                     }
                 }
 
-                deserializer.deserialize_struct_key(__FieldVisitor::<D>{ phantom: PhantomData })
+                deserializer.deserialize_struct_field(__FieldVisitor::<D>{ phantom: PhantomData })
             }
         }
     ).unwrap();
