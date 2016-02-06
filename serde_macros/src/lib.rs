@@ -1,5 +1,6 @@
-#![feature(plugin, plugin_registrar, rustc_private)]
-#![plugin(clippy)]
+#![feature(plugin_registrar, rustc_private)]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 
 extern crate serde_codegen;
 extern crate rustc_plugin;
