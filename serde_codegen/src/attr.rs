@@ -9,6 +9,8 @@ use syntax::ptr::P;
 
 use aster;
 
+use error::Error;
+
 /// Represents field name information
 #[derive(Debug)]
 pub enum FieldNames {
@@ -130,7 +132,7 @@ impl<'a> FieldAttrsBuilder<'a> {
         }
     }
 
-    pub fn field(mut self, field: &ast::StructField) -> Result<FieldAttrsBuilder<'a>, ()> {
+    pub fn field(mut self, field: &ast::StructField) -> Result<FieldAttrsBuilder<'a>, Error> {
         match field.node.kind {
             ast::NamedField(name, _) => {
                 self.name = Some(self.builder.expr().str(name));
@@ -141,7 +143,7 @@ impl<'a> FieldAttrsBuilder<'a> {
         self.attrs(&field.node.attrs)
     }
 
-    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<FieldAttrsBuilder<'a>, ()> {
+    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<FieldAttrsBuilder<'a>, Error> {
         for attr in attrs {
             self = try!(self.attr(attr));
         }
@@ -149,7 +151,7 @@ impl<'a> FieldAttrsBuilder<'a> {
         Ok(self)
     }
 
-    pub fn attr(mut self, attr: &ast::Attribute) -> Result<FieldAttrsBuilder<'a>, ()> {
+    pub fn attr(mut self, attr: &ast::Attribute) -> Result<FieldAttrsBuilder<'a>, Error> {
         match attr.node.value.node {
             ast::MetaList(ref name, ref items) if name == &"serde" => {
                 attr::mark_used(&attr);
@@ -165,7 +167,8 @@ impl<'a> FieldAttrsBuilder<'a> {
         }
     }
 
-    pub fn meta_item(mut self, meta_item: &P<ast::MetaItem>) -> Result<FieldAttrsBuilder<'a>, ()> {
+    pub fn meta_item(mut self,
+                     meta_item: &P<ast::MetaItem>) -> Result<FieldAttrsBuilder<'a>, Error> {
         match meta_item.node {
             ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
                 let expr = self.builder.expr().build_lit(P(lit.clone()));
@@ -204,7 +207,7 @@ impl<'a> FieldAttrsBuilder<'a> {
                     meta_item.span,
                     &format!("unknown serde field attribute `{}`",
                              meta_item_to_string(meta_item)));
-                Err(())
+                Err(Error)
             }
         }
     }
@@ -285,7 +288,7 @@ impl<'a> ContainerAttrsBuilder<'a> {
         }
     }
 
-    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<Self, ()> {
+    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<Self, Error> {
         for attr in attrs {
             self = try!(self.attr(attr));
         }
@@ -293,7 +296,7 @@ impl<'a> ContainerAttrsBuilder<'a> {
         Ok(self)
     }
 
-    pub fn attr(mut self, attr: &ast::Attribute) -> Result<Self, ()> {
+    pub fn attr(mut self, attr: &ast::Attribute) -> Result<Self, Error> {
         match attr.node.value.node {
             ast::MetaList(ref name, ref items) if name == &"serde" => {
                 attr::mark_used(&attr);
@@ -309,7 +312,7 @@ impl<'a> ContainerAttrsBuilder<'a> {
         }
     }
 
-    pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> Result<Self, ()> {
+    pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> Result<Self, Error> {
         match meta_item.node {
             ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
                 Ok(self.deny_unknown_fields())
@@ -319,7 +322,7 @@ impl<'a> ContainerAttrsBuilder<'a> {
                     meta_item.span,
                     &format!("unknown serde container attribute `{}`",
                              meta_item_to_string(meta_item)));
-                Err(())
+                Err(Error)
             }
         }
     }
@@ -334,4 +337,29 @@ impl<'a> ContainerAttrsBuilder<'a> {
             deny_unknown_fields: self.deny_unknown_fields,
         }
     }
+}
+
+/// Extract out the `#[serde(...)]` attributes from an item.
+pub fn get_container_attrs(cx: &ExtCtxt,
+                           container: &ast::Item,
+                          ) -> Result<ContainerAttrs, Error> {
+    let builder = ContainerAttrsBuilder::new(cx);
+    let builder = try!(builder.attrs(container.attrs()));
+    Ok(builder.build())
+}
+
+/// Extract out the `#[serde(...)]` attributes from a struct field.
+pub fn get_struct_field_attrs(cx: &ExtCtxt,
+                              builder: &aster::AstBuilder,
+                              fields: &[ast::StructField]
+                             ) -> Result<Vec<FieldAttrs>, Error> {
+    let mut attrs = vec![];
+    for field in fields {
+        let builder = FieldAttrsBuilder::new(cx, builder);
+        let builder = try!(builder.field(field));
+        let attr = builder.build();
+        attrs.push(attr);
+    }
+
+    Ok(attrs)
 }
