@@ -54,7 +54,7 @@ impl<'a> ser::Serialize for Bytes<'a> {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer
     {
-        serializer.visit_bytes(self.bytes)
+        serializer.serialize_bytes(self.bytes)
     }
 }
 
@@ -140,7 +140,7 @@ impl ser::Serialize for ByteBuf {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: ser::Serializer
     {
-        serializer.visit_bytes(&self)
+        serializer.serialize_bytes(&self)
     }
 }
 
@@ -199,7 +199,7 @@ impl de::Deserialize for ByteBuf {
     fn deserialize<D>(deserializer: &mut D) -> Result<ByteBuf, D::Error>
         where D: de::Deserializer
     {
-        deserializer.visit_bytes(ByteBufVisitor)
+        deserializer.deserialize_bytes(ByteBufVisitor)
     }
 }
 

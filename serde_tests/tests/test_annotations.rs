@@ -1,12 +1,25 @@
 use std::default;
 
-use token::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens};
+use token::{
+    Error,
+    Token,
+    assert_tokens,
+    assert_ser_tokens,
+    assert_de_tokens,
+    assert_de_tokens_error
+};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Default {
     a1: i32,
     #[serde(default)]
     a2: i32,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DisallowUnknown {
+    a1: i32,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -17,17 +30,17 @@ struct Rename {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FormatRename {
+struct RenameSerializeDeserialize {
     a1: i32,
-    #[serde(rename(xml= "a4", token="a5"))]
+    #[serde(rename(serialize="a4", deserialize="a5"))]
     a2: i32,
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-enum SerEnum<A> {
+enum RenameEnumSerializeDeserialize<A> {
     Map {
         a: i8,
-        #[serde(rename(xml= "c", token="d"))]
+        #[serde(rename(serialize="c", deserialize="d"))]
         b: A,
     },
 }
@@ -87,6 +100,59 @@ fn test_default() {
 }
 
 #[test]
+fn test_ignore_unknown() {
+    // 'Default' allows unknown. Basic smoke test of ignore...
+    assert_de_tokens(
+        &Default { a1: 1, a2: 2},
+        vec![
+            Token::StructStart("Default", Some(5)),
+
+            Token::MapSep,
+            Token::Str("whoops1"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("whoops2"),
+            Token::SeqStart(Some(1)),
+            Token::SeqSep,
+            Token::I32(2),
+            Token::SeqEnd,
+
+            Token::MapSep,
+            Token::Str("a2"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("whoops3"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens_error::<DisallowUnknown>(
+        vec![
+            Token::StructStart("DisallowUnknown", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("whoops"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ],
+        Error::UnknownFieldError("whoops".to_owned())
+    );
+}
+
+#[test]
 fn test_rename() {
     assert_tokens(
         &Rename { a1: 1, a2: 2 },
@@ -107,11 +173,28 @@ fn test_rename() {
 }
 
 #[test]
-fn test_format_rename() {
-    assert_tokens(
-        &FormatRename { a1: 1, a2: 2 },
+fn test_rename_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameSerializeDeserialize { a1: 1, a2: 2 },
+        &[
+            Token::StructStart("RenameSerializeDeserialize", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a4"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameSerializeDeserialize { a1: 1, a2: 2 },
         vec![
-            Token::StructStart("FormatRename", Some(2)),
+            Token::StructStart("RenameSerializeDeserialize", Some(2)),
 
             Token::MapSep,
             Token::Str("a1"),
@@ -127,14 +210,34 @@ fn test_format_rename() {
 }
 
 #[test]
-fn test_enum_format_rename() {
-    assert_tokens(
-        &SerEnum::Map {
+fn test_enum_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameEnumSerializeDeserialize::Map {
+            a: 0,
+            b: String::new(),
+        },
+        &[
+            Token::EnumMapStart("RenameEnumSerializeDeserialize", "Map", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::Str(""),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameEnumSerializeDeserialize::Map {
             a: 0,
             b: String::new(),
         },
         vec![
-            Token::EnumMapStart("SerEnum", "Map", Some(2)),
+            Token::EnumMapStart("RenameEnumSerializeDeserialize", "Map", Some(2)),
 
             Token::MapSep,
             Token::Str("a"),
