@@ -30,9 +30,37 @@ struct Rename {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum RenameEnumVariant {
+enum RenameVariantVariant {
     #[serde(rename="bruce_wayne")]
     Batman,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct RenameStructSerializeDeserialize {
+    a1: i32,
+    #[serde(rename(serialize="a4", deserialize="a5"))]
+    a2: i32,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum RenameEnum {
+    #[serde(rename="bruce_wayne")]
+    Batman,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+enum RenameVariantSerializeDeserialize<A> {
+    Map {
+        a: i8,
+        #[serde(rename(serialize="c", deserialize="d"))]
+        b: A,
+    },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum RenameEnumVariantSerializeDeserialize {
+    #[serde(rename(serialize="dick_grayson", deserialize="jason_todd"))]
+    Robin,
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -165,9 +193,106 @@ fn test_rename() {
 #[test]
 fn test_rename_enum_variant() {
     assert_tokens(
-        &RenameEnumVariant::Batman,
+        &RenameVariantVariant::Batman,
         vec![
-            Token::EnumUnit("RenameEnumVariant", "bruce_wayne"),
+            Token::EnumUnit("RenameVariantVariant", "bruce_wayne"),
+        ]
+    );
+}
+
+#[test]
+fn test_rename_struct_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
+        &[
+            Token::StructStart("RenameStructSerializeDeserialize", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a4"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
+        vec![
+            Token::StructStart("RenameStructSerializeDeserialize", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a5"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_rename_variant_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameEnumVariantSerializeDeserialize::Robin,
+        &[
+            Token::EnumUnit("RenameEnumVariantSerializeDeserialize", "dick_grayson"),
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameEnumVariantSerializeDeserialize::Robin,
+        vec![
+            Token::EnumUnit("RenameEnumVariantSerializeDeserialize", "jason_todd"),
+        ]
+    );
+}
+
+#[test]
+fn test_enum_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameVariantSerializeDeserialize::Map {
+            a: 0,
+            b: String::new(),
+        },
+        &[
+            Token::EnumMapStart("RenameVariantSerializeDeserialize", "Map", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::Str(""),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameVariantSerializeDeserialize::Map {
+            a: 0,
+            b: String::new(),
+        },
+        vec![
+            Token::EnumMapStart("RenameVariantSerializeDeserialize", "Map", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("d"),
+            Token::Str(""),
+
+            Token::MapEnd,
         ]
     );
 }

@@ -53,14 +53,16 @@ impl ContainerAttrs {
 #[derive(Debug)]
 pub struct VariantAttrs {
     ident: ast::Ident,
-    name: Option<ast::Lit>,
+    serialize_name: Option<ast::Lit>,
+    deserialize_name: Option<ast::Lit>,
 }
 
 impl VariantAttrs {
     pub fn from_variant(cx: &ExtCtxt, variant: &ast::Variant) -> Result<Self, Error> {
         let mut variant_attrs = VariantAttrs {
             ident: variant.node.name,
-            name: None,
+            serialize_name: None,
+            deserialize_name: None,
         };
 
         for meta_items in variant.node.attrs.iter().filter_map(get_serde_meta_items) {
@@ -68,7 +70,15 @@ impl VariantAttrs {
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
-                        variant_attrs.name = Some(lit.clone());
+                        variant_attrs.serialize_name = Some(lit.clone());
+                        variant_attrs.deserialize_name = Some(lit.clone());
+                    }
+
+                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                        let (ser_name, de_name) = try!(get_renames(cx, meta_items));
+                        variant_attrs.serialize_name = ser_name;
+                        variant_attrs.deserialize_name = de_name;
                     }
 
                     _ => {
@@ -92,8 +102,16 @@ impl VariantAttrs {
     }
 
     /// Return the field name for the field when serializing.
-    pub fn name_expr(&self) -> P<ast::Expr> {
-        match self.name {
+    pub fn serialize_name_expr(&self) -> P<ast::Expr> {
+        match self.serialize_name {
+            Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
+            None => self.ident_expr(),
+        }
+    }
+
+    /// Return the field name for the field when serializing.
+    pub fn deserialize_name_expr(&self) -> P<ast::Expr> {
+        match self.deserialize_name {
             Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
             None => self.ident_expr(),
         }
@@ -104,7 +122,8 @@ impl VariantAttrs {
 #[derive(Debug)]
 pub struct FieldAttrs {
     ident: ast::Ident,
-    name: Option<ast::Lit>,
+    serialize_name: Option<ast::Lit>,
+    deserialize_name: Option<ast::Lit>,
     skip_serializing_field: bool,
     skip_serializing_field_if_empty: bool,
     skip_serializing_field_if_none: bool,
@@ -119,38 +138,50 @@ impl FieldAttrs {
             None => { cx.span_bug(field.span, "struct field has no name?") }
         };
 
-        let mut skip_serializing_field = false;
-        let mut skip_serializing_field_if_empty = false;
-        let mut skip_serializing_field_if_none = false;
-        let mut field_name = None;
-        let mut use_default = false;
+        let mut field_attrs = FieldAttrs {
+            ident: field_ident,
+            serialize_name: None,
+            deserialize_name: None,
+            skip_serializing_field: false,
+            skip_serializing_field_if_empty: false,
+            skip_serializing_field_if_none: false,
+            use_default: false,
+        };
 
         for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
-                        field_name = Some(lit.clone());
+                        field_attrs.serialize_name = Some(lit.clone());
+                        field_attrs.deserialize_name = Some(lit.clone());
+                    }
+
+                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                        let (ser_name, de_name) = try!(get_renames(cx, meta_items));
+                        field_attrs.serialize_name = ser_name;
+                        field_attrs.deserialize_name = de_name;
                     }
 
                     // Parse `#[serde(default)]`
                     ast::MetaWord(ref name) if name == &"default" => {
-                        use_default = true;
+                        field_attrs.use_default = true;
                     }
 
                     // Parse `#[serde(skip_serializing)]`
                     ast::MetaWord(ref name) if name == &"skip_serializing" => {
-                        skip_serializing_field = true;
+                        field_attrs.skip_serializing_field = true;
                     }
 
                     // Parse `#[serde(skip_serializing_if_none)]`
                     ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
-                        skip_serializing_field_if_none = true;
+                        field_attrs.skip_serializing_field_if_none = true;
                     }
 
                     // Parse `#[serde(skip_serializing_if_empty)]`
                     ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
-                        skip_serializing_field_if_empty = true;
+                        field_attrs.skip_serializing_field_if_empty = true;
                     }
 
                     _ => {
@@ -165,14 +196,7 @@ impl FieldAttrs {
             }
         }
 
-        Ok(FieldAttrs {
-            ident: field_ident,
-            name: field_name,
-            skip_serializing_field: skip_serializing_field,
-            skip_serializing_field_if_empty: skip_serializing_field_if_empty,
-            skip_serializing_field_if_none: skip_serializing_field_if_none,
-            use_default: use_default,
-        })
+        Ok(field_attrs)
     }
 
     /// Return the string expression of the field ident.
@@ -181,8 +205,16 @@ impl FieldAttrs {
     }
 
     /// Return the field name for the field when serializing.
-    pub fn name_expr(&self) -> P<ast::Expr> {
-        match self.name {
+    pub fn serialize_name_expr(&self) -> P<ast::Expr> {
+        match self.serialize_name {
+            Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
+            None => self.ident_expr(),
+        }
+    }
+
+    /// Return the field name for the field when deserializing.
+    pub fn deserialize_name_expr(&self) -> P<ast::Expr> {
+        match self.deserialize_name {
             Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
             None => self.ident_expr(),
         }
@@ -213,6 +245,35 @@ pub fn get_struct_field_attrs(cx: &ExtCtxt,
     fields.iter()
         .map(|field| FieldAttrs::from_field(cx, field))
         .collect()
+}
+
+fn get_renames(cx: &ExtCtxt,
+               items: &[P<ast::MetaItem>]) -> Result<(Option<ast::Lit>, Option<ast::Lit>), Error> {
+    let mut ser_name = None;
+    let mut de_name = None;
+
+    for item in items {
+        match item.node {
+            ast::MetaNameValue(ref name, ref lit) if name == &"serialize" => {
+                ser_name = Some(lit.clone());
+            }
+
+            ast::MetaNameValue(ref name, ref lit) if name == &"deserialize" => {
+                de_name = Some(lit.clone());
+            }
+
+            _ => {
+                cx.span_err(
+                    item.span,
+                    &format!("unknown rename attribute `{}`",
+                             meta_item_to_string(item)));
+
+                return Err(Error);
+            }
+        }
+    }
+
+    Ok((ser_name, de_name))
 }
 
 fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {

@@ -554,7 +554,7 @@ fn deserialize_item_enum(
             enum_def.variants.iter()
                 .map(|variant| {
                     let attrs = try!(attr::VariantAttrs::from_variant(cx, variant));
-                    Ok(attrs.name_expr())
+                    Ok(attrs.deserialize_name_expr())
                 })
                 .collect()
         ),
@@ -924,7 +924,7 @@ fn deserialize_struct_visitor(
             fields.iter()
                 .map(|field| {
                     let attrs = try!(attr::FieldAttrs::from_field(cx, field));
-                    Ok(attrs.name_expr())
+                    Ok(attrs.deserialize_name_expr())
                 })
                 .collect()
         ),
@@ -1007,7 +1007,7 @@ fn deserialize_map(
             let missing_expr = if field_attr.use_default() {
                 quote_expr!(cx, ::std::default::Default::default())
             } else {
-                let name = field_attr.name_expr();
+                let name = field_attr.ident_expr();
                 quote_expr!(cx, try!(visitor.missing_field($name)))
             };
 

@@ -311,7 +311,7 @@ fn serialize_variant(
     let type_name = builder.expr().str(type_ident);
     let variant_ident = variant.node.name;
     let variant_attrs = try!(attr::VariantAttrs::from_variant(cx, variant));
-    let variant_name = variant_attrs.name_expr();
+    let variant_name = variant_attrs.serialize_name_expr();
 
     match variant.node.data {
         ast::VariantData::Unit(_) => {
@@ -613,7 +613,7 @@ fn serialize_struct_visitor<I>(
         .filter(|&(ref field, _)| !field.skip_serializing_field())
         .enumerate()
         .map(|(i, (ref field, value_expr))| {
-            let key_expr = field.name_expr();
+            let key_expr = field.serialize_name_expr();
 
             let stmt = if field.skip_serializing_field_if_empty() {
                 quote_stmt!(cx, if ($value_expr).is_empty() { continue; })
