@@ -69,6 +69,7 @@ pub fn expand_derive_serialize(
             fn serialize<__S>(&self, serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
                 where __S: ::serde::ser::Serializer,
             {
+                use ::serde::ser::empty::Empty;
                 $body
             }
         }
@@ -614,10 +615,8 @@ fn serialize_struct_visitor<I>(
         .map(|(i, (ref field, value_expr))| {
             let key_expr = field.serializer_key_expr(cx);
 
-            let stmt = if field.skip_serializing_field_if_empty() {
-                quote_stmt!(cx, if ($value_expr).is_empty() { continue; })
-            } else if field.skip_serializing_field_if_none() {
-                quote_stmt!(cx, if ($value_expr).is_none() { continue; })
+            let stmt = if field.omit_empty_field() {
+                quote_stmt!(cx, if ::serde::ser::empty::Empty::is_empty(&$value_expr) { continue; } )
             } else {
                 quote_stmt!(cx, {})
             };
@@ -658,10 +657,8 @@ fn serialize_struct_visitor<I>(
         .map(|(field, value_expr)| {
             if field.skip_serializing_field() {
                 quote_expr!(cx, 0)
-            } else if field.skip_serializing_field_if_empty() {
-                quote_expr!(cx, if ($value_expr).is_empty() { 0 } else { 1 })
-            } else if field.skip_serializing_field_if_none() {
-                quote_expr!(cx, if ($value_expr).is_none() { 0 } else { 1 })
+            } else if field.omit_empty_field() {
+                quote_expr!(cx, if ::serde::ser::empty::Empty::is_empty(&$value_expr) { 0 } else { 1 } )
             } else {
                 quote_expr!(cx, 1)
             }
