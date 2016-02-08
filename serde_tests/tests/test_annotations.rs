@@ -36,7 +36,7 @@ enum RenameVariantVariant {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct RenameStructSerializeDeserialize {
+struct RenameStructFieldSerializeDeserialize {
     a1: i32,
     #[serde(rename(serialize="a4", deserialize="a5"))]
     a2: i32,
@@ -171,7 +171,7 @@ fn test_ignore_unknown() {
 }
 
 #[test]
-fn test_rename() {
+fn test_rename_struct_field() {
     assert_tokens(
         &Rename { a1: 1, a2: 2 },
         vec![
@@ -201,11 +201,11 @@ fn test_rename_enum_variant() {
 }
 
 #[test]
-fn test_rename_struct_serialize_deserialize() {
+fn test_rename_struct_field_serialize_deserialize() {
     assert_ser_tokens(
-        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
+        &RenameStructFieldSerializeDeserialize { a1: 1, a2: 2 },
         &[
-            Token::StructStart("RenameStructSerializeDeserialize", Some(2)),
+            Token::StructStart("RenameStructFieldSerializeDeserialize", Some(2)),
 
             Token::MapSep,
             Token::Str("a1"),
@@ -220,9 +220,9 @@ fn test_rename_struct_serialize_deserialize() {
     );
 
     assert_de_tokens(
-        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
+        &RenameStructFieldSerializeDeserialize { a1: 1, a2: 2 },
         vec![
-            Token::StructStart("RenameStructSerializeDeserialize", Some(2)),
+            Token::StructStart("RenameStructFieldSerializeDeserialize", Some(2)),
 
             Token::MapSep,
             Token::Str("a1"),
