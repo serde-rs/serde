@@ -30,6 +30,12 @@ struct Rename {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum RenameEnum {
+    #[serde(rename="bruce_wayne")]
+    Batman,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct FormatRename {
     a1: i32,
     #[serde(rename(xml= "a4", token="a5"))]
@@ -43,6 +49,12 @@ enum SerEnum<A> {
         #[serde(rename(xml= "c", token="d"))]
         b: A,
     },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum FormatRenameEnum {
+    #[serde(rename(xml="dick_grayson", token="jason_todd"))]
+    Robin,
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -170,6 +182,13 @@ fn test_rename() {
             Token::MapEnd,
         ]
     );
+
+    assert_tokens(
+        &RenameEnum::Batman,
+        vec![
+            Token::EnumUnit("RenameEnum", "bruce_wayne"),
+        ]
+    );
 }
 
 #[test]
@@ -188,6 +207,13 @@ fn test_format_rename() {
             Token::I32(2),
 
             Token::MapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &FormatRenameEnum::Robin,
+        vec![
+            Token::EnumUnit("FormatRenameEnum", "jason_todd"),
         ]
     );
 }

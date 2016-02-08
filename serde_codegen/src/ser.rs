@@ -1,5 +1,8 @@
 use aster;
 
+use attr::FieldAttrsBuilder;
+use attr::FieldAttrs;
+
 use syntax::ast::{
     Ident,
     MetaItem,
@@ -65,8 +68,8 @@ pub fn expand_derive_serialize(
 
     let impl_item = quote_item!(cx,
         impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
-            fn serialize<__S>(&self, serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
-                where __S: ::serde::ser::Serializer,
+            fn serialize<S>(&self, serializer: &mut S) -> ::std::result::Result<(), S::Error>
+                where S: ::serde::ser::Serializer,
             {
                 $body
             }
@@ -309,7 +312,10 @@ fn serialize_variant(
 ) -> Result<ast::Arm, ()> {
     let type_name = builder.expr().str(type_ident);
     let variant_ident = variant.node.name;
-    let variant_name = builder.expr().str(variant_ident);
+    let variant_attrs : FieldAttrs = try!(
+            FieldAttrsBuilder::new(cx, builder).variant(variant)
+        ).build();
+    let variant_name = variant_attrs.serializer_key_expr(cx);
 
     match variant.node.data {
         ast::VariantData::Unit(_) => {

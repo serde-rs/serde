@@ -549,17 +549,16 @@ fn deserialize_item_enum(
 
     let type_name = builder.expr().str(type_ident);
 
+    let variant_attrs = try!(field::variant_attrs(
+        cx,
+        builder,
+        &*(enum_def.variants)
+    ));
+
     let variant_visitor = deserialize_field_visitor(
         cx,
         builder,
-        enum_def.variants.iter()
-            .map(|variant| {
-                let expr = builder.expr().str(variant.node.name);
-                 attr::FieldAttrsBuilder::new(cx, builder)
-                    .name(expr)
-                    .build()
-            })
-            .collect(),
+        variant_attrs,
         container_attrs,
     );
 

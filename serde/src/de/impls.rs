@@ -1009,6 +1009,245 @@ impl Deserialize for IgnoredAny {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+/// See: RenamedDeserializer::rename_deserializer
+pub struct RenamedDeserializer<MAIN, NAME> {
+    main: MAIN,
+    new_name: PhantomData<NAME>,
+}
+
+impl <MAIN, NAME> RenamedDeserializer<MAIN, NAME> {
+    /// Returns a new Deserializer wrapping main_deserializer, which forwards all methods
+    /// to main_deserializer, except for format(), which it forwards to the NAME type.
+    ///
+    /// This is useful for Deserializer authors who use helper deserializers, but want
+    /// those helper serializers to share the same name as the parent deserializers
+    /// for the purposes of, for example, field renaming.
+    pub fn rename_deserializer(main_deserializer: MAIN) -> RenamedDeserializer<MAIN, NAME> {
+        RenamedDeserializer{ main: main_deserializer, new_name: PhantomData }
+    }
+}
+
+#[allow(missing_docs)]
+impl <MAIN: Deserializer, NAME: Deserializer> Deserializer for RenamedDeserializer<MAIN, NAME>
+{
+    type Error = MAIN::Error;
+
+    #[inline]
+    fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor
+    {
+        self.main.deserialize(visitor)
+    }
+
+    #[inline]
+    fn deserialize_bool<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_bool(visitor)
+    }
+
+    #[inline]
+    fn deserialize_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_usize(visitor)
+    }
+
+    #[inline]
+    fn deserialize_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_u8(visitor)
+    }
+
+    #[inline]
+    fn deserialize_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_u16(visitor)
+    }
+
+    #[inline]
+    fn deserialize_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_u32(visitor)
+    }
+
+    #[inline]
+    fn deserialize_u64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_u64(visitor)
+    }
+
+    #[inline]
+    fn deserialize_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_isize(visitor)
+    }
+
+    #[inline]
+    fn deserialize_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_i8(visitor)
+    }
+
+    #[inline]
+    fn deserialize_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_i16(visitor)
+    }
+
+    #[inline]
+    fn deserialize_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_i32(visitor)
+    }
+
+    #[inline]
+    fn deserialize_i64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_i64(visitor)
+    }
+
+    #[inline]
+    fn deserialize_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_f32(visitor)
+    }
+
+    #[inline]
+    fn deserialize_f64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_f64(visitor)
+    }
+
+    #[inline]
+    fn deserialize_char<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_char(visitor)
+    }
+
+    #[inline]
+    fn deserialize_str<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_str(visitor)
+    }
+
+    #[inline]
+    fn deserialize_string<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_string(visitor)
+    }
+
+    #[inline]
+    fn deserialize_unit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_unit(visitor)
+    }
+
+    #[inline]
+    fn deserialize_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_option(visitor)
+    }
+
+    #[inline]
+    fn deserialize_seq<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_seq(visitor)
+    }
+
+    #[inline]
+    fn deserialize_map<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_map(visitor)
+    }
+
+    #[inline]
+    fn deserialize_unit_struct<V>(&mut self,
+                            name: &'static str,
+                            visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_unit_struct(name, visitor)
+    }
+
+    #[inline]
+    fn deserialize_newtype_struct<V>(&mut self,
+                               name: &'static str,
+                               visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_newtype_struct(name, visitor)
+    }
+
+    #[inline]
+    fn deserialize_tuple_struct<V>(&mut self,
+                             name: &'static str,
+                             len: usize,
+                             visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_tuple_struct(name, len, visitor)
+    }
+
+    #[inline]
+    fn deserialize_struct<V>(&mut self,
+                       name: &'static str,
+                       fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_struct(name, fields, visitor)
+    }
+
+    #[inline]
+    fn deserialize_tuple<V>(&mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_seq(visitor)
+    }
+
+    #[inline]
+    fn deserialize_enum<V>(&mut self,
+                     enum_name: &'static str,
+                     variants: &'static [&'static str],
+                     visitor: V) -> Result<V::Value, Self::Error>
+        where V: EnumVisitor,
+    {
+        self.main.deserialize_enum(enum_name, variants, visitor)
+    }
+
+    #[inline]
+    fn deserialize_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.main.deserialize_bytes(visitor)
+    }
+
+    fn format() -> &'static str {
+        NAME::format()
+    }
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
