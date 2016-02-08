@@ -7,7 +7,7 @@ use syntax::ext::base::ExtCtxt;
 use syntax::print::pprust::meta_item_to_string;
 use syntax::ptr::P;
 
-use aster;
+use aster::AstBuilder;
 
 use error::Error;
 
@@ -15,7 +15,7 @@ use error::Error;
 #[derive(Debug)]
 pub enum FieldNames {
     Global(P<ast::Expr>),
-    Format{
+    Format {
         formats: HashMap<P<ast::Expr>, P<ast::Expr>>,
         default: P<ast::Expr>,
     }
@@ -73,6 +73,106 @@ pub struct FieldAttrs {
 }
 
 impl FieldAttrs {
+    /// Extract out the `#[serde(...)]` attributes from a struct field.
+    pub fn from_field(cx: &ExtCtxt, field: &ast::StructField) -> Result<Self, Error> {
+        let builder = AstBuilder::new();
+
+        let field_ident = match field.node.ident() {
+            Some(ident) => ident,
+            None => { cx.span_bug(field.span, "struct field has no name?") }
+        };
+
+        let mut skip_serializing_field = false;
+        let mut skip_serializing_field_if_empty = false;
+        let mut skip_serializing_field_if_none = false;
+        let mut field_name = builder.expr().str(field_ident);
+        let mut format_rename = HashMap::new();
+        let mut use_default = false;
+
+        for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
+            for meta_item in meta_items {
+                match meta_item.node {
+                    // Parse `#[serde(rename="foo")]`
+                    ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                        field_name = builder.expr().build_lit(P(lit.clone()));
+                    }
+
+                    // Parse `#[serde(rename(xml="foo", token="bar"))]`
+                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                        for meta_item in meta_items {
+                            match meta_item.node {
+                                ast::MetaNameValue(ref name, ref lit) => {
+                                    let name = builder.expr().str(name);
+                                    let expr = builder.expr().build_lit(P(lit.clone()));
+                                    format_rename.insert(name, expr);
+                                }
+                                _ => { }
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(default)]`
+                    ast::MetaWord(ref name) if name == &"default" => {
+                        use_default = true;
+                    }
+
+                    // Parse `#[serde(skip_serializing)]`
+                    ast::MetaWord(ref name) if name == &"skip_serializing" => {
+                        skip_serializing_field = true;
+                    }
+
+                    // Parse `#[serde(skip_serializing_if_none)]`
+                    ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
+                        skip_serializing_field_if_none = true;
+                    }
+
+                    // Parse `#[serde(skip_serializing_if_empty)]`
+                    ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
+                        skip_serializing_field_if_empty = true;
+                    }
+
+                    _ => {
+                        cx.span_err(
+                            meta_item.span,
+                            &format!("unknown serde field attribute `{}`",
+                                     meta_item_to_string(meta_item)));
+
+                        return Err(Error);
+                    }
+                }
+            }
+        }
+
+        let names = if format_rename.is_empty() {
+            FieldNames::Global(field_name)
+        } else {
+            FieldNames::Format {
+                formats: format_rename,
+                default: field_name,
+            }
+        };
+
+        Ok(FieldAttrs {
+            skip_serializing_field: skip_serializing_field,
+            skip_serializing_field_if_empty: skip_serializing_field_if_empty,
+            skip_serializing_field_if_none: skip_serializing_field_if_none,
+            names: names,
+            use_default: use_default,
+        })
+    }
+
+    pub fn from_variant(variant: &ast::Variant) -> Self {
+        let name = AstBuilder::new().expr().str(variant.node.name);
+
+        FieldAttrs {
+            skip_serializing_field: false,
+            skip_serializing_field_if_empty: false,
+            skip_serializing_field_if_none: false,
+            names: FieldNames::Global(name),
+            use_default: false,
+        }
+    }
+
     /// Return a set of formats that the field has attributes for.
     pub fn formats(&self) -> HashSet<P<ast::Expr>> {
         match self.names {
@@ -147,177 +247,12 @@ impl FieldAttrs {
     }
 }
 
-pub struct FieldAttrsBuilder<'a> {
-    cx: &'a ExtCtxt<'a>,
-    builder: &'a aster::AstBuilder,
-    skip_serializing_field: bool,
-    skip_serializing_field_if_empty: bool,
-    skip_serializing_field_if_none: bool,
-    name: Option<P<ast::Expr>>,
-    format_rename: HashMap<P<ast::Expr>, P<ast::Expr>>,
-    use_default: bool,
-}
-
-impl<'a> FieldAttrsBuilder<'a> {
-    pub fn new(cx: &'a ExtCtxt<'a>,
-               builder: &'a aster::AstBuilder) -> FieldAttrsBuilder<'a> {
-        FieldAttrsBuilder {
-            cx: cx,
-            builder: builder,
-            skip_serializing_field: false,
-            skip_serializing_field_if_empty: false,
-            skip_serializing_field_if_none: false,
-            name: None,
-            format_rename: HashMap::new(),
-            use_default: false,
-        }
-    }
-
-    pub fn field(mut self, field: &ast::StructField) -> Result<FieldAttrsBuilder<'a>, Error> {
-        match field.node.kind {
-            ast::NamedField(name, _) => {
-                self.name = Some(self.builder.expr().str(name));
-            }
-            ast::UnnamedField(_) => { }
-        };
-
-        self.attrs(&field.node.attrs)
-    }
-
-    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<FieldAttrsBuilder<'a>, Error> {
-        for attr in attrs {
-            self = try!(self.attr(attr));
-        }
-
-        Ok(self)
-    }
-
-    pub fn attr(mut self, attr: &ast::Attribute) -> Result<FieldAttrsBuilder<'a>, Error> {
-        match attr.node.value.node {
-            ast::MetaList(ref name, ref items) if name == &"serde" => {
-                attr::mark_used(&attr);
-                for item in items {
-                    self = try!(self.meta_item(item));
-                }
-
-                Ok(self)
-            }
-            _ => {
-                Ok(self)
-            }
-        }
-    }
-
-    pub fn meta_item(mut self,
-                     meta_item: &P<ast::MetaItem>) -> Result<FieldAttrsBuilder<'a>, Error> {
-        match meta_item.node {
-            ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
-                let expr = self.builder.expr().build_lit(P(lit.clone()));
-
-                Ok(self.name(expr))
-            }
-            ast::MetaList(ref name, ref items) if name == &"rename" => {
-                for item in items {
-                    match item.node {
-                        ast::MetaNameValue(ref name, ref lit) => {
-                            let name = self.builder.expr().str(name);
-                            let expr = self.builder.expr().build_lit(P(lit.clone()));
-
-                            self = self.format_rename(name, expr);
-                        }
-                        _ => { }
-                    }
-                }
-
-                Ok(self)
-            }
-            ast::MetaWord(ref name) if name == &"default" => {
-                Ok(self.default())
-            }
-            ast::MetaWord(ref name) if name == &"skip_serializing" => {
-                Ok(self.skip_serializing_field())
-            }
-            ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
-                Ok(self.skip_serializing_field_if_empty())
-            }
-            ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
-                Ok(self.skip_serializing_field_if_none())
-            }
-            _ => {
-                self.cx.span_err(
-                    meta_item.span,
-                    &format!("unknown serde field attribute `{}`",
-                             meta_item_to_string(meta_item)));
-                Err(Error)
-            }
-        }
-    }
-
-    pub fn skip_serializing_field(mut self) -> FieldAttrsBuilder<'a> {
-        self.skip_serializing_field = true;
-        self
-    }
-
-    pub fn skip_serializing_field_if_empty(mut self) -> FieldAttrsBuilder<'a> {
-        self.skip_serializing_field_if_empty = true;
-        self
-    }
-
-    pub fn skip_serializing_field_if_none(mut self) -> FieldAttrsBuilder<'a> {
-        self.skip_serializing_field_if_none = true;
-        self
-    }
-
-    pub fn name(mut self, name: P<ast::Expr>) -> FieldAttrsBuilder<'a> {
-        self.name = Some(name);
-        self
-    }
-
-    pub fn format_rename(mut self, format: P<ast::Expr>, name: P<ast::Expr>) -> FieldAttrsBuilder<'a> {
-        self.format_rename.insert(format, name);
-        self
-    }
-
-    pub fn default(mut self) -> FieldAttrsBuilder<'a> {
-        self.use_default = true;
-        self
-    }
-
-    pub fn build(self) -> FieldAttrs {
-        let name = self.name.expect("here");
-        let names = if self.format_rename.is_empty() {
-            FieldNames::Global(name)
-        } else {
-            FieldNames::Format {
-                formats: self.format_rename,
-                default: name,
-            }
-        };
-
-        FieldAttrs {
-            skip_serializing_field: self.skip_serializing_field,
-            skip_serializing_field_if_empty: self.skip_serializing_field_if_empty,
-            skip_serializing_field_if_none: self.skip_serializing_field_if_none,
-            names: names,
-            use_default: self.use_default,
-        }
-    }
-}
-
 /// Extract out the `#[serde(...)]` attributes from a struct field.
 pub fn get_struct_field_attrs(cx: &ExtCtxt,
-                              builder: &aster::AstBuilder,
-                              fields: &[ast::StructField]
-                             ) -> Result<Vec<FieldAttrs>, Error> {
-    let mut attrs = vec![];
-    for field in fields {
-        let builder = FieldAttrsBuilder::new(cx, builder);
-        let builder = try!(builder.field(field));
-        let attr = builder.build();
-        attrs.push(attr);
-    }
-
-    Ok(attrs)
+                              fields: &[ast::StructField]) -> Result<Vec<FieldAttrs>, Error> {
+    fields.iter()
+        .map(|field| FieldAttrs::from_field(cx, field))
+        .collect()
 }
 
 fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
