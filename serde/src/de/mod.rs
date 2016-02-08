@@ -1,5 +1,7 @@
 //! Generic deserialization framework.
 
+use std::error;
+
 pub mod impls;
 pub mod value;
 
@@ -7,7 +9,7 @@ pub mod value;
 
 /// `Error` is a trait that allows a `Deserialize` to generically create a
 /// `Deserializer` error.
-pub trait Error: Sized {
+pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
     fn syntax(msg: &str) -> Self;
 
@@ -38,6 +40,7 @@ pub trait Error: Sized {
 
 /// `Type` represents all the primitive types that can be deserialized. This is used by
 /// `Error::kind_mismatch`.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Type {
     /// Represents a `bool` type.
     Bool,
@@ -144,250 +147,250 @@ pub trait Deserialize: Sized {
 /// `Deserializer` is a trait that can deserialize values by threading a `Visitor` trait through a
 /// value. It supports two entry point styles which enables different kinds of deserialization.
 ///
-/// 1) The `visit` method. File formats like JSON embed the type of it's construct in it's file
+/// 1) The `deserialize` method. File formats like JSON embed the type of its construct in its file
 ///    format. This allows the `Deserializer` to deserialize into a generic type like
 ///    `json::Value`, which can represent all JSON types.
 ///
-/// 2) The `visit_*` methods. File formats like bincode do not embed in it's format how to decode
-///    it's values. It relies instead on the `Deserialize` type to hint to the `Deserializer` with
-///    the `visit_*` methods how it should parse the next value. One downside though to only
-///    supporting the `visit_*` types is that it does not allow for deserializing into a generic
-///    `json::Value`-esque type.
+/// 2) The `deserialize_*` methods. File formats like bincode do not embed in its format how to
+///    decode its values. It relies instead on the `Deserialize` type to hint to the `Deserializer`
+///    with the `deserialize_*` methods how it should parse the next value. One downside though to
+///    only supporting the `deserialize_*` types is that it does not allow for deserializing into a
+///    generic `json::Value`-esque type.
 pub trait Deserializer {
     /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
     /// This method walks a visitor through a value as it is being deserialized.
-    fn visit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `bool` value.
     #[inline]
-    fn visit_bool<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_bool<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `usize` value.
     #[inline]
-    fn visit_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_u64(visitor)
+        self.deserialize_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u8` value.
     #[inline]
-    fn visit_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_u64(visitor)
+        self.deserialize_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u16` value.
     #[inline]
-    fn visit_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_u64(visitor)
+        self.deserialize_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u32` value.
     #[inline]
-    fn visit_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_u64(visitor)
+        self.deserialize_u64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `u64` value.
     #[inline]
-    fn visit_u64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `isize` value.
     #[inline]
-    fn visit_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_i64(visitor)
+        self.deserialize_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i8` value.
     #[inline]
-    fn visit_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_i64(visitor)
+        self.deserialize_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i16` value.
     #[inline]
-    fn visit_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_i64(visitor)
+        self.deserialize_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i32` value.
     #[inline]
-    fn visit_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_i64(visitor)
+        self.deserialize_i64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `i64` value.
     #[inline]
-    fn visit_i64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `f32` value.
     #[inline]
-    fn visit_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_f64(visitor)
+        self.deserialize_f64(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `f64` value.
     #[inline]
-    fn visit_f64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_f64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `char` value.
     #[inline]
-    fn visit_char<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_char<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `&str` value.
     #[inline]
-    fn visit_str<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_str<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `String` value.
     #[inline]
-    fn visit_string<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_string<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_str(visitor)
+        self.deserialize_str(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `unit` value.
     #[inline]
-    fn visit_unit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_unit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an `Option` value. This allows
     /// deserializers that encode an optional value as a nullable value to convert the null value
     /// into a `None`, and a regular value as `Some(value)`.
     #[inline]
-    fn visit_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a sequence value. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
-    fn visit_seq<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_seq<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a map of values. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
-    fn visit_map<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_map<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a unit struct. This allows
     /// deserializers to a unit struct that aren't tagged as a unit struct.
     #[inline]
-    fn visit_unit_struct<V>(&mut self,
-                            _name: &'static str,
-                            visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_unit_struct<V>(&mut self,
+                                  _name: &'static str,
+                                  visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_unit(visitor)
+        self.deserialize_unit(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a newtype struct. This allows
     /// deserializers to a newtype struct that aren't tagged as a newtype struct.
     #[inline]
-    fn visit_newtype_struct<V>(&mut self,
-                               name: &'static str,
-                               visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_newtype_struct<V>(&mut self,
+                                     name: &'static str,
+                                     visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_tuple_struct(name, 1, visitor)
+        self.deserialize_tuple_struct(name, 1, visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
-    fn visit_tuple_struct<V>(&mut self,
-                             _name: &'static str,
-                             len: usize,
-                             visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple_struct<V>(&mut self,
+                                   _name: &'static str,
+                                   len: usize,
+                                   visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_tuple(len, visitor)
+        self.deserialize_tuple(len, visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
-    fn visit_struct<V>(&mut self,
-                       _name: &'static str,
-                       _fields: &'static [&'static str],
-                       visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_struct<V>(&mut self,
+                             _name: &'static str,
+                             _fields: &'static [&'static str],
+                             visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_map(visitor)
+        self.deserialize_map(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a tuple value. This allows
     /// deserializers that provide a custom tuple serialization to properly deserialize the type.
     #[inline]
-    fn visit_tuple<V>(&mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple<V>(&mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_seq(visitor)
+        self.deserialize_seq(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting an enum value. This allows
     /// deserializers that provide a custom enumeration serialization to properly deserialize the
     /// type.
     #[inline]
-    fn visit_enum<V>(&mut self,
-                     _enum: &'static str,
-                     _variants: &'static [&'static str],
-                     _visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_enum<V>(&mut self,
+                           _enum: &'static str,
+                           _variants: &'static [&'static str],
+                           _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
     {
         Err(Error::syntax("expected an enum"))
@@ -397,20 +400,29 @@ pub trait Deserializer {
     /// deserializers that provide a custom byte vector serialization to properly deserialize the
     /// type.
     #[inline]
-    fn visit_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit_seq(visitor)
+        self.deserialize_seq(visitor)
     }
 
-    /// This method hints that the `Deserialize` type is expecting some sort of struct key mapping.
-    /// This allows deserializers to choose between &str, usize, or &[u8] to properly deserialize a
-    /// struct key.
+    /// This method hints that the `Deserialize` type is expecting some sort of struct field
+    /// mapping.  This allows deserializers to choose between &str, usize, or &[u8] to properly
+    /// deserialize a struct field.
     #[inline]
-    fn visit_struct_key<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.visit(visitor)
+        self.deserialize(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type needs to deserialize a value whose type
+    /// doesn't matter because it is ignored.
+    #[inline]
+    fn deserialize_ignored_any<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor
+    {
+        self.deserialize(visitor)
     }
 
     /// Specify a format string for the deserializer.
@@ -700,7 +712,7 @@ pub trait MapVisitor {
         (0, None)
     }
 
-    /// Report that there 
+    /// Report that the struct has a field that wasn't deserialized
     fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
         where V: Deserialize,
     {
@@ -831,8 +843,8 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
     }
 
     fn visit_struct<V>(&mut self,
-                    fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, T::Error>
+                       fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
         (**self).visit_struct(fields, visitor)

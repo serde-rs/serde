@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use std::fmt;
+use std::error;
 use std::collections::HashMap;
 use test::Bencher;
 
@@ -28,6 +30,21 @@ impl serde::de::Error for Error {
     }
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
+}
 //////////////////////////////////////////////////////////////////////////////
 
 mod decoder {
@@ -252,7 +269,7 @@ mod deserializer {
     impl de::Deserializer for IsizeDeserializer {
         type Error = Error;
 
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
@@ -399,7 +416,7 @@ fn bench_decoder_000(b: &mut Bencher) {
 fn bench_decoder_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in (0 .. 3) {
+        for i in 0 .. 3 {
             m.insert(i.to_string(), i);
         }
         run_decoder(decoder::IsizeDecoder::new(m.clone()), m)
@@ -410,7 +427,7 @@ fn bench_decoder_003(b: &mut Bencher) {
 fn bench_decoder_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in (0 .. 100) {
+        for i in 0 .. 100 {
             m.insert(i.to_string(), i);
         }
         run_decoder(decoder::IsizeDecoder::new(m.clone()), m)
@@ -439,7 +456,7 @@ fn bench_deserializer_000(b: &mut Bencher) {
 fn bench_deserializer_003(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in (0 .. 3) {
+        for i in 0 .. 3 {
             m.insert(i.to_string(), i);
         }
         run_deserializer(deserializer::IsizeDeserializer::new(m.clone()), m)
@@ -450,7 +467,7 @@ fn bench_deserializer_003(b: &mut Bencher) {
 fn bench_deserializer_100(b: &mut Bencher) {
     b.iter(|| {
         let mut m: HashMap<String, isize> = HashMap::new();
-        for i in (0 .. 100) {
+        for i in 0 .. 100 {
             m.insert(i.to_string(), i);
         }
         run_deserializer(deserializer::IsizeDeserializer::new(m.clone()), m)

@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use std::fmt;
+use std::error;
 use test::Bencher;
 
 use rustc_serialize::{Decoder, Decodable};
@@ -24,6 +26,21 @@ impl serde::de::Error for Error {
     fn missing_field(_: &'static str) -> Error { Error::SyntaxError }
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
+}
 //////////////////////////////////////////////////////////////////////////////
 
 mod decoder {
@@ -378,7 +395,7 @@ mod deserializer {
         type Error = Error;
 
         #[inline]
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.state {
@@ -437,7 +454,7 @@ mod deserializer {
         type Error = Error;
 
         #[inline]
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.state {

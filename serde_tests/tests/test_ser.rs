@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::str;
 
 use num::FromPrimitive;
 use num::bigint::{BigInt, BigUint};
 use num::complex::Complex;
 use num::rational::Ratio;
 
-use token::Token;
+use token::{self, Token};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -304,4 +305,23 @@ declare_ser_tests! {
             Token::Str("/usr/local/lib"),
         ],
     }
+}
+
+#[test]
+fn test_cannot_serialize_paths() {
+    let path = unsafe {
+        str::from_utf8_unchecked(b"Hello \xF0\x90\x80World")
+    };
+    token::assert_ser_tokens_error(
+        &Path::new(path),
+        &[Token::Str("Hello �World")],
+        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+
+    let mut path_buf = PathBuf::new();
+    path_buf.push(path);
+
+    token::assert_ser_tokens_error(
+        &path_buf,
+        &[Token::Str("Hello �World")],
+        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
 }

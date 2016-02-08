@@ -262,16 +262,26 @@ impl<'a> FieldAttrsBuilder<'a> {
 
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
-pub struct ContainerAttrs;
+pub struct ContainerAttrs {
+    deny_unknown_fields: bool,
+}
+
+impl ContainerAttrs {
+    pub fn deny_unknown_fields(&self) -> bool {
+        self.deny_unknown_fields
+    }
+}
 
 pub struct ContainerAttrsBuilder<'a> {
     cx: &'a ExtCtxt<'a>,
+    deny_unknown_fields: bool,
 }
 
 impl<'a> ContainerAttrsBuilder<'a> {
     pub fn new(cx: &'a ExtCtxt) -> Self {
         ContainerAttrsBuilder {
             cx: cx,
+            deny_unknown_fields: false,
         }
     }
 
@@ -301,6 +311,9 @@ impl<'a> ContainerAttrsBuilder<'a> {
 
     pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> Result<Self, ()> {
         match meta_item.node {
+            ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
+                Ok(self.deny_unknown_fields())
+            }
             _ => {
                 self.cx.span_err(
                     meta_item.span,
@@ -311,7 +324,14 @@ impl<'a> ContainerAttrsBuilder<'a> {
         }
     }
 
+    pub fn deny_unknown_fields(mut self) -> Self {
+        self.deny_unknown_fields = true;
+        self
+    }
+
     pub fn build(self) -> ContainerAttrs {
-        ContainerAttrs
+        ContainerAttrs {
+            deny_unknown_fields: self.deny_unknown_fields,
+        }
     }
 }

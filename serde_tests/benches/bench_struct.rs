@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use test::Bencher;
+use std::fmt;
+use std::error;
 
 use rustc_serialize::{Decoder, Decodable};
 
@@ -41,6 +43,22 @@ impl serde::de::Error for Error {
 
     fn missing_field(_: &'static str) -> Error {
         Error::MissingField
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
     }
 }
 
@@ -356,7 +374,7 @@ mod deserializer {
     impl de::Deserializer for OuterDeserializer {
         type Error = Error;
 
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
@@ -398,7 +416,7 @@ mod deserializer {
             }
         }
 
-        fn visit_struct<V>(&mut self,
+        fn deserialize_struct<V>(&mut self,
                            name: &str,
                            _fields: &'static [&'static str],
                            mut visitor: V) -> Result<V::Value, Error>
