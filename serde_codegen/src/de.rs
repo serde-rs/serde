@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use aster;
 
 use syntax::ast::{
@@ -14,7 +12,7 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 
-use attr::{self, ContainerAttrs};
+use attr::{self, ContainerAttrs, FieldAttrs};
 
 use error::Error;
 
@@ -554,12 +552,7 @@ fn deserialize_item_enum(
         cx,
         builder,
         enum_def.variants.iter()
-            .map(|variant| {
-                let expr = builder.expr().str(variant.node.name);
-                 attr::FieldAttrsBuilder::new(cx, builder)
-                    .name(expr)
-                    .build()
-            })
+            .map(|variant| FieldAttrs::new(variant.node.name))
             .collect(),
         container_attrs,
     );
@@ -838,18 +831,11 @@ fn deserialize_field_visitor(
         }
     );
 
-    // A set of all the formats that have specialized field attributes
-    let formats = field_attrs.iter()
-        .fold(HashSet::new(), |mut set, field_expr| {
-            set.extend(field_expr.formats());
-            set
-        });
-
     // Match arms to extract a field from a string
     let default_field_arms: Vec<_> = field_idents.iter()
         .zip(field_attrs.iter())
-        .map(|(field_ident, field_expr)| {
-            let expr = field_expr.default_key_expr();
+        .map(|(field_ident, field_attrs)| {
+            let expr = &field_attrs.name_expr();
             quote_arm!(cx, $expr => { Ok(__Field::$field_ident) })
         })
         .collect();
@@ -860,49 +846,12 @@ fn deserialize_field_visitor(
         quote_expr!(cx, Err(::serde::de::Error::unknown_field(value)))
     };
 
-    let str_body = if formats.is_empty() {
-        // No formats specific attributes, so no match on format required
-        quote_expr!(cx,
-            match value {
-                $default_field_arms
-                _ => { $fallthrough_arm_expr }
-            })
-    } else {
-        let field_arms: Vec<_> = formats.iter()
-            .map(|fmt| {
-                field_idents.iter()
-                    .zip(field_attrs.iter())
-                    .map(|(field_ident, field_expr)| {
-                        let expr = field_expr.key_expr(fmt);
-                        quote_arm!(cx, $expr => { Ok(__Field::$field_ident) })
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let fmt_matches: Vec<_> = formats.iter()
-            .zip(field_arms.iter())
-            .map(|(ref fmt, ref arms)| {
-                quote_arm!(cx, $fmt => {
-                    match value {
-                        $arms
-                        _ => {
-                            $fallthrough_arm_expr
-                        }
-                    }})
-            })
-            .collect();
-
-        quote_expr!(cx,
-            match __D::format() {
-                $fmt_matches
-                _ => match value {
-                    $default_field_arms
-                    _ => $fallthrough_arm_expr
-                }
-            }
-        )
-    };
+    let str_body = quote_expr!(cx,
+        match value {
+            $default_field_arms
+            _ => $fallthrough_arm_expr
+        }
+    );
 
     let impl_item = quote_item!(cx,
         impl ::serde::de::Deserialize for __Field {
@@ -968,7 +917,7 @@ fn deserialize_struct_visitor(
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        try!(attr::get_struct_field_attrs(cx, builder, fields)),
+        try!(attr::get_struct_field_attrs(cx, fields)),
         container_attrs
     );
 
@@ -1040,7 +989,7 @@ fn deserialize_map(
         .chain(ignored_arm.into_iter())
         .collect();
 
-    let field_attrs = try!(attr::get_struct_field_attrs(cx, builder, fields));
+    let field_attrs = try!(attr::get_struct_field_attrs(cx, fields));
 
     let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
         .zip(field_attrs.iter())
@@ -1048,25 +997,8 @@ fn deserialize_map(
             let missing_expr = if field_attr.use_default() {
                 quote_expr!(cx, ::std::default::Default::default())
             } else {
-                let formats = field_attr.formats();
-                let arms : Vec<_> = formats.iter()
-                    .map(|format| {
-                        let key_expr = field_attr.key_expr(format);
-                        quote_arm!(cx, $format => { $key_expr })
-                    })
-                    .collect();
-                let default = field_attr.default_key_expr();
-                if arms.is_empty() {
-                    quote_expr!(cx, try!(visitor.missing_field($default)))
-                } else {
-                    quote_expr!(
-                        cx,
-                        try!(visitor.missing_field(
-                            match __D::format() {
-                                $arms
-                                _ => { $default }
-                            })))
-                }
+                let name = &field_attr.name_expr();
+                quote_expr!(cx, try!(visitor.missing_field($name)))
             };
 
             quote_stmt!(cx,

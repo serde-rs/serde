@@ -29,22 +29,6 @@ struct Rename {
     a2: i32,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FormatRename {
-    a1: i32,
-    #[serde(rename(xml= "a4", token="a5"))]
-    a2: i32,
-}
-
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-enum SerEnum<A> {
-    Map {
-        a: i8,
-        #[serde(rename(xml= "c", token="d"))]
-        b: A,
-    },
-}
-
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct SkipSerializingFields<A: default::Default> {
     a: i8,
@@ -166,49 +150,6 @@ fn test_rename() {
             Token::MapSep,
             Token::Str("a3"),
             Token::I32(2),
-
-            Token::MapEnd,
-        ]
-    );
-}
-
-#[test]
-fn test_format_rename() {
-    assert_tokens(
-        &FormatRename { a1: 1, a2: 2 },
-        vec![
-            Token::StructStart("FormatRename", Some(2)),
-
-            Token::MapSep,
-            Token::Str("a1"),
-            Token::I32(1),
-
-            Token::MapSep,
-            Token::Str("a5"),
-            Token::I32(2),
-
-            Token::MapEnd,
-        ]
-    );
-}
-
-#[test]
-fn test_enum_format_rename() {
-    assert_tokens(
-        &SerEnum::Map {
-            a: 0,
-            b: String::new(),
-        },
-        vec![
-            Token::EnumMapStart("SerEnum", "Map", Some(2)),
-
-            Token::MapSep,
-            Token::Str("a"),
-            Token::I8(0),
-
-            Token::MapSep,
-            Token::Str("d"),
-            Token::Str(""),
 
             Token::MapEnd,
         ]

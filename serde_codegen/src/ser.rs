@@ -605,14 +605,14 @@ fn serialize_struct_visitor<I>(
 {
     let value_exprs = value_exprs.collect::<Vec<_>>();
 
-    let field_attrs = try!(attr::get_struct_field_attrs(cx, builder, fields));
+    let field_attrs = try!(attr::get_struct_field_attrs(cx, fields));
 
     let arms: Vec<ast::Arm> = field_attrs.iter()
         .zip(value_exprs.iter())
         .filter(|&(ref field, _)| !field.skip_serializing_field())
         .enumerate()
         .map(|(i, (ref field, value_expr))| {
-            let key_expr = field.serializer_key_expr(cx);
+            let key_expr = &field.name_expr();
 
             let stmt = if field.skip_serializing_field_if_empty() {
                 quote_stmt!(cx, if ($value_expr).is_empty() { continue; })
