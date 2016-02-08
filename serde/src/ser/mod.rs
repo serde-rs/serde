@@ -146,9 +146,9 @@ pub trait Serializer {
     /// By default, unit variants are serialized as a `()`.
     #[inline]
     fn serialize_unit_variant(&mut self,
-                          _name: &'static str,
-                          _variant_index: usize,
-                          _variant: &'static str) -> Result<(), Self::Error> {
+                              _name: &'static str,
+                              _variant_index: usize,
+                              _variant: &'static str) -> Result<(), Self::Error> {
         self.serialize_unit()
     }
 
@@ -157,8 +157,8 @@ pub trait Serializer {
     /// By default it just serializes the value as a tuple struct sequence.
     #[inline]
     fn serialize_newtype_struct<T>(&mut self,
-                               name: &'static str,
-                               value: T) -> Result<(), Self::Error>
+                                   name: &'static str,
+                                   value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
         self.serialize_tuple_struct(name, Some(value))
@@ -169,10 +169,10 @@ pub trait Serializer {
     /// tuple variant sequence.
     #[inline]
     fn serialize_newtype_variant<T>(&mut self,
-                                name: &'static str,
-                                variant_index: usize,
-                                variant: &'static str,
-                                value: T) -> Result<(), Self::Error>
+                                    name: &'static str,
+                                    variant_index: usize,
+                                    variant: &'static str,
+                                    value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
         self.serialize_tuple_variant(
@@ -225,8 +225,8 @@ pub trait Serializer {
     /// By default, tuple structs are serialized as a tuple.
     #[inline]
     fn serialize_tuple_struct<V>(&mut self,
-                             _name: &'static str,
-                             visitor: V) -> Result<(), Self::Error>
+                                 _name: &'static str,
+                                 visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.serialize_tuple(visitor)
@@ -247,10 +247,10 @@ pub trait Serializer {
     /// By default, tuple variants are serialized as a tuple struct.
     #[inline]
     fn serialize_tuple_variant<V>(&mut self,
-                              _name: &'static str,
-                              _variant_index: usize,
-                              variant: &'static str,
-                              visitor: V) -> Result<(), Self::Error>
+                                  _name: &'static str,
+                                  _variant_index: usize,
+                                  variant: &'static str,
+                                  visitor: V) -> Result<(), Self::Error>
         where V: SeqVisitor,
     {
         self.serialize_tuple_struct(variant, visitor)
@@ -283,8 +283,8 @@ pub trait Serializer {
     /// By default, structs are serialized as a map with the field name as the key.
     #[inline]
     fn serialize_struct<V>(&mut self,
-                       _name: &'static str,
-                       visitor: V) -> Result<(), Self::Error>
+                           _name: &'static str,
+                           visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.serialize_map(visitor)
@@ -295,8 +295,8 @@ pub trait Serializer {
     /// By default, struct elements are serialized as a map element with the field name as the key.
     #[inline]
     fn serialize_struct_elt<V>(&mut self,
-                           key: &'static str,
-                           value: V) -> Result<(), Self::Error>
+                               key: &'static str,
+                               value: V) -> Result<(), Self::Error>
         where V: Serialize,
     {
         self.serialize_map_elt(key, value)
@@ -307,10 +307,10 @@ pub trait Serializer {
     /// By default, struct variants are serialized as a struct.
     #[inline]
     fn serialize_struct_variant<V>(&mut self,
-                               _name: &'static str,
-                               _variant_index: usize,
-                               variant: &'static str,
-                               visitor: V) -> Result<(), Self::Error>
+                                   _name: &'static str,
+                                   _variant_index: usize,
+                                   variant: &'static str,
+                                   visitor: V) -> Result<(), Self::Error>
         where V: MapVisitor,
     {
         self.serialize_struct(variant, visitor)
@@ -321,8 +321,8 @@ pub trait Serializer {
     /// By default, struct variant elements are serialized as a struct element.
     #[inline]
     fn serialize_struct_variant_elt<V>(&mut self,
-                                   key: &'static str,
-                                   value: V) -> Result<(), Self::Error>
+                                       key: &'static str,
+                                       value: V) -> Result<(), Self::Error>
         where V: Serialize,
     {
         self.serialize_struct_elt(key, value)

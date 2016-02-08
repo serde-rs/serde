@@ -332,8 +332,8 @@ pub trait Deserializer {
     /// deserializers to a unit struct that aren't tagged as a unit struct.
     #[inline]
     fn deserialize_unit_struct<V>(&mut self,
-                            _name: &'static str,
-                            visitor: V) -> Result<V::Value, Self::Error>
+                                  _name: &'static str,
+                                  visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_unit(visitor)
@@ -343,8 +343,8 @@ pub trait Deserializer {
     /// deserializers to a newtype struct that aren't tagged as a newtype struct.
     #[inline]
     fn deserialize_newtype_struct<V>(&mut self,
-                               name: &'static str,
-                               visitor: V) -> Result<V::Value, Self::Error>
+                                     name: &'static str,
+                                     visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_tuple_struct(name, 1, visitor)
@@ -354,9 +354,9 @@ pub trait Deserializer {
     /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
     fn deserialize_tuple_struct<V>(&mut self,
-                             _name: &'static str,
-                             len: usize,
-                             visitor: V) -> Result<V::Value, Self::Error>
+                                   _name: &'static str,
+                                   len: usize,
+                                   visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_tuple(len, visitor)
@@ -366,9 +366,9 @@ pub trait Deserializer {
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
     fn deserialize_struct<V>(&mut self,
-                       _name: &'static str,
-                       _fields: &'static [&'static str],
-                       visitor: V) -> Result<V::Value, Self::Error>
+                             _name: &'static str,
+                             _fields: &'static [&'static str],
+                             visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_map(visitor)
@@ -388,9 +388,9 @@ pub trait Deserializer {
     /// type.
     #[inline]
     fn deserialize_enum<V>(&mut self,
-                     _enum: &'static str,
-                     _variants: &'static [&'static str],
-                     _visitor: V) -> Result<V::Value, Self::Error>
+                           _enum: &'static str,
+                           _variants: &'static [&'static str],
+                           _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
     {
         Err(Error::syntax("expected an enum"))
@@ -406,11 +406,11 @@ pub trait Deserializer {
         self.deserialize_seq(visitor)
     }
 
-    /// This method hints that the `Deserialize` type is expecting some sort of struct key mapping.
-    /// This allows deserializers to choose between &str, usize, or &[u8] to properly deserialize a
-    /// struct key.
+    /// This method hints that the `Deserialize` type is expecting some sort of struct field
+    /// mapping.  This allows deserializers to choose between &str, usize, or &[u8] to properly
+    /// deserialize a struct field.
     #[inline]
-    fn deserialize_struct_key<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize(visitor)
@@ -843,8 +843,8 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
     }
 
     fn visit_struct<V>(&mut self,
-                    fields: &'static [&'static str],
-                    visitor: V) -> Result<V::Value, T::Error>
+                       fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
         (**self).visit_struct(fields, visitor)
