@@ -12,12 +12,23 @@ keywords = ["serde", "serialization"]
 name = "serde_macros"
 plugin = true
 
+[features]
+nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-testing"]
+
 [dependencies]
-clippy = "^0.0.37"
+clippy = { version = "^0.0.37", optional = true }
 serde_codegen = { version = "^0.6.10", path = "../serde_codegen", default-features = false, features = ["nightly"] }
 
 [dev-dependencies]
 compiletest_rs = "^0.0.11"
 num = "^0.1.27"
 rustc-serialize = "^0.3.16"
-serde = { version = "^0.6.10", path = "../serde", features = ["nightly", "num-impls"] }
+serde = { version = "^0.6.10", path = "../serde", features = ["num-impls"] }
+
+[[test]]
+name = "test"
+path = "tests/test.rs"
+
+[[bench]]
+name = "bench"
+path = "benches/bench.rs"

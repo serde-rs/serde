@@ -22,9 +22,11 @@ script:
 - |
     (cd serde && travis-cargo build) &&
     (cd serde && travis-cargo test) &&
+    (cd serde && travis-cargo --only nightly test -- --features nightly-testing) &&
     (cd serde_tests && travis-cargo test) &&
-    (cd serde_macros && travis-cargo --only nightly test) &&
-    (cd serde_macros && travis-cargo --only nightly bench) &&
+    (cd serde_tests && travis-cargo --only nightly test -- --features nightly-testing) &&
+    (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing) &&
+    (cd serde_macros && travis-cargo --only nightly bench -- --features nightly-testing) &&
     (cd serde && travis-cargo --only stable doc) &&
     (cd serde_codegen && travis-cargo --only stable doc)
 

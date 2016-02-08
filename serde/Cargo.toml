@@ -10,7 +10,7 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 
 [features]
-nightly = ["clippy"]
+nightly-testing = ["clippy"]
 num-bigint = ["num/bigint"]
 num-complex = ["num/complex"]
 num-impls = ["num-bigint", "num-complex", "num-rational"]
