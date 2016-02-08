@@ -310,7 +310,8 @@ fn serialize_variant(
 ) -> Result<ast::Arm, Error> {
     let type_name = builder.expr().str(type_ident);
     let variant_ident = variant.node.name;
-    let variant_name = builder.expr().str(variant_ident);
+    let variant_attrs = try!(attr::VariantAttrs::from_variant(cx, variant));
+    let variant_name = variant_attrs.name_expr();
 
     match variant.node.data {
         ast::VariantData::Unit(_) => {

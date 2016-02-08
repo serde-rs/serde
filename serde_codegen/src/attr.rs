@@ -49,6 +49,57 @@ impl ContainerAttrs {
     }
 }
 
+/// Represents variant attribute information
+#[derive(Debug)]
+pub struct VariantAttrs {
+    ident: ast::Ident,
+    name: Option<ast::Lit>,
+}
+
+impl VariantAttrs {
+    pub fn from_variant(cx: &ExtCtxt, variant: &ast::Variant) -> Result<Self, Error> {
+        let mut variant_attrs = VariantAttrs {
+            ident: variant.node.name,
+            name: None,
+        };
+
+        for meta_items in variant.node.attrs.iter().filter_map(get_serde_meta_items) {
+            for meta_item in meta_items {
+                match meta_item.node {
+                    // Parse `#[serde(rename="foo")]`
+                    ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                        variant_attrs.name = Some(lit.clone());
+                    }
+
+                    _ => {
+                        cx.span_err(
+                            meta_item.span,
+                            &format!("unknown serde variant attribute `{}`",
+                                     meta_item_to_string(meta_item)));
+
+                        return Err(Error);
+                    }
+                }
+            }
+        }
+
+        Ok(variant_attrs)
+    }
+
+    /// Return the string expression of the field ident.
+    pub fn ident_expr(&self) -> P<ast::Expr> {
+        AstBuilder::new().expr().str(self.ident)
+    }
+
+    /// Return the field name for the field when serializing.
+    pub fn name_expr(&self) -> P<ast::Expr> {
+        match self.name {
+            Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
+            None => self.ident_expr(),
+        }
+    }
+}
+
 /// Represents field attribute information
 #[derive(Debug)]
 pub struct FieldAttrs {
@@ -124,22 +175,16 @@ impl FieldAttrs {
         })
     }
 
-    pub fn from_variant(variant: &ast::Variant) -> Self {
-        FieldAttrs {
-            ident: variant.node.name,
-            name: None,
-            skip_serializing_field: false,
-            skip_serializing_field_if_empty: false,
-            skip_serializing_field_if_none: false,
-            use_default: false,
-        }
+    /// Return the string expression of the field ident.
+    pub fn ident_expr(&self) -> P<ast::Expr> {
+        AstBuilder::new().expr().str(self.ident)
     }
 
-    /// Return the default field name for the field.
+    /// Return the field name for the field when serializing.
     pub fn name_expr(&self) -> P<ast::Expr> {
         match self.name {
             Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
-            None => AstBuilder::new().expr().str(self.ident),
+            None => self.ident_expr(),
         }
     }
 

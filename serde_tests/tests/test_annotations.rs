@@ -29,6 +29,12 @@ struct Rename {
     a2: i32,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum RenameEnumVariant {
+    #[serde(rename="bruce_wayne")]
+    Batman,
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct SkipSerializingFields<A: default::Default> {
     a: i8,
@@ -152,6 +158,16 @@ fn test_rename() {
             Token::I32(2),
 
             Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_rename_enum_variant() {
+    assert_tokens(
+        &RenameEnumVariant::Batman,
+        vec![
+            Token::EnumUnit("RenameEnumVariant", "bruce_wayne"),
         ]
     );
 }
