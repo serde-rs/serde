@@ -28,6 +28,35 @@ pub struct ContainerAttrs {
 }
 
 impl ContainerAttrs {
+    /// Extract out the `#[serde(...)]` attributes from an item.
+    pub fn from_item(cx: &ExtCtxt, item: &ast::Item) -> Result<ContainerAttrs, Error> {
+        let mut container_attrs = ContainerAttrs {
+            deny_unknown_fields: false,
+        };
+
+        for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
+            for meta_item in meta_items {
+                match meta_item.node {
+                    // Parse `#[serde(deny_unknown_fields)]`
+                    ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
+                        container_attrs.deny_unknown_fields = true;
+                    }
+
+                    _ => {
+                        cx.span_err(
+                            meta_item.span,
+                            &format!("unknown serde container attribute `{}`",
+                                     meta_item_to_string(meta_item)));
+
+                        return Err(Error);
+                    }
+                }
+            }
+        }
+
+        Ok(container_attrs)
+    }
+
     pub fn deny_unknown_fields(&self) -> bool {
         self.deny_unknown_fields
     }
@@ -275,79 +304,6 @@ impl<'a> FieldAttrsBuilder<'a> {
     }
 }
 
-pub struct ContainerAttrsBuilder<'a> {
-    cx: &'a ExtCtxt<'a>,
-    deny_unknown_fields: bool,
-}
-
-impl<'a> ContainerAttrsBuilder<'a> {
-    pub fn new(cx: &'a ExtCtxt) -> Self {
-        ContainerAttrsBuilder {
-            cx: cx,
-            deny_unknown_fields: false,
-        }
-    }
-
-    pub fn attrs(mut self, attrs: &[ast::Attribute]) -> Result<Self, Error> {
-        for attr in attrs {
-            self = try!(self.attr(attr));
-        }
-
-        Ok(self)
-    }
-
-    pub fn attr(mut self, attr: &ast::Attribute) -> Result<Self, Error> {
-        match attr.node.value.node {
-            ast::MetaList(ref name, ref items) if name == &"serde" => {
-                attr::mark_used(&attr);
-                for item in items {
-                    self = try!(self.meta_item(item));
-                }
-
-                Ok(self)
-            }
-            _ => {
-                Ok(self)
-            }
-        }
-    }
-
-    pub fn meta_item(self, meta_item: &P<ast::MetaItem>) -> Result<Self, Error> {
-        match meta_item.node {
-            ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
-                Ok(self.deny_unknown_fields())
-            }
-            _ => {
-                self.cx.span_err(
-                    meta_item.span,
-                    &format!("unknown serde container attribute `{}`",
-                             meta_item_to_string(meta_item)));
-                Err(Error)
-            }
-        }
-    }
-
-    pub fn deny_unknown_fields(mut self) -> Self {
-        self.deny_unknown_fields = true;
-        self
-    }
-
-    pub fn build(self) -> ContainerAttrs {
-        ContainerAttrs {
-            deny_unknown_fields: self.deny_unknown_fields,
-        }
-    }
-}
-
-/// Extract out the `#[serde(...)]` attributes from an item.
-pub fn get_container_attrs(cx: &ExtCtxt,
-                           container: &ast::Item,
-                          ) -> Result<ContainerAttrs, Error> {
-    let builder = ContainerAttrsBuilder::new(cx);
-    let builder = try!(builder.attrs(container.attrs()));
-    Ok(builder.build())
-}
-
 /// Extract out the `#[serde(...)]` attributes from a struct field.
 pub fn get_struct_field_attrs(cx: &ExtCtxt,
                               builder: &aster::AstBuilder,
@@ -362,4 +318,14 @@ pub fn get_struct_field_attrs(cx: &ExtCtxt,
     }
 
     Ok(attrs)
+}
+
+fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
+    match attr.node.value.node {
+        ast::MetaList(ref name, ref items) if name == &"serde" => {
+            attr::mark_used(&attr);
+            Some(items)
+        }
+        _ => None
+    }
 }

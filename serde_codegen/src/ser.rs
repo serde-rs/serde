@@ -86,7 +86,7 @@ fn serialize_body(
 ) -> Result<P<ast::Expr>, Error> {
     // Note: While we don't have any container attributes, we still want to try to
     // parse them so we can report a proper error if we get passed an unknown attribute.
-    let _ = try!(attr::get_container_attrs(cx, item));
+    let _container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
 
     match item.node {
         ast::ItemStruct(ref variant_data, _) => {

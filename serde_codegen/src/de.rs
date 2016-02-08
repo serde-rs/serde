@@ -14,8 +14,7 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 
-use attr::{self, ContainerAttrs};
-
+use attr;
 use error::Error;
 
 pub fn expand_derive_deserialize(
@@ -88,7 +87,7 @@ fn deserialize_body(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
 ) -> Result<P<ast::Expr>, Error> {
-    let container_attrs = try!(attr::get_container_attrs(cx, item));
+    let container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
 
     match item.node {
         ast::ItemStruct(ref variant_data, _) => {
@@ -129,7 +128,7 @@ fn deserialize_item_struct(
     ty: P<ast::Ty>,
     span: Span,
     variant_data: &ast::VariantData,
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     match *variant_data {
         ast::VariantData::Unit(_) => {
@@ -478,7 +477,7 @@ fn deserialize_struct(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -544,7 +543,7 @@ fn deserialize_item_enum(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     enum_def: &EnumDef,
-    container_attrs: &ContainerAttrs
+    container_attrs: &attr::ContainerAttrs
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -642,7 +641,7 @@ fn deserialize_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     variant: &ast::Variant,
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let variant_ident = variant.node.name;
 
@@ -735,7 +734,7 @@ fn deserialize_struct_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &generics.where_clause;
 
@@ -799,7 +798,7 @@ fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     field_attrs: Vec<attr::FieldAttrs>,
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
     let field_idents: Vec<ast::Ident> = (0 .. field_attrs.len())
@@ -963,7 +962,7 @@ fn deserialize_struct_visitor(
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<(Vec<P<ast::Item>>, P<ast::Stmt>, P<ast::Expr>), Error> {
     let field_visitor = deserialize_field_visitor(
         cx,
@@ -1006,7 +1005,7 @@ fn deserialize_map(
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
