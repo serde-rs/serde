@@ -12,7 +12,8 @@ use error::Error;
 #[derive(Debug)]
 pub struct FieldAttrs {
     ident: ast::Ident,
-    name: Option<ast::Lit>,
+    serializer_name: Option<ast::Lit>,
+    deserializer_name: Option<ast::Lit>,
     use_default_if_missing: bool,
     skip_serializing_field: bool,
     skip_serializing_field_if_empty: bool,
@@ -23,7 +24,8 @@ impl FieldAttrs {
     pub fn new(ident: ast::Ident) -> Self {
         FieldAttrs {
             ident: ident,
-            name: None,
+            serializer_name: None,
+            deserializer_name: None,
             use_default_if_missing: false,
             skip_serializing_field: false,
             skip_serializing_field_if_empty: false,
@@ -31,11 +33,24 @@ impl FieldAttrs {
         }
     }
 
-    /// Return the default field name for the field.
-    pub fn name_expr(&self) -> P<ast::Expr> {
-        match self.name {
+    /// Return the field name for the field when serializing.
+    pub fn field_name_expr(&self) -> P<ast::Expr> {
+        AstBuilder::new().expr().str(self.ident)
+    }
+
+    /// Return the field name for the field when serializing.
+    pub fn serialize_name_expr(&self) -> P<ast::Expr> {
+        match self.serializer_name {
             Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
-            None => AstBuilder::new().expr().str(self.ident),
+            None => self.field_name_expr(),
+        }
+    }
+
+    /// Return the field name for the field when deserializing.
+    pub fn deserialize_name_expr(&self) -> P<ast::Expr> {
+        match self.deserializer_name {
+            Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
+            None => self.field_name_expr(),
         }
     }
 
@@ -114,8 +129,6 @@ pub fn get_struct_field_attrs(cx: &ExtCtxt,
 
 /// Extract out the `#[serde(...)]` attributes from a struct field.
 fn get_field_attrs(cx: &ExtCtxt, field: &ast::StructField) -> Result<FieldAttrs, Error> {
-    let builder = AstBuilder::new();
-
     let field_ident = match field.node.ident() {
         Some(ident) => ident,
         None => { cx.span_bug(field.span, "struct field has no name?") }
@@ -128,7 +141,15 @@ fn get_field_attrs(cx: &ExtCtxt, field: &ast::StructField) -> Result<FieldAttrs,
             match meta_item.node {
                 // Parse `#[serde(rename="foo")]`
                 ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
-                    field_attrs.name = Some(lit.clone());
+                    field_attrs.serializer_name = Some(lit.clone());
+                    field_attrs.deserializer_name = Some(lit.clone());
+                }
+
+                // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                    let (ser_name, de_name) = try!(get_renames(cx, meta_items));
+                    field_attrs.serializer_name = ser_name;
+                    field_attrs.deserializer_name = de_name;
                 }
 
                 // Parse `#[serde(default)]`
@@ -164,6 +185,35 @@ fn get_field_attrs(cx: &ExtCtxt, field: &ast::StructField) -> Result<FieldAttrs,
     }
 
     Ok(field_attrs)
+}
+
+fn get_renames(cx: &ExtCtxt,
+               items: &[P<ast::MetaItem>]) -> Result<(Option<ast::Lit>, Option<ast::Lit>), Error> {
+    let mut ser_name = None;
+    let mut de_name = None;
+
+    for item in items {
+        match item.node {
+            ast::MetaNameValue(ref name, ref lit) if name == &"serialize" => {
+                ser_name = Some(lit.clone());
+            }
+
+            ast::MetaNameValue(ref name, ref lit) if name == &"deserialize" => {
+                de_name = Some(lit.clone());
+            }
+
+            _ => {
+                cx.span_err(
+                    item.span,
+                    &format!("unknown rename attribute `{}`",
+                             meta_item_to_string(item)));
+
+                return Err(Error);
+            }
+        }
+    }
+
+    Ok((ser_name, de_name))
 }
 
 fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {

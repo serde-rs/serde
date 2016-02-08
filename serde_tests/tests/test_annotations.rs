@@ -29,6 +29,22 @@ struct Rename {
     a2: i32,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct RenameSerializeDeserialize {
+    a1: i32,
+    #[serde(rename(serialize="a4", deserialize="a5"))]
+    a2: i32,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+enum RenameEnumSerializeDeserialize<A> {
+    Map {
+        a: i8,
+        #[serde(rename(serialize="c", deserialize="d"))]
+        b: A,
+    },
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct SkipSerializingFields<A: default::Default> {
     a: i8,
@@ -150,6 +166,86 @@ fn test_rename() {
             Token::MapSep,
             Token::Str("a3"),
             Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_rename_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameSerializeDeserialize { a1: 1, a2: 2 },
+        &[
+            Token::StructStart("RenameSerializeDeserialize", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a4"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameSerializeDeserialize { a1: 1, a2: 2 },
+        vec![
+            Token::StructStart("RenameSerializeDeserialize", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a5"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_enum_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameEnumSerializeDeserialize::Map {
+            a: 0,
+            b: String::new(),
+        },
+        &[
+            Token::EnumMapStart("RenameEnumSerializeDeserialize", "Map", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::Str(""),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameEnumSerializeDeserialize::Map {
+            a: 0,
+            b: String::new(),
+        },
+        vec![
+            Token::EnumMapStart("RenameEnumSerializeDeserialize", "Map", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("d"),
+            Token::Str(""),
 
             Token::MapEnd,
         ]

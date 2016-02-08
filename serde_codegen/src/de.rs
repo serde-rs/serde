@@ -835,7 +835,7 @@ fn deserialize_field_visitor(
     let default_field_arms: Vec<_> = field_idents.iter()
         .zip(field_attrs.iter())
         .map(|(field_ident, field_attrs)| {
-            let expr = &field_attrs.name_expr();
+            let expr = field_attrs.deserialize_name_expr();
             quote_arm!(cx, $expr => { Ok(__Field::$field_ident) })
         })
         .collect();
@@ -997,7 +997,7 @@ fn deserialize_map(
             let missing_expr = if field_attr.use_default() {
                 quote_expr!(cx, ::std::default::Default::default())
             } else {
-                let name = &field_attr.name_expr();
+                let name = field_attr.field_name_expr();
                 quote_expr!(cx, try!(visitor.missing_field($name)))
             };
 
