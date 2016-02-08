@@ -11,7 +11,8 @@ keywords = ["serde", "serialization"]
 
 [features]
 default = ["with-syntex"]
-nightly = ["clippy", "quasi_macros"]
+nightly = ["quasi_macros"]
+nightly-testing = ["clippy"]
 with-syntex = ["quasi/with-syntex", "quasi_codegen", "quasi_codegen/with-syntex", "syntex", "syntex_syntax"]
 
 [build-dependencies]
