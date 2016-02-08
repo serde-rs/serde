@@ -21,6 +21,18 @@ pub enum FieldNames {
     }
 }
 
+/// Represents container (e.g. struct) attribute information
+#[derive(Debug)]
+pub struct ContainerAttrs {
+    deny_unknown_fields: bool,
+}
+
+impl ContainerAttrs {
+    pub fn deny_unknown_fields(&self) -> bool {
+        self.deny_unknown_fields
+    }
+}
+
 /// Represents field attribute information
 #[derive(Debug)]
 pub struct FieldAttrs {
@@ -260,18 +272,6 @@ impl<'a> FieldAttrsBuilder<'a> {
             names: names,
             use_default: self.use_default,
         }
-    }
-}
-
-/// Represents container (e.g. struct) attribute information
-#[derive(Debug)]
-pub struct ContainerAttrs {
-    deny_unknown_fields: bool,
-}
-
-impl ContainerAttrs {
-    pub fn deny_unknown_fields(&self) -> bool {
-        self.deny_unknown_fields
     }
 }
 
