@@ -23,24 +23,44 @@ struct DisallowUnknown {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Rename {
+#[serde(rename="Superhero")]
+struct RenameStruct {
     a1: i32,
     #[serde(rename="a3")]
     a2: i32,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FormatRename {
+#[serde(rename(serialize="SuperheroSer", deserialize="SuperheroDe"))]
+struct RenameStructSerializeDeserialize {
     a1: i32,
-    #[serde(rename(xml= "a4", token="a5"))]
+    #[serde(rename(serialize="a4", deserialize="a5"))]
     a2: i32,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename="Superhero")]
+enum RenameEnum {
+    #[serde(rename="bruce_wayne")]
+    Batman,
+    #[serde(rename="clark_kent")]
+    Superman(i8),
+    #[serde(rename="diana_prince")]
+    WonderWoman(i8, i8),
+    #[serde(rename="barry_allan")]
+    Flash {
+        #[serde(rename="b")]
+        a: i32,
+    },
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-enum SerEnum<A> {
-    Map {
+#[serde(rename(serialize="SuperheroSer", deserialize="SuperheroDe"))]
+enum RenameEnumSerializeDeserialize<A> {
+    #[serde(rename(serialize="dick_grayson", deserialize="jason_todd"))]
+    Robin {
         a: i8,
-        #[serde(rename(xml= "c", token="d"))]
+        #[serde(rename(serialize="c", deserialize="d"))]
         b: A,
     },
 }
@@ -153,11 +173,11 @@ fn test_ignore_unknown() {
 }
 
 #[test]
-fn test_rename() {
+fn test_rename_struct() {
     assert_tokens(
-        &Rename { a1: 1, a2: 2 },
+        &RenameStruct { a1: 1, a2: 2 },
         vec![
-            Token::StructStart("Rename", Some(2)),
+            Token::StructStart("Superhero", Some(2)),
 
             Token::MapSep,
             Token::Str("a1"),
@@ -173,11 +193,28 @@ fn test_rename() {
 }
 
 #[test]
-fn test_format_rename() {
-    assert_tokens(
-        &FormatRename { a1: 1, a2: 2 },
+fn test_rename_struct_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
+        &[
+            Token::StructStart("SuperheroSer", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a4"),
+            Token::I32(2),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
         vec![
-            Token::StructStart("FormatRename", Some(2)),
+            Token::StructStart("SuperheroDe", Some(2)),
 
             Token::MapSep,
             Token::Str("a1"),
@@ -193,14 +230,80 @@ fn test_format_rename() {
 }
 
 #[test]
-fn test_enum_format_rename() {
+fn test_rename_enum() {
     assert_tokens(
-        &SerEnum::Map {
+        &RenameEnum::Batman,
+        vec![
+            Token::EnumUnit("Superhero", "bruce_wayne"),
+        ]
+    );
+
+    assert_tokens(
+        &RenameEnum::Superman(0),
+        vec![
+            Token::EnumNewtype("Superhero", "clark_kent"),
+            Token::I8(0),
+        ]
+    );
+
+    assert_tokens(
+        &RenameEnum::WonderWoman(0, 1),
+        vec![
+            Token::EnumSeqStart("Superhero", "diana_prince", Some(2)),
+
+            Token::SeqSep,
+            Token::I8(0),
+
+            Token::SeqSep,
+            Token::I8(1),
+
+            Token::SeqEnd,
+        ]
+    );
+
+    assert_tokens(
+        &RenameEnum::Flash { a: 1 },
+        vec![
+            Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::I32(1),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_enum_serialize_deserialize() {
+    assert_ser_tokens(
+        &RenameEnumSerializeDeserialize::Robin {
+            a: 0,
+            b: String::new(),
+        },
+        &[
+            Token::EnumMapStart("SuperheroSer", "dick_grayson", Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::MapSep,
+            Token::Str("c"),
+            Token::Str(""),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &RenameEnumSerializeDeserialize::Robin {
             a: 0,
             b: String::new(),
         },
         vec![
-            Token::EnumMapStart("SerEnum", "Map", Some(2)),
+            Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
 
             Token::MapSep,
             Token::Str("a"),

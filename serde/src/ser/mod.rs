@@ -327,14 +327,6 @@ pub trait Serializer {
     {
         self.serialize_struct_elt(key, value)
     }
-
-    /// Specify a format string for the serializer.
-    ///
-    /// The serializer format is used to determine which format
-    /// specific field attributes should be used with the serializer.
-    fn format() -> &'static str {
-        ""
-    }
 }
 
 /// A trait that is used by a `Serialize` to iterate through a sequence.

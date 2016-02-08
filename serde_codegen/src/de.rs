@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use aster;
 
 use syntax::ast::{
@@ -14,8 +12,7 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 
-use attr::{self, ContainerAttrs};
-
+use attr;
 use error::Error;
 
 pub fn expand_derive_deserialize(
@@ -88,7 +85,7 @@ fn deserialize_body(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
 ) -> Result<P<ast::Expr>, Error> {
-    let container_attrs = try!(attr::get_container_attrs(cx, item));
+    let container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
 
     match item.node {
         ast::ItemStruct(ref variant_data, _) => {
@@ -129,14 +126,14 @@ fn deserialize_item_struct(
     ty: P<ast::Ty>,
     span: Span,
     variant_data: &ast::VariantData,
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     match *variant_data {
         ast::VariantData::Unit(_) => {
             deserialize_unit_struct(
                 cx,
-                &builder,
                 item.ident,
+                container_attrs,
             )
         }
         ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
@@ -146,6 +143,7 @@ fn deserialize_item_struct(
                 item.ident,
                 impl_generics,
                 ty,
+                container_attrs,
             )
         }
         ast::VariantData::Tuple(ref fields, _) => {
@@ -160,6 +158,7 @@ fn deserialize_item_struct(
                 impl_generics,
                 ty,
                 fields.len(),
+                container_attrs,
             )
         }
         ast::VariantData::Struct(ref fields, _) => {
@@ -264,10 +263,10 @@ fn deserializer_ty_arg(builder: &aster::AstBuilder) -> P<ast::Ty>{
 
 fn deserialize_unit_struct(
     cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
     type_ident: Ident,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         struct __Visitor;
@@ -301,6 +300,7 @@ fn deserialize_newtype_struct(
     type_ident: Ident,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -318,7 +318,7 @@ fn deserialize_newtype_struct(
         1,
     );
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_item
@@ -353,6 +353,7 @@ fn deserialize_tuple_struct(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: usize,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -370,7 +371,7 @@ fn deserialize_tuple_struct(
         fields,
     );
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_item
@@ -478,7 +479,7 @@ fn deserialize_struct(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -506,7 +507,7 @@ fn deserialize_struct(
         container_attrs
     ));
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $field_visitor
@@ -544,23 +545,23 @@ fn deserialize_item_enum(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     enum_def: &EnumDef,
-    container_attrs: &ContainerAttrs
+    container_attrs: &attr::ContainerAttrs
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     let variant_visitor = deserialize_field_visitor(
         cx,
         builder,
-        enum_def.variants.iter()
-            .map(|variant| {
-                let expr = builder.expr().str(variant.node.name);
-                 attr::FieldAttrsBuilder::new(cx, builder)
-                    .name(expr)
-                    .build()
-            })
-            .collect(),
+        try!(
+            enum_def.variants.iter()
+                .map(|variant| {
+                    let attrs = try!(attr::VariantAttrs::from_variant(cx, variant));
+                    Ok(attrs.deserialize_name_expr())
+                })
+                .collect()
+        ),
         container_attrs,
     );
 
@@ -642,7 +643,7 @@ fn deserialize_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     variant: &ast::Variant,
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let variant_ident = variant.node.name;
 
@@ -735,7 +736,7 @@ fn deserialize_struct_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &generics.where_clause;
 
@@ -798,11 +799,11 @@ fn deserialize_struct_variant(
 fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    field_attrs: Vec<attr::FieldAttrs>,
-    container_attrs: &ContainerAttrs,
+    field_names: Vec<P<ast::Expr>>,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
-    let field_idents: Vec<ast::Ident> = (0 .. field_attrs.len())
+    let field_idents: Vec<ast::Ident> = (0 .. field_names.len())
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
@@ -838,19 +839,11 @@ fn deserialize_field_visitor(
         }
     );
 
-    // A set of all the formats that have specialized field attributes
-    let formats = field_attrs.iter()
-        .fold(HashSet::new(), |mut set, field_expr| {
-            set.extend(field_expr.formats());
-            set
-        });
-
     // Match arms to extract a field from a string
     let default_field_arms: Vec<_> = field_idents.iter()
-        .zip(field_attrs.iter())
-        .map(|(field_ident, field_expr)| {
-            let expr = field_expr.default_key_expr();
-            quote_arm!(cx, $expr => { Ok(__Field::$field_ident) })
+        .zip(field_names.iter())
+        .map(|(field_ident, field_name)| {
+            quote_arm!(cx, $field_name => { Ok(__Field::$field_ident) })
         })
         .collect();
 
@@ -860,49 +853,12 @@ fn deserialize_field_visitor(
         quote_expr!(cx, Err(::serde::de::Error::unknown_field(value)))
     };
 
-    let str_body = if formats.is_empty() {
-        // No formats specific attributes, so no match on format required
-        quote_expr!(cx,
-            match value {
-                $default_field_arms
-                _ => { $fallthrough_arm_expr }
-            })
-    } else {
-        let field_arms: Vec<_> = formats.iter()
-            .map(|fmt| {
-                field_idents.iter()
-                    .zip(field_attrs.iter())
-                    .map(|(field_ident, field_expr)| {
-                        let expr = field_expr.key_expr(fmt);
-                        quote_arm!(cx, $expr => { Ok(__Field::$field_ident) })
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let fmt_matches: Vec<_> = formats.iter()
-            .zip(field_arms.iter())
-            .map(|(ref fmt, ref arms)| {
-                quote_arm!(cx, $fmt => {
-                    match value {
-                        $arms
-                        _ => {
-                            $fallthrough_arm_expr
-                        }
-                    }})
-            })
-            .collect();
-
-        quote_expr!(cx,
-            match __D::format() {
-                $fmt_matches
-                _ => match value {
-                    $default_field_arms
-                    _ => $fallthrough_arm_expr
-                }
-            }
-        )
-    };
+    let str_body = quote_expr!(cx,
+        match value {
+            $default_field_arms
+            _ => $fallthrough_arm_expr
+        }
+    );
 
     let impl_item = quote_item!(cx,
         impl ::serde::de::Deserialize for __Field {
@@ -963,12 +919,19 @@ fn deserialize_struct_visitor(
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<(Vec<P<ast::Item>>, P<ast::Stmt>, P<ast::Expr>), Error> {
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        try!(attr::get_struct_field_attrs(cx, builder, fields)),
+        try!(
+            fields.iter()
+                .map(|field| {
+                    let attrs = try!(attr::FieldAttrs::from_field(cx, field));
+                    Ok(attrs.deserialize_name_expr())
+                })
+                .collect()
+        ),
         container_attrs
     );
 
@@ -1006,7 +969,7 @@ fn deserialize_map(
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
     fields: &[ast::StructField],
-    container_attrs: &ContainerAttrs,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
@@ -1040,33 +1003,16 @@ fn deserialize_map(
         .chain(ignored_arm.into_iter())
         .collect();
 
-    let field_attrs = try!(attr::get_struct_field_attrs(cx, builder, fields));
+    let field_attrs = try!(attr::get_struct_field_attrs(cx, fields));
 
-    let extract_values: Vec<P<ast::Stmt>> = field_names.iter()
+    let extract_values = field_names.iter()
         .zip(field_attrs.iter())
         .map(|(field_name, field_attr)| {
             let missing_expr = if field_attr.use_default() {
                 quote_expr!(cx, ::std::default::Default::default())
             } else {
-                let formats = field_attr.formats();
-                let arms : Vec<_> = formats.iter()
-                    .map(|format| {
-                        let key_expr = field_attr.key_expr(format);
-                        quote_arm!(cx, $format => { $key_expr })
-                    })
-                    .collect();
-                let default = field_attr.default_key_expr();
-                if arms.is_empty() {
-                    quote_expr!(cx, try!(visitor.missing_field($default)))
-                } else {
-                    quote_expr!(
-                        cx,
-                        try!(visitor.missing_field(
-                            match __D::format() {
-                                $arms
-                                _ => { $default }
-                            })))
-                }
+                let name = field_attr.ident_expr();
+                quote_expr!(cx, try!(visitor.missing_field($name)))
             };
 
             quote_stmt!(cx,
@@ -1076,7 +1022,7 @@ fn deserialize_map(
                 };
             ).unwrap()
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     let result = builder.expr().struct_path(struct_path)
         .with_id_exprs(

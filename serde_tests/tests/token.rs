@@ -301,10 +301,6 @@ impl<'a, I> ser::Serializer for Serializer<I>
         try!(key.serialize(self));
         value.serialize(self)
     }
-
-    fn format() -> &'static str {
-        "token"
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -582,10 +578,6 @@ impl<I> de::Deserializer for Deserializer<I>
             Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfStreamError),
         }
-    }
-
-    fn format() -> &'static str {
-        "token"
     }
 }
 
