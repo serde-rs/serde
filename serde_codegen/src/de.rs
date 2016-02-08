@@ -132,8 +132,8 @@ fn deserialize_item_struct(
         ast::VariantData::Unit(_) => {
             deserialize_unit_struct(
                 cx,
-                &builder,
                 item.ident,
+                container_attrs,
             )
         }
         ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
@@ -143,6 +143,7 @@ fn deserialize_item_struct(
                 item.ident,
                 impl_generics,
                 ty,
+                container_attrs,
             )
         }
         ast::VariantData::Tuple(ref fields, _) => {
@@ -157,6 +158,7 @@ fn deserialize_item_struct(
                 impl_generics,
                 ty,
                 fields.len(),
+                container_attrs,
             )
         }
         ast::VariantData::Struct(ref fields, _) => {
@@ -261,10 +263,10 @@ fn deserializer_ty_arg(builder: &aster::AstBuilder) -> P<ast::Ty>{
 
 fn deserialize_unit_struct(
     cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
     type_ident: Ident,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         struct __Visitor;
@@ -298,6 +300,7 @@ fn deserialize_newtype_struct(
     type_ident: Ident,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -315,7 +318,7 @@ fn deserialize_newtype_struct(
         1,
     );
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_item
@@ -350,6 +353,7 @@ fn deserialize_tuple_struct(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: usize,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
@@ -367,7 +371,7 @@ fn deserialize_tuple_struct(
         fields,
     );
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_item
@@ -503,7 +507,7 @@ fn deserialize_struct(
         container_attrs
     ));
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $field_visitor
@@ -545,7 +549,7 @@ fn deserialize_item_enum(
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
-    let type_name = builder.expr().str(type_ident);
+    let type_name = container_attrs.deserialize_name_expr();
 
     let variant_visitor = deserialize_field_visitor(
         cx,

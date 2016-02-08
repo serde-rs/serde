@@ -11,6 +11,9 @@ use error::Error;
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
 pub struct ContainerAttrs {
+    ident: ast::Ident,
+    serialize_name: Option<ast::Lit>,
+    deserialize_name: Option<ast::Lit>,
     deny_unknown_fields: bool,
 }
 
@@ -18,12 +21,28 @@ impl ContainerAttrs {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_item(cx: &ExtCtxt, item: &ast::Item) -> Result<ContainerAttrs, Error> {
         let mut container_attrs = ContainerAttrs {
+            ident: item.ident,
+            serialize_name: None,
+            deserialize_name: None,
             deny_unknown_fields: false,
         };
 
         for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item.node {
+                    // Parse `#[serde(rename="foo")]`
+                    ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                        container_attrs.serialize_name = Some(lit.clone());
+                        container_attrs.deserialize_name = Some(lit.clone());
+                    }
+
+                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                        let (ser_name, de_name) = try!(get_renames(cx, meta_items));
+                        container_attrs.serialize_name = ser_name;
+                        container_attrs.deserialize_name = de_name;
+                    }
+
                     // Parse `#[serde(deny_unknown_fields)]`
                     ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
                         container_attrs.deny_unknown_fields = true;
@@ -42,6 +61,27 @@ impl ContainerAttrs {
         }
 
         Ok(container_attrs)
+    }
+
+    /// Return the string expression of the field ident.
+    pub fn ident_expr(&self) -> P<ast::Expr> {
+        AstBuilder::new().expr().str(self.ident)
+    }
+
+    /// Return the field name for the field when serializing.
+    pub fn serialize_name_expr(&self) -> P<ast::Expr> {
+        match self.serialize_name {
+            Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
+            None => self.ident_expr(),
+        }
+    }
+
+    /// Return the field name for the field when serializing.
+    pub fn deserialize_name_expr(&self) -> P<ast::Expr> {
+        match self.deserialize_name {
+            Some(ref name) => AstBuilder::new().expr().build_lit(P(name.clone())),
+            None => self.ident_expr(),
+        }
     }
 
     pub fn deny_unknown_fields(&self) -> bool {
