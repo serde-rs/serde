@@ -9,10 +9,14 @@ use token::{
 
 trait Trait {
     fn my_default() -> Self;
+
+    fn should_skip(&self) -> bool;
 }
 
 impl Trait for i32 {
     fn my_default() -> Self { 123 }
+
+    fn should_skip(&self) -> bool { *self == 123 }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -31,19 +35,19 @@ fn test_default_struct() {
         vec![
             Token::StructStart("DefaultStruct", Some(3)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a2"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a3"),
             Token::I32(3),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 
@@ -52,11 +56,11 @@ fn test_default_struct() {
         vec![
             Token::StructStart("DefaultStruct", Some(1)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 }
@@ -79,19 +83,19 @@ fn test_default_enum() {
         vec![
             Token::EnumMapStart("DefaultEnum", "Struct", Some(3)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a2"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a3"),
             Token::I32(3),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 
@@ -100,11 +104,11 @@ fn test_default_enum() {
         vec![
             Token::EnumMapStart("DefaultEnum", "Struct", Some(3)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 }
@@ -123,34 +127,34 @@ fn test_ignore_unknown() {
         vec![
             Token::StructStart("DefaultStruct", Some(5)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("whoops1"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("whoops2"),
             Token::SeqStart(Some(1)),
             Token::SeqSep,
             Token::I32(2),
             Token::SeqEnd,
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a2"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("whoops3"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a3"),
             Token::I32(3),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 
@@ -158,15 +162,15 @@ fn test_ignore_unknown() {
         vec![
             Token::StructStart("DenyUnknown", Some(2)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("whoops"),
             Token::I32(2),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ],
         Error::UnknownFieldError("whoops".to_owned())
     );
@@ -195,15 +199,15 @@ fn test_rename_struct() {
         vec![
             Token::StructStart("Superhero", Some(2)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a3"),
             Token::I32(2),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 
@@ -212,15 +216,15 @@ fn test_rename_struct() {
         &[
             Token::StructStart("SuperheroSer", Some(2)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a4"),
             Token::I32(2),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 
@@ -229,15 +233,15 @@ fn test_rename_struct() {
         vec![
             Token::StructStart("SuperheroDe", Some(2)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a5"),
             Token::I32(2),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 }
@@ -281,7 +285,7 @@ fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::Superman(0),
         vec![
-            Token::EnumNewtype("Superhero", "clark_kent"),
+            Token::EnumNewType("Superhero", "clark_kent"),
             Token::I8(0),
         ]
     );
@@ -291,13 +295,13 @@ fn test_rename_enum() {
         vec![
             Token::EnumSeqStart("Superhero", "diana_prince", Some(2)),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I8(0),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I8(1),
 
-            Token::SeqEnd,
+            Token::EnumSeqEnd,
         ]
     );
 
@@ -306,11 +310,11 @@ fn test_rename_enum() {
         vec![
             Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("b"),
             Token::I32(1),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 
@@ -322,15 +326,15 @@ fn test_rename_enum() {
         &[
             Token::EnumMapStart("SuperheroSer", "dick_grayson", Some(2)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(0),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("c"),
             Token::Str(""),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 
@@ -342,24 +346,26 @@ fn test_rename_enum() {
         vec![
             Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(0),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("d"),
             Token::Str(""),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-struct SkipSerializingStruct<'a, B, D, E> {
+struct SkipSerializingStruct<'a, B, C, D, E> where C: Trait {
     a: &'a i8,
     #[serde(skip_serializing)]
     b: B,
+    #[serde(skip_serializing_if="self.c.should_skip()")]
+    c: C,
     #[serde(skip_serializing_if_none)]
     d: Option<D>,
     #[serde(skip_serializing_if_empty)]
@@ -373,29 +379,34 @@ fn test_skip_serializing_struct() {
         &SkipSerializingStruct {
             a: &a,
             b: 2,
+            c: 3,
             d: Some(4),
             e: vec![5],
         },
         &[
-            Token::StructStart("SkipSerializingStruct", Some(3)),
+            Token::StructStart("SkipSerializingStruct", Some(4)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::MapSep,
+            Token::StructSep,
+            Token::Str("c"),
+            Token::I32(3),
+
+            Token::StructSep,
             Token::Str("d"),
             Token::Option(true),
             Token::I32(4),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("e"),
             Token::SeqStart(Some(1)),
             Token::SeqSep,
             Token::I32(5),
             Token::SeqEnd,
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 
@@ -403,27 +414,30 @@ fn test_skip_serializing_struct() {
         &SkipSerializingStruct {
             a: &a,
             b: 2,
+            c: 123,
             d: None::<u8>,
             e: Vec::<u8>::new(),
         },
         &[
             Token::StructStart("SkipSerializingStruct", Some(1)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SkipSerializingEnum<'a, B, D, E> {
+enum SkipSerializingEnum<'a, B, C, D, E> where C: Trait {
     Struct {
         a: &'a i8,
         #[serde(skip_serializing)]
         _b: B,
+        #[serde(skip_serializing_if="self.c.should_skip()")]
+        c: C,
         #[serde(skip_serializing_if_none)]
         d: Option<D>,
         #[serde(skip_serializing_if_empty)]
@@ -438,29 +452,34 @@ fn test_skip_serializing_enum() {
         &SkipSerializingEnum::Struct {
             a: &a,
             _b: 2,
+            c: 3,
             d: Some(4),
             e: vec![5],
         },
         &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(3)),
+            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(4)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::MapSep,
+            Token::EnumMapSep,
+            Token::Str("c"),
+            Token::I32(3),
+
+            Token::EnumMapSep,
             Token::Str("d"),
             Token::Option(true),
             Token::I32(4),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("e"),
             Token::SeqStart(Some(1)),
             Token::SeqSep,
             Token::I32(5),
             Token::SeqEnd,
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 
@@ -468,17 +487,18 @@ fn test_skip_serializing_enum() {
         &SkipSerializingEnum::Struct {
             a: &a,
             _b: 2,
+            c: 123,
             d: None::<u8>,
             e: Vec::<u8>::new(),
         },
         &[
             Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(1)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 }

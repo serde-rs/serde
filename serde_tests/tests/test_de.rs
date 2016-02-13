@@ -184,27 +184,27 @@ declare_tests! {
         ],
         TupleStruct(1, 2, 3) => vec![
             Token::TupleStructStart("TupleStruct", Some(3)),
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(1),
 
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(2),
 
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(3),
-            Token::SeqEnd,
+            Token::TupleSeqEnd,
         ],
         TupleStruct(1, 2, 3) => vec![
             Token::TupleStructStart("TupleStruct", None),
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(1),
 
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(2),
 
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(3),
-            Token::SeqEnd,
+            Token::TupleSeqEnd,
         ],
     }
     test_btreeset {
@@ -495,18 +495,18 @@ declare_tests! {
         ],
         Struct { a: 1, b: 2, c: 3 } => vec![
             Token::StructStart("Struct", Some(3)),
-                Token::MapSep,
+                Token::StructSep,
                 Token::Str("a"),
                 Token::I32(1),
 
-                Token::MapSep,
+                Token::StructSep,
                 Token::Str("b"),
                 Token::I32(2),
 
-                Token::MapSep,
+                Token::StructSep,
                 Token::Str("c"),
                 Token::I32(3),
-            Token::MapEnd,
+            Token::StructEnd,
         ],
     }
     test_enum_unit {
@@ -516,39 +516,39 @@ declare_tests! {
     }
     test_enum_simple {
         Enum::Simple(1) => vec![
-            Token::EnumNewtype("Enum", "Simple"),
+            Token::EnumNewType("Enum", "Simple"),
             Token::I32(1),
         ],
     }
     test_enum_seq {
         Enum::Seq(1, 2, 3) => vec![
             Token::EnumSeqStart("Enum", "Seq", Some(3)),
-                Token::SeqSep,
+                Token::EnumSeqSep,
                 Token::I32(1),
 
-                Token::SeqSep,
+                Token::EnumSeqSep,
                 Token::I32(2),
 
-                Token::SeqSep,
+                Token::EnumSeqSep,
                 Token::I32(3),
-            Token::SeqEnd,
+            Token::EnumSeqEnd,
         ],
     }
     test_enum_map {
         Enum::Map { a: 1, b: 2, c: 3 } => vec![
             Token::EnumMapStart("Enum", "Map", Some(3)),
-                Token::MapSep,
+                Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),
 
-                Token::MapSep,
+                Token::EnumMapSep,
                 Token::Str("b"),
                 Token::I32(2),
 
-                Token::MapSep,
+                Token::EnumMapSep,
                 Token::Str("c"),
                 Token::I32(3),
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ],
     }
     test_enum_unit_usize {
