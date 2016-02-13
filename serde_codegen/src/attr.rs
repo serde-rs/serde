@@ -1,7 +1,8 @@
 use syntax::ast;
 use syntax::attr;
 use syntax::ext::base::ExtCtxt;
-use syntax::print::pprust::meta_item_to_string;
+use syntax::print::pprust::{lit_to_string, meta_item_to_string};
+use syntax::parse;
 use syntax::ptr::P;
 
 use aster::AstBuilder;
@@ -167,12 +168,16 @@ pub struct FieldAttrs {
     skip_serializing_field: bool,
     skip_serializing_field_if_empty: bool,
     skip_serializing_field_if_none: bool,
-    use_default: bool,
+    default_expr_if_missing: Option<P<ast::Expr>>,
 }
 
 impl FieldAttrs {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_field(cx: &ExtCtxt, field: &ast::StructField) -> Result<Self, Error> {
+    pub fn from_field(cx: &ExtCtxt,
+                      generics: &ast::Generics,
+                      field: &ast::StructField) -> Result<Self, Error> {
+        let builder = AstBuilder::new();
+
         let field_ident = match field.node.ident() {
             Some(ident) => ident,
             None => { cx.span_bug(field.span, "struct field has no name?") }
@@ -185,7 +190,7 @@ impl FieldAttrs {
             skip_serializing_field: false,
             skip_serializing_field_if_empty: false,
             skip_serializing_field_if_none: false,
-            use_default: false,
+            default_expr_if_missing: None,
         };
 
         for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
@@ -206,7 +211,20 @@ impl FieldAttrs {
 
                     // Parse `#[serde(default)]`
                     ast::MetaItemKind::Word(ref name) if name == &"default" => {
-                        field_attrs.use_default = true;
+                        let default_expr = builder.expr().default();
+                        field_attrs.default_expr_if_missing = Some(default_expr);
+                    }
+
+                    // Parse `#[serde(default="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"default" => {
+                        let wrapped_expr = wrap_default(
+                            cx,
+                            &field.node.ty,
+                            generics,
+                            try!(parse_lit_into_expr(cx, name, lit)),
+                        );
+
+                        field_attrs.default_expr_if_missing = Some(wrapped_expr);
                     }
 
                     // Parse `#[serde(skip_serializing)]`
@@ -261,8 +279,18 @@ impl FieldAttrs {
     }
 
     /// Predicate for using a field's default value
-    pub fn use_default(&self) -> bool {
-        self.use_default
+    pub fn expr_is_missing(&self) -> P<ast::Expr> {
+        match self.default_expr_if_missing {
+            Some(ref expr) => expr.clone(),
+            None => {
+                let name = self.ident_expr();
+                AstBuilder::new().expr()
+                    .try()
+                    .method_call("missing_field").id("visitor")
+                        .with_arg(name)
+                        .build()
+            }
+        }
     }
 
     /// Predicate for ignoring a field when serializing a value
@@ -281,9 +309,10 @@ impl FieldAttrs {
 
 /// Extract out the `#[serde(...)]` attributes from a struct field.
 pub fn get_struct_field_attrs(cx: &ExtCtxt,
+                              generics: &ast::Generics,
                               fields: &[ast::StructField]) -> Result<Vec<FieldAttrs>, Error> {
     fields.iter()
-        .map(|field| FieldAttrs::from_field(cx, field))
+        .map(|field| FieldAttrs::from_field(cx, generics, field))
         .collect()
 }
 
@@ -324,4 +353,51 @@ fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
         }
         _ => None
     }
+}
+
+fn parse_lit_into_expr(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<P<ast::Expr>, Error> {
+    let s: &str = match lit.node {
+        ast::LitKind::Str(ref s, ast::StrStyle::Cooked) => &s,
+        _ => {
+            cx.span_err(
+                lit.span,
+                &format!("{} literal `{}` must be a string",
+                         name,
+                         lit_to_string(lit)));
+
+            return Err(Error);
+        }
+    };
+
+    let expr = parse::parse_expr_from_source_str("<lit expansion>".to_string(),
+                                                 s.to_owned(),
+                                                 cx.cfg(),
+                                                 cx.parse_sess());
+
+    Ok(expr)
+}
+
+/// This function wraps the expression in `#[serde(default="...")]` in a function to prevent it
+/// from accessing the internal `Deserialize` state.
+fn wrap_default(cx: &ExtCtxt,
+                field_ty: &P<ast::Ty>,
+                generics: &ast::Generics,
+                expr: P<ast::Expr>) -> P<ast::Expr> {
+    let builder = AstBuilder::new();
+
+    // Quasi-quoting doesn't do a great job of expanding generics into paths, so manually build it.
+    let fn_path = builder.path()
+        .segment("__serde_default")
+            .with_generics(generics.clone())
+            .build()
+        .build();
+
+    let where_clause = &generics.where_clause;
+
+    quote_expr!(cx, {
+        fn __serde_default $generics() -> $field_ty $where_clause {
+            $expr
+        }
+        $fn_path()
+    })
 }
