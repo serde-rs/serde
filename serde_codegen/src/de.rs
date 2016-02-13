@@ -503,6 +503,7 @@ fn deserialize_struct(
         cx,
         builder,
         type_path.clone(),
+        &ty,
         impl_generics,
         fields,
         container_attrs
@@ -757,6 +758,7 @@ fn deserialize_struct_variant(
         cx,
         builder,
         type_path,
+        &ty,
         generics,
         fields,
         container_attrs,
@@ -920,13 +922,19 @@ fn deserialize_struct_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
+    container_ty: &P<ast::Ty>,
     generics: &ast::Generics,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<(Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>), Error> {
     let field_exprs = fields.iter()
         .map(|field| {
-            let field_attrs = try!(attr::FieldAttrs::from_field(cx, generics, field));
+            let field_attrs = try!(
+                attr::FieldAttrs::from_field(cx,
+                                             container_ty,
+                                             generics,
+                                             field)
+            );
             Ok(field_attrs.deserialize_name_expr())
         })
         .collect();
@@ -942,6 +950,7 @@ fn deserialize_struct_visitor(
         cx,
         builder,
         struct_path,
+        container_ty,
         generics,
         fields,
         container_attrs,
@@ -972,6 +981,7 @@ fn deserialize_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
+    container_ty: &P<ast::Ty>,
     generics: &ast::Generics,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
@@ -1011,7 +1021,12 @@ fn deserialize_map(
     let extract_values = fields.iter()
         .zip(field_names.iter())
         .map(|(field, field_name)| {
-            let field_attr = try!(attr::FieldAttrs::from_field(cx, generics, field));
+            let field_attr = try!(
+                attr::FieldAttrs::from_field(cx,
+                                             container_ty,
+                                             generics,
+                                             field)
+            );
             let missing_expr = field_attr.expr_is_missing();
 
             Ok(quote_stmt!(cx,

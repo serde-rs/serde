@@ -166,6 +166,7 @@ pub struct FieldAttrs {
     serialize_name: Option<ast::Lit>,
     deserialize_name: Option<ast::Lit>,
     skip_serializing_field: bool,
+    skip_serializing_field_if: Option<P<ast::Expr>>,
     skip_serializing_field_if_empty: bool,
     skip_serializing_field_if_none: bool,
     default_expr_if_missing: Option<P<ast::Expr>>,
@@ -174,6 +175,7 @@ pub struct FieldAttrs {
 impl FieldAttrs {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
     pub fn from_field(cx: &ExtCtxt,
+                      container_ty: &P<ast::Ty>,
                       generics: &ast::Generics,
                       field: &ast::StructField) -> Result<Self, Error> {
         let builder = AstBuilder::new();
@@ -188,6 +190,7 @@ impl FieldAttrs {
             serialize_name: None,
             deserialize_name: None,
             skip_serializing_field: false,
+            skip_serializing_field_if: None,
             skip_serializing_field_if_empty: false,
             skip_serializing_field_if_none: false,
             default_expr_if_missing: None,
@@ -230,6 +233,18 @@ impl FieldAttrs {
                     // Parse `#[serde(skip_serializing)]`
                     ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
                         field_attrs.skip_serializing_field = true;
+                    }
+
+                    // Parse `#[serde(skip_serializing_if="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"skip_serializing_if" => {
+                        let expr = wrap_skip_serializing(
+                            cx,
+                            container_ty,
+                            generics,
+                            try!(parse_lit_into_expr(cx, name, lit)),
+                        );
+
+                        field_attrs.skip_serializing_field_if = Some(expr);
                     }
 
                     // Parse `#[serde(skip_serializing_if_none)]`
@@ -298,6 +313,10 @@ impl FieldAttrs {
         self.skip_serializing_field
     }
 
+    pub fn skip_serializing_field_if(&self) -> Option<&P<ast::Expr>> {
+        self.skip_serializing_field_if.as_ref()
+    }
+
     pub fn skip_serializing_field_if_empty(&self) -> bool {
         self.skip_serializing_field_if_empty
     }
@@ -307,12 +326,14 @@ impl FieldAttrs {
     }
 }
 
+
 /// Extract out the `#[serde(...)]` attributes from a struct field.
 pub fn get_struct_field_attrs(cx: &ExtCtxt,
+                              container_ty: &P<ast::Ty>,
                               generics: &ast::Generics,
                               fields: &[ast::StructField]) -> Result<Vec<FieldAttrs>, Error> {
     fields.iter()
-        .map(|field| FieldAttrs::from_field(cx, generics, field))
+        .map(|field| FieldAttrs::from_field(cx, container_ty, generics, field))
         .collect()
 }
 
@@ -399,5 +420,28 @@ fn wrap_default(cx: &ExtCtxt,
             $expr
         }
         $fn_path()
+    })
+}
+
+/// This function wraps the expression in `#[serde(skip_serializing_if="...")]` in a trait to
+/// prevent it from accessing the internal `Serialize` state.
+fn wrap_skip_serializing(cx: &ExtCtxt,
+                         container_ty: &P<ast::Ty>,
+                         generics: &ast::Generics,
+                         expr: P<ast::Expr>) -> P<ast::Expr> {
+    let where_clause = &generics.where_clause;
+
+    quote_expr!(cx, {
+        trait __SerdeShouldSkipSerializing {
+            fn __serde_should_skip_serializing(&self) -> bool;
+        }
+
+        impl $generics __SerdeShouldSkipSerializing for $container_ty $where_clause {
+            fn __serde_should_skip_serializing(&self) -> bool {
+                $expr
+            }
+        }
+
+        self.value.__serde_should_skip_serializing()
     })
 }
