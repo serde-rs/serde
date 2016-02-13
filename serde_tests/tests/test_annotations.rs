@@ -7,19 +7,29 @@ use token::{
     assert_de_tokens_error
 };
 
+trait Trait {
+    fn my_default() -> Self;
+}
+
+impl Trait for i32 {
+    fn my_default() -> Self { 123 }
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Default {
-    a1: i32,
+struct DefaultStruct<A, B: Default, C> where C: Trait {
+    a1: A,
     #[serde(default)]
-    a2: i32,
+    a2: B,
+    #[serde(default="Trait::my_default()")]
+    a3: C,
 }
 
 #[test]
-fn test_default() {
+fn test_default_struct() {
     assert_de_tokens(
-        &Default { a1: 1, a2: 2 },
+        &DefaultStruct { a1: 1, a2: 2, a3: 3 },
         vec![
-            Token::StructStart("Default", Some(2)),
+            Token::StructStart("DefaultStruct", Some(3)),
 
             Token::MapSep,
             Token::Str("a1"),
@@ -29,14 +39,66 @@ fn test_default() {
             Token::Str("a2"),
             Token::I32(2),
 
+            Token::MapSep,
+            Token::Str("a3"),
+            Token::I32(3),
+
             Token::MapEnd,
         ]
     );
 
     assert_de_tokens(
-        &Default { a1: 1, a2: 0 },
+        &DefaultStruct { a1: 1, a2: 0, a3: 123 },
         vec![
-            Token::StructStart("Default", Some(1)),
+            Token::StructStart("DefaultStruct", Some(1)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum DefaultEnum<A, B: Default, C> where C: Trait {
+    Struct {
+        a1: A,
+        #[serde(default)]
+        a2: B,
+        #[serde(default="Trait::my_default()")]
+        a3: C,
+    }
+}
+
+#[test]
+fn test_default_enum() {
+    assert_de_tokens(
+        &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3 },
+        vec![
+            Token::EnumMapStart("DefaultEnum", "Struct", Some(3)),
+
+            Token::MapSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::MapSep,
+            Token::Str("a2"),
+            Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("a3"),
+            Token::I32(3),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123 },
+        vec![
+            Token::EnumMapStart("DefaultEnum", "Struct", Some(3)),
 
             Token::MapSep,
             Token::Str("a1"),
@@ -57,9 +119,9 @@ struct DenyUnknown {
 fn test_ignore_unknown() {
     // 'Default' allows unknown. Basic smoke test of ignore...
     assert_de_tokens(
-        &Default { a1: 1, a2: 2},
+        &DefaultStruct { a1: 1, a2: 2, a3: 3 },
         vec![
-            Token::StructStart("Default", Some(5)),
+            Token::StructStart("DefaultStruct", Some(5)),
 
             Token::MapSep,
             Token::Str("whoops1"),
@@ -83,6 +145,10 @@ fn test_ignore_unknown() {
             Token::MapSep,
             Token::Str("whoops3"),
             Token::I32(2),
+
+            Token::MapSep,
+            Token::Str("a3"),
+            Token::I32(3),
 
             Token::MapEnd,
         ]

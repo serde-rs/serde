@@ -503,6 +503,7 @@ fn deserialize_struct(
         cx,
         builder,
         type_path.clone(),
+        impl_generics,
         fields,
         container_attrs
     ));
@@ -756,6 +757,7 @@ fn deserialize_struct_variant(
         cx,
         builder,
         type_path,
+        generics,
         fields,
         container_attrs,
     ));
@@ -918,20 +920,21 @@ fn deserialize_struct_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
+    generics: &ast::Generics,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<(Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>), Error> {
+    let field_exprs = fields.iter()
+        .map(|field| {
+            let field_attrs = try!(attr::FieldAttrs::from_field(cx, generics, field));
+            Ok(field_attrs.deserialize_name_expr())
+        })
+        .collect();
+
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
-        try!(
-            fields.iter()
-                .map(|field| {
-                    let attrs = try!(attr::FieldAttrs::from_field(cx, field));
-                    Ok(attrs.deserialize_name_expr())
-                })
-                .collect()
-        ),
+        try!(field_exprs),
         container_attrs
     );
 
@@ -939,6 +942,7 @@ fn deserialize_struct_visitor(
         cx,
         builder,
         struct_path,
+        generics,
         fields,
         container_attrs,
     ));
@@ -968,6 +972,7 @@ fn deserialize_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     struct_path: ast::Path,
+    generics: &ast::Generics,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
@@ -1003,26 +1008,22 @@ fn deserialize_map(
         .chain(ignored_arm.into_iter())
         .collect();
 
-    let field_attrs = try!(attr::get_struct_field_attrs(cx, fields));
+    let extract_values = fields.iter()
+        .zip(field_names.iter())
+        .map(|(field, field_name)| {
+            let field_attr = try!(attr::FieldAttrs::from_field(cx, generics, field));
+            let missing_expr = field_attr.expr_is_missing();
 
-    let extract_values = field_names.iter()
-        .zip(field_attrs.iter())
-        .map(|(field_name, field_attr)| {
-            let missing_expr = if field_attr.use_default() {
-                quote_expr!(cx, ::std::default::Default::default())
-            } else {
-                let name = field_attr.ident_expr();
-                quote_expr!(cx, try!(visitor.missing_field($name)))
-            };
-
-            quote_stmt!(cx,
+            Ok(quote_stmt!(cx,
                 let $field_name = match $field_name {
                     Some($field_name) => $field_name,
                     None => $missing_expr
                 };
-            ).unwrap()
+            ).unwrap())
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>();
+
+    let extract_values = try!(extract_values);
 
     let result = builder.expr().struct_path(struct_path)
         .with_id_exprs(

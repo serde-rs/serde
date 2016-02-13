@@ -605,7 +605,7 @@ fn serialize_struct_visitor<I>(
 {
     let value_exprs = value_exprs.collect::<Vec<_>>();
 
-    let field_attrs = try!(attr::get_struct_field_attrs(cx, fields));
+    let field_attrs = try!(attr::get_struct_field_attrs(cx, generics, fields));
 
     let arms: Vec<ast::Arm> = field_attrs.iter()
         .zip(value_exprs.iter())
