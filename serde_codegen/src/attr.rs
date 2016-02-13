@@ -151,7 +151,7 @@ impl<'a> FieldAttrsBuilder<'a> {
 
     pub fn attr(mut self, attr: &ast::Attribute) -> Result<FieldAttrsBuilder<'a>, ()> {
         match attr.node.value.node {
-            ast::MetaList(ref name, ref items) if name == &"serde" => {
+            ast::MetaItemKind::List(ref name, ref items) if name == &"serde" => {
                 attr::mark_used(&attr);
                 for item in items {
                     self = try!(self.meta_item(item));
@@ -167,15 +167,15 @@ impl<'a> FieldAttrsBuilder<'a> {
 
     pub fn meta_item(mut self, meta_item: &P<ast::MetaItem>) -> Result<FieldAttrsBuilder<'a>, ()> {
         match meta_item.node {
-            ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+            ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                 let expr = self.builder.expr().build_lit(P(lit.clone()));
 
                 Ok(self.name(expr))
             }
-            ast::MetaList(ref name, ref items) if name == &"rename" => {
+            ast::MetaItemKind::List(ref name, ref items) if name == &"rename" => {
                 for item in items {
                     match item.node {
-                        ast::MetaNameValue(ref name, ref lit) => {
+                        ast::MetaItemKind::NameValue(ref name, ref lit) => {
                             let name = self.builder.expr().str(name);
                             let expr = self.builder.expr().build_lit(P(lit.clone()));
 
@@ -187,16 +187,16 @@ impl<'a> FieldAttrsBuilder<'a> {
 
                 Ok(self)
             }
-            ast::MetaWord(ref name) if name == &"default" => {
+            ast::MetaItemKind::Word(ref name) if name == &"default" => {
                 Ok(self.default())
             }
-            ast::MetaWord(ref name) if name == &"skip_serializing" => {
+            ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
                 Ok(self.skip_serializing_field())
             }
-            ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
+            ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_empty" => {
                 Ok(self.skip_serializing_field_if_empty())
             }
-            ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
+            ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_none" => {
                 Ok(self.skip_serializing_field_if_none())
             }
             _ => {
@@ -285,7 +285,7 @@ impl<'a> ContainerAttrsBuilder<'a> {
 
     pub fn attr(mut self, attr: &ast::Attribute) -> Result<Self, ()> {
         match attr.node.value.node {
-            ast::MetaList(ref name, ref items) if name == &"serde" => {
+            ast::MetaItemKind::List(ref name, ref items) if name == &"serde" => {
                 attr::mark_used(&attr);
                 for item in items {
                     self = try!(self.meta_item(item));

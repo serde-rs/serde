@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "nightly-testing", plugin(clippy))]
-#![cfg_attr(feature = "nightly", allow(used_underscore_binding))]
+#![cfg_attr(feature = "nightly-testing", feature(plugin))]
+#![cfg_attr(feature = "nightly-testing", allow(used_underscore_binding))]
 #![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 #![cfg_attr(not(feature = "with-syntex"), plugin(quasi_macros))]
 
@@ -31,14 +32,6 @@ include!("lib.rs.in");
 pub fn register(reg: &mut syntex::Registry) {
     use syntax::{ast, fold};
 
-    reg.add_attr("feature(custom_derive)");
-    reg.add_attr("feature(custom_attribute)");
-
-    reg.add_decorator("derive_Serialize", ser::expand_derive_serialize);
-    reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
-
-    reg.add_post_expansion_pass(strip_attributes);
-
     /// Strip the serde attributes from the crate.
     #[cfg(feature = "with-syntex")]
     fn strip_attributes(krate: ast::Crate) -> ast::Crate {
@@ -48,7 +41,7 @@ pub fn register(reg: &mut syntex::Registry) {
         impl fold::Folder for StripAttributeFolder {
             fn fold_attribute(&mut self, attr: ast::Attribute) -> Option<ast::Attribute> {
                 match attr.node.value.node {
-                    ast::MetaList(ref n, _) if n == &"serde" => { return None; }
+                    ast::MetaItemKind::List(ref n, _) if n == &"serde" => { return None; }
                     _ => {}
                 }
 
@@ -62,6 +55,14 @@ pub fn register(reg: &mut syntex::Registry) {
 
         fold::Folder::fold_crate(&mut StripAttributeFolder, krate)
     }
+
+    reg.add_attr("feature(custom_derive)");
+    reg.add_attr("feature(custom_attribute)");
+
+    reg.add_decorator("derive_Serialize", ser::expand_derive_serialize);
+    reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
+
+    reg.add_post_expansion_pass(strip_attributes);
 }
 
 #[cfg(not(feature = "with-syntex"))]
