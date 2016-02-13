@@ -407,7 +407,7 @@ pub trait Deserializer {
     /// This allows deserializers to choose between &str, usize, or &[u8] to properly deserialize a
     /// struct key.
     #[inline]
-    fn visit_struct_key<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn visit_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.visit(visitor)
