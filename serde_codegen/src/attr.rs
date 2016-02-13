@@ -31,20 +31,20 @@ impl ContainerAttrs {
             for meta_item in meta_items {
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
-                    ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                         container_attrs.serialize_name = Some(lit.clone());
                         container_attrs.deserialize_name = Some(lit.clone());
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
-                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
                         let (ser_name, de_name) = try!(get_renames(cx, meta_items));
                         container_attrs.serialize_name = ser_name;
                         container_attrs.deserialize_name = de_name;
                     }
 
                     // Parse `#[serde(deny_unknown_fields)]`
-                    ast::MetaWord(ref name) if name == &"deny_unknown_fields" => {
+                    ast::MetaItemKind::Word(ref name) if name == &"deny_unknown_fields" => {
                         container_attrs.deny_unknown_fields = true;
                     }
 
@@ -109,13 +109,13 @@ impl VariantAttrs {
             for meta_item in meta_items {
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
-                    ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                         variant_attrs.serialize_name = Some(lit.clone());
                         variant_attrs.deserialize_name = Some(lit.clone());
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
-                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
                         let (ser_name, de_name) = try!(get_renames(cx, meta_items));
                         variant_attrs.serialize_name = ser_name;
                         variant_attrs.deserialize_name = de_name;
@@ -192,35 +192,35 @@ impl FieldAttrs {
             for meta_item in meta_items {
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
-                    ast::MetaNameValue(ref name, ref lit) if name == &"rename" => {
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                         field_attrs.serialize_name = Some(lit.clone());
                         field_attrs.deserialize_name = Some(lit.clone());
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
-                    ast::MetaList(ref name, ref meta_items) if name == &"rename" => {
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
                         let (ser_name, de_name) = try!(get_renames(cx, meta_items));
                         field_attrs.serialize_name = ser_name;
                         field_attrs.deserialize_name = de_name;
                     }
 
                     // Parse `#[serde(default)]`
-                    ast::MetaWord(ref name) if name == &"default" => {
+                    ast::MetaItemKind::Word(ref name) if name == &"default" => {
                         field_attrs.use_default = true;
                     }
 
                     // Parse `#[serde(skip_serializing)]`
-                    ast::MetaWord(ref name) if name == &"skip_serializing" => {
+                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
                         field_attrs.skip_serializing_field = true;
                     }
 
                     // Parse `#[serde(skip_serializing_if_none)]`
-                    ast::MetaWord(ref name) if name == &"skip_serializing_if_none" => {
+                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_none" => {
                         field_attrs.skip_serializing_field_if_none = true;
                     }
 
                     // Parse `#[serde(skip_serializing_if_empty)]`
-                    ast::MetaWord(ref name) if name == &"skip_serializing_if_empty" => {
+                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_empty" => {
                         field_attrs.skip_serializing_field_if_empty = true;
                     }
 
@@ -294,11 +294,11 @@ fn get_renames(cx: &ExtCtxt,
 
     for item in items {
         match item.node {
-            ast::MetaNameValue(ref name, ref lit) if name == &"serialize" => {
+            ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize" => {
                 ser_name = Some(lit.clone());
             }
 
-            ast::MetaNameValue(ref name, ref lit) if name == &"deserialize" => {
+            ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize" => {
                 de_name = Some(lit.clone());
             }
 
@@ -318,7 +318,7 @@ fn get_renames(cx: &ExtCtxt,
 
 fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
     match attr.node.value.node {
-        ast::MetaList(ref name, ref items) if name == &"serde" => {
+        ast::MetaItemKind::List(ref name, ref items) if name == &"serde" => {
             attr::mark_used(&attr);
             Some(items)
         }

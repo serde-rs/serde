@@ -34,8 +34,8 @@ pub fn expand_derive_serialize(
     let builder = aster::AstBuilder::new().span(span);
 
     let generics = match item.node {
-        ast::ItemStruct(_, ref generics) => generics,
-        ast::ItemEnum(_, ref generics) => generics,
+        ast::ItemKind::Struct(_, ref generics) => generics,
+        ast::ItemKind::Enum(_, ref generics) => generics,
         _ => {
             cx.span_err(
                 meta_item.span,
@@ -87,7 +87,7 @@ fn serialize_body(
     let container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
 
     match item.node {
-        ast::ItemStruct(ref variant_data, _) => {
+        ast::ItemKind::Struct(ref variant_data, _) => {
             serialize_item_struct(
                 cx,
                 builder,
@@ -98,7 +98,7 @@ fn serialize_body(
                 &container_attrs,
             )
         }
-        ast::ItemEnum(ref enum_def, _) => {
+        ast::ItemKind::Enum(ref enum_def, _) => {
             serialize_item_enum(
                 cx,
                 builder,

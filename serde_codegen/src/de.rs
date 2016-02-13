@@ -35,8 +35,8 @@ pub fn expand_derive_deserialize(
     let builder = aster::AstBuilder::new().span(span);
 
     let generics = match item.node {
-        ast::ItemStruct(_, ref generics) => generics,
-        ast::ItemEnum(_, ref generics) => generics,
+        ast::ItemKind::Struct(_, ref generics) => generics,
+        ast::ItemKind::Enum(_, ref generics) => generics,
         _ => {
             cx.span_err(
                 meta_item.span,
@@ -88,7 +88,7 @@ fn deserialize_body(
     let container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
 
     match item.node {
-        ast::ItemStruct(ref variant_data, _) => {
+        ast::ItemKind::Struct(ref variant_data, _) => {
             deserialize_item_struct(
                 cx,
                 builder,
@@ -100,7 +100,7 @@ fn deserialize_body(
                 &container_attrs,
             )
         }
-        ast::ItemEnum(ref enum_def, _) => {
+        ast::ItemKind::Enum(ref enum_def, _) => {
             deserialize_item_enum(
                 cx,
                 builder,
@@ -565,7 +565,7 @@ fn deserialize_item_enum(
         container_attrs,
     );
 
-    let variants_expr = builder.expr().addr_of().slice()
+    let variants_expr = builder.expr().ref_().slice()
         .with_exprs(
             enum_def.variants.iter()
                 .map(|variant| {
@@ -943,7 +943,7 @@ fn deserialize_struct_visitor(
         container_attrs,
     ));
 
-    let fields_expr = builder.expr().addr_of().slice()
+    let fields_expr = builder.expr().ref_().slice()
         .with_exprs(
             fields.iter()
                 .map(|field| {

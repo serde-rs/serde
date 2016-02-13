@@ -8,7 +8,7 @@ use num::rational::Ratio;
 
 use serde::de::{Deserializer, Visitor};
 
-use token::{Error, Token, assert_de_tokens, assert_de_tokens_ignore};
+use token::{Token, assert_de_tokens, assert_de_tokens_ignore};
 
 //////////////////////////////////////////////////////////////////////////
 
