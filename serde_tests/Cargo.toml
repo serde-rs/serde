@@ -16,7 +16,7 @@ nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-tes
 [build-dependencies]
 syntex = { version = "^0.28.0" }
 syntex_syntax = { version = "^0.28.0" }
-serde_codegen = { version = "^0.6.12", path = "../serde_codegen", features = ["with-syntex"] }
+serde_codegen = { version = "^0.6.13", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
 num = "^0.1.26"
