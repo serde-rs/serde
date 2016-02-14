@@ -14,18 +14,18 @@ build = "build.rs"
 nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-testing"]
 
 [build-dependencies]
-syntex = { version = "^0.27.0" }
-syntex_syntax = { version = "^0.27.0" }
+syntex = { version = "^0.28.0" }
+syntex_syntax = { version = "^0.28.0" }
 serde_codegen = { version = "^0.6.12", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
 num = "^0.1.26"
 rustc-serialize = "^0.3.16"
 serde = { version = "*", path = "../serde", features = ["num-impls"] }
-syntex = "^0.27.0"
+syntex = "^0.28.0"
 
 [dependencies]
-clippy = { version = "^0.0.39", optional = true }
+clippy = { version = "^0.0.41", optional = true }
 
 [[test]]
 name = "test"
