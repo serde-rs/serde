@@ -397,7 +397,7 @@ fn deserialize_seq(
     struct_path: ast::Path,
     fields: usize,
 ) -> P<ast::Expr> {
-    let let_values: Vec<P<ast::Stmt>> = (0 .. fields)
+    let let_values: Vec<ast::Stmt> = (0 .. fields)
         .map(|i| {
             let name = builder.id(format!("__field{}", i));
             quote_stmt!(cx,
@@ -431,7 +431,7 @@ fn deserialize_struct_as_seq(
     struct_path: ast::Path,
     fields: &[ast::StructField],
 ) -> Result<P<ast::Expr>, Error> {
-    let let_values: Vec<P<ast::Stmt>> = (0 .. fields.len())
+    let let_values: Vec<_> = (0 .. fields.len())
         .map(|i| {
             let name = builder.id(format!("__field{}", i));
             quote_stmt!(cx,
@@ -920,7 +920,7 @@ fn deserialize_struct_visitor(
     struct_path: ast::Path,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
-) -> Result<(Vec<P<ast::Item>>, P<ast::Stmt>, P<ast::Expr>), Error> {
+) -> Result<(Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>), Error> {
     let field_visitor = deserialize_field_visitor(
         cx,
         builder,
@@ -977,7 +977,7 @@ fn deserialize_map(
         .collect();
 
     // Declare each field.
-    let let_values: Vec<P<ast::Stmt>> = field_names.iter()
+    let let_values: Vec<ast::Stmt> = field_names.iter()
         .map(|field_name| quote_stmt!(cx, let mut $field_name = None;).unwrap())
         .collect();
 
