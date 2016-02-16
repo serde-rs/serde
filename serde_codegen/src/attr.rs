@@ -170,6 +170,7 @@ pub struct FieldAttrs {
     skip_serializing_field_if_empty: bool,
     skip_serializing_field_if_none: bool,
     default_expr_if_missing: Option<P<ast::Expr>>,
+    serialize_with: Option<P<ast::Expr>>,
 }
 
 impl FieldAttrs {
@@ -194,6 +195,7 @@ impl FieldAttrs {
             skip_serializing_field_if_empty: false,
             skip_serializing_field_if_none: false,
             default_expr_if_missing: None,
+            serialize_with: None,
         };
 
         for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
@@ -255,6 +257,18 @@ impl FieldAttrs {
                     // Parse `#[serde(skip_serializing_if_empty)]`
                     ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_empty" => {
                         field_attrs.skip_serializing_field_if_empty = true;
+                    }
+
+                    // Parse `#[serde(serialize_with="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize_with" => {
+                        let expr = wrap_serialize_with(
+                            cx,
+                            container_ty,
+                            generics,
+                            try!(parse_lit_into_expr(cx, name, lit)),
+                        );
+
+                        field_attrs.serialize_with = Some(expr);
                     }
 
                     _ => {
@@ -323,6 +337,10 @@ impl FieldAttrs {
 
     pub fn skip_serializing_field_if_none(&self) -> bool {
         self.skip_serializing_field_if_none
+    }
+
+    pub fn serialize_with(&self) -> Option<&P<ast::Expr>> {
+        self.serialize_with.as_ref()
     }
 }
 
@@ -443,5 +461,57 @@ fn wrap_skip_serializing(cx: &ExtCtxt,
         }
 
         self.value.__serde_should_skip_serializing()
+    })
+}
+
+/// This function wraps the expression in `#[serde(serialize_with="...")]` in a trait to
+/// prevent it from accessing the internal `Serialize` state.
+fn wrap_serialize_with(cx: &ExtCtxt,
+                       container_ty: &P<ast::Ty>,
+                       generics: &ast::Generics,
+                       expr: P<ast::Expr>) -> P<ast::Expr> {
+    let where_clause = &generics.where_clause;
+
+    quote_expr!(cx, {
+        trait __SerdeSerializeWith {
+            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer;
+        }
+
+        impl<'a, T> __SerdeSerializeWith for &'a T
+            where T: 'a + __SerdeSerializeWith,
+        {
+            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer
+            {
+                (**self).__serde_serialize_with(serializer)
+            }
+        }
+
+        impl $generics __SerdeSerializeWith for $container_ty $where_clause {
+            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer
+            {
+                $expr
+            }
+        }
+
+        struct __SerdeSerializeWithStruct<'a, T: 'a> {
+            value: &'a T,
+        }
+
+        impl<'a, T> ::serde::ser::Serialize for __SerdeSerializeWithStruct<'a, T>
+            where T: 'a + __SerdeSerializeWith
+        {
+            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer
+            {
+                self.value.__serde_serialize_with(serializer)
+            }
+        }
+
+        __SerdeSerializeWithStruct {
+            value: &self.value,
+        }
     })
 }
