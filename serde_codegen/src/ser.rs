@@ -672,8 +672,13 @@ fn serialize_struct_visitor(
                 }
             };
 
+            let field_expr = match field_attr.serialize_with() {
+                Some(expr) => expr.clone(),
+                None => quote_expr!(cx, &self.value.$name),
+            };
+
             let expr = quote_expr!(cx,
-                serializer.$serializer_method($key_expr, &self.value.$name)
+                serializer.$serializer_method($key_expr, $field_expr)
             );
 
             quote_arm!(cx,

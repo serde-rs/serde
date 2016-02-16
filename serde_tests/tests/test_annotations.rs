@@ -1,3 +1,6 @@
+use std::default::Default;
+use serde::{Serialize, Serializer};
+
 use token::{
     Error,
     Token,
@@ -11,12 +14,25 @@ trait Trait {
     fn my_default() -> Self;
 
     fn should_skip(&self) -> bool;
+
+    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
+        where S: Serializer;
 }
 
 impl Trait for i32 {
     fn my_default() -> Self { 123 }
 
     fn should_skip(&self) -> bool { *self == 123 }
+
+    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
+        where S: Serializer
+    {
+        if *self == 123 {
+            true.serialize(ser)
+        } else {
+            false.serialize(ser)
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -497,6 +513,110 @@ fn test_skip_serializing_enum() {
             Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
+
+            Token::EnumMapEnd,
+        ]
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+struct SerializeWithStruct<'a, B> where B: Trait {
+    a: &'a i8,
+    #[serde(serialize_with="self.b.serialize_with(serializer)")]
+    b: B,
+}
+
+#[test]
+fn test_serialize_with_struct() {
+    let a = 1;
+    assert_ser_tokens(
+        &SerializeWithStruct {
+            a: &a,
+            b: 2,
+        },
+        &[
+            Token::StructStart("SerializeWithStruct", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::StructSep,
+            Token::Str("b"),
+            Token::Bool(false),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &SerializeWithStruct {
+            a: &a,
+            b: 123,
+        },
+        &[
+            Token::StructStart("SerializeWithStruct", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::StructSep,
+            Token::Str("b"),
+            Token::Bool(true),
+
+            Token::StructEnd,
+        ]
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+enum SerializeWithEnum<'a, B> where B: Trait {
+    Struct {
+        a: &'a i8,
+        #[serde(serialize_with="self.b.serialize_with(serializer)")]
+        b: B,
+    }
+}
+
+#[test]
+fn test_serialize_with_enum() {
+    let a = 1;
+    assert_ser_tokens(
+        &SerializeWithEnum::Struct {
+            a: &a,
+            b: 2,
+        },
+        &[
+            Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+
+            Token::EnumMapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::EnumMapSep,
+            Token::Str("b"),
+            Token::Bool(false),
+
+            Token::EnumMapEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &SerializeWithEnum::Struct {
+            a: &a,
+            b: 123,
+        },
+        &[
+            Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+
+            Token::EnumMapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::EnumMapSep,
+            Token::Str("b"),
+            Token::Bool(true),
 
             Token::EnumMapEnd,
         ]
