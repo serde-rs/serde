@@ -171,6 +171,7 @@ pub struct FieldAttrs {
     skip_serializing_field_if_none: bool,
     default_expr_if_missing: Option<P<ast::Expr>>,
     serialize_with: Option<P<ast::Expr>>,
+    deserialize_with: Option<P<ast::Expr>>,
 }
 
 impl FieldAttrs {
@@ -196,6 +197,7 @@ impl FieldAttrs {
             skip_serializing_field_if_none: false,
             default_expr_if_missing: None,
             serialize_with: None,
+            deserialize_with: None,
         };
 
         for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
@@ -271,6 +273,18 @@ impl FieldAttrs {
                         field_attrs.serialize_with = Some(expr);
                     }
 
+                    // Parse `#[serde(deserialize_with="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize_with" => {
+                        let expr = wrap_deserialize_with(
+                            cx,
+                            &field.node.ty,
+                            generics,
+                            try!(parse_lit_into_expr(cx, name, lit)),
+                        );
+
+                        field_attrs.deserialize_with = Some(expr);
+                    }
+
                     _ => {
                         cx.span_err(
                             meta_item.span,
@@ -341,6 +355,10 @@ impl FieldAttrs {
 
     pub fn serialize_with(&self) -> Option<&P<ast::Expr>> {
         self.serialize_with.as_ref()
+    }
+
+    pub fn deserialize_with(&self) -> Option<&P<ast::Expr>> {
+        self.deserialize_with.as_ref()
     }
 }
 
@@ -513,5 +531,60 @@ fn wrap_serialize_with(cx: &ExtCtxt,
         __SerdeSerializeWithStruct {
             value: &self.value,
         }
+    })
+}
+
+/// This function wraps the expression in `#[serde(deserialize_with="...")]` in a trait to prevent
+/// it from accessing the internal `Deserialize` state.
+fn wrap_deserialize_with(cx: &ExtCtxt,
+                         field_ty: &P<ast::Ty>,
+                         generics: &ast::Generics,
+                         expr: P<ast::Expr>) -> P<ast::Expr> {
+    let builder = AstBuilder::new();
+
+    let fn_generics = builder.from_generics(generics.clone())
+        .ty_param("__D")
+            .bound()
+                .trait_(
+                    builder.path()
+                        .global()
+                        .ids(&["serde", "de", "Deserializer"])
+                        .build()
+                )
+                .build()
+            .build()
+        .build();
+
+    // Quasi-quoting doesn't do a great job of expanding generics into paths, so manually build it.
+    let ty_path = AstBuilder::new().path()
+        .segment("__SerdeDeserializeWithStruct")
+            .with_generics(generics.clone())
+            .build()
+        .build();
+
+    let fn_where_clause = &fn_generics.where_clause;
+    let where_clause = &generics.where_clause;
+
+    quote_expr!(cx, {
+        fn __serde_deserialize_with $fn_generics(deserializer: &mut __D)
+            -> Result<$field_ty, __D::Error> $fn_where_clause {
+            $expr
+        }
+
+        struct __SerdeDeserializeWithStruct $generics $where_clause {
+            value: $field_ty,
+        }
+
+        impl $generics ::serde::de::Deserialize for $ty_path $where_clause {
+            fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+                where D: ::serde::de::Deserializer
+            {
+                let value = try!(__serde_deserialize_with(deserializer));
+                Ok(__SerdeDeserializeWithStruct { value: value })
+            }
+        }
+
+        let value: $ty_path = try!(visitor.visit_value());
+        Ok(value.value)
     })
 }
