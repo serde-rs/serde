@@ -1,5 +1,5 @@
 use std::default::Default;
-use serde::{Serialize, Serializer};
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use token::{
     Error,
@@ -10,13 +10,16 @@ use token::{
     assert_de_tokens_error
 };
 
-trait Trait {
+trait Trait: Sized {
     fn my_default() -> Self;
 
     fn should_skip(&self) -> bool;
 
     fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
         where S: Serializer;
+
+    fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer;
 }
 
 impl Trait for i32 {
@@ -31,6 +34,16 @@ impl Trait for i32 {
             true.serialize(ser)
         } else {
             false.serialize(ser)
+        }
+    }
+
+    fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer
+    {
+        if try!(Deserialize::deserialize(de)) {
+            Ok(123)
+        } else {
+            Ok(2)
         }
     }
 }
@@ -609,6 +622,108 @@ fn test_serialize_with_enum() {
         },
         &[
             Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+
+            Token::EnumMapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::EnumMapSep,
+            Token::Str("b"),
+            Token::Bool(true),
+
+            Token::EnumMapEnd,
+        ]
+    );
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct DeserializeWithStruct<B> where B: Trait {
+    a: i8,
+    #[serde(deserialize_with="Trait::deserialize_with(deserializer)")]
+    b: B,
+}
+
+#[test]
+fn test_deserialize_with_struct() {
+    assert_de_tokens(
+        &DeserializeWithStruct {
+            a: 1,
+            b: 2,
+        },
+        vec![
+            Token::StructStart("DeserializeWithStruct", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::StructSep,
+            Token::Str("b"),
+            Token::Bool(false),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &DeserializeWithStruct {
+            a: 1,
+            b: 123,
+        },
+        vec![
+            Token::StructStart("DeserializeWithStruct", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::StructSep,
+            Token::Str("b"),
+            Token::Bool(true),
+
+            Token::StructEnd,
+        ]
+    );
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+enum DeserializeWithEnum<B> where B: Trait {
+    Struct {
+        a: i8,
+        #[serde(deserialize_with="Trait::deserialize_with(deserializer)")]
+        b: B,
+    }
+}
+
+#[test]
+fn test_deserialize_with_enum() {
+    assert_de_tokens(
+        &DeserializeWithEnum::Struct {
+            a: 1,
+            b: 2,
+        },
+        vec![
+            Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
+
+            Token::EnumMapSep,
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::EnumMapSep,
+            Token::Str("b"),
+            Token::Bool(false),
+
+            Token::EnumMapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &DeserializeWithEnum::Struct {
+            a: 1,
+            b: 123,
+        },
+        vec![
+            Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
 
             Token::EnumMapSep,
             Token::Str("a"),

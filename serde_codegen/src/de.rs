@@ -991,6 +991,12 @@ fn deserialize_map(
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
+    let field_attrs: Vec<_> = try!(
+        fields.iter()
+            .map(|field| attr::FieldAttrs::from_field(cx, container_ty, generics, field))
+            .collect()
+    );
+
     // Declare each field.
     let let_values: Vec<ast::Stmt> = field_names.iter()
         .map(|field_name| quote_stmt!(cx, let mut $field_name = None;).unwrap())
@@ -1007,26 +1013,24 @@ fn deserialize_map(
     };
 
     // Match arms to extract a value for a field.
-    let value_arms: Vec<ast::Arm> = field_names.iter()
-        .map(|field_name| {
+    let value_arms = field_attrs.iter().zip(field_names.iter())
+        .map(|(field_attr, field_name)| {
+            let expr = match field_attr.deserialize_with() {
+                Some(expr) => expr.clone(),
+                None => quote_expr!(cx, visitor.visit_value()),
+            };
+
             quote_arm!(cx,
                 __Field::$field_name => {
-                    $field_name = Some(try!(visitor.visit_value()));
+                    $field_name = Some(try!($expr));
                 }
             )
         })
         .chain(ignored_arm.into_iter())
-        .collect();
+        .collect::<Vec<_>>();
 
-    let extract_values = fields.iter()
-        .zip(field_names.iter())
-        .map(|(field, field_name)| {
-            let field_attr = try!(
-                attr::FieldAttrs::from_field(cx,
-                                             container_ty,
-                                             generics,
-                                             field)
-            );
+    let extract_values = field_attrs.iter().zip(field_names.iter())
+        .map(|(field_attr, field_name)| {
             let missing_expr = field_attr.expr_is_missing();
 
             Ok(quote_stmt!(cx,
