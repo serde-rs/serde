@@ -1,4 +1,6 @@
 use test::Bencher;
+use std::error;
+use std::fmt;
 use rustc_serialize::{Decoder, Decodable};
 use serde;
 use serde::de::{Deserializer, Deserialize};
@@ -27,6 +29,22 @@ impl serde::de::Error for Error {
     fn unknown_field(_: &str) -> Error { Error::SyntaxError }
 
     fn missing_field(_: &'static str) -> Error { Error::SyntaxError }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -262,7 +280,7 @@ mod deserializer {
         type Error = Error;
 
         #[inline]
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
@@ -288,7 +306,7 @@ mod deserializer {
         }
 
         #[inline]
-        fn visit_enum<V>(&mut self,
+        fn deserialize_enum<V>(&mut self,
                          _name: &str,
                          _variants: &[&str],
                          mut visitor: V) -> Result<V::Value, Error>

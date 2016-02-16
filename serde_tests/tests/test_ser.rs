@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::str;
 
 use num::FromPrimitive;
 use num::bigint::{BigInt, BigUint};
 use num::complex::Complex;
 use num::rational::Ratio;
 
-use token::Token;
+use token::{self, Token};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -75,11 +76,11 @@ declare_ser_tests! {
     }
     test_result {
         Ok::<i32, i32>(0) => &[
-            Token::EnumNewtype("Result", "Ok"),
+            Token::EnumNewType("Result", "Ok"),
             Token::I32(0),
         ],
         Err::<i32, i32>(1) => &[
-            Token::EnumNewtype("Result", "Err"),
+            Token::EnumNewType("Result", "Err"),
             Token::I32(1),
         ],
     }
@@ -213,56 +214,56 @@ declare_ser_tests! {
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
             Token::TupleStructStart("TupleStruct", Some(3)),
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(1),
 
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(2),
 
-                Token::SeqSep,
+                Token::TupleSeqSep,
                 Token::I32(3),
-            Token::SeqEnd,
+            Token::TupleSeqEnd,
         ],
     }
     test_struct {
         Struct { a: 1, b: 2, c: 3 } => &[
             Token::StructStart("Struct", Some(3)),
-                Token::MapSep,
+                Token::StructSep,
                 Token::Str("a"),
                 Token::I32(1),
 
-                Token::MapSep,
+                Token::StructSep,
                 Token::Str("b"),
                 Token::I32(2),
 
-                Token::MapSep,
+                Token::StructSep,
                 Token::Str("c"),
                 Token::I32(3),
-            Token::MapEnd,
+            Token::StructEnd,
         ],
     }
     test_enum {
         Enum::Unit => &[Token::EnumUnit("Enum", "Unit")],
-        Enum::One(42) => &[Token::EnumNewtype("Enum", "One"), Token::I32(42)],
+        Enum::One(42) => &[Token::EnumNewType("Enum", "One"), Token::I32(42)],
         Enum::Seq(1, 2) => &[
             Token::EnumSeqStart("Enum", "Seq", Some(2)),
-                Token::SeqSep,
+                Token::EnumSeqSep,
                 Token::I32(1),
 
-                Token::SeqSep,
+                Token::EnumSeqSep,
                 Token::I32(2),
-            Token::SeqEnd,
+            Token::EnumSeqEnd,
         ],
         Enum::Map { a: 1, b: 2 } => &[
             Token::EnumMapStart("Enum", "Map", Some(2)),
-                Token::MapSep,
+                Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),
 
-                Token::MapSep,
+                Token::EnumMapSep,
                 Token::Str("b"),
                 Token::I32(2),
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ],
     }
     test_num_bigint {
@@ -304,4 +305,23 @@ declare_ser_tests! {
             Token::Str("/usr/local/lib"),
         ],
     }
+}
+
+#[test]
+fn test_cannot_serialize_paths() {
+    let path = unsafe {
+        str::from_utf8_unchecked(b"Hello \xF0\x90\x80World")
+    };
+    token::assert_ser_tokens_error(
+        &Path::new(path),
+        &[Token::Str("Hello �World")],
+        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+
+    let mut path_buf = PathBuf::new();
+    path_buf.push(path);
+
+    token::assert_ser_tokens_error(
+        &path_buf,
+        &[Token::Str("Hello �World")],
+        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
 }

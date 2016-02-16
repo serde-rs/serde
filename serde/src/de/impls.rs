@@ -64,7 +64,7 @@ impl Deserialize for () {
     fn deserialize<D>(deserializer: &mut D) -> Result<(), D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_unit(UnitVisitor)
+        deserializer.deserialize_unit(UnitVisitor)
     }
 }
 
@@ -97,7 +97,7 @@ impl Deserialize for bool {
     fn deserialize<D>(deserializer: &mut D) -> Result<bool, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_bool(BoolVisitor)
+        deserializer.deserialize_bool(BoolVisitor)
     }
 }
 
@@ -173,18 +173,18 @@ macro_rules! impl_deserialize_num {
     }
 }
 
-impl_deserialize_num!(isize, visit_isize);
-impl_deserialize_num!(i8, visit_i8);
-impl_deserialize_num!(i16, visit_i16);
-impl_deserialize_num!(i32, visit_i32);
-impl_deserialize_num!(i64, visit_i64);
-impl_deserialize_num!(usize, visit_usize);
-impl_deserialize_num!(u8, visit_u8);
-impl_deserialize_num!(u16, visit_u16);
-impl_deserialize_num!(u32, visit_u32);
-impl_deserialize_num!(u64, visit_u64);
-impl_deserialize_num!(f32, visit_f32);
-impl_deserialize_num!(f64, visit_f64);
+impl_deserialize_num!(isize, deserialize_isize);
+impl_deserialize_num!(i8, deserialize_i8);
+impl_deserialize_num!(i16, deserialize_i16);
+impl_deserialize_num!(i32, deserialize_i32);
+impl_deserialize_num!(i64, deserialize_i64);
+impl_deserialize_num!(usize, deserialize_usize);
+impl_deserialize_num!(u8, deserialize_u8);
+impl_deserialize_num!(u16, deserialize_u16);
+impl_deserialize_num!(u32, deserialize_u32);
+impl_deserialize_num!(u64, deserialize_u64);
+impl_deserialize_num!(f32, deserialize_f32);
+impl_deserialize_num!(f64, deserialize_f64);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -222,7 +222,7 @@ impl Deserialize for char {
     fn deserialize<D>(deserializer: &mut D) -> Result<char, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_char(CharVisitor)
+        deserializer.deserialize_char(CharVisitor)
     }
 }
 
@@ -268,7 +268,7 @@ impl Deserialize for String {
     fn deserialize<D>(deserializer: &mut D) -> Result<String, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_string(StringVisitor)
+        deserializer.deserialize_string(StringVisitor)
     }
 }
 
@@ -309,7 +309,7 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
     fn deserialize<D>(deserializer: &mut D) -> Result<Option<T>, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_option(OptionVisitor { marker: PhantomData })
+        deserializer.deserialize_option(OptionVisitor { marker: PhantomData })
     }
 }
 
@@ -373,7 +373,7 @@ macro_rules! seq_impl {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.visit_seq($visitor_name::new())
+                deserializer.deserialize_seq($visitor_name::new())
             }
         }
     }
@@ -483,7 +483,7 @@ impl<T> Deserialize for [T; 0]
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_seq(ArrayVisitor0::new())
+        deserializer.deserialize_seq(ArrayVisitor0::new())
     }
 }
 
@@ -529,7 +529,7 @@ macro_rules! array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit_seq($visitor::new())
+                    deserializer.deserialize_seq($visitor::new())
                 }
             }
         )+
@@ -630,7 +630,7 @@ macro_rules! tuple_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.visit_tuple($len, $visitor::new())
+                    deserializer.deserialize_tuple($len, $visitor::new())
                 }
             }
         )+
@@ -714,7 +714,7 @@ macro_rules! map_impl {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.visit_map($visitor_name::new())
+                deserializer.deserialize_map($visitor_name::new())
             }
         }
     }
@@ -762,7 +762,7 @@ impl Deserialize for path::PathBuf {
     fn deserialize<D>(deserializer: &mut D) -> Result<path::PathBuf, D::Error>
         where D: Deserializer,
     {
-        deserializer.visit_string(PathBufVisitor)
+        deserializer.deserialize_string(PathBufVisitor)
     }
 }
 
@@ -871,7 +871,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                     }
                 }
 
-                deserializer.visit(FieldVisitor)
+                deserializer.deserialize(FieldVisitor)
             }
         }
 
@@ -901,9 +901,114 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
 
         const VARIANTS: &'static [&'static str] = &["Ok", "Err"];
 
-        deserializer.visit_enum("Result", VARIANTS, Visitor(PhantomData))
+        deserializer.deserialize_enum("Result", VARIANTS, Visitor(PhantomData))
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// A target for deserializers that want to ignore data. Implements
+/// Deserialize and silently eats data given to it.
+pub struct IgnoredAny;
+
+impl Deserialize for IgnoredAny {
+    #[inline]
+    fn deserialize<D>(deserializer: &mut D) -> Result<IgnoredAny, D::Error>
+        where D: Deserializer,
+    {
+        struct IgnoredAnyVisitor;
+
+        impl Visitor for IgnoredAnyVisitor {
+            type Value = IgnoredAny;
+
+            #[inline]
+            fn visit_bool<E>(&mut self, _: bool) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_i64<E>(&mut self, _: i64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_u64<E>(&mut self, _: u64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_f64<E>(&mut self, _: f64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_str<E>(&mut self, _: &str) -> Result<IgnoredAny, E>
+                where E: Error,
+            {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_none<E>(&mut self) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_some<D>(&mut self, _: &mut D) -> Result<IgnoredAny, D::Error>
+                where D: Deserializer,
+            {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_newtype_struct<D>(&mut self, _: &mut D) -> Result<IgnoredAny, D::Error>
+                where D: Deserializer,
+            {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_unit<E>(&mut self) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_seq<V>(&mut self, mut visitor: V) -> Result<IgnoredAny, V::Error>
+                where V: SeqVisitor,
+            {
+                while let Some(_) = try!(visitor.visit::<IgnoredAny>()) {
+                    // Gobble
+                }
+
+                try!(visitor.end());
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_map<V>(&mut self, mut visitor: V) -> Result<IgnoredAny, V::Error>
+                where V: MapVisitor,
+            {
+                while let Some((_, _)) = try!(visitor.visit::<IgnoredAny, IgnoredAny>()) {
+                    // Gobble
+                }
+
+                try!(visitor.end());
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_bytes<E>(&mut self, _: &[u8]) -> Result<IgnoredAny, E>
+                where E: Error,
+            {
+                Ok(IgnoredAny)
+            }
+        }
+
+        // TODO maybe not necessary with impl specialization
+        deserializer.deserialize_ignored_any(IgnoredAnyVisitor)
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -930,7 +1035,7 @@ impl Deserialize for ::num::bigint::BigInt {
             }
         }
 
-        deserializer.visit(BigIntVisitor)
+        deserializer.deserialize(BigIntVisitor)
     }
 }
 
@@ -957,7 +1062,7 @@ impl Deserialize for ::num::bigint::BigUint {
             }
         }
 
-        deserializer.visit(BigUintVisitor)
+        deserializer.deserialize(BigUintVisitor)
     }
 }
 

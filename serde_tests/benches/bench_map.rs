@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use std::fmt;
+use std::error;
 use std::collections::HashMap;
 use test::Bencher;
 
@@ -28,6 +30,21 @@ impl serde::de::Error for Error {
     }
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str(format!("{:?}", self).as_ref())
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "Serde Deserialization Error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
+}
 //////////////////////////////////////////////////////////////////////////////
 
 mod decoder {
@@ -252,7 +269,7 @@ mod deserializer {
     impl de::Deserializer for IsizeDeserializer {
         type Error = Error;
 
-        fn visit<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
