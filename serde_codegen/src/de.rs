@@ -587,8 +587,8 @@ fn deserialize_item_enum(
     // Match arms to extract a variant from a string
     let mut variant_arms = vec![];
     for (i, variant) in enum_def.variants.iter().enumerate() {
-        let variant_name = builder.pat().enum_()
-            .id("__Field").id(format!("__field{}", i)).build()
+        let variant_name = builder.pat().path()
+            .id("__Field").id(format!("__field{}", i))
             .build();
 
         let expr = try!(deserialize_variant(

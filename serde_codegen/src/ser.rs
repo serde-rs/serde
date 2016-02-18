@@ -314,8 +314,8 @@ fn serialize_variant(
 
     match variant.node.data {
         ast::VariantData::Unit(_) => {
-            let pat = builder.pat().enum_()
-                .id(type_ident).id(variant_ident).build()
+            let pat = builder.pat().path()
+                .id(type_ident).id(variant_ident)
                 .build();
 
             Ok(quote_arm!(cx,
