@@ -389,16 +389,12 @@ fn test_rename_enum() {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-struct SkipSerializingStruct<'a, B, C, D, E> where C: Trait {
+struct SkipSerializingStruct<'a, B, C> where C: Trait {
     a: &'a i8,
     #[serde(skip_serializing)]
     b: B,
     #[serde(skip_serializing_if="self.c.should_skip()")]
     c: C,
-    #[serde(skip_serializing_if_none)]
-    d: Option<D>,
-    #[serde(skip_serializing_if_empty)]
-    e: Vec<E>,
 }
 
 #[test]
@@ -409,11 +405,9 @@ fn test_skip_serializing_struct() {
             a: &a,
             b: 2,
             c: 3,
-            d: Some(4),
-            e: vec![5],
         },
         &[
-            Token::StructStart("SkipSerializingStruct", Some(4)),
+            Token::StructStart("SkipSerializingStruct", Some(2)),
 
             Token::StructSep,
             Token::Str("a"),
@@ -422,18 +416,6 @@ fn test_skip_serializing_struct() {
             Token::StructSep,
             Token::Str("c"),
             Token::I32(3),
-
-            Token::StructSep,
-            Token::Str("d"),
-            Token::Option(true),
-            Token::I32(4),
-
-            Token::StructSep,
-            Token::Str("e"),
-            Token::SeqStart(Some(1)),
-            Token::SeqSep,
-            Token::I32(5),
-            Token::SeqEnd,
 
             Token::StructEnd,
         ]
@@ -444,8 +426,6 @@ fn test_skip_serializing_struct() {
             a: &a,
             b: 2,
             c: 123,
-            d: None::<u8>,
-            e: Vec::<u8>::new(),
         },
         &[
             Token::StructStart("SkipSerializingStruct", Some(1)),
@@ -460,17 +440,13 @@ fn test_skip_serializing_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SkipSerializingEnum<'a, B, C, D, E> where C: Trait {
+enum SkipSerializingEnum<'a, B, C> where C: Trait {
     Struct {
         a: &'a i8,
         #[serde(skip_serializing)]
         _b: B,
         #[serde(skip_serializing_if="self.c.should_skip()")]
         c: C,
-        #[serde(skip_serializing_if_none)]
-        d: Option<D>,
-        #[serde(skip_serializing_if_empty)]
-        e: Vec<E>,
     }
 }
 
@@ -482,11 +458,9 @@ fn test_skip_serializing_enum() {
             a: &a,
             _b: 2,
             c: 3,
-            d: Some(4),
-            e: vec![5],
         },
         &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(4)),
+            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(2)),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -495,18 +469,6 @@ fn test_skip_serializing_enum() {
             Token::EnumMapSep,
             Token::Str("c"),
             Token::I32(3),
-
-            Token::EnumMapSep,
-            Token::Str("d"),
-            Token::Option(true),
-            Token::I32(4),
-
-            Token::EnumMapSep,
-            Token::Str("e"),
-            Token::SeqStart(Some(1)),
-            Token::SeqSep,
-            Token::I32(5),
-            Token::SeqEnd,
 
             Token::EnumMapEnd,
         ]
@@ -517,8 +479,6 @@ fn test_skip_serializing_enum() {
             a: &a,
             _b: 2,
             c: 123,
-            d: None::<u8>,
-            e: Vec::<u8>::new(),
         },
         &[
             Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(1)),

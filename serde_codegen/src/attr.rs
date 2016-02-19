@@ -167,8 +167,6 @@ pub struct FieldAttrs {
     deserialize_name: Option<ast::Lit>,
     skip_serializing_field: bool,
     skip_serializing_field_if: Option<P<ast::Expr>>,
-    skip_serializing_field_if_empty: bool,
-    skip_serializing_field_if_none: bool,
     default_expr_if_missing: Option<P<ast::Expr>>,
     serialize_with: Option<P<ast::Expr>>,
     deserialize_with: Option<P<ast::Expr>>,
@@ -193,8 +191,6 @@ impl FieldAttrs {
             deserialize_name: None,
             skip_serializing_field: false,
             skip_serializing_field_if: None,
-            skip_serializing_field_if_empty: false,
-            skip_serializing_field_if_none: false,
             default_expr_if_missing: None,
             serialize_with: None,
             deserialize_with: None,
@@ -249,16 +245,6 @@ impl FieldAttrs {
                         );
 
                         field_attrs.skip_serializing_field_if = Some(expr);
-                    }
-
-                    // Parse `#[serde(skip_serializing_if_none)]`
-                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_none" => {
-                        field_attrs.skip_serializing_field_if_none = true;
-                    }
-
-                    // Parse `#[serde(skip_serializing_if_empty)]`
-                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_empty" => {
-                        field_attrs.skip_serializing_field_if_empty = true;
                     }
 
                     // Parse `#[serde(serialize_with="...")]`
@@ -343,14 +329,6 @@ impl FieldAttrs {
 
     pub fn skip_serializing_field_if(&self) -> Option<&P<ast::Expr>> {
         self.skip_serializing_field_if.as_ref()
-    }
-
-    pub fn skip_serializing_field_if_empty(&self) -> bool {
-        self.skip_serializing_field_if_empty
-    }
-
-    pub fn skip_serializing_field_if_none(&self) -> bool {
-        self.skip_serializing_field_if_none
     }
 
     pub fn serialize_with(&self) -> Option<&P<ast::Expr>> {

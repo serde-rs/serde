@@ -657,19 +657,10 @@ fn serialize_struct_visitor(
 
             let key_expr = field_attr.serialize_name_expr();
 
-            let stmt = match field_attr.skip_serializing_field_if() {
-                Some(expr) => {
+            let stmt = if let Some(expr) = field_attr.skip_serializing_field_if() {
                     Some(quote_stmt!(cx, if $expr { continue; }))
-                }
-                None => {
-                    if field_attr.skip_serializing_field_if_empty() {
-                        Some(quote_stmt!(cx, if self.value.$name.is_empty() { continue; }))
-                    } else if field_attr.skip_serializing_field_if_none() {
-                        Some(quote_stmt!(cx, if self.value.$name.is_none() { continue; }))
-                    } else {
-                        None
-                    }
-                }
+            } else {
+                None
             };
 
             let field_expr = match field_attr.serialize_with() {
@@ -702,26 +693,15 @@ fn serialize_struct_visitor(
         .strip_bounds()
         .build();
 
-    let len = fields.iter().zip(field_attrs.iter())
-        .map(|(field, field_attr)| {
-            if field_attr.skip_serializing_field() {
-                quote_expr!(cx, 0)
-            } else {
-                match field_attr.skip_serializing_field_if() {
-                    Some(expr) => {
-                        quote_expr!(cx, if $expr { 0 } else { 1 })
-                    }
-                    None => {
-                        let name = field.node.ident().expect("struct has unnamed field");
-
-                        if field_attr.skip_serializing_field_if_empty() {
-                            quote_expr!(cx, if self.value.$name.is_empty() { 0 } else { 1 })
-                        } else if field_attr.skip_serializing_field_if_none() {
-                            quote_expr!(cx, if self.value.$name.is_none() { 0 } else { 1 })
-                        } else {
-                            quote_expr!(cx, 1)
-                        }
-                    }
+    let len = field_attrs.iter()
+        .filter(|field_attr| !field_attr.skip_serializing_field())
+        .map(|field_attr| {
+            match field_attr.skip_serializing_field_if() {
+                Some(expr) => {
+                    quote_expr!(cx, if $expr { 0 } else { 1 })
+                }
+                None => {
+                    quote_expr!(cx, 1)
                 }
             }
         })
