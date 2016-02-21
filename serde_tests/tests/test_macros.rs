@@ -123,7 +123,7 @@ pub struct GenericStruct<T> {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct GenericNewtypeStruct<T>(T);
+pub struct GenericNewTypeStruct<T>(T);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct GenericTupleStruct<T, U>(T, U);
@@ -131,7 +131,7 @@ pub struct GenericTupleStruct<T, U>(T, U);
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum GenericEnum<T, U> {
     Unit,
-    Newtype(T),
+    NewType(T),
     Seq(T, U),
     Map { x: T, y: U },
 }
@@ -153,16 +153,16 @@ fn test_ser_named_tuple() {
         &SerNamedTuple(&a, &mut b, c),
         &[
             Token::TupleStructStart("SerNamedTuple", Some(3)),
-            Token::SeqSep,
+            Token::TupleSeqSep,
             Token::I32(5),
 
-            Token::SeqSep,
+            Token::TupleSeqSep,
             Token::I32(6),
 
-            Token::SeqSep,
+            Token::TupleSeqSep,
             Token::I32(7),
 
-            Token::SeqEnd,
+            Token::TupleSeqEnd,
         ],
     );
 }
@@ -172,7 +172,7 @@ fn test_de_named_tuple() {
     assert_de_tokens(
         &DeNamedTuple(5, 6, 7),
         vec![
-            Token::TupleStructStart("DeNamedTuple", Some(3)),
+            Token::SeqStart(Some(3)),
             Token::SeqSep,
             Token::I32(5),
 
@@ -183,6 +183,23 @@ fn test_de_named_tuple() {
             Token::I32(7),
 
             Token::SeqEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &DeNamedTuple(5, 6, 7),
+        vec![
+            Token::TupleStructStart("DeNamedTuple", Some(3)),
+            Token::TupleSeqSep,
+            Token::I32(5),
+
+            Token::TupleSeqSep,
+            Token::I32(6),
+
+            Token::TupleSeqSep,
+            Token::I32(7),
+
+            Token::TupleSeqEnd,
         ]
     );
 }
@@ -202,19 +219,19 @@ fn test_ser_named_map() {
         &[
             Token::StructStart("SerNamedMap", Some(3)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a"),
             Token::I32(5),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("b"),
             Token::I32(6),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("c"),
             Token::I32(7),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 }
@@ -230,19 +247,19 @@ fn test_de_named_map() {
         vec![
             Token::StructStart("DeNamedMap", Some(3)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("a"),
             Token::I32(5),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("b"),
             Token::I32(6),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("c"),
             Token::I32(7),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 }
@@ -278,19 +295,19 @@ fn test_ser_enum_seq() {
         &[
             Token::EnumSeqStart("SerEnum", "Seq", Some(4)),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I8(1),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I32(2),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I32(3),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I32(5),
 
-            Token::SeqEnd,
+            Token::EnumSeqEnd,
         ],
     );
 }
@@ -316,23 +333,23 @@ fn test_ser_enum_map() {
         &[
             Token::EnumMapStart("SerEnum", "Map", Some(4)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("b"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("c"),
             Token::I32(3),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("e"),
             Token::I32(5),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ],
     );
 }
@@ -368,19 +385,19 @@ fn test_de_enum_seq() {
         vec![
             Token::EnumSeqStart("DeEnum", "Seq", Some(4)),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I8(1),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I32(2),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I32(3),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::I32(5),
 
-            Token::SeqEnd,
+            Token::EnumSeqEnd,
         ],
     );
 }
@@ -406,23 +423,23 @@ fn test_de_enum_map() {
         vec![
             Token::EnumMapStart("DeEnum", "Map", Some(4)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("b"),
             Token::I32(2),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("c"),
             Token::I32(3),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("e"),
             Token::I32(5),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ],
     );
 }
@@ -434,7 +451,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::LifetimeSeq(&value),
         &[
-            Token::EnumNewtype("Lifetimes", "LifetimeSeq"),
+            Token::EnumNewType("Lifetimes", "LifetimeSeq"),
             Token::I32(5),
         ]
     );
@@ -442,7 +459,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::NoLifetimeSeq(5),
         &[
-            Token::EnumNewtype("Lifetimes", "NoLifetimeSeq"),
+            Token::EnumNewType("Lifetimes", "NoLifetimeSeq"),
             Token::I32(5),
         ]
     );
@@ -452,11 +469,11 @@ fn test_lifetimes() {
         &[
             Token::EnumMapStart("Lifetimes", "LifetimeMap", Some(1)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I32(5),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 
@@ -465,11 +482,11 @@ fn test_lifetimes() {
         &[
             Token::EnumMapStart("Lifetimes", "NoLifetimeMap", Some(1)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("a"),
             Token::I32(5),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 }
@@ -481,11 +498,11 @@ fn test_generic_struct() {
         vec![
             Token::StructStart("GenericStruct", Some(1)),
 
-            Token::MapSep,
+            Token::StructSep,
             Token::Str("x"),
             Token::U32(5),
 
-            Token::MapEnd,
+            Token::StructEnd,
         ]
     );
 }
@@ -493,9 +510,9 @@ fn test_generic_struct() {
 #[test]
 fn test_generic_newtype_struct() {
     assert_tokens(
-        &GenericNewtypeStruct(5u32),
+        &GenericNewTypeStruct(5u32),
         vec![
-            Token::StructNewtype("GenericNewtypeStruct"),
+            Token::StructNewType("GenericNewTypeStruct"),
             Token::U32(5),
         ]
     );
@@ -508,13 +525,13 @@ fn test_generic_tuple_struct() {
         vec![
             Token::TupleStructStart("GenericTupleStruct", Some(2)),
 
-            Token::SeqSep,
+            Token::TupleSeqSep,
             Token::U32(5),
 
-            Token::SeqSep,
+            Token::TupleSeqSep,
             Token::U32(6),
 
-            Token::SeqEnd,
+            Token::TupleSeqEnd,
         ]
     );
 }
@@ -532,9 +549,9 @@ fn test_generic_enum_unit() {
 #[test]
 fn test_generic_enum_newtype() {
     assert_tokens(
-        &GenericEnum::Newtype::<u32, u32>(5),
+        &GenericEnum::NewType::<u32, u32>(5),
         vec![
-            Token::EnumNewtype("GenericEnum", "Newtype"),
+            Token::EnumNewType("GenericEnum", "NewType"),
             Token::U32(5),
         ]
     );
@@ -547,13 +564,13 @@ fn test_generic_enum_seq() {
         vec![
             Token::EnumSeqStart("GenericEnum", "Seq", Some(2)),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::U32(5),
 
-            Token::SeqSep,
+            Token::EnumSeqSep,
             Token::U32(6),
 
-            Token::SeqEnd,
+            Token::EnumSeqEnd,
         ]
     );
 }
@@ -565,15 +582,15 @@ fn test_generic_enum_map() {
         vec![
             Token::EnumMapStart("GenericEnum", "Map", Some(2)),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("x"),
             Token::U32(5),
 
-            Token::MapSep,
+            Token::EnumMapSep,
             Token::Str("y"),
             Token::U32(6),
 
-            Token::MapEnd,
+            Token::EnumMapEnd,
         ]
     );
 }

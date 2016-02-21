@@ -1,7 +1,13 @@
-use syntax::ast;
+use std::rc::Rc;
+use syntax::ast::{self, TokenTree};
 use syntax::attr;
+use syntax::codemap::Span;
 use syntax::ext::base::ExtCtxt;
-use syntax::print::pprust::meta_item_to_string;
+use syntax::fold::Folder;
+use syntax::parse::parser::PathParsingMode;
+use syntax::parse::token;
+use syntax::parse;
+use syntax::print::pprust::{lit_to_string, meta_item_to_string};
 use syntax::ptr::P;
 
 use aster::AstBuilder;
@@ -165,14 +171,21 @@ pub struct FieldAttrs {
     serialize_name: Option<ast::Lit>,
     deserialize_name: Option<ast::Lit>,
     skip_serializing_field: bool,
-    skip_serializing_field_if_empty: bool,
-    skip_serializing_field_if_none: bool,
-    use_default: bool,
+    skip_serializing_field_if: Option<P<ast::Expr>>,
+    default_expr_if_missing: Option<P<ast::Expr>>,
+    serialize_with: Option<P<ast::Expr>>,
+    deserialize_with: Option<P<ast::Expr>>,
 }
 
 impl FieldAttrs {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_field(cx: &ExtCtxt, field: &ast::StructField) -> Result<Self, Error> {
+    pub fn from_field(cx: &ExtCtxt,
+                      container_ty: &P<ast::Ty>,
+                      generics: &ast::Generics,
+                      field: &ast::StructField,
+                      is_enum: bool) -> Result<Self, Error> {
+        let builder = AstBuilder::new();
+
         let field_ident = match field.node.ident() {
             Some(ident) => ident,
             None => { cx.span_bug(field.span, "struct field has no name?") }
@@ -183,9 +196,10 @@ impl FieldAttrs {
             serialize_name: None,
             deserialize_name: None,
             skip_serializing_field: false,
-            skip_serializing_field_if_empty: false,
-            skip_serializing_field_if_none: false,
-            use_default: false,
+            skip_serializing_field_if: None,
+            default_expr_if_missing: None,
+            serialize_with: None,
+            deserialize_with: None,
         };
 
         for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
@@ -206,7 +220,17 @@ impl FieldAttrs {
 
                     // Parse `#[serde(default)]`
                     ast::MetaItemKind::Word(ref name) if name == &"default" => {
-                        field_attrs.use_default = true;
+                        let default_expr = builder.expr().default();
+                        field_attrs.default_expr_if_missing = Some(default_expr);
+                    }
+
+                    // Parse `#[serde(default="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"default" => {
+                        let wrapped_expr = wrap_default(
+                            try!(parse_lit_into_path(cx, name, lit)),
+                        );
+
+                        field_attrs.default_expr_if_missing = Some(wrapped_expr);
                     }
 
                     // Parse `#[serde(skip_serializing)]`
@@ -214,14 +238,41 @@ impl FieldAttrs {
                         field_attrs.skip_serializing_field = true;
                     }
 
-                    // Parse `#[serde(skip_serializing_if_none)]`
-                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_none" => {
-                        field_attrs.skip_serializing_field_if_none = true;
+                    // Parse `#[serde(skip_serializing_if="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"skip_serializing_if" => {
+                        let expr = wrap_skip_serializing(
+                            field_ident,
+                            try!(parse_lit_into_path(cx, name, lit)),
+                            is_enum,
+                        );
+
+                        field_attrs.skip_serializing_field_if = Some(expr);
                     }
 
-                    // Parse `#[serde(skip_serializing_if_empty)]`
-                    ast::MetaItemKind::Word(ref name) if name == &"skip_serializing_if_empty" => {
-                        field_attrs.skip_serializing_field_if_empty = true;
+                    // Parse `#[serde(serialize_with="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize_with" => {
+                        let expr = wrap_serialize_with(
+                            cx,
+                            container_ty,
+                            generics,
+                            field_ident,
+                            try!(parse_lit_into_path(cx, name, lit)),
+                            is_enum,
+                        );
+
+                        field_attrs.serialize_with = Some(expr);
+                    }
+
+                    // Parse `#[serde(deserialize_with="...")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize_with" => {
+                        let expr = wrap_deserialize_with(
+                            cx,
+                            &field.node.ty,
+                            generics,
+                            try!(parse_lit_into_path(cx, name, lit)),
+                        );
+
+                        field_attrs.deserialize_with = Some(expr);
                     }
 
                     _ => {
@@ -261,8 +312,18 @@ impl FieldAttrs {
     }
 
     /// Predicate for using a field's default value
-    pub fn use_default(&self) -> bool {
-        self.use_default
+    pub fn expr_is_missing(&self) -> P<ast::Expr> {
+        match self.default_expr_if_missing {
+            Some(ref expr) => expr.clone(),
+            None => {
+                let name = self.ident_expr();
+                AstBuilder::new().expr()
+                    .try()
+                    .method_call("missing_field").id("visitor")
+                        .with_arg(name)
+                        .build()
+            }
+        }
     }
 
     /// Predicate for ignoring a field when serializing a value
@@ -270,20 +331,28 @@ impl FieldAttrs {
         self.skip_serializing_field
     }
 
-    pub fn skip_serializing_field_if_empty(&self) -> bool {
-        self.skip_serializing_field_if_empty
+    pub fn skip_serializing_field_if(&self) -> Option<&P<ast::Expr>> {
+        self.skip_serializing_field_if.as_ref()
     }
 
-    pub fn skip_serializing_field_if_none(&self) -> bool {
-        self.skip_serializing_field_if_none
+    pub fn serialize_with(&self) -> Option<&P<ast::Expr>> {
+        self.serialize_with.as_ref()
+    }
+
+    pub fn deserialize_with(&self) -> Option<&P<ast::Expr>> {
+        self.deserialize_with.as_ref()
     }
 }
 
+
 /// Extract out the `#[serde(...)]` attributes from a struct field.
 pub fn get_struct_field_attrs(cx: &ExtCtxt,
-                              fields: &[ast::StructField]) -> Result<Vec<FieldAttrs>, Error> {
+                              container_ty: &P<ast::Ty>,
+                              generics: &ast::Generics,
+                              fields: &[ast::StructField],
+                              is_enum: bool) -> Result<Vec<FieldAttrs>, Error> {
     fields.iter()
-        .map(|field| FieldAttrs::from_field(cx, field))
+        .map(|field| FieldAttrs::from_field(cx, container_ty, generics, field, is_enum))
         .collect()
 }
 
@@ -324,4 +393,240 @@ fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
         }
         _ => None
     }
+}
+
+/// This syntax folder rewrites tokens to say their spans are coming from a macro context.
+struct Respanner<'a, 'b: 'a> {
+    cx: &'a ExtCtxt<'b>,
+}
+
+impl<'a, 'b> Folder for Respanner<'a, 'b> {
+    fn fold_tt(&mut self, tt: &TokenTree) -> TokenTree {
+        match *tt {
+            TokenTree::Token(span, ref tok) => {
+                TokenTree::Token(
+                    self.new_span(span),
+                    self.fold_token(tok.clone())
+                )
+            }
+            TokenTree::Delimited(span, ref delimed) => {
+                TokenTree::Delimited(
+                    self.new_span(span),
+                    Rc::new(ast::Delimited {
+                        delim: delimed.delim,
+                        open_span: delimed.open_span,
+                        tts: self.fold_tts(&delimed.tts),
+                        close_span: delimed.close_span,
+                    })
+                )
+            }
+            TokenTree::Sequence(span, ref seq) => {
+                TokenTree::Sequence(
+                    self.new_span(span),
+                    Rc::new(ast::SequenceRepetition {
+                        tts: self.fold_tts(&seq.tts),
+                        separator: seq.separator.clone().map(|tok| self.fold_token(tok)),
+                        ..**seq
+                    })
+                )
+            }
+        }
+    }
+
+    fn new_span(&mut self, span: Span) -> Span {
+        Span {
+            lo: span.lo,
+            hi: span.hi,
+            expn_id: self.cx.backtrace(),
+        }
+    }
+}
+
+fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::Path, Error> {
+    let source: &str = match lit.node {
+        ast::LitKind::Str(ref source, _) => &source,
+        _ => {
+            cx.span_err(
+                lit.span,
+                &format!("serde annotation `{}` must be a string, not `{}`",
+                         name,
+                         lit_to_string(lit)));
+
+            return Err(Error);
+        }
+    };
+
+    // If we just parse the string into an expression, any syntax errors in the source will only
+    // have spans that point inside the string, and not back to the attribute. So to have better
+    // error reporting, we'll first parse the string into a token tree. Then we'll update those
+    // spans to say they're coming from a macro context that originally came from the attribute,
+    // and then finally parse them into an expression.
+    let tts = parse::parse_tts_from_source_str(
+        format!("<serde {} expansion>", name),
+        source.to_owned(),
+        cx.cfg(),
+        cx.parse_sess());
+
+    // Respan the spans to say they are all coming from this macro.
+    let tts = Respanner { cx: cx }.fold_tts(&tts);
+
+    let mut parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts);
+
+    let path = match parser.parse_path(PathParsingMode::LifetimeAndTypesWithoutColons) {
+        Ok(path) => path,
+        Err(mut e) => {
+            e.emit();
+            return Err(Error);
+        }
+    };
+
+    // Make sure to error out if there are trailing characters in the stream.
+    match parser.expect(&token::Eof) {
+        Ok(()) => { }
+        Err(mut e) => {
+            e.emit();
+            return Err(Error);
+        }
+    }
+
+    Ok(path)
+}
+
+/// This function wraps the expression in `#[serde(default="...")]` in a function to prevent it
+/// from accessing the internal `Deserialize` state.
+fn wrap_default(path: ast::Path) -> P<ast::Expr> {
+    AstBuilder::new().expr().call()
+        .build_path(path)
+        .build()
+}
+
+/// This function wraps the expression in `#[serde(skip_serializing_if="...")]` in a trait to
+/// prevent it from accessing the internal `Serialize` state.
+fn wrap_skip_serializing(field_ident: ast::Ident,
+                         path: ast::Path,
+                         is_enum: bool) -> P<ast::Expr> {
+    let builder = AstBuilder::new();
+
+    let expr = builder.expr()
+        .field(field_ident)
+        .field("value")
+        .self_();
+
+    let expr = if is_enum {
+        expr
+    } else {
+        builder.expr().ref_().build(expr)
+    };
+
+    builder.expr().call()
+        .build_path(path)
+        .arg().build(expr)
+        .build()
+}
+
+/// This function wraps the expression in `#[serde(serialize_with="...")]` in a trait to
+/// prevent it from accessing the internal `Serialize` state.
+fn wrap_serialize_with(cx: &ExtCtxt,
+                       container_ty: &P<ast::Ty>,
+                       generics: &ast::Generics,
+                       field_ident: ast::Ident,
+                       path: ast::Path,
+                       is_enum: bool) -> P<ast::Expr> {
+    let builder = AstBuilder::new();
+
+    let expr = builder.expr()
+        .field(field_ident)
+        .self_();
+
+    let expr = if is_enum {
+        expr
+    } else {
+        builder.expr().ref_().build(expr)
+    };
+
+    let expr = builder.expr().call()
+        .build_path(path)
+        .arg().build(expr)
+        .arg()
+            .id("serializer")
+        .build();
+
+    let where_clause = &generics.where_clause;
+
+    quote_expr!(cx, {
+        trait __SerdeSerializeWith {
+            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer;
+        }
+
+        impl<'a, T> __SerdeSerializeWith for &'a T
+            where T: 'a + __SerdeSerializeWith,
+        {
+            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer
+            {
+                (**self).__serde_serialize_with(serializer)
+            }
+        }
+
+        impl $generics __SerdeSerializeWith for $container_ty $where_clause {
+            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer
+            {
+                $expr
+            }
+        }
+
+        struct __SerdeSerializeWithStruct<'a, T: 'a> {
+            value: &'a T,
+        }
+
+        impl<'a, T> ::serde::ser::Serialize for __SerdeSerializeWithStruct<'a, T>
+            where T: 'a + __SerdeSerializeWith
+        {
+            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                where S: ::serde::ser::Serializer
+            {
+                self.value.__serde_serialize_with(serializer)
+            }
+        }
+
+        __SerdeSerializeWithStruct {
+            value: &self.value,
+        }
+    })
+}
+
+/// This function wraps the expression in `#[serde(deserialize_with="...")]` in a trait to prevent
+/// it from accessing the internal `Deserialize` state.
+fn wrap_deserialize_with(cx: &ExtCtxt,
+                         field_ty: &P<ast::Ty>,
+                         generics: &ast::Generics,
+                         path: ast::Path) -> P<ast::Expr> {
+    // Quasi-quoting doesn't do a great job of expanding generics into paths, so manually build it.
+    let ty_path = AstBuilder::new().path()
+        .segment("__SerdeDeserializeWithStruct")
+            .with_generics(generics.clone())
+            .build()
+        .build();
+
+    let where_clause = &generics.where_clause;
+
+    quote_expr!(cx, {
+        struct __SerdeDeserializeWithStruct $generics $where_clause {
+            value: $field_ty,
+        }
+
+        impl $generics ::serde::de::Deserialize for $ty_path $where_clause {
+            fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+                where D: ::serde::de::Deserializer
+            {
+                let value = try!($path(deserializer));
+                Ok(__SerdeDeserializeWithStruct { value: value })
+            }
+        }
+
+        let value: $ty_path = try!(visitor.visit_value());
+        Ok(value.value)
+    })
 }
