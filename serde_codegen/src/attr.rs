@@ -1,8 +1,12 @@
-use syntax::ast;
+use std::rc::Rc;
+use syntax::ast::{self, TokenTree};
 use syntax::attr;
+use syntax::codemap::Span;
 use syntax::ext::base::ExtCtxt;
-use syntax::print::pprust::{lit_to_string, meta_item_to_string};
+use syntax::fold::Folder;
+use syntax::parse::token;
 use syntax::parse;
+use syntax::print::pprust::{lit_to_string, meta_item_to_string};
 use syntax::ptr::P;
 
 use aster::AstBuilder;
@@ -390,13 +394,60 @@ fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
     }
 }
 
+/// This syntax folder rewrites tokens to say their spans are coming from a macro context.
+struct Respanner<'a, 'b: 'a> {
+    cx: &'a ExtCtxt<'b>,
+}
+
+impl<'a, 'b> Folder for Respanner<'a, 'b> {
+    fn fold_tt(&mut self, tt: &TokenTree) -> TokenTree {
+        match *tt {
+            TokenTree::Token(span, ref tok) => {
+                TokenTree::Token(
+                    self.new_span(span),
+                    self.fold_token(tok.clone())
+                )
+            }
+            TokenTree::Delimited(span, ref delimed) => {
+                TokenTree::Delimited(
+                    self.new_span(span),
+                    Rc::new(ast::Delimited {
+                        delim: delimed.delim,
+                        open_span: delimed.open_span,
+                        tts: self.fold_tts(&delimed.tts),
+                        close_span: delimed.close_span,
+                    })
+                )
+            }
+            TokenTree::Sequence(span, ref seq) => {
+                TokenTree::Sequence(
+                    self.new_span(span),
+                    Rc::new(ast::SequenceRepetition {
+                        tts: self.fold_tts(&seq.tts),
+                        separator: seq.separator.clone().map(|tok| self.fold_token(tok)),
+                        ..**seq
+                    })
+                )
+            }
+        }
+    }
+
+    fn new_span(&mut self, span: Span) -> Span {
+        Span {
+            lo: span.lo,
+            hi: span.hi,
+            expn_id: self.cx.backtrace(),
+        }
+    }
+}
+
 fn parse_lit_into_expr(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<P<ast::Expr>, Error> {
-    let s: &str = match lit.node {
-        ast::LitKind::Str(ref s, ast::StrStyle::Cooked) => &s,
+    let source: &str = match lit.node {
+        ast::LitKind::Str(ref source, _) => &source,
         _ => {
             cx.span_err(
                 lit.span,
-                &format!("{} literal `{}` must be a string",
+                &format!("serde annotation `{}` must be a string, not `{}`",
                          name,
                          lit_to_string(lit)));
 
@@ -404,10 +455,40 @@ fn parse_lit_into_expr(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<P<ast
         }
     };
 
-    let expr = parse::parse_expr_from_source_str("<lit expansion>".to_string(),
-                                                 s.to_owned(),
-                                                 cx.cfg(),
-                                                 cx.parse_sess());
+    // If we just parse the string into an expression, any syntax errors in the source will only
+    // have spans that point inside the string, and not back to the attribute. So to have better
+    // error reporting, we'll first parse the string into a token tree. Then we'll update those
+    // spans to say they're coming from a macro context that originally came from the attribute,
+    // and then finally parse them into an expression.
+    let tts = parse::parse_tts_from_source_str(
+        format!("<serde {} expansion>", name),
+        source.to_owned(),
+        cx.cfg(),
+        cx.parse_sess());
+
+    // Respan the spans to say they are all coming from this macro.
+    let tts = Respanner { cx: cx }.fold_tts(&tts);
+
+    let mut parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts);
+
+    let expr = parser.parse_expr();
+
+    let expr = match expr {
+        Ok(expr) => expr,
+        Err(mut e) => {
+            e.emit();
+            return Err(Error);
+        }
+    };
+
+    // Make sure to error out if there are trailing characters in the stream.
+    match parser.expect(&token::Eof) {
+        Ok(()) => { }
+        Err(mut e) => {
+            e.emit();
+            return Err(Error);
+        }
+    }
 
     Ok(expr)
 }
