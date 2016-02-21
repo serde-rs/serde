@@ -506,7 +506,8 @@ fn deserialize_struct(
         &ty,
         impl_generics,
         fields,
-        container_attrs
+        container_attrs,
+        false,
     ));
 
     let type_name = container_attrs.deserialize_name_expr();
@@ -762,6 +763,7 @@ fn deserialize_struct_variant(
         generics,
         fields,
         container_attrs,
+        true,
     ));
 
     let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = try!(deserialize_visitor(
@@ -926,6 +928,7 @@ fn deserialize_struct_visitor(
     generics: &ast::Generics,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
+    is_enum: bool,
 ) -> Result<(Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>), Error> {
     let field_exprs = fields.iter()
         .map(|field| {
@@ -933,7 +936,8 @@ fn deserialize_struct_visitor(
                 attr::FieldAttrs::from_field(cx,
                                              container_ty,
                                              generics,
-                                             field)
+                                             field,
+                                             is_enum)
             );
             Ok(field_attrs.deserialize_name_expr())
         })
@@ -954,6 +958,7 @@ fn deserialize_struct_visitor(
         generics,
         fields,
         container_attrs,
+        is_enum,
     ));
 
     let fields_expr = builder.expr().ref_().slice()
@@ -985,6 +990,7 @@ fn deserialize_map(
     generics: &ast::Generics,
     fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
+    is_enum: bool,
 ) -> Result<P<ast::Expr>, Error> {
     // Create the field names for the fields.
     let field_names: Vec<ast::Ident> = (0 .. fields.len())
@@ -993,7 +999,7 @@ fn deserialize_map(
 
     let field_attrs: Vec<_> = try!(
         fields.iter()
-            .map(|field| attr::FieldAttrs::from_field(cx, container_ty, generics, field))
+            .map(|field| attr::FieldAttrs::from_field(cx, container_ty, generics, field, is_enum))
             .collect()
     );
 

@@ -256,6 +256,7 @@ fn serialize_struct(
         builder.id("serialize_struct_elt"),
         fields,
         impl_generics,
+        false,
     ));
 
     let type_name = container_attrs.serialize_name_expr();
@@ -547,6 +548,7 @@ fn serialize_struct_variant(
         builder.id("serialize_struct_variant_elt"),
         fields,
         &variant_generics,
+        true,
     ));
 
     let container_name = container_attrs.serialize_name_expr();
@@ -644,9 +646,10 @@ fn serialize_struct_visitor(
     serializer_method: ast::Ident,
     fields: &[ast::StructField],
     generics: &ast::Generics,
+    is_enum: bool,
 ) -> Result<(P<ast::Item>, P<ast::Item>), Error> {
     let field_attrs = try!(
-        attr::get_struct_field_attrs(cx, &structure_ty, generics, fields)
+        attr::get_struct_field_attrs(cx, &structure_ty, generics, fields, is_enum)
     );
 
     let arms: Vec<ast::Arm> = fields.iter().zip(field_attrs.iter())

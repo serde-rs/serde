@@ -53,7 +53,7 @@ struct DefaultStruct<A, B: Default, C> where C: Trait {
     a1: A,
     #[serde(default)]
     a2: B,
-    #[serde(default="Trait::my_default()")]
+    #[serde(default="Trait::my_default")]
     a3: C,
 }
 
@@ -100,7 +100,7 @@ enum DefaultEnum<A, B: Default, C> where C: Trait {
         a1: A,
         #[serde(default)]
         a2: B,
-        #[serde(default="Trait::my_default()")]
+        #[serde(default="Trait::my_default")]
         a3: C,
     }
 }
@@ -393,7 +393,7 @@ struct SkipSerializingStruct<'a, B, C> where C: Trait {
     a: &'a i8,
     #[serde(skip_serializing)]
     b: B,
-    #[serde(skip_serializing_if="self.c.should_skip()")]
+    #[serde(skip_serializing_if="Trait::should_skip")]
     c: C,
 }
 
@@ -445,7 +445,7 @@ enum SkipSerializingEnum<'a, B, C> where C: Trait {
         a: &'a i8,
         #[serde(skip_serializing)]
         _b: B,
-        #[serde(skip_serializing_if="self.c.should_skip()")]
+        #[serde(skip_serializing_if="Trait::should_skip")]
         c: C,
     }
 }
@@ -495,7 +495,7 @@ fn test_skip_serializing_enum() {
 #[derive(Debug, PartialEq, Serialize)]
 struct SerializeWithStruct<'a, B> where B: Trait {
     a: &'a i8,
-    #[serde(serialize_with="self.b.serialize_with(serializer)")]
+    #[serde(serialize_with="Trait::serialize_with")]
     b: B,
 }
 
@@ -547,7 +547,7 @@ fn test_serialize_with_struct() {
 enum SerializeWithEnum<'a, B> where B: Trait {
     Struct {
         a: &'a i8,
-        #[serde(serialize_with="self.b.serialize_with(serializer)")]
+        #[serde(serialize_with="Trait::serialize_with")]
         b: B,
     }
 }
@@ -599,7 +599,7 @@ fn test_serialize_with_enum() {
 #[derive(Debug, PartialEq, Deserialize)]
 struct DeserializeWithStruct<B> where B: Trait {
     a: i8,
-    #[serde(deserialize_with="Trait::deserialize_with(deserializer)")]
+    #[serde(deserialize_with="Trait::deserialize_with")]
     b: B,
 }
 
@@ -650,7 +650,7 @@ fn test_deserialize_with_struct() {
 enum DeserializeWithEnum<B> where B: Trait {
     Struct {
         a: i8,
-        #[serde(deserialize_with="Trait::deserialize_with(deserializer)")]
+        #[serde(deserialize_with="Trait::deserialize_with")]
         b: B,
     }
 }

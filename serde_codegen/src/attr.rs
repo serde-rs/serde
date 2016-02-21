@@ -4,6 +4,7 @@ use syntax::attr;
 use syntax::codemap::Span;
 use syntax::ext::base::ExtCtxt;
 use syntax::fold::Folder;
+use syntax::parse::parser::PathParsingMode;
 use syntax::parse::token;
 use syntax::parse;
 use syntax::print::pprust::{lit_to_string, meta_item_to_string};
@@ -181,7 +182,8 @@ impl FieldAttrs {
     pub fn from_field(cx: &ExtCtxt,
                       container_ty: &P<ast::Ty>,
                       generics: &ast::Generics,
-                      field: &ast::StructField) -> Result<Self, Error> {
+                      field: &ast::StructField,
+                      is_enum: bool) -> Result<Self, Error> {
         let builder = AstBuilder::new();
 
         let field_ident = match field.node.ident() {
@@ -225,10 +227,7 @@ impl FieldAttrs {
                     // Parse `#[serde(default="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"default" => {
                         let wrapped_expr = wrap_default(
-                            cx,
-                            &field.node.ty,
-                            generics,
-                            try!(parse_lit_into_expr(cx, name, lit)),
+                            try!(parse_lit_into_path(cx, name, lit)),
                         );
 
                         field_attrs.default_expr_if_missing = Some(wrapped_expr);
@@ -242,10 +241,9 @@ impl FieldAttrs {
                     // Parse `#[serde(skip_serializing_if="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"skip_serializing_if" => {
                         let expr = wrap_skip_serializing(
-                            cx,
-                            container_ty,
-                            generics,
-                            try!(parse_lit_into_expr(cx, name, lit)),
+                            field_ident,
+                            try!(parse_lit_into_path(cx, name, lit)),
+                            is_enum,
                         );
 
                         field_attrs.skip_serializing_field_if = Some(expr);
@@ -257,7 +255,9 @@ impl FieldAttrs {
                             cx,
                             container_ty,
                             generics,
-                            try!(parse_lit_into_expr(cx, name, lit)),
+                            field_ident,
+                            try!(parse_lit_into_path(cx, name, lit)),
+                            is_enum,
                         );
 
                         field_attrs.serialize_with = Some(expr);
@@ -269,7 +269,7 @@ impl FieldAttrs {
                             cx,
                             &field.node.ty,
                             generics,
-                            try!(parse_lit_into_expr(cx, name, lit)),
+                            try!(parse_lit_into_path(cx, name, lit)),
                         );
 
                         field_attrs.deserialize_with = Some(expr);
@@ -349,9 +349,10 @@ impl FieldAttrs {
 pub fn get_struct_field_attrs(cx: &ExtCtxt,
                               container_ty: &P<ast::Ty>,
                               generics: &ast::Generics,
-                              fields: &[ast::StructField]) -> Result<Vec<FieldAttrs>, Error> {
+                              fields: &[ast::StructField],
+                              is_enum: bool) -> Result<Vec<FieldAttrs>, Error> {
     fields.iter()
-        .map(|field| FieldAttrs::from_field(cx, container_ty, generics, field))
+        .map(|field| FieldAttrs::from_field(cx, container_ty, generics, field, is_enum))
         .collect()
 }
 
@@ -441,7 +442,7 @@ impl<'a, 'b> Folder for Respanner<'a, 'b> {
     }
 }
 
-fn parse_lit_into_expr(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<P<ast::Expr>, Error> {
+fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::Path, Error> {
     let source: &str = match lit.node {
         ast::LitKind::Str(ref source, _) => &source,
         _ => {
@@ -471,10 +472,8 @@ fn parse_lit_into_expr(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<P<ast
 
     let mut parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts);
 
-    let expr = parser.parse_expr();
-
-    let expr = match expr {
-        Ok(expr) => expr,
+    let path = match parser.parse_path(PathParsingMode::LifetimeAndTypesWithoutColons) {
+        Ok(path) => path,
         Err(mut e) => {
             e.emit();
             return Err(Error);
@@ -490,55 +489,39 @@ fn parse_lit_into_expr(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<P<ast
         }
     }
 
-    Ok(expr)
+    Ok(path)
 }
 
 /// This function wraps the expression in `#[serde(default="...")]` in a function to prevent it
 /// from accessing the internal `Deserialize` state.
-fn wrap_default(cx: &ExtCtxt,
-                field_ty: &P<ast::Ty>,
-                generics: &ast::Generics,
-                expr: P<ast::Expr>) -> P<ast::Expr> {
-    let builder = AstBuilder::new();
-
-    // Quasi-quoting doesn't do a great job of expanding generics into paths, so manually build it.
-    let fn_path = builder.path()
-        .segment("__serde_default")
-            .with_generics(generics.clone())
-            .build()
-        .build();
-
-    let where_clause = &generics.where_clause;
-
-    quote_expr!(cx, {
-        fn __serde_default $generics() -> $field_ty $where_clause {
-            $expr
-        }
-        $fn_path()
-    })
+fn wrap_default(path: ast::Path) -> P<ast::Expr> {
+    AstBuilder::new().expr().call()
+        .build_path(path)
+        .build()
 }
 
 /// This function wraps the expression in `#[serde(skip_serializing_if="...")]` in a trait to
 /// prevent it from accessing the internal `Serialize` state.
-fn wrap_skip_serializing(cx: &ExtCtxt,
-                         container_ty: &P<ast::Ty>,
-                         generics: &ast::Generics,
-                         expr: P<ast::Expr>) -> P<ast::Expr> {
-    let where_clause = &generics.where_clause;
+fn wrap_skip_serializing(field_ident: ast::Ident,
+                         path: ast::Path,
+                         is_enum: bool) -> P<ast::Expr> {
+    let builder = AstBuilder::new();
 
-    quote_expr!(cx, {
-        trait __SerdeShouldSkipSerializing {
-            fn __serde_should_skip_serializing(&self) -> bool;
-        }
+    let expr = builder.expr()
+        .field(field_ident)
+        .field("value")
+        .self_();
 
-        impl $generics __SerdeShouldSkipSerializing for $container_ty $where_clause {
-            fn __serde_should_skip_serializing(&self) -> bool {
-                $expr
-            }
-        }
+    let expr = if is_enum {
+        expr
+    } else {
+        builder.expr().ref_().build(expr)
+    };
 
-        self.value.__serde_should_skip_serializing()
-    })
+    builder.expr().call()
+        .build_path(path)
+        .arg().build(expr)
+        .build()
 }
 
 /// This function wraps the expression in `#[serde(serialize_with="...")]` in a trait to
@@ -546,7 +529,28 @@ fn wrap_skip_serializing(cx: &ExtCtxt,
 fn wrap_serialize_with(cx: &ExtCtxt,
                        container_ty: &P<ast::Ty>,
                        generics: &ast::Generics,
-                       expr: P<ast::Expr>) -> P<ast::Expr> {
+                       field_ident: ast::Ident,
+                       path: ast::Path,
+                       is_enum: bool) -> P<ast::Expr> {
+    let builder = AstBuilder::new();
+
+    let expr = builder.expr()
+        .field(field_ident)
+        .self_();
+
+    let expr = if is_enum {
+        expr
+    } else {
+        builder.expr().ref_().build(expr)
+    };
+
+    let expr = builder.expr().call()
+        .build_path(path)
+        .arg().build(expr)
+        .arg()
+            .id("serializer")
+        .build();
+
     let where_clause = &generics.where_clause;
 
     quote_expr!(cx, {
@@ -598,22 +602,7 @@ fn wrap_serialize_with(cx: &ExtCtxt,
 fn wrap_deserialize_with(cx: &ExtCtxt,
                          field_ty: &P<ast::Ty>,
                          generics: &ast::Generics,
-                         expr: P<ast::Expr>) -> P<ast::Expr> {
-    let builder = AstBuilder::new();
-
-    let fn_generics = builder.from_generics(generics.clone())
-        .ty_param("__D")
-            .bound()
-                .trait_(
-                    builder.path()
-                        .global()
-                        .ids(&["serde", "de", "Deserializer"])
-                        .build()
-                )
-                .build()
-            .build()
-        .build();
-
+                         path: ast::Path) -> P<ast::Expr> {
     // Quasi-quoting doesn't do a great job of expanding generics into paths, so manually build it.
     let ty_path = AstBuilder::new().path()
         .segment("__SerdeDeserializeWithStruct")
@@ -621,15 +610,9 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
             .build()
         .build();
 
-    let fn_where_clause = &fn_generics.where_clause;
     let where_clause = &generics.where_clause;
 
     quote_expr!(cx, {
-        fn __serde_deserialize_with $fn_generics(deserializer: &mut __D)
-            -> Result<$field_ty, __D::Error> $fn_where_clause {
-            $expr
-        }
-
         struct __SerdeDeserializeWithStruct $generics $where_clause {
             value: $field_ty,
         }
@@ -638,7 +621,7 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
             fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
                 where D: ::serde::de::Deserializer
             {
-                let value = try!(__serde_deserialize_with(deserializer));
+                let value = try!($path(deserializer));
                 Ok(__SerdeDeserializeWithStruct { value: value })
             }
         }

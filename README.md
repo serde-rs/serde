@@ -689,18 +689,17 @@ Variant Annotations:
 
 Field Annotations:
 
-| Annotation                             | Function                                                           |
-| ----------                             | --------                                                           |
-| `#[serde(rename="name")`               | Serialize and deserialize this field with the given name           |
-| `#[serde(rename(serialize="name1"))`   | Serialize this field with the given name                           |
-| `#[serde(rename(deserialize="name1"))` | Deserialize this field with the given name                         |
-| `#[serde(default)`                     | If the value is not specified, use the `Default::default()`        |
-| `#[serde(default="$expr")`             | If the value is not specified, use the `$expr` expression          |
-| `#[serde(skip_serializing)`            | Do not serialize this value                                        |
-| `#[serde(skip_serializing_if="$expr")` | Do not serialize this value if the `$expr` expression returns true |
-| `#[serde(serialize_with="$expr")`      | Use the `$expr` expression to serialize this field                 |
-| `#[serde(deserialize_with="$expr")`    | Use the `$expr` expression to deserialize this field               |
-
+| Annotation                             | Function                                                                                                   |
+| ----------                             | --------                                                                                                   |
+| `#[serde(rename="name")`               | Serialize and deserialize this field with the given name                                                   |
+| `#[serde(rename(serialize="name1"))`   | Serialize this field with the given name                                                                   |
+| `#[serde(rename(deserialize="name1"))` | Deserialize this field with the given name                                                                 |
+| `#[serde(default)`                     | If the value is not specified, use the `Default::default()`                                                |
+| `#[serde(default="$path")`             | Call the path to a function `fn() -> T` to build the value                                                 |
+| `#[serde(skip_serializing)`            | Do not serialize this value                                                                                |
+| `#[serde(skip_serializing_if="$path")` | Do not serialize this value if this function `fn(&T) -> bool` returns `false`                              |
+| `#[serde(serialize_with="$path")`      | Call a function `fn<T, S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value |
+| `#[serde(deserialize_with="$path")`    | Call a function `fn<T, D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value  |
 
 Serialization Formats Using Serde
 =================================
