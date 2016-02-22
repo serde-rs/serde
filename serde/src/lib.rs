@@ -12,8 +12,8 @@
 #![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
 #![cfg_attr(feature = "nightly", feature(collections, enumset, nonzero, plugin, step_trait,
                                          zero_one))]
-#![cfg_attr(feature = "nightly", plugin(clippy))]
-#![cfg_attr(feature = "nightly", allow(linkedlist))]
+#![cfg_attr(feature = "nightly-testing", plugin(clippy))]
+#![cfg_attr(feature = "nightly-testing", allow(linkedlist))]
 
 #![deny(missing_docs)]
 
