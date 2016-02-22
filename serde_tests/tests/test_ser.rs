@@ -3,11 +3,6 @@ use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use num::FromPrimitive;
-use num::bigint::{BigInt, BigUint};
-use num::complex::Complex;
-use num::rational::Ratio;
-
 use token::{self, Token};
 
 //////////////////////////////////////////////////////////////////////////
@@ -277,35 +272,6 @@ declare_ser_tests! {
         "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
         "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
         "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
-    }
-    test_num_bigint {
-        BigInt::from_i64(123).unwrap() => &[Token::Str("123")],
-        BigInt::from_i64(-123).unwrap() => &[Token::Str("-123")],
-    }
-    test_num_biguint {
-        BigUint::from_i64(123).unwrap() => &[Token::Str("123")],
-    }
-    test_num_complex {
-        Complex::new(1, 2) => &[
-            Token::SeqStart(Some(2)),
-                Token::SeqSep,
-                Token::I32(1),
-
-                Token::SeqSep,
-                Token::I32(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_num_ratio {
-        Ratio::new(1, 2) => &[
-            Token::SeqStart(Some(2)),
-                Token::SeqSep,
-                Token::I32(1),
-
-                Token::SeqSep,
-                Token::I32(2),
-            Token::SeqEnd,
-        ],
     }
     test_path {
         Path::new("/usr/local/lib") => &[

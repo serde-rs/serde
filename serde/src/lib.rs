@@ -17,8 +17,6 @@
 
 #![deny(missing_docs)]
 
-extern crate num;
-
 #[cfg(feature = "nightly")]
 extern crate collections;
 
