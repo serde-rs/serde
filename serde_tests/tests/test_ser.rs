@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -266,6 +267,17 @@ declare_ser_tests! {
             Token::EnumMapEnd,
         ],
     }
+    test_net_ipv4addr {
+        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_ipv6addr {
+        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
+    }
+    test_net_socketaddr {
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
+    }
     test_num_bigint {
         BigInt::from_i64(123).unwrap() => &[Token::Str("123")],
         BigInt::from_i64(-123).unwrap() => &[Token::Str("-123")],
@@ -305,6 +317,15 @@ declare_ser_tests! {
             Token::Str("/usr/local/lib"),
         ],
     }
+}
+
+#[cfg(feature = "nightly")]
+#[test]
+fn test_net_ipaddr() {
+    assert_ser_tokens(
+        "1.2.3.4".parse::<net::IpAddr>().unwrap(),
+        &[Token::Str("1.2.3.4")],
+    );
 }
 
 #[test]

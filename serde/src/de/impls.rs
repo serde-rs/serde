@@ -14,6 +14,7 @@ use std::collections::{
 use collections::enum_set::{CLike, EnumSet};
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::net;
 use std::path;
 use std::rc::Rc;
 use std::str;
@@ -737,6 +738,83 @@ map_impl!(
     HashMap::new(),
     HashMap::with_capacity(visitor.size_hint().0),
     HashMap::insert);
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "nightly")]
+impl Deserialize for net::IpAddr {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let s = try!(String::deserialize(deserializer));
+        match s.parse() {
+            Ok(s) => Ok(s),
+            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+        }
+    }
+}
+
+impl Deserialize for net::Ipv4Addr {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let s = try!(String::deserialize(deserializer));
+        match s.parse() {
+            Ok(s) => Ok(s),
+            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+        }
+    }
+}
+
+impl Deserialize for net::Ipv6Addr {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let s = try!(String::deserialize(deserializer));
+        match s.parse() {
+            Ok(s) => Ok(s),
+            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl Deserialize for net::SocketAddr {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let s = try!(String::deserialize(deserializer));
+        match s.parse() {
+            Ok(s) => Ok(s),
+            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+        }
+    }
+}
+
+impl Deserialize for net::SocketAddrV4 {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let s = try!(String::deserialize(deserializer));
+        match s.parse() {
+            Ok(s) => Ok(s),
+            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+        }
+    }
+}
+
+impl Deserialize for net::SocketAddrV6 {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer,
+    {
+        let s = try!(String::deserialize(deserializer));
+        match s.parse() {
+            Ok(s) => Ok(s),
+            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+        }
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

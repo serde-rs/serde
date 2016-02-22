@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::net;
 use std::path::PathBuf;
 
 use num::FromPrimitive;
@@ -571,6 +572,17 @@ declare_tests! {
             Token::Unit,
         ],
     }
+    test_net_ipv4addr {
+        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => vec![Token::Str("1.2.3.4")],
+    }
+    test_net_ipv6addr {
+        "::1".parse::<net::Ipv6Addr>().unwrap() => vec![Token::Str("::1")],
+    }
+    test_net_socketaddr {
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => vec![Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => vec![Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => vec![Token::Str("[::1]:1234")],
+    }
     test_num_bigint {
         BigInt::from_i64(123).unwrap() => vec![Token::Str("123")],
         BigInt::from_i64(-123).unwrap() => vec![Token::Str("-123")],
@@ -605,6 +617,15 @@ declare_tests! {
             Token::String("/usr/local/lib".to_owned()),
         ],
     }
+}
+
+#[cfg(feature = "nightly")]
+#[test]
+fn test_net_ipaddr() {
+    assert_de_tokens(
+        "1.2.3.4".parse::<net::IpAddr>().unwrap(),
+        vec![Token::Str("1.2.3.4")],
+    );
 }
 
 #[test]
