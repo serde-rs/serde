@@ -541,7 +541,9 @@ pub trait Visitor {
         Err(Error::type_mismatch(Type::Str))
     }
 
-    /// `visit_string` deserializes a `String` into a `Value`.
+    /// `visit_string` deserializes a `String` into a `Value`.  This allows a deserializer to avoid
+    /// a copy if it is deserializing a string from a `String` type.  By default it passes a `&str`
+    /// to the `visit_str` method.
     #[inline]
     fn visit_string<E>(&mut self, v: String) -> Result<Self::Value, E>
         where E: Error,
