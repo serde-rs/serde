@@ -273,6 +273,11 @@ declare_ser_tests! {
     test_net_ipv6addr {
         "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
     }
+    test_net_socketaddr {
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
+    }
     test_num_bigint {
         BigInt::from_i64(123).unwrap() => &[Token::Str("123")],
         BigInt::from_i64(-123).unwrap() => &[Token::Str("-123")],

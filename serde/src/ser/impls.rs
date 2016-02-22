@@ -710,6 +710,35 @@ impl Serialize for net::Ipv6Addr {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+impl Serialize for net::SocketAddr {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        match *self {
+            net::SocketAddr::V4(ref addr) => addr.serialize(serializer),
+            net::SocketAddr::V6(ref addr) => addr.serialize(serializer),
+        }
+    }
+}
+
+impl Serialize for net::SocketAddrV4 {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+
+impl Serialize for net::SocketAddrV6 {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 impl Serialize for path::Path {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
