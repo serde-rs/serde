@@ -371,6 +371,7 @@ pub enum Error {
     SyntaxError,
     EndOfStreamError,
     UnknownFieldError(String),
+    UnknownVariantError(String),
     MissingFieldError(&'static str),
     InvalidName(&'static str),
     InvalidValue(String),
@@ -393,6 +394,10 @@ impl de::Error for Error {
 
     fn unknown_field(field: &str) -> Error {
         Error::UnknownFieldError(field.to_owned())
+    }
+
+    fn unknown_variant(variant: &str) -> Error {
+        Error::UnknownVariantError(variant.to_owned())
     }
 
     fn missing_field(field: &'static str) -> Error {
