@@ -8,7 +8,13 @@ use num::rational::Ratio;
 
 use serde::de::{Deserializer, Visitor};
 
-use token::{Token, assert_de_tokens, assert_de_tokens_ignore};
+use token::{
+    Error,
+    Token,
+    assert_de_tokens,
+    assert_de_tokens_ignore,
+    assert_de_tokens_error,
+};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -599,4 +605,14 @@ declare_tests! {
             Token::String("/usr/local/lib".to_owned()),
         ],
     }
+}
+
+#[test]
+fn test_enum_error() {
+    assert_de_tokens_error::<Enum>(
+        vec![
+            Token::EnumUnit("Enum", "Foo"),
+        ],
+        Error::UnknownVariantError("Foo".to_owned()),
+    )
 }

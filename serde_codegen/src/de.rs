@@ -566,6 +566,7 @@ fn deserialize_item_enum(
                 .collect()
         ),
         container_attrs,
+        true,
     );
 
     let variants_expr = builder.expr().ref_().slice()
@@ -807,6 +808,7 @@ fn deserialize_field_visitor(
     builder: &aster::AstBuilder,
     field_names: Vec<P<ast::Expr>>,
     container_attrs: &attr::ContainerAttrs,
+    is_variant: bool,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
     let field_idents: Vec<ast::Ident> = (0 .. field_names.len())
@@ -838,10 +840,16 @@ fn deserialize_field_visitor(
         })
         .collect();
 
+    let (index_error_msg, unknown_ident) = if is_variant {
+        (builder.expr().str("expected a variant"), builder.id("unknown_variant"))
+    } else {
+        (builder.expr().str("expected a field"), builder.id("unknown_field"))
+    };
+
     let index_body = quote_expr!(cx,
         match value {
             $index_field_arms
-            _ => { Err(::serde::de::Error::syntax("expected a field")) }
+            _ => { Err(::serde::de::Error::syntax($index_error_msg)) }
         }
     );
 
@@ -853,10 +861,10 @@ fn deserialize_field_visitor(
         })
         .collect();
 
-    let fallthrough_arm_expr = if !container_attrs.deny_unknown_fields() {
+    let fallthrough_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
-        quote_expr!(cx, Err(::serde::de::Error::unknown_field(value)))
+        quote_expr!(cx, Err(::serde::de::Error::$unknown_ident(value)))
     };
 
     let str_body = quote_expr!(cx,
@@ -947,7 +955,8 @@ fn deserialize_struct_visitor(
         cx,
         builder,
         try!(field_exprs),
-        container_attrs
+        container_attrs,
+        false,
     );
 
     let visit_map_expr = try!(deserialize_map(

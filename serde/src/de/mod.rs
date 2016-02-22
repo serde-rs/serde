@@ -32,10 +32,19 @@ pub trait Error: Sized + error::Error {
     fn end_of_stream() -> Self;
 
     /// Raised when a `Deserialize` struct type received an unexpected struct field.
-    fn unknown_field(field: &str) -> Self;
+    fn unknown_field(field: &str) -> Self {
+        Error::syntax(&format!("Unknown field `{}`", field))
+    }
 
-    /// Raised when a `Deserialize` struct type did not receive a field.
-    fn missing_field(field: &'static str) -> Self;
+    /// Raised when a `Deserialize` enum type received an unexpected variant.
+    fn unknown_variant(field: &str) -> Self {
+        Error::syntax(&format!("Unknown variant `{}`", field))
+    }
+
+    /// raised when a `deserialize` struct type did not receive a field.
+    fn missing_field(field: &'static str) -> Self {
+        Error::syntax(&format!("Missing field `{}`", field))
+    }
 }
 
 /// `Type` represents all the primitive types that can be deserialized. This is used by
