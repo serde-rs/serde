@@ -329,6 +329,19 @@ pub trait Deserializer {
         self.deserialize(visitor)
     }
 
+    /// This method hints that the `Deserialize` type is expecting a fixed size array. This allows
+    /// deserializers to parse arrays that aren't tagged as arrays.
+    ///
+    /// By default, this deserializes arrays from a sequence.
+    #[inline]
+    fn deserialize_fixed_size_array<V>(&mut self,
+                                       _len: usize,
+                                       visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.deserialize(visitor)
+    }
+
     /// This method hints that the `Deserialize` type is expecting a map of values. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
