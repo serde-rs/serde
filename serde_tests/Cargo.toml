@@ -16,7 +16,7 @@ nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-tes
 [build-dependencies]
 syntex = { version = "^0.29.0" }
 syntex_syntax = { version = "^0.29.0" }
-serde_codegen = { version = "^0.6.14", path = "../serde_codegen", features = ["with-syntex"] }
+serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
 rustc-serialize = "^0.3.16"
