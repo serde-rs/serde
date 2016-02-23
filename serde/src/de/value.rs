@@ -39,6 +39,9 @@ pub enum Error {
     /// Unknown field in struct.
     UnknownField(String),
 
+    /// Unknown variant in enum.
+    UnknownVariant(String),
+
     /// Struct is missing a field.
     MissingField(&'static str),
 }
@@ -49,6 +52,7 @@ impl de::Error for Error {
     fn length_mismatch(len: usize) -> Self { Error::Length(len) }
     fn end_of_stream() -> Self { Error::EndOfStream }
     fn unknown_field(field: &str) -> Self { Error::UnknownField(String::from(field)) }
+    fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant(String::from(variant)) }
     fn missing_field(field: &'static str) -> Self { Error::MissingField(field) }
 }
 
@@ -60,6 +64,7 @@ impl fmt::Display for Error {
             Error::Length(len) => write!(formatter, "Invalid length: {}", len),
             Error::EndOfStream => formatter.write_str("EndOfStreamError"),
             Error::UnknownField(ref field) => write!(formatter, "Unknown field: {}", field),
+            Error::UnkownVariant(ref variant) => write!(formatter, "Unknown varian: {}", variant),
             Error::MissingField(ref field) => write!(formatter, "Missing field: {}", field),
         }
     }
