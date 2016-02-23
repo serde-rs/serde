@@ -100,11 +100,11 @@ declare_ser_tests! {
     }
     test_array {
         [0; 0] => &[
-            Token::SeqStart(Some(0)),
+            Token::SeqArrayStart(0),
             Token::SeqEnd,
         ],
         [1, 2, 3] => &[
-            Token::SeqStart(Some(3)),
+            Token::SeqArrayStart(3),
                 Token::SeqSep,
                 Token::I32(1),
 
@@ -146,22 +146,22 @@ declare_ser_tests! {
     }
     test_tuple {
         (1,) => &[
-            Token::SeqStart(Some(1)),
-                Token::SeqSep,
+            Token::TupleStart(1),
+                Token::TupleSep,
                 Token::I32(1),
-            Token::SeqEnd,
+            Token::TupleEnd,
         ],
         (1, 2, 3) => &[
-            Token::SeqStart(Some(3)),
-                Token::SeqSep,
+            Token::TupleStart(3),
+                Token::TupleSep,
                 Token::I32(1),
 
-                Token::SeqSep,
+                Token::TupleSep,
                 Token::I32(2),
 
-                Token::SeqSep,
+                Token::TupleSep,
                 Token::I32(3),
-            Token::SeqEnd,
+            Token::TupleEnd,
         ],
     }
     test_btreemap {
@@ -210,15 +210,15 @@ declare_ser_tests! {
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
             Token::TupleStructStart("TupleStruct", Some(3)),
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(1),
 
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(2),
 
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(3),
-            Token::TupleSeqEnd,
+            Token::TupleStructEnd,
         ],
     }
     test_struct {

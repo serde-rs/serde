@@ -196,6 +196,8 @@ impl<T> Serialize for [T]
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 macro_rules! array_impls {
     ($len:expr) => {
         impl<T> Serialize for [T; $len] where T: Serialize {
@@ -203,7 +205,8 @@ macro_rules! array_impls {
             fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                 where S: Serializer,
             {
-                serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some($len)))
+                let visitor = SeqIteratorVisitor::new(self.iter(), Some($len));
+                serializer.serialize_fixed_size_array(visitor)
             }
         }
     }

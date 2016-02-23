@@ -220,6 +220,16 @@ pub trait Serializer {
         self.serialize_seq_elt(value)
     }
 
+    /// Serializes a fixed-size array.
+    ///
+    /// By default this serializes an array as a sequence.
+    #[inline]
+    fn serialize_fixed_size_array<V>(&mut self, visitor: V) -> Result<(), Self::Error>
+        where V: SeqVisitor,
+    {
+        self.serialize_seq(visitor)
+    }
+
     /// Serializes a tuple struct.
     ///
     /// By default, tuple structs are serialized as a tuple.

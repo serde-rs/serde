@@ -153,16 +153,16 @@ fn test_ser_named_tuple() {
         &SerNamedTuple(&a, &mut b, c),
         &[
             Token::TupleStructStart("SerNamedTuple", Some(3)),
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::I32(5),
 
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::I32(6),
 
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::I32(7),
 
-            Token::TupleSeqEnd,
+            Token::TupleStructEnd,
         ],
     );
 }
@@ -190,16 +190,16 @@ fn test_de_named_tuple() {
         &DeNamedTuple(5, 6, 7),
         vec![
             Token::TupleStructStart("DeNamedTuple", Some(3)),
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::I32(5),
 
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::I32(6),
 
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::I32(7),
 
-            Token::TupleSeqEnd,
+            Token::TupleStructEnd,
         ]
     );
 }
@@ -525,13 +525,13 @@ fn test_generic_tuple_struct() {
         vec![
             Token::TupleStructStart("GenericTupleStruct", Some(2)),
 
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::U32(5),
 
-            Token::TupleSeqSep,
+            Token::TupleStructSep,
             Token::U32(6),
 
-            Token::TupleSeqEnd,
+            Token::TupleStructEnd,
         ]
     );
 }

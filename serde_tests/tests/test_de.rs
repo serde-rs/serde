@@ -186,27 +186,27 @@ declare_tests! {
         ],
         TupleStruct(1, 2, 3) => vec![
             Token::TupleStructStart("TupleStruct", Some(3)),
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(1),
 
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(2),
 
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(3),
-            Token::TupleSeqEnd,
+            Token::TupleStructEnd,
         ],
         TupleStruct(1, 2, 3) => vec![
             Token::TupleStructStart("TupleStruct", None),
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(1),
 
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(2),
 
-                Token::TupleSeqSep,
+                Token::TupleStructSep,
                 Token::I32(3),
-            Token::TupleSeqEnd,
+            Token::TupleStructEnd,
         ],
     }
     test_btreeset {
@@ -321,6 +321,10 @@ declare_tests! {
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
+        [0; 0] => vec![
+            Token::SeqArrayStart(0),
+            Token::SeqEnd,
+        ],
         ([0; 0], [1], [2, 3]) => vec![
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
@@ -335,6 +339,28 @@ declare_tests! {
 
                 Token::SeqSep,
                 Token::SeqStart(Some(2)),
+                    Token::SeqSep,
+                    Token::I32(2),
+
+                    Token::SeqSep,
+                    Token::I32(3),
+                Token::SeqEnd,
+            Token::SeqEnd,
+        ],
+        ([0; 0], [1], [2, 3]) => vec![
+            Token::SeqArrayStart(3),
+                Token::SeqSep,
+                Token::SeqArrayStart(0),
+                Token::SeqEnd,
+
+                Token::SeqSep,
+                Token::SeqArrayStart(1),
+                    Token::SeqSep,
+                    Token::I32(1),
+                Token::SeqEnd,
+
+                Token::SeqSep,
+                Token::SeqArrayStart(2),
                     Token::SeqSep,
                     Token::I32(2),
 
@@ -369,6 +395,24 @@ declare_tests! {
                 Token::SeqSep,
                 Token::I32(3),
             Token::SeqEnd,
+        ],
+        (1,) => vec![
+            Token::TupleStart(1),
+                Token::TupleSep,
+                Token::I32(1),
+            Token::TupleEnd,
+        ],
+        (1, 2, 3) => vec![
+            Token::TupleStart(3),
+                Token::TupleSep,
+                Token::I32(1),
+
+                Token::TupleSep,
+                Token::I32(2),
+
+                Token::TupleSep,
+                Token::I32(3),
+            Token::TupleEnd,
         ],
     }
     test_btreemap {
