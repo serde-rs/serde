@@ -32,14 +32,14 @@ pub trait Error: Sized + error::Error {
     /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
 
-    /// Raised when a `Deserialize` struct type received an unexpected struct field.
-    fn unknown_field(field: &str) -> Self {
-        Error::syntax(&format!("Unknown field `{}`", field))
-    }
-
     /// Raised when a `Deserialize` enum type received an unexpected variant.
     fn unknown_variant(field: &str) -> Self {
         Error::syntax(&format!("Unknown variant `{}`", field))
+    }
+
+    /// Raised when a `Deserialize` struct type received an unexpected struct field.
+    fn unknown_field(field: &str) -> Self {
+        Error::syntax(&format!("Unknown field `{}`", field))
     }
 
     /// raised when a `deserialize` struct type did not receive a field.

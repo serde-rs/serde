@@ -33,8 +33,14 @@ pub enum Error {
     /// The value had an invalid length.
     Length(usize),
 
+    /// The value is invalid and cannot be deserialized.
+    Value(String),
+
     /// EOF while deserializing a value.
     EndOfStream,
+
+    /// Unknown variant in enum.
+    UnknownVariant(String),
 
     /// Unknown field in struct.
     UnknownField(String),
@@ -47,7 +53,9 @@ impl de::Error for Error {
     fn syntax(msg: &str) -> Self { Error::Syntax(String::from(msg)) }
     fn type_mismatch(type_: de::Type) -> Self { Error::Type(type_) }
     fn length_mismatch(len: usize) -> Self { Error::Length(len) }
+    fn invalid_value(msg: &str) -> Self { Error::Value(msg.to_owned()) }
     fn end_of_stream() -> Self { Error::EndOfStream }
+    fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant(String::from(variant)) }
     fn unknown_field(field: &str) -> Self { Error::UnknownField(String::from(field)) }
     fn missing_field(field: &'static str) -> Self { Error::MissingField(field) }
 }
@@ -58,7 +66,9 @@ impl fmt::Display for Error {
             Error::Syntax(ref s) => write!(formatter, "Syntax error: {}", s),
             Error::Type(ty) => write!(formatter, "Invalid type: {:?}", ty),
             Error::Length(len) => write!(formatter, "Invalid length: {}", len),
+            Error::Value(ref value) => write!(formatter, "Invalid value: {}", value),
             Error::EndOfStream => formatter.write_str("EndOfStreamError"),
+            Error::UnknownVariant(ref variant) => write!(formatter, "Unknown varian: {}", variant),
             Error::UnknownField(ref field) => write!(formatter, "Unknown field: {}", field),
             Error::MissingField(ref field) => write!(formatter, "Missing field: {}", field),
         }
