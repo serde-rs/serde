@@ -12,44 +12,44 @@ mod from_primitive;
 /// `Deserializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
-    fn syntax(msg: &str) -> Self;
-
-    /// Raised when a fixed sized sequence or map was passed in the wrong amount of arguments.
-    fn length_mismatch(_len: usize) -> Self {
-        Error::syntax("incorrect length")
-    }
-
-    /// Raised when a `Deserialize` was passed an incorrect type.
-    fn type_mismatch(_type: Type) -> Self {
-        Error::syntax("incorrect type")
-    }
-
-    /// Raised when a `Deserialize` was passed an incorrect value.
-    fn invalid_value(msg: &str) -> Self {
-        Error::syntax(msg)
-    }
+    fn custom(msg: String) -> Self;
 
     /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
 
-    /// Raised when a `Deserialize` struct type received an unexpected struct field.
-    fn unknown_field(field: &str) -> Self {
-        Error::syntax(&format!("Unknown field `{}`", field))
+    /// Raised when a `Deserialize` was passed an incorrect type.
+    fn invalid_type(ty: Type) -> Self {
+        Error::custom(format!("Invalid type. Expected `{:?}`", ty))
+    }
+
+    /// Raised when a `Deserialize` was passed an incorrect value.
+    fn invalid_value(msg: &str) -> Self {
+        Error::custom(format!("Invalid value: {}", msg))
+    }
+
+    /// Raised when a fixed sized sequence or map was passed in the wrong amount of arguments.
+    fn invalid_length(len: usize) -> Self {
+        Error::custom(format!("Invalid length: {}", len))
     }
 
     /// Raised when a `Deserialize` enum type received an unexpected variant.
     fn unknown_variant(field: &str) -> Self {
-        Error::syntax(&format!("Unknown variant `{}`", field))
+        Error::custom(format!("Unknown variant `{}`", field))
+    }
+
+    /// Raised when a `Deserialize` struct type received an unexpected struct field.
+    fn unknown_field(field: &str) -> Self {
+        Error::custom(format!("Unknown field `{}`", field))
     }
 
     /// raised when a `deserialize` struct type did not receive a field.
     fn missing_field(field: &'static str) -> Self {
-        Error::syntax(&format!("Missing field `{}`", field))
+        Error::custom(format!("Missing field `{}`", field))
     }
 }
 
 /// `Type` represents all the primitive types that can be deserialized. This is used by
-/// `Error::kind_mismatch`.
+/// `Error::invalid_type`.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Type {
     /// Represents a `bool` type.
@@ -124,11 +124,17 @@ pub enum Type {
     /// Represents a struct type.
     Struct,
 
+    /// Represents a struct field name.
+    FieldName,
+
     /// Represents a tuple type.
     Tuple,
 
     /// Represents an `enum` type.
     Enum,
+
+    /// Represents an enum variant name.
+    VariantName,
 
     /// Represents a struct variant.
     StructVariant,
@@ -416,7 +422,7 @@ pub trait Deserializer {
                            _visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
     {
-        Err(Error::syntax("expected an enum"))
+        Err(Error::invalid_type(Type::Enum))
     }
 
     /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
@@ -460,7 +466,7 @@ pub trait Visitor {
     fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::Bool))
+        Err(Error::invalid_type(Type::Bool))
     }
 
     /// `visit_isize` deserializes a `isize` into a `Value`.
@@ -495,7 +501,7 @@ pub trait Visitor {
     fn visit_i64<E>(&mut self, _v: i64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::I64))
+        Err(Error::invalid_type(Type::I64))
     }
 
     /// `visit_usize` deserializes a `usize` into a `Value`.
@@ -530,7 +536,7 @@ pub trait Visitor {
     fn visit_u64<E>(&mut self, _v: u64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::U64))
+        Err(Error::invalid_type(Type::U64))
     }
 
     /// `visit_f32` deserializes a `f32` into a `Value`.
@@ -544,7 +550,7 @@ pub trait Visitor {
     fn visit_f64<E>(&mut self, _v: f64) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::F64))
+        Err(Error::invalid_type(Type::F64))
     }
 
     /// `visit_char` deserializes a `char` into a `Value`.
@@ -561,7 +567,7 @@ pub trait Visitor {
     fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::Str))
+        Err(Error::invalid_type(Type::Str))
     }
 
     /// `visit_string` deserializes a `String` into a `Value`.  This allows a deserializer to avoid
@@ -578,7 +584,7 @@ pub trait Visitor {
     fn visit_unit<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::Unit))
+        Err(Error::invalid_type(Type::Unit))
     }
 
     /// `visit_unit_struct` deserializes a unit struct into a `Value`.
@@ -593,42 +599,42 @@ pub trait Visitor {
     fn visit_none<E>(&mut self) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::Option))
+        Err(Error::invalid_type(Type::Option))
     }
 
     /// `visit_some` deserializes a value into a `Value`.
     fn visit_some<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
-        Err(Error::type_mismatch(Type::Option))
+        Err(Error::invalid_type(Type::Option))
     }
 
     /// `visit_newtype_struct` deserializes a value into a `Value`.
     fn visit_newtype_struct<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
-        Err(Error::type_mismatch(Type::NewtypeStruct))
+        Err(Error::invalid_type(Type::NewtypeStruct))
     }
 
     /// `visit_bool` deserializes a `SeqVisitor` into a `Value`.
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
-        Err(Error::type_mismatch(Type::Seq))
+        Err(Error::invalid_type(Type::Seq))
     }
 
     /// `visit_map` deserializes a `MapVisitor` into a `Value`.
     fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
     {
-        Err(Error::type_mismatch(Type::Map))
+        Err(Error::invalid_type(Type::Map))
     }
 
     /// `visit_bytes` deserializes a `&[u8]` into a `Value`.
     fn visit_bytes<E>(&mut self, _v: &[u8]) -> Result<Self::Value, E>
         where E: Error,
     {
-        Err(Error::type_mismatch(Type::Bytes))
+        Err(Error::invalid_type(Type::Bytes))
     }
 
     /// `visit_byte_buf` deserializes a `Vec<u8>` into a `Value`.
@@ -799,7 +805,7 @@ pub trait VariantVisitor {
 
     /// `visit_unit` is called when deserializing a variant with no values.
     fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Err(Error::type_mismatch(Type::UnitVariant))
+        Err(Error::invalid_type(Type::UnitVariant))
     }
 
     /// `visit_newtype` is called when deserializing a variant with a single value. By default this
@@ -818,7 +824,7 @@ pub trait VariantVisitor {
                       _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        Err(Error::type_mismatch(Type::TupleVariant))
+        Err(Error::invalid_type(Type::TupleVariant))
     }
 
     /// `visit_struct` is called when deserializing a struct-like variant.
@@ -827,7 +833,7 @@ pub trait VariantVisitor {
                        _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        Err(Error::type_mismatch(Type::StructVariant))
+        Err(Error::invalid_type(Type::StructVariant))
     }
 }
 

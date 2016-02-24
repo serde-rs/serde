@@ -24,17 +24,23 @@ use bytes;
 /// This represents all the possible errors that can occur using the `ValueDeserializer`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
-    /// The value had some syntatic error.
-    Syntax(String),
+    /// The value had some custom error.
+    Custom(String),
 
     /// The value had an incorrect type.
-    Type(de::Type),
+    InvalidType(de::Type),
 
     /// The value had an invalid length.
-    Length(usize),
+    InvalidLength(usize),
+
+    /// The value is invalid and cannot be deserialized.
+    InvalidValue(String),
 
     /// EOF while deserializing a value.
     EndOfStream,
+
+    /// Unknown variant in enum.
+    UnknownVariant(String),
 
     /// Unknown field in struct.
     UnknownField(String),
@@ -44,10 +50,12 @@ pub enum Error {
 }
 
 impl de::Error for Error {
-    fn syntax(msg: &str) -> Self { Error::Syntax(String::from(msg)) }
-    fn type_mismatch(type_: de::Type) -> Self { Error::Type(type_) }
-    fn length_mismatch(len: usize) -> Self { Error::Length(len) }
+    fn custom(msg: String) -> Self { Error::Custom(msg) }
     fn end_of_stream() -> Self { Error::EndOfStream }
+    fn invalid_type(ty: de::Type) -> Self { Error::InvalidType(ty) }
+    fn invalid_value(msg: &str) -> Self { Error::InvalidValue(msg.to_owned()) }
+    fn invalid_length(len: usize) -> Self { Error::InvalidLength(len) }
+    fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant(String::from(variant)) }
     fn unknown_field(field: &str) -> Self { Error::UnknownField(String::from(field)) }
     fn missing_field(field: &'static str) -> Self { Error::MissingField(field) }
 }
@@ -55,10 +63,14 @@ impl de::Error for Error {
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            Error::Syntax(ref s) => write!(formatter, "Syntax error: {}", s),
-            Error::Type(ty) => write!(formatter, "Invalid type: {:?}", ty),
-            Error::Length(len) => write!(formatter, "Invalid length: {}", len),
-            Error::EndOfStream => formatter.write_str("EndOfStreamError"),
+            Error::Custom(ref s) => write!(formatter, "{}", s),
+            Error::EndOfStream => formatter.write_str("End of stream"),
+            Error::InvalidType(ty) => write!(formatter, "Invalid type, expected `{:?}`", ty),
+            Error::InvalidValue(ref value) => write!(formatter, "Invalid value: {}", value),
+            Error::InvalidLength(len) => write!(formatter, "Invalid length: {}", len),
+            Error::UnknownVariant(ref variant) => {
+                write!(formatter, "Unknown variant: {}", variant)
+            }
             Error::UnknownField(ref field) => write!(formatter, "Unknown field: {}", field),
             Error::MissingField(ref field) => write!(formatter, "Missing field: {}", field),
         }
@@ -338,7 +350,7 @@ impl<I, T, E> de::SeqVisitor for SeqDeserializer<I, E>
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::length_mismatch(self.len))
+            Err(de::Error::invalid_length(self.len))
         }
     }
 
@@ -494,7 +506,9 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
                 let mut de = value.into_deserializer();
                 de::Deserialize::deserialize(&mut de)
             }
-            None => Err(de::Error::syntax("expected a map value"))
+            None => {
+                Err(de::Error::end_of_stream())
+            }
         }
     }
 
@@ -502,7 +516,7 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
         if self.len == 0 {
             Ok(())
         } else {
-            Err(de::Error::length_mismatch(self.len))
+            Err(de::Error::invalid_length(self.len))
         }
     }
 

@@ -12,18 +12,18 @@ use serde::de::{Deserializer, Deserialize};
 
 #[derive(PartialEq, Debug)]
 pub enum Error {
-    EndOfStreamError,
-    SyntaxError,
+    EndOfStream,
+    Syntax,
 }
 
 impl serde::de::Error for Error {
-    fn syntax(_: &str) -> Error { Error::SyntaxError }
+    fn custom(_: String) -> Error { Error::Syntax }
 
-    fn end_of_stream() -> Error { Error::EndOfStreamError }
+    fn end_of_stream() -> Error { Error::EndOfStream }
 
-    fn unknown_field(_: &str) -> Error { Error::SyntaxError }
+    fn unknown_field(_: &str) -> Error { Error::Syntax }
 
-    fn missing_field(_: &'static str) -> Error { Error::SyntaxError }
+    fn missing_field(_: &'static str) -> Error { Error::Syntax }
 }
 
 impl fmt::Display for Error {
@@ -67,104 +67,104 @@ mod decoder {
     impl rustc_serialize::Decoder for UsizeDecoder {
         type Error = Error;
 
-        fn error(&mut self, _: &str) -> Error { Error::SyntaxError }
+        fn error(&mut self, _: &str) -> Error { Error::Syntax }
 
         // Primitive types:
-        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::SyntaxError) }
+        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::Syntax) }
         #[inline]
         fn read_usize(&mut self) -> Result<usize, Error> {
             match self.iter.next() {
                 Some(value) => Ok(value),
-                None => Err(Error::EndOfStreamError),
+                None => Err(Error::EndOfStream),
             }
         }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError) }
-        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
-        fn read_char(&mut self) -> Result<char, Error> { Err(Error::SyntaxError) }
-        fn read_str(&mut self) -> Result<String, Error> { Err(Error::SyntaxError) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::Syntax) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::Syntax) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::Syntax) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::Syntax) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::Syntax) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::Syntax) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::Syntax) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::Syntax) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::Syntax) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::Syntax) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::Syntax) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::Syntax) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(Error::Syntax) }
+        fn read_str(&mut self) -> Result<String, Error> { Err(Error::Syntax) }
 
         // Compound types:
         fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         // Specialized types:
         fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder, bool) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         #[inline]
@@ -184,19 +184,19 @@ mod decoder {
         fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_map_elt_key<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_map_elt_val<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut UsizeDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
     }
 
@@ -219,105 +219,105 @@ mod decoder {
     impl rustc_serialize::Decoder for U8Decoder {
         type Error = Error;
 
-        fn error(&mut self, _: &str) -> Error { Error::SyntaxError }
+        fn error(&mut self, _: &str) -> Error { Error::Syntax }
 
         // Primitive types:
-        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::SyntaxError) }
-        fn read_usize(&mut self) -> Result<usize, Error> { Err(Error::SyntaxError) }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
+        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::Syntax) }
+        fn read_usize(&mut self) -> Result<usize, Error> { Err(Error::Syntax) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::Syntax) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::Syntax) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::Syntax) }
         #[inline]
         fn read_u8(&mut self) -> Result<u8, Error> {
             match self.iter.next() {
                 Some(value) => Ok(value),
-                None => Err(Error::EndOfStreamError),
+                None => Err(Error::EndOfStream),
             }
         }
         #[inline]
-        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
-        fn read_char(&mut self) -> Result<char, Error> { Err(Error::SyntaxError) }
-        fn read_str(&mut self) -> Result<String, Error> { Err(Error::SyntaxError) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::Syntax) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::Syntax) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::Syntax) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::Syntax) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::Syntax) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::Syntax) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::Syntax) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::Syntax) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(Error::Syntax) }
+        fn read_str(&mut self) -> Result<String, Error> { Err(Error::Syntax) }
 
         // Compound types:
         fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         // Specialized types:
         fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder, bool) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         #[inline]
@@ -337,19 +337,19 @@ mod decoder {
         fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_map_elt_key<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_map_elt_val<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut U8Decoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
     }
 }
@@ -366,9 +366,9 @@ mod deserializer {
 
     #[derive(PartialEq, Debug)]
     enum State {
-        StartState,
-        SepOrEndState,
-        EndState,
+        Start,
+        SepOrEnd,
+        End,
     }
 
     pub struct Deserializer<A> {
@@ -383,7 +383,7 @@ mod deserializer {
         pub fn new(values: Vec<A>) -> Deserializer<A> {
             let len = values.len();
             Deserializer {
-                state: State::StartState,
+                state: State::Start,
                 iter: values.into_iter(),
                 len: len,
                 value: None,
@@ -399,15 +399,15 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.state {
-                State::StartState => {
-                    self.state = State::SepOrEndState;
+                State::Start => {
+                    self.state = State::SepOrEnd;
                     visitor.visit_seq(self)
                 }
-                State::SepOrEndState => {
+                State::SepOrEnd => {
                     visitor.visit_usize(self.value.take().unwrap())
                 }
-                State::EndState => {
-                    Err(Error::EndOfStreamError)
+                State::End => {
+                    Err(Error::EndOfStream)
                 }
             }
         }
@@ -427,7 +427,7 @@ mod deserializer {
                     Ok(Some(try!(de::Deserialize::deserialize(self))))
                 }
                 None => {
-                    self.state = State::EndState;
+                    self.state = State::End;
                     Ok(None)
                 }
             }
@@ -436,9 +436,9 @@ mod deserializer {
         #[inline]
         fn end(&mut self) -> Result<(), Error> {
             match self.iter.next() {
-                Some(_) => Err(Error::SyntaxError),
+                Some(_) => Err(Error::Syntax),
                 None => {
-                    self.state = State::EndState;
+                    self.state = State::End;
                     Ok(())
                 }
             }
@@ -458,15 +458,15 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.state {
-                State::StartState => {
-                    self.state = State::SepOrEndState;
+                State::Start => {
+                    self.state = State::SepOrEnd;
                     visitor.visit_seq(self)
                 }
-                State::SepOrEndState => {
+                State::SepOrEnd => {
                     visitor.visit_u8(self.value.take().unwrap())
                 }
-                State::EndState => {
-                    Err(Error::EndOfStreamError)
+                State::End => {
+                    Err(Error::EndOfStream)
                 }
             }
         }
@@ -486,7 +486,7 @@ mod deserializer {
                     Ok(Some(try!(de::Deserialize::deserialize(self))))
                 }
                 None => {
-                    self.state = State::EndState;
+                    self.state = State::End;
                     Ok(None)
                 }
             }
@@ -495,9 +495,9 @@ mod deserializer {
         #[inline]
         fn end(&mut self) -> Result<(), Error> {
             match self.iter.next() {
-                Some(_) => Err(Error::SyntaxError),
+                Some(_) => Err(Error::Syntax),
                 None => {
-                    self.state = State::EndState;
+                    self.state = State::End;
                     Ok(())
                 }
             }

@@ -185,7 +185,7 @@ fn serialize_unit_struct(
     cx: &ExtCtxt,
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
-    let type_name = container_attrs.serialize_name_expr();
+    let type_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx,
         serializer.serialize_unit_struct($type_name)
@@ -196,7 +196,7 @@ fn serialize_newtype_struct(
     cx: &ExtCtxt,
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
-    let type_name = container_attrs.serialize_name_expr();
+    let type_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx,
         serializer.serialize_newtype_struct($type_name, &self.0)
@@ -224,7 +224,7 @@ fn serialize_tuple_struct(
         impl_generics,
     );
 
-    let type_name = container_attrs.serialize_name_expr();
+    let type_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_struct
@@ -259,7 +259,7 @@ fn serialize_struct(
         false,
     ));
 
-    let type_name = container_attrs.serialize_name_expr();
+    let type_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_struct
@@ -316,11 +316,11 @@ fn serialize_variant(
     variant_index: usize,
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<ast::Arm, Error> {
-    let type_name = container_attrs.serialize_name_expr();
+    let type_name = container_attrs.name().serialize_name_expr();
 
     let variant_ident = variant.node.name;
     let variant_attrs = try!(attr::VariantAttrs::from_variant(cx, variant));
-    let variant_name = variant_attrs.serialize_name_expr();
+    let variant_name = variant_attrs.name().serialize_name_expr();
 
     match variant.node.data {
         ast::VariantData::Unit(_) => {
@@ -551,7 +551,7 @@ fn serialize_struct_variant(
         true,
     ));
 
-    let container_name = container_attrs.serialize_name_expr();
+    let container_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $variant_struct
@@ -658,7 +658,7 @@ fn serialize_struct_visitor(
         .map(|(i, (ref field, ref field_attr))| {
             let name = field.node.ident().expect("struct has unnamed field");
 
-            let key_expr = field_attr.serialize_name_expr();
+            let key_expr = field_attr.name().serialize_name_expr();
 
             let stmt = if let Some(expr) = field_attr.skip_serializing_field_if() {
                     Some(quote_stmt!(cx, if $expr { continue; }))

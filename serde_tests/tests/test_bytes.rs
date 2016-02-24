@@ -10,19 +10,13 @@ use serde::bytes::{ByteBuf, Bytes};
 struct Error;
 
 impl serde::ser::Error for Error {
-    fn syntax(_: &str) -> Error { Error }
-
-    fn invalid_value(_field: &str) -> Error { Error }
+    fn custom(_: String) -> Error { Error }
 }
 
 impl serde::de::Error for Error {
-    fn syntax(_: &str) -> Error { Error }
+    fn custom(_: String) -> Error { Error }
 
     fn end_of_stream() -> Error { Error }
-
-    fn unknown_field(_field: &str) -> Error { Error }
-
-    fn missing_field(_field: &'static str) -> Error { Error }
 }
 
 impl fmt::Display for Error {

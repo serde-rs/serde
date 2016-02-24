@@ -88,7 +88,7 @@ impl Visitor for BoolVisitor {
         match s.trim() {
             "true" => Ok(true),
             "false" => Ok(false),
-            _ => Err(Error::type_mismatch(Type::Bool)),
+            _ => Err(Error::invalid_type(Type::Bool)),
         }
     }
 }
@@ -111,30 +111,30 @@ macro_rules! impl_deserialize_num_method {
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => Err(Error::type_mismatch($ty)),
+                None => Err(Error::invalid_type($ty)),
             }
         }
     }
 }
 
 /// A visitor that produces a primitive type.
-pub struct PrimitiveVisitor<T> {
+struct PrimitiveVisitor<T> {
     marker: PhantomData<T>,
 }
 
 impl<T> PrimitiveVisitor<T> {
     /// Construct a new `PrimitiveVisitor`.
     #[inline]
-    pub fn new() -> Self {
+    fn new() -> Self {
         PrimitiveVisitor {
             marker: PhantomData,
         }
     }
 }
 
-impl<
-    T: Deserialize + FromPrimitive + str::FromStr
-> Visitor for PrimitiveVisitor<T> {
+impl<T> Visitor for PrimitiveVisitor<T>
+    where T: Deserialize + FromPrimitive + str::FromStr
+{
     type Value = T;
 
     impl_deserialize_num_method!(isize, visit_isize, from_isize, Type::Isize);
@@ -155,7 +155,7 @@ impl<
         where E: Error,
     {
         str::FromStr::from_str(v.trim()).or_else(|_| {
-            Err(Error::type_mismatch(Type::Str))
+            Err(Error::invalid_type(Type::Str))
         })
     }
 }
@@ -207,7 +207,7 @@ impl Visitor for CharVisitor {
         let mut iter = v.chars();
         if let Some(v) = iter.next() {
             if iter.next().is_some() {
-                Err(Error::type_mismatch(Type::Char))
+                Err(Error::invalid_type(Type::Char))
             } else {
                 Ok(v)
             }
@@ -250,7 +250,7 @@ impl Visitor for StringVisitor {
     {
         match str::from_utf8(v) {
             Ok(s) => Ok(s.to_owned()),
-            Err(_) => Err(Error::type_mismatch(Type::String)),
+            Err(_) => Err(Error::invalid_type(Type::String)),
         }
     }
 
@@ -259,7 +259,7 @@ impl Visitor for StringVisitor {
     {
         match String::from_utf8(v) {
             Ok(s) => Ok(s),
-            Err(_) => Err(Error::type_mismatch(Type::String)),
+            Err(_) => Err(Error::invalid_type(Type::String)),
         }
     }
 }
@@ -889,7 +889,7 @@ impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable +
     fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
         let value = try!(Deserialize::deserialize(deserializer));
         if value == Zero::zero() {
-            return Err(Error::syntax("expected a non-zero value"))
+            return Err(Error::invalid_value("expected a non-zero value"))
         }
         unsafe {
             Ok(NonZero::new(value))
@@ -941,7 +941,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                             _ => {
                                 match str::from_utf8(value) {
                                     Ok(value) => Err(Error::unknown_field(value)),
-                                    Err(_) => Err(Error::type_mismatch(Type::String)),
+                                    Err(_) => Err(Error::invalid_type(Type::String)),
                                 }
                             }
                         }
