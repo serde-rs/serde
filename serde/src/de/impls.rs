@@ -315,6 +315,34 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// A visitor that produces a `PhantomData`.
+pub struct PhantomDataVisitor<T> {
+    marker: PhantomData<T>,
+}
+
+impl<
+    T: Deserialize,
+> Visitor for PhantomDataVisitor<T> {
+    type Value = PhantomData<T>;
+
+    #[inline]
+    fn visit_unit<E>(&mut self) -> Result<PhantomData<T>, E>
+        where E: Error,
+    {
+        Ok(PhantomData)
+    }
+}
+
+impl<T> Deserialize for PhantomData<T> where T: Deserialize {
+    fn deserialize<D>(deserializer: &mut D) -> Result<PhantomData<T>, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.visit_unit(PhantomDataVisitor {marker: PhantomData})
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 macro_rules! seq_impl {
     (
         $ty:ty,

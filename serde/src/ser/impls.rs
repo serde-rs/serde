@@ -22,6 +22,7 @@ use std::ops;
 use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::marker::PhantomData;
 
 #[cfg(feature = "nightly")]
 use core::nonzero::{NonZero, Zeroable};
@@ -114,6 +115,17 @@ impl<T> SeqVisitor for Option<T> where T: Serialize {
     #[inline]
     fn len(&self) -> Option<usize> {
         Some(if self.is_some() { 1 } else { 0 })
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+impl<T> Serialize for PhantomData<T> {
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_unit()
     }
 }
 
