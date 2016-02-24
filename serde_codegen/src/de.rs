@@ -10,6 +10,7 @@ use syntax::ast::{
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
+use syntax::parse::token::InternedString;
 use syntax::ptr::P;
 
 use attr;
@@ -266,7 +267,7 @@ fn deserialize_unit_struct(
     type_ident: Ident,
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
-    let type_name = container_attrs.deserialize_name_expr();
+    let type_name = container_attrs.name().deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         struct __Visitor;
@@ -318,7 +319,7 @@ fn deserialize_newtype_struct(
         1,
     );
 
-    let type_name = container_attrs.deserialize_name_expr();
+    let type_name = container_attrs.name().deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_item
@@ -371,7 +372,7 @@ fn deserialize_tuple_struct(
         fields,
     );
 
-    let type_name = container_attrs.deserialize_name_expr();
+    let type_name = container_attrs.name().deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $visitor_item
@@ -510,7 +511,7 @@ fn deserialize_struct(
         false,
     ));
 
-    let type_name = container_attrs.deserialize_name_expr();
+    let type_name = container_attrs.name().deserialize_name_expr();
 
     Ok(quote_expr!(cx, {
         $field_visitor
@@ -552,7 +553,7 @@ fn deserialize_item_enum(
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
 
-    let type_name = container_attrs.deserialize_name_expr();
+    let type_name = container_attrs.name().deserialize_name_expr();
 
     let variant_visitor = deserialize_field_visitor(
         cx,
@@ -561,7 +562,7 @@ fn deserialize_item_enum(
             enum_def.variants.iter()
                 .map(|variant| {
                     let attrs = try!(attr::VariantAttrs::from_variant(cx, variant));
-                    Ok(attrs.deserialize_name_expr())
+                    Ok(attrs.name().deserialize_name())
                 })
                 .collect()
         ),
@@ -806,12 +807,12 @@ fn deserialize_struct_variant(
 fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    field_names: Vec<P<ast::Expr>>,
+    field_names: Vec<InternedString>,
     container_attrs: &attr::ContainerAttrs,
     is_variant: bool,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
-    let field_idents: Vec<ast::Ident> = (0 .. field_names.len())
+    let field_idents: Vec<_> = (0 .. field_names.len())
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
@@ -846,22 +847,34 @@ fn deserialize_field_visitor(
         (builder.expr().str("expected a field"), builder.id("unknown_field"))
     };
 
+    let fallthrough_index_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
+        quote_expr!(cx, Ok(__Field::__ignore))
+    } else {
+        quote_expr!(cx, {
+            Err(::serde::de::Error::invalid_value($index_error_msg))
+        })
+    };
+
     let index_body = quote_expr!(cx,
         match value {
             $index_field_arms
-            _ => { Err(::serde::de::Error::syntax($index_error_msg)) }
+            _ => $fallthrough_index_arm_expr
         }
     );
 
+    // Convert the field names into byte strings.
+    let str_field_names: Vec<_> = field_names.iter()
+        .map(|name| builder.expr().lit().str(&name))
+        .collect();
+
     // Match arms to extract a field from a string
-    let default_field_arms: Vec<_> = field_idents.iter()
-        .zip(field_names.iter())
+    let str_field_arms: Vec<_> = field_idents.iter().zip(str_field_names.iter())
         .map(|(field_ident, field_name)| {
             quote_arm!(cx, $field_name => { Ok(__Field::$field_ident) })
         })
         .collect();
 
-    let fallthrough_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
+    let fallthrough_str_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
         quote_expr!(cx, Err(::serde::de::Error::$unknown_ident(value)))
@@ -869,8 +882,39 @@ fn deserialize_field_visitor(
 
     let str_body = quote_expr!(cx,
         match value {
-            $default_field_arms
-            _ => $fallthrough_arm_expr
+            $str_field_arms
+            _ => $fallthrough_str_arm_expr
+        }
+    );
+
+    // Convert the field names into byte strings.
+    let bytes_field_names: Vec<_> = field_names.iter()
+        .map(|name| {
+            let name: &str = name;
+            builder.expr().lit().byte_str(name)
+        })
+        .collect();
+
+    // Match arms to extract a field from a string
+    let bytes_field_arms: Vec<_> = field_idents.iter().zip(bytes_field_names.iter())
+        .map(|(field_ident, field_name)| {
+            quote_arm!(cx, $field_name => { Ok(__Field::$field_ident) })
+        })
+        .collect();
+
+    let fallthrough_bytes_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
+        quote_expr!(cx, Ok(__Field::__ignore))
+    } else {
+        quote_expr!(cx, {
+            let value = ::std::string::String::from_utf8_lossy(value);
+            Err(::serde::de::Error::$unknown_ident(&value))
+        })
+    };
+
+    let bytes_body = quote_expr!(cx,
+        match value {
+            $bytes_field_arms
+            _ => $fallthrough_bytes_arm_expr
         }
     );
 
@@ -906,17 +950,7 @@ fn deserialize_field_visitor(
                     fn visit_bytes<E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, E>
                         where E: ::serde::de::Error,
                     {
-                        // TODO: would be better to generate a byte string literal match
-                        match ::std::str::from_utf8(value) {
-                            Ok(s) => self.visit_str(s),
-                            _ => {
-                                Err(
-                                    ::serde::de::Error::invalid_value(
-                                        "could not convert a byte string to a String"
-                                    )
-                                )
-                            }
-                        }
+                        $bytes_body
                     }
                 }
 
@@ -947,7 +981,7 @@ fn deserialize_struct_visitor(
                                              field,
                                              is_enum)
             );
-            Ok(field_attrs.deserialize_name_expr())
+            Ok(field_attrs.name().deserialize_name())
         })
         .collect();
 
