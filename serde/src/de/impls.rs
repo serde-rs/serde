@@ -118,23 +118,23 @@ macro_rules! impl_deserialize_num_method {
 }
 
 /// A visitor that produces a primitive type.
-pub struct PrimitiveVisitor<T> {
+struct PrimitiveVisitor<T> {
     marker: PhantomData<T>,
 }
 
 impl<T> PrimitiveVisitor<T> {
     /// Construct a new `PrimitiveVisitor`.
     #[inline]
-    pub fn new() -> Self {
+    fn new() -> Self {
         PrimitiveVisitor {
             marker: PhantomData,
         }
     }
 }
 
-impl<
-    T: Deserialize + FromPrimitive + str::FromStr
-> Visitor for PrimitiveVisitor<T> {
+impl<T> Visitor for PrimitiveVisitor<T>
+    where T: Deserialize + FromPrimitive + str::FromStr
+{
     type Value = T;
 
     impl_deserialize_num_method!(isize, visit_isize, from_isize, Type::Isize);
