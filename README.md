@@ -81,7 +81,7 @@ Using Serde with Stable Rust, syntex, and serde\_codegen
 
 Stable Rust is a little more complicated because it does not yet support
 compiler plugins. Instead we need to use the code generation library
-[syntex](https://github.com/erickt/rust-syntex) for this:
+[syntex](https://github.com/serde-rs/syntex) for this:
 
 ```toml
 [package]
