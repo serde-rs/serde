@@ -17,18 +17,18 @@ pub enum Animal {
 
 #[derive(Debug)]
 pub enum Error {
-    EndOfStreamError,
-    SyntaxError,
+    EndOfStream,
+    Syntax,
 }
 
 impl serde::de::Error for Error {
-    fn custom(_: String) -> Error { Error::SyntaxError }
+    fn custom(_: String) -> Error { Error::Syntax }
 
-    fn end_of_stream() -> Error { Error::EndOfStreamError }
+    fn end_of_stream() -> Error { Error::EndOfStream }
 
-    fn unknown_field(_: &str) -> Error { Error::SyntaxError }
+    fn unknown_field(_: &str) -> Error { Error::Syntax }
 
-    fn missing_field(_: &'static str) -> Error { Error::SyntaxError }
+    fn missing_field(_: &'static str) -> Error { Error::Syntax }
 }
 
 impl fmt::Display for Error {
@@ -54,12 +54,11 @@ mod decoder {
 
     use super::{Animal, Error};
     use super::Animal::{Dog, Frog};
-    use self::State::{AnimalState, IsizeState, StringState};
 
     enum State {
-        AnimalState(Animal),
-        IsizeState(isize),
-        StringState(String),
+        Animal(Animal),
+        Isize(isize),
+        String(String),
     }
 
     pub struct AnimalDecoder {
@@ -71,7 +70,7 @@ mod decoder {
         #[inline]
         pub fn new(animal: Animal) -> AnimalDecoder {
             AnimalDecoder {
-                stack: vec!(AnimalState(animal)),
+                stack: vec!(State::Animal(animal)),
             }
         }
     }
@@ -79,35 +78,35 @@ mod decoder {
     impl Decoder for AnimalDecoder {
         type Error = Error;
 
-        fn error(&mut self, _: &str) -> Error { Error::SyntaxError }
+        fn error(&mut self, _: &str) -> Error { Error::Syntax }
 
         // Primitive types:
-        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::SyntaxError) }
-        fn read_usize(&mut self) -> Result<usize, Error> { Err(Error::SyntaxError) }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError) }
+        fn read_nil(&mut self) -> Result<(), Error> { Err(Error::Syntax) }
+        fn read_usize(&mut self) -> Result<usize, Error> { Err(Error::Syntax) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::Syntax) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::Syntax) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::Syntax) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::Syntax) }
         #[inline]
         fn read_isize(&mut self) -> Result<isize, Error> {
             match self.stack.pop() {
-                Some(IsizeState(x)) => Ok(x),
-                _ => Err(Error::SyntaxError),
+                Some(State::Isize(x)) => Ok(x),
+                _ => Err(Error::Syntax),
             }
         }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
-        fn read_char(&mut self) -> Result<char, Error> { Err(Error::SyntaxError) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::Syntax) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::Syntax) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::Syntax) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::Syntax) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::Syntax) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::Syntax) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::Syntax) }
+        fn read_char(&mut self) -> Result<char, Error> { Err(Error::Syntax) }
         #[inline]
         fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
-                Some(StringState(x)) => Ok(x),
-                _ => Err(Error::SyntaxError),
+                Some(State::String(x)) => Ok(x),
+                _ => Err(Error::Syntax),
             }
         }
 
@@ -117,15 +116,15 @@ mod decoder {
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
-                Some(AnimalState(animal)) => {
-                    self.stack.push(AnimalState(animal));
+                Some(State::Animal(animal)) => {
+                    self.stack.push(State::Animal(animal));
                     if name == "Animal" {
                         f(self)
                     } else {
-                        Err(Error::SyntaxError)
+                        Err(Error::Syntax)
                     }
                 }
-                _ => Err(Error::SyntaxError)
+                _ => Err(Error::Syntax)
             }
         }
 
@@ -134,18 +133,18 @@ mod decoder {
             F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
             let name = match self.stack.pop() {
-                Some(AnimalState(Dog)) => "Dog",
-                Some(AnimalState(Frog(x0, x1))) => {
-                    self.stack.push(IsizeState(x1));
-                    self.stack.push(StringState(x0));
+                Some(State::Animal(Dog)) => "Dog",
+                Some(State::Animal(Frog(x0, x1))) => {
+                    self.stack.push(State::Isize(x1));
+                    self.stack.push(State::String(x0));
                     "Frog"
                 }
-                _ => { return Err(Error::SyntaxError); }
+                _ => { return Err(Error::Syntax); }
             };
 
             let idx = match names.iter().position(|n| *n == name) {
                 Some(idx) => idx,
-                None => { return Err(Error::SyntaxError); }
+                None => { return Err(Error::Syntax); }
             };
 
             f(self, idx)
@@ -161,56 +160,56 @@ mod decoder {
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_struct_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         // Specialized types:
         fn read_option<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder, bool) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         #[inline]
@@ -230,19 +229,19 @@ mod decoder {
         fn read_map<T, F>(&mut self, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_map_elt_key<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_map_elt_val<T, F>(&mut self, _idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut AnimalDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
     }
 }
@@ -256,10 +255,10 @@ mod deserializer {
 
     #[derive(Debug)]
     enum State {
-        AnimalState(Animal),
-        IsizeState(isize),
-        StrState(&'static str),
-        StringState(String),
+        Animal(Animal),
+        Isize(isize),
+        Str(&'static str),
+        String(String),
         UnitState,
     }
 
@@ -271,7 +270,7 @@ mod deserializer {
         #[inline]
         pub fn new(animal: Animal) -> AnimalDeserializer {
             AnimalDeserializer {
-                stack: vec!(State::AnimalState(animal)),
+                stack: vec!(State::Animal(animal)),
             }
         }
     }
@@ -284,23 +283,23 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.stack.pop() {
-                Some(State::IsizeState(value)) => {
+                Some(State::Isize(value)) => {
                     visitor.visit_isize(value)
                 }
-                Some(State::StringState(value)) => {
+                Some(State::String(value)) => {
                     visitor.visit_string(value)
                 }
-                Some(State::StrState(value)) => {
+                Some(State::Str(value)) => {
                     visitor.visit_str(value)
                 }
                 Some(State::UnitState) => {
                     visitor.visit_unit()
                 }
                 Some(_) => {
-                    Err(Error::SyntaxError)
+                    Err(Error::Syntax)
                 }
                 None => {
-                    Err(Error::EndOfStreamError)
+                    Err(Error::EndOfStream)
                 }
             }
         }
@@ -313,27 +312,27 @@ mod deserializer {
             where V: de::EnumVisitor,
         {
             match self.stack.pop() {
-                Some(State::AnimalState(Animal::Dog)) => {
+                Some(State::Animal(Animal::Dog)) => {
                     self.stack.push(State::UnitState);
-                    self.stack.push(State::StrState("Dog"));
+                    self.stack.push(State::Str("Dog"));
                     visitor.visit(DogVisitor {
                         de: self,
                     })
                 }
-                Some(State::AnimalState(Animal::Frog(x0, x1))) => {
-                    self.stack.push(State::IsizeState(x1));
-                    self.stack.push(State::StringState(x0));
-                    self.stack.push(State::StrState("Frog"));
+                Some(State::Animal(Animal::Frog(x0, x1))) => {
+                    self.stack.push(State::Isize(x1));
+                    self.stack.push(State::String(x0));
+                    self.stack.push(State::Str("Frog"));
                     visitor.visit(FrogVisitor {
                         de: self,
                         state: 0,
                     })
                 }
                 Some(_) => {
-                    Err(Error::SyntaxError)
+                    Err(Error::Syntax)
                 }
                 None => {
-                    Err(Error::EndOfStreamError)
+                    Err(Error::EndOfStream)
                 }
             }
         }
@@ -405,7 +404,7 @@ mod deserializer {
             if self.state == 2 {
                 Ok(())
             } else {
-                Err(Error::SyntaxError)
+                Err(Error::Syntax)
             }
         }
 

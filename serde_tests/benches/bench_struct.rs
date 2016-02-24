@@ -29,17 +29,17 @@ pub struct Outer {
 #[derive(Debug, PartialEq)]
 pub enum Error {
     EndOfStream,
-    SyntaxError,
+    Syntax,
     MissingField,
     OtherError,
 }
 
 impl serde::de::Error for Error {
-    fn custom(_: String) -> Error { Error::SyntaxError }
+    fn custom(_: String) -> Error { Error::Syntax }
 
     fn end_of_stream() -> Error { Error::EndOfStream }
 
-    fn unknown_field(_: &str) -> Error { Error::SyntaxError }
+    fn unknown_field(_: &str) -> Error { Error::Syntax }
 
     fn missing_field(_: &'static str) -> Error {
         Error::MissingField
@@ -68,31 +68,18 @@ mod decoder {
 
     use super::{Outer, Inner, Error};
 
-    use self::State::{
-        OuterState,
-        InnerState,
-        NullState,
-        UsizeState,
-        CharState,
-        StringState,
-        FieldState,
-        VecState,
-        MapState,
-        OptionState,
-    };
-
     #[derive(Debug)]
     enum State {
-        OuterState(Outer),
-        InnerState(Inner),
-        NullState,
-        UsizeState(usize),
-        CharState(char),
-        StringState(String),
-        FieldState(&'static str),
-        VecState(Vec<Inner>),
-        MapState(HashMap<String, Option<char>>),
-        OptionState(bool),
+        Outer(Outer),
+        Inner(Inner),
+        Null,
+        Usize(usize),
+        Char(char),
+        String(String),
+        Field(&'static str),
+        Vec(Vec<Inner>),
+        Map(HashMap<String, Option<char>>),
+        Option(bool),
     }
 
     pub struct OuterDecoder {
@@ -104,7 +91,7 @@ mod decoder {
         #[inline]
         pub fn new(animal: Outer) -> OuterDecoder {
             OuterDecoder {
-                stack: vec!(OuterState(animal)),
+                stack: vec!(State::Outer(animal)),
             }
         }
     }
@@ -120,41 +107,41 @@ mod decoder {
         #[inline]
         fn read_nil(&mut self) -> Result<(), Error> {
             match self.stack.pop() {
-                Some(NullState) => Ok(()),
-                _ => Err(Error::SyntaxError),
+                Some(State::Null) => Ok(()),
+                _ => Err(Error::Syntax),
             }
         }
         #[inline]
         fn read_usize(&mut self) -> Result<usize, Error> {
             match self.stack.pop() {
-                Some(UsizeState(value)) => Ok(value),
-                _ => Err(Error::SyntaxError),
+                Some(State::Usize(value)) => Ok(value),
+                _ => Err(Error::Syntax),
             }
         }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::SyntaxError) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::SyntaxError) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::SyntaxError) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::SyntaxError) }
-        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::SyntaxError) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::SyntaxError) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::SyntaxError) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::SyntaxError) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::SyntaxError) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::SyntaxError) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::SyntaxError) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::SyntaxError) }
+        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::Syntax) }
+        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::Syntax) }
+        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::Syntax) }
+        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::Syntax) }
+        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::Syntax) }
+        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::Syntax) }
+        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::Syntax) }
+        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::Syntax) }
+        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::Syntax) }
+        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::Syntax) }
+        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::Syntax) }
+        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::Syntax) }
         #[inline]
         fn read_char(&mut self) -> Result<char, Error> {
             match self.stack.pop() {
-                Some(CharState(c)) => Ok(c),
-                _ => Err(Error::SyntaxError),
+                Some(State::Char(c)) => Ok(c),
+                _ => Err(Error::Syntax),
             }
         }
         #[inline]
         fn read_str(&mut self) -> Result<String, Error> {
             match self.stack.pop() {
-                Some(StringState(value)) => Ok(value),
-                _ => Err(Error::SyntaxError),
+                Some(State::String(value)) => Ok(value),
+                _ => Err(Error::Syntax),
             }
         }
 
@@ -162,31 +149,31 @@ mod decoder {
         fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         #[inline]
@@ -194,31 +181,31 @@ mod decoder {
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
-                Some(OuterState(Outer { inner })) => {
+                Some(State::Outer(Outer { inner })) => {
                     if s_name == "Outer" {
-                        self.stack.push(VecState(inner));
-                        self.stack.push(FieldState("inner"));
+                        self.stack.push(State::Vec(inner));
+                        self.stack.push(State::Field("inner"));
                         f(self)
                     } else {
-                        Err(Error::SyntaxError)
+                        Err(Error::Syntax)
                     }
                 }
-                Some(InnerState(Inner { a: (), b, c })) => {
+                Some(State::Inner(Inner { a: (), b, c })) => {
                     if s_name == "Inner" {
-                        self.stack.push(MapState(c));
-                        self.stack.push(FieldState("c"));
+                        self.stack.push(State::Map(c));
+                        self.stack.push(State::Field("c"));
 
-                        self.stack.push(UsizeState(b));
-                        self.stack.push(FieldState("b"));
+                        self.stack.push(State::Usize(b));
+                        self.stack.push(State::Field("b"));
 
-                        self.stack.push(NullState);
-                        self.stack.push(FieldState("a"));
+                        self.stack.push(State::Null);
+                        self.stack.push(State::Field("a"));
                         f(self)
                     } else {
-                        Err(Error::SyntaxError)
+                        Err(Error::Syntax)
                     }
                 }
-                _ => Err(Error::SyntaxError),
+                _ => Err(Error::Syntax),
             }
         }
         #[inline]
@@ -226,39 +213,39 @@ mod decoder {
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
-                Some(FieldState(name)) => {
+                Some(State::Field(name)) => {
                     if f_name == name {
                         f(self)
                     } else {
-                        Err(Error::SyntaxError)
+                        Err(Error::Syntax)
                     }
                 }
-                _ => Err(Error::SyntaxError)
+                _ => Err(Error::Syntax)
             }
         }
 
         fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
             F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
-            Err(Error::SyntaxError)
+            Err(Error::Syntax)
         }
 
         // Specialized types:
@@ -267,8 +254,8 @@ mod decoder {
             F: FnOnce(&mut OuterDecoder, bool) -> Result<T, Error>,
         {
             match self.stack.pop() {
-                Some(OptionState(b)) => f(self, b),
-                _ => Err(Error::SyntaxError),
+                Some(State::Option(b)) => f(self, b),
+                _ => Err(Error::Syntax),
             }
         }
 
@@ -277,14 +264,14 @@ mod decoder {
             F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             match self.stack.pop() {
-                Some(VecState(value)) => {
+                Some(State::Vec(value)) => {
                     let len = value.len();
                     for inner in value.into_iter().rev() {
-                        self.stack.push(InnerState(inner));
+                        self.stack.push(State::Inner(inner));
                     }
                     f(self, len)
                 }
-                _ => Err(Error::SyntaxError)
+                _ => Err(Error::Syntax)
             }
         }
         #[inline]
@@ -299,23 +286,23 @@ mod decoder {
             F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             match self.stack.pop() {
-                Some(MapState(map)) => {
+                Some(State::Map(map)) => {
                     let len = map.len();
                     for (key, value) in map {
                         match value {
                             Some(c) => {
-                                self.stack.push(CharState(c));
-                                self.stack.push(OptionState(true));
+                                self.stack.push(State::Char(c));
+                                self.stack.push(State::Option(true));
                             }
                             None => {
-                                self.stack.push(OptionState(false));
+                                self.stack.push(State::Option(false));
                             }
                         }
-                        self.stack.push(StringState(key));
+                        self.stack.push(State::String(key));
                     }
                     f(self, len)
                 }
-                _ => Err(Error::SyntaxError),
+                _ => Err(Error::Syntax),
             }
         }
         #[inline]
@@ -346,16 +333,16 @@ mod deserializer {
 
     #[derive(Debug)]
     enum State {
-        OuterState(Outer),
-        InnerState(Inner),
-        StrState(&'static str),
-        NullState,
-        UsizeState(usize),
-        CharState(char),
-        StringState(String),
-        OptionState(bool),
-        VecState(Vec<Inner>),
-        MapState(HashMap<String, Option<char>>),
+        Outer(Outer),
+        Inner(Inner),
+        Str(&'static str),
+        Null,
+        Usize(usize),
+        Char(char),
+        String(String),
+        Option(bool),
+        Vec(Vec<Inner>),
+        Map(HashMap<String, Option<char>>),
     }
 
     pub struct OuterDeserializer {
@@ -366,7 +353,7 @@ mod deserializer {
         #[inline]
         pub fn new(outer: Outer) -> OuterDeserializer {
             OuterDeserializer {
-                stack: vec!(State::OuterState(outer)),
+                stack: vec!(State::Outer(outer)),
             }
         }
     }
@@ -378,40 +365,40 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.stack.pop() {
-                Some(State::VecState(value)) => {
+                Some(State::Vec(value)) => {
                     visitor.visit_seq(OuterSeqVisitor {
                         de: self,
                         iter: value.into_iter(),
                     })
                 }
-                Some(State::MapState(value)) => {
+                Some(State::Map(value)) => {
                     visitor.visit_map(MapVisitor {
                         de: self,
                         iter: value.into_iter(),
                     })
                 }
-                Some(State::NullState) => {
+                Some(State::Null) => {
                     visitor.visit_unit()
                 }
-                Some(State::UsizeState(x)) => {
+                Some(State::Usize(x)) => {
                     visitor.visit_usize(x)
                 }
-                Some(State::CharState(x)) => {
+                Some(State::Char(x)) => {
                     visitor.visit_char(x)
                 }
-                Some(State::StrState(x)) => {
+                Some(State::Str(x)) => {
                     visitor.visit_str(x)
                 }
-                Some(State::StringState(x)) => {
+                Some(State::String(x)) => {
                     visitor.visit_string(x)
                 }
-                Some(State::OptionState(false)) => {
+                Some(State::Option(false)) => {
                     visitor.visit_none()
                 }
-                Some(State::OptionState(true)) => {
+                Some(State::Option(true)) => {
                     visitor.visit_some(self)
                 }
-                Some(_) => Err(Error::SyntaxError),
+                Some(_) => Err(Error::Syntax),
                 None => Err(Error::EndOfStream),
             }
         }
@@ -423,32 +410,32 @@ mod deserializer {
             where V: de::Visitor,
         {
             match self.stack.pop() {
-                Some(State::OuterState(Outer { inner })) => {
+                Some(State::Outer(Outer { inner })) => {
                     if name != "Outer" {
-                        return Err(Error::SyntaxError);
+                        return Err(Error::Syntax);
                     }
 
-                    self.stack.push(State::VecState(inner));
-                    self.stack.push(State::StrState("inner"));
+                    self.stack.push(State::Vec(inner));
+                    self.stack.push(State::Str("inner"));
 
                     visitor.visit_map(OuterMapVisitor {
                         de: self,
                         state: 0,
                     })
                 }
-                Some(State::InnerState(Inner { a: (), b, c })) => {
+                Some(State::Inner(Inner { a: (), b, c })) => {
                     if name != "Inner" {
-                        return Err(Error::SyntaxError);
+                        return Err(Error::Syntax);
                     }
 
-                    self.stack.push(State::MapState(c));
-                    self.stack.push(State::StrState("c"));
+                    self.stack.push(State::Map(c));
+                    self.stack.push(State::Str("c"));
 
-                    self.stack.push(State::UsizeState(b));
-                    self.stack.push(State::StrState("b"));
+                    self.stack.push(State::Usize(b));
+                    self.stack.push(State::Str("b"));
 
-                    self.stack.push(State::NullState);
-                    self.stack.push(State::StrState("a"));
+                    self.stack.push(State::Null);
+                    self.stack.push(State::Str("a"));
 
                     visitor.visit_map(InnerMapVisitor {
                         de: self,
@@ -456,7 +443,7 @@ mod deserializer {
                     })
                 }
                 _ => {
-                    Err(Error::SyntaxError)
+                    Err(Error::Syntax)
                 }
             }
         }
@@ -494,7 +481,7 @@ mod deserializer {
             if self.state == 1 {
                 Ok(())
             } else {
-                Err(Error::SyntaxError)
+                Err(Error::Syntax)
             }
         }
 
@@ -517,7 +504,7 @@ mod deserializer {
         {
             match self.iter.next() {
                 Some(value) => {
-                    self.de.stack.push(State::InnerState(value));
+                    self.de.stack.push(State::Inner(value));
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
                 None => {
@@ -528,7 +515,7 @@ mod deserializer {
 
         fn end(&mut self) -> Result<(), Error> {
             match self.iter.next() {
-                Some(_) => Err(Error::SyntaxError),
+                Some(_) => Err(Error::Syntax),
                 None => Ok(()),
             }
         }
@@ -570,7 +557,7 @@ mod deserializer {
             if self.state == 3 {
                 Ok(())
             } else {
-                Err(Error::SyntaxError)
+                Err(Error::Syntax)
             }
         }
 
@@ -593,14 +580,14 @@ mod deserializer {
         {
             match self.iter.next() {
                 Some((key, Some(value))) => {
-                    self.de.stack.push(State::CharState(value));
-                    self.de.stack.push(State::OptionState(true));
-                    self.de.stack.push(State::StringState(key));
+                    self.de.stack.push(State::Char(value));
+                    self.de.stack.push(State::Option(true));
+                    self.de.stack.push(State::String(key));
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
                 Some((key, None)) => {
-                    self.de.stack.push(State::OptionState(false));
-                    self.de.stack.push(State::StringState(key));
+                    self.de.stack.push(State::Option(false));
+                    self.de.stack.push(State::String(key));
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
                 None => {
@@ -617,7 +604,7 @@ mod deserializer {
 
         fn end(&mut self) -> Result<(), Error> {
             match self.iter.next() {
-                Some(_) => Err(Error::SyntaxError),
+                Some(_) => Err(Error::Syntax),
                 None => Ok(()),
             }
         }
