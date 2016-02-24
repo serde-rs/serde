@@ -348,6 +348,16 @@ pub trait Deserializer {
         self.deserialize(visitor)
     }
 
+    /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
+    /// deserializers that provide a custom byte vector serialization to properly deserialize the
+    /// type.
+    #[inline]
+    fn deserialize_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.deserialize_seq(visitor)
+    }
+
     /// This method hints that the `Deserialize` type is expecting a map of values. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
@@ -403,6 +413,16 @@ pub trait Deserializer {
         self.deserialize_map(visitor)
     }
 
+    /// This method hints that the `Deserialize` type is expecting some sort of struct field
+    /// name.  This allows deserializers to choose between &str, usize, or &[u8] to properly
+    /// deserialize a struct field.
+    #[inline]
+    fn deserialize_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.deserialize(visitor)
+    }
+
     /// This method hints that the `Deserialize` type is expecting a tuple value. This allows
     /// deserializers that provide a custom tuple serialization to properly deserialize the type.
     #[inline]
@@ -423,26 +443,6 @@ pub trait Deserializer {
         where V: EnumVisitor,
     {
         Err(Error::invalid_type(Type::Enum))
-    }
-
-    /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
-    /// deserializers that provide a custom byte vector serialization to properly deserialize the
-    /// type.
-    #[inline]
-    fn deserialize_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor,
-    {
-        self.deserialize_seq(visitor)
-    }
-
-    /// This method hints that the `Deserialize` type is expecting some sort of struct field
-    /// mapping.  This allows deserializers to choose between &str, usize, or &[u8] to properly
-    /// deserialize a struct field.
-    #[inline]
-    fn deserialize_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor,
-    {
-        self.deserialize(visitor)
     }
 
     /// This method hints that the `Deserialize` type needs to deserialize a value whose type
