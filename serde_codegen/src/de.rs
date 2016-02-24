@@ -911,7 +911,7 @@ fn deserialize_field_visitor(
                             Ok(s) => self.visit_str(s),
                             _ => {
                                 Err(
-                                    ::serde::de::Error::syntax(
+                                    ::serde::de::Error::invalid_value(
                                         "could not convert a byte string to a String"
                                     )
                                 )

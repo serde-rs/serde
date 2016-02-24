@@ -416,7 +416,7 @@ pub enum Error {
 }
 
 impl ser::Error for Error {
-    fn syntax(_: &str) -> Error { Error::SyntaxError }
+    fn custom(_: String) -> Error { Error::SyntaxError }
 
     fn invalid_value(msg: &str) -> Error {
         Error::InvalidValue(msg.to_owned())
@@ -424,7 +424,7 @@ impl ser::Error for Error {
 }
 
 impl de::Error for Error {
-    fn syntax(_: &str) -> Error { Error::SyntaxError }
+    fn custom(_: String) -> Error { Error::SyntaxError }
 
     fn end_of_stream() -> Error { Error::EndOfStreamError }
 
