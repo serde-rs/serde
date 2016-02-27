@@ -35,7 +35,7 @@ pub enum Error {
 }
 
 impl serde::de::Error for Error {
-    fn custom(_: String) -> Error { Error::Syntax }
+    fn custom<T: Into<String>>(_: T) -> Error { Error::Syntax }
 
     fn end_of_stream() -> Error { Error::EndOfStream }
 

@@ -10,7 +10,7 @@ pub mod impls;
 /// `Serializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
-    fn custom(msg: String) -> Self;
+    fn custom<T: Into<String>>(msg: T) -> Self;
 
     /// Raised when a `Serialize` was passed an incorrect value.
     fn invalid_value(msg: &str) -> Self {

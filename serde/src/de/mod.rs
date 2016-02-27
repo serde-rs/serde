@@ -12,7 +12,7 @@ mod from_primitive;
 /// `Deserializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
-    fn custom(msg: String) -> Self;
+    fn custom<T: Into<String>>(msg: T) -> Self;
 
     /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
