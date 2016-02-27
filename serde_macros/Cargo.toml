@@ -8,17 +8,27 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://github.com/serde-rs/serde"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
+build = "build.rs"
 
 [lib]
 name = "serde_macros"
 plugin = true
 
 [features]
-unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
+unstable-testing = [
+    "clippy",
+    "skeptic",
+    "serde/unstable-testing",
+    "serde_codegen/unstable-testing"
+]
+
+[build-dependencies]
+skeptic = { version = "^0.6.0", optional = true }
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
 serde_codegen = { version = "=0.8.0", default-features = false, features = ["unstable"] }
+skeptic = { version = "^0.6.0", optional = true }
 
 [dev-dependencies]
 clippy = "^0.*"
