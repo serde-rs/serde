@@ -10,11 +10,11 @@ use serde::bytes::{ByteBuf, Bytes};
 struct Error;
 
 impl serde::ser::Error for Error {
-    fn custom(_: String) -> Error { Error }
+    fn custom<T: Into<String>>(_: T) -> Error { Error }
 }
 
 impl serde::de::Error for Error {
-    fn custom(_: String) -> Error { Error }
+    fn custom<T: Into<String>>(_: T) -> Error { Error }
 
     fn end_of_stream() -> Error { Error }
 }

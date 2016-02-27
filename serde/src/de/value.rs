@@ -50,7 +50,7 @@ pub enum Error {
 }
 
 impl de::Error for Error {
-    fn custom(msg: String) -> Self { Error::Custom(msg) }
+    fn custom<T: Into<String>>(msg: T) -> Self { Error::Custom(msg.into()) }
     fn end_of_stream() -> Self { Error::EndOfStream }
     fn invalid_type(ty: de::Type) -> Self { Error::InvalidType(ty) }
     fn invalid_value(msg: &str) -> Self { Error::InvalidValue(msg.to_owned()) }
