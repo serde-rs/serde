@@ -1,5 +1,4 @@
 language: rust
-sudo: false
 
 rust:
   - stable
