@@ -60,11 +60,7 @@ fn serialize_item(
         }
     };
 
-    let impl_generics = builder.from_generics(generics.clone())
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "ser", "Serialize"]).build()
-        )
-        .build();
+    let impl_generics = build_impl_generics(cx, builder, item, generics);
 
     let ty = builder.ty().path()
         .segment(item.ident).with_generics(impl_generics.clone()).build()
@@ -87,6 +83,117 @@ fn serialize_item(
             }
         }
     ).unwrap())
+}
+
+// All the generics in the input, plus a bound `T: Serialize` for each field
+// type that will be serialized by us.
+fn build_impl_generics(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    item: &Item,
+    generics: &ast::Generics,
+) -> ast::Generics {
+    let serialize_path = builder.path()
+        .global()
+        .ids(&["serde", "ser", "Serialize"])
+        .build();
+
+    builder.from_generics(generics.clone())
+        .with_predicates(
+            all_variants(cx, item).iter()
+                .flat_map(|variant_data| all_struct_fields(variant_data))
+                .filter(|field| serialized_by_us(field))
+                .map(|field| &field.node.ty)
+                .map(|ty| strip_reference(ty))
+                .map(|ty| builder.where_predicate()
+                    // the type that is being bounded i.e. T
+                    .bound().build(ty.clone())
+                    // the bound i.e. Serialize
+                    .bound().trait_(serialize_path.clone()).build()
+                    .build()))
+        .build()
+}
+
+fn all_variants<'a>(cx: &ExtCtxt, item: &'a Item) -> Vec<&'a ast::VariantData> {
+    match item.node {
+        ast::ItemKind::Struct(ref variant_data, _) => {
+            vec![variant_data]
+        }
+        ast::ItemKind::Enum(ref enum_def, _) => {
+            enum_def.variants.iter()
+                .map(|variant| &variant.node.data)
+                .collect()
+        }
+        _ => {
+            cx.span_bug(item.span,
+                        "expected Item to be Struct or Enum in #[derive(Serialize)]");
+        }
+    }
+}
+
+fn all_struct_fields(variant_data: &ast::VariantData) -> &[ast::StructField] {
+    match *variant_data {
+        ast::VariantData::Struct(ref fields, _) |
+        ast::VariantData::Tuple(ref fields, _) => {
+            fields
+        }
+        ast::VariantData::Unit(_) => {
+            &[]
+        }
+    }
+}
+
+// Fields with a `skip_serializing` or `serialize_with` attribute are not
+// serialized by us. All other fields will receive a `T: Serialize` bound where
+// T is the type of the field.
+fn serialized_by_us(field: &ast::StructField) -> bool {
+    for meta_items in field.node.attrs.iter().filter_map(attr::get_serde_meta_items) {
+        for meta_item in meta_items {
+            match meta_item.node {
+                ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
+                    return false
+                }
+                ast::MetaItemKind::NameValue(ref name, _) if name == &"serialize_with" => {
+                    return false
+                }
+                _ => {}
+            }
+        }
+    }
+    true
+}
+
+// This is required to handle types that use both a reference and a value of
+// the same type, as in:
+//
+//    enum Test<'a, T> where T: 'a {
+//        Lifetime(&'a T),
+//        NoLifetime(T),
+//    }
+//
+// Preserving references, we would generate an impl like:
+//
+//    impl<'a, T> Serialize for Test<'a, T>
+//        where &'a T: Serialize,
+//              T: Serialize { ... }
+//
+// And taking a reference to one of the elements would fail with:
+//
+//    error: cannot infer an appropriate lifetime for pattern due
+//    to conflicting requirements [E0495]
+//        Test::NoLifetime(ref v) => { ... }
+//                         ^~~~~
+//
+// Instead, we strip references before adding `T: Serialize` bounds in order to
+// generate:
+//
+//    impl<'a, T> Serialize for Test<'a, T>
+//        where T: Serialize { ... }
+fn strip_reference(ty: &P<ast::Ty>) -> &P<ast::Ty> {
+    match ty.node {
+        ast::TyKind::Rptr(_, ref mut_ty) => &mut_ty.ty,
+        _ => ty
+    }
 }
 
 fn serialize_body(

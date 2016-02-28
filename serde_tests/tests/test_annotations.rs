@@ -10,23 +10,33 @@ use token::{
     assert_de_tokens_error
 };
 
-trait Trait: Sized {
+trait MyDefault: Sized {
     fn my_default() -> Self;
+}
 
+trait ShouldSkip: Sized {
     fn should_skip(&self) -> bool;
+}
 
+trait SerializeWith: Sized {
     fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
         where S: Serializer;
+}
 
+trait DeserializeWith: Sized {
     fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
         where D: Deserializer;
 }
 
-impl Trait for i32 {
+impl MyDefault for i32 {
     fn my_default() -> Self { 123 }
+}
 
+impl ShouldSkip for i32 {
     fn should_skip(&self) -> bool { *self == 123 }
+}
 
+impl SerializeWith for i32 {
     fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
         where S: Serializer
     {
@@ -36,7 +46,9 @@ impl Trait for i32 {
             false.serialize(ser)
         }
     }
+}
 
+impl DeserializeWith for i32 {
     fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
         where D: Deserializer
     {
@@ -49,11 +61,11 @@ impl Trait for i32 {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct DefaultStruct<A, B: Default, C> where C: Trait {
+struct DefaultStruct<A, B: Default, C> where C: MyDefault {
     a1: A,
     #[serde(default)]
     a2: B,
-    #[serde(default="Trait::my_default")]
+    #[serde(default="MyDefault::my_default")]
     a3: C,
 }
 
@@ -95,12 +107,12 @@ fn test_default_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DefaultEnum<A, B: Default, C> where C: Trait {
+enum DefaultEnum<A, B: Default, C> where C: MyDefault {
     Struct {
         a1: A,
         #[serde(default)]
         a2: B,
-        #[serde(default="Trait::my_default")]
+        #[serde(default="MyDefault::my_default")]
         a3: C,
     }
 }
@@ -389,11 +401,11 @@ fn test_rename_enum() {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-struct SkipSerializingStruct<'a, B, C> where C: Trait {
+struct SkipSerializingStruct<'a, B, C> where C: ShouldSkip {
     a: &'a i8,
     #[serde(skip_serializing)]
     b: B,
-    #[serde(skip_serializing_if="Trait::should_skip")]
+    #[serde(skip_serializing_if="ShouldSkip::should_skip")]
     c: C,
 }
 
@@ -440,12 +452,12 @@ fn test_skip_serializing_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SkipSerializingEnum<'a, B, C> where C: Trait {
+enum SkipSerializingEnum<'a, B, C> where C: ShouldSkip {
     Struct {
         a: &'a i8,
         #[serde(skip_serializing)]
         _b: B,
-        #[serde(skip_serializing_if="Trait::should_skip")]
+        #[serde(skip_serializing_if="ShouldSkip::should_skip")]
         c: C,
     }
 }
@@ -492,10 +504,62 @@ fn test_skip_serializing_enum() {
     );
 }
 
+#[derive(Debug, PartialEq)]
+struct NotSerializeStruct(i8);
+
+#[derive(Debug, PartialEq)]
+enum NotSerializeEnum { Trouble }
+
+impl SerializeWith for NotSerializeEnum {
+    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
+        where S: Serializer
+    {
+        "trouble".serialize(ser)
+    }
+}
+
 #[derive(Debug, PartialEq, Serialize)]
-struct SerializeWithStruct<'a, B> where B: Trait {
+struct ContainsNotSerialize<'a, B, C, D> where B: 'a, D: SerializeWith {
+    a: &'a Option<i8>,
+    #[serde(skip_serializing)]
+    b: &'a B,
+    #[serde(skip_serializing)]
+    c: Option<C>,
+    #[serde(serialize_with="SerializeWith::serialize_with")]
+    d: D,
+}
+
+#[test]
+fn test_elt_not_serialize() {
+    let a = 1;
+    assert_ser_tokens(
+        &ContainsNotSerialize {
+            a: &Some(a),
+            b: &NotSerializeStruct(2),
+            c: Some(NotSerializeEnum::Trouble),
+            d: NotSerializeEnum::Trouble,
+        },
+        &[
+            Token::StructStart("ContainsNotSerialize", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::Option(true),
+            Token::I8(1),
+
+            Token::StructSep,
+            Token::Str("d"),
+            Token::Str("trouble"),
+
+            Token::StructEnd,
+        ]
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+struct SerializeWithStruct<'a, B> where B: SerializeWith {
     a: &'a i8,
-    #[serde(serialize_with="Trait::serialize_with")]
+    #[serde(serialize_with="SerializeWith::serialize_with")]
     b: B,
 }
 
@@ -544,10 +608,10 @@ fn test_serialize_with_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SerializeWithEnum<'a, B> where B: Trait {
+enum SerializeWithEnum<'a, B> where B: SerializeWith {
     Struct {
         a: &'a i8,
-        #[serde(serialize_with="Trait::serialize_with")]
+        #[serde(serialize_with="SerializeWith::serialize_with")]
         b: B,
     }
 }
@@ -597,9 +661,9 @@ fn test_serialize_with_enum() {
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-struct DeserializeWithStruct<B> where B: Trait {
+struct DeserializeWithStruct<B> where B: DeserializeWith {
     a: i8,
-    #[serde(deserialize_with="Trait::deserialize_with")]
+    #[serde(deserialize_with="DeserializeWith::deserialize_with")]
     b: B,
 }
 
@@ -647,10 +711,10 @@ fn test_deserialize_with_struct() {
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-enum DeserializeWithEnum<B> where B: Trait {
+enum DeserializeWithEnum<B> where B: DeserializeWith {
     Struct {
         a: i8,
-        #[serde(deserialize_with="Trait::deserialize_with")]
+        #[serde(deserialize_with="DeserializeWith::deserialize_with")]
         b: B,
     }
 }

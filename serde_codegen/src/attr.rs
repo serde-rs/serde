@@ -382,7 +382,7 @@ fn get_renames(cx: &ExtCtxt,
     Ok((ser_name, de_name))
 }
 
-fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
+pub fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
     match attr.node.value.node {
         ast::MetaItemKind::List(ref name, ref items) if name == &"serde" => {
             attr::mark_used(&attr);
