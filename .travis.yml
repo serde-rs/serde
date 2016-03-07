@@ -1,42 +1,33 @@
 language: rust
-
 rust:
-  - stable
-  - beta
-  - nightly
-
+- stable
+- beta
+- nightly
 addons:
   apt:
     packages:
     - libcurl4-openssl-dev
     - libelf-dev
     - libdw-dev
-
 before_script:
 - |
-    pip install 'travis-cargo<0.2' --user &&
-    export PATH=$HOME/.local/bin:$PATH
-
+  pip install 'travis-cargo<0.2' --user &&
+  export PATH=$HOME/.local/bin:$PATH
 script:
 - |
-    (cd serde && travis-cargo build) &&
-    (cd serde && travis-cargo test) &&
-    (cd serde && travis-cargo --only nightly test -- --features nightly-testing) &&
-    (cd serde_tests && travis-cargo test) &&
-    (cd serde_tests && travis-cargo --only nightly test -- --features nightly-testing) &&
-    (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing) &&
-    (cd serde_macros && travis-cargo --only nightly bench -- --features nightly-testing) &&
-    (cd serde && travis-cargo --only stable doc) &&
-    (cd serde_codegen && travis-cargo --only stable doc)
-
+  (cd serde && travis-cargo build) &&
+  (cd serde && travis-cargo test) &&
+  (cd serde && travis-cargo --only nightly test -- --features nightly-testing) &&
+  (cd serde_tests && travis-cargo test) &&
+  (cd serde_tests && travis-cargo --only nightly test -- --features nightly-testing) &&
+  (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing) &&
+  (cd serde_macros && travis-cargo --only nightly bench -- --features nightly-testing) &&
+  (cd serde && travis-cargo --only stable doc) &&
+  (cd serde_codegen && travis-cargo --only stable doc)
 after_success:
-- (cd serde && travis-cargo --only stable doc-upload)
-- (cd serde_tests && travis-cargo coveralls --no-sudo)
-
+- "(cd serde && travis-cargo --only stable doc-upload)"
+- "(cd serde_tests && travis-cargo coveralls --no-sudo)"
 env:
   global:
-    # override the default `--features unstable` used for the nightly branch (optional)
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-
-    # encrypted github token for doc upload (see `GH_TOKEN` link above)
-    - secure: HO41LMpMXkF2In9+1sxWVu7fgolL+y9+4Q5PI6wZX2L5pDwpPJCjxaQarQXCEnoIxED1PlP03JuF7ULNz0zw1ylYhAOfOSdkxFZRnE2wMZqq6qvXBHwyMiDrAociIzoPKSGv7JVrKPsjsnd+96K6xxueIodQZrmAdyq7N/M82Mc=
+  - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+  - secure: Jcd11Jy0xLyacBUB+oKOaxKBm9iZNInenRDtNBY8GKOtqF5fHUfEjgDf538hwRl5L0FP7DLr8oK0IHmzA7lPjJxlzoKVKV3IM7bRZEYzW5DMonf/lcliuGte7SH0NVFhifM87T8HI2hjGdAb+7+m34siBR7M3AY/XjLInrvUFvY=
