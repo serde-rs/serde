@@ -26,17 +26,14 @@ script:
     (cd serde_tests && travis-cargo --only nightly test -- --features nightly-testing) &&
     (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing) &&
     (cd serde_macros && travis-cargo --only nightly bench -- --features nightly-testing) &&
-    (cd serde && travis-cargo --only stable doc) &&
-    (cd serde_codegen && travis-cargo --only stable doc)
+    (cd serde && travis-cargo --only nightly doc) &&
+    (cd serde_codegen && travis-cargo --only nightly doc)
 
 after_success:
-- (cd serde && travis-cargo --only stable doc-upload)
+- scripts/doc-upload.sh
 - (cd serde_tests && travis-cargo coveralls --no-sudo)
 
 env:
   global:
     # override the default `--features unstable` used for the nightly branch (optional)
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-
-    # encrypted github token for doc upload (see `GH_TOKEN` link above)
-    - secure: HO41LMpMXkF2In9+1sxWVu7fgolL+y9+4Q5PI6wZX2L5pDwpPJCjxaQarQXCEnoIxED1PlP03JuF7ULNz0zw1ylYhAOfOSdkxFZRnE2wMZqq6qvXBHwyMiDrAociIzoPKSGv7JVrKPsjsnd+96K6xxueIodQZrmAdyq7N/M82Mc=
