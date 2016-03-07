@@ -717,6 +717,12 @@ Field Annotations:
 | `#[serde(serialize_with="$path")`      | Call a function `fn<T, S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value |
 | `#[serde(deserialize_with="$path")`    | Call a function `fn<T, D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value  |
 
+Upgrading from Serde 0.6
+========================
+
+* `#[serde(skip_serializing_if_none)]` was replaced with `#[serde(skip_serializing_if="Option::is_none)]`.
+* `#[serde(skip_serializing_if_empty)]` was replaced with `#[serde(skip_serializing_if="Vec::is_empty)]`.
+
 Serialization Formats Using Serde
 =================================
 
