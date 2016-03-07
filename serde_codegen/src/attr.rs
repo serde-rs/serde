@@ -181,6 +181,7 @@ impl VariantAttrs {
 pub struct FieldAttrs {
     name: Name,
     skip_serializing_field: bool,
+    skip_deserializing_field: bool,
     skip_serializing_field_if: Option<P<ast::Expr>>,
     default_expr_if_missing: Option<P<ast::Expr>>,
     serialize_with: Option<P<ast::Expr>>,
@@ -204,6 +205,7 @@ impl FieldAttrs {
         let mut field_attrs = FieldAttrs {
             name: Name::new(field_ident),
             skip_serializing_field: false,
+            skip_deserializing_field: false,
             skip_serializing_field_if: None,
             default_expr_if_missing: None,
             serialize_with: None,
@@ -247,6 +249,11 @@ impl FieldAttrs {
                     // Parse `#[serde(skip_serializing)]`
                     ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
                         field_attrs.skip_serializing_field = true;
+                    }
+
+                    // Parse `#[serde(skip_deserializing)]`
+                    ast::MetaItemKind::Word(ref name) if name == &"skip_deserializing" => {
+                        field_attrs.skip_deserializing_field = true;
                     }
 
                     // Parse `#[serde(skip_serializing_if="...")]`
@@ -323,6 +330,10 @@ impl FieldAttrs {
     /// Predicate for ignoring a field when serializing a value
     pub fn skip_serializing_field(&self) -> bool {
         self.skip_serializing_field
+    }
+
+    pub fn skip_deserializing_field(&self) -> bool {
+        self.skip_deserializing_field
     }
 
     pub fn skip_serializing_field_if(&self) -> Option<&P<ast::Expr>> {
