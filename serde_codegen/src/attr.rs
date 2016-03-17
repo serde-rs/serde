@@ -462,11 +462,11 @@ fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::
     // error reporting, we'll first parse the string into a token tree. Then we'll update those
     // spans to say they're coming from a macro context that originally came from the attribute,
     // and then finally parse them into an expression.
-    let tts = parse::parse_tts_from_source_str(
+    let tts = panictry!(parse::parse_tts_from_source_str(
         format!("<serde {} expansion>", name),
         (*source).to_owned(),
         cx.cfg(),
-        cx.parse_sess());
+        cx.parse_sess()));
 
     // Respan the spans to say they are all coming from this macro.
     let tts = Respanner { cx: cx }.fold_tts(&tts);
