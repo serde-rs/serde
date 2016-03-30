@@ -30,11 +30,6 @@ impl Name {
         }
     }
 
-    /// Return the string expression of the field ident.
-    pub fn ident_expr(&self) -> P<ast::Expr> {
-        AstBuilder::new().expr().str(self.ident)
-    }
-
     /// Return the container name for the container when serializing.
     pub fn serialize_name(&self) -> InternedString {
         match self.serialize_name {
@@ -310,7 +305,7 @@ impl FieldAttrs {
         match self.default_expr_if_missing {
             Some(ref expr) => expr.clone(),
             None => {
-                let name = self.name.ident_expr();
+                let name = self.name.deserialize_name_expr();
                 AstBuilder::new().expr()
                     .try()
                     .method_call("missing_field").id("visitor")
