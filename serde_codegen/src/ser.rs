@@ -80,7 +80,7 @@ fn serialize_item(
 
     Ok(quote_item!(cx,
         impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
-            fn serialize<__S>(&self, serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
+            fn serialize<__S>(&self, _serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
                 where __S: ::serde::ser::Serializer,
             {
                 $body
@@ -188,7 +188,7 @@ fn serialize_unit_struct(
     let type_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx,
-        serializer.serialize_unit_struct($type_name)
+        _serializer.serialize_unit_struct($type_name)
     ))
 }
 
@@ -199,7 +199,7 @@ fn serialize_newtype_struct(
     let type_name = container_attrs.name().serialize_name_expr();
 
     Ok(quote_expr!(cx,
-        serializer.serialize_newtype_struct($type_name, &self.0)
+        _serializer.serialize_newtype_struct($type_name, &self.0)
     ))
 }
 
@@ -229,7 +229,7 @@ fn serialize_tuple_struct(
     Ok(quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.serialize_tuple_struct($type_name, Visitor {
+        _serializer.serialize_tuple_struct($type_name, Visitor {
             value: self,
             state: 0,
             _structure_ty: ::std::marker::PhantomData::<&$ty>,
@@ -264,7 +264,7 @@ fn serialize_struct(
     Ok(quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.serialize_struct($type_name, Visitor {
+        _serializer.serialize_struct($type_name, Visitor {
             value: self,
             state: 0,
             _structure_ty: ::std::marker::PhantomData::<&$ty>,
@@ -331,7 +331,7 @@ fn serialize_variant(
             Ok(quote_arm!(cx,
                 $pat => {
                     ::serde::ser::Serializer::serialize_unit_variant(
-                        serializer,
+                        _serializer,
                         $type_name,
                         $variant_index,
                         $variant_name,
@@ -350,7 +350,7 @@ fn serialize_variant(
             Ok(quote_arm!(cx,
                 $pat => {
                     ::serde::ser::Serializer::serialize_newtype_variant(
-                        serializer,
+                        _serializer,
                         $type_name,
                         $variant_index,
                         $variant_name,
@@ -473,7 +473,7 @@ fn serialize_tuple_variant(
     quote_expr!(cx, {
         $visitor_struct
         $visitor_impl
-        serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, Visitor {
+        _serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, Visitor {
             value: $value_expr,
             state: 0,
             _structure_ty: ::std::marker::PhantomData::<&$structure_ty>,
@@ -557,7 +557,7 @@ fn serialize_struct_variant(
         $variant_struct
         $visitor_struct
         $visitor_impl
-        serializer.serialize_struct_variant(
+        _serializer.serialize_struct_variant(
             $container_name,
             $variant_index,
             $variant_name,
@@ -582,7 +582,7 @@ fn serialize_tuple_struct_visitor(
     let arms: Vec<ast::Arm> = (0 .. fields)
         .map(|i| {
             let expr = builder.expr().method_call(serializer_method)
-                .id("serializer")
+                .id("_serializer")
                 .arg().ref_().tup_field(i).field("value").self_()
                 .build();
 
@@ -620,7 +620,7 @@ fn serialize_tuple_struct_visitor(
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
-                fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
+                fn visit<S>(&mut self, _serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
                     where S: ::serde::ser::Serializer
                 {
                     match self.state {
@@ -672,7 +672,7 @@ fn serialize_struct_visitor(
             };
 
             let expr = quote_expr!(cx,
-                serializer.$serializer_method($key_expr, $field_expr)
+                _serializer.$serializer_method($key_expr, $field_expr)
             );
 
             quote_arm!(cx,
@@ -725,7 +725,7 @@ fn serialize_struct_visitor(
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
-                fn visit<S>(&mut self, serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
+                fn visit<S>(&mut self, _serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
                     where S: ::serde::ser::Serializer,
                 {
                     loop {
