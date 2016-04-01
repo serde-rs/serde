@@ -689,34 +689,34 @@ how types are serialized. Here are the supported annotations:
 
 Container Annotations:
 
-| Annotation                             | Function                                                                                                                                           |
-| ----------                             | --------                                                                                                                                           |
-| `#[serde(rename="name")`               | Serialize and deserialize this container with the given name                                                                                       |
-| `#[serde(rename(serialize="name1"))`   | Serialize this container with the given name                                                                                                       |
-| `#[serde(rename(deserialize="name1"))` | Deserialize this container with the given name                                                                                                     |
-| `#[serde(deny_unknown_fields)`         | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
+| Annotation                              | Function                                                                                                                                           |
+| ----------                              | --------                                                                                                                                           |
+| `#[serde(rename="name")]`               | Serialize and deserialize this container with the given name                                                                                       |
+| `#[serde(rename(serialize="name1"))]`   | Serialize this container with the given name                                                                                                       |
+| `#[serde(rename(deserialize="name1"))]` | Deserialize this container with the given name                                                                                                     |
+| `#[serde(deny_unknown_fields)]`         | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
 
 Variant Annotations:
 
-| Annotation                             | Function                                                   |
-| ----------                             | --------                                                   |
-| `#[serde(rename="name")`               | Serialize and deserialize this variant with the given name |
-| `#[serde(rename(serialize="name1"))`   | Serialize this variant with the given name                 |
-| `#[serde(rename(deserialize="name1"))` | Deserialize this variant with the given name               |
+| Annotation                              | Function                                                   |
+| ----------                              | --------                                                   |
+| `#[serde(rename="name")]`               | Serialize and deserialize this variant with the given name |
+| `#[serde(rename(serialize="name1"))]`   | Serialize this variant with the given name                 |
+| `#[serde(rename(deserialize="name1"))]` | Deserialize this variant with the given name               |
 
 Field Annotations:
 
-| Annotation                             | Function                                                                                                   |
-| ----------                             | --------                                                                                                   |
-| `#[serde(rename="name")`               | Serialize and deserialize this field with the given name                                                   |
-| `#[serde(rename(serialize="name1"))`   | Serialize this field with the given name                                                                   |
-| `#[serde(rename(deserialize="name1"))` | Deserialize this field with the given name                                                                 |
-| `#[serde(default)`                     | If the value is not specified, use the `Default::default()`                                                |
-| `#[serde(default="$path")`             | Call the path to a function `fn() -> T` to build the value                                                 |
-| `#[serde(skip_serializing)`            | Do not serialize this value                                                                                |
-| `#[serde(skip_serializing_if="$path")` | Do not serialize this value if this function `fn(&T) -> bool` returns `false`                              |
-| `#[serde(serialize_with="$path")`      | Call a function `fn<T, S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value |
-| `#[serde(deserialize_with="$path")`    | Call a function `fn<T, D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value  |
+| Annotation                              | Function                                                                                                   |
+| ----------                              | --------                                                                                                   |
+| `#[serde(rename="name")]`               | Serialize and deserialize this field with the given name                                                   |
+| `#[serde(rename(serialize="name1"))]`   | Serialize this field with the given name                                                                   |
+| `#[serde(rename(deserialize="name1"))]` | Deserialize this field with the given name                                                                 |
+| `#[serde(default)]`                     | If the value is not specified, use the `Default::default()`                                                |
+| `#[serde(default="$path")]`             | Call the path to a function `fn() -> T` to build the value                                                 |
+| `#[serde(skip_serializing)]`            | Do not serialize this value                                                                                |
+| `#[serde(skip_serializing_if="$path")]` | Do not serialize this value if this function `fn(&T) -> bool` returns `false`                              |
+| `#[serde(serialize_with="$path")]`      | Call a function `fn<T, S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value |
+| `#[serde(deserialize_with="$path")]`    | Call a function `fn<T, D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value  |
 
 Upgrading from Serde 0.6
 ========================
