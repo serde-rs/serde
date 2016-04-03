@@ -6,6 +6,13 @@ trait Trait {
 }
 */
 
+// That tests that the derived Serialize implementation doesn't trigger
+// any warning about `serializer` not being used, in case of empty enums.
+#[derive(Serialize)]
+#[allow(dead_code)]
+#[deny(unused_variables)]
+enum Void {}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct NamedUnit;
 
