@@ -619,7 +619,7 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
         }
 
         impl $generics ::serde::de::Deserialize for $ty_path $where_clause {
-            fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error>
                 where D: ::serde::de::Deserializer
             {
                 let value = try!($path(deserializer));
