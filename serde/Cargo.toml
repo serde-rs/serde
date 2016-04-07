@@ -5,7 +5,7 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
 repository = "https://github.com/serde-rs/serde"
-documentation = "https://serde-rs.github.io/serde/serde/serde/index.html"
+documentation = "https://serde-rs.github.io/serde/serde/index.html"
 readme = "../README.md"
 keywords = ["serde", "serialization"]
 
