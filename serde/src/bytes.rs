@@ -61,7 +61,7 @@ impl<'a> ser::Serialize for Bytes<'a> {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `ByteBuf` wraps a `Vec<u8>` and serializes as a byte array.
-#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ByteBuf {
     bytes: Vec<u8>,
 }
