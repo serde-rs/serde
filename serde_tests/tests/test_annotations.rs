@@ -698,10 +698,8 @@ fn test_deserialize_with_enum() {
     );
 }
 
-
-
 #[test]
-fn test_missing_renamed_field() {
+fn test_missing_renamed_field_struct() {
     assert_de_tokens_error::<RenameStruct>(
         vec![
             Token::StructStart("Superhero", Some(2)),
@@ -713,5 +711,43 @@ fn test_missing_renamed_field() {
             Token::StructEnd,
         ],
         Error::MissingFieldError("a3"),
-    )
+    );
+
+    assert_de_tokens_error::<RenameStructSerializeDeserialize>(
+        vec![
+            Token::StructStart("SuperheroDe", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::StructEnd,
+        ],
+        Error::MissingFieldError("a5"),
+    );
+}
+
+#[test]
+fn test_missing_renamed_field_enum() {
+    assert_de_tokens_error::<RenameEnum>(
+        vec![
+            Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
+
+            Token::EnumMapEnd,
+        ],
+        Error::MissingFieldError("b"),
+    );
+
+    assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
+        vec![
+            Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
+
+            Token::EnumMapSep,
+            Token::Str("a"),
+            Token::I8(0),
+
+            Token::EnumMapEnd,
+        ],
+        Error::MissingFieldError("d"),
+    );
 }
