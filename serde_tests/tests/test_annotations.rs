@@ -697,3 +697,21 @@ fn test_deserialize_with_enum() {
         ]
     );
 }
+
+
+
+#[test]
+fn test_missing_renamed_field() {
+    assert_de_tokens_error::<RenameStruct>(
+        vec![
+            Token::StructStart("Superhero", Some(2)),
+
+            Token::StructSep,
+            Token::Str("a1"),
+            Token::I32(1),
+
+            Token::StructEnd,
+        ],
+        Error::MissingFieldError("a3"),
+    )
+}
