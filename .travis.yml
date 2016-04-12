@@ -23,9 +23,12 @@ script:
   (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing) &&
   (cd serde_macros && travis-cargo --only nightly bench -- --features nightly-testing) &&
   (cd serde && travis-cargo --only stable doc) &&
-  (cd serde_codegen && travis-cargo --only stable doc)
+  (cd serde_codegen && travis-cargo --only stable doc) &&
+  (cd serde_macros && travis-cargo --only nightly doc)
 after_success:
 - "(cd serde && travis-cargo --only stable doc-upload)"
+- "(cd serde_codegen && travis-cargo --only stable doc-upload)"
+- "(cd serde_macros && travis-cargo --only nightly doc-upload)"
 - "(cd serde_tests && travis-cargo coveralls --no-sudo)"
 env:
   global:

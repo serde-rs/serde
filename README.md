@@ -15,6 +15,8 @@ the same speed as a hand written serializer for a specific type.
 Documentation is available at:
 
 * [serde](https://serde-rs.github.io/serde/serde/index.html)
+* [serde_codegen](https://serde-rs.github.io/serde/serde_codegen/index.html)
+* [serde_macros](https://serde-rs.github.io/serde/serde_macros/index.html)
 
 Using Serde with Nightly Rust and serde\_macros
 ===============================================
