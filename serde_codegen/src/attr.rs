@@ -191,7 +191,7 @@ impl FieldAttrs {
                       is_enum: bool) -> Result<Self, Error> {
         let builder = AstBuilder::new();
 
-        let field_ident = match field.node.ident() {
+        let field_ident = match field.ident {
             Some(ident) => ident,
             None => { cx.span_bug(field.span, "struct field has no name?") }
         };
@@ -205,7 +205,7 @@ impl FieldAttrs {
             deserialize_with: None,
         };
 
-        for meta_items in field.node.attrs.iter().filter_map(get_serde_meta_items) {
+        for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
@@ -273,7 +273,7 @@ impl FieldAttrs {
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize_with" => {
                         let expr = wrap_deserialize_with(
                             cx,
-                            &field.node.ty,
+                            &field.ty,
                             generics,
                             try!(parse_lit_into_path(cx, name, lit)),
                         );
@@ -614,7 +614,7 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
         }
 
         impl $generics ::serde::de::Deserialize for $ty_path $where_clause {
-            fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error>
                 where D: ::serde::de::Deserializer
             {
                 let value = try!($path(deserializer));

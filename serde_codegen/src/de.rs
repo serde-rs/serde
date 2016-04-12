@@ -148,7 +148,7 @@ fn deserialize_item_struct(
             )
         }
         ast::VariantData::Tuple(ref fields, _) => {
-            if fields.iter().any(|field| !field.node.kind.is_unnamed()) {
+            if fields.iter().any(|field| field.ident.is_some()) {
                 cx.span_bug(span, "tuple struct has named fields")
             }
 
@@ -163,7 +163,7 @@ fn deserialize_item_struct(
             )
         }
         ast::VariantData::Struct(ref fields, _) => {
-            if fields.iter().any(|field| field.node.kind.is_unnamed()) {
+            if fields.iter().any(|field| field.ident.is_none()) {
                 cx.span_bug(span, "struct has unnamed fields")
             }
 
@@ -452,9 +452,9 @@ fn deserialize_struct_as_seq(
                 .enumerate()
                 .map(|(i, field)| {
                     (
-                        match field.node.kind {
-                            ast::NamedField(name, _) => name.clone(),
-                            ast::UnnamedField(_) => {
+                        match field.ident {
+                            Some(name) => name.clone(),
+                            None => {
                                 cx.span_bug(field.span, "struct contains unnamed fields")
                             }
                         },
@@ -583,10 +583,10 @@ fn deserialize_item_enum(
         const VARIANTS: &'static [&'static str] = $variants_expr;
     ).unwrap();
 
-    let ignored_arm = if !container_attrs.deny_unknown_fields() {
-        Some(quote_arm!(cx, __Field::__ignore => { Err(::serde::de::Error::end_of_stream()) }))
-    } else {
+    let ignored_arm = if container_attrs.deny_unknown_fields() {
         None
+    } else {
+        Some(quote_arm!(cx, __Field::__ignore => { Err(::serde::de::Error::end_of_stream()) }))
     };
 
     // Match arms to extract a variant from a string
@@ -816,11 +816,11 @@ fn deserialize_field_visitor(
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
-    let ignore_variant = if !container_attrs.deny_unknown_fields() {
+    let ignore_variant = if container_attrs.deny_unknown_fields() {
+        None
+    } else {
         let skip_ident = builder.id("__ignore");
         Some(builder.variant(skip_ident).unit())
-    } else {
-        None
     };
 
     let field_enum = builder.item()
@@ -1008,9 +1008,9 @@ fn deserialize_struct_visitor(
         .with_exprs(
             fields.iter()
                 .map(|field| {
-                    match field.node.kind {
-                        ast::NamedField(name, _) => builder.expr().str(name),
-                        ast::UnnamedField(_) => {
+                    match field.ident {
+                        Some(name) => builder.expr().str(name),
+                        None => {
                             cx.span_bug(field.span, "struct contains unnamed fields")
                         }
                     }
@@ -1053,12 +1053,12 @@ fn deserialize_map(
 
 
     // Visit ignored values to consume them
-    let ignored_arm = if !container_attrs.deny_unknown_fields() {
+    let ignored_arm = if container_attrs.deny_unknown_fields() {
+        None
+    } else {
         Some(quote_arm!(cx,
             _ => { try!(visitor.visit_value::<::serde::de::impls::IgnoredAny>()); }
         ))
-    } else {
-        None
     };
 
     // Match arms to extract a value for a field.
@@ -1099,9 +1099,9 @@ fn deserialize_map(
                 .zip(field_names.iter())
                 .map(|(field, field_name)| {
                     (
-                        match field.node.kind {
-                            ast::NamedField(name, _) => name.clone(),
-                            ast::UnnamedField(_) => {
+                        match field.ident {
+                            Some(name) => name.clone(),
+                            None => {
                                 cx.span_bug(field.span, "struct contains unnamed fields")
                             }
                         },
