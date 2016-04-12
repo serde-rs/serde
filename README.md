@@ -714,6 +714,7 @@ Field Annotations:
 | `#[serde(default)]`                     | If the value is not specified, use the `Default::default()`                                                |
 | `#[serde(default="$path")]`             | Call the path to a function `fn() -> T` to build the value                                                 |
 | `#[serde(skip_serializing)]`            | Do not serialize this value                                                                                |
+| `#[serde(skip_deserializing)]`          | Always use `Default::default()` instead of deserializing this value                                        |
 | `#[serde(skip_serializing_if="$path")]` | Do not serialize this value if this function `fn(&T) -> bool` returns `false`                              |
 | `#[serde(serialize_with="$path")]`      | Call a function `fn<T, S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value |
 | `#[serde(deserialize_with="$path")]`    | Call a function `fn<T, D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value  |

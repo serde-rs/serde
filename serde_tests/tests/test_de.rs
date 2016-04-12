@@ -24,6 +24,7 @@ struct TupleStruct(i32, i32, i32);
 struct Struct {
     a: i32,
     b: i32,
+    #[serde(skip_deserializing)]
     c: i32,
 }
 
@@ -56,6 +57,17 @@ macro_rules! declare_tests {
     ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
         $(
             declare_test!($name { $($value => $tokens,)+ });
+        )+
+    }
+}
+
+macro_rules! declare_error_tests {
+    ($($name:ident<$target:ident> { $tokens:expr, $expected:expr, })+) => {
+        $(
+            #[test]
+            fn $name() {
+                assert_de_tokens_error::<$target>($tokens, $expected);
+            }
         )+
     }
 }
@@ -524,7 +536,40 @@ declare_tests! {
         ],
     }
     test_struct {
-        Struct { a: 1, b: 2, c: 3 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => vec![
+            Token::MapStart(Some(3)),
+                Token::MapSep,
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::MapSep,
+                Token::Str("b"),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => vec![
+            Token::StructStart("Struct", Some(3)),
+                Token::StructSep,
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::StructSep,
+                Token::Str("b"),
+                Token::I32(2),
+            Token::StructEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => vec![
+            Token::SeqStart(Some(3)),
+                Token::SeqSep,
+                Token::I32(1),
+
+                Token::SeqSep,
+                Token::I32(2),
+            Token::SeqEnd,
+        ],
+    }
+    test_struct_with_skip {
+        Struct { a: 1, b: 2, c: 0 } => vec![
             Token::MapStart(Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
@@ -537,9 +582,13 @@ declare_tests! {
                 Token::MapSep,
                 Token::Str("c"),
                 Token::I32(3),
+
+                Token::MapSep,
+                Token::Str("d"),
+                Token::I32(4),
             Token::MapEnd,
         ],
-        Struct { a: 1, b: 2, c: 3 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => vec![
             Token::StructStart("Struct", Some(3)),
                 Token::StructSep,
                 Token::Str("a"),
@@ -552,6 +601,10 @@ declare_tests! {
                 Token::StructSep,
                 Token::Str("c"),
                 Token::I32(3),
+
+                Token::StructSep,
+                Token::Str("d"),
+                Token::I32(4),
             Token::StructEnd,
         ],
     }
@@ -638,12 +691,22 @@ fn test_net_ipaddr() {
     );
 }
 
-#[test]
-fn test_enum_error() {
-    assert_de_tokens_error::<Enum>(
+declare_error_tests! {
+    test_unknown_variant<Enum> {
         vec![
             Token::EnumUnit("Enum", "Foo"),
         ],
         Error::UnknownVariantError("Foo".to_owned()),
-    )
+    }
+    test_struct_seq_too_long<Struct> {
+        vec![
+            Token::SeqStart(Some(4)),
+                Token::SeqSep, Token::I32(1),
+                Token::SeqSep, Token::I32(2),
+                Token::SeqSep, Token::I32(3),
+                Token::SeqSep, Token::I32(4),
+            Token::SeqEnd,
+        ],
+        Error::UnexpectedToken(Token::SeqSep),
+    }
 }
