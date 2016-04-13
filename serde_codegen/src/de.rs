@@ -437,7 +437,7 @@ fn deserialize_struct_as_seq(
         .map(|(i, &(_, ref attrs))| {
             let name = builder.id(format!("__field{}", i));
             if attrs.skip_deserializing_field() {
-                let default = builder.expr().default();
+                let default = attrs.expr_is_missing();
                 quote_stmt!(cx,
                     let $name = $default;
                 ).unwrap()
@@ -1103,7 +1103,7 @@ fn deserialize_map(
                             }
                         },
                         if attrs.skip_deserializing_field() {
-                            builder.expr().default()
+                            attrs.expr_is_missing()
                         } else {
                             builder.expr().id(name)
                         }

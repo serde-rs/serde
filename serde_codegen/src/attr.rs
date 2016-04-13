@@ -249,6 +249,13 @@ impl FieldAttrs {
                     // Parse `#[serde(skip_deserializing)]`
                     ast::MetaItemKind::Word(ref name) if name == &"skip_deserializing" => {
                         field_attrs.skip_deserializing_field = true;
+
+                        // Initialize field to Default::default() unless a different
+                        // default is specified by `#[serde(default="...")]`
+                        if field_attrs.default_expr_if_missing.is_none() {
+                            let default_expr = builder.expr().default();
+                            field_attrs.default_expr_if_missing = Some(default_expr);
+                        }
                     }
 
                     // Parse `#[serde(skip_serializing_if="...")]`
