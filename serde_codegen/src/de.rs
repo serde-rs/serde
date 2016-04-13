@@ -14,6 +14,7 @@ use syntax::parse::token::InternedString;
 use syntax::ptr::P;
 
 use attr;
+use bound;
 use error::Error;
 
 pub fn expand_derive_deserialize(
@@ -46,11 +47,7 @@ pub fn expand_derive_deserialize(
         }
     };
 
-    let impl_generics = builder.from_generics(generics.clone())
-        .add_ty_param_bound(
-            builder.path().global().ids(&["serde", "de", "Deserialize"]).build()
-        )
-        .build();
+    let impl_generics = build_impl_generics(cx, &builder, item, generics);
 
     let ty = builder.ty().path()
         .segment(item.ident).with_generics(impl_generics.clone()).build()
@@ -77,6 +74,82 @@ pub fn expand_derive_deserialize(
     ).unwrap();
 
     push(Annotatable::Item(impl_item))
+}
+
+// All the generics in the input, plus a bound `T: Deserialize` for each generic
+// field type that will be deserialized by us, plus a bound `T: Default` for
+// each generic field type that will be set to a default value.
+fn build_impl_generics(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    item: &Item,
+    generics: &ast::Generics,
+) -> ast::Generics {
+    let generics = bound::with_bound(cx, builder, item, generics,
+        &deserialized_by_us,
+        &["serde", "de", "Deserialize"]);
+    let generics = bound::with_bound(cx, builder, item, &generics,
+        &requires_default,
+        &["std", "default", "Default"]);
+    generics
+}
+
+// Fields with a `skip_deserializing` or `deserialize_with` attribute are not
+// deserialized by us. All other fields may need a `T: Deserialize` bound where
+// T is the type of the field.
+fn deserialized_by_us(field: &ast::StructField) -> bool {
+    for meta_items in field.attrs.iter().filter_map(attr::get_serde_meta_items) {
+        for meta_item in meta_items {
+            match meta_item.node {
+                ast::MetaItemKind::Word(ref name) if name == &"skip_deserializing" => {
+                    return false
+                }
+                ast::MetaItemKind::NameValue(ref name, _) if name == &"deserialize_with" => {
+                    // TODO: For now we require `T: Deserialize` even if the
+                    // field has `deserialize_with`. The reason is the signature
+                    // of serde::de::MapVisitor::missing_field which looks like:
+                    //
+                    // fn missing_field<T>(...) -> Result<T, Self::Error> where T: Deserialize
+                    //
+                    // So in order to use missing_field, the type must have the
+                    // `T: Deserialize` bound. Some formats rely on this bound
+                    // because they treat missing fields as unit.
+                    //
+                    // Long-term the fix would be to change the signature of
+                    // missing_field so it can, for example, use the
+                    // `deserialize_with` function to visit a unit in place of
+                    // the missing field.
+                    //
+                    // See https://github.com/serde-rs/serde/issues/259
+                }
+                _ => {}
+            }
+        }
+    }
+    true
+}
+
+// Fields with a `default` attribute (not `default=...`), and fields with a
+// `skip_deserializing` attribute that do not also have `default=...`.
+fn requires_default(field: &ast::StructField) -> bool {
+    let mut has_skip_deserializing = false;
+    for meta_items in field.attrs.iter().filter_map(attr::get_serde_meta_items) {
+        for meta_item in meta_items {
+            match meta_item.node {
+                ast::MetaItemKind::Word(ref name) if name == &"default" => {
+                    return true
+                }
+                ast::MetaItemKind::NameValue(ref name, _) if name == &"default" => {
+                    return false
+                }
+                ast::MetaItemKind::Word(ref name) if name == &"skip_deserializing" => {
+                    has_skip_deserializing = true
+                }
+                _ => {}
+            }
+        }
+    }
+    has_skip_deserializing
 }
 
 fn deserialize_body(
@@ -442,9 +515,10 @@ fn deserialize_struct_as_seq(
                     let $name = $default;
                 ).unwrap()
             } else {
+                let deserialize_with = attrs.deserialize_with();
                 quote_stmt!(cx,
                     let $name = match try!(visitor.visit()) {
-                        Some(value) => { value },
+                        Some(value) => { $deserialize_with(value) },
                         None => {
                             return Err(::serde::de::Error::end_of_stream());
                         }
@@ -1040,14 +1114,10 @@ fn deserialize_map(
     let value_arms = fields_attrs_names.iter()
         .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
         .map(|&(_, ref attrs, name)| {
-            let expr = match attrs.deserialize_with() {
-                Some(expr) => expr.clone(),
-                None => quote_expr!(cx, visitor.visit_value()),
-            };
-
+            let deserialize_with = attrs.deserialize_with();
             quote_arm!(cx,
                 __Field::$name => {
-                    $name = Some(try!($expr));
+                    $name = Some($deserialize_with(try!(visitor.visit_value())));
                 }
             )
         })

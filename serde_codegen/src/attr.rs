@@ -180,7 +180,7 @@ pub struct FieldAttrs {
     skip_serializing_field_if: Option<P<ast::Expr>>,
     default_expr_if_missing: Option<P<ast::Expr>>,
     serialize_with: Option<P<ast::Expr>>,
-    deserialize_with: Option<P<ast::Expr>>,
+    deserialize_with: P<ast::Expr>,
 }
 
 impl FieldAttrs {
@@ -197,6 +197,8 @@ impl FieldAttrs {
             None => { cx.span_bug(field.span, "struct field has no name?") }
         };
 
+        let identity = quote_expr!(cx, |x| x);
+
         let mut field_attrs = FieldAttrs {
             name: Name::new(field_ident),
             skip_serializing_field: false,
@@ -204,7 +206,7 @@ impl FieldAttrs {
             skip_serializing_field_if: None,
             default_expr_if_missing: None,
             serialize_with: None,
-            deserialize_with: None,
+            deserialize_with: identity,
         };
 
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
@@ -292,7 +294,7 @@ impl FieldAttrs {
                             try!(parse_lit_into_path(cx, name, lit)),
                         );
 
-                        field_attrs.deserialize_with = Some(expr);
+                        field_attrs.deserialize_with = expr;
                     }
 
                     _ => {
@@ -346,8 +348,8 @@ impl FieldAttrs {
         self.serialize_with.as_ref()
     }
 
-    pub fn deserialize_with(&self) -> Option<&P<ast::Expr>> {
-        self.deserialize_with.as_ref()
+    pub fn deserialize_with(&self) -> &P<ast::Expr> {
+        &self.deserialize_with
     }
 }
 
@@ -626,7 +628,7 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
 
     let where_clause = &generics.where_clause;
 
-    quote_expr!(cx, {
+    quote_expr!(cx, ({
         struct __SerdeDeserializeWithStruct $generics $where_clause {
             value: $field_ty,
         }
@@ -640,7 +642,6 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
             }
         }
 
-        let value: $ty_path = try!(visitor.visit_value());
-        Ok(value.value)
-    })
+        |visit: $ty_path| visit.value
+    }))
 }
