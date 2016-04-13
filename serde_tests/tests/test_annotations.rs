@@ -61,18 +61,25 @@ impl DeserializeWith for i32 {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct DefaultStruct<A, B: Default, C> where C: MyDefault {
+struct DefaultStruct<A, B: Default, C, D: Default, E>
+    where C: MyDefault,
+          E: MyDefault,
+{
     a1: A,
     #[serde(default)]
     a2: B,
     #[serde(default="MyDefault::my_default")]
     a3: C,
+    #[serde(skip_deserializing)]
+    a4: D,
+    #[serde(skip_deserializing, default="MyDefault::my_default")]
+    a5: E,
 }
 
 #[test]
 fn test_default_struct() {
     assert_de_tokens(
-        &DefaultStruct { a1: 1, a2: 2, a3: 3 },
+        &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         vec![
             Token::StructStart("DefaultStruct", Some(3)),
 
@@ -88,12 +95,20 @@ fn test_default_struct() {
             Token::Str("a3"),
             Token::I32(3),
 
+            Token::StructSep,
+            Token::Str("a4"),
+            Token::I32(4),
+
+            Token::StructSep,
+            Token::Str("a5"),
+            Token::I32(5),
+
             Token::StructEnd,
         ]
     );
 
     assert_de_tokens(
-        &DefaultStruct { a1: 1, a2: 0, a3: 123 },
+        &DefaultStruct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         vec![
             Token::StructStart("DefaultStruct", Some(1)),
 
@@ -107,22 +122,29 @@ fn test_default_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DefaultEnum<A, B: Default, C> where C: MyDefault {
+enum DefaultEnum<A, B: Default, C, D: Default, E>
+    where C: MyDefault,
+          E: MyDefault
+{
     Struct {
         a1: A,
         #[serde(default)]
         a2: B,
         #[serde(default="MyDefault::my_default")]
         a3: C,
+        #[serde(skip_deserializing)]
+        a4: D,
+        #[serde(skip_deserializing, default="MyDefault::my_default")]
+        a5: E,
     }
 }
 
 #[test]
 fn test_default_enum() {
     assert_de_tokens(
-        &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3 },
+        &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         vec![
-            Token::EnumMapStart("DefaultEnum", "Struct", Some(3)),
+            Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -136,14 +158,22 @@ fn test_default_enum() {
             Token::Str("a3"),
             Token::I32(3),
 
+            Token::EnumMapSep,
+            Token::Str("a4"),
+            Token::I32(4),
+
+            Token::EnumMapSep,
+            Token::Str("a5"),
+            Token::I32(5),
+
             Token::EnumMapEnd,
         ]
     );
 
     assert_de_tokens(
-        &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123 },
+        &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         vec![
-            Token::EnumMapStart("DefaultEnum", "Struct", Some(3)),
+            Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -164,7 +194,7 @@ struct DenyUnknown {
 fn test_ignore_unknown() {
     // 'Default' allows unknown. Basic smoke test of ignore...
     assert_de_tokens(
-        &DefaultStruct { a1: 1, a2: 2, a3: 3 },
+        &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         vec![
             Token::StructStart("DefaultStruct", Some(5)),
 
