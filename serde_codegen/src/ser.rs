@@ -93,9 +93,11 @@ fn build_impl_generics(
     item: &Item,
     generics: &ast::Generics,
 ) -> ast::Generics {
-    bound::with_bound(cx, builder, item, generics,
+    let generics = bound::without_defaults(generics);
+    let generics = bound::with_bound(cx, builder, item, &generics,
         &serialized_by_us,
-        &["serde", "ser", "Serialize"])
+        &["serde", "ser", "Serialize"]);
+    generics
 }
 
 // Fields with a `skip_serializing` or `serialize_with` attribute are not

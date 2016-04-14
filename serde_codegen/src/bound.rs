@@ -7,6 +7,20 @@ use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 use syntax::visit;
 
+// Remove the default from every type parameter because in the generated impls
+// they look like associated types: "error: associated type bindings are not
+// allowed here".
+pub fn without_defaults(generics: &ast::Generics) -> ast::Generics {
+    ast::Generics {
+        ty_params: generics.ty_params.map(|ty_param| {
+            ast::TyParam {
+                default: None,
+                .. ty_param.clone()
+            }}),
+        .. generics.clone()
+    }
+}
+
 pub fn with_bound(
     cx: &ExtCtxt,
     builder: &AstBuilder,

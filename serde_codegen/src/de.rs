@@ -85,7 +85,8 @@ fn build_impl_generics(
     item: &Item,
     generics: &ast::Generics,
 ) -> ast::Generics {
-    let generics = bound::with_bound(cx, builder, item, generics,
+    let generics = bound::without_defaults(generics);
+    let generics = bound::with_bound(cx, builder, item, &generics,
         &deserialized_by_us,
         &["serde", "de", "Deserialize"]);
     let generics = bound::with_bound(cx, builder, item, &generics,
