@@ -664,6 +664,21 @@ declare_tests! {
             Token::Unit,
         ],
     }
+    test_box {
+        Box::new(0i32) => vec![Token::I32(0)],
+    }
+    test_boxed_slice {
+        Box::new([0, 1, 2]) => vec![
+            Token::SeqStart(Some(3)),
+            Token::SeqSep,
+            Token::I32(0),
+            Token::SeqSep,
+            Token::I32(1),
+            Token::SeqSep,
+            Token::I32(2),
+            Token::SeqEnd,
+        ],
+    }
     test_net_ipv4addr {
         "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => vec![Token::Str("1.2.3.4")],
     }
