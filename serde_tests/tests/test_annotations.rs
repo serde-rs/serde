@@ -1,4 +1,3 @@
-use std::default::Default;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use token::{
@@ -61,7 +60,7 @@ impl DeserializeWith for i32 {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct DefaultStruct<A, B: Default, C, D: Default, E>
+struct DefaultStruct<A, B, C, D, E>
     where C: MyDefault,
           E: MyDefault,
 {
@@ -122,7 +121,7 @@ fn test_default_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DefaultEnum<A, B: Default, C, D: Default, E>
+enum DefaultEnum<A, B, C, D, E>
     where C: MyDefault,
           E: MyDefault
 {
@@ -180,6 +179,97 @@ fn test_default_enum() {
             Token::I32(1),
 
             Token::EnumMapEnd,
+        ]
+    );
+}
+
+// Does not implement std::default::Default.
+#[derive(Debug, PartialEq, Deserialize)]
+struct NoStdDefault(i8);
+
+impl MyDefault for NoStdDefault {
+    fn my_default() -> Self {
+        NoStdDefault(123)
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct ContainsNoStdDefault<A: MyDefault> {
+    #[serde(default="MyDefault::my_default")]
+    a: A,
+}
+
+// Tests that a struct field does not need to implement std::default::Default if
+// it is annotated with `default=...`.
+#[test]
+fn test_no_std_default() {
+    assert_de_tokens(
+        &ContainsNoStdDefault { a: NoStdDefault(123) },
+        vec![
+            Token::StructStart("ContainsNoStdDefault", Some(1)),
+            Token::StructEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &ContainsNoStdDefault { a: NoStdDefault(8) },
+        vec![
+            Token::StructStart("ContainsNoStdDefault", Some(1)),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::StructNewType("NoStdDefault"),
+            Token::I8(8),
+
+            Token::StructEnd,
+        ]
+    );
+}
+
+// Does not implement Deserialize.
+#[derive(Debug, PartialEq)]
+struct NotDeserializeStruct(i8);
+
+impl Default for NotDeserializeStruct {
+    fn default() -> Self {
+        NotDeserializeStruct(123)
+    }
+}
+
+// Does not implement Deserialize.
+#[derive(Debug, PartialEq)]
+enum NotDeserializeEnum { Trouble }
+
+impl MyDefault for NotDeserializeEnum {
+    fn my_default() -> Self {
+        NotDeserializeEnum::Trouble
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct ContainsNotDeserialize<A, B, C: MyDefault> {
+    #[serde(skip_deserializing)]
+    a: A,
+    #[serde(skip_deserializing, default)]
+    b: B,
+    #[serde(skip_deserializing, default="MyDefault::my_default")]
+    c: C,
+}
+
+// Tests that a struct field does not need to implement Deserialize if it is
+// annotated with skip_deserializing, whether using the std Default or a
+// custom default.
+#[test]
+fn test_elt_not_deserialize() {
+    assert_de_tokens(
+        &ContainsNotDeserialize {
+            a: NotDeserializeStruct(123),
+            b: NotDeserializeStruct(123),
+            c: NotDeserializeEnum::Trouble,
+        },
+        vec![
+            Token::StructStart("ContainsNotDeserialize", Some(3)),
+            Token::StructEnd,
         ]
     );
 }

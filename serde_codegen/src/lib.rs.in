@@ -1,4 +1,5 @@
 mod attr;
+mod bound;
 mod de;
 mod error;
 mod ser;
