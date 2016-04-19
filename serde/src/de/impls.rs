@@ -881,6 +881,15 @@ impl<T: Deserialize> Deserialize for Box<T> {
     }
 }
 
+impl<T: Deserialize> Deserialize for Box<[T]> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Box<[T]>, D::Error>
+        where D: Deserializer,
+    {
+        let v: Vec<T> = try!(Deserialize::deserialize(deserializer));
+        Ok(v.into_boxed_slice())
+    }
+}
+
 impl<T: Deserialize> Deserialize for Arc<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Arc<T>, D::Error>
         where D: Deserializer,
