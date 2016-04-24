@@ -2,9 +2,10 @@ use std::fmt;
 use std::iter;
 use std::error;
 
-use serde::ser::{self, Serialize};
-use serde::de;
-use serde::de::value::{self, ValueDeserializer};
+extern crate serde;
+use self::serde::ser::{self, Serialize};
+use self::serde::de;
+use self::serde::de::value::{self, ValueDeserializer};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token<'a> {

@@ -2,7 +2,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
-use serde::de::{Deserializer, Visitor};
+extern crate serde;
+use self::serde::de::{Deserializer, Visitor};
 
 use token::{
     Error,

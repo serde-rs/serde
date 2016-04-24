@@ -63,14 +63,21 @@ pub fn expand_derive_deserialize(
 
     let where_clause = &impl_generics.where_clause;
 
+    let dummy_const = builder.id(format!("_IMPL_DESERIALIZE_FOR_{}", item.ident));
+
     let impl_item = quote_item!(cx,
-        impl $impl_generics ::serde::de::Deserialize for $ty $where_clause {
-            fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<$ty, __D::Error>
-                where __D: ::serde::de::Deserializer,
-            {
-                $body
+        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const $dummy_const: () = {
+            extern crate serde as _serde;
+            #[automatically_derived]
+            impl $impl_generics _serde::de::Deserialize for $ty $where_clause {
+                fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<$ty, __D::Error>
+                    where __D: _serde::de::Deserializer,
+                {
+                    $body
+                }
             }
-        }
+        };
     ).unwrap();
 
     push(Annotatable::Item(impl_item))
@@ -88,10 +95,10 @@ fn build_impl_generics(
     let generics = bound::without_defaults(generics);
     let generics = bound::with_bound(cx, builder, item, &generics,
         &deserialized_by_us,
-        &["serde", "de", "Deserialize"]);
+        &builder.path().ids(&["_serde", "de", "Deserialize"]).build());
     let generics = bound::with_bound(cx, builder, item, &generics,
         &requires_default,
-        &["std", "default", "Default"]);
+        &builder.path().global().ids(&["std", "default", "Default"]).build());
     generics
 }
 
@@ -323,8 +330,7 @@ fn deserialize_visitor(
 fn deserializer_ty_param(builder: &aster::AstBuilder) -> ast::TyParam {
     builder.ty_param("__D")
         .trait_bound(builder.path()
-                     .global()
-                     .segment("serde").build()
+                     .segment("_serde").build()
                      .segment("de").build()
                      .id("Deserializer")
                      .build())
@@ -346,19 +352,19 @@ fn deserialize_unit_struct(
     Ok(quote_expr!(cx, {
         struct __Visitor;
 
-        impl ::serde::de::Visitor for __Visitor {
+        impl _serde::de::Visitor for __Visitor {
             type Value = $type_ident;
 
             #[inline]
             fn visit_unit<E>(&mut self) -> ::std::result::Result<$type_ident, E>
-                where E: ::serde::de::Error,
+                where E: _serde::de::Error,
             {
                 Ok($type_ident)
             }
 
             #[inline]
             fn visit_seq<V>(&mut self, mut visitor: V) -> ::std::result::Result<$type_ident, V::Error>
-                where V: ::serde::de::SeqVisitor,
+                where V: _serde::de::SeqVisitor,
             {
                 try!(visitor.end());
                 self.visit_unit()
@@ -398,20 +404,20 @@ fn deserialize_newtype_struct(
     Ok(quote_expr!(cx, {
         $visitor_item
 
-        impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
+        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             #[inline]
             fn visit_newtype_struct<D>(&mut self, deserializer: &mut D) -> ::std::result::Result<Self::Value, D::Error>
-                where D: ::serde::de::Deserializer,
+                where D: _serde::de::Deserializer,
             {
-                let value = try!(::serde::de::Deserialize::deserialize(deserializer));
+                let value = try!(_serde::de::Deserialize::deserialize(deserializer));
                 Ok($type_ident(value))
             }
 
             #[inline]
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::SeqVisitor,
+                where __V: _serde::de::SeqVisitor,
             {
                 $visit_seq_expr
             }
@@ -451,12 +457,12 @@ fn deserialize_tuple_struct(
     Ok(quote_expr!(cx, {
         $visitor_item
 
-        impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
+        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             #[inline]
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::SeqVisitor,
+                where __V: _serde::de::SeqVisitor,
             {
                 $visit_seq_expr
             }
@@ -479,7 +485,7 @@ fn deserialize_seq(
                 let $name = match try!(visitor.visit()) {
                     Some(value) => { value },
                     None => {
-                        return Err(::serde::de::Error::end_of_stream());
+                        return Err(_serde::de::Error::end_of_stream());
                     }
                 };
             ).unwrap()
@@ -521,7 +527,7 @@ fn deserialize_struct_as_seq(
                     let $name = match try!(visitor.visit()) {
                         Some(value) => { $deserialize_with(value) },
                         None => {
-                            return Err(::serde::de::Error::end_of_stream());
+                            return Err(_serde::de::Error::end_of_stream());
                         }
                     };
                 ).unwrap()
@@ -600,19 +606,19 @@ fn deserialize_struct(
 
         $visitor_item
 
-        impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
+        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             #[inline]
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::SeqVisitor,
+                where __V: _serde::de::SeqVisitor,
             {
                 $visit_seq_expr
             }
 
             #[inline]
             fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::MapVisitor,
+                where __V: _serde::de::MapVisitor,
             {
                 $visit_map_expr
             }
@@ -668,7 +674,7 @@ fn deserialize_item_enum(
     let ignored_arm = if container_attrs.deny_unknown_fields() {
         None
     } else {
-        Some(quote_arm!(cx, __Field::__ignore => { Err(::serde::de::Error::end_of_stream()) }))
+        Some(quote_arm!(cx, __Field::__ignore => { Err(_serde::de::Error::end_of_stream()) }))
     };
 
     // Match arms to extract a variant from a string
@@ -705,11 +711,11 @@ fn deserialize_item_enum(
 
         $visitor_item
 
-        impl $visitor_generics ::serde::de::EnumVisitor for $visitor_ty $where_clause {
+        impl $visitor_generics _serde::de::EnumVisitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             fn visit<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::VariantVisitor,
+                where __V: _serde::de::VariantVisitor,
             {
                 match try!(visitor.visit_variant()) {
                     $variant_arms
@@ -801,11 +807,11 @@ fn deserialize_tuple_variant(
     Ok(quote_expr!(cx, {
         $visitor_item
 
-        impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
+        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::SeqVisitor,
+                where __V: _serde::de::SeqVisitor,
             {
                 $visit_seq_expr
             }
@@ -861,19 +867,19 @@ fn deserialize_struct_variant(
 
         $visitor_item
 
-        impl $visitor_generics ::serde::de::Visitor for $visitor_ty $where_clause {
+        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             #[inline]
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::SeqVisitor,
+                where __V: _serde::de::SeqVisitor,
             {
                 $visit_seq_expr
             }
 
             #[inline]
             fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: ::serde::de::MapVisitor,
+                where __V: _serde::de::MapVisitor,
             {
                 $field_expr
             }
@@ -932,7 +938,7 @@ fn deserialize_field_visitor(
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
         quote_expr!(cx, {
-            Err(::serde::de::Error::invalid_value($index_error_msg))
+            Err(_serde::de::Error::invalid_value($index_error_msg))
         })
     };
 
@@ -958,7 +964,7 @@ fn deserialize_field_visitor(
     let fallthrough_str_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
-        quote_expr!(cx, Err(::serde::de::Error::$unknown_ident(value)))
+        quote_expr!(cx, Err(_serde::de::Error::$unknown_ident(value)))
     };
 
     let str_body = quote_expr!(cx,
@@ -988,7 +994,7 @@ fn deserialize_field_visitor(
     } else {
         quote_expr!(cx, {
             let value = ::std::string::String::from_utf8_lossy(value);
-            Err(::serde::de::Error::$unknown_ident(&value))
+            Err(_serde::de::Error::$unknown_ident(&value))
         })
     };
 
@@ -1000,10 +1006,10 @@ fn deserialize_field_visitor(
     );
 
     let impl_item = quote_item!(cx,
-        impl ::serde::de::Deserialize for __Field {
+        impl _serde::de::Deserialize for __Field {
             #[inline]
             fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
-                where D: ::serde::de::Deserializer,
+                where D: _serde::de::Deserializer,
             {
                 use std::marker::PhantomData;
 
@@ -1011,25 +1017,25 @@ fn deserialize_field_visitor(
                     phantom: PhantomData<D>
                 }
 
-                impl<__D> ::serde::de::Visitor for __FieldVisitor<__D>
-                    where __D: ::serde::de::Deserializer
+                impl<__D> _serde::de::Visitor for __FieldVisitor<__D>
+                    where __D: _serde::de::Deserializer
                 {
                     type Value = __Field;
 
                     fn visit_usize<E>(&mut self, value: usize) -> ::std::result::Result<__Field, E>
-                        where E: ::serde::de::Error,
+                        where E: _serde::de::Error,
                     {
                         $index_body
                     }
 
                     fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<__Field, E>
-                        where E: ::serde::de::Error,
+                        where E: _serde::de::Error,
                     {
                         $str_body
                     }
 
                     fn visit_bytes<E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, E>
-                        where E: ::serde::de::Error,
+                        where E: _serde::de::Error,
                     {
                         $bytes_body
                     }
@@ -1131,7 +1137,7 @@ fn deserialize_map(
         .map(|&(_, _, name)| {
             quote_arm!(cx,
                 __Field::$name => {
-                    try!(visitor.visit_value::<::serde::de::impls::IgnoredAny>());
+                    try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>());
                 }
             )
         })
@@ -1142,7 +1148,7 @@ fn deserialize_map(
         None
     } else {
         Some(quote_arm!(cx,
-            _ => { try!(visitor.visit_value::<::serde::de::impls::IgnoredAny>()); }
+            _ => { try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>()); }
         ))
     };
 

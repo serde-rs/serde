@@ -27,10 +27,8 @@ pub fn with_bound(
     item: &ast::Item,
     generics: &ast::Generics,
     filter: &Fn(&ast::StructField) -> bool,
-    bound: &[&'static str],
+    bound: &ast::Path,
 ) -> ast::Generics {
-    let path = builder.path().global().ids(bound).build();
-
     builder.from_generics(generics.clone())
         .with_predicates(
             all_variants(cx, item).iter()
@@ -44,7 +42,7 @@ pub fn with_bound(
                     // the type that is being bounded e.g. T
                     .bound().build(ty.clone())
                     // the bound e.g. Serialize
-                    .bound().trait_(path.clone()).build()
+                    .bound().trait_(bound.clone()).build()
                     .build()))
         .build()
 }
