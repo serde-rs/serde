@@ -1138,12 +1138,12 @@ fn deserialize_map(
         .collect::<Vec<_>>();
 
     // Visit ignored values to consume them
-    let ignored_arm = if !container_attrs.deny_unknown_fields() {
+    let ignored_arm = if container_attrs.deny_unknown_fields() {
+        None
+    } else {
         Some(quote_arm!(cx,
             _ => { try!(visitor.visit_value::<::serde::de::impls::IgnoredAny>()); }
         ))
-    } else {
-        None
     };
 
     let extract_values = fields_attrs_names.iter()
