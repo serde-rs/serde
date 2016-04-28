@@ -1,6 +1,7 @@
 //! Generic serialization framework.
 
 use std::error;
+use decimal::d128;
 
 pub mod impls;
 
@@ -110,6 +111,9 @@ pub trait Serializer {
 
     /// Serializes a `f64` value.
     fn serialize_f64(&mut self, v: f64) -> Result<(), Self::Error>;
+
+    /// Serializes a `d128` value..
+    fn serialize_d128(&mut self, v: d128) -> Result<(), Self::Error>;
 
     /// Serializes a character. By default it serializes it as a `&str` containing a
     /// single character.

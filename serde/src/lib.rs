@@ -23,8 +23,11 @@ extern crate collections;
 #[cfg(feature = "nightly")]
 extern crate core;
 
+extern crate decimal;
+
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer, Error};
+pub use decimal::d128;
 
 pub mod bytes;
 pub mod de;

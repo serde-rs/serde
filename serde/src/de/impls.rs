@@ -20,6 +20,8 @@ use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 
+use decimal::d128;
+
 #[cfg(feature = "nightly")]
 use core::nonzero::{NonZero, Zeroable};
 
@@ -185,6 +187,38 @@ impl_deserialize_num!(u32, deserialize_u32);
 impl_deserialize_num!(u64, deserialize_u64);
 impl_deserialize_num!(f32, deserialize_f32);
 impl_deserialize_num!(f64, deserialize_f64);
+
+///////////////////////////////////////////////////////////////////////////////
+
+struct d128Visitor;
+
+impl Visitor for d128Visitor {
+    type Value = d128;
+
+    fn visit_d128<E>(&mut self, v: d128) -> Result<d128, E>
+        where E: Error,
+    {
+        Ok(v)
+    }
+
+    #[inline]
+    fn visit_str<E>(&mut self, v: &str) -> Result<d128, E>
+        where E: Error,
+    {
+        str::FromStr::from_str(v.trim()).or_else(|_| {
+            Err(Error::invalid_type(Type::Str))
+        })
+    }
+}
+
+impl Deserialize for d128 {
+    fn deserialize<D>(deserializer: &mut D) -> Result<d128, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.deserialize_d128(d128Visitor)
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 

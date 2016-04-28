@@ -64,6 +64,7 @@ impl_visit!(u32, serialize_u32);
 impl_visit!(u64, serialize_u64);
 impl_visit!(f32, serialize_f32);
 impl_visit!(f64, serialize_f64);
+//impl_visit!(d128, serialize_d128);
 impl_visit!(char, serialize_char);
 
 ///////////////////////////////////////////////////////////////////////////////
