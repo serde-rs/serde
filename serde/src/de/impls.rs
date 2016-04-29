@@ -151,6 +151,7 @@ impl<T> Visitor for PrimitiveVisitor<T>
     impl_deserialize_num_method!(u64, visit_u64, from_u64, Type::U64);
     impl_deserialize_num_method!(f32, visit_f32, from_f32, Type::F32);
     impl_deserialize_num_method!(f64, visit_f64, from_f64, Type::F64);
+    impl_deserialize_num_method!(d128, visit_d128, from_d128, Type::D128);
 
     #[inline]
     fn visit_str<E>(&mut self, v: &str) -> Result<T, E>
