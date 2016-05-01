@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.7.3"
+version = "0.7.4"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -10,8 +10,13 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 
 [features]
+default = ["std"]
+
+std = []
 nightly = []
-nightly-testing = ["clippy", "nightly"]
+alloc = ["nightly"]
+collections = ["alloc"]
+nightly-testing = ["clippy", "nightly", "std"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }

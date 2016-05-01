@@ -1,30 +1,63 @@
 //! This module contains `Deserialize` and `Visitor` implementations.
 
+#[cfg(feature = "std")]
 use std::borrow::Cow;
-use std::collections::{
+#[cfg(all(feature = "nightly", feature = "collections", not(feature = "std")))]
+use collections::borrow::Cow;
+
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::{
     BinaryHeap,
     BTreeMap,
     BTreeSet,
     LinkedList,
+    VecDeque,
+    Vec,
+    String,
+};
+
+#[cfg(feature = "std")]
+use std::collections::{
     HashMap,
     HashSet,
+    BinaryHeap,
+    BTreeMap,
+    BTreeSet,
+    LinkedList,
     VecDeque,
 };
-#[cfg(feature = "nightly")]
+
+#[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::enum_set::{CLike, EnumSet};
-use std::hash::Hash;
-use std::marker::PhantomData;
+#[cfg(all(feature = "nightly", feature = "collections"))]
+use collections::borrow::ToOwned;
+
+use core::hash::Hash;
+use core::marker::PhantomData;
+#[cfg(feature = "std")]
 use std::net;
+#[cfg(feature = "std")]
 use std::path;
+use core::str;
+
+#[cfg(feature = "std")]
 use std::rc::Rc;
-use std::str;
+#[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
+use alloc::rc::Rc;
+
+#[cfg(feature = "std")]
 use std::sync::Arc;
+#[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
+use alloc::arc::Arc;
+
+#[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
+use alloc::boxed::Box;
 
 #[cfg(feature = "nightly")]
 use core::nonzero::{NonZero, Zeroable};
 
 #[cfg(feature = "nightly")]
-use std::num::Zero;
+use core::num::Zero;
 
 use de::{
     Deserialize,
@@ -85,7 +118,7 @@ impl Visitor for BoolVisitor {
     fn visit_str<E>(&mut self, s: &str) -> Result<bool, E>
         where E: Error,
     {
-        match s.trim() {
+        match s.trim_matches(|c| ::utils::Pattern_White_Space(c)) {
             "true" => Ok(true),
             "false" => Ok(false),
             _ => Err(Error::invalid_type(Type::Bool)),
@@ -151,10 +184,10 @@ impl<T> Visitor for PrimitiveVisitor<T>
     impl_deserialize_num_method!(f64, visit_f64, from_f64, Type::F64);
 
     #[inline]
-    fn visit_str<E>(&mut self, v: &str) -> Result<T, E>
+    fn visit_str<E>(&mut self, s: &str) -> Result<T, E>
         where E: Error,
     {
-        str::FromStr::from_str(v.trim()).or_else(|_| {
+        str::FromStr::from_str(s.trim_matches(::utils::Pattern_White_Space)).or_else(|_| {
             Err(Error::invalid_type(Type::Str))
         })
     }
@@ -228,8 +261,10 @@ impl Deserialize for char {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 struct StringVisitor;
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl Visitor for StringVisitor {
     type Value = String;
 
@@ -264,6 +299,7 @@ impl Visitor for StringVisitor {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl Deserialize for String {
     fn deserialize<D>(deserializer: &mut D) -> Result<String, D::Error>
         where D: Deserializer,
@@ -406,6 +442,7 @@ macro_rules! seq_impl {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BinaryHeap<T>,
     <Deserialize, Ord>,
@@ -415,6 +452,7 @@ seq_impl!(
     BinaryHeap::with_capacity(visitor.size_hint().0),
     BinaryHeap::push);
 
+#[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BTreeSet<T>,
     <Deserialize, Eq, Ord>,
@@ -424,7 +462,7 @@ seq_impl!(
     BTreeSet::new(),
     BTreeSet::insert);
 
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "nightly", feature = "collections"))]
 seq_impl!(
     EnumSet<T>,
     <Deserialize, CLike>,
@@ -434,6 +472,7 @@ seq_impl!(
     EnumSet::new(),
     EnumSet::insert);
 
+#[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     LinkedList<T>,
     <Deserialize>,
@@ -443,6 +482,7 @@ seq_impl!(
     LinkedList::new(),
     LinkedList::push_back);
 
+#[cfg(feature = "std")]
 seq_impl!(
     HashSet<T>,
     <Deserialize, Eq, Hash>,
@@ -452,6 +492,7 @@ seq_impl!(
     HashSet::with_capacity(visitor.size_hint().0),
     HashSet::insert);
 
+#[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     Vec<T>,
     <Deserialize>,
@@ -461,6 +502,7 @@ seq_impl!(
     Vec::with_capacity(visitor.size_hint().0),
     Vec::push);
 
+#[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     VecDeque<T>,
     <Deserialize>,
@@ -747,6 +789,7 @@ macro_rules! map_impl {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
     BTreeMap<K, V>,
     <Deserialize, Eq, Ord>,
@@ -756,6 +799,7 @@ map_impl!(
     BTreeMap::new(),
     BTreeMap::insert);
 
+#[cfg(feature = "std")]
 map_impl!(
     HashMap<K, V>,
     <Deserialize, Eq, Hash>,
@@ -767,7 +811,7 @@ map_impl!(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "nightly", feature = "std"))]
 impl Deserialize for net::IpAddr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -780,6 +824,7 @@ impl Deserialize for net::IpAddr {
     }
 }
 
+#[cfg(feature = "std")]
 impl Deserialize for net::Ipv4Addr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -792,6 +837,7 @@ impl Deserialize for net::Ipv4Addr {
     }
 }
 
+#[cfg(feature = "std")]
 impl Deserialize for net::Ipv6Addr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -806,6 +852,7 @@ impl Deserialize for net::Ipv6Addr {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "std")]
 impl Deserialize for net::SocketAddr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -818,6 +865,7 @@ impl Deserialize for net::SocketAddr {
     }
 }
 
+#[cfg(feature = "std")]
 impl Deserialize for net::SocketAddrV4 {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -830,6 +878,7 @@ impl Deserialize for net::SocketAddrV4 {
     }
 }
 
+#[cfg(feature = "std")]
 impl Deserialize for net::SocketAddrV6 {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -844,8 +893,10 @@ impl Deserialize for net::SocketAddrV6 {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "std")]
 struct PathBufVisitor;
 
+#[cfg(feature = "std")]
 impl Visitor for PathBufVisitor {
     type Value = path::PathBuf;
 
@@ -862,6 +913,7 @@ impl Visitor for PathBufVisitor {
     }
 }
 
+#[cfg(feature = "std")]
 impl Deserialize for path::PathBuf {
     fn deserialize<D>(deserializer: &mut D) -> Result<path::PathBuf, D::Error>
         where D: Deserializer,
@@ -872,6 +924,7 @@ impl Deserialize for path::PathBuf {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<T: Deserialize> Deserialize for Box<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Box<T>, D::Error>
         where D: Deserializer,
@@ -881,6 +934,7 @@ impl<T: Deserialize> Deserialize for Box<T> {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T: Deserialize> Deserialize for Box<[T]> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Box<[T]>, D::Error>
         where D: Deserializer,
@@ -890,6 +944,7 @@ impl<T: Deserialize> Deserialize for Box<[T]> {
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<T: Deserialize> Deserialize for Arc<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Arc<T>, D::Error>
         where D: Deserializer,
@@ -899,6 +954,7 @@ impl<T: Deserialize> Deserialize for Arc<T> {
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<T: Deserialize> Deserialize for Rc<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Rc<T>, D::Error>
         where D: Deserializer,
@@ -908,6 +964,7 @@ impl<T: Deserialize> Deserialize for Rc<T> {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deserialize, {
     #[inline]
     fn deserialize<D>(deserializer: &mut D) -> Result<Cow<'a, T>, D::Error>
@@ -954,11 +1011,25 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                 impl ::de::Visitor for FieldVisitor {
                     type Value = Field;
 
+                    #[cfg(any(feature = "std", feature = "collections"))]
                     fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E> where E: Error {
+                        #[cfg(feature = "collections")]
+                        use collections::string::ToString;
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),
                             _ => Err(Error::unknown_field(&value.to_string())),
+                        }
+                    }
+
+                    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+                    fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E> where E: Error {
+                        #[cfg(feature = "collections")]
+                        use collections::string::ToString;
+                        match value {
+                            0 => Ok(Field::Ok),
+                            1 => Ok(Field::Err),
+                            _ => Err(Error::unknown_field("some number")),
                         }
                     }
 
