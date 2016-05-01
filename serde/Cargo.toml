@@ -10,8 +10,13 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 
 [features]
+default = ["std"]
+
+std = []
 nightly = []
-nightly-testing = ["clippy", "nightly"]
+alloc = ["nightly"]
+collections = ["alloc"]
+nightly-testing = ["clippy", "nightly", "std"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
