@@ -12,11 +12,11 @@ use syntax::visit;
 // allowed here".
 pub fn without_defaults(generics: &ast::Generics) -> ast::Generics {
     ast::Generics {
-        ty_params: generics.ty_params.map(|ty_param| {
+        ty_params: generics.ty_params.iter().map(|ty_param| {
             ast::TyParam {
                 default: None,
                 .. ty_param.clone()
-            }}),
+            }}).collect(),
         .. generics.clone()
     }
 }
