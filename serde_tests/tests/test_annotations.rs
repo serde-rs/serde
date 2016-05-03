@@ -1,4 +1,5 @@
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+extern crate serde;
+use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use token::{
     Error,

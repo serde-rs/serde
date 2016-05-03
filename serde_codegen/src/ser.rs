@@ -74,14 +74,21 @@ fn serialize_item(
 
     let where_clause = &impl_generics.where_clause;
 
+    let dummy_const = builder.id(format!("_IMPL_SERIALIZE_FOR_{}", item.ident));
+
     Ok(quote_item!(cx,
-        impl $impl_generics ::serde::ser::Serialize for $ty $where_clause {
-            fn serialize<__S>(&self, _serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
-                where __S: ::serde::ser::Serializer,
-            {
-                $body
+        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const $dummy_const: () = {
+            extern crate serde as _serde;
+            #[automatically_derived]
+            impl $impl_generics _serde::ser::Serialize for $ty $where_clause {
+                fn serialize<__S>(&self, _serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
+                    where __S: _serde::ser::Serializer,
+                {
+                    $body
+                }
             }
-        }
+        };
     ).unwrap())
 }
 
@@ -96,7 +103,7 @@ fn build_impl_generics(
     let generics = bound::without_defaults(generics);
     let generics = bound::with_bound(cx, builder, item, &generics,
         &serialized_by_us,
-        &["serde", "ser", "Serialize"]);
+        &builder.path().ids(&["_serde", "ser", "Serialize"]).build());
     generics
 }
 
@@ -361,7 +368,7 @@ fn serialize_variant(
 
             Ok(quote_arm!(cx,
                 $pat => {
-                    ::serde::ser::Serializer::serialize_unit_variant(
+                    _serde::ser::Serializer::serialize_unit_variant(
                         _serializer,
                         $type_name,
                         $variant_index,
@@ -380,7 +387,7 @@ fn serialize_variant(
 
             Ok(quote_arm!(cx,
                 $pat => {
-                    ::serde::ser::Serializer::serialize_newtype_variant(
+                    _serde::ser::Serializer::serialize_newtype_variant(
                         _serializer,
                         $type_name,
                         $variant_index,
@@ -647,12 +654,12 @@ fn serialize_tuple_struct_visitor(
         ).unwrap(),
 
         quote_item!(cx,
-            impl $visitor_impl_generics ::serde::ser::SeqVisitor
+            impl $visitor_impl_generics _serde::ser::SeqVisitor
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
                 fn visit<S>(&mut self, _serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
-                    where S: ::serde::ser::Serializer
+                    where S: _serde::ser::Serializer
                 {
                     match self.state {
                         $arms
@@ -752,12 +759,12 @@ fn serialize_struct_visitor(
 
         quote_item!(cx,
             impl $visitor_impl_generics
-            ::serde::ser::MapVisitor
+            _serde::ser::MapVisitor
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
                 fn visit<S>(&mut self, _serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
-                    where S: ::serde::ser::Serializer,
+                    where S: _serde::ser::Serializer,
                 {
                     loop {
                         match self.state {

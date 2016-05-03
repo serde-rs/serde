@@ -572,14 +572,14 @@ fn wrap_serialize_with(cx: &ExtCtxt,
     quote_expr!(cx, {
         trait __SerdeSerializeWith {
             fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: ::serde::ser::Serializer;
+                where S: _serde::ser::Serializer;
         }
 
         impl<'a, T> __SerdeSerializeWith for &'a T
             where T: 'a + __SerdeSerializeWith,
         {
             fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: ::serde::ser::Serializer
+                where S: _serde::ser::Serializer
             {
                 (**self).__serde_serialize_with(serializer)
             }
@@ -587,7 +587,7 @@ fn wrap_serialize_with(cx: &ExtCtxt,
 
         impl $generics __SerdeSerializeWith for $container_ty $where_clause {
             fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: ::serde::ser::Serializer
+                where S: _serde::ser::Serializer
             {
                 $expr
             }
@@ -597,11 +597,11 @@ fn wrap_serialize_with(cx: &ExtCtxt,
             value: &'a T,
         }
 
-        impl<'a, T> ::serde::ser::Serialize for __SerdeSerializeWithStruct<'a, T>
+        impl<'a, T> _serde::ser::Serialize for __SerdeSerializeWithStruct<'a, T>
             where T: 'a + __SerdeSerializeWith
         {
             fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: ::serde::ser::Serializer
+                where S: _serde::ser::Serializer
             {
                 self.value.__serde_serialize_with(serializer)
             }
@@ -633,9 +633,9 @@ fn wrap_deserialize_with(cx: &ExtCtxt,
             value: $field_ty,
         }
 
-        impl $generics ::serde::de::Deserialize for $ty_path $where_clause {
+        impl $generics _serde::de::Deserialize for $ty_path $where_clause {
             fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error>
-                where D: ::serde::de::Deserializer
+                where D: _serde::de::Deserializer
             {
                 let value = try!($path(deserializer));
                 Ok(__SerdeDeserializeWithStruct { value: value })
