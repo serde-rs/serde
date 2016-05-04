@@ -4,7 +4,7 @@ use syntax::attr;
 use syntax::codemap::Span;
 use syntax::ext::base::ExtCtxt;
 use syntax::fold::Folder;
-use syntax::parse::parser::PathParsingMode;
+use syntax::parse::parser::PathStyle;
 use syntax::parse::token::{self, InternedString};
 use syntax::parse;
 use syntax::print::pprust::{lit_to_string, meta_item_to_string};
@@ -488,7 +488,7 @@ fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::
 
     let mut parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts);
 
-    let path = match parser.parse_path(PathParsingMode::LifetimeAndTypesWithoutColons) {
+    let path = match parser.parse_path(PathStyle::Type) {
         Ok(path) => path,
         Err(mut e) => {
             e.emit();
