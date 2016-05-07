@@ -509,12 +509,14 @@ fn deserialize_seq(
 fn deserialize_struct_as_seq(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
+    type_ident: Ident,
     struct_path: ast::Path,
+    impl_generics: &ast::Generics,
     fields: &[(&ast::StructField, attr::FieldAttrs)],
 ) -> Result<P<ast::Expr>, Error> {
     let let_values: Vec<_> = fields.iter()
         .enumerate()
-        .map(|(i, &(_, ref attrs))| {
+        .map(|(i, &(field, ref attrs))| {
             let name = builder.id(format!("__field{}", i));
             if attrs.skip_deserializing_field() {
                 let default = attrs.expr_is_missing();
@@ -522,10 +524,24 @@ fn deserialize_struct_as_seq(
                     let $name = $default;
                 ).unwrap()
             } else {
-                let deserialize_with = attrs.deserialize_with();
+                let visit = match attrs.deserialize_with() {
+                    None => {
+                        let field_ty = &field.ty;
+                        quote_expr!(cx, try!(visitor.visit::<$field_ty>()))
+                    }
+                    Some(path) => {
+                        let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
+                            cx, builder, type_ident, impl_generics, &field.ty, path);
+                        quote_expr!(cx, {
+                            $wrapper
+                            $wrapper_impl
+                            try!(visitor.visit::<$wrapper_ty>()).map(|wrap| wrap.value)
+                        })
+                    }
+                };
                 quote_stmt!(cx,
-                    let $name = match try!(visitor.visit()) {
-                        Some(value) => { $deserialize_with(value) },
+                    let $name = match $visit {
+                        Some(value) => { value },
                         None => {
                             return Err(_serde::de::Error::end_of_stream());
                         }
@@ -587,14 +603,18 @@ fn deserialize_struct(
     let visit_seq_expr = try!(deserialize_struct_as_seq(
         cx,
         builder,
+        type_ident,
         type_path.clone(),
+        impl_generics,
         &fields_with_attrs,
     ));
 
     let (field_visitor, fields_stmt, visit_map_expr) = try!(deserialize_struct_visitor(
         cx,
         builder,
+        type_ident,
         type_path.clone(),
+        impl_generics,
         &fields_with_attrs,
         container_attrs,
     ));
@@ -843,14 +863,18 @@ fn deserialize_struct_variant(
     let visit_seq_expr = try!(deserialize_struct_as_seq(
         cx,
         builder,
+        type_ident,
         type_path.clone(),
+        generics,
         &fields_with_attrs,
     ));
 
     let (field_visitor, fields_stmt, field_expr) = try!(deserialize_struct_visitor(
         cx,
         builder,
+        type_ident,
         type_path,
+        generics,
         &fields_with_attrs,
         container_attrs,
     ));
@@ -1011,10 +1035,8 @@ fn deserialize_field_visitor(
             fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
                 where D: _serde::de::Deserializer,
             {
-                use std::marker::PhantomData;
-
                 struct __FieldVisitor<D> {
-                    phantom: PhantomData<D>
+                    phantom: ::std::marker::PhantomData<D>
                 }
 
                 impl<__D> _serde::de::Visitor for __FieldVisitor<__D>
@@ -1041,7 +1063,11 @@ fn deserialize_field_visitor(
                     }
                 }
 
-                deserializer.deserialize_struct_field(__FieldVisitor::<D>{ phantom: PhantomData })
+                deserializer.deserialize_struct_field(
+                    __FieldVisitor::<D>{
+                        phantom: ::std::marker::PhantomData
+                    }
+                )
             }
         }
     ).unwrap();
@@ -1052,7 +1078,9 @@ fn deserialize_field_visitor(
 fn deserialize_struct_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
+    type_ident: Ident,
     struct_path: ast::Path,
+    impl_generics: &ast::Generics,
     fields: &[(&ast::StructField, attr::FieldAttrs)],
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<(Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>), Error> {
@@ -1071,7 +1099,9 @@ fn deserialize_struct_visitor(
     let visit_map_expr = try!(deserialize_map(
         cx,
         builder,
+        type_ident,
         struct_path,
+        impl_generics,
         fields,
         container_attrs,
     ));
@@ -1100,7 +1130,9 @@ fn deserialize_struct_visitor(
 fn deserialize_map(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
+    type_ident: Ident,
     struct_path: ast::Path,
+    impl_generics: &ast::Generics,
     fields: &[(&ast::StructField, attr::FieldAttrs)],
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
@@ -1114,17 +1146,34 @@ fn deserialize_map(
     // Declare each field that will be deserialized.
     let let_values: Vec<ast::Stmt> = fields_attrs_names.iter()
         .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
-        .map(|&(_, _, name)| quote_stmt!(cx, let mut $name = None;).unwrap())
+        .map(|&(field, _, name)| {
+            let field_ty = &field.ty;
+            quote_stmt!(cx, let mut $name: Option<$field_ty> = None;).unwrap()
+        })
         .collect();
 
     // Match arms to extract a value for a field.
     let value_arms = fields_attrs_names.iter()
         .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
-        .map(|&(_, ref attrs, name)| {
-            let deserialize_with = attrs.deserialize_with();
+        .map(|&(field, ref attrs, name)| {
+            let visit = match attrs.deserialize_with() {
+                None => {
+                    let field_ty = &field.ty;
+                    quote_expr!(cx, try!(visitor.visit_value::<$field_ty>()))
+                }
+                Some(path) => {
+                    let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
+                        cx, builder, type_ident, impl_generics, &field.ty, path);
+                    quote_expr!(cx, ({
+                        $wrapper
+                        $wrapper_impl
+                        try!(visitor.visit_value::<$wrapper_ty>()).value
+                    }))
+                }
+            };
             quote_arm!(cx,
                 __Field::$name => {
-                    $name = Some($deserialize_with(try!(visitor.visit_value())));
+                    $name = Some($visit);
                 }
             )
         })
@@ -1192,7 +1241,7 @@ fn deserialize_map(
     Ok(quote_expr!(cx, {
         $let_values
 
-        while let Some(key) = try!(visitor.visit_key()) {
+        while let Some(key) = try!(visitor.visit_key::<__Field>()) {
             match key {
                 $value_arms
                 $skipped_arms
@@ -1221,4 +1270,56 @@ fn fields_with_attrs<'a>(
             Ok((field, attrs))
         })
         .collect()
+}
+
+/// This function wraps the expression in `#[serde(deserialize_with="...")]` in
+/// a trait to prevent it from accessing the internal `Deserialize` state.
+fn wrap_deserialize_with(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    type_ident: Ident,
+    impl_generics: &ast::Generics,
+    field_ty: &P<ast::Ty>,
+    deserialize_with: &ast::Path,
+) -> (ast::Stmt, ast::Stmt, ast::Path) {
+    // Quasi-quoting doesn't do a great job of expanding generics into paths,
+    // so manually build it.
+    let wrapper_ty = builder.path()
+        .segment("__SerdeDeserializeWithStruct")
+            .with_generics(impl_generics.clone())
+            .build()
+        .build();
+
+    let where_clause = &impl_generics.where_clause;
+
+    let phantom_ty = builder.path()
+        .segment(type_ident)
+            .with_generics(builder.from_generics(impl_generics.clone())
+                .strip_ty_params()
+                .build())
+            .build()
+        .build();
+
+    (
+        quote_stmt!(cx,
+            struct __SerdeDeserializeWithStruct $impl_generics $where_clause {
+                value: $field_ty,
+                phantom: ::std::marker::PhantomData<$phantom_ty>,
+            }
+        ).unwrap(),
+        quote_stmt!(cx,
+            impl $impl_generics _serde::de::Deserialize for $wrapper_ty $where_clause {
+                fn deserialize<D>(__d: &mut D) -> ::std::result::Result<Self, D::Error>
+                    where D: _serde::de::Deserializer
+                {
+                    let value = try!($deserialize_with(__d));
+                    Ok(__SerdeDeserializeWithStruct {
+                        value: value,
+                        phantom: ::std::marker::PhantomData,
+                    })
+                }
+            }
+        ).unwrap(),
+        wrapper_ty,
+    )
 }
