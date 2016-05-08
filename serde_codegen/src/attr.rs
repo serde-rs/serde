@@ -308,22 +308,6 @@ impl FieldAttrs {
         &self.name
     }
 
-    /// Predicate for using a field's default value
-    pub fn expr_is_missing(&self) -> P<ast::Expr> {
-        match self.default_expr_if_missing {
-            Some(ref expr) => expr.clone(),
-            None => {
-                let name = self.name.deserialize_name_expr();
-                AstBuilder::new().expr()
-                    .try()
-                    .method_call("missing_field").id("visitor")
-                        .with_arg(name)
-                        .build()
-            }
-        }
-    }
-
-    /// Predicate for ignoring a field when serializing a value
     pub fn skip_serializing_field(&self) -> bool {
         self.skip_serializing_field
     }
@@ -334,6 +318,10 @@ impl FieldAttrs {
 
     pub fn skip_serializing_field_if(&self) -> Option<&P<ast::Expr>> {
         self.skip_serializing_field_if.as_ref()
+    }
+
+    pub fn default_expr_if_missing(&self) -> Option<&P<ast::Expr>> {
+        self.default_expr_if_missing.as_ref()
     }
 
     pub fn serialize_with(&self) -> Option<&P<ast::Expr>> {
