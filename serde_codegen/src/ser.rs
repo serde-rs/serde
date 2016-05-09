@@ -658,8 +658,8 @@ fn serialize_tuple_struct_visitor(
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
-                fn visit<S>(&mut self, _serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
-                    where S: _serde::ser::Serializer
+                fn visit<__S>(&mut self, _serializer: &mut __S) -> ::std::result::Result<Option<()>, __S::Error>
+                    where __S: _serde::ser::Serializer
                 {
                     match self.state {
                         $arms
@@ -763,8 +763,8 @@ fn serialize_struct_visitor(
             for Visitor $visitor_generics
             $where_clause {
                 #[inline]
-                fn visit<S>(&mut self, _serializer: &mut S) -> ::std::result::Result<Option<()>, S::Error>
-                    where S: _serde::ser::Serializer,
+                fn visit<__S>(&mut self, _serializer: &mut __S) -> ::std::result::Result<Option<()>, __S::Error>
+                    where __S: _serde::ser::Serializer,
                 {
                     loop {
                         match self.state {
