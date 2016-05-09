@@ -718,20 +718,6 @@ Field Annotations:
 | `#[serde(serialize_with="$path")]`      | Call a function `fn<S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value of type `T` |
 | `#[serde(deserialize_with="$path")]`    | Call a function `fn<D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value of type `T`  |
 
-Using in `no_std` crates
-========================
-
-The core `serde` package defines a number of features to enable usage in a
-variety of freestanding environments. Enable any or none of the following
-features, and use `default-features = false` in your `Cargo.toml`:
-
-- `alloc` (implies `nightly`)
-- `collections` (implies `alloc` and `nightly`)
-- `std` (default)
-
-If you only use `default-features = false`, you will receive a stock `no_std`
-serde with no support for any of the collection types.
-
 Upgrading from Serde 0.6
 ========================
 

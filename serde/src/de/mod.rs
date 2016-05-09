@@ -1,12 +1,6 @@
 //! Generic deserialization framework.
 
-#[cfg(feature = "std")]
 use std::error;
-#[cfg(not(feature = "std"))]
-use error;
-
-#[cfg(all(not(feature = "std"), feature = "collections"))]
-use collections::{String, Vec};
 
 pub mod impls;
 pub mod value;
@@ -18,12 +12,7 @@ mod from_primitive;
 /// `Deserializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
-    #[cfg(any(feature = "std", feature = "collections"))]
     fn custom<T: Into<String>>(msg: T) -> Self;
-
-    /// Raised when there is general error when deserializing a type.
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    fn custom<T: Into<&'static str>>(msg: T) -> Self;
 
     /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
@@ -569,7 +558,9 @@ pub trait Visitor {
     fn visit_char<E>(&mut self, v: char) -> Result<Self::Value, E>
         where E: Error,
     {
-        self.visit_str(::core::str::from_utf8(::utils::encode_utf8(v).as_slice()).unwrap())
+        // FIXME: this allocation is required in order to be compatible with stable rust, which
+        // doesn't support encoding a `char` into a stack buffer.
+        self.visit_string(v.to_string())
     }
 
     /// `visit_str` deserializes a `&str` into a `Value`.
@@ -583,7 +574,6 @@ pub trait Visitor {
     /// a copy if it is deserializing a string from a `String` type.  By default it passes a `&str`
     /// to the `visit_str` method.
     #[inline]
-    #[cfg(any(feature = "std", feature = "collections"))]
     fn visit_string<E>(&mut self, v: String) -> Result<Self::Value, E>
         where E: Error,
     {
@@ -648,7 +638,6 @@ pub trait Visitor {
     }
 
     /// `visit_byte_buf` deserializes a `Vec<u8>` into a `Value`.
-    #[cfg(any(feature = "std", feature = "collections"))]
     fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<Self::Value, E>
         where E: Error,
     {
