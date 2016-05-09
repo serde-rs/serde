@@ -3,7 +3,7 @@ use std::net;
 use std::path::PathBuf;
 
 extern crate serde;
-use self::serde::de::{Deserializer, Visitor};
+use self::serde::de::Deserializer;
 
 use token::{
     Error,
