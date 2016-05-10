@@ -410,6 +410,7 @@ pub enum Error {
     UnknownFieldError(String),
     UnknownVariantError(String),
     MissingFieldError(&'static str),
+    DuplicateFieldError(&'static str),
     InvalidName(&'static str),
     InvalidValue(String),
     UnexpectedToken(Token<'static>),
@@ -429,6 +430,10 @@ impl de::Error for Error {
 
     fn end_of_stream() -> Error { Error::EndOfStreamError }
 
+    fn invalid_value(msg: &str) -> Error {
+        Error::InvalidValue(msg.to_owned())
+    }
+
     fn unknown_field(field: &str) -> Error {
         Error::UnknownFieldError(field.to_owned())
     }
@@ -439,6 +444,10 @@ impl de::Error for Error {
 
     fn missing_field(field: &'static str) -> Error {
         Error::MissingFieldError(field)
+    }
+
+    fn duplicate_field(field: &'static str) -> Error {
+        Error::DuplicateFieldError(field)
     }
 }
 

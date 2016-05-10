@@ -1156,6 +1156,9 @@ fn deserialize_map(
     let value_arms = fields_attrs_names.iter()
         .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
         .map(|&(field, ref attrs, name)| {
+            let deser_name = attrs.name().deserialize_name();
+            let name_str = builder.expr().lit().str(deser_name);
+
             let visit = match attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
@@ -1173,6 +1176,9 @@ fn deserialize_map(
             };
             quote_arm!(cx,
                 __Field::$name => {
+                    if $name.is_some() {
+                        return Err(<__V::Error as _serde::de::Error>::duplicate_field($name_str));
+                    }
                     $name = Some($visit);
                 }
             )

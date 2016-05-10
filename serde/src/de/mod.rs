@@ -46,6 +46,12 @@ pub trait Error: Sized + error::Error {
     fn missing_field(field: &'static str) -> Self {
         Error::custom(format!("Missing field `{}`", field))
     }
+
+    /// Raised when a `Deserialize` struct type received more than one of the
+    /// same struct field.
+    fn duplicate_field(field: &'static str) -> Self {
+        Error::custom(format!("Duplicate field `{}`", field))
+    }
 }
 
 /// `Type` represents all the primitive types that can be deserialized. This is used by
