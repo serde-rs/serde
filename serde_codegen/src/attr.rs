@@ -563,37 +563,37 @@ fn wrap_serialize_with(cx: &ExtCtxt,
 
     quote_expr!(cx, {
         trait __SerdeSerializeWith {
-            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: _serde::ser::Serializer;
+            fn __serde_serialize_with<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
+                where __S: _serde::ser::Serializer;
         }
 
-        impl<'a, T> __SerdeSerializeWith for &'a T
-            where T: 'a + __SerdeSerializeWith,
+        impl<'__a, __T> __SerdeSerializeWith for &'__a __T
+            where __T: '__a + __SerdeSerializeWith,
         {
-            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: _serde::ser::Serializer
+            fn __serde_serialize_with<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
+                where __S: _serde::ser::Serializer
             {
                 (**self).__serde_serialize_with(serializer)
             }
         }
 
         impl $generics __SerdeSerializeWith for $container_ty $where_clause {
-            fn __serde_serialize_with<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: _serde::ser::Serializer
+            fn __serde_serialize_with<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
+                where __S: _serde::ser::Serializer
             {
                 $expr
             }
         }
 
-        struct __SerdeSerializeWithStruct<'a, T: 'a> {
-            value: &'a T,
+        struct __SerdeSerializeWithStruct<'__a, __T: '__a> {
+            value: &'__a __T,
         }
 
-        impl<'a, T> _serde::ser::Serialize for __SerdeSerializeWithStruct<'a, T>
-            where T: 'a + __SerdeSerializeWith
+        impl<'__a, __T> _serde::ser::Serialize for __SerdeSerializeWithStruct<'__a, __T>
+            where __T: '__a + __SerdeSerializeWith
         {
-            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-                where S: _serde::ser::Serializer
+            fn serialize<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
+                where __S: _serde::ser::Serializer
             {
                 self.value.__serde_serialize_with(serializer)
             }

@@ -356,15 +356,15 @@ fn deserialize_unit_struct(
             type Value = $type_ident;
 
             #[inline]
-            fn visit_unit<E>(&mut self) -> ::std::result::Result<$type_ident, E>
-                where E: _serde::de::Error,
+            fn visit_unit<__E>(&mut self) -> ::std::result::Result<$type_ident, __E>
+                where __E: _serde::de::Error,
             {
                 Ok($type_ident)
             }
 
             #[inline]
-            fn visit_seq<V>(&mut self, mut visitor: V) -> ::std::result::Result<$type_ident, V::Error>
-                where V: _serde::de::SeqVisitor,
+            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$type_ident, __V::Error>
+                where __V: _serde::de::SeqVisitor,
             {
                 try!(visitor.end());
                 self.visit_unit()
@@ -408,8 +408,8 @@ fn deserialize_newtype_struct(
             type Value = $ty;
 
             #[inline]
-            fn visit_newtype_struct<D>(&mut self, deserializer: &mut D) -> ::std::result::Result<Self::Value, D::Error>
-                where D: _serde::de::Deserializer,
+            fn visit_newtype_struct<__E>(&mut self, deserializer: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
+                where __E: _serde::de::Deserializer,
             {
                 let value = try!(_serde::de::Deserialize::deserialize(deserializer));
                 Ok($type_ident(value))
@@ -1032,11 +1032,11 @@ fn deserialize_field_visitor(
     let impl_item = quote_item!(cx,
         impl _serde::de::Deserialize for __Field {
             #[inline]
-            fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<__Field, D::Error>
-                where D: _serde::de::Deserializer,
+            fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<__Field, __D::Error>
+                where __D: _serde::de::Deserializer,
             {
-                struct __FieldVisitor<D> {
-                    phantom: ::std::marker::PhantomData<D>
+                struct __FieldVisitor<__D> {
+                    phantom: ::std::marker::PhantomData<__D>
                 }
 
                 impl<__D> _serde::de::Visitor for __FieldVisitor<__D>
@@ -1044,27 +1044,27 @@ fn deserialize_field_visitor(
                 {
                     type Value = __Field;
 
-                    fn visit_usize<E>(&mut self, value: usize) -> ::std::result::Result<__Field, E>
-                        where E: _serde::de::Error,
+                    fn visit_usize<__E>(&mut self, value: usize) -> ::std::result::Result<__Field, __E>
+                        where __E: _serde::de::Error,
                     {
                         $index_body
                     }
 
-                    fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<__Field, E>
-                        where E: _serde::de::Error,
+                    fn visit_str<__E>(&mut self, value: &str) -> ::std::result::Result<__Field, __E>
+                        where __E: _serde::de::Error,
                     {
                         $str_body
                     }
 
-                    fn visit_bytes<E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, E>
-                        where E: _serde::de::Error,
+                    fn visit_bytes<__E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, __E>
+                        where __E: _serde::de::Error,
                     {
                         $bytes_body
                     }
                 }
 
                 deserializer.deserialize_struct_field(
-                    __FieldVisitor::<D>{
+                    __FieldVisitor::<__D>{
                         phantom: ::std::marker::PhantomData
                     }
                 )
@@ -1309,8 +1309,8 @@ fn wrap_deserialize_with(
         ).unwrap(),
         quote_stmt!(cx,
             impl $impl_generics _serde::de::Deserialize for $wrapper_ty $where_clause {
-                fn deserialize<D>(__d: &mut D) -> ::std::result::Result<Self, D::Error>
-                    where D: _serde::de::Deserializer
+                fn deserialize<__D>(__d: &mut __D) -> ::std::result::Result<Self, __D::Error>
+                    where __D: _serde::de::Deserializer
                 {
                     let value = try!($deserialize_with(__d));
                     Ok(__SerdeDeserializeWithStruct {
