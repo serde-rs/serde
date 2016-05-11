@@ -113,22 +113,7 @@ fn deserialized_by_us(field: &ast::StructField) -> bool {
                     return false
                 }
                 ast::MetaItemKind::NameValue(ref name, _) if name == &"deserialize_with" => {
-                    // TODO: For now we require `T: Deserialize` even if the
-                    // field has `deserialize_with`. The reason is the signature
-                    // of serde::de::MapVisitor::missing_field which looks like:
-                    //
-                    // fn missing_field<T>(...) -> Result<T, Self::Error> where T: Deserialize
-                    //
-                    // So in order to use missing_field, the type must have the
-                    // `T: Deserialize` bound. Some formats rely on this bound
-                    // because they treat missing fields as unit.
-                    //
-                    // Long-term the fix would be to change the signature of
-                    // missing_field so it can, for example, use the
-                    // `deserialize_with` function to visit a unit in place of
-                    // the missing field.
-                    //
-                    // See https://github.com/serde-rs/serde/issues/259
+                    return false
                 }
                 _ => {}
             }
@@ -519,7 +504,7 @@ fn deserialize_struct_as_seq(
         .map(|(i, &(field, ref attrs))| {
             let name = builder.id(format!("__field{}", i));
             if attrs.skip_deserializing_field() {
-                let default = attrs.expr_is_missing();
+                let default = expr_is_missing(cx, attrs);
                 quote_stmt!(cx,
                     let $name = $default;
                 ).unwrap()
@@ -1204,7 +1189,7 @@ fn deserialize_map(
     let extract_values = fields_attrs_names.iter()
         .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
         .map(|&(_, ref attrs, name)| {
-            let missing_expr = attrs.expr_is_missing();
+            let missing_expr = expr_is_missing(cx, attrs);
 
             Ok(quote_stmt!(cx,
                 let $name = match $name {
@@ -1229,7 +1214,7 @@ fn deserialize_map(
                             }
                         },
                         if attrs.skip_deserializing_field() {
-                            attrs.expr_is_missing()
+                            expr_is_missing(cx, attrs)
                         } else {
                             builder.expr().id(name)
                         }
@@ -1322,4 +1307,23 @@ fn wrap_deserialize_with(
         ).unwrap(),
         wrapper_ty,
     )
+}
+
+fn expr_is_missing(
+    cx: &ExtCtxt,
+    attrs: &attr::FieldAttrs,
+) -> P<ast::Expr> {
+    if let Some(expr) = attrs.default_expr_if_missing() {
+        return expr.clone();
+    }
+    let name = attrs.name().deserialize_name_expr();
+    match attrs.deserialize_with() {
+        None => {
+            quote_expr!(cx, try!(visitor.missing_field($name)))
+        }
+        Some(_) => {
+            quote_expr!(cx, return Err(
+                <__V::Error as _serde::de::Error>::missing_field($name)))
+        }
+    }
 }
