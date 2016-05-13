@@ -1024,8 +1024,6 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
 
                     #[cfg(all(not(feature = "std"), not(feature = "collections")))]
                     fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E> where E: Error {
-                        #[cfg(feature = "collections")]
-                        use collections::string::ToString;
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),

@@ -124,6 +124,7 @@ pub trait Serializer {
 
     /// Serializes a character. By default it serializes as bytes containing the UTF-8 encoding
     /// of the character.
+    #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), Self::Error> {
         self.serialize_bytes(::utils::encode_utf8(v).as_slice())
     }
