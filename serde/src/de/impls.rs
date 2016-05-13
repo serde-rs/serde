@@ -118,7 +118,7 @@ impl Visitor for BoolVisitor {
     fn visit_str<E>(&mut self, s: &str) -> Result<bool, E>
         where E: Error,
     {
-        match s.trim_matches(|c| ::utils::Pattern_White_Space(c)) {
+        match s.trim_matches(::utils::Pattern_White_Space) {
             "true" => Ok(true),
             "false" => Ok(false),
             _ => Err(Error::invalid_type(Type::Bool)),

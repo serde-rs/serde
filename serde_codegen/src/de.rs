@@ -9,7 +9,6 @@ use syntax::ast::{
 };
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
-use syntax::ext::build::AstBuilder;
 use syntax::parse::token::InternedString;
 use syntax::ptr::P;
 
