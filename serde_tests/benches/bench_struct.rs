@@ -3,10 +3,10 @@ use test::Bencher;
 use std::fmt;
 use std::error;
 
-use rustc_serialize::{Decoder, Decodable};
+use rustc_serialize::Decodable;
 
 use serde;
-use serde::de::{Deserializer, Deserialize};
+use serde::de::Deserialize;
 
 //////////////////////////////////////////////////////////////////////////////
 

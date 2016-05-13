@@ -41,7 +41,7 @@ impl<'a> From<&'a [u8]> for Bytes<'a> {
 impl<'a> From<&'a Vec<u8>> for Bytes<'a> {
     fn from(bytes: &'a Vec<u8>) -> Self {
         Bytes {
-            bytes: &bytes,
+            bytes: bytes,
         }
     }
 }
@@ -165,7 +165,7 @@ mod bytebuf {
         fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
             where S: ser::Serializer
         {
-            serializer.serialize_bytes(&self)
+            serializer.serialize_bytes(self)
         }
     }
 
