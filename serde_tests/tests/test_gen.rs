@@ -1,5 +1,6 @@
 // These just test that serde_codegen is able to produce code that compiles
-// successfully when there are a variety of generics involved.
+// successfully when there are a variety of generics and non-(de)serializable
+// types involved.
 
 extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
@@ -10,16 +11,16 @@ use self::serde::de::{Deserialize, Deserializer};
 #[derive(Serialize, Deserialize)]
 struct With<T> {
     t: T,
-    #[serde(serialize_with="ser_i32", deserialize_with="de_i32")]
-    i: i32,
+    #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+    x: X,
 }
 
 #[derive(Serialize, Deserialize)]
 struct WithRef<'a, T: 'a> {
     #[serde(skip_deserializing)]
     t: Option<&'a T>,
-    #[serde(serialize_with="ser_i32", deserialize_with="de_i32")]
-    i: i32,
+    #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+    x: X,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -40,13 +41,18 @@ struct NoBounds<T> {
 
 #[derive(Serialize, Deserialize)]
 enum EnumWith<T> {
-    A(
-        #[serde(serialize_with="ser_i32", deserialize_with="de_i32")]
-        i32),
-    B {
+    Unit,
+    Newtype(
+        #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+        X),
+    Tuple(
+        T,
+        #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+        X),
+    Struct {
         t: T,
-        #[serde(serialize_with="ser_i32", deserialize_with="de_i32")]
-        i: i32 },
+        #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+        x: X },
 }
 
 #[derive(Serialize)]
@@ -55,8 +61,23 @@ struct MultipleRef<'a, 'b, 'c, T> where T: 'c, 'c: 'b, 'b: 'a {
     rrrt: &'a &'b &'c T,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Newtype(
+    #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+    X
+);
+
+#[derive(Serialize, Deserialize)]
+struct Tuple<T>(
+    T,
+    #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+    X,
+);
+
 //////////////////////////////////////////////////////////////////////////
 
-fn ser_i32<S: Serializer>(_: &i32, _: &mut S) -> Result<(), S::Error> { panic!() }
+// Implements neither Serialize nor Deserialize
+struct X;
+fn ser_x<S: Serializer>(_: &X, _: &mut S) -> Result<(), S::Error> { panic!() }
+fn de_x<D: Deserializer>(_: &mut D) -> Result<X, D::Error> { panic!() }
 
-fn de_i32<D: Deserializer>(_: &mut D) -> Result<i32, D::Error> { panic!() }

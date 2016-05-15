@@ -214,7 +214,7 @@ fn deserialize_item_struct(
                 None,
                 impl_generics,
                 ty,
-                fields.len(),
+                fields,
                 container_attrs,
             )
         }
@@ -358,7 +358,7 @@ fn deserialize_tuple(
     variant_ident: Option<Ident>,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    fields: usize,
+    fields: &[ast::StructField],
     container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
     let where_clause = &impl_generics.where_clause;
@@ -376,37 +376,43 @@ fn deserialize_tuple(
         None => builder.path().id(type_ident).build(),
     };
 
-    let visit_newtype_struct = if !is_enum && fields == 1 {
-        Some(quote_tokens!(cx,
-            #[inline]
-            fn visit_newtype_struct<__E>(&mut self, deserializer: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
-                where __E: _serde::de::Deserializer,
-            {
-                let value = try!(_serde::de::Deserialize::deserialize(deserializer));
-                Ok($type_path(value))
-            }))
+    let nfields = fields.len();
+    let fields_with_attrs = try!(attr::fields_with_attrs(cx, fields));
+
+    let visit_newtype_struct = if !is_enum && nfields == 1 {
+        Some(try!(deserialize_newtype_struct(
+            cx,
+            builder,
+            type_ident,
+            &type_path,
+            impl_generics,
+            &fields_with_attrs[0],
+        )))
     } else {
         None
     };
 
-    let visit_seq_expr = deserialize_seq(
+    let visit_seq_expr = try!(deserialize_seq(
         cx,
         builder,
+        type_ident,
         type_path,
-        fields,
-    );
+        impl_generics,
+        &fields_with_attrs,
+        false,
+    ));
 
     let dispatch = if is_enum {
         quote_expr!(cx,
-            visitor.visit_tuple($fields, $visitor_expr))
-    } else if fields == 1 {
+            visitor.visit_tuple($nfields, $visitor_expr))
+    } else if nfields == 1 {
         let type_name = container_attrs.name().deserialize_name_expr();
         quote_expr!(cx,
             deserializer.deserialize_newtype_struct($type_name, $visitor_expr))
     } else {
         let type_name = container_attrs.name().deserialize_name_expr();
         quote_expr!(cx,
-            deserializer.deserialize_tuple_struct($type_name, $fields, $visitor_expr))
+            deserializer.deserialize_tuple_struct($type_name, $nfields, $visitor_expr))
     };
 
     Ok(quote_expr!(cx, {
@@ -432,44 +438,11 @@ fn deserialize_tuple(
 fn deserialize_seq(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    struct_path: ast::Path,
-    fields: usize,
-) -> P<ast::Expr> {
-    let let_values: Vec<ast::Stmt> = (0 .. fields)
-        .map(|i| {
-            let name = builder.id(format!("__field{}", i));
-            quote_stmt!(cx,
-                let $name = match try!(visitor.visit()) {
-                    Some(value) => { value },
-                    None => {
-                        return Err(_serde::de::Error::end_of_stream());
-                    }
-                };
-            ).unwrap()
-        })
-        .collect();
-
-    let result = builder.expr().call()
-        .build_path(struct_path)
-        .with_args((0 .. fields).map(|i| builder.expr().id(format!("__field{}", i))))
-        .build();
-
-    quote_expr!(cx, {
-        $let_values
-
-        try!(visitor.end());
-
-        Ok($result)
-    })
-}
-
-fn deserialize_struct_as_seq(
-    cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
     type_ident: Ident,
-    struct_path: ast::Path,
+    type_path: ast::Path,
     impl_generics: &ast::Generics,
     fields: &[(&ast::StructField, attr::FieldAttrs)],
+    is_struct: bool,
 ) -> Result<P<ast::Expr>, Error> {
     let let_values: Vec<_> = fields.iter()
         .enumerate()
@@ -508,23 +481,30 @@ fn deserialize_struct_as_seq(
         })
         .collect();
 
-    let result = builder.expr().struct_path(struct_path)
-        .with_id_exprs(
-            fields.iter()
-                .enumerate()
-                .map(|(i, &(field, _))| {
-                    (
-                        match field.ident {
-                            Some(name) => name.clone(),
-                            None => {
-                                cx.span_bug(field.span, "struct contains unnamed fields")
-                            }
-                        },
-                        builder.expr().id(format!("__field{}", i)),
-                    )
-                })
-        )
-        .build();
+    let result = if is_struct {
+        builder.expr().struct_path(type_path)
+            .with_id_exprs(
+                fields.iter()
+                    .enumerate()
+                    .map(|(i, &(field, _))| {
+                        (
+                            match field.ident {
+                                Some(name) => name.clone(),
+                                None => {
+                                    cx.span_bug(field.span, "struct contains unnamed fields")
+                                }
+                            },
+                            builder.expr().id(format!("__field{}", i)),
+                        )
+                    })
+            )
+            .build()
+    } else {
+        builder.expr().call()
+            .build_path(type_path)
+            .with_args((0..fields.len()).map(|i| builder.expr().id(format!("__field{}", i))))
+            .build()
+    };
 
     Ok(quote_expr!(cx, {
         $let_values
@@ -533,6 +513,41 @@ fn deserialize_struct_as_seq(
 
         Ok($result)
     }))
+}
+
+fn deserialize_newtype_struct(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    type_ident: Ident,
+    type_path: &ast::Path,
+    impl_generics: &ast::Generics,
+    field: &(&ast::StructField, attr::FieldAttrs),
+) -> Result<Vec<ast::TokenTree>, Error> {
+    let &(field, ref attrs) = field;
+    let value = match attrs.deserialize_with() {
+        None => {
+            let field_ty = &field.ty;
+            quote_expr!(cx,
+                try!(<$field_ty as _serde::Deserialize>::deserialize(__e)))
+        }
+        Some(path) => {
+            let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
+                cx, builder, type_ident, impl_generics, &field.ty, path);
+            quote_expr!(cx, {
+                $wrapper
+                $wrapper_impl
+                try!(<$wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
+            })
+        }
+    };
+    Ok(quote_tokens!(cx,
+        #[inline]
+        fn visit_newtype_struct<__E>(&mut self, __e: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
+            where __E: _serde::de::Deserializer,
+        {
+            Ok($type_path($value))
+        }
+    ))
 }
 
 fn deserialize_struct(
@@ -559,16 +574,16 @@ fn deserialize_struct(
         None => builder.path().id(type_ident).build(),
     };
 
-    let is_enum = variant_ident.is_some();
-    let fields_with_attrs = try!(fields_with_attrs(cx, impl_generics, &ty, fields, is_enum));
+    let fields_with_attrs = try!(attr::fields_with_attrs(cx, fields));
 
-    let visit_seq_expr = try!(deserialize_struct_as_seq(
+    let visit_seq_expr = try!(deserialize_seq(
         cx,
         builder,
         type_ident,
         type_path.clone(),
         impl_generics,
         &fields_with_attrs,
+        true,
     ));
 
     let (field_visitor, fields_stmt, visit_map_expr) = try!(deserialize_struct_visitor(
@@ -581,6 +596,7 @@ fn deserialize_struct(
         container_attrs,
     ));
 
+    let is_enum = variant_ident.is_some();
     let dispatch = if is_enum {
         quote_expr!(cx,
             visitor.visit_struct(FIELDS, $visitor_expr))
@@ -737,10 +753,14 @@ fn deserialize_variant(
             }))
         }
         ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
-            Ok(quote_expr!(cx, {
-                let val = try!(visitor.visit_newtype());
-                Ok($type_ident::$variant_ident(val))
-            }))
+            deserialize_newtype_variant(
+                cx,
+                builder,
+                type_ident,
+                variant_ident,
+                generics,
+                &fields[0],
+            )
         }
         ast::VariantData::Tuple(ref fields, _) => {
             deserialize_tuple(
@@ -750,7 +770,7 @@ fn deserialize_variant(
                 Some(variant_ident),
                 generics,
                 ty,
-                fields.len(),
+                fields,
                 container_attrs,
             )
         }
@@ -767,6 +787,33 @@ fn deserialize_variant(
             )
         }
     }
+}
+
+fn deserialize_newtype_variant(
+    cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
+    type_ident: Ident,
+    variant_ident: Ident,
+    impl_generics: &ast::Generics,
+    field: &ast::StructField,
+) -> Result<P<ast::Expr>, Error> {
+    let attrs = try!(attr::FieldAttrs::from_field(cx, 0, field));
+    let visit = match attrs.deserialize_with() {
+        None => {
+            let field_ty = &field.ty;
+            quote_expr!(cx, try!(visitor.visit_newtype::<$field_ty>()))
+        }
+        Some(path) => {
+            let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
+                cx, builder, type_ident, impl_generics, &field.ty, path);
+            quote_expr!(cx, {
+                $wrapper
+                $wrapper_impl
+                try!(visitor.visit_newtype::<$wrapper_ty>()).value
+            })
+        }
+    };
+    Ok(quote_expr!(cx, Ok($type_ident::$variant_ident($visit))))
 }
 
 fn deserialize_field_visitor(
@@ -1115,21 +1162,6 @@ fn deserialize_map(
 
         Ok($result)
     }))
-}
-
-fn fields_with_attrs<'a>(
-    cx: &ExtCtxt,
-    generics: &ast::Generics,
-    ty: &P<ast::Ty>,
-    fields: &'a [ast::StructField],
-    is_enum: bool
-) -> Result<Vec<(&'a ast::StructField, attr::FieldAttrs)>, Error> {
-    fields.iter()
-        .map(|field| {
-            let attrs = try!(attr::FieldAttrs::from_field(cx, &ty, generics, field, is_enum));
-            Ok((field, attrs))
-        })
-        .collect()
 }
 
 /// This function wraps the expression in `#[serde(deserialize_with="...")]` in

@@ -177,31 +177,29 @@ pub struct FieldAttrs {
     name: Name,
     skip_serializing_field: bool,
     skip_deserializing_field: bool,
-    skip_serializing_field_if: Option<P<ast::Expr>>,
+    skip_serializing_if: Option<ast::Path>,
     default_expr_if_missing: Option<P<ast::Expr>>,
-    serialize_with: Option<P<ast::Expr>>,
+    serialize_with: Option<ast::Path>,
     deserialize_with: Option<ast::Path>,
 }
 
 impl FieldAttrs {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
     pub fn from_field(cx: &ExtCtxt,
-                      container_ty: &P<ast::Ty>,
-                      generics: &ast::Generics,
-                      field: &ast::StructField,
-                      is_enum: bool) -> Result<Self, Error> {
+                      index: usize,
+                      field: &ast::StructField) -> Result<Self, Error> {
         let builder = AstBuilder::new();
 
         let field_ident = match field.ident {
             Some(ident) => ident,
-            None => { cx.span_bug(field.span, "struct field has no name?") }
+            None => builder.id(index.to_string()),
         };
 
         let mut field_attrs = FieldAttrs {
             name: Name::new(field_ident),
             skip_serializing_field: false,
             skip_deserializing_field: false,
-            skip_serializing_field_if: None,
+            skip_serializing_if: None,
             default_expr_if_missing: None,
             serialize_with: None,
             deserialize_with: None,
@@ -260,27 +258,14 @@ impl FieldAttrs {
 
                     // Parse `#[serde(skip_serializing_if="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"skip_serializing_if" => {
-                        let expr = wrap_skip_serializing(
-                            field_ident,
-                            try!(parse_lit_into_path(cx, name, lit)),
-                            is_enum,
-                        );
-
-                        field_attrs.skip_serializing_field_if = Some(expr);
+                        let path = try!(parse_lit_into_path(cx, name, lit));
+                        field_attrs.skip_serializing_if = Some(path);
                     }
 
                     // Parse `#[serde(serialize_with="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize_with" => {
-                        let expr = wrap_serialize_with(
-                            cx,
-                            container_ty,
-                            generics,
-                            field_ident,
-                            try!(parse_lit_into_path(cx, name, lit)),
-                            is_enum,
-                        );
-
-                        field_attrs.serialize_with = Some(expr);
+                        let path = try!(parse_lit_into_path(cx, name, lit));
+                        field_attrs.serialize_with = Some(path);
                     }
 
                     // Parse `#[serde(deserialize_with="...")]`
@@ -316,15 +301,15 @@ impl FieldAttrs {
         self.skip_deserializing_field
     }
 
-    pub fn skip_serializing_field_if(&self) -> Option<&P<ast::Expr>> {
-        self.skip_serializing_field_if.as_ref()
+    pub fn skip_serializing_if(&self) -> Option<&ast::Path> {
+        self.skip_serializing_if.as_ref()
     }
 
     pub fn default_expr_if_missing(&self) -> Option<&P<ast::Expr>> {
         self.default_expr_if_missing.as_ref()
     }
 
-    pub fn serialize_with(&self) -> Option<&P<ast::Expr>> {
+    pub fn serialize_with(&self) -> Option<&ast::Path> {
         self.serialize_with.as_ref()
     }
 
@@ -334,14 +319,17 @@ impl FieldAttrs {
 }
 
 
-/// Extract out the `#[serde(...)]` attributes from a struct field.
-pub fn get_struct_field_attrs(cx: &ExtCtxt,
-                              container_ty: &P<ast::Ty>,
-                              generics: &ast::Generics,
-                              fields: &[ast::StructField],
-                              is_enum: bool) -> Result<Vec<FieldAttrs>, Error> {
+/// Zip together fields and `#[serde(...)]` attributes on those fields.
+pub fn fields_with_attrs<'a>(
+    cx: &ExtCtxt,
+    fields: &'a [ast::StructField],
+) -> Result<Vec<(&'a ast::StructField, FieldAttrs)>, Error> {
     fields.iter()
-        .map(|field| FieldAttrs::from_field(cx, container_ty, generics, field, is_enum))
+        .enumerate()
+        .map(|(i, field)| {
+            let attrs = try!(FieldAttrs::from_field(cx, i, field));
+            Ok((field, attrs))
+        })
         .collect()
 }
 
@@ -494,101 +482,4 @@ fn wrap_default(path: ast::Path) -> P<ast::Expr> {
     AstBuilder::new().expr().call()
         .build_path(path)
         .build()
-}
-
-/// This function wraps the expression in `#[serde(skip_serializing_if="...")]` in a trait to
-/// prevent it from accessing the internal `Serialize` state.
-fn wrap_skip_serializing(field_ident: ast::Ident,
-                         path: ast::Path,
-                         is_enum: bool) -> P<ast::Expr> {
-    let builder = AstBuilder::new();
-
-    let expr = builder.expr()
-        .field(field_ident)
-        .field("value")
-        .self_();
-
-    let expr = if is_enum {
-        expr
-    } else {
-        builder.expr().ref_().build(expr)
-    };
-
-    builder.expr().call()
-        .build_path(path)
-        .arg().build(expr)
-        .build()
-}
-
-/// This function wraps the expression in `#[serde(serialize_with="...")]` in a trait to
-/// prevent it from accessing the internal `Serialize` state.
-fn wrap_serialize_with(cx: &ExtCtxt,
-                       container_ty: &P<ast::Ty>,
-                       generics: &ast::Generics,
-                       field_ident: ast::Ident,
-                       path: ast::Path,
-                       is_enum: bool) -> P<ast::Expr> {
-    let builder = AstBuilder::new();
-
-    let expr = builder.expr()
-        .field(field_ident)
-        .self_();
-
-    let expr = if is_enum {
-        expr
-    } else {
-        builder.expr().ref_().build(expr)
-    };
-
-    let expr = builder.expr().call()
-        .build_path(path)
-        .arg().build(expr)
-        .arg()
-            .id("serializer")
-        .build();
-
-    let where_clause = &generics.where_clause;
-
-    quote_expr!(cx, {
-        trait __SerdeSerializeWith {
-            fn __serde_serialize_with<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
-                where __S: _serde::ser::Serializer;
-        }
-
-        impl<'__a, __T> __SerdeSerializeWith for &'__a __T
-            where __T: '__a + __SerdeSerializeWith,
-        {
-            fn __serde_serialize_with<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
-                where __S: _serde::ser::Serializer
-            {
-                (**self).__serde_serialize_with(serializer)
-            }
-        }
-
-        impl $generics __SerdeSerializeWith for $container_ty $where_clause {
-            fn __serde_serialize_with<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
-                where __S: _serde::ser::Serializer
-            {
-                $expr
-            }
-        }
-
-        struct __SerdeSerializeWithStruct<'__a, __T: '__a> {
-            value: &'__a __T,
-        }
-
-        impl<'__a, __T> _serde::ser::Serialize for __SerdeSerializeWithStruct<'__a, __T>
-            where __T: '__a + __SerdeSerializeWith
-        {
-            fn serialize<__S>(&self, serializer: &mut __S) -> Result<(), __S::Error>
-                where __S: _serde::ser::Serializer
-            {
-                self.value.__serde_serialize_with(serializer)
-            }
-        }
-
-        __SerdeSerializeWithStruct {
-            value: &self.value,
-        }
-    })
 }
