@@ -202,25 +202,16 @@ fn deserialize_item_struct(
                 container_attrs,
             )
         }
-        ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
-            deserialize_newtype_struct(
-                cx,
-                &builder,
-                item.ident,
-                impl_generics,
-                ty,
-                container_attrs,
-            )
-        }
         ast::VariantData::Tuple(ref fields, _) => {
             if fields.iter().any(|field| field.ident.is_some()) {
                 cx.span_bug(span, "tuple struct has named fields")
             }
 
-            deserialize_tuple_struct(
+            deserialize_tuple(
                 cx,
                 &builder,
                 item.ident,
+                None,
                 impl_generics,
                 ty,
                 fields.len(),
@@ -236,6 +227,7 @@ fn deserialize_item_struct(
                 cx,
                 &builder,
                 item.ident,
+                None,
                 impl_generics,
                 ty,
                 fields,
@@ -359,62 +351,11 @@ fn deserialize_unit_struct(
     }))
 }
 
-fn deserialize_newtype_struct(
+fn deserialize_tuple(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     type_ident: Ident,
-    impl_generics: &ast::Generics,
-    ty: P<ast::Ty>,
-    container_attrs: &attr::ContainerAttrs,
-) -> Result<P<ast::Expr>, Error> {
-    let where_clause = &impl_generics.where_clause;
-
-    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = try!(deserialize_visitor(
-        builder,
-        impl_generics,
-        vec![deserializer_ty_param(builder)],
-        vec![deserializer_ty_arg(builder)],
-    ));
-
-    let visit_seq_expr = deserialize_seq(
-        cx,
-        builder,
-        builder.path().id(type_ident).build(),
-        1,
-    );
-
-    let type_name = container_attrs.name().deserialize_name_expr();
-
-    Ok(quote_expr!(cx, {
-        $visitor_item
-
-        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
-            type Value = $ty;
-
-            #[inline]
-            fn visit_newtype_struct<__E>(&mut self, deserializer: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
-                where __E: _serde::de::Deserializer,
-            {
-                let value = try!(_serde::de::Deserialize::deserialize(deserializer));
-                Ok($type_ident(value))
-            }
-
-            #[inline]
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: _serde::de::SeqVisitor,
-            {
-                $visit_seq_expr
-            }
-        }
-
-        deserializer.deserialize_newtype_struct($type_name, $visitor_expr)
-    }))
-}
-
-fn deserialize_tuple_struct(
-    cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
-    type_ident: Ident,
+    variant_ident: Option<Ident>,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: usize,
@@ -429,20 +370,52 @@ fn deserialize_tuple_struct(
         vec![deserializer_ty_arg(builder)],
     ));
 
+    let is_enum = variant_ident.is_some();
+    let type_path = match variant_ident {
+        Some(variant_ident) => builder.path().id(type_ident).id(variant_ident).build(),
+        None => builder.path().id(type_ident).build(),
+    };
+
+    let visit_newtype_struct = if !is_enum && fields == 1 {
+        Some(quote_tokens!(cx,
+            #[inline]
+            fn visit_newtype_struct<__E>(&mut self, deserializer: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
+                where __E: _serde::de::Deserializer,
+            {
+                let value = try!(_serde::de::Deserialize::deserialize(deserializer));
+                Ok($type_path(value))
+            }))
+    } else {
+        None
+    };
+
     let visit_seq_expr = deserialize_seq(
         cx,
         builder,
-        builder.path().id(type_ident).build(),
+        type_path,
         fields,
     );
 
-    let type_name = container_attrs.name().deserialize_name_expr();
+    let dispatch = if is_enum {
+        quote_expr!(cx,
+            visitor.visit_tuple($fields, $visitor_expr))
+    } else if fields == 1 {
+        let type_name = container_attrs.name().deserialize_name_expr();
+        quote_expr!(cx,
+            deserializer.deserialize_newtype_struct($type_name, $visitor_expr))
+    } else {
+        let type_name = container_attrs.name().deserialize_name_expr();
+        quote_expr!(cx,
+            deserializer.deserialize_tuple_struct($type_name, $fields, $visitor_expr))
+    };
 
     Ok(quote_expr!(cx, {
         $visitor_item
 
         impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
+
+            $visit_newtype_struct
 
             #[inline]
             fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
@@ -452,7 +425,7 @@ fn deserialize_tuple_struct(
             }
         }
 
-        deserializer.deserialize_tuple_struct($type_name, $fields, $visitor_expr)
+        $dispatch
     }))
 }
 
@@ -566,6 +539,7 @@ fn deserialize_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     type_ident: Ident,
+    variant_ident: Option<Ident>,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[ast::StructField],
@@ -580,9 +554,13 @@ fn deserialize_struct(
         vec![deserializer_ty_arg(builder)],
     ));
 
-    let type_path = builder.path().id(type_ident).build();
+    let type_path = match variant_ident {
+        Some(variant_ident) => builder.path().id(type_ident).id(variant_ident).build(),
+        None => builder.path().id(type_ident).build(),
+    };
 
-    let fields_with_attrs = try!(fields_with_attrs(cx, impl_generics, &ty, fields, false));
+    let is_enum = variant_ident.is_some();
+    let fields_with_attrs = try!(fields_with_attrs(cx, impl_generics, &ty, fields, is_enum));
 
     let visit_seq_expr = try!(deserialize_struct_as_seq(
         cx,
@@ -603,7 +581,14 @@ fn deserialize_struct(
         container_attrs,
     ));
 
-    let type_name = container_attrs.name().deserialize_name_expr();
+    let dispatch = if is_enum {
+        quote_expr!(cx,
+            visitor.visit_struct(FIELDS, $visitor_expr))
+    } else {
+        let type_name = container_attrs.name().deserialize_name_expr();
+        quote_expr!(cx,
+            deserializer.deserialize_struct($type_name, FIELDS, $visitor_expr))
+    };
 
     Ok(quote_expr!(cx, {
         $field_visitor
@@ -630,7 +615,7 @@ fn deserialize_struct(
 
         $fields_stmt
 
-        deserializer.deserialize_struct($type_name, FIELDS, $visitor_expr)
+        $dispatch
     }))
 }
 
@@ -751,29 +736,30 @@ fn deserialize_variant(
                 Ok($type_ident::$variant_ident)
             }))
         }
-        ast::VariantData::Tuple(ref args, _) if args.len() == 1 => {
+        ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
             Ok(quote_expr!(cx, {
                 let val = try!(visitor.visit_newtype());
                 Ok($type_ident::$variant_ident(val))
             }))
         }
         ast::VariantData::Tuple(ref fields, _) => {
-            deserialize_tuple_variant(
+            deserialize_tuple(
                 cx,
                 builder,
                 type_ident,
-                variant_ident,
+                Some(variant_ident),
                 generics,
                 ty,
                 fields.len(),
+                container_attrs,
             )
         }
         ast::VariantData::Struct(ref fields, _) => {
-            deserialize_struct_variant(
+            deserialize_struct(
                 cx,
                 builder,
                 type_ident,
-                variant_ident,
+                Some(variant_ident),
                 generics,
                 ty,
                 fields,
@@ -781,122 +767,6 @@ fn deserialize_variant(
             )
         }
     }
-}
-
-fn deserialize_tuple_variant(
-    cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
-    type_ident: ast::Ident,
-    variant_ident: ast::Ident,
-    generics: &ast::Generics,
-    ty: P<ast::Ty>,
-    fields: usize,
-) -> Result<P<ast::Expr>, Error> {
-    let where_clause = &generics.where_clause;
-
-    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = try!(deserialize_visitor(
-        builder,
-        generics,
-        vec![deserializer_ty_param(builder)],
-        vec![deserializer_ty_arg(builder)],
-    ));
-
-    let visit_seq_expr = deserialize_seq(
-        cx,
-        builder,
-        builder.path().id(type_ident).id(variant_ident).build(),
-        fields,
-    );
-
-    Ok(quote_expr!(cx, {
-        $visitor_item
-
-        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
-            type Value = $ty;
-
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: _serde::de::SeqVisitor,
-            {
-                $visit_seq_expr
-            }
-        }
-
-        visitor.visit_tuple($fields, $visitor_expr)
-    }))
-}
-
-fn deserialize_struct_variant(
-    cx: &ExtCtxt,
-    builder: &aster::AstBuilder,
-    type_ident: ast::Ident,
-    variant_ident: ast::Ident,
-    generics: &ast::Generics,
-    ty: P<ast::Ty>,
-    fields: &[ast::StructField],
-    container_attrs: &attr::ContainerAttrs,
-) -> Result<P<ast::Expr>, Error> {
-    let where_clause = &generics.where_clause;
-
-    let type_path = builder.path()
-        .id(type_ident)
-        .id(variant_ident)
-        .build();
-
-    let fields_with_attrs = try!(fields_with_attrs(cx, generics, &ty, fields, true));
-
-    let visit_seq_expr = try!(deserialize_struct_as_seq(
-        cx,
-        builder,
-        type_ident,
-        type_path.clone(),
-        generics,
-        &fields_with_attrs,
-    ));
-
-    let (field_visitor, fields_stmt, field_expr) = try!(deserialize_struct_visitor(
-        cx,
-        builder,
-        type_ident,
-        type_path,
-        generics,
-        &fields_with_attrs,
-        container_attrs,
-    ));
-
-    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = try!(deserialize_visitor(
-        builder,
-        generics,
-        vec![deserializer_ty_param(builder)],
-        vec![deserializer_ty_arg(builder)],
-    ));
-
-    Ok(quote_expr!(cx, {
-        $field_visitor
-
-        $visitor_item
-
-        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
-            type Value = $ty;
-
-            #[inline]
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: _serde::de::SeqVisitor,
-            {
-                $visit_seq_expr
-            }
-
-            #[inline]
-            fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
-                where __V: _serde::de::MapVisitor,
-            {
-                $field_expr
-            }
-        }
-
-        $fields_stmt
-
-        visitor.visit_struct(FIELDS, $visitor_expr)
-    }))
 }
 
 fn deserialize_field_visitor(
