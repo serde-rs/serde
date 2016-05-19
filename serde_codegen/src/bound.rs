@@ -139,9 +139,9 @@ fn contains_generic(ty: &ast::Ty, generics: &ast::Generics) -> bool {
 //
 //    impl<'a, T> Serialize for Test<'a, T>
 //        where T: Serialize { ... }
-fn strip_reference(ty: &P<ast::Ty>) -> &P<ast::Ty> {
-    match ty.node {
-        ast::TyKind::Rptr(_, ref mut_ty) => &mut_ty.ty,
-        _ => ty
+fn strip_reference(mut ty: &P<ast::Ty>) -> &P<ast::Ty> {
+    while let ast::TyKind::Rptr(_, ref mut_ty) = ty.node {
+        ty = &mut_ty.ty;
     }
+    ty
 }
