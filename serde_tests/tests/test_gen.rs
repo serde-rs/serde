@@ -49,6 +49,12 @@ enum EnumWith<T> {
         i: i32 },
 }
 
+#[derive(Serialize)]
+struct MultipleRef<'a, 'b, 'c, T> where T: 'c, 'c: 'b, 'b: 'a {
+    t: T,
+    rrrt: &'a &'b &'c T,
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 fn ser_i32<S: Serializer>(_: &i32, _: &mut S) -> Result<(), S::Error> { panic!() }
