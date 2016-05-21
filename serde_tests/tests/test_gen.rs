@@ -74,7 +74,43 @@ struct Tuple<T>(
     X,
 );
 
+#[derive(Serialize, Deserialize)]
+#[serde(where(serialize="D: Serialize", deserialize="D: Deserialize"))]
+enum TreeNode<D> {
+    Split {
+        left: Box<TreeNode<D>>,
+        right: Box<TreeNode<D>>,
+    },
+    Leaf {
+        data: D,
+    },
+}
+
+#[derive(Serialize, Deserialize)]
+struct ListNode<D> {
+    data: D,
+    #[serde(where="")]
+    next: Box<ListNode<D>>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SerializeWithTrait<D> {
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with",
+            where(serialize="D: SerializeWith",
+                  deserialize="D: DeserializeWith"))]
+    data: D,
+}
+
 //////////////////////////////////////////////////////////////////////////
+
+trait SerializeWith {
+    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> Result<(), S::Error>;
+}
+
+trait DeserializeWith: Sized {
+    fn deserialize_with<D: Deserializer>(_: &mut D) -> Result<Self, D::Error>;
+}
 
 // Implements neither Serialize nor Deserialize
 struct X;

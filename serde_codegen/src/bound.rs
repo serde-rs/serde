@@ -7,6 +7,9 @@ use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 use syntax::visit;
 
+use attr;
+use error::Error;
+
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
 // allowed here".
@@ -21,20 +24,50 @@ pub fn without_defaults(generics: &ast::Generics) -> ast::Generics {
     }
 }
 
-pub fn with_bound(
+pub fn with_where_predicates(
+    builder: &AstBuilder,
+    generics: &ast::Generics,
+    predicates: &Vec<ast::WherePredicate>,
+) -> ast::Generics {
+    builder.from_generics(generics.clone())
+        .with_predicates(predicates.clone())
+        .build()
+}
+
+pub fn with_where_predicates_from_fields<F>(
     cx: &ExtCtxt,
     builder: &AstBuilder,
     item: &ast::Item,
     generics: &ast::Generics,
-    filter: &Fn(&ast::StructField) -> bool,
-    bound: &ast::Path,
-) -> ast::Generics {
-    builder.from_generics(generics.clone())
+    from_field: F,
+) -> Result<ast::Generics, Error>
+    where F: Fn(&attr::FieldAttrs) -> Option<&Vec<ast::WherePredicate>>,
+{
+    Ok(builder.from_generics(generics.clone())
         .with_predicates(
-            all_variants(cx, item).iter()
-                .flat_map(|variant_data| all_struct_fields(variant_data))
-                .filter(|field| filter(field))
-                .map(|field| &field.ty)
+            try!(all_fields_with_attrs(cx, item))
+                .iter()
+                .flat_map(|&(_, ref attrs)| from_field(attrs))
+                .flat_map(|predicates| predicates.clone()))
+        .build())
+}
+
+pub fn with_bound<F>(
+    cx: &ExtCtxt,
+    builder: &AstBuilder,
+    item: &ast::Item,
+    generics: &ast::Generics,
+    filter: F,
+    bound: &ast::Path,
+) -> Result<ast::Generics, Error>
+    where F: Fn(&ast::StructField, &attr::FieldAttrs) -> bool,
+{
+    Ok(builder.from_generics(generics.clone())
+        .with_predicates(
+            try!(all_fields_with_attrs(cx, item))
+                .iter()
+                .filter(|&&(ref field, ref attrs)| filter(field, attrs))
+                .map(|&(ref field, _)| &field.ty)
                 // TODO this filter can be removed later, see comment on function
                 .filter(|ty| contains_generic(ty, generics))
                 .map(|ty| strip_reference(ty))
@@ -44,7 +77,20 @@ pub fn with_bound(
                     // the bound e.g. Serialize
                     .bound().trait_(bound.clone()).build()
                     .build()))
-        .build()
+        .build())
+}
+
+fn all_fields_with_attrs(
+    cx: &ExtCtxt,
+    item: &ast::Item,
+) -> Result<Vec<(ast::StructField, attr::FieldAttrs)>, Error> {
+    let fields: Vec<ast::StructField> =
+        all_variants(cx, item).iter()
+            .flat_map(|variant_data| all_struct_fields(variant_data))
+            .cloned()
+            .collect();
+
+    attr::fields_with_attrs(cx, &fields)
 }
 
 fn all_variants<'a>(cx: &ExtCtxt, item: &'a ast::Item) -> Vec<&'a ast::VariantData> {

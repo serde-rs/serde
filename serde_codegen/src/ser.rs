@@ -60,7 +60,9 @@ fn serialize_item(
         }
     };
 
-    let impl_generics = build_impl_generics(cx, builder, item, generics);
+    let container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
+
+    let impl_generics = try!(build_impl_generics(cx, builder, item, generics, &container_attrs));
 
     let ty = builder.ty().path()
         .segment(item.ident).with_generics(impl_generics.clone()).build()
@@ -70,7 +72,8 @@ fn serialize_item(
                                    &builder,
                                    &item,
                                    &impl_generics,
-                                   ty.clone()));
+                                   ty.clone(),
+                                   &container_attrs));
 
     let where_clause = &impl_generics.where_clause;
 
@@ -99,32 +102,36 @@ fn build_impl_generics(
     builder: &aster::AstBuilder,
     item: &Item,
     generics: &ast::Generics,
-) -> ast::Generics {
+    container_attrs: &attr::ContainerAttrs,
+) -> Result<ast::Generics, Error> {
     let generics = bound::without_defaults(generics);
-    let generics = bound::with_bound(cx, builder, item, &generics,
-        &serialized_by_us,
-        &builder.path().ids(&["_serde", "ser", "Serialize"]).build());
-    generics
+
+    let generics = try!(bound::with_where_predicates_from_fields(
+        cx, builder, item, &generics,
+        |attrs| attrs.ser_where()));
+
+    match container_attrs.ser_where() {
+        Some(predicates) => {
+            let generics = bound::with_where_predicates(builder, &generics, predicates);
+            Ok(generics)
+        }
+        None => {
+            let generics = try!(bound::with_bound(cx, builder, item, &generics,
+                needs_serialize_bound,
+                &builder.path().ids(&["_serde", "ser", "Serialize"]).build()));
+            Ok(generics)
+        }
+    }
 }
 
 // Fields with a `skip_serializing` or `serialize_with` attribute are not
-// serialized by us. All other fields may need a `T: Serialize` bound where T is
-// the type of the field.
-fn serialized_by_us(field: &ast::StructField) -> bool {
-    for meta_items in field.attrs.iter().filter_map(attr::get_serde_meta_items) {
-        for meta_item in meta_items {
-            match meta_item.node {
-                ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
-                    return false
-                }
-                ast::MetaItemKind::NameValue(ref name, _) if name == &"serialize_with" => {
-                    return false
-                }
-                _ => {}
-            }
-        }
-    }
-    true
+// serialized by us so we do not generate a bound. Fields with a `where`
+// attribute specify their own bound so we do not generate one. All other fields
+// may need a `T: Serialize` bound where T is the type of the field.
+fn needs_serialize_bound(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
+    !attrs.skip_serializing_field()
+        && attrs.serialize_with().is_none()
+        && attrs.ser_where().is_none()
 }
 
 fn serialize_body(
@@ -133,9 +140,8 @@ fn serialize_body(
     item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
+    container_attrs: &attr::ContainerAttrs,
 ) -> Result<P<ast::Expr>, Error> {
-    let container_attrs = try!(attr::ContainerAttrs::from_item(cx, item));
-
     match item.node {
         ast::ItemKind::Struct(ref variant_data, _) => {
             serialize_item_struct(
@@ -145,7 +151,7 @@ fn serialize_body(
                 ty,
                 item.span,
                 variant_data,
-                &container_attrs,
+                container_attrs,
             )
         }
         ast::ItemKind::Enum(ref enum_def, _) => {
@@ -156,7 +162,7 @@ fn serialize_body(
                 impl_generics,
                 ty,
                 enum_def,
-                &container_attrs,
+                container_attrs,
             )
         }
         _ => {
@@ -661,7 +667,7 @@ fn serialize_tuple_struct_visitor(
 
     let arms: Vec<_> = fields_with_attrs.iter()
         .enumerate()
-        .map(|(i, &(field, ref attrs))| {
+        .map(|(i, &(ref field, ref attrs))| {
             let mut field_expr = builder.expr().tup_field(i).field("value").self_();
             if !is_enum {
                 field_expr = quote_expr!(cx, &$field_expr);
@@ -745,7 +751,7 @@ fn serialize_struct_visitor(
     let arms: Vec<ast::Arm> = fields_with_attrs.iter()
         .filter(|&&(_, ref attrs)| !attrs.skip_serializing_field())
         .enumerate()
-        .map(|(i, &(field, ref attrs))| {
+        .map(|(i, &(ref field, ref attrs))| {
             let ident = field.ident.expect("struct has unnamed field");
             let mut field_expr = quote_expr!(cx, self.value.$ident);
             if !is_enum {
@@ -789,7 +795,7 @@ fn serialize_struct_visitor(
 
     let len = fields_with_attrs.iter()
         .filter(|&&(_, ref attrs)| !attrs.skip_serializing_field())
-        .map(|&(field, ref attrs)| {
+        .map(|&(ref field, ref attrs)| {
             let ident = field.ident.expect("struct has unnamed fields");
             let mut field_expr = quote_expr!(cx, self.value.$ident);
             if !is_enum {
