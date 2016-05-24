@@ -65,7 +65,6 @@ use super::{
     Serialize,
     Serializer,
     SeqVisitor,
-    MapVisitor,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -571,72 +570,6 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// A `serde::Visitor` for (key, value) map iterators.
-///
-/// # Examples
-///
-/// ```
-/// use std::collections::HashMap;
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::impls::MapIteratorVisitor;
-///
-/// struct Map(HashMap<u32, u32>);
-///
-/// impl Serialize for Map {
-///     fn serialize<S>(&self, ser: &mut S) -> Result<(), S::Error>
-///         where S: Serializer,
-///     {
-///         ser.serialize_map(MapIteratorVisitor::new(
-///             self.0.iter(),
-///             Some(self.0.len()),
-///         ))
-///     }
-/// }
-/// ```
-pub struct MapIteratorVisitor<Iter> {
-    iter: Iter,
-    len: Option<usize>,
-}
-
-impl<K, V, Iter> MapIteratorVisitor<Iter>
-    where Iter: Iterator<Item=(K, V)>
-{
-    /// Construct a new `MapIteratorVisitor<Iter>`.
-    #[inline]
-    pub fn new(iter: Iter, len: Option<usize>) -> MapIteratorVisitor<Iter> {
-        MapIteratorVisitor {
-            iter: iter,
-            len: len,
-        }
-    }
-}
-
-impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
-    where K: Serialize,
-          V: Serialize,
-          I: Iterator<Item=(K, V)>,
-{
-    #[inline]
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer,
-    {
-        match self.iter.next() {
-            Some((key, value)) => {
-                try!(serializer.serialize_map_elt(key, value));
-                Ok(Some(()))
-            }
-            None => Ok(None)
-        }
-    }
-
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        self.len
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<K, V> Serialize for BTreeMap<K, V>
     where K: Serialize + Ord,
@@ -646,7 +579,10 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+        serializer.serialize_map(self.iter().map(|(k, v)| (
+            move |s: &mut S| k.serialize(s),
+            move |s: &mut S| v.serialize(s),
+        )))
     }
 }
 
@@ -659,7 +595,10 @@ impl<K, V> Serialize for HashMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+        serializer.serialize_map(self.iter().map(|(k, v)| (
+            move |s: &mut S| k.serialize(s),
+            move |s: &mut S| v.serialize(s),
+        )))
     }
 }
 
