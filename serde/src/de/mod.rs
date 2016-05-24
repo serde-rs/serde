@@ -39,6 +39,9 @@ pub trait Error: Sized + error::Error {
     }
 
     /// Raised when a fixed sized sequence or map was passed in the wrong amount of arguments.
+    ///
+    /// The parameter `len` is the number of arguments found in the serialization. The sequence
+    /// may either expect more arguments or less arguments.
     fn invalid_length(len: usize) -> Self {
         Error::custom(format!("Invalid length: {}", len))
     }
