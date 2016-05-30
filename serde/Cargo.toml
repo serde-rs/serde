@@ -8,6 +8,7 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde-rs.github.io/serde/serde/"
 readme = "../README.md"
 keywords = ["serde", "serialization"]
+include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
 default = ["std"]
