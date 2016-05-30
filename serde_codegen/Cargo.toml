@@ -8,7 +8,7 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://github.com/serde-rs/serde"
 keywords = ["serde", "serialization"]
 build = "build.rs"
-include = ["Cargo.toml", "src/**/*.rs"]
+include = ["Cargo.toml", "build.rs", "src/**/*.rs"]
 
 [features]
 default = ["with-syntex"]
