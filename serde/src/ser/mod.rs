@@ -122,11 +122,11 @@ pub trait Serializer {
     /// Serializes a `f64` value.
     fn serialize_f64(&mut self, v: f64) -> Result<(), Self::Error>;
 
-    /// Serializes a character. By default it serializes as bytes containing the UTF-8 encoding
-    /// of the character.
+    /// Serializes a character. By default it serializes it as a `&str` containing a
+    /// single character.
     #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), Self::Error> {
-        self.serialize_bytes(::utils::encode_utf8(v).as_slice())
+        self.serialize_str(::utils::encode_utf8(v).as_str())
     }
 
     /// Serializes a `&str`.

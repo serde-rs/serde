@@ -578,7 +578,7 @@ pub trait Visitor {
     fn visit_char<E>(&mut self, v: char) -> Result<Self::Value, E>
         where E: Error,
     {
-        self.visit_str(::core::str::from_utf8(::utils::encode_utf8(v).as_slice()).unwrap())
+        self.visit_str(::utils::encode_utf8(v).as_str())
     }
 
     /// `visit_str` deserializes a `&str` into a `Value`.
