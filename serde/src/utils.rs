@@ -40,9 +40,9 @@ pub struct EncodeUtf8 {
 }
 
 impl EncodeUtf8 {
-    /// Returns the remaining bytes of this iterator as a slice.
-    pub fn as_slice(&self) -> &[u8] {
-        &self.buf[self.pos..]
+    // FIXME: use this from_utf8_unchecked, since we know it can never fail
+    pub fn as_str(&self) -> &str {
+        ::core::str::from_utf8(&self.buf[self.pos..]).unwrap()
     }
 }
 
