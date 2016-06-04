@@ -137,12 +137,12 @@ impl ContainerAttrs {
         self.deny_unknown_fields
     }
 
-    pub fn ser_where(&self) -> Option<&Vec<ast::WherePredicate>> {
-        self.ser_where.as_ref()
+    pub fn ser_where(&self) -> Option<&[ast::WherePredicate]> {
+        self.ser_where.as_ref().map(Vec::as_slice)
     }
 
-    pub fn de_where(&self) -> Option<&Vec<ast::WherePredicate>> {
-        self.de_where.as_ref()
+    pub fn de_where(&self) -> Option<&[ast::WherePredicate]> {
+        self.de_where.as_ref().map(Vec::as_slice)
     }
 }
 
@@ -361,12 +361,12 @@ impl FieldAttrs {
         self.deserialize_with.as_ref()
     }
 
-    pub fn ser_where(&self) -> Option<&Vec<ast::WherePredicate>> {
-        self.ser_where.as_ref()
+    pub fn ser_where(&self) -> Option<&[ast::WherePredicate]> {
+        self.ser_where.as_ref().map(Vec::as_slice)
     }
 
-    pub fn de_where(&self) -> Option<&Vec<ast::WherePredicate>> {
-        self.de_where.as_ref()
+    pub fn de_where(&self) -> Option<&[ast::WherePredicate]> {
+        self.de_where.as_ref().map(Vec::as_slice)
     }
 }
 

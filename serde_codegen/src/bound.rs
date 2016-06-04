@@ -27,10 +27,10 @@ pub fn without_defaults(generics: &ast::Generics) -> ast::Generics {
 pub fn with_where_predicates(
     builder: &AstBuilder,
     generics: &ast::Generics,
-    predicates: &Vec<ast::WherePredicate>,
+    predicates: &[ast::WherePredicate],
 ) -> ast::Generics {
     builder.from_generics(generics.clone())
-        .with_predicates(predicates.clone())
+        .with_predicates(predicates.to_vec())
         .build()
 }
 
@@ -41,14 +41,14 @@ pub fn with_where_predicates_from_fields<F>(
     generics: &ast::Generics,
     from_field: F,
 ) -> Result<ast::Generics, Error>
-    where F: Fn(&attr::FieldAttrs) -> Option<&Vec<ast::WherePredicate>>,
+    where F: Fn(&attr::FieldAttrs) -> Option<&[ast::WherePredicate]>,
 {
     Ok(builder.from_generics(generics.clone())
         .with_predicates(
             try!(all_fields_with_attrs(cx, item))
                 .iter()
                 .flat_map(|&(_, ref attrs)| from_field(attrs))
-                .flat_map(|predicates| predicates.clone()))
+                .flat_map(|predicates| predicates.to_vec()))
         .build())
 }
 
