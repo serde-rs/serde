@@ -138,11 +138,11 @@ impl ContainerAttrs {
     }
 
     pub fn ser_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.ser_where.as_ref().map(Vec::as_slice)
+        self.ser_where.as_ref().map(|vec| &vec[..])
     }
 
     pub fn de_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.de_where.as_ref().map(Vec::as_slice)
+        self.de_where.as_ref().map(|vec| &vec[..])
     }
 }
 
@@ -362,11 +362,11 @@ impl FieldAttrs {
     }
 
     pub fn ser_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.ser_where.as_ref().map(Vec::as_slice)
+        self.ser_where.as_ref().map(|vec| &vec[..])
     }
 
     pub fn de_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.de_where.as_ref().map(Vec::as_slice)
+        self.de_where.as_ref().map(|vec| &vec[..])
     }
 }
 
