@@ -75,7 +75,6 @@ struct Tuple<T>(
 );
 
 #[derive(Serialize, Deserialize)]
-#[serde(where(serialize="D: Serialize", deserialize="D: Deserialize"))]
 enum TreeNode<D> {
     Split {
         left: Box<TreeNode<D>>,
@@ -89,17 +88,33 @@ enum TreeNode<D> {
 #[derive(Serialize, Deserialize)]
 struct ListNode<D> {
     data: D,
-    #[serde(where="")]
     next: Box<ListNode<D>>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct SerializeWithTrait<D> {
+#[serde(where="D: SerializeWith + DeserializeWith")]
+struct WithTraits1<D, E> {
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with")]
+    d: D,
     #[serde(serialize_with="SerializeWith::serialize_with",
             deserialize_with="DeserializeWith::deserialize_with",
-            where(serialize="D: SerializeWith",
-                  deserialize="D: DeserializeWith"))]
-    data: D,
+            where="E: SerializeWith + DeserializeWith")]
+    e: E,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(where(serialize="D: SerializeWith",
+              deserialize="D: DeserializeWith"))]
+struct WithTraits2<D, E> {
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with")]
+    d: D,
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with",
+            where(serialize="E: SerializeWith",
+                  deserialize="E: DeserializeWith"))]
+    e: E,
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -70,6 +70,7 @@ pub fn with_bound<F>(
                 .map(|&(ref field, _)| &field.ty)
                 // TODO this filter can be removed later, see comment on function
                 .filter(|ty| contains_generic(ty, generics))
+                .filter(|ty| !contains_recursion(ty, item.ident))
                 .map(|ty| strip_reference(ty))
                 .map(|ty| builder.where_predicate()
                     // the type that is being bounded e.g. T
@@ -157,6 +158,50 @@ fn contains_generic(ty: &ast::Ty, generics: &ast::Generics) -> bool {
     };
     visit::walk_ty(&mut visitor, ty);
     visitor.found_generic
+}
+
+// We do not attempt to generate any bounds based on field types that are
+// directly recursive, as in:
+//
+//    struct Test<D> {
+//        next: Box<Test<D>>,
+//    }
+//
+// This does not catch field types that are mutually recursive with some other
+// type. For those, we require bounds to be specified by a `where` attribute if
+// the inferred ones are not correct.
+//
+//    struct Test<D> {
+//        #[serde(where="D: Serialize + Deserialize")]
+//        next: Box<Other<D>>,
+//    }
+//    struct Other<D> {
+//        #[serde(where="D: Serialize + Deserialize")]
+//        next: Box<Test<D>>,
+//    }
+fn contains_recursion(ty: &ast::Ty, ident: ast::Ident) -> bool {
+    struct FindRecursion {
+        ident: ast::Ident,
+        found_recursion: bool,
+    }
+    impl<'v> visit::Visitor<'v> for FindRecursion {
+        fn visit_path(&mut self, path: &'v ast::Path, _id: ast::NodeId) {
+            if !path.global
+                    && path.segments.len() == 1
+                    && path.segments[0].identifier == self.ident {
+                self.found_recursion = true;
+            } else {
+                visit::walk_path(self, path);
+            }
+        }
+    }
+
+    let mut visitor = FindRecursion {
+        ident: ident,
+        found_recursion: false,
+    };
+    visit::walk_ty(&mut visitor, ty);
+    visitor.found_recursion
 }
 
 // This is required to handle types that use both a reference and a value of
