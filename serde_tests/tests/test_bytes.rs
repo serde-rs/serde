@@ -107,15 +107,8 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_map<V>(&mut self, _visitor: V) -> Result<(), Error>
-        where V: serde::ser::MapVisitor,
-    {
-        Err(Error)
-    }
-
-    fn serialize_map_elt<K, V>(&mut self, _key: K, _value: V) -> Result<(), Error>
-        where K: serde::Serialize,
-              V: serde::Serialize,
+    fn serialize_map<K, V, I>(&mut self, _: I) -> Result<(), Error>
+        where I: Iterator<Item = (K, V)>
     {
         Err(Error)
     }
