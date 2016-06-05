@@ -82,7 +82,6 @@ impl ContainerAttrs {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                         let s = try!(get_str_from_lit(cx, name, lit));
-
                         container_attrs.name.serialize_name = Some(s.clone());
                         container_attrs.name.deserialize_name = Some(s);
                     }
@@ -90,9 +89,12 @@ impl ContainerAttrs {
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
                         let (ser_name, de_name) = try!(get_renames(cx, meta_items));
-
-                        container_attrs.name.serialize_name = ser_name;
-                        container_attrs.name.deserialize_name = de_name;
+                        if ser_name.is_some() {
+                            container_attrs.name.serialize_name = ser_name;
+                        }
+                        if de_name.is_some() {
+                            container_attrs.name.deserialize_name = de_name;
+                        }
                     }
 
                     // Parse `#[serde(deny_unknown_fields)]`
@@ -110,8 +112,12 @@ impl ContainerAttrs {
                     // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
                         let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
-                        container_attrs.ser_bound = ser_bound;
-                        container_attrs.de_bound = de_bound;
+                        if ser_bound.is_some() {
+                            container_attrs.ser_bound = ser_bound;
+                        }
+                        if de_bound.is_some() {
+                            container_attrs.de_bound = de_bound;
+                        }
                     }
 
                     _ => {
@@ -164,7 +170,6 @@ impl VariantAttrs {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                         let s = try!(get_str_from_lit(cx, name, lit));
-
                         variant_attrs.name.serialize_name = Some(s.clone());
                         variant_attrs.name.deserialize_name = Some(s);
                     }
@@ -172,9 +177,12 @@ impl VariantAttrs {
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
                         let (ser_name, de_name) = try!(get_renames(cx, meta_items));
-
-                        variant_attrs.name.serialize_name = ser_name;
-                        variant_attrs.name.deserialize_name = de_name;
+                        if ser_name.is_some() {
+                            variant_attrs.name.serialize_name = ser_name;
+                        }
+                        if de_name.is_some() {
+                            variant_attrs.name.deserialize_name = de_name;
+                        }
                     }
 
                     _ => {
@@ -241,7 +249,6 @@ impl FieldAttrs {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
                         let s = try!(get_str_from_lit(cx, name, lit));
-
                         field_attrs.name.serialize_name = Some(s.clone());
                         field_attrs.name.deserialize_name = Some(s);
                     }
@@ -249,9 +256,12 @@ impl FieldAttrs {
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
                         let (ser_name, de_name) = try!(get_renames(cx, meta_items));
-
-                        field_attrs.name.serialize_name = ser_name;
-                        field_attrs.name.deserialize_name = de_name;
+                        if ser_name.is_some() {
+                            field_attrs.name.serialize_name = ser_name;
+                        }
+                        if de_name.is_some() {
+                            field_attrs.name.deserialize_name = de_name;
+                        }
                     }
 
                     // Parse `#[serde(default)]`
@@ -314,8 +324,12 @@ impl FieldAttrs {
                     // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
                         let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
-                        field_attrs.ser_bound = ser_bound;
-                        field_attrs.de_bound = de_bound;
+                        if ser_bound.is_some() {
+                            field_attrs.ser_bound = ser_bound;
+                        }
+                        if de_bound.is_some() {
+                            field_attrs.de_bound = de_bound;
+                        }
                     }
 
                     _ => {
