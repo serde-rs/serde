@@ -2,7 +2,6 @@
 #![cfg_attr(feature = "nightly-testing", feature(plugin))]
 #![cfg_attr(feature = "nightly-testing", allow(too_many_arguments))]
 #![cfg_attr(feature = "nightly-testing", allow(used_underscore_binding))]
-#![cfg_attr(feature = "nightly-testing", allow(useless_let_if_seq))]
 #![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 #![cfg_attr(not(feature = "with-syntex"), plugin(quasi_macros))]
 
