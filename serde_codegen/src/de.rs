@@ -111,16 +111,16 @@ fn build_impl_generics(
 
     let generics = try!(bound::with_where_predicates_from_fields(
         cx, builder, item, &generics,
-        |attrs| attrs.de_where()));
+        |attrs| attrs.de_bound()));
 
-    match container_attrs.de_where() {
+    match container_attrs.de_bound() {
         Some(predicates) => {
             let generics = bound::with_where_predicates(builder, &generics, predicates);
             Ok(generics)
         }
         None => {
             let generics = try!(bound::with_bound(cx, builder, item, &generics,
-                deserialized_by_us,
+                needs_deserialize_bound,
                 &builder.path().ids(&["_serde", "de", "Deserialize"]).build()));
             let generics = try!(bound::with_bound(cx, builder, item, &generics,
                 requires_default,
@@ -131,12 +131,13 @@ fn build_impl_generics(
 }
 
 // Fields with a `skip_deserializing` or `deserialize_with` attribute are not
-// deserialized by us. All other fields may need a `T: Deserialize` bound where
-// T is the type of the field.
-fn deserialized_by_us(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
+// deserialized by us so we do not generate a bound. Fields with a `bound`
+// attribute specify their own bound so we do not generate one. All other fields
+// may need a `T: Deserialize` bound where T is the type of the field.
+fn needs_deserialize_bound(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
     !attrs.skip_deserializing_field()
         && attrs.deserialize_with().is_none()
-        && attrs.de_where().is_none()
+        && attrs.de_bound().is_none()
 }
 
 // Fields with a `default` attribute (not `default=...`), and fields with a

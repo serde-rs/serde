@@ -62,8 +62,8 @@ impl Name {
 pub struct ContainerAttrs {
     name: Name,
     deny_unknown_fields: bool,
-    ser_where: Option<Vec<ast::WherePredicate>>,
-    de_where: Option<Vec<ast::WherePredicate>>,
+    ser_bound: Option<Vec<ast::WherePredicate>>,
+    de_bound: Option<Vec<ast::WherePredicate>>,
 }
 
 impl ContainerAttrs {
@@ -72,8 +72,8 @@ impl ContainerAttrs {
         let mut container_attrs = ContainerAttrs {
             name: Name::new(item.ident),
             deny_unknown_fields: false,
-            ser_where: None,
-            de_where: None,
+            ser_bound: None,
+            de_bound: None,
         };
 
         for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
@@ -100,18 +100,18 @@ impl ContainerAttrs {
                         container_attrs.deny_unknown_fields = true;
                     }
 
-                    // Parse `#[serde(where="D: Serialize")]`
-                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"where" => {
+                    // Parse `#[serde(bound="D: Serialize")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
                         let where_predicates = try!(parse_lit_into_where(cx, name, lit));
-                        container_attrs.ser_where = Some(where_predicates.clone());
-                        container_attrs.de_where = Some(where_predicates.clone());
+                        container_attrs.ser_bound = Some(where_predicates.clone());
+                        container_attrs.de_bound = Some(where_predicates.clone());
                     }
 
-                    // Parse `#[serde(where(serialize="D: Serialize", deserialize="D: Deserialize"))]`
-                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"where" => {
-                        let (ser_where, de_where) = try!(get_where_predicates(cx, meta_items));
-                        container_attrs.ser_where = ser_where;
-                        container_attrs.de_where = de_where;
+                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
+                        let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
+                        container_attrs.ser_bound = ser_bound;
+                        container_attrs.de_bound = de_bound;
                     }
 
                     _ => {
@@ -137,12 +137,12 @@ impl ContainerAttrs {
         self.deny_unknown_fields
     }
 
-    pub fn ser_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.ser_where.as_ref().map(|vec| &vec[..])
+    pub fn ser_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.ser_bound.as_ref().map(|vec| &vec[..])
     }
 
-    pub fn de_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.de_where.as_ref().map(|vec| &vec[..])
+    pub fn de_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.de_bound.as_ref().map(|vec| &vec[..])
     }
 }
 
@@ -207,8 +207,8 @@ pub struct FieldAttrs {
     default_expr_if_missing: Option<P<ast::Expr>>,
     serialize_with: Option<ast::Path>,
     deserialize_with: Option<ast::Path>,
-    ser_where: Option<Vec<ast::WherePredicate>>,
-    de_where: Option<Vec<ast::WherePredicate>>,
+    ser_bound: Option<Vec<ast::WherePredicate>>,
+    de_bound: Option<Vec<ast::WherePredicate>>,
 }
 
 impl FieldAttrs {
@@ -231,8 +231,8 @@ impl FieldAttrs {
             default_expr_if_missing: None,
             serialize_with: None,
             deserialize_with: None,
-            ser_where: None,
-            de_where: None,
+            ser_bound: None,
+            de_bound: None,
         };
 
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
@@ -304,18 +304,18 @@ impl FieldAttrs {
                         field_attrs.deserialize_with = Some(path);
                     }
 
-                    // Parse `#[serde(where="D: Serialize")]`
-                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"where" => {
+                    // Parse `#[serde(bound="D: Serialize")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
                         let where_predicates = try!(parse_lit_into_where(cx, name, lit));
-                        field_attrs.ser_where = Some(where_predicates.clone());
-                        field_attrs.de_where = Some(where_predicates.clone());
+                        field_attrs.ser_bound = Some(where_predicates.clone());
+                        field_attrs.de_bound = Some(where_predicates.clone());
                     }
 
-                    // Parse `#[serde(where(serialize="D: Serialize", deserialize="D: Deserialize"))]`
-                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"where" => {
-                        let (ser_where, de_where) = try!(get_where_predicates(cx, meta_items));
-                        field_attrs.ser_where = ser_where;
-                        field_attrs.de_where = de_where;
+                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
+                        let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
+                        field_attrs.ser_bound = ser_bound;
+                        field_attrs.de_bound = de_bound;
                     }
 
                     _ => {
@@ -361,12 +361,12 @@ impl FieldAttrs {
         self.deserialize_with.as_ref()
     }
 
-    pub fn ser_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.ser_where.as_ref().map(|vec| &vec[..])
+    pub fn ser_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.ser_bound.as_ref().map(|vec| &vec[..])
     }
 
-    pub fn de_where(&self) -> Option<&[ast::WherePredicate]> {
-        self.de_where.as_ref().map(|vec| &vec[..])
+    pub fn de_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.de_bound.as_ref().map(|vec| &vec[..])
     }
 }
 
@@ -434,7 +434,7 @@ fn get_where_predicates(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
 ) -> Result<(Option<Vec<ast::WherePredicate>>, Option<Vec<ast::WherePredicate>>), Error> {
-    get_ser_and_de(cx, "where", items, parse_lit_into_where)
+    get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 
 pub fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {

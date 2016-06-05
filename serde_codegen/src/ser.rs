@@ -108,9 +108,9 @@ fn build_impl_generics(
 
     let generics = try!(bound::with_where_predicates_from_fields(
         cx, builder, item, &generics,
-        |attrs| attrs.ser_where()));
+        |attrs| attrs.ser_bound()));
 
-    match container_attrs.ser_where() {
+    match container_attrs.ser_bound() {
         Some(predicates) => {
             let generics = bound::with_where_predicates(builder, &generics, predicates);
             Ok(generics)
@@ -125,13 +125,13 @@ fn build_impl_generics(
 }
 
 // Fields with a `skip_serializing` or `serialize_with` attribute are not
-// serialized by us so we do not generate a bound. Fields with a `where`
+// serialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Serialize` bound where T is the type of the field.
 fn needs_serialize_bound(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
     !attrs.skip_serializing_field()
         && attrs.serialize_with().is_none()
-        && attrs.ser_where().is_none()
+        && attrs.ser_bound().is_none()
 }
 
 fn serialize_body(

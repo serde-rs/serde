@@ -168,15 +168,15 @@ fn contains_generic(ty: &ast::Ty, generics: &ast::Generics) -> bool {
 //    }
 //
 // This does not catch field types that are mutually recursive with some other
-// type. For those, we require bounds to be specified by a `where` attribute if
+// type. For those, we require bounds to be specified by a `bound` attribute if
 // the inferred ones are not correct.
 //
 //    struct Test<D> {
-//        #[serde(where="D: Serialize + Deserialize")]
+//        #[serde(bound="D: Serialize + Deserialize")]
 //        next: Box<Other<D>>,
 //    }
 //    struct Other<D> {
-//        #[serde(where="D: Serialize + Deserialize")]
+//        #[serde(bound="D: Serialize + Deserialize")]
 //        next: Box<Test<D>>,
 //    }
 fn contains_recursion(ty: &ast::Ty, ident: ast::Ident) -> bool {

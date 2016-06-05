@@ -92,19 +92,19 @@ struct ListNode<D> {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(where="D: SerializeWith + DeserializeWith")]
+#[serde(bound="D: SerializeWith + DeserializeWith")]
 struct WithTraits1<D, E> {
     #[serde(serialize_with="SerializeWith::serialize_with",
             deserialize_with="DeserializeWith::deserialize_with")]
     d: D,
     #[serde(serialize_with="SerializeWith::serialize_with",
             deserialize_with="DeserializeWith::deserialize_with",
-            where="E: SerializeWith + DeserializeWith")]
+            bound="E: SerializeWith + DeserializeWith")]
     e: E,
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(where(serialize="D: SerializeWith",
+#[serde(bound(serialize="D: SerializeWith",
               deserialize="D: DeserializeWith"))]
 struct WithTraits2<D, E> {
     #[serde(serialize_with="SerializeWith::serialize_with",
@@ -112,7 +112,7 @@ struct WithTraits2<D, E> {
     d: D,
     #[serde(serialize_with="SerializeWith::serialize_with",
             deserialize_with="DeserializeWith::deserialize_with",
-            where(serialize="E: SerializeWith",
+            bound(serialize="E: SerializeWith",
                   deserialize="E: DeserializeWith"))]
     e: E,
 }
