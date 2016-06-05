@@ -104,7 +104,7 @@ impl ContainerAttrs {
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
                         let where_predicates = try!(parse_lit_into_where(cx, name, lit));
                         container_attrs.ser_bound = Some(where_predicates.clone());
-                        container_attrs.de_bound = Some(where_predicates.clone());
+                        container_attrs.de_bound = Some(where_predicates);
                     }
 
                     // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
@@ -308,7 +308,7 @@ impl FieldAttrs {
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
                         let where_predicates = try!(parse_lit_into_where(cx, name, lit));
                         field_attrs.ser_bound = Some(where_predicates.clone());
-                        field_attrs.de_bound = Some(where_predicates.clone());
+                        field_attrs.de_bound = Some(where_predicates);
                     }
 
                     // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
