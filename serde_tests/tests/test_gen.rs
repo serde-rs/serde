@@ -111,9 +111,9 @@ struct WithTraits2<D, E> {
             deserialize_with="DeserializeWith::deserialize_with")]
     d: D,
     #[serde(serialize_with="SerializeWith::serialize_with",
-            deserialize_with="DeserializeWith::deserialize_with",
-            bound(serialize="E: SerializeWith",
-                  deserialize="E: DeserializeWith"))]
+            bound(serialize="E: SerializeWith"))]
+    #[serde(deserialize_with="DeserializeWith::deserialize_with",
+            bound(deserialize="E: DeserializeWith"))]
     e: E,
 }
 

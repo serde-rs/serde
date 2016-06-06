@@ -441,7 +441,8 @@ enum RenameEnumSerializeDeserialize<A> {
     #[serde(rename(serialize="dick_grayson", deserialize="jason_todd"))]
     Robin {
         a: i8,
-        #[serde(rename(serialize="c", deserialize="d"))]
+        #[serde(rename(serialize="c"))]
+        #[serde(rename(deserialize="d"))]
         b: A,
     },
 }
