@@ -74,7 +74,58 @@ struct Tuple<T>(
     X,
 );
 
+#[derive(Serialize, Deserialize)]
+enum TreeNode<D> {
+    Split {
+        left: Box<TreeNode<D>>,
+        right: Box<TreeNode<D>>,
+    },
+    Leaf {
+        data: D,
+    },
+}
+
+#[derive(Serialize, Deserialize)]
+struct ListNode<D> {
+    data: D,
+    next: Box<ListNode<D>>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(bound="D: SerializeWith + DeserializeWith")]
+struct WithTraits1<D, E> {
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with")]
+    d: D,
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with",
+            bound="E: SerializeWith + DeserializeWith")]
+    e: E,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(bound(serialize="D: SerializeWith",
+              deserialize="D: DeserializeWith"))]
+struct WithTraits2<D, E> {
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with")]
+    d: D,
+    #[serde(serialize_with="SerializeWith::serialize_with",
+            deserialize_with="DeserializeWith::deserialize_with",
+            bound(serialize="E: SerializeWith",
+                  deserialize="E: DeserializeWith"))]
+    e: E,
+}
+
 //////////////////////////////////////////////////////////////////////////
+
+trait SerializeWith {
+    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> Result<(), S::Error>;
+}
+
+trait DeserializeWith: Sized {
+    fn deserialize_with<D: Deserializer>(_: &mut D) -> Result<Self, D::Error>;
+}
 
 // Implements neither Serialize nor Deserialize
 struct X;

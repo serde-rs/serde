@@ -4,7 +4,7 @@ use syntax::attr;
 use syntax::codemap::Span;
 use syntax::ext::base::ExtCtxt;
 use syntax::fold::Folder;
-use syntax::parse::parser::PathStyle;
+use syntax::parse::parser::{Parser, PathStyle};
 use syntax::parse::token::{self, InternedString};
 use syntax::parse;
 use syntax::print::pprust::{lit_to_string, meta_item_to_string};
@@ -62,6 +62,8 @@ impl Name {
 pub struct ContainerAttrs {
     name: Name,
     deny_unknown_fields: bool,
+    ser_bound: Option<Vec<ast::WherePredicate>>,
+    de_bound: Option<Vec<ast::WherePredicate>>,
 }
 
 impl ContainerAttrs {
@@ -70,6 +72,8 @@ impl ContainerAttrs {
         let mut container_attrs = ContainerAttrs {
             name: Name::new(item.ident),
             deny_unknown_fields: false,
+            ser_bound: None,
+            de_bound: None,
         };
 
         for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
@@ -96,6 +100,20 @@ impl ContainerAttrs {
                         container_attrs.deny_unknown_fields = true;
                     }
 
+                    // Parse `#[serde(bound="D: Serialize")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
+                        let where_predicates = try!(parse_lit_into_where(cx, name, lit));
+                        container_attrs.ser_bound = Some(where_predicates.clone());
+                        container_attrs.de_bound = Some(where_predicates);
+                    }
+
+                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
+                        let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
+                        container_attrs.ser_bound = ser_bound;
+                        container_attrs.de_bound = de_bound;
+                    }
+
                     _ => {
                         cx.span_err(
                             meta_item.span,
@@ -117,6 +135,14 @@ impl ContainerAttrs {
 
     pub fn deny_unknown_fields(&self) -> bool {
         self.deny_unknown_fields
+    }
+
+    pub fn ser_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.ser_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn de_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.de_bound.as_ref().map(|vec| &vec[..])
     }
 }
 
@@ -181,6 +207,8 @@ pub struct FieldAttrs {
     default_expr_if_missing: Option<P<ast::Expr>>,
     serialize_with: Option<ast::Path>,
     deserialize_with: Option<ast::Path>,
+    ser_bound: Option<Vec<ast::WherePredicate>>,
+    de_bound: Option<Vec<ast::WherePredicate>>,
 }
 
 impl FieldAttrs {
@@ -203,6 +231,8 @@ impl FieldAttrs {
             default_expr_if_missing: None,
             serialize_with: None,
             deserialize_with: None,
+            ser_bound: None,
+            de_bound: None,
         };
 
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
@@ -274,6 +304,20 @@ impl FieldAttrs {
                         field_attrs.deserialize_with = Some(path);
                     }
 
+                    // Parse `#[serde(bound="D: Serialize")]`
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
+                        let where_predicates = try!(parse_lit_into_where(cx, name, lit));
+                        field_attrs.ser_bound = Some(where_predicates.clone());
+                        field_attrs.de_bound = Some(where_predicates);
+                    }
+
+                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
+                        let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
+                        field_attrs.ser_bound = ser_bound;
+                        field_attrs.de_bound = de_bound;
+                    }
+
                     _ => {
                         cx.span_err(
                             meta_item.span,
@@ -316,45 +360,59 @@ impl FieldAttrs {
     pub fn deserialize_with(&self) -> Option<&ast::Path> {
         self.deserialize_with.as_ref()
     }
+
+    pub fn ser_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.ser_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn de_bound(&self) -> Option<&[ast::WherePredicate]> {
+        self.de_bound.as_ref().map(|vec| &vec[..])
+    }
 }
 
 
 /// Zip together fields and `#[serde(...)]` attributes on those fields.
-pub fn fields_with_attrs<'a>(
+pub fn fields_with_attrs(
     cx: &ExtCtxt,
-    fields: &'a [ast::StructField],
-) -> Result<Vec<(&'a ast::StructField, FieldAttrs)>, Error> {
+    fields: &[ast::StructField],
+) -> Result<Vec<(ast::StructField, FieldAttrs)>, Error> {
     fields.iter()
         .enumerate()
         .map(|(i, field)| {
             let attrs = try!(FieldAttrs::from_field(cx, i, field));
-            Ok((field, attrs))
+            Ok((field.clone(), attrs))
         })
         .collect()
 }
 
-fn get_renames(cx: &ExtCtxt,
-               items: &[P<ast::MetaItem>],
-              )-> Result<(Option<InternedString>, Option<InternedString>), Error> {
-    let mut ser_name = None;
-    let mut de_name = None;
+fn get_ser_and_de<T, F>(
+    cx: &ExtCtxt,
+    attribute: &str,
+    items: &[P<ast::MetaItem>],
+    f: F
+) -> Result<(Option<T>, Option<T>), Error>
+    where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, Error>,
+{
+    let mut ser_item = None;
+    let mut de_item = None;
 
     for item in items {
         match item.node {
             ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize" => {
-                let s = try!(get_str_from_lit(cx, name, lit));
-                ser_name = Some(s);
+                let s = try!(f(cx, name, lit));
+                ser_item = Some(s);
             }
 
             ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize" => {
-                let s = try!(get_str_from_lit(cx, name, lit));
-                de_name = Some(s);
+                let s = try!(f(cx, name, lit));
+                de_item = Some(s);
             }
 
             _ => {
                 cx.span_err(
                     item.span,
-                    &format!("unknown rename attribute `{}`",
+                    &format!("unknown {} attribute `{}`",
+                             attribute,
                              meta_item_to_string(item)));
 
                 return Err(Error);
@@ -362,7 +420,21 @@ fn get_renames(cx: &ExtCtxt,
         }
     }
 
-    Ok((ser_name, de_name))
+    Ok((ser_item, de_item))
+}
+
+fn get_renames(
+    cx: &ExtCtxt,
+    items: &[P<ast::MetaItem>],
+) -> Result<(Option<InternedString>, Option<InternedString>), Error> {
+    get_ser_and_de(cx, "rename", items, get_str_from_lit)
+}
+
+fn get_where_predicates(
+    cx: &ExtCtxt,
+    items: &[P<ast::MetaItem>],
+) -> Result<(Option<Vec<ast::WherePredicate>>, Option<Vec<ast::WherePredicate>>), Error> {
+    get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 
 pub fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
@@ -437,17 +509,18 @@ fn get_str_from_lit(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Interned
     }
 }
 
-fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::Path, Error> {
-    let source = try!(get_str_from_lit(cx, name, lit));
-
-    // If we just parse the string into an expression, any syntax errors in the source will only
-    // have spans that point inside the string, and not back to the attribute. So to have better
-    // error reporting, we'll first parse the string into a token tree. Then we'll update those
-    // spans to say they're coming from a macro context that originally came from the attribute,
-    // and then finally parse them into an expression.
+// If we just parse a string literal from an attibute, any syntax errors in the
+// source will only have spans that point inside the string and not back to the
+// attribute. So to have better error reporting, we'll first parse the string
+// into a token tree. Then we'll update those spans to say they're coming from a
+// macro context that originally came from the attribnute, and then finally
+// parse them into an expression or where-clause.
+fn parse_string_via_tts<T, F>(cx: &ExtCtxt, name: &str, string: String, action: F) -> Result<T, Error>
+    where F: for<'a> Fn(&'a mut Parser) -> parse::PResult<'a, T>,
+{
     let tts = panictry!(parse::parse_tts_from_source_str(
         format!("<serde {} expansion>", name),
-        (*source).to_owned(),
+        string,
         cx.cfg(),
         cx.parse_sess()));
 
@@ -456,7 +529,7 @@ fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::
 
     let mut parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts);
 
-    let path = match parser.parse_path(PathStyle::Type) {
+    let path = match action(&mut parser) {
         Ok(path) => path,
         Err(mut e) => {
             e.emit();
@@ -474,6 +547,28 @@ fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::
     }
 
     Ok(path)
+}
+
+fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::Path, Error> {
+    let string = try!(get_str_from_lit(cx, name, lit)).to_string();
+
+    parse_string_via_tts(cx, name, string, |parser| {
+        parser.parse_path(PathStyle::Type)
+    })
+}
+
+fn parse_lit_into_where(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Vec<ast::WherePredicate>, Error> {
+    let string = try!(get_str_from_lit(cx, name, lit));
+    if string.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let where_string = format!("where {}", string);
+
+    parse_string_via_tts(cx, name, where_string, |parser| {
+        let where_clause = try!(parser.parse_where_clause());
+        Ok(where_clause.predicates)
+    })
 }
 
 /// This function wraps the expression in `#[serde(default="...")]` in a function to prevent it

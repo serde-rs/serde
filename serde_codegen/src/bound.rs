@@ -7,6 +7,9 @@ use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 use syntax::visit;
 
+use attr;
+use error::Error;
+
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
 // allowed here".
@@ -21,22 +24,53 @@ pub fn without_defaults(generics: &ast::Generics) -> ast::Generics {
     }
 }
 
-pub fn with_bound(
+pub fn with_where_predicates(
+    builder: &AstBuilder,
+    generics: &ast::Generics,
+    predicates: &[ast::WherePredicate],
+) -> ast::Generics {
+    builder.from_generics(generics.clone())
+        .with_predicates(predicates.to_vec())
+        .build()
+}
+
+pub fn with_where_predicates_from_fields<F>(
     cx: &ExtCtxt,
     builder: &AstBuilder,
     item: &ast::Item,
     generics: &ast::Generics,
-    filter: &Fn(&ast::StructField) -> bool,
-    bound: &ast::Path,
-) -> ast::Generics {
-    builder.from_generics(generics.clone())
+    from_field: F,
+) -> Result<ast::Generics, Error>
+    where F: Fn(&attr::FieldAttrs) -> Option<&[ast::WherePredicate]>,
+{
+    Ok(builder.from_generics(generics.clone())
         .with_predicates(
-            all_variants(cx, item).iter()
-                .flat_map(|variant_data| all_struct_fields(variant_data))
-                .filter(|field| filter(field))
-                .map(|field| &field.ty)
+            try!(all_fields_with_attrs(cx, item))
+                .iter()
+                .flat_map(|&(_, ref attrs)| from_field(attrs))
+                .flat_map(|predicates| predicates.to_vec()))
+        .build())
+}
+
+pub fn with_bound<F>(
+    cx: &ExtCtxt,
+    builder: &AstBuilder,
+    item: &ast::Item,
+    generics: &ast::Generics,
+    filter: F,
+    bound: &ast::Path,
+) -> Result<ast::Generics, Error>
+    where F: Fn(&ast::StructField, &attr::FieldAttrs) -> bool,
+{
+    Ok(builder.from_generics(generics.clone())
+        .with_predicates(
+            try!(all_fields_with_attrs(cx, item))
+                .iter()
+                .filter(|&&(ref field, ref attrs)| filter(field, attrs))
+                .map(|&(ref field, _)| &field.ty)
                 // TODO this filter can be removed later, see comment on function
                 .filter(|ty| contains_generic(ty, generics))
+                .filter(|ty| !contains_recursion(ty, item.ident))
                 .map(|ty| strip_reference(ty))
                 .map(|ty| builder.where_predicate()
                     // the type that is being bounded e.g. T
@@ -44,7 +78,20 @@ pub fn with_bound(
                     // the bound e.g. Serialize
                     .bound().trait_(bound.clone()).build()
                     .build()))
-        .build()
+        .build())
+}
+
+fn all_fields_with_attrs(
+    cx: &ExtCtxt,
+    item: &ast::Item,
+) -> Result<Vec<(ast::StructField, attr::FieldAttrs)>, Error> {
+    let fields: Vec<ast::StructField> =
+        all_variants(cx, item).iter()
+            .flat_map(|variant_data| all_struct_fields(variant_data))
+            .cloned()
+            .collect();
+
+    attr::fields_with_attrs(cx, &fields)
 }
 
 fn all_variants<'a>(cx: &ExtCtxt, item: &'a ast::Item) -> Vec<&'a ast::VariantData> {
@@ -111,6 +158,50 @@ fn contains_generic(ty: &ast::Ty, generics: &ast::Generics) -> bool {
     };
     visit::walk_ty(&mut visitor, ty);
     visitor.found_generic
+}
+
+// We do not attempt to generate any bounds based on field types that are
+// directly recursive, as in:
+//
+//    struct Test<D> {
+//        next: Box<Test<D>>,
+//    }
+//
+// This does not catch field types that are mutually recursive with some other
+// type. For those, we require bounds to be specified by a `bound` attribute if
+// the inferred ones are not correct.
+//
+//    struct Test<D> {
+//        #[serde(bound="D: Serialize + Deserialize")]
+//        next: Box<Other<D>>,
+//    }
+//    struct Other<D> {
+//        #[serde(bound="D: Serialize + Deserialize")]
+//        next: Box<Test<D>>,
+//    }
+fn contains_recursion(ty: &ast::Ty, ident: ast::Ident) -> bool {
+    struct FindRecursion {
+        ident: ast::Ident,
+        found_recursion: bool,
+    }
+    impl<'v> visit::Visitor<'v> for FindRecursion {
+        fn visit_path(&mut self, path: &'v ast::Path, _id: ast::NodeId) {
+            if !path.global
+                    && path.segments.len() == 1
+                    && path.segments[0].identifier == self.ident {
+                self.found_recursion = true;
+            } else {
+                visit::walk_path(self, path);
+            }
+        }
+    }
+
+    let mut visitor = FindRecursion {
+        ident: ident,
+        found_recursion: false,
+    };
+    visit::walk_ty(&mut visitor, ty);
+    visitor.found_recursion
 }
 
 // This is required to handle types that use both a reference and a value of
