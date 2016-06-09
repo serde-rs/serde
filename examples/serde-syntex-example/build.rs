@@ -12,10 +12,7 @@ mod inner {
         let src = Path::new("src/main.rs.in");
         let dst = Path::new(&out_dir).join("main.rs");
 
-        let mut registry = syntex::Registry::new();
-
-        serde_codegen::register(&mut registry);
-        registry.expand("", &src, &dst).unwrap();
+        serde_codegen::expand(&src, &dst).unwrap();
     }
 }
 
