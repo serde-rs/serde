@@ -37,10 +37,13 @@ include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 include!("lib.rs.in");
 
 #[cfg(feature = "with-syntex")]
-pub fn expand(src: &Path, dst: &Path) -> io::Result<()> {
+pub fn expand<S, D>(src: S, dst: D) -> io::Result<()>
+    where S: AsRef<Path>,
+          D: AsRef<Path>,
+{
     let mut registry = syntex::Registry::new();
     register(&mut registry);
-    registry.expand("", src, dst)
+    registry.expand("", src.as_ref(), dst.as_ref())
 }
 
 #[cfg(feature = "with-syntex")]
