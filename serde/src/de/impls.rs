@@ -224,9 +224,9 @@ impl_deserialize_num!(f64, deserialize_f64);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct d128Visitor;
+struct D128Visitor;
 
-impl Visitor for d128Visitor {
+impl Visitor for D128Visitor {
     type Value = d128;
 
     fn visit_d128<E>(&mut self, v: d128) -> Result<d128, E>
@@ -249,7 +249,7 @@ impl Deserialize for d128 {
     fn deserialize<D>(deserializer: &mut D) -> Result<d128, D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize_d128(d128Visitor)
+        deserializer.deserialize_d128(D128Visitor)
     }
 }
 

@@ -128,7 +128,7 @@ pub trait ToPrimitive {
     /// Converts the value of `self` to a `d128`.
     #[inline]
     fn to_d128(&self) -> Option<d128> {
-        self.to_f64().map(|x| d128::from_str(&format!("{}", x)).unwrap() )
+        self.to_f64().and_then(|x| d128::from_str(&format!("{}", x)).ok() )
     }
 }
 

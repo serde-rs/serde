@@ -1383,8 +1383,6 @@ pub fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
     let mut de = Deserializer::new(concated_tokens.into_iter());
     let v: Result<IgnoreBase, Error> = de::Deserialize::deserialize(&mut de);
 
-    println!("Deserializing stuff");
-
     // We run this test on every token stream for convenience, but
     // some token streams don't make sense embedded as a map value,
     // so we ignore those. SyntaxError is the real sign of trouble.

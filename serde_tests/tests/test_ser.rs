@@ -3,7 +3,8 @@ use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use serde::d128;
+extern crate serde;
+use self::serde::d128;
 use token::{self, Token};
 
 //////////////////////////////////////////////////////////////////////////
