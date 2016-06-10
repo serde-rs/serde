@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.7.0"
+version = "0.7.9"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -8,11 +8,16 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde-rs.github.io/serde/serde/"
 readme = "../README.md"
 keywords = ["serde", "serialization"]
+include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
+default = ["std"]
+
+std = []
 nightly = []
-nightly-testing = ["clippy", "nightly"]
-serde = []
+alloc = ["nightly"]
+collections = ["alloc"]
+nightly-testing = ["clippy", "nightly", "std"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }

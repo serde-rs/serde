@@ -1,9 +1,10 @@
-use serde;
 use std::fmt;
 use std::error;
-use serde::Serialize;
-use serde::bytes::{ByteBuf, Bytes};
-use serde::d128;
+
+extern crate serde;
+use self::serde::Serialize;
+use self::serde::bytes::{ByteBuf, Bytes};
+use self::serde::d128;
 
 ///////////////////////////////////////////////////////////////////////////////
 

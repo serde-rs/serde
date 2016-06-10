@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
-use serde::d128;
-use serde::de::{Deserializer, Visitor};
+extern crate serde;
+use self::serde::d128;
 
 use token::{
     Error,
@@ -728,5 +728,33 @@ declare_error_tests! {
             Token::SeqEnd,
         ],
         Error::UnexpectedToken(Token::SeqSep),
+    }
+    test_duplicate_field_struct<Struct> {
+        vec![
+            Token::MapStart(Some(3)),
+                Token::MapSep,
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::MapSep,
+                Token::Str("a"),
+                Token::I32(3),
+            Token::MapEnd,
+        ],
+        Error::DuplicateFieldError("a"),
+    }
+    test_duplicate_field_enum<Enum> {
+        vec![
+            Token::EnumMapStart("Enum", "Map", Some(3)),
+                Token::EnumMapSep,
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::EnumMapSep,
+                Token::Str("a"),
+                Token::I32(3),
+            Token::EnumMapEnd,
+        ],
+        Error::DuplicateFieldError("a"),
     }
 }

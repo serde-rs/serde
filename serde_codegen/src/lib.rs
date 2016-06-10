@@ -22,6 +22,11 @@ extern crate syntax;
 #[cfg(not(feature = "with-syntex"))]
 extern crate rustc_plugin;
 
+#[cfg(feature = "with-syntex")]
+use std::io;
+#[cfg(feature = "with-syntex")]
+use std::path::Path;
+
 #[cfg(not(feature = "with-syntex"))]
 use syntax::feature_gate::AttributeType;
 
@@ -30,6 +35,16 @@ include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 
 #[cfg(not(feature = "with-syntex"))]
 include!("lib.rs.in");
+
+#[cfg(feature = "with-syntex")]
+pub fn expand<S, D>(src: S, dst: D) -> io::Result<()>
+    where S: AsRef<Path>,
+          D: AsRef<Path>,
+{
+    let mut registry = syntex::Registry::new();
+    register(&mut registry);
+    registry.expand("", src.as_ref(), dst.as_ref())
+}
 
 #[cfg(feature = "with-syntex")]
 pub fn register(reg: &mut syntex::Registry) {

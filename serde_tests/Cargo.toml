@@ -1,6 +1,6 @@
 [package]
 name = "serde_tests"
-version = "0.7.1"
+version = "0.7.9"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -14,14 +14,14 @@ build = "build.rs"
 nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-testing"]
 
 [build-dependencies]
-syntex = { version = "^0.31.0" }
-syntex_syntax = { version = "^0.31.0" }
+syntex = { version = "^0.33.0" }
+syntex_syntax = { version = "^0.33.0" }
 serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
 rustc-serialize = "^0.3.16"
 serde = { version = "*", path = "../serde" }
-syntex = "^0.31.0"
+syntex = "^0.33.0"
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }

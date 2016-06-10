@@ -1,7 +1,15 @@
 //! Generic deserialization framework.
 
+#[cfg(feature = "std")]
 use std::error;
+
 use decimal::d128;
+
+#[cfg(not(feature = "std"))]
+use error;
+
+#[cfg(all(not(feature = "std"), feature = "collections"))]
+use collections::{String, Vec};
 
 pub mod impls;
 pub mod value;
@@ -13,7 +21,12 @@ pub mod from_primitive;
 /// `Deserializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn custom<T: Into<String>>(msg: T) -> Self;
+
+    /// Raised when there is general error when deserializing a type.
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    fn custom<T: Into<&'static str>>(msg: T) -> Self;
 
     /// Raised when a `Deserialize` type unexpectedly hit the end of the stream.
     fn end_of_stream() -> Self;
@@ -29,6 +42,9 @@ pub trait Error: Sized + error::Error {
     }
 
     /// Raised when a fixed sized sequence or map was passed in the wrong amount of arguments.
+    ///
+    /// The parameter `len` is the number of arguments found in the serialization. The sequence
+    /// may either expect more arguments or less arguments.
     fn invalid_length(len: usize) -> Self {
         Error::custom(format!("Invalid length: {}", len))
     }
@@ -46,6 +62,12 @@ pub trait Error: Sized + error::Error {
     /// raised when a `deserialize` struct type did not receive a field.
     fn missing_field(field: &'static str) -> Self {
         Error::custom(format!("Missing field `{}`", field))
+    }
+
+    /// Raised when a `Deserialize` struct type received more than one of the
+    /// same struct field.
+    fn duplicate_field(field: &'static str) -> Self {
+        Error::custom(format!("Duplicate field `{}`", field))
     }
 }
 
@@ -577,9 +599,7 @@ pub trait Visitor {
     fn visit_char<E>(&mut self, v: char) -> Result<Self::Value, E>
         where E: Error,
     {
-        // FIXME: this allocation is required in order to be compatible with stable rust, which
-        // doesn't support encoding a `char` into a stack buffer.
-        self.visit_string(v.to_string())
+        self.visit_str(::utils::encode_utf8(v).as_str())
     }
 
     /// `visit_str` deserializes a `&str` into a `Value`.
@@ -593,6 +613,7 @@ pub trait Visitor {
     /// a copy if it is deserializing a string from a `String` type.  By default it passes a `&str`
     /// to the `visit_str` method.
     #[inline]
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn visit_string<E>(&mut self, v: String) -> Result<Self::Value, E>
         where E: Error,
     {
@@ -657,6 +678,7 @@ pub trait Visitor {
     }
 
     /// `visit_byte_buf` deserializes a `Vec<u8>` into a `Value`.
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<Self::Value, E>
         where E: Error,
     {

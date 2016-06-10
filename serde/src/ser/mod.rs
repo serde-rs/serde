@@ -1,7 +1,15 @@
 //! Generic serialization framework.
 
+#[cfg(feature = "std")]
 use std::error;
+
 use decimal::d128;
+
+#[cfg(not(feature = "std"))]
+use error;
+
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::String;
 
 pub mod impls;
 
@@ -11,7 +19,12 @@ pub mod impls;
 /// `Serializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is general error when deserializing a type.
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn custom<T: Into<String>>(msg: T) -> Self;
+
+    /// Raised when there is general error when deserializing a type.
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    fn custom<T: Into<&'static str>>(msg: T) -> Self;
 
     /// Raised when a `Serialize` was passed an incorrect value.
     fn invalid_value(msg: &str) -> Self {
@@ -119,9 +132,7 @@ pub trait Serializer {
     /// single character.
     #[inline]
     fn serialize_char(&mut self, v: char) -> Result<(), Self::Error> {
-        // FIXME: this allocation is required in order to be compatible with stable rust, which
-        // doesn't support encoding a `char` into a stack buffer.
-        self.serialize_str(&v.to_string())
+        self.serialize_str(::utils::encode_utf8(v).as_str())
     }
 
     /// Serializes a `&str`.

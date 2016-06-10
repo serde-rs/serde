@@ -1,5 +1,6 @@
 //! This module supports deserializing from primitives with the `ValueDeserializer` trait.
 
+#[cfg(feature = "std")]
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -10,11 +11,31 @@ use std::collections::{
     hash_map,
     hash_set,
 };
-use std::hash::Hash;
-use std::error;
-use std::fmt;
+#[cfg(feature = "std")]
 use std::vec;
-use std::marker::PhantomData;
+
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::{
+    BTreeMap,
+    BTreeSet,
+    Vec,
+    String,
+    btree_map,
+    btree_set,
+    vec,
+};
+
+#[cfg(all(feature = "nightly", feature = "collections"))]
+use collections::borrow::ToOwned;
+
+use core::hash::Hash;
+#[cfg(feature = "std")]
+use std::error;
+#[cfg(not(feature = "std"))]
+use error;
+
+use core::fmt;
+use core::marker::PhantomData;
 
 use de;
 use bytes;
@@ -26,7 +47,11 @@ use decimal::d128;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// The value had some custom error.
+    #[cfg(any(feature = "std", feature = "collections"))]
     Custom(String),
+    /// The value had some custom error.
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    Custom(&'static str),
 
     /// The value had an incorrect type.
     InvalidType(de::Type),
@@ -35,29 +60,60 @@ pub enum Error {
     InvalidLength(usize),
 
     /// The value is invalid and cannot be deserialized.
+    #[cfg(any(feature = "std", feature = "collections"))]
     InvalidValue(String),
+    /// The value is invalid and cannot be deserialized.
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    InvalidValue(&'static str),
 
     /// EOF while deserializing a value.
     EndOfStream,
 
     /// Unknown variant in enum.
+    #[cfg(any(feature = "std", feature = "collections"))]
     UnknownVariant(String),
+    /// Unknown variant in enum.
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    UnknownVariant(&'static str),
 
     /// Unknown field in struct.
+    #[cfg(any(feature = "std", feature = "collections"))]
     UnknownField(String),
+    /// Unknown field in struct.
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    UnknownField(&'static str),
 
     /// Struct is missing a field.
     MissingField(&'static str),
 }
 
 impl de::Error for Error {
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn custom<T: Into<String>>(msg: T) -> Self { Error::Custom(msg.into()) }
+
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    fn custom<T: Into<&'static str>>(msg: T) -> Self { Error::Custom(msg.into()) }
+
     fn end_of_stream() -> Self { Error::EndOfStream }
     fn invalid_type(ty: de::Type) -> Self { Error::InvalidType(ty) }
+
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn invalid_value(msg: &str) -> Self { Error::InvalidValue(msg.to_owned()) }
+
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    fn invalid_value(msg: &str) -> Self { Error::InvalidValue("invalid value") }
+
     fn invalid_length(len: usize) -> Self { Error::InvalidLength(len) }
+
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant(String::from(variant)) }
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn unknown_field(field: &str) -> Self { Error::UnknownField(String::from(field)) }
+
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant("unknown variant") }
+    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
+    fn unknown_field(field: &str) -> Self { Error::UnknownField("unknown field") }
     fn missing_field(field: &'static str) -> Self { Error::MissingField(field) }
 }
 
@@ -240,8 +296,10 @@ impl<'a, E> de::VariantVisitor for StrDeserializer<'a, E>
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a `String`.
+#[cfg(any(feature = "std", feature = "collections"))]
 pub struct StringDeserializer<E>(Option<String>, PhantomData<E>);
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<E> ValueDeserializer<E> for String
     where E: de::Error,
 {
@@ -252,6 +310,7 @@ impl<E> ValueDeserializer<E> for String
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<E> de::Deserializer for StringDeserializer<E>
     where E: de::Error,
 {
@@ -276,6 +335,7 @@ impl<E> de::Deserializer for StringDeserializer<E>
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<'a, E> de::VariantVisitor for StringDeserializer<E>
     where E: de::Error,
 {
@@ -363,6 +423,7 @@ impl<I, T, E> de::SeqVisitor for SeqDeserializer<I, E>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T, E> ValueDeserializer<E> for Vec<T>
     where T: ValueDeserializer<E>,
           E: de::Error,
@@ -375,6 +436,7 @@ impl<T, E> ValueDeserializer<E> for Vec<T>
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T, E> ValueDeserializer<E> for BTreeSet<T>
     where T: ValueDeserializer<E> + Eq + Ord,
           E: de::Error,
@@ -387,6 +449,7 @@ impl<T, E> ValueDeserializer<E> for BTreeSet<T>
     }
 }
 
+#[cfg(feature = "std")]
 impl<T, E> ValueDeserializer<E> for HashSet<T>
     where T: ValueDeserializer<E> + Eq + Hash,
           E: de::Error,
@@ -529,6 +592,7 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<K, V, E> ValueDeserializer<E> for BTreeMap<K, V>
     where K: ValueDeserializer<E> + Eq + Ord,
           V: ValueDeserializer<E>,
@@ -542,6 +606,7 @@ impl<K, V, E> ValueDeserializer<E> for BTreeMap<K, V>
     }
 }
 
+#[cfg(feature = "std")]
 impl<K, V, E> ValueDeserializer<E> for HashMap<K, V>
     where K: ValueDeserializer<E> + Eq + Hash,
           V: ValueDeserializer<E>,
@@ -620,6 +685,7 @@ impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<E> ValueDeserializer<E> for bytes::ByteBuf
     where E: de::Error,
 {
@@ -631,8 +697,10 @@ impl<E> ValueDeserializer<E> for bytes::ByteBuf
 }
 
 /// A helper deserializer that deserializes a `Vec<u8>`.
+#[cfg(any(feature = "std", feature = "collections"))]
 pub struct ByteBufDeserializer<E>(Option<Vec<u8>>, PhantomData<E>);
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<E> de::Deserializer for ByteBufDeserializer<E>
     where E: de::Error,
 {

@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use token::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens};
 
 /*
@@ -141,6 +142,19 @@ pub enum GenericEnum<T, U> {
     NewType(T),
     Seq(T, U),
     Map { x: T, y: U },
+}
+
+trait AssociatedType {
+    type X;
+}
+
+impl AssociatedType for i32 {
+    type X = i32;
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct DefaultTyParam<T: AssociatedType<X=i32> = i32> {
+    phantom: PhantomData<T>
 }
 
 #[test]
@@ -598,6 +612,22 @@ fn test_generic_enum_map() {
             Token::U32(6),
 
             Token::EnumMapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_default_ty_param() {
+    assert_tokens(
+        &DefaultTyParam::<i32> { phantom: PhantomData },
+        vec![
+            Token::StructStart("DefaultTyParam", Some(1)),
+
+            Token::StructSep,
+            Token::Str("phantom"),
+            Token::UnitStruct("PhantomData"),
+
+            Token::StructEnd,
         ]
     );
 }

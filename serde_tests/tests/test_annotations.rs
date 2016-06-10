@@ -1,4 +1,5 @@
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+extern crate serde;
+use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use token::{
     Error,
@@ -236,6 +237,14 @@ impl Default for NotDeserializeStruct {
     }
 }
 
+impl DeserializeWith for NotDeserializeStruct {
+    fn deserialize_with<D>(_: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer
+    {
+        panic!()
+    }
+}
+
 // Does not implement Deserialize.
 #[derive(Debug, PartialEq)]
 enum NotDeserializeEnum { Trouble }
@@ -247,13 +256,15 @@ impl MyDefault for NotDeserializeEnum {
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-struct ContainsNotDeserialize<A, B, C: MyDefault> {
+struct ContainsNotDeserialize<A, B, C: DeserializeWith, E: MyDefault> {
     #[serde(skip_deserializing)]
     a: A,
     #[serde(skip_deserializing, default)]
     b: B,
-    #[serde(skip_deserializing, default="MyDefault::my_default")]
+    #[serde(deserialize_with="DeserializeWith::deserialize_with", default)]
     c: C,
+    #[serde(skip_deserializing, default="MyDefault::my_default")]
+    e: E,
 }
 
 // Tests that a struct field does not need to implement Deserialize if it is
@@ -265,7 +276,8 @@ fn test_elt_not_deserialize() {
         &ContainsNotDeserialize {
             a: NotDeserializeStruct(123),
             b: NotDeserializeStruct(123),
-            c: NotDeserializeEnum::Trouble,
+            c: NotDeserializeStruct(123),
+            e: NotDeserializeEnum::Trouble,
         },
         vec![
             Token::StructStart("ContainsNotDeserialize", Some(3)),
@@ -429,7 +441,8 @@ enum RenameEnumSerializeDeserialize<A> {
     #[serde(rename(serialize="dick_grayson", deserialize="jason_todd"))]
     Robin {
         a: i8,
-        #[serde(rename(serialize="c", deserialize="d"))]
+        #[serde(rename(serialize="c"))]
+        #[serde(rename(deserialize="d"))]
         b: A,
     },
 }

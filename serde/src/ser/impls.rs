@@ -1,6 +1,11 @@
 //! Implementations for all of Rust's builtin types.
 
+#[cfg(feature = "std")]
 use std::borrow::Cow;
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::borrow::Cow;
+
+#[cfg(feature = "std")]
 use std::collections::{
     BinaryHeap,
     BTreeMap,
@@ -10,20 +15,48 @@ use std::collections::{
     HashSet,
     VecDeque,
 };
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::{
+    BinaryHeap,
+    BTreeMap,
+    BTreeSet,
+    LinkedList,
+    VecDeque,
+    String,
+    Vec,
+};
+
+#[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::enum_set::{CLike, EnumSet};
-use std::hash::Hash;
+#[cfg(all(feature = "nightly", feature = "collections"))]
+use collections::borrow::ToOwned;
+
+use core::hash::Hash;
 #[cfg(feature = "nightly")]
-use std::iter;
+use core::iter;
+#[cfg(feature = "std")]
 use std::net;
 #[cfg(feature = "nightly")]
-use std::num;
+use core::num;
 #[cfg(feature = "nightly")]
-use std::ops;
+use core::ops;
+#[cfg(feature = "std")]
 use std::path;
+#[cfg(feature = "std")]
 use std::rc::Rc;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::rc::Rc;
+
+#[cfg(feature = "std")]
 use std::sync::Arc;
-use std::marker::PhantomData;
+
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::arc::Arc;
+
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::boxed::Box;
+
+use core::marker::PhantomData;
 use decimal::d128;
 
 #[cfg(feature = "nightly")]
@@ -78,6 +111,7 @@ impl Serialize for str {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl Serialize for String {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -261,6 +295,7 @@ array_impls!(32);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for BinaryHeap<T>
     where T: Serialize + Ord
 {
@@ -272,6 +307,7 @@ impl<T> Serialize for BinaryHeap<T>
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for BTreeSet<T>
     where T: Serialize + Ord,
 {
@@ -283,7 +319,7 @@ impl<T> Serialize for BTreeSet<T>
     }
 }
 
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "nightly", feature = "collections"))]
 impl<T> Serialize for EnumSet<T>
     where T: Serialize + CLike
 {
@@ -295,6 +331,7 @@ impl<T> Serialize for EnumSet<T>
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> Serialize for HashSet<T>
     where T: Serialize + Eq + Hash,
 {
@@ -306,6 +343,7 @@ impl<T> Serialize for HashSet<T>
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for LinkedList<T>
     where T: Serialize,
 {
@@ -331,6 +369,7 @@ impl<A> Serialize for ops::Range<A>
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for Vec<T> where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -340,6 +379,7 @@ impl<T> Serialize for Vec<T> where T: Serialize {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for VecDeque<T> where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -599,6 +639,7 @@ impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<K, V> Serialize for BTreeMap<K, V>
     where K: Serialize + Ord,
           V: Serialize,
@@ -611,6 +652,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
     }
 }
 
+#[cfg(feature = "std")]
 impl<K, V> Serialize for HashMap<K, V>
     where K: Serialize + Eq + Hash,
           V: Serialize,
@@ -643,6 +685,7 @@ impl<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize {
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<T: ?Sized> Serialize for Box<T> where T: Serialize {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -652,6 +695,7 @@ impl<T: ?Sized> Serialize for Box<T> where T: Serialize {
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<T> Serialize for Rc<T> where T: Serialize, {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -661,6 +705,7 @@ impl<T> Serialize for Rc<T> where T: Serialize, {
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<T> Serialize for Arc<T> where T: Serialize, {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -670,6 +715,7 @@ impl<T> Serialize for Arc<T> where T: Serialize, {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
 impl<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned, {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -696,7 +742,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "std", feature = "nightly"))]
 impl Serialize for net::IpAddr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -708,6 +754,7 @@ impl Serialize for net::IpAddr {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -716,6 +763,7 @@ impl Serialize for net::Ipv4Addr {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for net::Ipv6Addr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -726,6 +774,7 @@ impl Serialize for net::Ipv6Addr {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "std")]
 impl Serialize for net::SocketAddr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -737,6 +786,7 @@ impl Serialize for net::SocketAddr {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for net::SocketAddrV4 {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -745,6 +795,7 @@ impl Serialize for net::SocketAddrV4 {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for net::SocketAddrV6 {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -755,6 +806,7 @@ impl Serialize for net::SocketAddrV6 {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "std")]
 impl Serialize for path::Path {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -766,6 +818,7 @@ impl Serialize for path::Path {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for path::PathBuf {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
