@@ -128,7 +128,7 @@ fn build_impl_generics(
 // serialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Serialize` bound where T is the type of the field.
-fn needs_serialize_bound(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
+fn needs_serialize_bound(attrs: &attr::FieldAttrs) -> bool {
     !attrs.skip_serializing_field()
         && attrs.serialize_with().is_none()
         && attrs.ser_bound().is_none()

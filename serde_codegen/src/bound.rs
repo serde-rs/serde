@@ -60,13 +60,13 @@ pub fn with_bound<F>(
     filter: F,
     bound: &ast::Path,
 ) -> Result<ast::Generics, Error>
-    where F: Fn(&ast::StructField, &attr::FieldAttrs) -> bool,
+    where F: Fn(&attr::FieldAttrs) -> bool,
 {
     Ok(builder.from_generics(generics.clone())
         .with_predicates(
             try!(all_fields_with_attrs(cx, item))
                 .iter()
-                .filter(|&&(ref field, ref attrs)| filter(field, attrs))
+                .filter(|&&(_, ref attrs)| filter(attrs))
                 .map(|&(ref field, _)| &field.ty)
                 // TODO this filter can be removed later, see comment on function
                 .filter(|ty| contains_generic(ty, generics))

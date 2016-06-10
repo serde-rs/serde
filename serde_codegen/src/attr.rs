@@ -212,11 +212,22 @@ pub struct FieldAttrs {
     skip_serializing_field: bool,
     skip_deserializing_field: bool,
     skip_serializing_if: Option<ast::Path>,
-    default_expr_if_missing: Option<P<ast::Expr>>,
+    default: FieldDefault,
     serialize_with: Option<ast::Path>,
     deserialize_with: Option<ast::Path>,
     ser_bound: Option<Vec<ast::WherePredicate>>,
     de_bound: Option<Vec<ast::WherePredicate>>,
+}
+
+/// Represents the default to use for a field when deserializing.
+#[derive(Debug, PartialEq)]
+pub enum FieldDefault {
+    /// Field must always be specified because it does not have a default.
+    None,
+    /// The default is given by `std::default::Default::default()`.
+    Default,
+    /// The default is given by this function.
+    Path(ast::Path),
 }
 
 impl FieldAttrs {
@@ -236,7 +247,7 @@ impl FieldAttrs {
             skip_serializing_field: false,
             skip_deserializing_field: false,
             skip_serializing_if: None,
-            default_expr_if_missing: None,
+            default: FieldDefault::None,
             serialize_with: None,
             deserialize_with: None,
             ser_bound: None,
@@ -266,17 +277,13 @@ impl FieldAttrs {
 
                     // Parse `#[serde(default)]`
                     ast::MetaItemKind::Word(ref name) if name == &"default" => {
-                        let default_expr = builder.expr().default();
-                        field_attrs.default_expr_if_missing = Some(default_expr);
+                        field_attrs.default = FieldDefault::Default;
                     }
 
                     // Parse `#[serde(default="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"default" => {
-                        let wrapped_expr = wrap_default(
-                            try!(parse_lit_into_path(cx, name, lit)),
-                        );
-
-                        field_attrs.default_expr_if_missing = Some(wrapped_expr);
+                        let path = try!(parse_lit_into_path(cx, name, lit));
+                        field_attrs.default = FieldDefault::Path(path);
                     }
 
                     // Parse `#[serde(skip_serializing)]`
@@ -290,9 +297,8 @@ impl FieldAttrs {
 
                         // Initialize field to Default::default() unless a different
                         // default is specified by `#[serde(default="...")]`
-                        if field_attrs.default_expr_if_missing.is_none() {
-                            let default_expr = builder.expr().default();
-                            field_attrs.default_expr_if_missing = Some(default_expr);
+                        if field_attrs.default == FieldDefault::None {
+                            field_attrs.default = FieldDefault::Default;
                         }
                     }
 
@@ -363,8 +369,8 @@ impl FieldAttrs {
         self.skip_serializing_if.as_ref()
     }
 
-    pub fn default_expr_if_missing(&self) -> Option<&P<ast::Expr>> {
-        self.default_expr_if_missing.as_ref()
+    pub fn default(&self) -> &FieldDefault {
+        &self.default
     }
 
     pub fn serialize_with(&self) -> Option<&ast::Path> {
@@ -583,12 +589,4 @@ fn parse_lit_into_where(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Vec<
         let where_clause = try!(parser.parse_where_clause());
         Ok(where_clause.predicates)
     })
-}
-
-/// This function wraps the expression in `#[serde(default="...")]` in a function to prevent it
-/// from accessing the internal `Deserialize` state.
-fn wrap_default(path: ast::Path) -> P<ast::Expr> {
-    AstBuilder::new().expr().call()
-        .build_path(path)
-        .build()
 }
