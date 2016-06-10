@@ -5,7 +5,7 @@ use decimal::d128;
 
 pub mod impls;
 pub mod value;
-mod from_primitive;
+pub mod from_primitive;
 
 ///////////////////////////////////////////////////////////////////////////////
 

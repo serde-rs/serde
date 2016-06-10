@@ -1090,6 +1090,11 @@ impl Deserialize for IgnoredAny {
             }
 
             #[inline]
+            fn visit_d128<E>(&mut self, _: d128) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
             fn visit_str<E>(&mut self, _: &str) -> Result<IgnoredAny, E>
                 where E: Error,
             {

@@ -13,11 +13,11 @@
 // Rust 1.5 is unhappy that this private module is undocumented.
 #![allow(missing_docs)]
 
-
 use std::{usize, u8, u16, u32, u64};
 use std::{isize, i8, i16, i32, i64};
 use std::{f32, f64};
 use std::mem::size_of;
+use std::str::FromStr;
 use decimal::d128;
 
 /// Numbers which have upper and lower bounds
@@ -128,11 +128,7 @@ pub trait ToPrimitive {
     /// Converts the value of `self` to a `d128`.
     #[inline]
     fn to_d128(&self) -> Option<d128> {
-        self.to_f64().and_then(|x|{
-            let exp = 10_u32.pow(8);
-            let whole: u32 = (x * (exp as f64)).round() as u32;
-            Some(d128::from(whole) / d128::from(exp))
-        })
+        self.to_f64().map(|x| d128::from_str(&format!("{}", x)).unwrap() )
     }
 }
 
@@ -335,19 +331,25 @@ impl_to_primitive_float! { f64 }
 impl ToPrimitive for d128 {
   #[inline]
   fn to_i64(&self) -> Option<i64> {
-    self.to_f64().map(|u| u.round() as i64)
+    if self.is_integer() || self.is_zero() {
+      format!("{}", self.quantize(d128::zero())).parse().ok()
+    } else {
+      None
+    }
   }
 
   #[inline]
   fn to_u64(&self) -> Option<u64> {
-    self.to_f64().map(|u| u.round() as u64)
+    if (self.is_integer() && self.is_positive() ) || self.is_zero() {
+      format!("{}", self.quantize(d128::zero()).abs()).parse().ok()
+    } else {
+      None
+    }
   }
 
   #[inline]
   fn to_f64(&self) -> Option<f64> {
-    let exp = 10_u32.pow(8);
-    let whole:u32 = (self * d128::from(exp)).into();
-    Some((whole as f64) / (exp as f64))
+     format!("{}", self).parse().ok()
   }
 
   fn to_d128(&self) -> Option<d128>{
@@ -411,11 +413,7 @@ pub trait FromPrimitive: Sized {
     }
 
     #[inline]
-    fn from_d128(n: d128) -> Option<Self> {
-      let exp = 10_u32.pow(8);
-      let whole:u32 = (n * d128::from(exp)).into();
-      FromPrimitive::from_f64((whole as f64) / (exp as f64))
-    }
+    fn from_d128(n: d128) -> Option<Self>;
 }
 
 macro_rules! impl_from_primitive {

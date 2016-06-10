@@ -5,6 +5,7 @@ use std::error;
 use serde::ser::{self, Serialize};
 use serde::de;
 use serde::de::value::{self, ValueDeserializer};
+use serde::d128;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token<'a> {
@@ -21,6 +22,7 @@ pub enum Token<'a> {
     U64(u64),
     F32(f32),
     F64(f64),
+    D128(d128),
     Char(char),
     Str(&'a str),
     String(String),
@@ -200,6 +202,11 @@ impl<'a, I> ser::Serializer for Serializer<I>
 
     fn serialize_f64(&mut self, v: f64) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::F64(v)));
+        Ok(())
+    }
+
+    fn serialize_d128(&mut self, v: d128) -> Result<(), Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::D128(v)));
         Ok(())
     }
 
@@ -571,6 +578,7 @@ impl<I> de::Deserializer for Deserializer<I>
             Some(Token::U64(v)) => visitor.visit_u64(v),
             Some(Token::F32(v)) => visitor.visit_f32(v),
             Some(Token::F64(v)) => visitor.visit_f64(v),
+            Some(Token::D128(v)) => visitor.visit_d128(v),
             Some(Token::Char(v)) => visitor.visit_char(v),
             Some(Token::Str(v)) => visitor.visit_str(v),
             Some(Token::String(v)) => visitor.visit_string(v),
@@ -1364,6 +1372,8 @@ pub fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
 
     let mut de = Deserializer::new(concated_tokens.into_iter());
     let v: Result<IgnoreBase, Error> = de::Deserialize::deserialize(&mut de);
+
+    println!("Deserializing stuff");
 
     // We run this test on every token stream for convenience, but
     // some token streams don't make sense embedded as a map value,

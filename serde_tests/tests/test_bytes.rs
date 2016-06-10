@@ -3,6 +3,7 @@ use std::fmt;
 use std::error;
 use serde::Serialize;
 use serde::bytes::{ByteBuf, Bytes};
+use serde::d128;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -73,6 +74,10 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_f64(&mut self, _v: f64) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_d128(&mut self, _v: d128) -> Result<(), Error> {
         Err(Error)
     }
 

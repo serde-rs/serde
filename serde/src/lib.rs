@@ -14,6 +14,7 @@
                                          zero_one))]
 #![cfg_attr(feature = "nightly-testing", plugin(clippy))]
 #![cfg_attr(feature = "nightly-testing", allow(linkedlist))]
+#![feature(macro_reexport)]
 
 #![deny(missing_docs)]
 
@@ -23,11 +24,15 @@ extern crate collections;
 #[cfg(feature = "nightly")]
 extern crate core;
 
+#[macro_use]
+#[macro_reexport(d128)]
 extern crate decimal;
 
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer, Error};
+
 pub use decimal::d128;
+
 
 pub mod bytes;
 pub mod de;

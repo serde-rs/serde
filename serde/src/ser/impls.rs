@@ -24,6 +24,7 @@ use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::marker::PhantomData;
+use decimal::d128;
 
 #[cfg(feature = "nightly")]
 use core::nonzero::{NonZero, Zeroable};
@@ -64,7 +65,6 @@ impl_visit!(u32, serialize_u32);
 impl_visit!(u64, serialize_u64);
 impl_visit!(f32, serialize_f32);
 impl_visit!(f64, serialize_f64);
-//impl_visit!(d128, serialize_d128);
 impl_visit!(char, serialize_char);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -780,3 +780,13 @@ impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
         (**self).serialize(serializer)
     }
 }
+
+impl Serialize for d128 {
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.serialize_d128(*self)
+    }
+}
+

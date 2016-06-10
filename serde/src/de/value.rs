@@ -18,6 +18,7 @@ use std::marker::PhantomData;
 
 use de;
 use bytes;
+use decimal::d128;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -178,8 +179,8 @@ primitive_deserializer!(u64, U64Deserializer, visit_u64);
 primitive_deserializer!(usize, UsizeDeserializer, visit_usize);
 primitive_deserializer!(f32, F32Deserializer, visit_f32);
 primitive_deserializer!(f64, F64Deserializer, visit_f64);
-//primitive_deserializer!(d128, D128Deserializer, visit_d128);
 primitive_deserializer!(char, CharDeserializer, visit_char);
+primitive_deserializer!(d128, D128Deserializer, visit_d128);
 
 ///////////////////////////////////////////////////////////////////////////////
 

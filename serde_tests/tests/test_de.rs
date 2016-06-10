@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
+use serde::d128;
 use serde::de::{Deserializer, Visitor};
 
 use token::{
@@ -92,6 +93,7 @@ declare_tests! {
         0isize => vec![Token::U64(0)],
         0isize => vec![Token::F32(0.)],
         0isize => vec![Token::F64(0.)],
+        0isize => vec![Token::D128(d128::zero())],
     }
     test_ints {
         0isize => vec![Token::Isize(0)],
@@ -110,6 +112,9 @@ declare_tests! {
     test_floats {
         0f32 => vec![Token::F32(0.)],
         0f64 => vec![Token::F64(0.)],
+    }
+    test_decimal {
+        d128::zero() => vec![Token::D128(d128::zero())],
     }
     test_char {
         'a' => vec![Token::Char('a')],

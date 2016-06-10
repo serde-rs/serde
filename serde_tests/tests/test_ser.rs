@@ -3,6 +3,7 @@ use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
+use serde::d128;
 use token::{self, Token};
 
 //////////////////////////////////////////////////////////////////////////
@@ -55,6 +56,9 @@ declare_ser_tests! {
     test_floats {
         0f32 => &[Token::F32(0.)],
         0f64 => &[Token::F64(0.)],
+    }
+    test_decimal {
+      d128::zero() => &[Token::D128(d128::zero())],
     }
     test_char {
         'a' => &[Token::Char('a')],
