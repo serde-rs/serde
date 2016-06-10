@@ -134,7 +134,7 @@ fn build_impl_generics(
 // deserialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Deserialize` bound where T is the type of the field.
-fn needs_deserialize_bound(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
+fn needs_deserialize_bound(attrs: &attr::FieldAttrs) -> bool {
     !attrs.skip_deserializing_field()
         && attrs.deserialize_with().is_none()
         && attrs.de_bound().is_none()
@@ -142,21 +142,8 @@ fn needs_deserialize_bound(_: &ast::StructField, attrs: &attr::FieldAttrs) -> bo
 
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
-fn requires_default(field: &ast::StructField, attrs: &attr::FieldAttrs) -> bool {
-    for meta_items in field.attrs.iter().filter_map(attr::get_serde_meta_items) {
-        for meta_item in meta_items {
-            match meta_item.node {
-                ast::MetaItemKind::Word(ref name) if name == &"default" => {
-                    return true
-                }
-                ast::MetaItemKind::NameValue(ref name, _) if name == &"default" => {
-                    return false
-                }
-                _ => {}
-            }
-        }
-    }
-    attrs.skip_deserializing_field()
+fn requires_default(attrs: &attr::FieldAttrs) -> bool {
+    attrs.default() == &attr::FieldDefault::Default
 }
 
 fn deserialize_body(
@@ -1234,9 +1221,16 @@ fn expr_is_missing(
     cx: &ExtCtxt,
     attrs: &attr::FieldAttrs,
 ) -> P<ast::Expr> {
-    if let Some(expr) = attrs.default_expr_if_missing() {
-        return expr.clone();
+    match *attrs.default() {
+        attr::FieldDefault::Default => {
+            return quote_expr!(cx, ::std::default::Default::default());
+        }
+        attr::FieldDefault::Path(ref path) => {
+            return quote_expr!(cx, $path());
+        }
+        attr::FieldDefault::None => { /* below */ }
     }
+
     let name = attrs.name().deserialize_name_expr();
     match attrs.deserialize_with() {
         None => {
