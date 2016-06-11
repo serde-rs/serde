@@ -1,6 +1,6 @@
 [package]
 name = "serde_codegen"
-version = "0.7.9"
+version = "0.8.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -17,13 +17,13 @@ nightly-testing = ["clippy"]
 with-syntex = ["quasi/with-syntex", "quasi_codegen", "quasi_codegen/with-syntex", "syntex", "syntex_syntax"]
 
 [build-dependencies]
-quasi_codegen = { version = "^0.11.0", optional = true }
-syntex = { version = "^0.33.0", optional = true }
+quasi_codegen = { version = "^0.12.0", optional = true }
+syntex = { version = "^0.35.0", optional = true }
 
 [dependencies]
-aster = { version = "^0.17.0", default-features = false }
+aster = { version = "^0.18.0", default-features = false }
 clippy = { version = "^0.*", optional = true }
-quasi = { version = "^0.11.0", default-features = false }
-quasi_macros = { version = "^0.11.0", optional = true }
-syntex = { version = "^0.33.0", optional = true }
-syntex_syntax = { version = "^0.33.0", optional = true }
+quasi = { version = "^0.12.0", default-features = false }
+quasi_macros = { version = "^0.12.0", optional = true }
+syntex = { version = "^0.35.0", optional = true }
+syntex_syntax = { version = "^0.35.0", optional = true }
