@@ -329,32 +329,32 @@ impl_to_primitive_float! { f32 }
 impl_to_primitive_float! { f64 }
 
 impl ToPrimitive for d128 {
-  #[inline]
-  fn to_i64(&self) -> Option<i64> {
-    if self.is_integer() || self.is_zero() {
-      format!("{}", self.quantize(d128::zero())).parse().ok()
-    } else {
-      None
+    #[inline]
+    fn to_i64(&self) -> Option<i64> {
+        if self.is_integer() || self.is_zero() {
+            format!("{}", self.quantize(d128::zero())).parse().ok()
+        } else {
+            None
+        }
     }
-  }
 
-  #[inline]
-  fn to_u64(&self) -> Option<u64> {
-    if (self.is_integer() && self.is_positive() ) || self.is_zero() {
-      format!("{}", self.quantize(d128::zero()).abs()).parse().ok()
-    } else {
-      None
+    #[inline]
+    fn to_u64(&self) -> Option<u64> {
+        if (self.is_integer() && self.is_positive() ) || self.is_zero() {
+            format!("{}", self.quantize(d128::zero()).abs()).parse().ok()
+        } else {
+            None
+        }
     }
-  }
 
-  #[inline]
-  fn to_f64(&self) -> Option<f64> {
-     format!("{}", self).parse().ok()
-  }
+    #[inline]
+    fn to_f64(&self) -> Option<f64> {
+         format!("{}", self).parse().ok()
+    }
 
-  fn to_d128(&self) -> Option<d128>{
-    Some(*self)
-  }
+    fn to_d128(&self) -> Option<d128>{
+        Some(*self)
+    }
 }
 
 pub trait FromPrimitive: Sized {
