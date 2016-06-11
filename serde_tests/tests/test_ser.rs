@@ -208,15 +208,22 @@ declare_ser_tests! {
         ],
     }
     test_hashmap {
-        hashmap![FnvHasher @ 1 => 2, 3 => 4] => &[
-            Token::MapStart(Some(2)),
+        HashMap::<isize, isize>::new() => &[
+            Token::MapStart(Some(0)),
+            Token::MapEnd,
+        ],
+        hashmap![1 => 2] => &[
+            Token::MapStart(Some(1)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
-
+            Token::MapEnd,
+        ],
+        hashmap![FnvHasher @ 1 => 2] => &[
+            Token::MapStart(Some(1)),
                 Token::MapSep,
-                Token::I32(3),
-                Token::I32(4),
+                Token::I32(1),
+                Token::I32(2),
             Token::MapEnd,
         ],
     }
