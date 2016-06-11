@@ -1,6 +1,6 @@
 [package]
 name = "serde_macros"
-version = "0.7.9"
+version = "0.7.10"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -24,7 +24,7 @@ serde_codegen = { version = "^0.7.10", path = "../serde_codegen", default-featur
 compiletest_rs = "^0.1.1"
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
-serde = { version = "^0.7.9", path = "../serde" }
+serde = { version = "^0.7.10", path = "../serde" }
 
 [[test]]
 name = "test"
