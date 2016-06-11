@@ -17,6 +17,7 @@ use core::{usize, u8, u16, u32, u64};
 use core::{isize, i8, i16, i32, i64};
 use core::{f32, f64};
 use core::mem::size_of;
+use core::fmt::Debug;
 use core::str::FromStr;
 use decimal::d128;
 
@@ -57,7 +58,7 @@ bounded_impl!(f32, f32::MIN, f32::MAX);
 bounded_impl!(f64, f64::MIN, f64::MAX);
 
 /// A generic trait for converting a value to a number.
-pub trait ToPrimitive {
+pub trait ToPrimitive where Self: Debug {
     /// Converts the value of `self` to an `isize`.
     #[inline]
     fn to_isize(&self) -> Option<isize> {
@@ -128,7 +129,7 @@ pub trait ToPrimitive {
     /// Converts the value of `self` to a `d128`.
     #[inline]
     fn to_d128(&self) -> Option<d128> {
-        self.to_f64().and_then(|x| d128::from_str(&format!("{}", x)).ok() )
+        d128::from_str(&format!("{:?}", self)).ok()
     }
 }
 
