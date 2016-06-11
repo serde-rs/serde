@@ -736,7 +736,9 @@ macro_rules! map_impl {
             marker: PhantomData<$ty>,
         }
 
-        impl<$($typaram : $bound1 $(+ $bound2)*),*> $visitor_ty<$($typaram),*> {
+        impl<$($typaram),*> $visitor_ty<$($typaram),*>
+            where $($typaram: $bound1 $(+ $bound2)*),*
+        {
             /// Construct a `MapVisitor*<T>`.
             pub fn new() -> Self {
                 $visitor_ty {
@@ -745,7 +747,9 @@ macro_rules! map_impl {
             }
         }
 
-        impl<$($typaram : $bound1 $(+ $bound2)*),*> Visitor for $visitor_ty<$($typaram),*> {
+        impl<$($typaram),*> Visitor for $visitor_ty<$($typaram),*>
+            where $($typaram: $bound1 $(+ $bound2)*),*
+        {
             type Value = $ty;
 
             #[inline]
@@ -771,7 +775,9 @@ macro_rules! map_impl {
             }
         }
 
-        impl<$($typaram : $bound1 $(+ $bound2)*),*> Deserialize for $ty {
+        impl<$($typaram),*> Deserialize for $ty
+            where $($typaram: $bound1 $(+ $bound2)*),*
+        {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
