@@ -330,8 +330,9 @@ impl<T> Serialize for EnumSet<T>
 }
 
 #[cfg(feature = "std")]
-impl<T> Serialize for HashSet<T>
+impl<T, H> Serialize for HashSet<T, H>
     where T: Serialize + Eq + Hash,
+          H: BuildHasher,
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>

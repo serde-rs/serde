@@ -62,6 +62,14 @@ macro_rules! hashset {
             $(set.insert($value);)+
             set
         }
+    };
+    ($hasher:ident @ $($value:expr),+) => {
+        {
+            use std::hash::BuildHasherDefault;
+            let mut set = HashSet::with_hasher(BuildHasherDefault::<$hasher>::default());
+            $(set.insert($value);)+
+            set
+        }
     }
 }
 

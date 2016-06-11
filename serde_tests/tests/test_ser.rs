@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
@@ -144,6 +144,24 @@ declare_ser_tests! {
                     Token::SeqSep,
                     Token::I32(3),
                 Token::SeqEnd,
+            Token::SeqEnd,
+        ],
+    }
+    test_hashset {
+        HashSet::<isize>::new() => &[
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        hashset![1] => &[
+            Token::SeqStart(Some(1)),
+                Token::SeqSep,
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+        hashset![FnvHasher @ 1] => &[
+            Token::SeqStart(Some(1)),
+                Token::SeqSep,
+                Token::I32(1),
             Token::SeqEnd,
         ],
     }
