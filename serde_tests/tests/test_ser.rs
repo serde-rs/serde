@@ -1,9 +1,12 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
 use token::{self, Token};
+
+extern crate fnv;
+use self::fnv::FnvHasher;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -201,6 +204,19 @@ declare_ser_tests! {
                     Token::I32(5),
                     Token::I32(6),
                 Token::MapEnd,
+            Token::MapEnd,
+        ],
+    }
+    test_hashmap {
+        hashmap![FnvHasher @ 1 => 2, 3 => 4] => &[
+            Token::MapStart(Some(2)),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+
+                Token::MapSep,
+                Token::I32(3),
+                Token::I32(4),
             Token::MapEnd,
         ],
     }

@@ -75,5 +75,13 @@ macro_rules! hashmap {
             $(map.insert($key, $value);)+
             map
         }
+    };
+    ($hasher:ident @ $($key:expr => $value:expr),+) => {
+        {
+            use std::hash::BuildHasherDefault;
+            let mut map = HashMap::with_hasher(BuildHasherDefault::<$hasher>::default());
+            $(map.insert($key, $value);)+
+            map
+        }
     }
 }

@@ -2,6 +2,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
+extern crate fnv;
+use self::fnv::FnvHasher;
+
 use token::{
     Error,
     Token,
@@ -530,6 +533,17 @@ declare_tests! {
         ],
         HashMap::<isize, isize>::new() => vec![
             Token::StructStart("Anything", Some(0)),
+            Token::MapEnd,
+        ],
+        hashmap![FnvHasher @ 1 => 2, 3 => 4] => vec![
+            Token::MapStart(Some(2)),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+
+                Token::MapSep,
+                Token::I32(3),
+                Token::I32(4),
             Token::MapEnd,
         ],
     }

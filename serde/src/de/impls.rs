@@ -32,7 +32,7 @@ use collections::enum_set::{CLike, EnumSet};
 #[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::borrow::ToOwned;
 
-use core::hash::Hash;
+use core::hash::{Hash, BuildHasher};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use std::net;
@@ -726,31 +726,26 @@ tuple_impls! {
 macro_rules! map_impl {
     (
         $ty:ty,
-        < $($constraints:ident),* >,
-        $visitor_name:ident,
+        $visitor_ty:ident < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
         $visitor:ident,
         $ctor:expr,
-        $with_capacity:expr,
-        $insert:expr
+        $with_capacity:expr
     ) => {
         /// A visitor that produces a map.
-        pub struct $visitor_name<K, V> {
+        pub struct $visitor_ty<$($typaram),*> {
             marker: PhantomData<$ty>,
         }
 
-        impl<K, V> $visitor_name<K, V> {
+        impl<$($typaram : $bound1 $(+ $bound2)*),*> $visitor_ty<$($typaram),*> {
             /// Construct a `MapVisitor*<T>`.
             pub fn new() -> Self {
-                $visitor_name {
+                $visitor_ty {
                     marker: PhantomData,
                 }
             }
         }
 
-        impl<K, V> Visitor for $visitor_name<K, V>
-            where K: $($constraints +)*,
-                  V: Deserialize,
-        {
+        impl<$($typaram : $bound1 $(+ $bound2)*),*> Visitor for $visitor_ty<$($typaram),*> {
             type Value = $ty;
 
             #[inline]
@@ -767,7 +762,7 @@ macro_rules! map_impl {
                 let mut values = $with_capacity;
 
                 while let Some((key, value)) = try!($visitor.visit()) {
-                    $insert(&mut values, key, value);
+                    values.insert(key, value);
                 }
 
                 try!($visitor.end());
@@ -776,14 +771,11 @@ macro_rules! map_impl {
             }
         }
 
-        impl<K, V> Deserialize for $ty
-            where K: $($constraints +)*,
-                  V: Deserialize,
-        {
+        impl<$($typaram : $bound1 $(+ $bound2)*),*> Deserialize for $ty {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.deserialize_map($visitor_name::new())
+                deserializer.deserialize_map($visitor_ty::new())
             }
         }
     }
@@ -792,22 +784,21 @@ macro_rules! map_impl {
 #[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
     BTreeMap<K, V>,
-    <Deserialize, Eq, Ord>,
-    BTreeMapVisitor,
+    BTreeMapVisitor<K: Deserialize + Eq + Ord,
+                    V: Deserialize>,
     visitor,
     BTreeMap::new(),
-    BTreeMap::new(),
-    BTreeMap::insert);
+    BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
-    HashMap<K, V>,
-    <Deserialize, Eq, Hash>,
-    HashMapVisitor,
+    HashMap<K, V, S>,
+    HashMapVisitor<K: Deserialize + Eq + Hash,
+                   V: Deserialize,
+                   S: BuildHasher + Default>,
     visitor,
-    HashMap::new(),
-    HashMap::with_capacity(visitor.size_hint().0),
-    HashMap::insert);
+    HashMap::with_hasher(S::default()),
+    HashMap::with_capacity_and_hasher(visitor.size_hint().0, S::default()));
 
 ///////////////////////////////////////////////////////////////////////////////
 

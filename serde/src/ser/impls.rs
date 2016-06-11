@@ -31,7 +31,7 @@ use collections::enum_set::{CLike, EnumSet};
 #[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::borrow::ToOwned;
 
-use core::hash::Hash;
+use core::hash::{Hash, BuildHasher};
 #[cfg(feature = "nightly")]
 use core::iter;
 #[cfg(feature = "std")]
@@ -651,9 +651,10 @@ impl<K, V> Serialize for BTreeMap<K, V>
 }
 
 #[cfg(feature = "std")]
-impl<K, V> Serialize for HashMap<K, V>
+impl<K, V, H> Serialize for HashMap<K, V, H>
     where K: Serialize + Eq + Hash,
           V: Serialize,
+          H: BuildHasher,
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
