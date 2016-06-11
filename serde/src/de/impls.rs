@@ -32,7 +32,7 @@ use collections::enum_set::{CLike, EnumSet};
 #[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::borrow::ToOwned;
 
-use core::hash::Hash;
+use core::hash::{Hash, BuildHasher};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use std::net;
@@ -381,29 +381,30 @@ impl<T> Deserialize for PhantomData<T> where T: Deserialize {
 macro_rules! seq_impl {
     (
         $ty:ty,
-        < $($constraints:ident),* >,
-        $visitor_name:ident,
+        $visitor_ty:ident < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
         $visitor:ident,
         $ctor:expr,
         $with_capacity:expr,
         $insert:expr
     ) => {
         /// A visitor that produces a sequence.
-        pub struct $visitor_name<T> {
-            marker: PhantomData<T>,
+        pub struct $visitor_ty<$($typaram),*> {
+            marker: PhantomData<$ty>,
         }
 
-        impl<T> $visitor_name<T> {
+        impl<$($typaram),*> $visitor_ty<$($typaram),*>
+            where $($typaram: $bound1 $(+ $bound2)*),*
+        {
             /// Construct a new sequence visitor.
             pub fn new() -> Self {
-                $visitor_name {
+                $visitor_ty {
                     marker: PhantomData,
                 }
             }
         }
 
-        impl<T> Visitor for $visitor_name<T>
-            where T: $($constraints +)*,
+        impl<$($typaram),*> Visitor for $visitor_ty<$($typaram),*>
+            where $($typaram: $bound1 $(+ $bound2)*),*
         {
             type Value = $ty;
 
@@ -430,13 +431,13 @@ macro_rules! seq_impl {
             }
         }
 
-        impl<T> Deserialize for $ty
-            where T: $($constraints +)*,
+        impl<$($typaram),*> Deserialize for $ty
+            where $($typaram: $bound1 $(+ $bound2)*),*
         {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.deserialize_seq($visitor_name::new())
+                deserializer.deserialize_seq($visitor_ty::new())
             }
         }
     }
@@ -445,8 +446,7 @@ macro_rules! seq_impl {
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BinaryHeap<T>,
-    <Deserialize, Ord>,
-    BinaryHeapVisitor,
+    BinaryHeapVisitor<T: Deserialize + Ord>,
     visitor,
     BinaryHeap::new(),
     BinaryHeap::with_capacity(visitor.size_hint().0),
@@ -455,8 +455,7 @@ seq_impl!(
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BTreeSet<T>,
-    <Deserialize, Eq, Ord>,
-    BTreeSetVisitor,
+    BTreeSetVisitor<T: Deserialize + Eq + Ord>,
     visitor,
     BTreeSet::new(),
     BTreeSet::new(),
@@ -465,8 +464,7 @@ seq_impl!(
 #[cfg(all(feature = "nightly", feature = "collections"))]
 seq_impl!(
     EnumSet<T>,
-    <Deserialize, CLike>,
-    EnumSetVisitor,
+    EnumSetVisitor<T: Deserialize + CLike>,
     visitor,
     EnumSet::new(),
     EnumSet::new(),
@@ -475,8 +473,7 @@ seq_impl!(
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     LinkedList<T>,
-    <Deserialize>,
-    LinkedListVisitor,
+    LinkedListVisitor<T: Deserialize>,
     visitor,
     LinkedList::new(),
     LinkedList::new(),
@@ -484,19 +481,18 @@ seq_impl!(
 
 #[cfg(feature = "std")]
 seq_impl!(
-    HashSet<T>,
-    <Deserialize, Eq, Hash>,
-    HashSetVisitor,
+    HashSet<T, S>,
+    HashSetVisitor<T: Deserialize + Eq + Hash,
+                   S: BuildHasher + Default>,
     visitor,
-    HashSet::new(),
-    HashSet::with_capacity(visitor.size_hint().0),
+    HashSet::with_hasher(S::default()),
+    HashSet::with_capacity_and_hasher(visitor.size_hint().0, S::default()),
     HashSet::insert);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     Vec<T>,
-    <Deserialize>,
-    VecVisitor,
+    VecVisitor<T: Deserialize>,
     visitor,
     Vec::new(),
     Vec::with_capacity(visitor.size_hint().0),
@@ -505,8 +501,7 @@ seq_impl!(
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     VecDeque<T>,
-    <Deserialize>,
-    VecDequeVisitor,
+    VecDequeVisitor<T: Deserialize>,
     visitor,
     VecDeque::new(),
     VecDeque::with_capacity(visitor.size_hint().0),
@@ -726,30 +721,29 @@ tuple_impls! {
 macro_rules! map_impl {
     (
         $ty:ty,
-        < $($constraints:ident),* >,
-        $visitor_name:ident,
+        $visitor_ty:ident < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
         $visitor:ident,
         $ctor:expr,
-        $with_capacity:expr,
-        $insert:expr
+        $with_capacity:expr
     ) => {
         /// A visitor that produces a map.
-        pub struct $visitor_name<K, V> {
+        pub struct $visitor_ty<$($typaram),*> {
             marker: PhantomData<$ty>,
         }
 
-        impl<K, V> $visitor_name<K, V> {
+        impl<$($typaram),*> $visitor_ty<$($typaram),*>
+            where $($typaram: $bound1 $(+ $bound2)*),*
+        {
             /// Construct a `MapVisitor*<T>`.
             pub fn new() -> Self {
-                $visitor_name {
+                $visitor_ty {
                     marker: PhantomData,
                 }
             }
         }
 
-        impl<K, V> Visitor for $visitor_name<K, V>
-            where K: $($constraints +)*,
-                  V: Deserialize,
+        impl<$($typaram),*> Visitor for $visitor_ty<$($typaram),*>
+            where $($typaram: $bound1 $(+ $bound2)*),*
         {
             type Value = $ty;
 
@@ -767,7 +761,7 @@ macro_rules! map_impl {
                 let mut values = $with_capacity;
 
                 while let Some((key, value)) = try!($visitor.visit()) {
-                    $insert(&mut values, key, value);
+                    values.insert(key, value);
                 }
 
                 try!($visitor.end());
@@ -776,14 +770,13 @@ macro_rules! map_impl {
             }
         }
 
-        impl<K, V> Deserialize for $ty
-            where K: $($constraints +)*,
-                  V: Deserialize,
+        impl<$($typaram),*> Deserialize for $ty
+            where $($typaram: $bound1 $(+ $bound2)*),*
         {
             fn deserialize<D>(deserializer: &mut D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.deserialize_map($visitor_name::new())
+                deserializer.deserialize_map($visitor_ty::new())
             }
         }
     }
@@ -792,22 +785,21 @@ macro_rules! map_impl {
 #[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
     BTreeMap<K, V>,
-    <Deserialize, Eq, Ord>,
-    BTreeMapVisitor,
+    BTreeMapVisitor<K: Deserialize + Eq + Ord,
+                    V: Deserialize>,
     visitor,
     BTreeMap::new(),
-    BTreeMap::new(),
-    BTreeMap::insert);
+    BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
-    HashMap<K, V>,
-    <Deserialize, Eq, Hash>,
-    HashMapVisitor,
+    HashMap<K, V, S>,
+    HashMapVisitor<K: Deserialize + Eq + Hash,
+                   V: Deserialize,
+                   S: BuildHasher + Default>,
     visitor,
-    HashMap::new(),
-    HashMap::with_capacity(visitor.size_hint().0),
-    HashMap::insert);
+    HashMap::with_hasher(S::default()),
+    HashMap::with_capacity_and_hasher(visitor.size_hint().0, S::default()));
 
 ///////////////////////////////////////////////////////////////////////////////
 

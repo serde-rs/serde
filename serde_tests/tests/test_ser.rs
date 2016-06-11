@@ -1,9 +1,12 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
 use token::{self, Token};
+
+extern crate fnv;
+use self::fnv::FnvHasher;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -144,6 +147,24 @@ declare_ser_tests! {
             Token::SeqEnd,
         ],
     }
+    test_hashset {
+        HashSet::<isize>::new() => &[
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        hashset![1] => &[
+            Token::SeqStart(Some(1)),
+                Token::SeqSep,
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+        hashset![FnvHasher @ 1] => &[
+            Token::SeqStart(Some(1)),
+                Token::SeqSep,
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+    }
     test_tuple {
         (1,) => &[
             Token::TupleStart(1),
@@ -201,6 +222,26 @@ declare_ser_tests! {
                     Token::I32(5),
                     Token::I32(6),
                 Token::MapEnd,
+            Token::MapEnd,
+        ],
+    }
+    test_hashmap {
+        HashMap::<isize, isize>::new() => &[
+            Token::MapStart(Some(0)),
+            Token::MapEnd,
+        ],
+        hashmap![1 => 2] => &[
+            Token::MapStart(Some(1)),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        hashmap![FnvHasher @ 1 => 2] => &[
+            Token::MapStart(Some(1)),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
             Token::MapEnd,
         ],
     }

@@ -19,6 +19,7 @@ syntex_syntax = { version = "^0.35.0" }
 serde_codegen = { version = "*", path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
+fnv = "1.0"
 rustc-serialize = "^0.3.16"
 serde = { version = "*", path = "../serde" }
 syntex = "^0.35.0"
