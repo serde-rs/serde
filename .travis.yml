@@ -3,6 +3,8 @@ rust:
 - stable
 - beta
 - nightly
+- 1.7.0
+- 1.8.0
 addons:
   apt:
     packages:
