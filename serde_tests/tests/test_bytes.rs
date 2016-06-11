@@ -4,6 +4,7 @@ use std::error;
 extern crate serde;
 use self::serde::Serialize;
 use self::serde::bytes::{ByteBuf, Bytes};
+use self::serde::d128;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -74,6 +75,10 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_f64(&mut self, _v: f64) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_d128(&mut self, _v: d128) -> Result<(), Error> {
         Err(Error)
     }
 

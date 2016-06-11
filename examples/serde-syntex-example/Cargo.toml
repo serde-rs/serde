@@ -9,10 +9,10 @@ default = ["serde_codegen"]
 nightly = ["serde_macros"]
 
 [build-dependencies]
-serde_codegen = { version = "^0.7.9", optional = true }
-syntex = "^0.33.0"
+serde_codegen = { version = "^0.8.0", optional = true }
+syntex = "^0.35.0"
 
 [dependencies]
-serde = "^0.7.9"
-serde_json = "^0.7.0"
-serde_macros = { version = "^0.7.9", optional = true }
+serde = "^0.8.0"
+serde_json = "^0.8.0"
+serde_macros = { version = "^0.8.0", optional = true }

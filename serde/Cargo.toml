@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.7.9"
+version = "0.8.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -21,3 +21,4 @@ nightly-testing = ["clippy", "nightly", "std"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
+decimal = { version = "0.5.0" }

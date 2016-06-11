@@ -2,6 +2,9 @@
 
 #[cfg(feature = "std")]
 use std::error;
+
+use decimal::d128;
+
 #[cfg(not(feature = "std"))]
 use error;
 
@@ -10,7 +13,7 @@ use collections::{String, Vec};
 
 pub mod impls;
 pub mod value;
-mod from_primitive;
+pub mod from_primitive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -110,6 +113,9 @@ pub enum Type {
 
     /// Represents a `f64` type.
     F64,
+
+    /// Represents a `d128` type.
+    D128,
 
     /// Represents a `char` type.
     Char,
@@ -299,6 +305,14 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a `f64` value.
     #[inline]
     fn deserialize_f64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        self.deserialize(visitor)
+    }
+
+    /// This method hints that the `Deserialize` type is expecting a `d128` value.
+    #[inline]
+    fn deserialize_d128<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize(visitor)
@@ -571,6 +585,13 @@ pub trait Visitor {
         where E: Error,
     {
         Err(Error::invalid_type(Type::F64))
+    }
+
+    /// `visit_d128` deserializes a `d128` into a `Value`.
+    fn visit_d128<E>(&mut self, _v: d128) -> Result<Self::Value, E>
+        where E: Error,
+    {
+        Err(Error::invalid_type(Type::D128))
     }
 
     /// `visit_char` deserializes a `char` into a `Value`.

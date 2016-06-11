@@ -49,6 +49,7 @@ use alloc::rc::Rc;
 
 #[cfg(feature = "std")]
 use std::sync::Arc;
+
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::arc::Arc;
 
@@ -56,6 +57,7 @@ use alloc::arc::Arc;
 use alloc::boxed::Box;
 
 use core::marker::PhantomData;
+use decimal::d128;
 
 #[cfg(feature = "nightly")]
 use core::nonzero::{NonZero, Zeroable};
@@ -831,3 +833,13 @@ impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
         (**self).serialize(serializer)
     }
 }
+
+impl Serialize for d128 {
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.serialize_d128(*self)
+    }
+}
+

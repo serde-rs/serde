@@ -17,6 +17,9 @@ use core::{usize, u8, u16, u32, u64};
 use core::{isize, i8, i16, i32, i64};
 use core::{f32, f64};
 use core::mem::size_of;
+use core::fmt::Debug;
+use core::str::FromStr;
+use decimal::d128;
 
 /// Numbers which have upper and lower bounds
 pub trait Bounded {
@@ -55,7 +58,7 @@ bounded_impl!(f32, f32::MIN, f32::MAX);
 bounded_impl!(f64, f64::MIN, f64::MAX);
 
 /// A generic trait for converting a value to a number.
-pub trait ToPrimitive {
+pub trait ToPrimitive where Self: Debug {
     /// Converts the value of `self` to an `isize`.
     #[inline]
     fn to_isize(&self) -> Option<isize> {
@@ -121,6 +124,12 @@ pub trait ToPrimitive {
     #[inline]
     fn to_f64(&self) -> Option<f64> {
         self.to_i64().and_then(|x| x.to_f64())
+    }
+
+    /// Converts the value of `self` to a `d128`.
+    #[inline]
+    fn to_d128(&self) -> Option<d128> {
+        d128::from_str(&format!("{:?}", self)).ok()
     }
 }
 
@@ -320,6 +329,35 @@ macro_rules! impl_to_primitive_float {
 impl_to_primitive_float! { f32 }
 impl_to_primitive_float! { f64 }
 
+impl ToPrimitive for d128 {
+    #[inline]
+    fn to_i64(&self) -> Option<i64> {
+        if self.is_integer() || self.is_zero() {
+            format!("{}", self.quantize(d128::zero())).parse().ok()
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn to_u64(&self) -> Option<u64> {
+        if (self.is_integer() && self.is_positive() ) || self.is_zero() {
+            format!("{}", self.quantize(d128::zero()).abs()).parse().ok()
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn to_f64(&self) -> Option<f64> {
+         format!("{}", self).parse().ok()
+    }
+
+    fn to_d128(&self) -> Option<d128>{
+        Some(*self)
+    }
+}
+
 pub trait FromPrimitive: Sized {
     #[inline]
     fn from_isize(n: isize) -> Option<Self> {
@@ -374,6 +412,9 @@ pub trait FromPrimitive: Sized {
     fn from_f64(n: f64) -> Option<Self> {
         FromPrimitive::from_i64(n as i64)
     }
+
+    #[inline]
+    fn from_d128(n: d128) -> Option<Self>;
 }
 
 macro_rules! impl_from_primitive {
@@ -391,6 +432,7 @@ macro_rules! impl_from_primitive {
 
             #[inline] fn from_f32(n: f32) -> Option<$T> { n.$to_ty() }
             #[inline] fn from_f64(n: f64) -> Option<$T> { n.$to_ty() }
+            #[inline] fn from_d128(n: d128) -> Option<$T> { n.$to_ty() }
         }
     )
 }
@@ -407,3 +449,4 @@ impl_from_primitive! { u32, to_u32 }
 impl_from_primitive! { u64, to_u64 }
 impl_from_primitive! { f32, to_f32 }
 impl_from_primitive! { f64, to_f64 }
+impl_from_primitive! { d128, to_d128 }

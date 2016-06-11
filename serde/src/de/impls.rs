@@ -53,6 +53,8 @@ use alloc::arc::Arc;
 #[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 
+use decimal::d128;
+
 #[cfg(feature = "nightly")]
 use core::nonzero::{NonZero, Zeroable};
 
@@ -182,6 +184,7 @@ impl<T> Visitor for PrimitiveVisitor<T>
     impl_deserialize_num_method!(u64, visit_u64, from_u64, Type::U64);
     impl_deserialize_num_method!(f32, visit_f32, from_f32, Type::F32);
     impl_deserialize_num_method!(f64, visit_f64, from_f64, Type::F64);
+    impl_deserialize_num_method!(d128, visit_d128, from_d128, Type::D128);
 
     #[inline]
     fn visit_str<E>(&mut self, s: &str) -> Result<T, E>
@@ -218,6 +221,38 @@ impl_deserialize_num!(u32, deserialize_u32);
 impl_deserialize_num!(u64, deserialize_u64);
 impl_deserialize_num!(f32, deserialize_f32);
 impl_deserialize_num!(f64, deserialize_f64);
+
+///////////////////////////////////////////////////////////////////////////////
+
+struct D128Visitor;
+
+impl Visitor for D128Visitor {
+    type Value = d128;
+
+    fn visit_d128<E>(&mut self, v: d128) -> Result<d128, E>
+        where E: Error,
+    {
+        Ok(v)
+    }
+
+    #[inline]
+    fn visit_str<E>(&mut self, v: &str) -> Result<d128, E>
+        where E: Error,
+    {
+        str::FromStr::from_str(v.trim()).or_else(|_| {
+            Err(Error::invalid_type(Type::Str))
+        })
+    }
+}
+
+impl Deserialize for d128 {
+    fn deserialize<D>(deserializer: &mut D) -> Result<d128, D::Error>
+        where D: Deserializer,
+    {
+        deserializer.deserialize_d128(D128Visitor)
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1120,6 +1155,11 @@ impl Deserialize for IgnoredAny {
 
             #[inline]
             fn visit_f64<E>(&mut self, _: f64) -> Result<IgnoredAny, E> {
+                Ok(IgnoredAny)
+            }
+
+            #[inline]
+            fn visit_d128<E>(&mut self, _: d128) -> Result<IgnoredAny, E> {
                 Ok(IgnoredAny)
             }
 

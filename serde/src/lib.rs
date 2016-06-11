@@ -16,6 +16,7 @@
 #![cfg_attr(feature = "collections", feature(collections, enumset))]
 #![cfg_attr(feature = "nightly-testing", plugin(clippy))]
 #![cfg_attr(feature = "nightly-testing", allow(linkedlist))]
+#![feature(macro_reexport)]
 
 #![cfg_attr(any(not(feature = "std"), feature = "nightly"), allow(unused_variables, unused_imports, unused_features, dead_code))]
 
@@ -37,8 +38,14 @@ mod core {
     pub use self::core::nonzero;
 }
 
+#[macro_use]
+#[macro_reexport(d128)]
+extern crate decimal;
+
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer, Error};
+
+pub use decimal::d128;
 
 #[cfg(not(feature = "std"))]
 macro_rules! format {
