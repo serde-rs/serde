@@ -1,6 +1,5 @@
 #[cfg(not(feature = "serde_macros"))]
 mod inner {
-    extern crate syntex;
     extern crate serde_codegen;
 
     use std::env;
