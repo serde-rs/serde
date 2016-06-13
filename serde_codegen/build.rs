@@ -1,6 +1,5 @@
 #[cfg(feature = "with-syntex")]
 mod inner {
-    extern crate syntex;
     extern crate quasi_codegen;
 
     use std::env;

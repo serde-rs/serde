@@ -74,12 +74,12 @@ When run, it produces:
 Point { x: 1, y: 2 }
 ```
 
-Using Serde with Stable Rust, syntex, and serde\_codegen
-========================================================
+Using Serde with Stable Rust and serde\_codegen
+===============================================
 
 Stable Rust is a little more complicated because it does not yet support
-compiler plugins. Instead we need to use the code generation library
-[syntex](https://github.com/serde-rs/syntex) for this:
+compiler plugins. Instead we need to use `serde_codegen` which is based on the
+code generation library [syntex](https://github.com/serde-rs/syntex):
 
 ```toml
 [package]
@@ -90,7 +90,6 @@ build = "build.rs"
 
 [build-dependencies]
 serde_codegen = "*"
-syntex = "*"
 
 [dependencies]
 serde = "*"
@@ -130,7 +129,6 @@ fn main() {
 `build.rs`
 
 ```rust,ignore
-extern crate syntex;
 extern crate serde_codegen;
 
 use std::env;
@@ -175,7 +173,6 @@ nightly = ["serde_macros"]
 
 [build-dependencies]
 serde_codegen = { version = "*", optional = true }
-syntex = "*"
 
 [dependencies]
 serde = "*"
@@ -188,7 +185,6 @@ serde_macros = { version = "*", optional = true }
 ```rust,ignore
 #[cfg(not(feature = "serde_macros"))]
 mod inner {
-    extern crate syntex;
     extern crate serde_codegen;
 
     use std::env;

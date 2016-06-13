@@ -1,4 +1,3 @@
-extern crate syntex;
 extern crate serde_codegen;
 
 use std::env;

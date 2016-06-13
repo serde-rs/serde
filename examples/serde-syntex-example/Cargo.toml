@@ -10,7 +10,6 @@ nightly = ["serde_macros"]
 
 [build-dependencies]
 serde_codegen = { version = "^0.7.10", optional = true }
-syntex = "^0.33.0"
 
 [dependencies]
 serde = "^0.7.10"
