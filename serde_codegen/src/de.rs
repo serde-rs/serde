@@ -379,6 +379,7 @@ fn deserialize_tuple(
 
     let nfields = fields.len();
     let fields_with_attrs = try!(attr::fields_with_attrs(cx, fields));
+    try!(check_no_str(cx, &fields_with_attrs));
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
         Some(try!(deserialize_newtype_struct(
@@ -576,6 +577,7 @@ fn deserialize_struct(
     };
 
     let fields_with_attrs = try!(attr::fields_with_attrs(cx, fields));
+    try!(check_no_str(cx, &fields_with_attrs));
 
     let visit_seq_expr = try!(deserialize_seq(
         cx,
@@ -1241,4 +1243,33 @@ fn expr_is_missing(
                 <__V::Error as _serde::de::Error>::missing_field($name)))
         }
     }
+}
+
+fn check_no_str(
+    cx: &ExtCtxt,
+    fields: &[(ast::StructField, attr::FieldAttrs)],
+) -> Result<(), Error> {
+    let fail = |field: &ast::StructField| {
+        cx.span_err(
+            field.span,
+            "Serde does not support deserializing fields of type &str; \
+             consider using String instead");
+        Err(Error)
+    };
+
+    for &(ref field, ref attrs) in fields {
+        if attrs.skip_deserializing_field()
+            || attrs.deserialize_with().is_some() { continue }
+
+        if let ast::TyKind::Rptr(_, ref inner) = field.ty.node {
+            if let ast::TyKind::Path(_, ref path) = inner.ty.node {
+                if path.segments.len() == 1
+                    && path.segments[0].identifier.name.as_str() == "str"
+                {
+                    return fail(field);
+                }
+            }
+        }
+    }
+    Ok(())
 }
