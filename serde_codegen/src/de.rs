@@ -135,7 +135,7 @@ fn build_impl_generics(
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Deserialize` bound where T is the type of the field.
 fn needs_deserialize_bound(attrs: &attr::FieldAttrs) -> bool {
-    !attrs.skip_deserializing_field()
+    !attrs.skip_deserializing()
         && attrs.deserialize_with().is_none()
         && attrs.de_bound().is_none()
 }
@@ -450,7 +450,7 @@ fn deserialize_seq(
         .enumerate()
         .map(|(i, &(ref field, ref attrs))| {
             let name = builder.id(format!("__field{}", i));
-            if attrs.skip_deserializing_field() {
+            if attrs.skip_deserializing() {
                 let default = expr_is_missing(cx, attrs);
                 quote_stmt!(cx,
                     let $name = $default;
@@ -1049,7 +1049,7 @@ fn deserialize_map(
 
     // Declare each field that will be deserialized.
     let let_values: Vec<ast::Stmt> = fields_attrs_names.iter()
-        .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
+        .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing())
         .map(|&(field, _, name)| {
             let field_ty = &field.ty;
             quote_stmt!(cx, let mut $name: Option<$field_ty> = None;).unwrap()
@@ -1058,7 +1058,7 @@ fn deserialize_map(
 
     // Match arms to extract a value for a field.
     let value_arms = fields_attrs_names.iter()
-        .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
+        .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing())
         .map(|&(ref field, ref attrs, name)| {
             let deser_name = attrs.name().deserialize_name();
             let name_str = builder.expr().lit().str(deser_name);
@@ -1092,7 +1092,7 @@ fn deserialize_map(
     // Match arms to ignore value for fields that have `skip_deserializing`.
     // Ignored even if `deny_unknown_fields` is set.
     let skipped_arms = fields_attrs_names.iter()
-        .filter(|&&(_, ref attrs, _)| attrs.skip_deserializing_field())
+        .filter(|&&(_, ref attrs, _)| attrs.skip_deserializing())
         .map(|&(_, _, name)| {
             quote_arm!(cx,
                 __Field::$name => {
@@ -1112,7 +1112,7 @@ fn deserialize_map(
     };
 
     let extract_values = fields_attrs_names.iter()
-        .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing_field())
+        .filter(|&&(_, ref attrs, _)| !attrs.skip_deserializing())
         .map(|&(_, ref attrs, name)| {
             let missing_expr = expr_is_missing(cx, attrs);
 
@@ -1138,7 +1138,7 @@ fn deserialize_map(
                                 cx.span_bug(field.span, "struct contains unnamed fields")
                             }
                         },
-                        if attrs.skip_deserializing_field() {
+                        if attrs.skip_deserializing() {
                             expr_is_missing(cx, attrs)
                         } else {
                             builder.expr().id(name)
@@ -1258,7 +1258,7 @@ fn check_no_str(
     };
 
     for &(ref field, ref attrs) in fields {
-        if attrs.skip_deserializing_field()
+        if attrs.skip_deserializing()
             || attrs.deserialize_with().is_some() { continue }
 
         if let ast::TyKind::Rptr(_, ref inner) = field.ty.node {

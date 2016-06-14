@@ -129,7 +129,7 @@ fn build_impl_generics(
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Serialize` bound where T is the type of the field.
 fn needs_serialize_bound(attrs: &attr::FieldAttrs) -> bool {
-    !attrs.skip_serializing_field()
+    !attrs.skip_serializing()
         && attrs.serialize_with().is_none()
         && attrs.ser_bound().is_none()
 }
@@ -749,7 +749,7 @@ fn serialize_struct_visitor(
     let fields_with_attrs = try!(attr::fields_with_attrs(cx, fields));
 
     let arms: Vec<ast::Arm> = fields_with_attrs.iter()
-        .filter(|&&(_, ref attrs)| !attrs.skip_serializing_field())
+        .filter(|&&(_, ref attrs)| !attrs.skip_serializing())
         .enumerate()
         .map(|(i, &(ref field, ref attrs))| {
             let ident = field.ident.expect("struct has unnamed field");
@@ -794,7 +794,7 @@ fn serialize_struct_visitor(
         .build();
 
     let len = fields_with_attrs.iter()
-        .filter(|&&(_, ref attrs)| !attrs.skip_serializing_field())
+        .filter(|&&(_, ref attrs)| !attrs.skip_serializing())
         .map(|&(ref field, ref attrs)| {
             let ident = field.ident.expect("struct has unnamed fields");
             let mut field_expr = quote_expr!(cx, self.value.$ident);
