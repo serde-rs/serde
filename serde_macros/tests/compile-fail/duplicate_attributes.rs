@@ -5,13 +5,11 @@
 struct S {
     #[serde(rename(serialize="x"))]
     #[serde(rename(serialize="y"))] //~ ERROR: duplicate serde attribute `rename`
-    a: (),                          //~^ ERROR: duplicate serde attribute `rename`
-                                    //~^^ ERROR: duplicate serde attribute `rename`
+    a: (),
 
     #[serde(rename(serialize="x"))]
     #[serde(rename="y")] //~ ERROR: duplicate serde attribute `rename`
-    b: (),               //~^ ERROR: duplicate serde attribute `rename`
-                         //~^^ ERROR: duplicate serde attribute `rename`
+    b: (),
 
     #[serde(rename(serialize="x"))]
     #[serde(rename(deserialize="y"))] // ok
@@ -19,7 +17,7 @@ struct S {
 
     #[serde(rename="x")]
     #[serde(rename(deserialize="y"))] //~ ERROR: duplicate serde attribute `rename`
-    d: (),                            //~^ ERROR: duplicate serde attribute `rename`
-}                                     //~^^ ERROR: duplicate serde attribute `rename`
+    d: (),
+}
 
 fn main() {}
