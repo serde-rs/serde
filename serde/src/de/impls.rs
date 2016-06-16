@@ -714,6 +714,10 @@ tuple_impls! {
     10 => TupleVisitor10 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
     11 => TupleVisitor11 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
     12 => TupleVisitor12 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
+    13 => TupleVisitor13 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12),
+    14 => TupleVisitor14 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13),
+    15 => TupleVisitor15 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14),
+    16 => TupleVisitor16 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15),
 }
 
 ///////////////////////////////////////////////////////////////////////////////
