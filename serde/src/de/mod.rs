@@ -365,7 +365,7 @@ pub trait Deserializer {
                                        visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        self.deserialize(visitor)
+        self.deserialize_seq(visitor)
     }
 
     /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
