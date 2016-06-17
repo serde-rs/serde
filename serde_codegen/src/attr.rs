@@ -15,6 +15,14 @@ use aster::ident::ToIdent;
 
 use error::Error;
 
+// This module handles parsing of `#[serde(...)]` attributes. The entrypoints
+// are `ContainerAttrs::from_item`, `VariantAttrs::from_variant`, and
+// `FieldAttrs::from_field`. Each returns an instance of the corresponding
+// struct. Note that none of them return a Result. Unrecognized, malformed, or
+// duplicated attributes result in a span_err but otherwise are ignored. The
+// user will see errors simultaneously for all bad attributes in the crate
+// rather than just the first.
+
 struct Attr<'a, 'b: 'a, T> {
     cx: &'a ExtCtxt<'b>,
     name: &'static str,
