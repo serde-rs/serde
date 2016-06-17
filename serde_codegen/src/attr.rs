@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use syntax::ast::{self, TokenTree};
 use syntax::attr;
-use syntax::codemap::Span;
+use syntax::codemap::{Span, Spanned, respan};
 use syntax::ext::base::ExtCtxt;
 use syntax::fold::Folder;
 use syntax::parse::parser::{Parser, PathStyle};
@@ -11,8 +11,79 @@ use syntax::print::pprust::{lit_to_string, meta_item_to_string};
 use syntax::ptr::P;
 
 use aster::AstBuilder;
+use aster::ident::ToIdent;
 
 use error::Error;
+
+// This module handles parsing of `#[serde(...)]` attributes. The entrypoints
+// are `ContainerAttrs::from_item`, `VariantAttrs::from_variant`, and
+// `FieldAttrs::from_field`. Each returns an instance of the corresponding
+// struct. Note that none of them return a Result. Unrecognized, malformed, or
+// duplicated attributes result in a span_err but otherwise are ignored. The
+// user will see errors simultaneously for all bad attributes in the crate
+// rather than just the first.
+
+struct Attr<'a, 'b: 'a, T> {
+    cx: &'a ExtCtxt<'b>,
+    name: &'static str,
+    value: Option<Spanned<T>>,
+}
+impl<'a, 'b, T> Attr<'a, 'b, T> {
+    fn none(cx: &'a ExtCtxt<'b>, name: &'static str) -> Self {
+        Attr {
+            cx: cx,
+            name: name,
+            value: None,
+        }
+    }
+
+    fn set(&mut self, span: Span, t: T) {
+        if let Some(Spanned { span: prev_span, .. }) = self.value {
+            let mut err = self.cx.struct_span_err(
+                span,
+                &format!("duplicate serde attribute `{}`", self.name));
+            err.span_help(prev_span, "previously set here");
+            err.emit();
+        } else {
+            self.value = Some(respan(span, t));
+        }
+    }
+
+    fn set_opt(&mut self, v: Option<Spanned<T>>) {
+        if let Some(v) = v {
+            self.set(v.span, v.node);
+        }
+    }
+
+    fn set_if_none(&mut self, span: Span, t: T) {
+        if self.value.is_none() {
+            self.value = Some(respan(span, t));
+        }
+    }
+
+    fn get(self) -> Option<T> {
+        self.value.map(|spanned| spanned.node)
+    }
+
+    fn get_spanned(self) -> Option<Spanned<T>> {
+        self.value
+    }
+}
+
+struct BoolAttr<'a, 'b: 'a>(Attr<'a, 'b, ()>);
+impl<'a, 'b> BoolAttr<'a, 'b> {
+    fn none(cx: &'a ExtCtxt<'b>, name: &'static str) -> Self {
+        BoolAttr(Attr::none(cx, name))
+    }
+
+    fn set_true(&mut self, span: Span) {
+        self.0.set(span, ());
+    }
+
+    fn get(&self) -> bool {
+        self.0.value.is_some()
+    }
+}
 
 #[derive(Debug)]
 pub struct Name {
@@ -22,14 +93,6 @@ pub struct Name {
 }
 
 impl Name {
-    fn new(ident: ast::Ident) -> Self {
-        Name {
-            ident: ident,
-            serialize_name: None,
-            deserialize_name: None,
-        }
-    }
-
     /// Return the container name for the container when serializing.
     pub fn serialize_name(&self) -> InternedString {
         match self.serialize_name {
@@ -68,55 +131,51 @@ pub struct ContainerAttrs {
 
 impl ContainerAttrs {
     /// Extract out the `#[serde(...)]` attributes from an item.
-    pub fn from_item(cx: &ExtCtxt, item: &ast::Item) -> Result<Self, Error> {
-        let mut container_attrs = ContainerAttrs {
-            name: Name::new(item.ident),
-            deny_unknown_fields: false,
-            ser_bound: None,
-            de_bound: None,
-        };
+    pub fn from_item(cx: &ExtCtxt, item: &ast::Item) -> Self {
+        let mut ser_name = Attr::none(cx, "rename");
+        let mut de_name = Attr::none(cx, "rename");
+        let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
+        let mut ser_bound = Attr::none(cx, "bound");
+        let mut de_bound = Attr::none(cx, "bound");
 
         for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
+                let span = meta_item.span;
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
-                        let s = try!(get_str_from_lit(cx, name, lit));
-                        container_attrs.name.serialize_name = Some(s.clone());
-                        container_attrs.name.deserialize_name = Some(s);
+                        if let Ok(s) = get_str_from_lit(cx, name, lit) {
+                            ser_name.set(span, s.clone());
+                            de_name.set(span, s);
+                        }
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
-                        let (ser_name, de_name) = try!(get_renames(cx, meta_items));
-                        if ser_name.is_some() {
-                            container_attrs.name.serialize_name = ser_name;
-                        }
-                        if de_name.is_some() {
-                            container_attrs.name.deserialize_name = de_name;
+                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
+                            ser_name.set_opt(ser);
+                            de_name.set_opt(de);
                         }
                     }
 
                     // Parse `#[serde(deny_unknown_fields)]`
                     ast::MetaItemKind::Word(ref name) if name == &"deny_unknown_fields" => {
-                        container_attrs.deny_unknown_fields = true;
+                        deny_unknown_fields.set_true(span);
                     }
 
                     // Parse `#[serde(bound="D: Serialize")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
-                        let where_predicates = try!(parse_lit_into_where(cx, name, lit));
-                        container_attrs.ser_bound = Some(where_predicates.clone());
-                        container_attrs.de_bound = Some(where_predicates);
+                        if let Ok(where_predicates) = parse_lit_into_where(cx, name, lit) {
+                            ser_bound.set(span, where_predicates.clone());
+                            de_bound.set(span, where_predicates);
+                        }
                     }
 
                     // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
-                        let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
-                        if ser_bound.is_some() {
-                            container_attrs.ser_bound = ser_bound;
-                        }
-                        if de_bound.is_some() {
-                            container_attrs.de_bound = de_bound;
+                        if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
+                            ser_bound.set_opt(ser);
+                            de_bound.set_opt(de);
                         }
                     }
 
@@ -125,14 +184,21 @@ impl ContainerAttrs {
                             meta_item.span,
                             &format!("unknown serde container attribute `{}`",
                                      meta_item_to_string(meta_item)));
-
-                        return Err(Error);
                     }
                 }
             }
         }
 
-        Ok(container_attrs)
+        ContainerAttrs {
+            name: Name {
+                ident: item.ident,
+                serialize_name: ser_name.get(),
+                deserialize_name: de_name.get(),
+            },
+            deny_unknown_fields: deny_unknown_fields.get(),
+            ser_bound: ser_bound.get(),
+            de_bound: de_bound.get(),
+        }
     }
 
     pub fn name(&self) -> &Name {
@@ -159,29 +225,27 @@ pub struct VariantAttrs {
 }
 
 impl VariantAttrs {
-    pub fn from_variant(cx: &ExtCtxt, variant: &ast::Variant) -> Result<Self, Error> {
-        let mut variant_attrs = VariantAttrs {
-            name: Name::new(variant.node.name),
-        };
+    pub fn from_variant(cx: &ExtCtxt, variant: &ast::Variant) -> Self {
+        let mut ser_name = Attr::none(cx, "rename");
+        let mut de_name = Attr::none(cx, "rename");
 
         for meta_items in variant.node.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
+                let span = meta_item.span;
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
-                        let s = try!(get_str_from_lit(cx, name, lit));
-                        variant_attrs.name.serialize_name = Some(s.clone());
-                        variant_attrs.name.deserialize_name = Some(s);
+                        if let Ok(s) = get_str_from_lit(cx, name, lit) {
+                            ser_name.set(span, s.clone());
+                            de_name.set(span, s);
+                        }
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
-                        let (ser_name, de_name) = try!(get_renames(cx, meta_items));
-                        if ser_name.is_some() {
-                            variant_attrs.name.serialize_name = ser_name;
-                        }
-                        if de_name.is_some() {
-                            variant_attrs.name.deserialize_name = de_name;
+                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
+                            ser_name.set_opt(ser);
+                            de_name.set_opt(de);
                         }
                     }
 
@@ -190,14 +254,18 @@ impl VariantAttrs {
                             meta_item.span,
                             &format!("unknown serde variant attribute `{}`",
                                      meta_item_to_string(meta_item)));
-
-                        return Err(Error);
                     }
                 }
             }
         }
 
-        Ok(variant_attrs)
+        VariantAttrs {
+            name: Name {
+                ident: variant.node.name,
+                serialize_name: ser_name.get(),
+                deserialize_name: de_name.get(),
+            },
+        }
     }
 
     pub fn name(&self) -> &Name {
@@ -209,8 +277,8 @@ impl VariantAttrs {
 #[derive(Debug)]
 pub struct FieldAttrs {
     name: Name,
-    skip_serializing_field: bool,
-    skip_deserializing_field: bool,
+    skip_serializing: bool,
+    skip_deserializing: bool,
     skip_serializing_if: Option<ast::Path>,
     default: FieldDefault,
     serialize_with: Option<ast::Path>,
@@ -234,107 +302,99 @@ impl FieldAttrs {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
     pub fn from_field(cx: &ExtCtxt,
                       index: usize,
-                      field: &ast::StructField) -> Result<Self, Error> {
-        let builder = AstBuilder::new();
+                      field: &ast::StructField) -> Self {
+        let mut ser_name = Attr::none(cx, "rename");
+        let mut de_name = Attr::none(cx, "rename");
+        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
+        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
+        let mut skip_serializing_if = Attr::none(cx, "skip_serializing_if");
+        let mut default = Attr::none(cx, "default");
+        let mut serialize_with = Attr::none(cx, "serialize_with");
+        let mut deserialize_with = Attr::none(cx, "deserialize_with");
+        let mut ser_bound = Attr::none(cx, "bound");
+        let mut de_bound = Attr::none(cx, "bound");
 
         let field_ident = match field.ident {
             Some(ident) => ident,
-            None => builder.id(index.to_string()),
-        };
-
-        let mut field_attrs = FieldAttrs {
-            name: Name::new(field_ident),
-            skip_serializing_field: false,
-            skip_deserializing_field: false,
-            skip_serializing_if: None,
-            default: FieldDefault::None,
-            serialize_with: None,
-            deserialize_with: None,
-            ser_bound: None,
-            de_bound: None,
+            None => index.to_string().to_ident(),
         };
 
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
+                let span = meta_item.span;
                 match meta_item.node {
                     // Parse `#[serde(rename="foo")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"rename" => {
-                        let s = try!(get_str_from_lit(cx, name, lit));
-                        field_attrs.name.serialize_name = Some(s.clone());
-                        field_attrs.name.deserialize_name = Some(s);
+                        if let Ok(s) = get_str_from_lit(cx, name, lit) {
+                            ser_name.set(span, s.clone());
+                            de_name.set(span, s);
+                        }
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"rename" => {
-                        let (ser_name, de_name) = try!(get_renames(cx, meta_items));
-                        if ser_name.is_some() {
-                            field_attrs.name.serialize_name = ser_name;
-                        }
-                        if de_name.is_some() {
-                            field_attrs.name.deserialize_name = de_name;
+                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
+                            ser_name.set_opt(ser);
+                            de_name.set_opt(de);
                         }
                     }
 
                     // Parse `#[serde(default)]`
                     ast::MetaItemKind::Word(ref name) if name == &"default" => {
-                        field_attrs.default = FieldDefault::Default;
+                        default.set(span, FieldDefault::Default);
                     }
 
                     // Parse `#[serde(default="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"default" => {
-                        let path = try!(parse_lit_into_path(cx, name, lit));
-                        field_attrs.default = FieldDefault::Path(path);
+                        if let Ok(path) = parse_lit_into_path(cx, name, lit) {
+                            default.set(span, FieldDefault::Path(path));
+                        }
                     }
 
                     // Parse `#[serde(skip_serializing)]`
                     ast::MetaItemKind::Word(ref name) if name == &"skip_serializing" => {
-                        field_attrs.skip_serializing_field = true;
+                        skip_serializing.set_true(span);
                     }
 
                     // Parse `#[serde(skip_deserializing)]`
                     ast::MetaItemKind::Word(ref name) if name == &"skip_deserializing" => {
-                        field_attrs.skip_deserializing_field = true;
-
-                        // Initialize field to Default::default() unless a different
-                        // default is specified by `#[serde(default="...")]`
-                        if field_attrs.default == FieldDefault::None {
-                            field_attrs.default = FieldDefault::Default;
-                        }
+                        skip_deserializing.set_true(span);
                     }
 
                     // Parse `#[serde(skip_serializing_if="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"skip_serializing_if" => {
-                        let path = try!(parse_lit_into_path(cx, name, lit));
-                        field_attrs.skip_serializing_if = Some(path);
+                        if let Ok(path) = parse_lit_into_path(cx, name, lit) {
+                            skip_serializing_if.set(span, path);
+                        }
                     }
 
                     // Parse `#[serde(serialize_with="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize_with" => {
-                        let path = try!(parse_lit_into_path(cx, name, lit));
-                        field_attrs.serialize_with = Some(path);
+                        if let Ok(path) = parse_lit_into_path(cx, name, lit) {
+                            serialize_with.set(span, path);
+                        }
                     }
 
                     // Parse `#[serde(deserialize_with="...")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize_with" => {
-                        let path = try!(parse_lit_into_path(cx, name, lit));
-                        field_attrs.deserialize_with = Some(path);
+                        if let Ok(path) = parse_lit_into_path(cx, name, lit) {
+                            deserialize_with.set(span, path);
+                        }
                     }
 
                     // Parse `#[serde(bound="D: Serialize")]`
                     ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"bound" => {
-                        let where_predicates = try!(parse_lit_into_where(cx, name, lit));
-                        field_attrs.ser_bound = Some(where_predicates.clone());
-                        field_attrs.de_bound = Some(where_predicates);
+                        if let Ok(where_predicates) = parse_lit_into_where(cx, name, lit) {
+                            ser_bound.set(span, where_predicates.clone());
+                            de_bound.set(span, where_predicates);
+                        }
                     }
 
                     // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
                     ast::MetaItemKind::List(ref name, ref meta_items) if name == &"bound" => {
-                        let (ser_bound, de_bound) = try!(get_where_predicates(cx, meta_items));
-                        if ser_bound.is_some() {
-                            field_attrs.ser_bound = ser_bound;
-                        }
-                        if de_bound.is_some() {
-                            field_attrs.de_bound = de_bound;
+                        if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
+                            ser_bound.set_opt(ser);
+                            de_bound.set_opt(de);
                         }
                     }
 
@@ -343,26 +403,44 @@ impl FieldAttrs {
                             meta_item.span,
                             &format!("unknown serde field attribute `{}`",
                                      meta_item_to_string(meta_item)));
-
-                        return Err(Error);
                     }
                 }
             }
         }
 
-        Ok(field_attrs)
+        // Is skip_deserializing, initialize the field to Default::default()
+        // unless a different default is specified by `#[serde(default="...")]`
+        if let Some(Spanned { span, .. }) = skip_deserializing.0.value {
+            default.set_if_none(span, FieldDefault::Default);
+        }
+
+        FieldAttrs {
+            name: Name {
+                ident: field_ident,
+                serialize_name: ser_name.get(),
+                deserialize_name: de_name.get(),
+            },
+            skip_serializing: skip_serializing.get(),
+            skip_deserializing: skip_deserializing.get(),
+            skip_serializing_if: skip_serializing_if.get(),
+            default: default.get().unwrap_or(FieldDefault::None),
+            serialize_with: serialize_with.get(),
+            deserialize_with: deserialize_with.get(),
+            ser_bound: ser_bound.get(),
+            de_bound: de_bound.get(),
+        }
     }
 
     pub fn name(&self) -> &Name {
         &self.name
     }
 
-    pub fn skip_serializing_field(&self) -> bool {
-        self.skip_serializing_field
+    pub fn skip_serializing(&self) -> bool {
+        self.skip_serializing
     }
 
-    pub fn skip_deserializing_field(&self) -> bool {
-        self.skip_deserializing_field
+    pub fn skip_deserializing(&self) -> bool {
+        self.skip_deserializing
     }
 
     pub fn skip_serializing_if(&self) -> Option<&ast::Path> {
@@ -390,42 +468,29 @@ impl FieldAttrs {
     }
 }
 
-
-/// Zip together fields and `#[serde(...)]` attributes on those fields.
-pub fn fields_with_attrs(
-    cx: &ExtCtxt,
-    fields: &[ast::StructField],
-) -> Result<Vec<(ast::StructField, FieldAttrs)>, Error> {
-    fields.iter()
-        .enumerate()
-        .map(|(i, field)| {
-            let attrs = try!(FieldAttrs::from_field(cx, i, field));
-            Ok((field.clone(), attrs))
-        })
-        .collect()
-}
-
 fn get_ser_and_de<T, F>(
     cx: &ExtCtxt,
-    attribute: &str,
+    attribute: &'static str,
     items: &[P<ast::MetaItem>],
     f: F
-) -> Result<(Option<T>, Option<T>), Error>
+) -> Result<(Option<Spanned<T>>, Option<Spanned<T>>), Error>
     where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, Error>,
 {
-    let mut ser_item = None;
-    let mut de_item = None;
+    let mut ser_item = Attr::none(cx, attribute);
+    let mut de_item = Attr::none(cx, attribute);
 
     for item in items {
         match item.node {
             ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize" => {
-                let s = try!(f(cx, name, lit));
-                ser_item = Some(s);
+                if let Ok(v) = f(cx, name, lit) {
+                    ser_item.set(item.span, v);
+                }
             }
 
             ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize" => {
-                let s = try!(f(cx, name, lit));
-                de_item = Some(s);
+                if let Ok(v) = f(cx, name, lit) {
+                    de_item.set(item.span, v);
+                }
             }
 
             _ => {
@@ -440,20 +505,20 @@ fn get_ser_and_de<T, F>(
         }
     }
 
-    Ok((ser_item, de_item))
+    Ok((ser_item.get_spanned(), de_item.get_spanned()))
 }
 
 fn get_renames(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
-) -> Result<(Option<InternedString>, Option<InternedString>), Error> {
+) -> Result<(Option<Spanned<InternedString>>, Option<Spanned<InternedString>>), Error> {
     get_ser_and_de(cx, "rename", items, get_str_from_lit)
 }
 
 fn get_where_predicates(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
-) -> Result<(Option<Vec<ast::WherePredicate>>, Option<Vec<ast::WherePredicate>>), Error> {
+) -> Result<(Option<Spanned<Vec<ast::WherePredicate>>>, Option<Spanned<Vec<ast::WherePredicate>>>), Error> {
     get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 

@@ -3,12 +3,11 @@ use std::collections::HashSet;
 use aster::AstBuilder;
 
 use syntax::ast;
-use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 use syntax::visit;
 
 use attr;
-use error::Error;
+use item::Item;
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
@@ -35,39 +34,35 @@ pub fn with_where_predicates(
 }
 
 pub fn with_where_predicates_from_fields<F>(
-    cx: &ExtCtxt,
     builder: &AstBuilder,
-    item: &ast::Item,
+    item: &Item,
     generics: &ast::Generics,
     from_field: F,
-) -> Result<ast::Generics, Error>
+) -> ast::Generics
     where F: Fn(&attr::FieldAttrs) -> Option<&[ast::WherePredicate]>,
 {
-    Ok(builder.from_generics(generics.clone())
+    builder.from_generics(generics.clone())
         .with_predicates(
-            try!(all_fields_with_attrs(cx, item))
-                .iter()
-                .flat_map(|&(_, ref attrs)| from_field(attrs))
+            item.body.all_fields()
+                .flat_map(|field| from_field(&field.attrs))
                 .flat_map(|predicates| predicates.to_vec()))
-        .build())
+        .build()
 }
 
 pub fn with_bound<F>(
-    cx: &ExtCtxt,
     builder: &AstBuilder,
-    item: &ast::Item,
+    item: &Item,
     generics: &ast::Generics,
     filter: F,
     bound: &ast::Path,
-) -> Result<ast::Generics, Error>
+) -> ast::Generics
     where F: Fn(&attr::FieldAttrs) -> bool,
 {
-    Ok(builder.from_generics(generics.clone())
+    builder.from_generics(generics.clone())
         .with_predicates(
-            try!(all_fields_with_attrs(cx, item))
-                .iter()
-                .filter(|&&(_, ref attrs)| filter(attrs))
-                .map(|&(ref field, _)| &field.ty)
+            item.body.all_fields()
+                .filter(|&field| filter(&field.attrs))
+                .map(|field| &field.ty)
                 // TODO this filter can be removed later, see comment on function
                 .filter(|ty| contains_generic(ty, generics))
                 .filter(|ty| !contains_recursion(ty, item.ident))
@@ -78,48 +73,7 @@ pub fn with_bound<F>(
                     // the bound e.g. Serialize
                     .bound().trait_(bound.clone()).build()
                     .build()))
-        .build())
-}
-
-fn all_fields_with_attrs(
-    cx: &ExtCtxt,
-    item: &ast::Item,
-) -> Result<Vec<(ast::StructField, attr::FieldAttrs)>, Error> {
-    let fields: Vec<ast::StructField> =
-        all_variants(cx, item).iter()
-            .flat_map(|variant_data| all_struct_fields(variant_data))
-            .cloned()
-            .collect();
-
-    attr::fields_with_attrs(cx, &fields)
-}
-
-fn all_variants<'a>(cx: &ExtCtxt, item: &'a ast::Item) -> Vec<&'a ast::VariantData> {
-    match item.node {
-        ast::ItemKind::Struct(ref variant_data, _) => {
-            vec![variant_data]
-        }
-        ast::ItemKind::Enum(ref enum_def, _) => {
-            enum_def.variants.iter()
-                .map(|variant| &variant.node.data)
-                .collect()
-        }
-        _ => {
-            cx.span_bug(item.span, "expected Item to be Struct or Enum");
-        }
-    }
-}
-
-fn all_struct_fields(variant_data: &ast::VariantData) -> &[ast::StructField] {
-    match *variant_data {
-        ast::VariantData::Struct(ref fields, _) |
-        ast::VariantData::Tuple(ref fields, _) => {
-            fields
-        }
-        ast::VariantData::Unit(_) => {
-            &[]
-        }
-    }
+        .build()
 }
 
 // Rust <1.7 enforces that `where` clauses involve generic type parameters. The
