@@ -646,7 +646,6 @@ array_impls! {
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {
-    () => {};
     ($($len:expr => $visitor:ident => ($($name:ident),+),)+) => {
         $(
             /// Construct a tuple visitor.
