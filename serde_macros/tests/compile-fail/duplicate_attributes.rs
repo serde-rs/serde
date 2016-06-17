@@ -18,6 +18,15 @@ struct S {
     #[serde(rename="x")]
     #[serde(rename(deserialize="y"))] //~ ERROR: duplicate serde attribute `rename`
     d: (),
+
+    #[serde(rename(serialize="x", serialize="y"))] //~ ERROR: duplicate serde attribute `rename`
+    e: (),
+
+    #[serde(rename="x", serialize="y")] //~ ERROR: unknown serde field attribute `serialize = "y"`
+    f: (),
+
+    #[serde(rename(serialize="x"), rename(serialize="y"))] //~ ERROR: duplicate serde attribute `rename`
+    g: (),
 }
 
 fn main() {}

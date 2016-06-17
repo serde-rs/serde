@@ -64,6 +64,10 @@ impl<'a, 'b, T> Attr<'a, 'b, T> {
     fn get(self) -> Option<T> {
         self.value.map(|spanned| spanned.node)
     }
+
+    fn get_spanned(self) -> Option<Spanned<T>> {
+        self.value
+    }
 }
 
 struct BoolAttr<'a, 'b: 'a>(Attr<'a, 'b, ()>);
@@ -466,25 +470,27 @@ impl FieldAttrs {
 
 fn get_ser_and_de<T, F>(
     cx: &ExtCtxt,
-    attribute: &str,
+    attribute: &'static str,
     items: &[P<ast::MetaItem>],
     f: F
 ) -> Result<(Option<Spanned<T>>, Option<Spanned<T>>), Error>
     where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, Error>,
 {
-    let mut ser_item = None;
-    let mut de_item = None;
+    let mut ser_item = Attr::none(cx, attribute);
+    let mut de_item = Attr::none(cx, attribute);
 
     for item in items {
         match item.node {
             ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize" => {
-                let s = try!(f(cx, name, lit));
-                ser_item = Some(respan(item.span, s));
+                if let Ok(v) = f(cx, name, lit) {
+                    ser_item.set(item.span, v);
+                }
             }
 
             ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize" => {
-                let s = try!(f(cx, name, lit));
-                de_item = Some(respan(item.span, s));
+                if let Ok(v) = f(cx, name, lit) {
+                    de_item.set(item.span, v);
+                }
             }
 
             _ => {
@@ -499,7 +505,7 @@ fn get_ser_and_de<T, F>(
         }
     }
 
-    Ok((ser_item, de_item))
+    Ok((ser_item.get_spanned(), de_item.get_spanned()))
 }
 
 fn get_renames(
