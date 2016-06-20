@@ -83,26 +83,19 @@ impl<'a, 'b> BoolAttr<'a, 'b> {
 
 #[derive(Debug)]
 pub struct Name {
-    ident: ast::Ident,
-    serialize_name: Option<InternedString>,
-    deserialize_name: Option<InternedString>,
+    serialize: InternedString,
+    deserialize: InternedString,
 }
 
 impl Name {
     /// Return the container name for the container when serializing.
     pub fn serialize_name(&self) -> InternedString {
-        match self.serialize_name {
-            Some(ref name) => name.clone(),
-            None => self.ident.name.as_str(),
-        }
+        self.serialize.clone()
     }
 
     /// Return the container name for the container when deserializing.
     pub fn deserialize_name(&self) -> InternedString {
-        match self.deserialize_name {
-            Some(ref name) => name.clone(),
-            None => self.ident.name.as_str(),
-        }
+        self.deserialize.clone()
     }
 }
 
@@ -123,6 +116,8 @@ impl Item {
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
+
+        let ident = item.ident.name.as_str();
 
         for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -177,9 +172,8 @@ impl Item {
 
         Item {
             name: Name {
-                ident: item.ident,
-                serialize_name: ser_name.get(),
-                deserialize_name: de_name.get(),
+                serialize: ser_name.get().unwrap_or(ident.clone()),
+                deserialize: de_name.get().unwrap_or(ident),
             },
             deny_unknown_fields: deny_unknown_fields.get(),
             ser_bound: ser_bound.get(),
@@ -215,6 +209,8 @@ impl Variant {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
 
+        let ident = variant.node.name.name.as_str();
+
         for meta_items in variant.node.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 let span = meta_item.span;
@@ -247,9 +243,8 @@ impl Variant {
 
         Variant {
             name: Name {
-                ident: variant.node.name,
-                serialize_name: ser_name.get(),
-                deserialize_name: de_name.get(),
+                serialize: ser_name.get().unwrap_or(ident.clone()),
+                deserialize: de_name.get().unwrap_or(ident),
             },
         }
     }
@@ -300,9 +295,9 @@ impl Field {
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
 
-        let field_ident = match field.ident {
-            Some(ident) => ident,
-            None => ast::Ident::with_empty_ctxt(token::intern(&index.to_string())),
+        let ident = match field.ident {
+            Some(ident) => ident.name.as_str(),
+            None => token::intern_and_get_ident(&index.to_string()),
         };
 
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
@@ -402,9 +397,8 @@ impl Field {
 
         Field {
             name: Name {
-                ident: field_ident,
-                serialize_name: ser_name.get(),
-                deserialize_name: de_name.get(),
+                serialize: ser_name.get().unwrap_or(ident.clone()),
+                deserialize: de_name.get().unwrap_or(ident),
             },
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
