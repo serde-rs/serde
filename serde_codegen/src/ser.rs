@@ -1,4 +1,5 @@
 use aster;
+use reduce::Reduce;
 
 use syntax::ast::{self, Ident, MetaItem};
 use syntax::codemap::Span;
@@ -741,7 +742,9 @@ fn serialize_struct_visitor(
                 None => quote_expr!(cx, 1),
             }
         })
-        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
+        // instead of using fold, so that Clippy does not warn about 0+expr
+        .reduce(|sum, expr| quote_expr!(cx, $sum + $expr))
+        .unwrap_or(quote_expr!(cx, 0));
 
     (
         quote_item!(cx,
