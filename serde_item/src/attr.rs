@@ -1,4 +1,5 @@
 use std::rc::Rc;
+
 use syntax::ast::{self, TokenTree};
 use syntax::attr;
 use syntax::codemap::{Span, Spanned, respan};
@@ -10,14 +11,9 @@ use syntax::parse;
 use syntax::print::pprust::{lit_to_string, meta_item_to_string};
 use syntax::ptr::P;
 
-use aster::AstBuilder;
-use aster::ident::ToIdent;
-
-use error::Error;
-
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
-// are `ContainerAttrs::from_item`, `VariantAttrs::from_variant`, and
-// `FieldAttrs::from_field`. Each returns an instance of the corresponding
+// are `attr::Item::from_ast`, `attr::Variant::from_ast`, and
+// `attr::Field::from_ast`. Each returns an instance of the corresponding
 // struct. Note that none of them return a Result. Unrecognized, malformed, or
 // duplicated attributes result in a span_err but otherwise are ignored. The
 // user will see errors simultaneously for all bad attributes in the crate
@@ -87,56 +83,41 @@ impl<'a, 'b> BoolAttr<'a, 'b> {
 
 #[derive(Debug)]
 pub struct Name {
-    ident: ast::Ident,
-    serialize_name: Option<InternedString>,
-    deserialize_name: Option<InternedString>,
+    serialize: InternedString,
+    deserialize: InternedString,
 }
 
 impl Name {
     /// Return the container name for the container when serializing.
     pub fn serialize_name(&self) -> InternedString {
-        match self.serialize_name {
-            Some(ref name) => name.clone(),
-            None => self.ident.name.as_str(),
-        }
-    }
-
-    /// Return the container name expression for the container when deserializing.
-    pub fn serialize_name_expr(&self) -> P<ast::Expr> {
-        AstBuilder::new().expr().str(self.serialize_name())
+        self.serialize.clone()
     }
 
     /// Return the container name for the container when deserializing.
     pub fn deserialize_name(&self) -> InternedString {
-        match self.deserialize_name {
-            Some(ref name) => name.clone(),
-            None => self.ident.name.as_str(),
-        }
-    }
-
-    /// Return the container name expression for the container when deserializing.
-    pub fn deserialize_name_expr(&self) -> P<ast::Expr> {
-        AstBuilder::new().expr().str(self.deserialize_name())
+        self.deserialize.clone()
     }
 }
 
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
-pub struct ContainerAttrs {
+pub struct Item {
     name: Name,
     deny_unknown_fields: bool,
     ser_bound: Option<Vec<ast::WherePredicate>>,
     de_bound: Option<Vec<ast::WherePredicate>>,
 }
 
-impl ContainerAttrs {
+impl Item {
     /// Extract out the `#[serde(...)]` attributes from an item.
-    pub fn from_item(cx: &ExtCtxt, item: &ast::Item) -> Self {
+    pub fn from_ast(cx: &ExtCtxt, item: &ast::Item) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
+
+        let ident = item.ident.name.as_str();
 
         for meta_items in item.attrs().iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -189,11 +170,10 @@ impl ContainerAttrs {
             }
         }
 
-        ContainerAttrs {
+        Item {
             name: Name {
-                ident: item.ident,
-                serialize_name: ser_name.get(),
-                deserialize_name: de_name.get(),
+                serialize: ser_name.get().unwrap_or(ident.clone()),
+                deserialize: de_name.get().unwrap_or(ident),
             },
             deny_unknown_fields: deny_unknown_fields.get(),
             ser_bound: ser_bound.get(),
@@ -220,14 +200,16 @@ impl ContainerAttrs {
 
 /// Represents variant attribute information
 #[derive(Debug)]
-pub struct VariantAttrs {
+pub struct Variant {
     name: Name,
 }
 
-impl VariantAttrs {
-    pub fn from_variant(cx: &ExtCtxt, variant: &ast::Variant) -> Self {
+impl Variant {
+    pub fn from_ast(cx: &ExtCtxt, variant: &ast::Variant) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
+
+        let ident = variant.node.name.name.as_str();
 
         for meta_items in variant.node.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -259,11 +241,10 @@ impl VariantAttrs {
             }
         }
 
-        VariantAttrs {
+        Variant {
             name: Name {
-                ident: variant.node.name,
-                serialize_name: ser_name.get(),
-                deserialize_name: de_name.get(),
+                serialize: ser_name.get().unwrap_or(ident.clone()),
+                deserialize: de_name.get().unwrap_or(ident),
             },
         }
     }
@@ -275,7 +256,7 @@ impl VariantAttrs {
 
 /// Represents field attribute information
 #[derive(Debug)]
-pub struct FieldAttrs {
+pub struct Field {
     name: Name,
     skip_serializing: bool,
     skip_deserializing: bool,
@@ -298,11 +279,11 @@ pub enum FieldDefault {
     Path(ast::Path),
 }
 
-impl FieldAttrs {
+impl Field {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_field(cx: &ExtCtxt,
-                      index: usize,
-                      field: &ast::StructField) -> Self {
+    pub fn from_ast(cx: &ExtCtxt,
+                    index: usize,
+                    field: &ast::StructField) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
@@ -314,9 +295,9 @@ impl FieldAttrs {
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
 
-        let field_ident = match field.ident {
-            Some(ident) => ident,
-            None => index.to_string().to_ident(),
+        let ident = match field.ident {
+            Some(ident) => ident.name.as_str(),
+            None => token::intern_and_get_ident(&index.to_string()),
         };
 
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
@@ -414,11 +395,10 @@ impl FieldAttrs {
             default.set_if_none(span, FieldDefault::Default);
         }
 
-        FieldAttrs {
+        Field {
             name: Name {
-                ident: field_ident,
-                serialize_name: ser_name.get(),
-                deserialize_name: de_name.get(),
+                serialize: ser_name.get().unwrap_or(ident.clone()),
+                deserialize: de_name.get().unwrap_or(ident),
             },
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
@@ -473,8 +453,8 @@ fn get_ser_and_de<T, F>(
     attribute: &'static str,
     items: &[P<ast::MetaItem>],
     f: F
-) -> Result<(Option<Spanned<T>>, Option<Spanned<T>>), Error>
-    where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, Error>,
+) -> Result<(Option<Spanned<T>>, Option<Spanned<T>>), ()>
+    where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, ()>,
 {
     let mut ser_item = Attr::none(cx, attribute);
     let mut de_item = Attr::none(cx, attribute);
@@ -500,7 +480,7 @@ fn get_ser_and_de<T, F>(
                              attribute,
                              meta_item_to_string(item)));
 
-                return Err(Error);
+                return Err(());
             }
         }
     }
@@ -511,14 +491,14 @@ fn get_ser_and_de<T, F>(
 fn get_renames(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
-) -> Result<(Option<Spanned<InternedString>>, Option<Spanned<InternedString>>), Error> {
+) -> Result<(Option<Spanned<InternedString>>, Option<Spanned<InternedString>>), ()> {
     get_ser_and_de(cx, "rename", items, get_str_from_lit)
 }
 
 fn get_where_predicates(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
-) -> Result<(Option<Spanned<Vec<ast::WherePredicate>>>, Option<Spanned<Vec<ast::WherePredicate>>>), Error> {
+) -> Result<(Option<Spanned<Vec<ast::WherePredicate>>>, Option<Spanned<Vec<ast::WherePredicate>>>), ()> {
     get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 
@@ -579,7 +559,7 @@ impl<'a, 'b> Folder for Respanner<'a, 'b> {
     }
 }
 
-fn get_str_from_lit(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<InternedString, Error> {
+fn get_str_from_lit(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<InternedString, ()> {
     match lit.node {
         ast::LitKind::Str(ref s, _) => Ok(s.clone()),
         _ => {
@@ -589,7 +569,7 @@ fn get_str_from_lit(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Interned
                          name,
                          lit_to_string(lit)));
 
-            return Err(Error);
+            return Err(());
         }
     }
 }
@@ -600,7 +580,7 @@ fn get_str_from_lit(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Interned
 // into a token tree. Then we'll update those spans to say they're coming from a
 // macro context that originally came from the attribnute, and then finally
 // parse them into an expression or where-clause.
-fn parse_string_via_tts<T, F>(cx: &ExtCtxt, name: &str, string: String, action: F) -> Result<T, Error>
+fn parse_string_via_tts<T, F>(cx: &ExtCtxt, name: &str, string: String, action: F) -> Result<T, ()>
     where F: for<'a> Fn(&'a mut Parser) -> parse::PResult<'a, T>,
 {
     let tts = panictry!(parse::parse_tts_from_source_str(
@@ -618,7 +598,7 @@ fn parse_string_via_tts<T, F>(cx: &ExtCtxt, name: &str, string: String, action: 
         Ok(path) => path,
         Err(mut e) => {
             e.emit();
-            return Err(Error);
+            return Err(());
         }
     };
 
@@ -627,14 +607,14 @@ fn parse_string_via_tts<T, F>(cx: &ExtCtxt, name: &str, string: String, action: 
         Ok(()) => { }
         Err(mut e) => {
             e.emit();
-            return Err(Error);
+            return Err(());
         }
     }
 
     Ok(path)
 }
 
-fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::Path, Error> {
+fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::Path, ()> {
     let string = try!(get_str_from_lit(cx, name, lit)).to_string();
 
     parse_string_via_tts(cx, name, string, |parser| {
@@ -642,7 +622,7 @@ fn parse_lit_into_path(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<ast::
     })
 }
 
-fn parse_lit_into_where(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Vec<ast::WherePredicate>, Error> {
+fn parse_lit_into_where(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Vec<ast::WherePredicate>, ()> {
     let string = try!(get_str_from_lit(cx, name, lit));
     if string.is_empty() {
         return Ok(Vec::new());

@@ -6,10 +6,9 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::parse::token::InternedString;
 use syntax::ptr::P;
 
-use attr;
 use bound;
 use error::Error;
-use item;
+use item::{self, attr};
 
 pub fn expand_derive_deserialize(
     cx: &mut ExtCtxt,
@@ -28,27 +27,30 @@ pub fn expand_derive_deserialize(
         }
     };
 
-    let builder = aster::AstBuilder::new().span(span);
-
-    let impl_item = match deserialize_item(cx, &builder, &item) {
+    let item = match item::Item::from_ast(cx, item) {
         Ok(item) => item,
-        Err(Error) => {
-            // An error occured, but it should have been reported already.
+        Err(item::Error::UnexpectedItemKind) => {
+            cx.span_err(item.span,
+                "`#[derive(Deserialize)]` may only be applied to structs and enums");
             return;
         }
     };
 
+    if check_no_str(cx, &item).is_err() {
+        return;
+    }
+
+    let builder = aster::AstBuilder::new().span(span);
+
+    let impl_item = deserialize_item(cx, &builder, &item);
     push(Annotatable::Item(impl_item))
 }
 
 fn deserialize_item(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    item: &ast::Item,
-) -> Result<P<ast::Item>, Error> {
-    let item = try!(item::Item::from_ast(cx, "Deserialize", item));
-    try!(check_no_str(cx, &item));
-
+    item: &item::Item,
+) -> P<ast::Item> {
     let impl_generics = build_impl_generics(builder, &item);
 
     let ty = builder.ty().path()
@@ -65,7 +67,7 @@ fn deserialize_item(
 
     let dummy_const = builder.id(format!("_IMPL_DESERIALIZE_FOR_{}", item.ident));
 
-    Ok(quote_item!(cx,
+    quote_item!(cx,
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const $dummy_const: () = {
             extern crate serde as _serde;
@@ -78,7 +80,7 @@ fn deserialize_item(
                 }
             }
         };
-    ).unwrap())
+    ).unwrap()
 }
 
 // All the generics in the input, plus a bound `T: Deserialize` for each generic
@@ -114,7 +116,7 @@ fn build_impl_generics(
 // deserialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Deserialize` bound where T is the type of the field.
-fn needs_deserialize_bound(attrs: &attr::FieldAttrs) -> bool {
+fn needs_deserialize_bound(attrs: &attr::Field) -> bool {
     !attrs.skip_deserializing()
         && attrs.deserialize_with().is_none()
         && attrs.de_bound().is_none()
@@ -122,7 +124,7 @@ fn needs_deserialize_bound(attrs: &attr::FieldAttrs) -> bool {
 
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
-fn requires_default(attrs: &attr::FieldAttrs) -> bool {
+fn requires_default(attrs: &attr::Field) -> bool {
     attrs.default() == &attr::FieldDefault::Default
 }
 
@@ -178,6 +180,7 @@ fn deserialize_body(
         item::Body::Struct(item::Style::Unit, _) => {
             deserialize_unit_struct(
                 cx,
+                builder,
                 item.ident,
                 &item.attrs)
         }
@@ -266,10 +269,11 @@ fn deserializer_ty_arg(builder: &aster::AstBuilder) -> P<ast::Ty>{
 
 fn deserialize_unit_struct(
     cx: &ExtCtxt,
+    builder: &aster::AstBuilder,
     type_ident: Ident,
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
-    let type_name = container_attrs.name().deserialize_name_expr();
+    let type_name = name_expr(builder, item_attrs.name());
 
     quote_expr!(cx, {
         struct __Visitor;
@@ -305,7 +309,7 @@ fn deserialize_tuple(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[item::Field],
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
 
@@ -351,11 +355,11 @@ fn deserialize_tuple(
         quote_expr!(cx,
             visitor.visit_tuple($nfields, $visitor_expr))
     } else if nfields == 1 {
-        let type_name = container_attrs.name().deserialize_name_expr();
+        let type_name = name_expr(builder, item_attrs.name());
         quote_expr!(cx,
             deserializer.deserialize_newtype_struct($type_name, $visitor_expr))
     } else {
-        let type_name = container_attrs.name().deserialize_name_expr();
+        let type_name = name_expr(builder, item_attrs.name());
         quote_expr!(cx,
             deserializer.deserialize_tuple_struct($type_name, $nfields, $visitor_expr))
     };
@@ -394,7 +398,7 @@ fn deserialize_seq(
         .map(|(i, field)| {
             let name = builder.id(format!("__field{}", i));
             if field.attrs.skip_deserializing() {
-                let default = expr_is_missing(cx, &field.attrs);
+                let default = expr_is_missing(cx, builder, &field.attrs);
                 quote_stmt!(cx,
                     let $name = $default;
                 ).unwrap()
@@ -502,7 +506,7 @@ fn deserialize_struct(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[item::Field],
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
 
@@ -535,7 +539,7 @@ fn deserialize_struct(
         type_path.clone(),
         impl_generics,
         fields,
-        container_attrs,
+        item_attrs,
     );
 
     let is_enum = variant_ident.is_some();
@@ -543,7 +547,7 @@ fn deserialize_struct(
         quote_expr!(cx,
             visitor.visit_struct(FIELDS, $visitor_expr))
     } else {
-        let type_name = container_attrs.name().deserialize_name_expr();
+        let type_name = name_expr(builder, item_attrs.name());
         quote_expr!(cx,
             deserializer.deserialize_struct($type_name, FIELDS, $visitor_expr))
     };
@@ -584,11 +588,11 @@ fn deserialize_item_enum(
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
     variants: &[item::Variant],
-    container_attrs: &attr::ContainerAttrs
+    item_attrs: &attr::Item
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
 
-    let type_name = container_attrs.name().deserialize_name_expr();
+    let type_name = name_expr(builder, item_attrs.name());
 
     let variant_visitor = deserialize_field_visitor(
         cx,
@@ -596,7 +600,7 @@ fn deserialize_item_enum(
         variants.iter()
             .map(|variant| variant.attrs.name().deserialize_name())
             .collect(),
-        container_attrs,
+        item_attrs,
         true,
     );
 
@@ -610,7 +614,7 @@ fn deserialize_item_enum(
         const VARIANTS: &'static [&'static str] = $variants_expr;
     ).unwrap();
 
-    let ignored_arm = if container_attrs.deny_unknown_fields() {
+    let ignored_arm = if item_attrs.deny_unknown_fields() {
         None
     } else {
         Some(quote_arm!(cx, __Field::__ignore => { Err(_serde::de::Error::end_of_stream()) }))
@@ -630,7 +634,7 @@ fn deserialize_item_enum(
             impl_generics,
             ty.clone(),
             variant,
-            container_attrs,
+            item_attrs,
         );
 
         let arm = quote_arm!(cx, $variant_name => { $expr });
@@ -675,7 +679,7 @@ fn deserialize_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     variant: &item::Variant,
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     let variant_ident = variant.ident;
 
@@ -705,7 +709,7 @@ fn deserialize_variant(
                 generics,
                 ty,
                 &variant.fields,
-                container_attrs,
+                item_attrs,
             )
         }
         item::Style::Struct => {
@@ -717,7 +721,7 @@ fn deserialize_variant(
                 generics,
                 ty,
                 &variant.fields,
-                container_attrs,
+                item_attrs,
             )
         }
     }
@@ -753,7 +757,7 @@ fn deserialize_field_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     field_names: Vec<InternedString>,
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
     is_variant: bool,
 ) -> Vec<P<ast::Item>> {
     // Create the field names for the fields.
@@ -761,7 +765,7 @@ fn deserialize_field_visitor(
         .map(|i| builder.id(format!("__field{}", i)))
         .collect();
 
-    let ignore_variant = if container_attrs.deny_unknown_fields() {
+    let ignore_variant = if item_attrs.deny_unknown_fields() {
         None
     } else {
         let skip_ident = builder.id("__ignore");
@@ -792,7 +796,7 @@ fn deserialize_field_visitor(
         (builder.expr().str("expected a field"), builder.id("unknown_field"))
     };
 
-    let fallthrough_index_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
+    let fallthrough_index_arm_expr = if !is_variant && !item_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
         quote_expr!(cx, {
@@ -819,7 +823,7 @@ fn deserialize_field_visitor(
         })
         .collect();
 
-    let fallthrough_str_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
+    let fallthrough_str_arm_expr = if !is_variant && !item_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
         quote_expr!(cx, Err(_serde::de::Error::$unknown_ident(value)))
@@ -847,7 +851,7 @@ fn deserialize_field_visitor(
         })
         .collect();
 
-    let fallthrough_bytes_arm_expr = if !is_variant && !container_attrs.deny_unknown_fields() {
+    let fallthrough_bytes_arm_expr = if !is_variant && !item_attrs.deny_unknown_fields() {
         quote_expr!(cx, Ok(__Field::__ignore))
     } else {
         quote_expr!(cx, {
@@ -916,7 +920,7 @@ fn deserialize_struct_visitor(
     struct_path: ast::Path,
     impl_generics: &ast::Generics,
     fields: &[item::Field],
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
 ) -> (Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>) {
     let field_exprs = fields.iter()
         .map(|field| field.attrs.name().deserialize_name())
@@ -926,7 +930,7 @@ fn deserialize_struct_visitor(
         cx,
         builder,
         field_exprs,
-        container_attrs,
+        item_attrs,
         false,
     );
 
@@ -937,7 +941,7 @@ fn deserialize_struct_visitor(
         struct_path,
         impl_generics,
         fields,
-        container_attrs,
+        item_attrs,
     );
 
     let fields_expr = builder.expr().ref_().slice()
@@ -968,7 +972,7 @@ fn deserialize_map(
     struct_path: ast::Path,
     impl_generics: &ast::Generics,
     fields: &[item::Field],
-    container_attrs: &attr::ContainerAttrs,
+    item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     // Create the field names for the fields.
     let fields_names = fields.iter()
@@ -1033,7 +1037,7 @@ fn deserialize_map(
         .collect::<Vec<_>>();
 
     // Visit ignored values to consume them
-    let ignored_arm = if container_attrs.deny_unknown_fields() {
+    let ignored_arm = if item_attrs.deny_unknown_fields() {
         None
     } else {
         Some(quote_arm!(cx,
@@ -1044,7 +1048,7 @@ fn deserialize_map(
     let extract_values = fields_names.iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, name)| {
-            let missing_expr = expr_is_missing(cx, &field.attrs);
+            let missing_expr = expr_is_missing(cx, builder, &field.attrs);
 
             quote_stmt!(cx,
                 let $name = match $name {
@@ -1067,7 +1071,7 @@ fn deserialize_map(
                             }
                         },
                         if field.attrs.skip_deserializing() {
-                            expr_is_missing(cx, &field.attrs)
+                            expr_is_missing(cx, builder, &field.attrs)
                         } else {
                             builder.expr().id(name)
                         }
@@ -1149,7 +1153,8 @@ fn wrap_deserialize_with(
 
 fn expr_is_missing(
     cx: &ExtCtxt,
-    attrs: &attr::FieldAttrs,
+    builder: &aster::AstBuilder,
+    attrs: &attr::Field,
 ) -> P<ast::Expr> {
     match *attrs.default() {
         attr::FieldDefault::Default => {
@@ -1161,7 +1166,7 @@ fn expr_is_missing(
         attr::FieldDefault::None => { /* below */ }
     }
 
-    let name = attrs.name().deserialize_name_expr();
+    let name = name_expr(builder, attrs.name());
     match attrs.deserialize_with() {
         None => {
             quote_expr!(cx, try!(visitor.missing_field($name)))
@@ -1171,6 +1176,13 @@ fn expr_is_missing(
                 <__V::Error as _serde::de::Error>::missing_field($name)))
         }
     }
+}
+
+fn name_expr(
+    builder: &aster::AstBuilder,
+    name: &attr::Name,
+) -> P<ast::Expr> {
+    builder.expr().str(name.deserialize_name())
 }
 
 fn check_no_str(

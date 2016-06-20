@@ -7,6 +7,7 @@
 
 extern crate aster;
 extern crate quasi;
+extern crate serde_item as item;
 
 #[cfg(feature = "with-syntex")]
 extern crate syntex;

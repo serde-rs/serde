@@ -1,0 +1,19 @@
+[package]
+name = "serde_item"
+version = "0.1.0"
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "AST representation used by Serde codegen. Unstable."
+repository = "https://github.com/serde-rs/serde"
+documentation = "https://github.com/serde-rs/serde"
+keywords = ["serde", "serialization"]
+include = ["Cargo.toml", "src/**/*.rs"]
+
+[features]
+default = ["with-syntex"]
+nightly-testing = ["clippy"]
+with-syntex = ["syntex_syntax"]
+
+[dependencies]
+clippy = { version = "^0.*", optional = true }
+syntex_syntax = { version = "^0.35.0", optional = true }
