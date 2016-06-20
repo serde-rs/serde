@@ -742,6 +742,7 @@ fn serialize_struct_visitor(
                 None => quote_expr!(cx, 1),
             }
         })
+        // instead of using fold, so that Clippy does not warn about 0+expr
         .reduce(|sum, expr| quote_expr!(cx, $sum + $expr))
         .unwrap_or(quote_expr!(cx, 0));
 
