@@ -1,15 +1,29 @@
+#![cfg_attr(feature = "nightly-testing", plugin(clippy))]
+#![cfg_attr(feature = "nightly-testing", feature(plugin))]
+#![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
+
+#[cfg(feature = "with-syntex")]
+#[macro_use]
+extern crate syntex_syntax as syntax;
+
+#[cfg(not(feature = "with-syntex"))]
+#[macro_use]
+extern crate syntax;
+
 use syntax::ast;
 use syntax::codemap;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 
-use attr;
-use error::Error;
+pub mod attr;
+
+mod error;
+pub use error::Error;
 
 pub struct Item<'a> {
     pub ident: ast::Ident,
     pub span: codemap::Span,
-    pub attrs: attr::ContainerAttrs,
+    pub attrs: attr::Item,
     pub body: Body<'a>,
     pub generics: &'a ast::Generics,
 }
@@ -21,7 +35,8 @@ pub enum Body<'a> {
 
 pub struct Variant<'a> {
     pub ident: ast::Ident,
-    pub attrs: attr::VariantAttrs,
+    pub span: codemap::Span,
+    pub attrs: attr::Variant,
     pub style: Style,
     pub fields: Vec<Field<'a>>,
 }
@@ -29,7 +44,7 @@ pub struct Variant<'a> {
 pub struct Field<'a> {
     pub ident: Option<ast::Ident>,
     pub span: codemap::Span,
-    pub attrs: attr::FieldAttrs,
+    pub attrs: attr::Field,
     pub ty: &'a P<ast::Ty>,
 }
 
@@ -43,10 +58,9 @@ pub enum Style {
 impl<'a> Item<'a> {
     pub fn from_ast(
         cx: &ExtCtxt,
-        derive_trait: &'static str,
         item: &'a ast::Item,
     ) -> Result<Item<'a>, Error> {
-        let attrs = attr::ContainerAttrs::from_item(cx, item);
+        let attrs = attr::Item::from_ast(cx, item);
 
         let (body, generics) = match item.node {
             ast::ItemKind::Enum(ref enum_def, ref generics) => {
@@ -58,10 +72,7 @@ impl<'a> Item<'a> {
                 (Body::Struct(style, fields), generics)
             }
             _ => {
-                cx.span_err(item.span, &format!(
-                    "`#[derive({})]` may only be applied to structs and enums",
-                    derive_trait));
-                return Err(Error);
+                return Err(Error::UnexpectedItemKind);
             }
         };
 
@@ -75,6 +86,20 @@ impl<'a> Item<'a> {
     }
 }
 
+impl<'a> Body<'a> {
+    pub fn all_fields(&'a self) -> Box<Iterator<Item=&'a Field<'a>> + 'a> {
+        match *self {
+            Body::Enum(ref variants) => {
+                Box::new(variants.iter()
+                             .flat_map(|variant| variant.fields.iter()))
+            }
+            Body::Struct(_, ref fields) => {
+                Box::new(fields.iter())
+            }
+        }
+    }
+}
+
 fn enum_from_ast<'a>(
     cx: &ExtCtxt,
     enum_def: &'a ast::EnumDef,
@@ -84,7 +109,8 @@ fn enum_from_ast<'a>(
             let (style, fields) = struct_from_ast(cx, &variant.node.data);
             Variant {
                 ident: variant.node.name,
-                attrs: attr::VariantAttrs::from_variant(cx, variant),
+                span: variant.span,
+                attrs: attr::Variant::from_ast(cx, variant),
                 style: style,
                 fields: fields,
             }
@@ -122,23 +148,9 @@ fn fields_from_ast<'a>(
             Field {
                 ident: field.ident,
                 span: field.span,
-                attrs: attr::FieldAttrs::from_field(cx, i, field),
+                attrs: attr::Field::from_ast(cx, i, field),
                 ty: &field.ty,
             }
         })
         .collect()
-}
-
-impl<'a> Body<'a> {
-    pub fn all_fields(&'a self) -> Box<Iterator<Item=&'a Field<'a>> + 'a> {
-        match *self {
-            Body::Enum(ref variants) => {
-                Box::new(variants.iter()
-                             .flat_map(|variant| variant.fields.iter()))
-            }
-            Body::Struct(_, ref fields) => {
-                Box::new(fields.iter())
-            }
-        }
-    }
 }

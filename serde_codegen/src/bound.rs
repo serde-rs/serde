@@ -6,8 +6,7 @@ use syntax::ast;
 use syntax::ptr::P;
 use syntax::visit;
 
-use attr;
-use item::Item;
+use item::{attr, Item};
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
@@ -39,7 +38,7 @@ pub fn with_where_predicates_from_fields<F>(
     generics: &ast::Generics,
     from_field: F,
 ) -> ast::Generics
-    where F: Fn(&attr::FieldAttrs) -> Option<&[ast::WherePredicate]>,
+    where F: Fn(&attr::Field) -> Option<&[ast::WherePredicate]>,
 {
     builder.from_generics(generics.clone())
         .with_predicates(
@@ -56,7 +55,7 @@ pub fn with_bound<F>(
     filter: F,
     bound: &ast::Path,
 ) -> ast::Generics
-    where F: Fn(&attr::FieldAttrs) -> bool,
+    where F: Fn(&attr::Field) -> bool,
 {
     builder.from_generics(generics.clone())
         .with_predicates(

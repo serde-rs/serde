@@ -1,6 +1,4 @@
-mod attr;
 mod bound;
 mod de;
 mod error;
-mod item;
 mod ser;
