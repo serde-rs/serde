@@ -7,8 +7,7 @@ use syntax::parse::token::InternedString;
 use syntax::ptr::P;
 
 use bound;
-use error::Error;
-use item::{self, attr};
+use internals::{attr, Body, Error, Field, Item, Style, Variant};
 
 pub fn expand_derive_deserialize(
     cx: &mut ExtCtxt,
@@ -27,9 +26,9 @@ pub fn expand_derive_deserialize(
         }
     };
 
-    let item = match item::Item::from_ast(cx, item) {
+    let item = match Item::from_ast(cx, item) {
         Ok(item) => item,
-        Err(item::Error::UnexpectedItemKind) => {
+        Err(Error::UnexpectedItemKind) => {
             cx.span_err(item.span,
                 "`#[derive(Deserialize)]` may only be applied to structs and enums");
             return;
@@ -49,7 +48,7 @@ pub fn expand_derive_deserialize(
 fn deserialize_item(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    item: &item::Item,
+    item: &Item,
 ) -> P<ast::Item> {
     let impl_generics = build_impl_generics(builder, &item);
 
@@ -88,7 +87,7 @@ fn deserialize_item(
 // each generic field type that will be set to a default value.
 fn build_impl_generics(
     builder: &aster::AstBuilder,
-    item: &item::Item,
+    item: &Item,
 ) -> ast::Generics {
     let generics = bound::without_defaults(item.generics);
 
@@ -131,12 +130,12 @@ fn requires_default(attrs: &attr::Field) -> bool {
 fn deserialize_body(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
-    item: &item::Item,
+    item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
 ) -> P<ast::Expr> {
     match item.body {
-        item::Body::Enum(ref variants) => {
+        Body::Enum(ref variants) => {
             deserialize_item_enum(
                 cx,
                 builder,
@@ -146,7 +145,7 @@ fn deserialize_body(
                 variants,
                 &item.attrs)
         }
-        item::Body::Struct(item::Style::Struct, ref fields) => {
+        Body::Struct(Style::Struct, ref fields) => {
             if fields.iter().any(|field| field.ident.is_none()) {
                 cx.span_bug(item.span, "struct has unnamed fields")
             }
@@ -161,8 +160,8 @@ fn deserialize_body(
                 fields,
                 &item.attrs)
         }
-        item::Body::Struct(item::Style::Tuple, ref fields) |
-        item::Body::Struct(item::Style::Newtype, ref fields) => {
+        Body::Struct(Style::Tuple, ref fields) |
+        Body::Struct(Style::Newtype, ref fields) => {
             if fields.iter().any(|field| field.ident.is_some()) {
                 cx.span_bug(item.span, "tuple struct has named fields")
             }
@@ -177,7 +176,7 @@ fn deserialize_body(
                 fields,
                 &item.attrs)
         }
-        item::Body::Struct(item::Style::Unit, _) => {
+        Body::Struct(Style::Unit, _) => {
             deserialize_unit_struct(
                 cx,
                 builder,
@@ -308,7 +307,7 @@ fn deserialize_tuple(
     variant_ident: Option<Ident>,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    fields: &[item::Field],
+    fields: &[Field],
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
@@ -390,7 +389,7 @@ fn deserialize_seq(
     type_ident: Ident,
     type_path: ast::Path,
     impl_generics: &ast::Generics,
-    fields: &[item::Field],
+    fields: &[Field],
     is_struct: bool,
 ) -> P<ast::Expr> {
     let let_values: Vec<_> = fields.iter()
@@ -470,7 +469,7 @@ fn deserialize_newtype_struct(
     type_ident: Ident,
     type_path: &ast::Path,
     impl_generics: &ast::Generics,
-    field: &item::Field,
+    field: &Field,
 ) -> Vec<ast::TokenTree> {
     let value = match field.attrs.deserialize_with() {
         None => {
@@ -505,7 +504,7 @@ fn deserialize_struct(
     variant_ident: Option<Ident>,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    fields: &[item::Field],
+    fields: &[Field],
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
@@ -587,7 +586,7 @@ fn deserialize_item_enum(
     type_ident: Ident,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-    variants: &[item::Variant],
+    variants: &[Variant],
     item_attrs: &attr::Item
 ) -> P<ast::Expr> {
     let where_clause = &impl_generics.where_clause;
@@ -678,19 +677,19 @@ fn deserialize_variant(
     type_ident: Ident,
     generics: &ast::Generics,
     ty: P<ast::Ty>,
-    variant: &item::Variant,
+    variant: &Variant,
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     let variant_ident = variant.ident;
 
     match variant.style {
-        item::Style::Unit => {
+        Style::Unit => {
             quote_expr!(cx, {
                 try!(visitor.visit_unit());
                 Ok($type_ident::$variant_ident)
             })
         }
-        item::Style::Newtype => {
+        Style::Newtype => {
             deserialize_newtype_variant(
                 cx,
                 builder,
@@ -700,7 +699,7 @@ fn deserialize_variant(
                 &variant.fields[0],
             )
         }
-        item::Style::Tuple => {
+        Style::Tuple => {
             deserialize_tuple(
                 cx,
                 builder,
@@ -712,7 +711,7 @@ fn deserialize_variant(
                 item_attrs,
             )
         }
-        item::Style::Struct => {
+        Style::Struct => {
             deserialize_struct(
                 cx,
                 builder,
@@ -733,7 +732,7 @@ fn deserialize_newtype_variant(
     type_ident: Ident,
     variant_ident: Ident,
     impl_generics: &ast::Generics,
-    field: &item::Field,
+    field: &Field,
 ) -> P<ast::Expr> {
     let visit = match field.attrs.deserialize_with() {
         None => {
@@ -919,7 +918,7 @@ fn deserialize_struct_visitor(
     type_ident: Ident,
     struct_path: ast::Path,
     impl_generics: &ast::Generics,
-    fields: &[item::Field],
+    fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Vec<P<ast::Item>>, ast::Stmt, P<ast::Expr>) {
     let field_exprs = fields.iter()
@@ -971,7 +970,7 @@ fn deserialize_map(
     type_ident: Ident,
     struct_path: ast::Path,
     impl_generics: &ast::Generics,
-    fields: &[item::Field],
+    fields: &[Field],
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
     // Create the field names for the fields.
@@ -1187,14 +1186,14 @@ fn name_expr(
 
 fn check_no_str(
     cx: &ExtCtxt,
-    item: &item::Item,
-) -> Result<(), Error> {
-    let fail = |field: &item::Field| {
+    item: &Item,
+) -> Result<(), ()> {
+    let fail = |field: &Field| {
         cx.span_err(
             field.span,
             "Serde does not support deserializing fields of type &str; \
              consider using String instead");
-        Err(Error)
+        Err(())
     };
 
     for field in item.body.all_fields() {
