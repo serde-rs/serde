@@ -663,6 +663,13 @@ pub trait Visitor {
     {
         self.visit_bytes(&v)
     }
+    
+    /// `visit_tagged_value` deserializes a tagged value.
+    fn visit_tagged_value<T, D>(&mut self, _tag: T, deserializer: &mut D) -> Result<Self::Value, D::Error>
+        where T: ::Tagger, D: Deserializer 
+    {
+        Deserialize::deserialize(deserializer)
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
