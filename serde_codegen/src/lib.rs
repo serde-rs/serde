@@ -24,8 +24,6 @@ extern crate syntax;
 extern crate rustc_plugin;
 
 #[cfg(feature = "with-syntex")]
-use std::io;
-#[cfg(feature = "with-syntex")]
 use std::path::Path;
 
 #[cfg(not(feature = "with-syntex"))]
@@ -38,7 +36,7 @@ include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 include!("lib.rs.in");
 
 #[cfg(feature = "with-syntex")]
-pub fn expand<S, D>(src: S, dst: D) -> io::Result<()>
+pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     where S: AsRef<Path>,
           D: AsRef<Path>,
 {
