@@ -41,7 +41,7 @@ pub trait Serialize {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A trait that describes a type that can serialize a stream of values into the underlying format.
-pub trait Serializer {
+pub trait Serializer: Sized {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
 
@@ -345,6 +345,23 @@ pub trait Serializer {
         where V: Serialize,
     {
         self.serialize_struct_elt(key, value)
+    }
+    
+    /// Serializes a tagged value.
+    ///
+    /// By default, the tag is discarded and the value is serialized as-is.
+    /// 
+    /// The tags are provided as a pair of format (like `cbor`) and a numeric
+    /// tag. It is possible to supply different tags for different formats.
+    /// The serialization library will select an appropriate tag if available
+    /// and otherwise will serialize the raw value.
+    #[inline]
+    fn serialize_tagged_value<V>(&mut self,
+                                 _tags: &[(&'static str, u64)],
+                                 value: V) -> Result<(), Self::Error>
+        where V: Serialize,
+    {
+        value.serialize(self)
     }
 }
 
