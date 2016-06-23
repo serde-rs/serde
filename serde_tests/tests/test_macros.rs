@@ -14,8 +14,19 @@ trait Trait {
 #[deny(unused_variables)]
 enum Void {}
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+// Test that `derive` expansion works inside of `cfg_attr`. The `all()` is
+// equivalent to true. This struct is used below in a way that requires it to
+// implement all four traits.
+#[cfg_attr(all(), derive(Debug, PartialEq, Serialize, Deserialize))]
 struct NamedUnit;
+
+// Test that `derive` expansion pays attention to the `cfg_attr`. The `any()`
+// is equivalent to false.
+#[allow(dead_code)]
+struct NotSerializable;
+#[allow(dead_code)]
+#[cfg_attr(any(), derive(Serialize))]
+struct AlsoNotSerializable(NotSerializable);
 
 #[derive(Debug, PartialEq, Serialize)]
 struct SerNamedTuple<'a, 'b, A: 'a, B: 'b, C>(&'a A, &'b mut B, C);
