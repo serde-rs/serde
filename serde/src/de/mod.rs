@@ -635,7 +635,7 @@ pub trait Visitor {
         Err(Error::invalid_type(Type::NewtypeStruct))
     }
 
-    /// `visit_bool` deserializes a `SeqVisitor` into a `Value`.
+    /// `visit_seq` deserializes a `SeqVisitor` into a `Value`.
     fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
