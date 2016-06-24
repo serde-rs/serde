@@ -131,4 +131,3 @@ trait DeserializeWith: Sized {
 struct X;
 fn ser_x<S: Serializer>(_: &X, _: &mut S) -> Result<(), S::Error> { panic!() }
 fn de_x<D: Deserializer>(_: &mut D) -> Result<X, D::Error> { panic!() }
-
