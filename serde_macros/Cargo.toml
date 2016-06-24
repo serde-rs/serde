@@ -24,7 +24,7 @@ serde_codegen = { version = "^0.7.11", path = "../serde_codegen", default-featur
 compiletest_rs = "^0.2.0"
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
-serde = { version = "^0.7.10", path = "../serde" }
+serde = { version = "^0.7.11", path = "../serde" }
 
 [[test]]
 name = "test"
