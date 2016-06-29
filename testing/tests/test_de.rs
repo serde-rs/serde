@@ -76,7 +76,7 @@ macro_rules! declare_error_tests {
     }
 }
 
-fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
+fn assert_de_tokens_ignore(ignorable_tokens: &[Token<'static>]) {
     #[derive(PartialEq, Debug, Deserialize)]
     struct IgnoreBase {
         a: i32,
@@ -96,7 +96,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
                 Token::Str("ignored")
         ]
         .into_iter()
-        .chain(ignorable_tokens.into_iter())
+        .chain(ignorable_tokens.to_vec().into_iter())
         .chain(vec![
             Token::MapEnd,
         ].into_iter())
@@ -120,103 +120,103 @@ fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
 
 declare_tests! {
     test_bool {
-        true => vec![Token::Bool(true)],
-        false => vec![Token::Bool(false)],
+        true => &[Token::Bool(true)],
+        false => &[Token::Bool(false)],
     }
     test_isize {
-        0isize => vec![Token::Isize(0)],
-        0isize => vec![Token::I8(0)],
-        0isize => vec![Token::I16(0)],
-        0isize => vec![Token::I32(0)],
-        0isize => vec![Token::I64(0)],
-        0isize => vec![Token::Usize(0)],
-        0isize => vec![Token::U8(0)],
-        0isize => vec![Token::U16(0)],
-        0isize => vec![Token::U32(0)],
-        0isize => vec![Token::U64(0)],
-        0isize => vec![Token::F32(0.)],
-        0isize => vec![Token::F64(0.)],
+        0isize => &[Token::Isize(0)],
+        0isize => &[Token::I8(0)],
+        0isize => &[Token::I16(0)],
+        0isize => &[Token::I32(0)],
+        0isize => &[Token::I64(0)],
+        0isize => &[Token::Usize(0)],
+        0isize => &[Token::U8(0)],
+        0isize => &[Token::U16(0)],
+        0isize => &[Token::U32(0)],
+        0isize => &[Token::U64(0)],
+        0isize => &[Token::F32(0.)],
+        0isize => &[Token::F64(0.)],
     }
     test_ints {
-        0isize => vec![Token::Isize(0)],
-        0i8 => vec![Token::I8(0)],
-        0i16 => vec![Token::I16(0)],
-        0i32 => vec![Token::I32(0)],
-        0i64 => vec![Token::I64(0)],
+        0isize => &[Token::Isize(0)],
+        0i8 => &[Token::I8(0)],
+        0i16 => &[Token::I16(0)],
+        0i32 => &[Token::I32(0)],
+        0i64 => &[Token::I64(0)],
     }
     test_uints {
-        0usize => vec![Token::Usize(0)],
-        0u8 => vec![Token::U8(0)],
-        0u16 => vec![Token::U16(0)],
-        0u32 => vec![Token::U32(0)],
-        0u64 => vec![Token::U64(0)],
+        0usize => &[Token::Usize(0)],
+        0u8 => &[Token::U8(0)],
+        0u16 => &[Token::U16(0)],
+        0u32 => &[Token::U32(0)],
+        0u64 => &[Token::U64(0)],
     }
     test_floats {
-        0f32 => vec![Token::F32(0.)],
-        0f64 => vec![Token::F64(0.)],
+        0f32 => &[Token::F32(0.)],
+        0f64 => &[Token::F64(0.)],
     }
     test_char {
-        'a' => vec![Token::Char('a')],
-        'a' => vec![Token::Str("a")],
-        'a' => vec![Token::String("a".to_owned())],
+        'a' => &[Token::Char('a')],
+        'a' => &[Token::Str("a")],
+        'a' => &[Token::String("a".to_owned())],
     }
     test_string {
-        "abc".to_owned() => vec![Token::Str("abc")],
-        "abc".to_owned() => vec![Token::String("abc".to_owned())],
-        "a".to_owned() => vec![Token::Char('a')],
+        "abc".to_owned() => &[Token::Str("abc")],
+        "abc".to_owned() => &[Token::String("abc".to_owned())],
+        "a".to_owned() => &[Token::Char('a')],
     }
     test_option {
-        None::<i32> => vec![Token::Unit],
-        None::<i32> => vec![Token::Option(false)],
-        Some(1) => vec![Token::I32(1)],
-        Some(1) => vec![
+        None::<i32> => &[Token::Unit],
+        None::<i32> => &[Token::Option(false)],
+        Some(1) => &[Token::I32(1)],
+        Some(1) => &[
             Token::Option(true),
             Token::I32(1),
         ],
     }
     test_result {
-        Ok::<i32, i32>(0) => vec![
+        Ok::<i32, i32>(0) => &[
             Token::EnumStart("Result"),
             Token::Str("Ok"),
             Token::I32(0),
         ],
-        Err::<i32, i32>(1) => vec![
+        Err::<i32, i32>(1) => &[
             Token::EnumStart("Result"),
             Token::Str("Err"),
             Token::I32(1),
         ],
     }
     test_unit {
-        () => vec![Token::Unit],
-        () => vec![
+        () => &[Token::Unit],
+        () => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
-        () => vec![
+        () => &[
             Token::SeqStart(None),
             Token::SeqEnd,
         ],
-        () => vec![
+        () => &[
             Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
     test_unit_struct {
-        UnitStruct => vec![Token::Unit],
-        UnitStruct => vec![
+        UnitStruct => &[Token::Unit],
+        UnitStruct => &[
             Token::UnitStruct("UnitStruct"),
         ],
-        UnitStruct => vec![
+        UnitStruct => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
-        UnitStruct => vec![
+        UnitStruct => &[
             Token::SeqStart(None),
             Token::SeqEnd,
         ],
     }
     test_tuple_struct {
-        TupleStruct(1, 2, 3) => vec![
+        TupleStruct(1, 2, 3) => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
@@ -228,7 +228,7 @@ declare_tests! {
                 Token::I32(3),
             Token::SeqEnd,
         ],
-        TupleStruct(1, 2, 3) => vec![
+        TupleStruct(1, 2, 3) => &[
             Token::SeqStart(None),
                 Token::SeqSep,
                 Token::I32(1),
@@ -240,7 +240,7 @@ declare_tests! {
                 Token::I32(3),
             Token::SeqEnd,
         ],
-        TupleStruct(1, 2, 3) => vec![
+        TupleStruct(1, 2, 3) => &[
             Token::TupleStructStart("TupleStruct", Some(3)),
                 Token::TupleStructSep,
                 Token::I32(1),
@@ -252,7 +252,7 @@ declare_tests! {
                 Token::I32(3),
             Token::TupleStructEnd,
         ],
-        TupleStruct(1, 2, 3) => vec![
+        TupleStruct(1, 2, 3) => &[
             Token::TupleStructStart("TupleStruct", None),
                 Token::TupleStructSep,
                 Token::I32(1),
@@ -266,14 +266,14 @@ declare_tests! {
         ],
     }
     test_btreeset {
-        BTreeSet::<isize>::new() => vec![
+        BTreeSet::<isize>::new() => &[
             Token::Unit,
         ],
-        BTreeSet::<isize>::new() => vec![
+        BTreeSet::<isize>::new() => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
-        btreeset![btreeset![], btreeset![1], btreeset![2, 3]] => vec![
+        btreeset![btreeset![], btreeset![1], btreeset![2, 3]] => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::SeqStart(Some(0)),
@@ -295,23 +295,23 @@ declare_tests! {
                 Token::SeqEnd,
             Token::SeqEnd,
         ],
-        BTreeSet::<isize>::new() => vec![
+        BTreeSet::<isize>::new() => &[
             Token::UnitStruct("Anything"),
         ],
-        BTreeSet::<isize>::new() => vec![
+        BTreeSet::<isize>::new() => &[
             Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
     test_hashset {
-        HashSet::<isize>::new() => vec![
+        HashSet::<isize>::new() => &[
             Token::Unit,
         ],
-        HashSet::<isize>::new() => vec![
+        HashSet::<isize>::new() => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
-        hashset![1, 2, 3] => vec![
+        hashset![1, 2, 3] => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
@@ -323,14 +323,14 @@ declare_tests! {
                 Token::I32(3),
             Token::SeqEnd,
         ],
-        HashSet::<isize>::new() => vec![
+        HashSet::<isize>::new() => &[
             Token::UnitStruct("Anything"),
         ],
-        HashSet::<isize>::new() => vec![
+        HashSet::<isize>::new() => &[
             Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
-        hashset![FnvHasher @ 1, 2, 3] => vec![
+        hashset![FnvHasher @ 1, 2, 3] => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
@@ -344,14 +344,14 @@ declare_tests! {
         ],
     }
     test_vec {
-        Vec::<isize>::new() => vec![
+        Vec::<isize>::new() => &[
             Token::Unit,
         ],
-        Vec::<isize>::new() => vec![
+        Vec::<isize>::new() => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
-        vec![vec![], vec![1], vec![2, 3]] => vec![
+        vec![vec![], vec![1], vec![2, 3]] => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::SeqStart(Some(0)),
@@ -373,27 +373,27 @@ declare_tests! {
                 Token::SeqEnd,
             Token::SeqEnd,
         ],
-        Vec::<isize>::new() => vec![
+        Vec::<isize>::new() => &[
             Token::UnitStruct("Anything"),
         ],
-        Vec::<isize>::new() => vec![
+        Vec::<isize>::new() => &[
             Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
     test_array {
-        [0; 0] => vec![
+        [0; 0] => &[
             Token::Unit,
         ],
-        [0; 0] => vec![
+        [0; 0] => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
-        [0; 0] => vec![
+        [0; 0] => &[
             Token::SeqArrayStart(0),
             Token::SeqEnd,
         ],
-        ([0; 0], [1], [2, 3]) => vec![
+        ([0; 0], [1], [2, 3]) => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::SeqStart(Some(0)),
@@ -415,7 +415,7 @@ declare_tests! {
                 Token::SeqEnd,
             Token::SeqEnd,
         ],
-        ([0; 0], [1], [2, 3]) => vec![
+        ([0; 0], [1], [2, 3]) => &[
             Token::SeqArrayStart(3),
                 Token::SeqSep,
                 Token::SeqArrayStart(0),
@@ -437,22 +437,22 @@ declare_tests! {
                 Token::SeqEnd,
             Token::SeqEnd,
         ],
-        [0; 0] => vec![
+        [0; 0] => &[
             Token::UnitStruct("Anything"),
         ],
-        [0; 0] => vec![
+        [0; 0] => &[
             Token::TupleStructStart("Anything", Some(0)),
             Token::SeqEnd,
         ],
     }
     test_tuple {
-        (1,) => vec![
+        (1,) => &[
             Token::SeqStart(Some(1)),
                 Token::SeqSep,
                 Token::I32(1),
             Token::SeqEnd,
         ],
-        (1, 2, 3) => vec![
+        (1, 2, 3) => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
@@ -464,13 +464,13 @@ declare_tests! {
                 Token::I32(3),
             Token::SeqEnd,
         ],
-        (1,) => vec![
+        (1,) => &[
             Token::TupleStart(1),
                 Token::TupleSep,
                 Token::I32(1),
             Token::TupleEnd,
         ],
-        (1, 2, 3) => vec![
+        (1, 2, 3) => &[
             Token::TupleStart(3),
                 Token::TupleSep,
                 Token::I32(1),
@@ -484,21 +484,21 @@ declare_tests! {
         ],
     }
     test_btreemap {
-        BTreeMap::<isize, isize>::new() => vec![
+        BTreeMap::<isize, isize>::new() => &[
             Token::Unit,
         ],
-        BTreeMap::<isize, isize>::new() => vec![
+        BTreeMap::<isize, isize>::new() => &[
             Token::MapStart(Some(0)),
             Token::MapEnd,
         ],
-        btreemap![1 => 2] => vec![
+        btreemap![1 => 2] => &[
             Token::MapStart(Some(1)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
-        btreemap![1 => 2, 3 => 4] => vec![
+        btreemap![1 => 2, 3 => 4] => &[
             Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
@@ -509,7 +509,7 @@ declare_tests! {
                 Token::I32(4),
             Token::MapEnd,
         ],
-        btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => vec![
+        btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => &[
             Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
@@ -529,30 +529,30 @@ declare_tests! {
                 Token::MapEnd,
             Token::MapEnd,
         ],
-        BTreeMap::<isize, isize>::new() => vec![
+        BTreeMap::<isize, isize>::new() => &[
             Token::UnitStruct("Anything"),
         ],
-        BTreeMap::<isize, isize>::new() => vec![
+        BTreeMap::<isize, isize>::new() => &[
             Token::StructStart("Anything", Some(0)),
             Token::MapEnd,
         ],
     }
     test_hashmap {
-        HashMap::<isize, isize>::new() => vec![
+        HashMap::<isize, isize>::new() => &[
             Token::Unit,
         ],
-        HashMap::<isize, isize>::new() => vec![
+        HashMap::<isize, isize>::new() => &[
             Token::MapStart(Some(0)),
             Token::MapEnd,
         ],
-        hashmap![1 => 2] => vec![
+        hashmap![1 => 2] => &[
             Token::MapStart(Some(1)),
                 Token::MapSep,
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
-        hashmap![1 => 2, 3 => 4] => vec![
+        hashmap![1 => 2, 3 => 4] => &[
             Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
@@ -563,7 +563,7 @@ declare_tests! {
                 Token::I32(4),
             Token::MapEnd,
         ],
-        hashmap![1 => hashmap![], 2 => hashmap![3 => 4, 5 => 6]] => vec![
+        hashmap![1 => hashmap![], 2 => hashmap![3 => 4, 5 => 6]] => &[
             Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
@@ -583,14 +583,14 @@ declare_tests! {
                 Token::MapEnd,
             Token::MapEnd,
         ],
-        HashMap::<isize, isize>::new() => vec![
+        HashMap::<isize, isize>::new() => &[
             Token::UnitStruct("Anything"),
         ],
-        HashMap::<isize, isize>::new() => vec![
+        HashMap::<isize, isize>::new() => &[
             Token::StructStart("Anything", Some(0)),
             Token::MapEnd,
         ],
-        hashmap![FnvHasher @ 1 => 2, 3 => 4] => vec![
+        hashmap![FnvHasher @ 1 => 2, 3 => 4] => &[
             Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::I32(1),
@@ -603,7 +603,7 @@ declare_tests! {
         ],
     }
     test_struct {
-        Struct { a: 1, b: 2, c: 0 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => &[
             Token::MapStart(Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
@@ -614,7 +614,7 @@ declare_tests! {
                 Token::I32(2),
             Token::MapEnd,
         ],
-        Struct { a: 1, b: 2, c: 0 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => &[
             Token::StructStart("Struct", Some(3)),
                 Token::StructSep,
                 Token::Str("a"),
@@ -625,7 +625,7 @@ declare_tests! {
                 Token::I32(2),
             Token::StructEnd,
         ],
-        Struct { a: 1, b: 2, c: 0 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => &[
             Token::SeqStart(Some(3)),
                 Token::SeqSep,
                 Token::I32(1),
@@ -636,7 +636,7 @@ declare_tests! {
         ],
     }
     test_struct_with_skip {
-        Struct { a: 1, b: 2, c: 0 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => &[
             Token::MapStart(Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
@@ -655,7 +655,7 @@ declare_tests! {
                 Token::I32(4),
             Token::MapEnd,
         ],
-        Struct { a: 1, b: 2, c: 0 } => vec![
+        Struct { a: 1, b: 2, c: 0 } => &[
             Token::StructStart("Struct", Some(3)),
                 Token::StructSep,
                 Token::Str("a"),
@@ -676,18 +676,18 @@ declare_tests! {
         ],
     }
     test_enum_unit {
-        Enum::Unit => vec![
+        Enum::Unit => &[
             Token::EnumUnit("Enum", "Unit"),
         ],
     }
     test_enum_simple {
-        Enum::Simple(1) => vec![
+        Enum::Simple(1) => &[
             Token::EnumNewType("Enum", "Simple"),
             Token::I32(1),
         ],
     }
     test_enum_seq {
-        Enum::Seq(1, 2, 3) => vec![
+        Enum::Seq(1, 2, 3) => &[
             Token::EnumSeqStart("Enum", "Seq", Some(3)),
                 Token::EnumSeqSep,
                 Token::I32(1),
@@ -701,7 +701,7 @@ declare_tests! {
         ],
     }
     test_enum_map {
-        Enum::Map { a: 1, b: 2, c: 3 } => vec![
+        Enum::Map { a: 1, b: 2, c: 3 } => &[
             Token::EnumMapStart("Enum", "Map", Some(3)),
                 Token::EnumMapSep,
                 Token::Str("a"),
@@ -718,24 +718,24 @@ declare_tests! {
         ],
     }
     test_enum_unit_usize {
-        Enum::Unit => vec![
+        Enum::Unit => &[
             Token::EnumStart("Enum"),
             Token::Usize(0),
             Token::Unit,
         ],
     }
     test_enum_unit_bytes {
-        Enum::Unit => vec![
+        Enum::Unit => &[
             Token::EnumStart("Enum"),
             Token::Bytes(b"Unit"),
             Token::Unit,
         ],
     }
     test_box {
-        Box::new(0i32) => vec![Token::I32(0)],
+        Box::new(0i32) => &[Token::I32(0)],
     }
     test_boxed_slice {
-        Box::new([0, 1, 2]) => vec![
+        Box::new([0, 1, 2]) => &[
             Token::SeqStart(Some(3)),
             Token::SeqSep,
             Token::I32(0),
@@ -747,18 +747,18 @@ declare_tests! {
         ],
     }
     test_net_ipv4addr {
-        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => vec![Token::Str("1.2.3.4")],
+        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
     }
     test_net_ipv6addr {
-        "::1".parse::<net::Ipv6Addr>().unwrap() => vec![Token::Str("::1")],
+        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
     }
     test_net_socketaddr {
-        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => vec![Token::Str("1.2.3.4:1234")],
-        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => vec![Token::Str("1.2.3.4:1234")],
-        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => vec![Token::Str("[::1]:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
     }
     test_path_buf {
-        PathBuf::from("/usr/local/lib") => vec![
+        PathBuf::from("/usr/local/lib") => &[
             Token::String("/usr/local/lib".to_owned()),
         ],
     }
@@ -769,19 +769,19 @@ declare_tests! {
 fn test_net_ipaddr() {
     assert_de_tokens(
         "1.2.3.4".parse::<net::IpAddr>().unwrap(),
-        vec![Token::Str("1.2.3.4")],
+        &[Token::Str("1.2.3.4")],
     );
 }
 
 declare_error_tests! {
     test_unknown_variant<Enum> {
-        vec![
+        &[
             Token::EnumUnit("Enum", "Foo"),
         ],
         Error::UnknownVariant("Foo".to_owned()),
     }
     test_struct_seq_too_long<Struct> {
-        vec![
+        &[
             Token::SeqStart(Some(4)),
                 Token::SeqSep, Token::I32(1),
                 Token::SeqSep, Token::I32(2),
@@ -790,7 +790,7 @@ declare_error_tests! {
         Error::UnexpectedToken(Token::SeqSep),
     }
     test_duplicate_field_struct<Struct> {
-        vec![
+        &[
             Token::MapStart(Some(3)),
                 Token::MapSep,
                 Token::Str("a"),
@@ -802,7 +802,7 @@ declare_error_tests! {
         Error::DuplicateField("a"),
     }
     test_duplicate_field_enum<Enum> {
-        vec![
+        &[
             Token::EnumMapStart("Enum", "Map", Some(3)),
                 Token::EnumMapSep,
                 Token::Str("a"),
