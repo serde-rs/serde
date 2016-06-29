@@ -22,7 +22,7 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
     assert_eq!(ser.next_token(), None);
 }
 
-// Expect an error serializing T
+/// Expect an error serializing `T`.
 pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
     where T: Serialize + PartialEq + Debug,
 {
@@ -41,7 +41,7 @@ pub fn assert_de_tokens<T>(value: &T, tokens: &[Token<'static>])
     assert_eq!(de.next_token(), None);
 }
 
-// Expect an error deserializing tokens into a T
+/// Expect an error deserializing tokens into a `T`.
 pub fn assert_de_tokens_error<T>(tokens: &[Token<'static>], error: Error)
     where T: Deserialize + PartialEq + Debug,
 {
