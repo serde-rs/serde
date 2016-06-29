@@ -3,7 +3,12 @@ use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use token::{self, Token};
+extern crate serde_test;
+use self::serde_test::{
+    Error,
+    Token,
+    assert_ser_tokens_error,
+};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -355,16 +360,16 @@ fn test_cannot_serialize_paths() {
     let path = unsafe {
         str::from_utf8_unchecked(b"Hello \xF0\x90\x80World")
     };
-    token::assert_ser_tokens_error(
+    assert_ser_tokens_error(
         &Path::new(path),
         &[Token::Str("Hello �World")],
-        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
 
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
 
-    token::assert_ser_tokens_error(
+    assert_ser_tokens_error(
         &path_buf,
         &[Token::Str("Hello �World")],
-        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
 }

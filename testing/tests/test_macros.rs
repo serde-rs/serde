@@ -1,11 +1,12 @@
-use std::marker::PhantomData;
-use token::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens};
+extern crate serde_test;
+use self::serde_test::{
+    Token,
+    assert_tokens,
+    assert_ser_tokens,
+    assert_de_tokens,
+};
 
-/*
-trait Trait {
-    type Type;
-}
-*/
+use std::marker::PhantomData;
 
 // That tests that the derived Serialize implementation doesn't trigger
 // any warning about `serializer` not being used, in case of empty enums.

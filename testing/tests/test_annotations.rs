@@ -1,7 +1,8 @@
 extern crate serde;
 use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
-use token::{
+extern crate serde_test;
+use self::serde_test::{
     Error,
     Token,
     assert_tokens,

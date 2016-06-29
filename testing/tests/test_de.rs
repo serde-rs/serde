@@ -2,14 +2,17 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
+extern crate serde;
+use self::serde::Deserialize;
+
 extern crate fnv;
 use self::fnv::FnvHasher;
 
-use token::{
+extern crate serde_test;
+use self::serde_test::{
     Error,
     Token,
     assert_de_tokens,
-    assert_de_tokens_ignore,
     assert_de_tokens_error,
 };
 
@@ -71,6 +74,46 @@ macro_rules! declare_error_tests {
             }
         )+
     }
+}
+
+fn assert_de_tokens_ignore(ignorable_tokens: Vec<Token<'static>>) {
+    #[derive(PartialEq, Debug, Deserialize)]
+    struct IgnoreBase {
+        a: i32,
+    }
+ 
+    let expected = IgnoreBase{a: 1};
+ 
+    // Embed the tokens to be ignored in the normal token
+    // stream for an IgnoreBase type
+    let concated_tokens : Vec<Token<'static>> = vec![
+            Token::MapStart(Some(2)),
+                Token::MapSep,
+                Token::Str("a"),
+                Token::I32(1),
+ 
+                Token::MapSep,
+                Token::Str("ignored")
+        ]
+        .into_iter()
+        .chain(ignorable_tokens.into_iter())
+        .chain(vec![
+            Token::MapEnd,
+        ].into_iter())
+        .collect();
+ 
+    let mut de = serde_test::Deserializer::new(concated_tokens.into_iter());
+    let v: Result<IgnoreBase, Error> = Deserialize::deserialize(&mut de);
+ 
+    // We run this test on every token stream for convenience, but
+    // some token streams don't make sense embedded as a map value,
+    // so we ignore those. SyntaxError is the real sign of trouble.
+    if let Err(Error::UnexpectedToken(_)) = v {
+        return;
+    }
+ 
+    assert_eq!(v.as_ref(), Ok(&expected));
+    assert_eq!(de.next_token(), None);
 }
 
 //////////////////////////////////////////////////////////////////////////
