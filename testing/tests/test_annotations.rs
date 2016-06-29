@@ -342,9 +342,6 @@ fn test_ignore_unknown() {
 
             Token::StructSep,
             Token::Str("whoops"),
-            Token::I32(2),
-
-            Token::StructEnd,
         ],
         Error::UnknownFieldError("whoops".to_owned())
     );

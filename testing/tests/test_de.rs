@@ -786,8 +786,6 @@ declare_error_tests! {
                 Token::SeqSep, Token::I32(1),
                 Token::SeqSep, Token::I32(2),
                 Token::SeqSep, Token::I32(3),
-                Token::SeqSep, Token::I32(4),
-            Token::SeqEnd,
         ],
         Error::UnexpectedToken(Token::SeqSep),
     }
@@ -800,8 +798,6 @@ declare_error_tests! {
 
                 Token::MapSep,
                 Token::Str("a"),
-                Token::I32(3),
-            Token::MapEnd,
         ],
         Error::DuplicateFieldError("a"),
     }
@@ -814,8 +810,6 @@ declare_error_tests! {
 
                 Token::EnumMapSep,
                 Token::Str("a"),
-                Token::I32(3),
-            Token::EnumMapEnd,
         ],
         Error::DuplicateFieldError("a"),
     }

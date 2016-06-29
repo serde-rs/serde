@@ -22,13 +22,14 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
     assert_eq!(ser.next_token(), None);
 }
 
-// Expect an error deserializing tokens into a T
+// Expect an error serializing T
 pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
     where T: Serialize + PartialEq + Debug,
 {
     let mut ser = Serializer::new(tokens.iter());
     let v: Result<(), Error> = Serialize::serialize(value, &mut ser);
     assert_eq!(v.as_ref(), Err(&error));
+    assert_eq!(ser.next_token(), None);
 }
 
 pub fn assert_de_tokens<T>(value: &T, tokens: Vec<Token<'static>>)
@@ -47,4 +48,7 @@ pub fn assert_de_tokens_error<T>(tokens: Vec<Token<'static>>, error: Error)
     let mut de = Deserializer::new(tokens.into_iter());
     let v: Result<T, Error> = Deserialize::deserialize(&mut de);
     assert_eq!(v, Err(error));
+    // There may be one token left if a peek caused the error
+    de.next_token();
+    assert_eq!(de.next_token(), None);
 }
