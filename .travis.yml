@@ -22,15 +22,15 @@ script:
 - (cd serde && travis-cargo build -- --no-default-features)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features alloc)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features collections)
-- (cd serde_tests && travis-cargo --skip nightly test)
-- (cd serde_tests && travis-cargo --only nightly test -- --features nightly-testing)
+- (cd testing && travis-cargo --skip nightly test)
+- (cd testing && travis-cargo --only nightly test -- --features nightly-testing)
 - (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing)
 - (cd examples/serde-syntex-example && travis-cargo --skip nightly run)
 - (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features nightly)
 - (cd serde && travis-cargo --only stable doc)
 after_success:
 - (cd serde && travis-cargo --only stable doc-upload)
-- (cd serde_tests && travis-cargo --only stable coveralls --no-sudo)
+- (cd testing && travis-cargo --only stable coveralls --no-sudo)
 env:
   global:
   - TRAVIS_CARGO_NIGHTLY_FEATURE=""

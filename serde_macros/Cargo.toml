@@ -25,6 +25,7 @@ compiletest_rs = "^0.2.0"
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
 serde = { version = "^0.7.11", path = "../serde" }
+serde_test = { version = "^0.7.11", path = "../serde_test" }
 
 [[test]]
 name = "test"

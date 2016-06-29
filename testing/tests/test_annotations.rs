@@ -1,7 +1,8 @@
 extern crate serde;
 use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
-use token::{
+extern crate serde_test;
+use self::serde_test::{
     Error,
     Token,
     assert_tokens,
@@ -80,7 +81,7 @@ struct DefaultStruct<A, B, C, D, E>
 fn test_default_struct() {
     assert_de_tokens(
         &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
-        vec![
+        &[
             Token::StructStart("DefaultStruct", Some(3)),
 
             Token::StructSep,
@@ -109,7 +110,7 @@ fn test_default_struct() {
 
     assert_de_tokens(
         &DefaultStruct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
-        vec![
+        &[
             Token::StructStart("DefaultStruct", Some(1)),
 
             Token::StructSep,
@@ -143,7 +144,7 @@ enum DefaultEnum<A, B, C, D, E>
 fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
-        vec![
+        &[
             Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
 
             Token::EnumMapSep,
@@ -172,7 +173,7 @@ fn test_default_enum() {
 
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
-        vec![
+        &[
             Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
 
             Token::EnumMapSep,
@@ -206,7 +207,7 @@ struct ContainsNoStdDefault<A: MyDefault> {
 fn test_no_std_default() {
     assert_de_tokens(
         &ContainsNoStdDefault { a: NoStdDefault(123) },
-        vec![
+        &[
             Token::StructStart("ContainsNoStdDefault", Some(1)),
             Token::StructEnd,
         ]
@@ -214,7 +215,7 @@ fn test_no_std_default() {
 
     assert_de_tokens(
         &ContainsNoStdDefault { a: NoStdDefault(8) },
-        vec![
+        &[
             Token::StructStart("ContainsNoStdDefault", Some(1)),
 
             Token::StructSep,
@@ -279,7 +280,7 @@ fn test_elt_not_deserialize() {
             c: NotDeserializeStruct(123),
             e: NotDeserializeEnum::Trouble,
         },
-        vec![
+        &[
             Token::StructStart("ContainsNotDeserialize", Some(3)),
             Token::StructEnd,
         ]
@@ -297,7 +298,7 @@ fn test_ignore_unknown() {
     // 'Default' allows unknown. Basic smoke test of ignore...
     assert_de_tokens(
         &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
-        vec![
+        &[
             Token::StructStart("DefaultStruct", Some(5)),
 
             Token::StructSep,
@@ -332,7 +333,7 @@ fn test_ignore_unknown() {
     );
 
     assert_de_tokens_error::<DenyUnknown>(
-        vec![
+        &[
             Token::StructStart("DenyUnknown", Some(2)),
 
             Token::StructSep,
@@ -341,11 +342,8 @@ fn test_ignore_unknown() {
 
             Token::StructSep,
             Token::Str("whoops"),
-            Token::I32(2),
-
-            Token::StructEnd,
         ],
-        Error::UnknownFieldError("whoops".to_owned())
+        Error::UnknownField("whoops".to_owned())
     );
 }
 
@@ -369,7 +367,7 @@ struct RenameStructSerializeDeserialize {
 fn test_rename_struct() {
     assert_tokens(
         &RenameStruct { a1: 1, a2: 2 },
-        vec![
+        &[
             Token::StructStart("Superhero", Some(2)),
 
             Token::StructSep,
@@ -403,7 +401,7 @@ fn test_rename_struct() {
 
     assert_de_tokens(
         &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
-        vec![
+        &[
             Token::StructStart("SuperheroDe", Some(2)),
 
             Token::StructSep,
@@ -451,14 +449,14 @@ enum RenameEnumSerializeDeserialize<A> {
 fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::Batman,
-        vec![
+        &[
             Token::EnumUnit("Superhero", "bruce_wayne"),
         ]
     );
 
     assert_tokens(
         &RenameEnum::Superman(0),
-        vec![
+        &[
             Token::EnumNewType("Superhero", "clark_kent"),
             Token::I8(0),
         ]
@@ -466,7 +464,7 @@ fn test_rename_enum() {
 
     assert_tokens(
         &RenameEnum::WonderWoman(0, 1),
-        vec![
+        &[
             Token::EnumSeqStart("Superhero", "diana_prince", Some(2)),
 
             Token::EnumSeqSep,
@@ -481,7 +479,7 @@ fn test_rename_enum() {
 
     assert_tokens(
         &RenameEnum::Flash { a: 1 },
-        vec![
+        &[
             Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
 
             Token::EnumMapSep,
@@ -517,7 +515,7 @@ fn test_rename_enum() {
             a: 0,
             b: String::new(),
         },
-        vec![
+        &[
             Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
 
             Token::EnumMapSep,
@@ -807,7 +805,7 @@ fn test_deserialize_with_struct() {
             a: 1,
             b: 2,
         },
-        vec![
+        &[
             Token::StructStart("DeserializeWithStruct", Some(2)),
 
             Token::StructSep,
@@ -827,7 +825,7 @@ fn test_deserialize_with_struct() {
             a: 1,
             b: 123,
         },
-        vec![
+        &[
             Token::StructStart("DeserializeWithStruct", Some(2)),
 
             Token::StructSep,
@@ -859,7 +857,7 @@ fn test_deserialize_with_enum() {
             a: 1,
             b: 2,
         },
-        vec![
+        &[
             Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
 
             Token::EnumMapSep,
@@ -879,7 +877,7 @@ fn test_deserialize_with_enum() {
             a: 1,
             b: 123,
         },
-        vec![
+        &[
             Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
 
             Token::EnumMapSep,
@@ -898,7 +896,7 @@ fn test_deserialize_with_enum() {
 #[test]
 fn test_missing_renamed_field_struct() {
     assert_de_tokens_error::<RenameStruct>(
-        vec![
+        &[
             Token::StructStart("Superhero", Some(2)),
 
             Token::StructSep,
@@ -907,11 +905,11 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::MissingFieldError("a3"),
+        Error::MissingField("a3"),
     );
 
     assert_de_tokens_error::<RenameStructSerializeDeserialize>(
-        vec![
+        &[
             Token::StructStart("SuperheroDe", Some(2)),
 
             Token::StructSep,
@@ -920,23 +918,23 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::MissingFieldError("a5"),
+        Error::MissingField("a5"),
     );
 }
 
 #[test]
 fn test_missing_renamed_field_enum() {
     assert_de_tokens_error::<RenameEnum>(
-        vec![
+        &[
             Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
 
             Token::EnumMapEnd,
         ],
-        Error::MissingFieldError("b"),
+        Error::MissingField("b"),
     );
 
     assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
-        vec![
+        &[
             Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
 
             Token::EnumMapSep,
@@ -945,6 +943,6 @@ fn test_missing_renamed_field_enum() {
 
             Token::EnumMapEnd,
         ],
-        Error::MissingFieldError("d"),
+        Error::MissingField("d"),
     );
 }
