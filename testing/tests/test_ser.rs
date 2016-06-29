@@ -7,6 +7,7 @@ extern crate serde_test;
 use self::serde_test::{
     Error,
     Token,
+    assert_ser_tokens,
     assert_ser_tokens_error,
 };
 

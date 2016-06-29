@@ -5,7 +5,7 @@ macro_rules! declare_ser_tests {
             #[test]
             fn $name() {
                 $(
-                    self::serde_test::assert_ser_tokens(&$value, $tokens);
+                    assert_ser_tokens(&$value, $tokens);
                 )+
             }
         )+
