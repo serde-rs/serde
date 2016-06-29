@@ -6,21 +6,21 @@ use token::Token;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
-    CustomError(String),
-    EndOfStreamError,
-    UnknownFieldError(String),
-    UnknownVariantError(String),
-    MissingFieldError(&'static str),
-    DuplicateFieldError(&'static str),
+    Custom(String),
+    EndOfStream,
+    UnknownField(String),
+    UnknownVariant(String),
+    MissingField(&'static str),
+    DuplicateField(&'static str),
     InvalidName(&'static str),
     InvalidValue(String),
     UnexpectedToken(Token<'static>),
-    ValueError(de::value::Error),
+    Value(de::value::Error),
 }
 
 impl ser::Error for Error {
     fn custom<T: Into<String>>(msg: T) -> Error {
-        Error::CustomError(msg.into())
+        Error::Custom(msg.into())
     }
 
     fn invalid_value(msg: &str) -> Error {
@@ -30,11 +30,11 @@ impl ser::Error for Error {
 
 impl de::Error for Error {
     fn custom<T: Into<String>>(msg: T) -> Error {
-        Error::CustomError(msg.into())
+        Error::Custom(msg.into())
     }
 
     fn end_of_stream() -> Error {
-        Error::EndOfStreamError
+        Error::EndOfStream
     }
 
     fn invalid_value(msg: &str) -> Error {
@@ -42,19 +42,19 @@ impl de::Error for Error {
     }
 
     fn unknown_field(field: &str) -> Error {
-        Error::UnknownFieldError(field.to_owned())
+        Error::UnknownField(field.to_owned())
     }
 
     fn unknown_variant(variant: &str) -> Error {
-        Error::UnknownVariantError(variant.to_owned())
+        Error::UnknownVariant(variant.to_owned())
     }
 
     fn missing_field(field: &'static str) -> Error {
-        Error::MissingFieldError(field)
+        Error::MissingField(field)
     }
 
     fn duplicate_field(field: &'static str) -> Error {
-        Error::DuplicateFieldError(field)
+        Error::DuplicateField(field)
     }
 }
 

@@ -778,7 +778,7 @@ declare_error_tests! {
         vec![
             Token::EnumUnit("Enum", "Foo"),
         ],
-        Error::UnknownVariantError("Foo".to_owned()),
+        Error::UnknownVariant("Foo".to_owned()),
     }
     test_struct_seq_too_long<Struct> {
         vec![
@@ -799,7 +799,7 @@ declare_error_tests! {
                 Token::MapSep,
                 Token::Str("a"),
         ],
-        Error::DuplicateFieldError("a"),
+        Error::DuplicateField("a"),
     }
     test_duplicate_field_enum<Enum> {
         vec![
@@ -811,6 +811,6 @@ declare_error_tests! {
                 Token::EnumMapSep,
                 Token::Str("a"),
         ],
-        Error::DuplicateFieldError("a"),
+        Error::DuplicateField("a"),
     }
 }

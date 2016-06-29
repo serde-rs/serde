@@ -343,7 +343,7 @@ fn test_ignore_unknown() {
             Token::StructSep,
             Token::Str("whoops"),
         ],
-        Error::UnknownFieldError("whoops".to_owned())
+        Error::UnknownField("whoops".to_owned())
     );
 }
 
@@ -905,7 +905,7 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::MissingFieldError("a3"),
+        Error::MissingField("a3"),
     );
 
     assert_de_tokens_error::<RenameStructSerializeDeserialize>(
@@ -918,7 +918,7 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::MissingFieldError("a5"),
+        Error::MissingField("a5"),
     );
 }
 
@@ -930,7 +930,7 @@ fn test_missing_renamed_field_enum() {
 
             Token::EnumMapEnd,
         ],
-        Error::MissingFieldError("b"),
+        Error::MissingField("b"),
     );
 
     assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
@@ -943,6 +943,6 @@ fn test_missing_renamed_field_enum() {
 
             Token::EnumMapEnd,
         ],
-        Error::MissingFieldError("d"),
+        Error::MissingField("d"),
     );
 }

@@ -145,7 +145,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 self.visit_map(len, visitor)
             }
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -168,7 +168,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 visitor.visit_none()
             }
             Some(_) => visitor.visit_some(self),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -198,7 +198,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 let token = self.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => { return Err(Error::EndOfStreamError); }
+            None => { return Err(Error::EndOfStream); }
         }
     }
 
@@ -215,7 +215,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 }
             }
             Some(_) => self.deserialize(visitor),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -234,7 +234,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 }
             }
             Some(_) => self.deserialize(visitor),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -249,7 +249,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 self.visit_array(len, visitor)
             }
             Some(_) => self.deserialize(visitor),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -284,7 +284,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 self.visit_tuple_struct(len, visitor)
             }
             Some(_) => self.deserialize(visitor),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -328,7 +328,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 }
             }
             Some(_) => self.deserialize(visitor),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -352,7 +352,7 @@ impl<I> de::Deserializer for Deserializer<I>
                 self.visit_map(Some(fields.len()), visitor)
             }
             Some(_) => self.deserialize(visitor),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 }
@@ -383,7 +383,7 @@ impl<'a, I> SeqVisitor for DeserializerSeqVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -392,7 +392,7 @@ impl<'a, I> SeqVisitor for DeserializerSeqVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::SeqEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -428,7 +428,7 @@ impl<'a, I> SeqVisitor for DeserializerArrayVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -437,7 +437,7 @@ impl<'a, I> SeqVisitor for DeserializerArrayVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::SeqEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -472,7 +472,7 @@ impl<'a, I> SeqVisitor for DeserializerTupleVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -481,7 +481,7 @@ impl<'a, I> SeqVisitor for DeserializerTupleVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::TupleEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -516,7 +516,7 @@ impl<'a, I> SeqVisitor for DeserializerTupleStructVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -525,7 +525,7 @@ impl<'a, I> SeqVisitor for DeserializerTupleStructVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::TupleStructEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -560,7 +560,7 @@ impl<'a, I> SeqVisitor for DeserializerVariantSeqVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -569,7 +569,7 @@ impl<'a, I> SeqVisitor for DeserializerVariantSeqVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::EnumSeqEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -605,7 +605,7 @@ impl<'a, I> MapVisitor for DeserializerMapVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -620,7 +620,7 @@ impl<'a, I> MapVisitor for DeserializerMapVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::MapEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -656,7 +656,7 @@ impl<'a, I> MapVisitor for DeserializerStructVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -671,7 +671,7 @@ impl<'a, I> MapVisitor for DeserializerStructVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::StructEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -707,7 +707,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
             Some(_) => {
                 Deserialize::deserialize(self.de)
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -720,7 +720,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
             Some(_) => {
                 Deserialize::deserialize(self.de)
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -735,7 +735,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
             Some(_) => {
                 Deserialize::deserialize(self.de)
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -766,7 +766,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
             Some(_) => {
                 Deserialize::deserialize(self.de)
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -797,7 +797,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
             Some(_) => {
                 Deserialize::deserialize(self.de)
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 }
@@ -828,7 +828,7 @@ impl<'a, I> MapVisitor for DeserializerVariantMapVisitor<'a, I>
                 let token = self.de.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
@@ -843,7 +843,7 @@ impl<'a, I> MapVisitor for DeserializerVariantMapVisitor<'a, I>
         match self.de.tokens.next() {
             Some(Token::EnumMapEnd) => Ok(()),
             Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfStreamError),
+            None => Err(Error::EndOfStream),
         }
     }
 
