@@ -6,16 +6,20 @@ use token::Token;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
+    // Shared
     Custom(String),
+    InvalidValue(String),
+
+    // De
     EndOfStream,
-    UnknownField(String),
+    InvalidType(de::Type),
+    InvalidLength(usize),
     UnknownVariant(String),
+    UnknownField(String),
     MissingField(&'static str),
     DuplicateField(&'static str),
     InvalidName(&'static str),
-    InvalidValue(String),
     UnexpectedToken(Token<'static>),
-    Value(de::value::Error),
 }
 
 impl ser::Error for Error {
@@ -37,16 +41,24 @@ impl de::Error for Error {
         Error::EndOfStream
     }
 
+    fn invalid_type(ty: de::Type) -> Error {
+        Error::InvalidType(ty)
+    }
+
     fn invalid_value(msg: &str) -> Error {
         Error::InvalidValue(msg.to_owned())
     }
 
-    fn unknown_field(field: &str) -> Error {
-        Error::UnknownField(field.to_owned())
+    fn invalid_length(len: usize) -> Error {
+        Error::InvalidLength(len)
     }
 
     fn unknown_variant(variant: &str) -> Error {
         Error::UnknownVariant(variant.to_owned())
+    }
+
+    fn unknown_field(field: &str) -> Error {
+        Error::UnknownField(field.to_owned())
     }
 
     fn missing_field(field: &'static str) -> Error {
