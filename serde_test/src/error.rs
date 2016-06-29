@@ -6,7 +6,7 @@ use token::Token;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
-    SyntaxError,
+    CustomError(String),
     EndOfStreamError,
     UnknownFieldError(String),
     UnknownVariantError(String),
@@ -19,8 +19,8 @@ pub enum Error {
 }
 
 impl ser::Error for Error {
-    fn custom<T: Into<String>>(_: T) -> Error {
-        Error::SyntaxError
+    fn custom<T: Into<String>>(msg: T) -> Error {
+        Error::CustomError(msg.into())
     }
 
     fn invalid_value(msg: &str) -> Error {
@@ -29,8 +29,8 @@ impl ser::Error for Error {
 }
 
 impl de::Error for Error {
-    fn custom<T: Into<String>>(_: T) -> Error {
-        Error::SyntaxError
+    fn custom<T: Into<String>>(msg: T) -> Error {
+        Error::CustomError(msg.into())
     }
 
     fn end_of_stream() -> Error {
