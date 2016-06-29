@@ -6,4 +6,4 @@ extern crate rustc_serialize;
 extern crate serde;
 extern crate test;
 
-include!("../../serde_tests/benches/bench.rs.in");
+include!("../../testing/benches/bench.rs.in");
