@@ -1,24 +1,10 @@
-#![cfg_attr(feature = "nightly-testing", plugin(clippy))]
-#![cfg_attr(feature = "nightly-testing", feature(plugin))]
-#![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
-
-#[cfg(feature = "with-syntex")]
-#[macro_use]
-extern crate syntex_syntax as syntax;
-
-#[cfg(not(feature = "with-syntex"))]
-#[macro_use]
-extern crate syntax;
-
 use syntax::ast;
 use syntax::codemap;
 use syntax::ext::base::ExtCtxt;
 use syntax::ptr::P;
 
-pub mod attr;
-
-mod error;
-pub use error::Error;
+use attr;
+use Error;
 
 pub struct Item<'a> {
     pub ident: ast::Ident,

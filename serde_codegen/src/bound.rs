@@ -6,7 +6,8 @@ use syntax::ast;
 use syntax::ptr::P;
 use syntax::visit;
 
-use item::{attr, Item};
+use internals::ast::Item;
+use internals::attr;
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
