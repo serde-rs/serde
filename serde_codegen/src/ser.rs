@@ -6,7 +6,8 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;
 
 use bound;
-use internals::{attr, Body, Error, Field, Item, Style, Variant};
+use internals::ast::{Body, Field, Item, Style, Variant};
+use internals::{attr, Error};
 
 pub fn expand_derive_serialize(
     cx: &mut ExtCtxt,
