@@ -1,6 +1,6 @@
 [package]
 name = "serde_macros"
-version = "0.7.11"
+version = "0.7.12"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -18,14 +18,14 @@ nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-tes
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-serde_codegen = { version = "^0.7.11", path = "../serde_codegen", default-features = false, features = ["nightly"] }
+serde_codegen = { version = "^0.7.12", path = "../serde_codegen", default-features = false, features = ["nightly"] }
 
 [dev-dependencies]
 compiletest_rs = "^0.2.0"
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
-serde = { version = "^0.7.11", path = "../serde" }
-serde_test = { version = "^0.7.11", path = "../serde_test" }
+serde = { version = "^0.7.12", path = "../serde" }
+serde_test = { version = "^0.7.12", path = "../serde_test" }
 
 [[test]]
 name = "test"

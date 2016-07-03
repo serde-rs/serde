@@ -5,6 +5,7 @@ use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::parse::token::InternedString;
 use syntax::ptr::P;
+use syntax::tokenstream::TokenTree;
 
 use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
@@ -471,7 +472,7 @@ fn deserialize_newtype_struct(
     type_path: &ast::Path,
     impl_generics: &ast::Generics,
     field: &Field,
-) -> Vec<ast::TokenTree> {
+) -> Vec<TokenTree> {
     let value = match field.attrs.deserialize_with() {
         None => {
             let field_ty = &field.ty;
