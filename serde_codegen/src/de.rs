@@ -8,6 +8,7 @@ use syntax::ptr::P;
 use syntax::tokenstream::TokenTree;
 
 use bound;
+use span;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{attr, Error};
 
@@ -44,7 +45,7 @@ pub fn expand_derive_deserialize(
     let builder = aster::AstBuilder::new().span(span);
 
     let impl_item = deserialize_item(cx, &builder, &item);
-    push(Annotatable::Item(impl_item))
+    push(span::record_expansion(cx, impl_item, "Deserialize"))
 }
 
 fn deserialize_item(

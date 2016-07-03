@@ -6,6 +6,7 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;
 
 use bound;
+use span;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{attr, Error};
 
@@ -38,7 +39,7 @@ pub fn expand_derive_serialize(
     let builder = aster::AstBuilder::new().span(span);
 
     let impl_item = serialize_item(cx, &builder, &item);
-    push(Annotatable::Item(impl_item))
+    push(span::record_expansion(cx, impl_item, "Serialize"))
 }
 
 fn serialize_item(
