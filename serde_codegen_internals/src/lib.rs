@@ -5,10 +5,14 @@
 #[cfg(feature = "with-syntex")]
 #[macro_use]
 extern crate syntex_syntax as syntax;
+#[cfg(feature = "with-syntex")]
+extern crate syntex_errors as errors;
 
 #[cfg(not(feature = "with-syntex"))]
 #[macro_use]
 extern crate syntax;
+#[cfg(not(feature = "with-syntex"))]
+extern crate rustc_errors as errors;
 
 pub mod ast;
 pub mod attr;

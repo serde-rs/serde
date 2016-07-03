@@ -96,8 +96,8 @@ fn contains_recursion(ty: &ast::Ty, ident: ast::Ident) -> bool {
         ident: ast::Ident,
         found_recursion: bool,
     }
-    impl<'v> visit::Visitor<'v> for FindRecursion {
-        fn visit_path(&mut self, path: &'v ast::Path, _id: ast::NodeId) {
+    impl visit::Visitor for FindRecursion {
+        fn visit_path(&mut self, path: &ast::Path, _id: ast::NodeId) {
             if !path.global
                     && path.segments.len() == 1
                     && path.segments[0].identifier == self.ident {
