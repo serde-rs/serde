@@ -395,6 +395,7 @@ fn deserialize_seq(
     fields: &[Field],
     is_struct: bool,
 ) -> P<ast::Expr> {
+    let mut index_in_seq = 0usize;
     let let_values: Vec<_> = fields.iter()
         .enumerate()
         .map(|(i, field)| {
@@ -420,14 +421,16 @@ fn deserialize_seq(
                         })
                     }
                 };
-                quote_stmt!(cx,
+                let assign = quote_stmt!(cx,
                     let $name = match $visit {
                         Some(value) => { value },
                         None => {
-                            return Err(_serde::de::Error::end_of_stream());
+                            return Err(_serde::de::Error::invalid_length($index_in_seq));
                         }
                     };
-                ).unwrap()
+                ).unwrap();
+                index_in_seq += 1;
+                assign
             }
         })
         .collect();

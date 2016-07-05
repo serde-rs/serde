@@ -946,3 +946,31 @@ fn test_missing_renamed_field_enum() {
         Error::MissingField("d"),
     );
 }
+
+#[derive(Debug, PartialEq, Deserialize)]
+enum InvalidLengthEnum {
+    A(i32, i32, i32),
+    B(#[serde(skip_deserializing)] i32, i32, i32),
+}
+
+#[test]
+fn test_invalid_length_enum() {
+    assert_de_tokens_error::<InvalidLengthEnum>(
+        &[
+            Token::EnumSeqStart("InvalidLengthEnum", "A", Some(3)),
+                Token::EnumSeqSep,
+                Token::I32(1),
+            Token::EnumSeqEnd,
+        ],
+        Error::InvalidLength(1),
+    );
+    assert_de_tokens_error::<InvalidLengthEnum>(
+        &[
+            Token::EnumSeqStart("InvalidLengthEnum", "B", Some(3)),
+                Token::EnumSeqSep,
+                Token::I32(1),
+            Token::EnumSeqEnd,
+        ],
+        Error::InvalidLength(1),
+    );
+}
