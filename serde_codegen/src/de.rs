@@ -1096,9 +1096,9 @@ fn deserialize_map(
             }
         }
 
-        $extract_values
-
         try!(visitor.end());
+
+        $extract_values
 
         Ok($result)
     })
