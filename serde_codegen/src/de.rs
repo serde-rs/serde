@@ -425,6 +425,7 @@ fn deserialize_seq(
                     let $name = match $visit {
                         Some(value) => { value },
                         None => {
+                            try!(visitor.end());
                             return Err(_serde::de::Error::invalid_length($index_in_seq));
                         }
                     };
