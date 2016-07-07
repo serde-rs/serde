@@ -8,6 +8,8 @@ use error;
 #[cfg(all(not(feature = "std"), feature = "collections"))]
 use collections::{String, Vec};
 
+use core::fmt;
+
 pub mod impls;
 pub mod value;
 mod from_primitive;
@@ -167,6 +169,46 @@ pub enum Type {
 
     /// Represents a `&[u8]` type.
     Bytes,
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let display = match *self {
+            Type::Bool          => "bool",
+            Type::Usize         => "usize",
+            Type::U8            => "u8",
+            Type::U16           => "u16",
+            Type::U32           => "u32",
+            Type::U64           => "u64",
+            Type::Isize         => "isize",
+            Type::I8            => "i8",
+            Type::I16           => "i16",
+            Type::I32           => "i32",
+            Type::I64           => "i64",
+            Type::F32           => "f32",
+            Type::F64           => "f64",
+            Type::Char          => "char",
+            Type::Str           => "str",
+            Type::String        => "string",
+            Type::Unit          => "unit",
+            Type::Option        => "option",
+            Type::Seq           => "seq",
+            Type::Map           => "map",
+            Type::UnitStruct    => "unit struct",
+            Type::NewtypeStruct => "newtype struct",
+            Type::TupleStruct   => "tuple struct",
+            Type::Struct        => "struct",
+            Type::FieldName     => "field name",
+            Type::Tuple         => "tuple",
+            Type::Enum          => "enum",
+            Type::VariantName   => "variant name",
+            Type::StructVariant => "struct variant",
+            Type::TupleVariant  => "tuple variant",
+            Type::UnitVariant   => "unit variant",
+            Type::Bytes         => "bytes",
+        };
+        display.fmt(formatter)
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
