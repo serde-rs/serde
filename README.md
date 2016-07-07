@@ -12,74 +12,100 @@ information. In many situations, the handshake protocol between serializers and
 serializees can be completely optimized away, leaving Serde to perform roughly
 the same speed as a hand written serializer for a specific type.
 
-Documentation is available at:
+[Documentation](https://serde-rs.github.io/serde/serde/index.html)
 
-* [serde](https://serde-rs.github.io/serde/serde/index.html)
+Simple Serde Example
+====================
 
-Using Serde with Nightly Rust and serde\_macros
-===============================================
-
-Here is a simple example that demonstrates how to use Serde by serializing and
-deserializing to JSON. Serde comes with some powerful code generation libraries
-that work with Stable and Nightly Rust that eliminate much of the complexity of
-hand rolling serialization and deserialization for a given type. First lets see
-how we would use Nightly Rust, which is currently a bit simpler than Stable
-Rust:
-
-`Cargo.toml`:
+Here is a simple example that uses
+[serde_json](https://github.com/serde-rs/json), which uses Serde under the
+covers, to generate and parse JSON. First, lets start off with the `Cargo.toml`
+file:
 
 ```toml
 [package]
-name = "serde_example_nightly"
+name = "serde_example"
 version = "0.1.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 
 [dependencies]
-serde = "*"
 serde_json = "*"
-serde_macros = "*"
 ```
 
-`src/main.rs`
+Next, the `src/main.rs` file itself:
 
-```rust
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
-
+```rust,ignore
 extern crate serde_json;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Point {
-    x: i32,
-    y: i32,
-}
+use std::collections::HashMap;
+use serde_json::Value;
+use serde_json::builder::{ArrayBuilder, ObjectBuilder};
 
 fn main() {
-    let point = Point { x: 1, y: 2 };
-    let serialized = serde_json::to_string(&point).unwrap();
+    // Serde has support for many of the builtin Rust types, like arrays..:
+    let v = vec![1, 2];
+    let serialized = serde_json::to_string(&v).unwrap();
+    println!("serialized vec: {:?}", serialized);
 
-    println!("{}", serialized);
+    let deserialized: Vec<u32> = serde_json::from_str(&serialized).unwrap();
+    println!("deserialized vec: {:?}", deserialized);
 
-    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+    // ... and maps:
+    let mut map = HashMap::new();
+    map.insert("x".to_string(), 1);
+    map.insert("y".to_string(), 2);
 
-    println!("{:?}", deserialized);
+    let serialized = serde_json::to_string(&map).unwrap();
+    println!("serialized map: {:?}", serialized);
+
+    let deserialized: HashMap<String, u32> = serde_json::from_str(&serialized).unwrap();
+    println!("deserialized map: {:?}", deserialized);
+
+    // It also can handle complex objects:
+    let value = ObjectBuilder::new()
+        .insert("int", 1)
+        .insert("string", "a string")
+        .insert("array", ArrayBuilder::new()
+                .push(1)
+                .push(2)
+                .unwrap())
+        .unwrap();
+
+    let serialized = serde_json::to_string(&value).unwrap();
+    println!("serialized value: {:?}", serialized);
+
+    let deserialized: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+    println!("deserialized value: {:?}", deserialized);
 }
 ```
 
-When run, it produces:
+This produces the following output when run:
 
 ```
 % cargo run
-{"x":1,"y":2}
-Point { x: 1, y: 2 }
+serialized vec: "[1,2]"
+deserialized vec: [1, 2]
+serialized map: "{\"y\":2,\"x\":1}"
+deserialized map: {"y": 2, "x": 1}
+serialized value: "{\"array\":[1,2],\"int\":1,\"string\":\"a string\"}"
+deserialized value: {"array":[1,2],"int":1,"string":"a string"}
 ```
 
 Using Serde with Stable Rust and serde\_codegen
 ===============================================
 
-Stable Rust is a little more complicated because it does not yet support
-compiler plugins. Instead we need to use `serde_codegen` which is based on the
-code generation library [syntex](https://github.com/serde-rs/syntex):
+The example before used `serde_json::Value` as the in-memory representation of
+the JSON value, but it's also possible for Serde to serialize to and from
+regular Rust types. However, the code to do this can be a bit complicated to
+write. So instead, Serde also has some powerful code generation libraries that
+work with Stable and Nightly Rust that eliminate much of the complexity of hand
+rolling serialization and deserialization for a given type.
+
+First lets see how we would use Stable Rust, which is currently a tad more
+complicated than Nightly Rust due to having to work around compiler plugins
+being unstable.  We will use `serde_codegen` which is based on the code
+generation library [syntex](https://github.com/serde-rs/syntex). First we need
+to setup the `Cargo.toml` that builds the project:
 
 ```toml
 [package]
@@ -96,16 +122,8 @@ serde = "*"
 serde_json = "*"
 ```
 
-`src/main.rs`:
-
-```rust,ignore
-extern crate serde;
-extern crate serde_json;
-
-include!(concat!(env!("OUT_DIR"), "/main.rs"));
-```
-
-`src/main.rs.in`:
+Next, we define our source file, `src/main.rs.in`. Note this is a different
+extension than usual becaues we need to do code generation:
 
 ```rust,ignore
 #[derive(Serialize, Deserialize, Debug)]
@@ -116,17 +134,28 @@ struct Point {
 
 fn main() {
     let point = Point { x: 1, y: 2 };
-    let serialized = serde_json::to_string(&point).unwrap();
 
+    let serialized = serde_json::to_string(&point).unwrap();
     println!("{}", serialized);
 
     let deserialized: Point = serde_json::from_str(&serialized).unwrap();
-
     println!("{:?}", deserialized);
 }
 ```
 
-`build.rs`
+To finish up the main source code, we define a very simple `src/main.rs` that
+uses the generated code.
+
+`src/main.rs`:
+
+```rust,ignore
+extern crate serde;
+extern crate serde_json;
+
+include!(concat!(env!("OUT_DIR"), "/main.rs"));
+```
+
+The last step is to actually drive the code generation, with the `build.rs` script:
 
 ```rust,ignore
 extern crate serde_codegen;
@@ -144,7 +173,7 @@ pub fn main() {
 }
 ```
 
-This also produces:
+All this produces this when run:
 
 ```
 % cargo run
@@ -153,8 +182,63 @@ Point { x: 1, y: 2 }
 ```
 
 While this works well with Stable Rust, be aware that the error locations
-currently are reported in the generated file instead of in the source file. You
-may find it easier to develop with Nightly Rust and `serde\_macros`, then
+currently are reported in the generated file instead of in the source file.
+
+Using Serde with Nightly Rust and serde\_macros
+===============================================
+
+The prior example is a bit more complicated than it needs to be due to compiler
+plugins being unstable. However, if you are already using Nightly Rust, you can
+use `serde_macros`, which has a much simpler interface. First, here is the new
+`Cargo.toml`:
+
+```toml
+[package]
+name = "serde_example_nightly"
+version = "0.1.0"
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
+
+[dependencies]
+serde = "*"
+serde_json = "*"
+serde_macros = "*"
+```
+
+Note that it doesn't need a build script. Now the `src/main.rs`, which enables
+the plugin feature, and registers the `serde_macros` plugin:
+
+```rust
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
+
+extern crate serde_json;
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn main() {
+    let point = Point { x: 1, y: 2 };
+
+    let serialized = serde_json::to_string(&point).unwrap();
+    println!("{}", serialized);
+
+    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+    println!("{:?}", deserialized);
+}
+```
+
+This also produces the same output:
+
+```
+% cargo run
+{"x":1,"y":2}
+Point { x: 1, y: 2 }
+```
+
+You may find it easier to develop with Nightly Rust and `serde\_macros`, then
 deploy with Stable Rust and `serde_codegen`. It's possible to combine both
 approaches in one setup:
 
