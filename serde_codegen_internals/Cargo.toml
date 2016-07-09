@@ -1,6 +1,6 @@
 [package]
 name = "serde_codegen_internals"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "AST representation used by Serde codegen. Unstable."
@@ -16,5 +16,5 @@ with-syntex = ["syntex_syntax", "syntex_errors"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-syntex_syntax = { version = "^0.37.0", optional = true }
-syntex_errors = { version = "^0.37.0", optional = true }
+syntex_syntax = { version = "^0.38.0", optional = true }
+syntex_errors = { version = "^0.38.0", optional = true }
