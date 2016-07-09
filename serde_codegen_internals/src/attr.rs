@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use syntax::ast;
 use syntax::attr::{self, HasAttrs};
 use syntax::codemap::{Span, Spanned, respan};
@@ -517,33 +519,33 @@ struct Respanner<'a, 'b: 'a> {
 }
 
 impl<'a, 'b> Folder for Respanner<'a, 'b> {
-    fn fold_tt(&mut self, tt: TokenTree) -> TokenTree {
-        match tt {
+    fn fold_tt(&mut self, tt: &TokenTree) -> TokenTree {
+        match *tt {
             TokenTree::Token(span, ref tok) => {
                 TokenTree::Token(
                     self.new_span(span),
                     self.fold_token(tok.clone())
                 )
             }
-            TokenTree::Delimited(span, delimed) => {
+            TokenTree::Delimited(span, ref delimed) => {
                 TokenTree::Delimited(
                     self.new_span(span),
-                    tokenstream::Delimited {
+                    Rc::new(tokenstream::Delimited {
                         delim: delimed.delim,
                         open_span: delimed.open_span,
-                        tts: self.fold_tts(delimed.tts),
+                        tts: self.fold_tts(&delimed.tts),
                         close_span: delimed.close_span,
-                    }
+                    })
                 )
             }
-            TokenTree::Sequence(span, seq) => {
+            TokenTree::Sequence(span, ref seq) => {
                 TokenTree::Sequence(
                     self.new_span(span),
-                    tokenstream::SequenceRepetition {
-                        tts: self.fold_tts(seq.tts),
+                    Rc::new(tokenstream::SequenceRepetition {
+                        tts: self.fold_tts(&seq.tts),
                         separator: seq.separator.clone().map(|tok| self.fold_token(tok)),
-                        ..seq
-                    }
+                        ..**seq
+                    })
                 )
             }
         }
@@ -589,7 +591,7 @@ fn parse_string_via_tts<T, F>(cx: &ExtCtxt, name: &str, string: String, action: 
         cx.parse_sess()));
 
     // Respan the spans to say they are all coming from this macro.
-    let tts = Respanner { cx: cx }.fold_tts(tts);
+    let tts = Respanner { cx: cx }.fold_tts(&tts);
 
     let mut parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts);
 
