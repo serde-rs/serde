@@ -64,8 +64,8 @@ use super::{
     Error,
     Serialize,
     Serializer,
-    SeqVisitor,
-    MapVisitor,
+    SeqSerializer,
+    MapSerializer,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -133,26 +133,6 @@ impl<T> Serialize for Option<T> where T: Serialize {
     }
 }
 
-impl<T> SeqVisitor for Option<T> where T: Serialize {
-    #[inline]
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer,
-    {
-        match self.take() {
-            Some(value) => {
-                try!(serializer.serialize_seq_elt(value));
-                Ok(Some(()))
-            }
-            None => Ok(None),
-        }
-    }
-
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        Some(if self.is_some() { 1 } else { 0 })
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 impl<T> Serialize for PhantomData<T> {
@@ -164,69 +144,6 @@ impl<T> Serialize for PhantomData<T> {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-/// A `serde::Visitor` for sequence iterators.
-///
-/// # Examples
-///
-/// ```
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::impls::SeqIteratorVisitor;
-///
-/// struct Seq(Vec<u32>);
-///
-/// impl Serialize for Seq {
-///     fn serialize<S>(&self, ser: &mut S) -> Result<(), S::Error>
-///         where S: Serializer,
-///     {
-///         ser.serialize_seq(SeqIteratorVisitor::new(
-///             self.0.iter(),
-///             Some(self.0.len()),
-///         ))
-///     }
-/// }
-/// ```
-pub struct SeqIteratorVisitor<Iter> {
-    iter: Iter,
-    len: Option<usize>,
-}
-
-impl<T, Iter> SeqIteratorVisitor<Iter>
-    where Iter: Iterator<Item=T>
-{
-    /// Construct a new `SeqIteratorVisitor<Iter>`.
-    #[inline]
-    pub fn new(iter: Iter, len: Option<usize>) -> SeqIteratorVisitor<Iter> {
-        SeqIteratorVisitor {
-            iter: iter,
-            len: len,
-        }
-    }
-}
-
-impl<T, Iter> SeqVisitor for SeqIteratorVisitor<Iter>
-    where T: Serialize,
-          Iter: Iterator<Item=T>,
-{
-    #[inline]
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer,
-    {
-        match self.iter.next() {
-            Some(value) => {
-                try!(serializer.serialize_seq_elt(value));
-                Ok(Some(()))
-            }
-            None => Ok(None),
-        }
-    }
-
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        self.len
-    }
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -237,7 +154,12 @@ impl<T> Serialize for [T]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -250,8 +172,11 @@ macro_rules! array_impls {
             fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                 where S: Serializer,
             {
-                let visitor = SeqIteratorVisitor::new(self.iter(), Some($len));
-                serializer.serialize_fixed_size_array(visitor)
+                let mut seq_serializer = try!(serializer.serialize_seq());
+                for e in self.iter() {
+                    try!(seq_serializer.serialize_elt(e));
+                }
+                Ok(())
             }
         }
     }
@@ -301,7 +226,11 @@ impl<T> Serialize for BinaryHeap<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -313,7 +242,11 @@ impl<T> Serialize for BTreeSet<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -325,7 +258,10 @@ impl<T> Serialize for EnumSet<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
     }
 }
 
@@ -338,7 +274,11 @@ impl<T, H> Serialize for HashSet<T, H>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -350,7 +290,11 @@ impl<T> Serialize for LinkedList<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -361,10 +305,13 @@ impl<A> Serialize for ops::Range<A>
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
+        where S: Serialize,
     {
-        let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.clone(), len))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -384,7 +331,11 @@ impl<T> Serialize for VecDeque<T> where T: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_seq(SeqIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut seq_serializer = try!(serializer.serialize_seq());
+        for e in self.iter() {
+            try!(seq_serializer.serialize_elt(e));
+        }
+        Ok(())
     }
 }
 
@@ -406,6 +357,7 @@ macro_rules! e {
     ($e:expr) => { $e }
 }
 
+/* TODO: FIX tuple magic
 macro_rules! tuple_impls {
     ($(
         $TupleVisitor:ident ($len:expr, $($T:ident),+) {
@@ -413,51 +365,18 @@ macro_rules! tuple_impls {
         }
     )+) => {
         $(
-            /// A tuple visitor.
-            pub struct $TupleVisitor<'a, $($T: 'a),+> {
-                tuple: &'a ($($T,)+),
-                state: u8,
-            }
-
-            impl<'a, $($T: 'a),+> $TupleVisitor<'a, $($T),+> {
-                /// Construct a new, empty `TupleVisitor`.
-                pub fn new(tuple: &'a ($($T,)+)) -> $TupleVisitor<'a, $($T),+> {
-                    $TupleVisitor {
-                        tuple: tuple,
-                        state: 0,
-                    }
-                }
-            }
-
-            impl<'a, $($T),+> SeqVisitor for $TupleVisitor<'a, $($T),+>
-                where $($T: Serialize),+
-            {
-                fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-                    where S: Serializer,
-                {
-                    match self.state {
-                        $(
-                            $state => {
-                                self.state += 1;
-                                Ok(Some(try!(serializer.serialize_tuple_elt(&e!(self.tuple.$idx)))))
-                            }
-                        )+
-                        _ => {
-                            Ok(None)
-                        }
-                    }
-                }
-
-                fn len(&self) -> Option<usize> {
-                    Some($len)
-                }
-            }
-
             impl<$($T),+> Serialize for ($($T,)+)
                 where $($T: Serialize),+
             {
                 #[inline]
-                fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
+                fn serialize<S,SS>(&self, serializer: &mut S) -> Result<(), S::Error>
+                    where S: Serializer<SeqSerializer=SS>,
+                          SS : SeqSerializer,
+                {
+
+                    for e in self.iter() {
+                        try!(seq_serializer.serialize_elt(e));
+                    }
                     serializer.serialize_tuple($TupleVisitor::new(self))
                 }
             }
@@ -635,72 +554,7 @@ tuple_impls! {
         15 => 15,
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-/// A `serde::Visitor` for (key, value) map iterators.
-///
-/// # Examples
-///
-/// ```
-/// use std::collections::HashMap;
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::impls::MapIteratorVisitor;
-///
-/// struct Map(HashMap<u32, u32>);
-///
-/// impl Serialize for Map {
-///     fn serialize<S>(&self, ser: &mut S) -> Result<(), S::Error>
-///         where S: Serializer,
-///     {
-///         ser.serialize_map(MapIteratorVisitor::new(
-///             self.0.iter(),
-///             Some(self.0.len()),
-///         ))
-///     }
-/// }
-/// ```
-pub struct MapIteratorVisitor<Iter> {
-    iter: Iter,
-    len: Option<usize>,
-}
-
-impl<K, V, Iter> MapIteratorVisitor<Iter>
-    where Iter: Iterator<Item=(K, V)>
-{
-    /// Construct a new `MapIteratorVisitor<Iter>`.
-    #[inline]
-    pub fn new(iter: Iter, len: Option<usize>) -> MapIteratorVisitor<Iter> {
-        MapIteratorVisitor {
-            iter: iter,
-            len: len,
-        }
-    }
-}
-
-impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
-    where K: Serialize,
-          V: Serialize,
-          I: Iterator<Item=(K, V)>,
-{
-    #[inline]
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer,
-    {
-        match self.iter.next() {
-            Some((key, value)) => {
-                try!(serializer.serialize_map_elt(key, value));
-                Ok(Some(()))
-            }
-            None => Ok(None)
-        }
-    }
-
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        self.len
-    }
-}
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -713,7 +567,11 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut map_serializer = try!(serializer.serialize_map());
+        for (k, v) in self.iter() {
+            try!(map_serializer.serialize_elt(k, v));
+        }
+        Ok(())
     }
 }
 
@@ -727,7 +585,11 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
+        let mut map_serializer = try!(serializer.serialize_map());
+        for (k, v) in self.iter() {
+            try!(map_serializer.serialize_elt(k, v));
+        }
+        Ok(())
     }
 }
 
