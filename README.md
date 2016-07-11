@@ -824,6 +824,7 @@ Serialization Formats Using Serde
 | Format      | Name                                                 |
 | ------      | ----                                                 |
 | Bincode     | [bincode](https://crates.io/crates/bincode)          |
+| env vars    | [envy](https://crates.io/crates/envy)                |
 | JSON        | [serde\_json](https://crates.io/crates/serde_json)   |
 | MessagePack | [rmp](https://crates.io/crates/rmp)                  |
 | XML         | [serde\_xml](https://github.com/serde-rs/xml)        |
