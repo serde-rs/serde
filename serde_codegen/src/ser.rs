@@ -223,15 +223,16 @@ fn serialize_tuple_struct(
         fields,
         impl_generics,
         false,
+        cx.ident_of("serialize_tuple_struct_elt"),
     );
 
     let type_name = name_expr(builder, item_attrs.name());
     let len = serialize_stmts.len();
 
     quote_expr!(cx, {
-        let mut _seq_serializer = try!(_serializer.serialize_tuple_struct($type_name, $len));
+        try!(_serializer.serialize_tuple_struct($type_name, $len));
         $serialize_stmts
-        _seq_serializer.drop()
+        _serializer.serialize_tuple_struct_end()
     })
 }
 
@@ -250,6 +251,7 @@ fn serialize_struct(
         fields,
         impl_generics,
         false,
+        cx.ident_of("serialize_struct_elt"),
     );
 
     let type_name = name_expr(builder, item_attrs.name());
@@ -267,9 +269,9 @@ fn serialize_struct(
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_expr!(cx, {
-        let mut _map_serializer = try!(_serializer.serialize_struct($type_name, $len));
+        try!(_serializer.serialize_struct($type_name, $len));
         $serialize_fields
-        _map_serializer.drop()
+        _serializer.serialize_struct_end()
     })
 }
 
@@ -455,14 +457,15 @@ fn serialize_tuple_variant(
         fields,
         generics,
         true,
+        cx.ident_of("serialize_tuple_variant_elt"),
     );
 
     let len = serialize_stmts.len();
 
     quote_expr!(cx, {
-        let mut _seq_serializer = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
+        try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
         $serialize_stmts
-        _seq_serializer.drop()
+        _serializer.serialize_tuple_variant_end()
     })
 }
 
@@ -484,6 +487,7 @@ fn serialize_struct_variant(
         fields,
         &generics,
         true,
+        cx.ident_of("serialize_struct_variant_elt"),
     );
 
     let item_name = name_expr(builder, item_attrs.name());
@@ -501,14 +505,14 @@ fn serialize_struct_variant(
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_expr!(cx, {
-        let mut _map_serializer = try!(_serializer.serialize_struct_variant(
+        try!(_serializer.serialize_struct_variant(
             $item_name,
             $variant_index,
             $variant_name,
             $len,
         ));
         $serialize_fields
-        _map_serializer.drop()
+        _serializer.serialize_struct_variant_end()
     })
 }
 
@@ -519,6 +523,7 @@ fn serialize_tuple_struct_visitor(
     fields: &[Field],
     generics: &ast::Generics,
     is_enum: bool,
+    func: ast::Ident,
 ) -> Vec<ast::Stmt> {
     fields.iter()
         .enumerate()
@@ -540,7 +545,7 @@ fn serialize_tuple_struct_visitor(
 
             quote_stmt!(cx,
                 if !$skip {
-                    try!(_seq_serializer.serialize_elt($field_expr));
+                    try!(_serializer.$func($field_expr));
                 }
             ).unwrap()
         })
@@ -554,6 +559,7 @@ fn serialize_struct_visitor(
     fields: &[Field],
     generics: &ast::Generics,
     is_enum: bool,
+    func: ast::Ident,
 ) -> Vec<ast::Stmt> {
     fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
@@ -578,7 +584,7 @@ fn serialize_struct_visitor(
 
             quote_stmt!(cx,
                 if !$skip {
-                    try!(_map_serializer.serialize_elt($key_expr, $field_expr));
+                    try!(_serializer.$func($key_expr, $field_expr));
                 }
             ).unwrap()
         })

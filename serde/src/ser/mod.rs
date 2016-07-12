@@ -38,93 +38,12 @@ pub trait Serialize {
         where S: Serializer;
 }
 
-/// A trait that described a type that can serialize elements of a Map
-pub trait MapSerializer : Sized {
-    /// The error type that can be returned if some error occurs during serialization.
-    type Error: Error;
-
-    /// Serializes an element of a map (key-value pair).
-    fn serialize_elt<S: ?Sized, K, V>(&mut self, serializer: &mut S, key: K, value: V) -> Result<(), Self::Error>
-        where K: Serialize,
-              V: Serialize,
-              S: Serializer<Error = Self::Error>;
-
-    /// Finish serializing the map
-    fn drop<S: ?Sized>(self, serializer: &mut S) -> Result<(), Self::Error>
-        where S: Serializer<Error = Self::Error>;
-}
-
-/// A trait that described a type that can serialize elements of a Sequence
-pub trait SeqSerializer : Sized {
-    /// The error type that can be returned if some error occurs during serialization.
-    type Error: Error;
-
-    /// Serializes an element of a sequence.
-    fn serialize_elt<S: ?Sized, T>(&mut self, serializer: &mut S, value: T) -> Result<(), Self::Error>
-        where T: Serialize,
-              S: Serializer<Error = Self::Error>;
-
-    /// Finish serializing the map
-    fn drop<S: ?Sized>(self, serializer: &mut S) -> Result<(), Self::Error>
-        where S: Serializer<Error = Self::Error>;
-}
-
-/// A helper type for serializing maps. This is a workaround for HKL associated types
-pub struct MapHelper<'a, S: Serializer + 'a + ?Sized>(&'a mut S, S::MapSerializer);
-
-impl<'a, S: Serializer + 'a + ?Sized> MapHelper<'a, S> {
-    /// Create a new MapHelper
-    pub fn new(s: &'a mut S, ms: S::MapSerializer) -> Self {
-        MapHelper(s, ms)
-    }
-}
-
-impl<'a, S: Serializer + ?Sized> MapHelper<'a, S> {
-    /// Serializes an element of a map (key-value pair).
-    pub fn serialize_elt<K, V>(&mut self, key: K, value: V) -> Result<(), S::Error>
-        where K: Serialize,
-              V: Serialize {
-        self.1.serialize_elt(self.0, key, value)
-    }
-    /// Closes the sequence
-    pub fn drop(self) -> Result<(), S::Error> {
-        self.1.drop(self.0)
-    }
-}
-
-/// A helper type for serializing sequences. This is a workaround for HKL associated types
-pub struct SeqHelper<'a, S: Serializer + 'a + ?Sized>(&'a mut S, S::SeqSerializer);
-
-impl<'a, S: Serializer + 'a + ?Sized> SeqHelper<'a, S> {
-    /// Create a new SeqHelper
-    pub fn new(s: &'a mut S, ms: S::SeqSerializer) -> Self {
-        SeqHelper(s, ms)
-    }
-}
-
-impl<'a, S: Serializer + ?Sized> SeqHelper<'a, S> {
-    /// Serializes an element of a sequence.
-    pub fn serialize_elt<V>(&mut self, value: V) -> Result<(), S::Error>
-        where V: Serialize {
-        self.1.serialize_elt(self.0, value)
-    }
-    /// Closes the sequence
-    pub fn drop(self) -> Result<(), S::Error> {
-        self.1.drop(self.0)
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A trait that describes a type that can serialize a stream of values into the underlying format.
 pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
-
-    /// A sub-type used to serialize sequences
-    type SeqSerializer : SeqSerializer<Error = Self::Error>;
-    /// A sub-type used to serialize maps
-    type MapSerializer : MapSerializer<Error = Self::Error>;
 
     /// Serializes a `bool` value.
     fn serialize_bool(&mut self, v: bool) -> Result<(), Self::Error>;
@@ -217,11 +136,11 @@ pub trait Serializer {
     /// byte slices separately from generic arrays. By default it serializes as a regular array.
     #[inline]
     fn serialize_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error> {
-        let mut seq_serializer = try!(self.serialize_seq(Some(value.len())));
+        try!(self.serialize_seq(Some(value.len())));
         for b in value.iter() {
-            try!(seq_serializer.serialize_elt(b));
+            try!(self.serialize_seq_elt(b));
         }
-        seq_serializer.drop()
+        self.serialize_seq_end()
     }
 
     /// Serializes a `()` value.
@@ -255,9 +174,9 @@ pub trait Serializer {
                                    value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
-        let mut ser = try!(self.serialize_tuple_struct(name, 1));
-        try!(ser.serialize_elt((value,)));
-        ser.drop()
+        try!(self.serialize_tuple_struct(name, 1));
+        try!(self.serialize_tuple_struct_elt(value));
+        self.serialize_tuple_struct_end()
     }
 
     /// Allows a variant with a single item to be more efficiently
@@ -271,9 +190,9 @@ pub trait Serializer {
                                     value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
-        let mut ser = try!(self.serialize_tuple_variant(name, variant_index, variant, 1));
-        try!(ser.serialize_elt((value,)));
-        ser.drop()
+        try!(self.serialize_tuple_variant(name, variant_index, variant, 1));
+        try!(self.serialize_tuple_variant_elt(value));
+        self.serialize_tuple_variant_end()
     }
 
     /// Serializes a `None` value..serialize
@@ -287,7 +206,7 @@ pub trait Serializer {
     ///
     /// Callees of this method need to construct a `SeqVisitor`, which iterates through each item
     /// in the sequence.
-    fn serialize_seq<'a>(&'a mut self, len: Option<usize>) -> Result<SeqHelper<'a, Self>, Self::Error>;
+    fn serialize_seq(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
 
     /// Serializes a sequence element.
     fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
@@ -300,7 +219,7 @@ pub trait Serializer {
     ///
     /// By default this serializes a tuple as a sequence.
     #[inline]
-    fn serialize_tuple<'a>(&'a mut self, len: usize) -> Result<SeqHelper<'a, Self>, Self::Error>
+    fn serialize_tuple(&mut self, len: usize) -> Result<(), Self::Error>
     {
         self.serialize_seq(Some(len))
     }
@@ -326,7 +245,7 @@ pub trait Serializer {
     ///
     /// By default this serializes an array as a sequence.
     #[inline]
-    fn serialize_fixed_size_array<'a>(&'a mut self, size: usize) -> Result<SeqHelper<'a, Self>, Self::Error>
+    fn serialize_fixed_size_array(&mut self, size: usize) -> Result<(), Self::Error>
     {
         self.serialize_seq(Some(size))
     }
@@ -335,10 +254,10 @@ pub trait Serializer {
     ///
     /// By default, tuple structs are serialized as a tuple.
     #[inline]
-    fn serialize_tuple_struct<'a>(&'a mut self,
-                                 _name: &'static str,
-                                 len: usize,
-                                 ) -> Result<SeqHelper<'a, Self>, Self::Error>
+    fn serialize_tuple_struct(&mut self,
+                              _name: &'static str,
+                              len: usize,
+                              ) -> Result<(), Self::Error>
     {
         self.serialize_tuple(len)
     }
@@ -365,12 +284,12 @@ pub trait Serializer {
     ///
     /// By default, tuple variants are serialized as a tuple struct.
     #[inline]
-    fn serialize_tuple_variant<'a>(&'a mut self,
-                                  _name: &'static str,
-                                  _variant_index: usize,
-                                  variant: &'static str,
-                                  len: usize,
-                                  ) -> Result<SeqHelper<'a, Self>, Self::Error>
+    fn serialize_tuple_variant(&mut self,
+                               _name: &'static str,
+                               _variant_index: usize,
+                               variant: &'static str,
+                               len: usize,
+                               ) -> Result<(), Self::Error>
     {
         self.serialize_tuple_struct(variant, len)
     }
@@ -394,22 +313,22 @@ pub trait Serializer {
     }
 
     /// Serialize a map.
-    fn serialize_map<'a>(&'a mut self, len: Option<usize>) -> Result<MapHelper<'a, Self>, Self::Error>;
+    fn serialize_map(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
 
     /// Serialize a map element
-    fn serialize_map_elt<'a, K, V>(&'a mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize;
+    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize;
 
     /// Finishes serializing a map
-    fn serialize_map_end<'a>(&'a mut self) -> Result<(), Self::Error>;
+    fn serialize_map_end(&mut self) -> Result<(), Self::Error>;
 
     /// Serializes a struct.
     ///
     /// By default, structs are serialized as a map with the field name as the key.
     #[inline]
-    fn serialize_struct<'a>(&'a mut self,
+    fn serialize_struct(&mut self,
                            _name: &'static str,
                            len: usize,
-                           ) -> Result<MapHelper<'a, Self>, Self::Error>
+                       ) -> Result<(), Self::Error>
     {
         self.serialize_map(Some(len))
     }
@@ -417,14 +336,14 @@ pub trait Serializer {
     /// Serialize a struct field
     ///
     /// By default, structs are serialized as a map with the field name as the key.
-    fn serialize_struct_elt<'a, K, V>(&'a mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
+    fn serialize_struct_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
         self.serialize_map_elt(key, value)
     }
 
     /// Finishes serializing a struct
     ///
     /// By default, structs are serialized as a map with the field name as the key.
-    fn serialize_struct_end<'a>(&'a mut self) -> Result<(), Self::Error> {
+    fn serialize_struct_end(&mut self) -> Result<(), Self::Error> {
         self.serialize_map_end()
     }
 
@@ -432,12 +351,12 @@ pub trait Serializer {
     ///
     /// By default, struct variants are serialized as a struct.
     #[inline]
-    fn serialize_struct_variant<'a>(&'a mut self,
+    fn serialize_struct_variant(&mut self,
                                    _name: &'static str,
                                    _variant_index: usize,
                                    variant: &'static str,
                                    len: usize,
-                                   ) -> Result<MapHelper<'a, Self>, Self::Error>
+                               ) -> Result<(), Self::Error>
     {
         self.serialize_struct(variant, len)
     }
@@ -445,14 +364,14 @@ pub trait Serializer {
     /// Serialize a struct variant element
     ///
     /// By default, structs are serialized as a map with the field name as the key.
-    fn serialize_struct_variant_elt<'a, K, V>(&'a mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
+    fn serialize_struct_variant_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
         self.serialize_struct_elt(key, value)
     }
 
     /// Finishes serializing a struct variant
     ///
     /// By default, structs are serialized as a map with the field name as the key.
-    fn serialize_struct_variant_end<'a>(&'a mut self) -> Result<(), Self::Error> {
+    fn serialize_struct_variant_end(&mut self) -> Result<(), Self::Error> {
         self.serialize_struct_end()
     }
 }
