@@ -260,6 +260,7 @@ impl<T> Serialize for EnumSet<T>
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
+        seq_serializer.drop()
     }
 }
 
