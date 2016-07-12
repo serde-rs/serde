@@ -256,7 +256,7 @@ declare_ser_tests! {
     }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
-            Token::TupleStructStart("TupleStruct", Some(3)),
+            Token::TupleStructStart("TupleStruct", 3),
                 Token::TupleStructSep,
                 Token::I32(1),
 
@@ -270,7 +270,7 @@ declare_ser_tests! {
     }
     test_struct {
         Struct { a: 1, b: 2, c: 3 } => &[
-            Token::StructStart("Struct", Some(3)),
+            Token::StructStart("Struct", 3),
                 Token::StructSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -289,7 +289,7 @@ declare_ser_tests! {
         Enum::Unit => &[Token::EnumUnit("Enum", "Unit")],
         Enum::One(42) => &[Token::EnumNewType("Enum", "One"), Token::I32(42)],
         Enum::Seq(1, 2) => &[
-            Token::EnumSeqStart("Enum", "Seq", Some(2)),
+            Token::EnumSeqStart("Enum", "Seq", 2),
                 Token::EnumSeqSep,
                 Token::I32(1),
 
@@ -298,7 +298,7 @@ declare_ser_tests! {
             Token::EnumSeqEnd,
         ],
         Enum::Map { a: 1, b: 2 } => &[
-            Token::EnumMapStart("Enum", "Map", Some(2)),
+            Token::EnumMapStart("Enum", "Map", 2),
                 Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),

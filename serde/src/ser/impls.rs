@@ -64,8 +64,6 @@ use super::{
     Error,
     Serialize,
     Serializer,
-    SeqSerializer,
-    MapSerializer,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -155,11 +153,11 @@ impl<T> Serialize for [T]
         where S: Serializer,
     {
 
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -172,11 +170,11 @@ macro_rules! array_impls {
             fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                 where S: Serializer,
             {
-                let mut seq_serializer = try!(serializer.serialize_seq());
+                let mut seq_serializer = try!(serializer.serialize_fixed_size_array($len));
                 for e in self.iter() {
                     try!(seq_serializer.serialize_elt(e));
                 }
-                Ok(())
+                seq_serializer.drop()
             }
         }
     }
@@ -226,11 +224,11 @@ impl<T> Serialize for BinaryHeap<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -242,11 +240,11 @@ impl<T> Serialize for BTreeSet<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -258,7 +256,7 @@ impl<T> Serialize for EnumSet<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
@@ -274,11 +272,11 @@ impl<T, H> Serialize for HashSet<T, H>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -290,11 +288,11 @@ impl<T> Serialize for LinkedList<T>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -307,11 +305,11 @@ impl<A> Serialize for ops::Range<A>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serialize,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -331,11 +329,11 @@ impl<T> Serialize for VecDeque<T> where T: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq());
+        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
             try!(seq_serializer.serialize_elt(e));
         }
-        Ok(())
+        seq_serializer.drop()
     }
 }
 
@@ -357,7 +355,6 @@ macro_rules! e {
     ($e:expr) => { $e }
 }
 
-/* TODO: FIX tuple magic
 macro_rules! tuple_impls {
     ($(
         $TupleVisitor:ident ($len:expr, $($T:ident),+) {
@@ -369,15 +366,14 @@ macro_rules! tuple_impls {
                 where $($T: Serialize),+
             {
                 #[inline]
-                fn serialize<S,SS>(&self, serializer: &mut S) -> Result<(), S::Error>
-                    where S: Serializer<SeqSerializer=SS>,
-                          SS : SeqSerializer,
+                fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                    where S: Serializer,
                 {
-
-                    for e in self.iter() {
-                        try!(seq_serializer.serialize_elt(e));
-                    }
-                    serializer.serialize_tuple($TupleVisitor::new(self))
+                    let mut ser = try!(serializer.serialize_tuple($len));
+                    $(
+                        try!(ser.serialize_elt(&e!(self.$idx)));
+                    )+
+                    ser.drop()
                 }
             }
         )+
@@ -554,7 +550,6 @@ tuple_impls! {
         15 => 15,
     }
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -567,11 +562,11 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut map_serializer = try!(serializer.serialize_map());
+        let mut map_serializer = try!(serializer.serialize_map(Some(self.len())));
         for (k, v) in self.iter() {
             try!(map_serializer.serialize_elt(k, v));
         }
-        Ok(())
+        map_serializer.drop()
     }
 }
 
@@ -585,11 +580,11 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut map_serializer = try!(serializer.serialize_map());
+        let mut map_serializer = try!(serializer.serialize_map(Some(self.len())));
         for (k, v) in self.iter() {
             try!(map_serializer.serialize_elt(k, v));
         }
-        Ok(())
+        map_serializer.drop()
     }
 }
 

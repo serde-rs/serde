@@ -38,7 +38,7 @@ pub enum Token<'a> {
     TupleSep,
     TupleEnd,
 
-    TupleStructStart(&'a str, Option<usize>),
+    TupleStructStart(&'a str, usize),
     TupleStructSep,
     TupleStructEnd,
 
@@ -46,15 +46,15 @@ pub enum Token<'a> {
     MapSep,
     MapEnd,
 
-    StructStart(&'a str, Option<usize>),
+    StructStart(&'a str, usize),
     StructSep,
     StructEnd,
 
-    EnumSeqStart(&'a str, &'a str, Option<usize>),
+    EnumSeqStart(&'a str, &'a str, usize),
     EnumSeqSep,
     EnumSeqEnd,
 
-    EnumMapStart(&'a str, &'a str, Option<usize>),
+    EnumMapStart(&'a str, &'a str, usize),
     EnumMapSep,
     EnumMapEnd,
 }

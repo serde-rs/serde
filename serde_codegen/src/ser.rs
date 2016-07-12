@@ -216,30 +216,22 @@ fn serialize_tuple_struct(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
-    let (visitor_struct, visitor_impl) = serialize_tuple_struct_visitor(
+    let serialize_stmts = serialize_tuple_struct_visitor(
         cx,
         builder,
         ty.clone(),
-        builder.ty()
-            .ref_()
-            .lifetime("'__a")
-            .build_ty(ty.clone()),
-        builder.id("serialize_tuple_struct_elt"),
         fields,
         impl_generics,
         false,
     );
 
     let type_name = name_expr(builder, item_attrs.name());
+    let len = serialize_stmts.len();
 
     quote_expr!(cx, {
-        $visitor_struct
-        $visitor_impl
-        _serializer.serialize_tuple_struct($type_name, Visitor {
-            value: self,
-            state: 0,
-            _structure_ty: ::std::marker::PhantomData::<&$ty>,
-        })
+        let mut _seq_serializer = try!(_serializer.serialize_tuple_struct($type_name, $len));
+        $serialize_stmts
+        _seq_serializer.drop()
     })
 }
 
@@ -251,30 +243,33 @@ fn serialize_struct(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
-    let (visitor_struct, visitor_impl) = serialize_struct_visitor(
+    let serialize_fields = serialize_struct_visitor(
         cx,
         builder,
         ty.clone(),
-        builder.ty()
-            .ref_()
-            .lifetime("'__a")
-            .build_ty(ty.clone()),
-        builder.id("serialize_struct_elt"),
         fields,
         impl_generics,
         false,
     );
 
     let type_name = name_expr(builder, item_attrs.name());
+    let len = fields.iter()
+        .filter(|&field| !field.attrs.skip_serializing())
+        .map(|field| {
+            let ident = field.ident.expect("struct has unnamed fields");
+            let field_expr = quote_expr!(cx, &self.$ident);
+
+            match field.attrs.skip_serializing_if() {
+                Some(path) => quote_expr!(cx, if $path($field_expr) { 0 } else { 1 }),
+                None => quote_expr!(cx, 1),
+            }
+         })
+        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_expr!(cx, {
-        $visitor_struct
-        $visitor_impl
-        _serializer.serialize_struct($type_name, Visitor {
-            value: self,
-            state: 0,
-            _structure_ty: ::std::marker::PhantomData::<&$ty>,
-        })
+        let mut _map_serializer = try!(_serializer.serialize_struct($type_name, $len));
+        $serialize_fields
+        _map_serializer.drop()
     })
 }
 
@@ -377,7 +372,6 @@ fn serialize_variant(
                 generics,
                 ty,
                 &variant.fields,
-                field_names,
             );
 
             quote_arm!(cx,
@@ -385,24 +379,16 @@ fn serialize_variant(
             )
         }
         Style::Struct => {
-            let field_names: Vec<_> = (0 .. variant.fields.len())
-                .map(|i| builder.id(format!("__field{}", i)))
-                .collect();
-
             let pat = builder.pat().struct_()
                 .id(type_ident).id(variant_ident).build()
-                .with_pats(
-                    field_names.iter()
-                        .zip(variant.fields.iter())
-                        .map(|(id, field)| {
-                            let name = match field.ident {
-                                Some(name) => name,
+                .with_pats(variant.fields.iter()
+                        .map(|field| {
+                            match field.ident {
+                                Some(name) => (name, builder.pat().ref_id(name)),
                                 None => {
                                     cx.span_bug(field.span, "struct variant has unnamed fields")
                                 }
-                            };
-
-                            (name, builder.pat().ref_id(id))
+                            }
                         })
                 )
                 .build();
@@ -415,7 +401,6 @@ fn serialize_variant(
                 generics,
                 ty,
                 &variant.fields,
-                field_names,
                 item_attrs,
             );
 
@@ -462,46 +447,22 @@ fn serialize_tuple_variant(
     generics: &ast::Generics,
     structure_ty: P<ast::Ty>,
     fields: &[Field],
-    field_names: Vec<Ident>,
 ) -> P<ast::Expr> {
-    let variant_ty = builder.ty().tuple()
-        .with_tys(
-            fields.iter().map(|field| {
-                builder.ty()
-                    .ref_()
-                    .lifetime("'__a")
-                    .build_ty(field.ty.clone())
-            })
-        )
-        .build();
-
-    let (visitor_struct, visitor_impl) = serialize_tuple_struct_visitor(
+    let serialize_stmts = serialize_tuple_struct_visitor(
         cx,
         builder,
-        structure_ty.clone(),
-        variant_ty,
-        builder.id("serialize_tuple_variant_elt"),
+        structure_ty,
         fields,
         generics,
         true,
     );
 
-    let value_expr = builder.expr().tuple()
-        .with_exprs(
-            field_names.iter().map(|field| {
-                builder.expr().id(field)
-            })
-        )
-        .build();
+    let len = serialize_stmts.len();
 
     quote_expr!(cx, {
-        $visitor_struct
-        $visitor_impl
-        _serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, Visitor {
-            value: $value_expr,
-            state: 0,
-            _structure_ty: ::std::marker::PhantomData::<&$structure_ty>,
-        })
+        let mut _seq_serializer = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
+        $serialize_stmts
+        _seq_serializer.drop()
     })
 }
 
@@ -513,83 +474,41 @@ fn serialize_struct_variant(
     generics: &ast::Generics,
     ty: P<ast::Ty>,
     fields: &[Field],
-    field_names: Vec<Ident>,
     item_attrs: &attr::Item,
 ) -> P<ast::Expr> {
-    let variant_generics = builder.generics()
-        .with(generics.clone())
-        .add_lifetime_bound("'__serde_variant")
-        .lifetime_name("'__serde_variant")
-        .build();
 
-    let variant_struct = builder.item().struct_("__VariantStruct")
-        .with_generics(variant_generics.clone())
-        .with_fields(
-            fields.iter().map(|field| {
-                builder.struct_field(field.ident.expect("struct has unnamed fields"))
-                    .ty()
-                    .ref_()
-                    .lifetime("'__serde_variant")
-                    .build_ty(field.ty.clone())
-            })
-        )
-        .field("__serde_container_ty")
-            .ty().phantom_data().build(ty.clone())
-        .build();
-
-    let variant_expr = builder.expr().struct_id("__VariantStruct")
-        .with_id_exprs(
-            fields.iter()
-                .zip(field_names.iter())
-                .map(|(field, field_name)| {
-                    (
-                        field.ident.expect("struct has unnamed fields"),
-                        builder.expr().id(field_name),
-                    )
-                })
-        )
-        .field("__serde_container_ty").path()
-            .global()
-            .id("std").id("marker")
-            .segment("PhantomData")
-                .with_ty(ty.clone())
-                .build()
-            .build()
-        .build();
-
-    let variant_ty = builder.ty().path()
-        .segment("__VariantStruct")
-            .with_generics(variant_generics.clone())
-            .build()
-        .build();
-
-    let (visitor_struct, visitor_impl) = serialize_struct_visitor(
+    let serialize_fields = serialize_struct_visitor(
         cx,
         builder,
-        variant_ty.clone(),
-        variant_ty.clone(),
-        builder.id("serialize_struct_variant_elt"),
+        ty.clone(),
         fields,
-        &variant_generics,
+        &generics,
         true,
     );
 
     let item_name = name_expr(builder, item_attrs.name());
+    let len = fields.iter()
+        .filter(|&field| !field.attrs.skip_serializing())
+        .map(|field| {
+            let ident = field.ident.expect("struct has unnamed fields");
+            let field_expr = quote_expr!(cx, $ident);
+
+            match field.attrs.skip_serializing_if() {
+                Some(path) => quote_expr!(cx, if $path($field_expr) { 0 } else { 1 }),
+                None => quote_expr!(cx, 1),
+            }
+         })
+        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_expr!(cx, {
-        $variant_struct
-        $visitor_struct
-        $visitor_impl
-        _serializer.serialize_struct_variant(
+        let mut _map_serializer = try!(_serializer.serialize_struct_variant(
             $item_name,
             $variant_index,
             $variant_name,
-            Visitor {
-                value: $variant_expr,
-                state: 0,
-                _structure_ty: ::std::marker::PhantomData,
-            },
-        )
+            $len,
+        ));
+        $serialize_fields
+        _map_serializer.drop()
     })
 }
 
@@ -597,187 +516,73 @@ fn serialize_tuple_struct_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     structure_ty: P<ast::Ty>,
-    variant_ty: P<ast::Ty>,
-    serializer_method: ast::Ident,
     fields: &[Field],
     generics: &ast::Generics,
     is_enum: bool,
-) -> (P<ast::Item>, P<ast::Item>) {
-    let arms: Vec<_> = fields.iter()
+) -> Vec<ast::Stmt> {
+    fields.iter()
         .enumerate()
         .map(|(i, field)| {
-            let mut field_expr = builder.expr().tup_field(i).field("value").self_();
-            if !is_enum {
-                field_expr = quote_expr!(cx, &$field_expr);
-            }
+            let mut field_expr = if is_enum {
+                builder.expr().path().id(format!("__field{}", i)).build()
+            } else {
+                builder.expr().tup_field(i).ref_().self_()
+            };
 
-            let continue_if_skip = field.attrs.skip_serializing_if()
-                .map(|path| quote_stmt!(cx, if $path($field_expr) { continue }));
+            let skip = field.attrs.skip_serializing_if()
+                .map(|path| quote_expr!(cx, $path($field_expr)))
+                .unwrap_or(quote_expr!(cx, false));
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(cx, builder,
                     &structure_ty, generics, &field.ty, path, field_expr);
             }
 
-            quote_arm!(cx,
-                $i => {
-                    self.state += 1;
-                    $continue_if_skip
-                    Ok(Some(try!(_serializer.$serializer_method($field_expr))))
+            quote_stmt!(cx,
+                if !$skip {
+                    try!(_seq_serializer.serialize_elt($field_expr));
                 }
-            )
+            ).unwrap()
         })
-        .collect();
-
-    let visitor_impl_generics = builder.from_generics(generics.clone())
-        .add_lifetime_bound("'__a")
-        .lifetime_name("'__a")
-        .build();
-
-    let where_clause = &visitor_impl_generics.where_clause;
-
-    let visitor_generics = builder.from_generics(visitor_impl_generics.clone())
-        .strip_bounds()
-        .build();
-
-    let nfields = fields.len();
-
-    (
-        quote_item!(cx,
-            struct Visitor $visitor_impl_generics $where_clause {
-                state: usize,
-                value: $variant_ty,
-                _structure_ty: ::std::marker::PhantomData<&'__a $structure_ty>,
-            }
-        ).unwrap(),
-
-        quote_item!(cx,
-            impl $visitor_impl_generics _serde::ser::SeqVisitor
-            for Visitor $visitor_generics
-            $where_clause {
-                #[inline]
-                fn visit<__S>(&mut self, _serializer: &mut __S) -> ::std::result::Result<Option<()>, __S::Error>
-                    where __S: _serde::ser::Serializer
-                {
-                    match self.state {
-                        $arms
-                        _ => Ok(None)
-                    }
-                }
-
-                #[inline]
-                fn len(&self) -> Option<usize> {
-                    Some($nfields)
-                }
-            }
-        ).unwrap(),
-    )
+        .collect()
 }
 
 fn serialize_struct_visitor(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     structure_ty: P<ast::Ty>,
-    variant_ty: P<ast::Ty>,
-    serializer_method: ast::Ident,
     fields: &[Field],
     generics: &ast::Generics,
     is_enum: bool,
-) -> (P<ast::Item>, P<ast::Item>) {
-    let arms: Vec<ast::Arm> = fields.iter()
+) -> Vec<ast::Stmt> {
+    fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
-        .enumerate()
-        .map(|(i, field)| {
+        .map(|field| {
             let ident = field.ident.expect("struct has unnamed field");
-            let mut field_expr = quote_expr!(cx, self.value.$ident);
-            if !is_enum {
-                field_expr = quote_expr!(cx, &$field_expr);
-            }
+            let mut field_expr = if is_enum {
+                quote_expr!(cx, $ident)
+            } else {
+                quote_expr!(cx, &self.$ident)
+            };
 
             let key_expr = name_expr(builder, field.attrs.name());
 
-            let continue_if_skip = field.attrs.skip_serializing_if()
-                .map(|path| quote_stmt!(cx, if $path($field_expr) { continue }));
+            let skip = field.attrs.skip_serializing_if()
+                .map(|path| quote_expr!(cx, $path($field_expr)))
+                .unwrap_or(quote_expr!(cx, false));
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(cx, builder,
                     &structure_ty, generics, &field.ty, path, field_expr)
             }
 
-            let expr = quote_expr!(cx,
-                _serializer.$serializer_method($key_expr, $field_expr)
-            );
-
-            quote_arm!(cx,
-                $i => {
-                    self.state += 1;
-                    $continue_if_skip
-                    return Ok(Some(try!($expr)));
+            quote_stmt!(cx,
+                if !$skip {
+                    try!(_map_serializer.serialize_elt($key_expr, $field_expr));
                 }
-            )
+            ).unwrap()
         })
-        .collect();
-
-    let visitor_impl_generics = builder.from_generics(generics.clone())
-        .add_lifetime_bound("'__a")
-        .lifetime_name("'__a")
-        .build();
-
-    let where_clause = &visitor_impl_generics.where_clause;
-
-    let visitor_generics = builder.from_generics(visitor_impl_generics.clone())
-        .strip_bounds()
-        .build();
-
-    let len = fields.iter()
-        .filter(|&field| !field.attrs.skip_serializing())
-        .map(|field| {
-            let ident = field.ident.expect("struct has unnamed fields");
-            let mut field_expr = quote_expr!(cx, self.value.$ident);
-            if !is_enum {
-                field_expr = quote_expr!(cx, &$field_expr);
-            }
-
-            match field.attrs.skip_serializing_if() {
-                Some(path) => quote_expr!(cx, if $path($field_expr) { 0 } else { 1 }),
-                None => quote_expr!(cx, 1),
-            }
-        })
-        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
-
-    (
-        quote_item!(cx,
-            struct Visitor $visitor_impl_generics $where_clause {
-                state: usize,
-                value: $variant_ty,
-                _structure_ty: ::std::marker::PhantomData<&'__a $structure_ty>,
-            }
-        ).unwrap(),
-
-        quote_item!(cx,
-            impl $visitor_impl_generics
-            _serde::ser::MapVisitor
-            for Visitor $visitor_generics
-            $where_clause {
-                #[inline]
-                fn visit<__S>(&mut self, _serializer: &mut __S) -> ::std::result::Result<Option<()>, __S::Error>
-                    where __S: _serde::ser::Serializer,
-                {
-                    loop {
-                        match self.state {
-                            $arms
-                            _ => { return Ok(None); }
-                        }
-                    }
-                }
-
-                #[inline]
-                fn len(&self) -> Option<usize> {
-                    Some($len)
-                }
-            }
-        ).unwrap(),
-    )
+        .collect()
 }
 
 fn wrap_serialize_with(

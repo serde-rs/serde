@@ -2,13 +2,72 @@ use std::marker::PhantomData;
 
 use serde::ser::{
     self,
-    MapVisitor,
-    SeqVisitor,
     Serialize,
+    MapHelper,
+    SeqHelper,
 };
 
 use error::Error;
 use token::Token;
+
+pub enum MapSerializer {
+    Map,
+    Struct,
+    Enum,
+}
+
+impl ser::MapSerializer for MapSerializer {
+    type Error = Error;
+
+    fn serialize_elt<S: ?Sized, K, V>(&mut self, serializer: &mut S, key: K, value: V) -> Result<(), Self::Error>
+        where K: Serialize,
+              V: Serialize,
+              S: ser::Serializer<Error = Error> {
+        match *self {
+            MapSerializer::Map => serializer.serialize_map_elt(key, value),
+            MapSerializer::Struct => serializer.serialize_struct_elt(key, value),
+            MapSerializer::Enum => serializer.serialize_struct_variant_elt(key, value),
+        }
+    }
+
+    fn drop<S: ?Sized>(self, serializer: &mut S) -> Result<(), Self::Error> where S: ser::Serializer<Error = Error> {
+        match self {
+            MapSerializer::Map => serializer.serialize_map_end(),
+            MapSerializer::Struct => serializer.serialize_struct_end(),
+            MapSerializer::Enum => serializer.serialize_struct_variant_end(),
+        }
+    }
+}
+
+pub enum SeqSerializer {
+    Seq,
+    Tuple,
+    TupleStruct,
+    Enum,
+}
+
+impl ser::SeqSerializer for SeqSerializer {
+    type Error = Error;
+
+    fn serialize_elt<S: ?Sized, T>(&mut self, serializer: &mut S, value: T) -> Result<(), Self::Error>
+        where T: Serialize, S: ser::Serializer<Error = Error> {
+        match *self {
+            SeqSerializer::Seq => serializer.serialize_seq_elt(value),
+            SeqSerializer::Tuple => serializer.serialize_tuple_elt(value),
+            SeqSerializer::TupleStruct => serializer.serialize_tuple_struct_elt(value),
+            SeqSerializer::Enum => serializer.serialize_tuple_variant_elt(value),
+        }
+    }
+
+    fn drop<S: ?Sized>(self, serializer: &mut S) -> Result<(), Self::Error> where S: ser::Serializer<Error = Error> {
+        match self {
+            SeqSerializer::Seq => serializer.serialize_seq_end(),
+            SeqSerializer::Tuple => serializer.serialize_tuple_end(),
+            SeqSerializer::TupleStruct => serializer.serialize_tuple_struct_end(),
+            SeqSerializer::Enum => serializer.serialize_tuple_variant_end(),
+        }
+    }
+}
 
 pub struct Serializer<'a, I>
     where I: Iterator<Item=&'a Token<'a>>,
@@ -30,32 +89,14 @@ impl<'a, I> Serializer<'a, I>
     pub fn next_token(&mut self) -> Option<&'a Token<'a>> {
         self.tokens.next()
     }
-
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
-    {
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::SeqEnd));
-
-        Ok(())
-    }
-
-    fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), Error>
-        where V: MapVisitor
-    {
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::MapEnd));
-
-        Ok(())
-    }
 }
 
 impl<'a, I> ser::Serializer for Serializer<'a, I>
     where I: Iterator<Item=&'a Token<'a>>,
 {
     type Error = Error;
+    type SeqSerializer = SeqSerializer;
+    type MapSerializer = MapSerializer;
 
     fn serialize_unit(&mut self) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Unit));
@@ -174,25 +215,10 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-
-    fn serialize_seq<V>(&mut self, visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+    fn serialize_seq<'b>(&'b mut self, len: Option<usize>) -> Result<SeqHelper<'b, Self>, Error>
     {
-        let len = visitor.len();
-
         assert_eq!(self.tokens.next(), Some(&Token::SeqStart(len)));
-
-        self.visit_seq(visitor)
-    }
-
-    fn serialize_fixed_size_array<V>(&mut self, visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
-    {
-        let len = visitor.len().expect("arrays must have a length");
-
-        assert_eq!(self.tokens.next(), Some(&Token::SeqArrayStart(len)));
-
-        self.visit_seq(visitor)
+        Ok(SeqHelper::new(self, SeqSerializer::Seq))
     }
 
     fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), Error>
@@ -202,18 +228,22 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_tuple<V>(&mut self, mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
-    {
-        let len = visitor.len().expect("arrays must have a length");
+    fn serialize_seq_end(&mut self) -> Result<(), Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::SeqEnd));
+        Ok(())
+    }
 
+    fn serialize_fixed_size_array<'b>(&'b mut self, len: usize) -> Result<SeqHelper<'b, Self>, Error>
+    {
+        assert_eq!(self.tokens.next(), Some(&Token::SeqArrayStart(len)));
+        Ok(SeqHelper::new(self, SeqSerializer::Seq))
+    }
+
+    fn serialize_tuple<'b>(&'b mut self, len: usize) -> Result<SeqHelper<'b, Self>, Error>
+    {
         assert_eq!(self.tokens.next(), Some(&Token::TupleStart(len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::TupleEnd));
-
-        Ok(())
+        Ok(SeqHelper::new(self, SeqSerializer::Tuple))
     }
 
     fn serialize_tuple_elt<T>(&mut self, value: T) -> Result<(), Error>
@@ -223,128 +253,117 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
+    fn serialize_tuple_end(&mut self) -> Result<(), Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::TupleEnd));
+        Ok(())
+    }
+
     fn serialize_newtype_struct<T>(&mut self,
-                               name: &'static str,
-                               value: T) -> Result<(), Error>
+                                   name: &'static str,
+                                   value: T) -> Result<(), Error>
         where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::StructNewType(name)));
         value.serialize(self)
     }
 
-    fn serialize_tuple_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+    fn serialize_tuple_struct<'b>(&'b mut self, name: &str, len: usize) -> Result<SeqHelper<'b, Self>, Error>
     {
-        let len = visitor.len();
-
         assert_eq!(self.tokens.next(), Some(&Token::TupleStructStart(name, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::TupleStructEnd));
-
-        Ok(())
+        Ok(SeqHelper::new(self, SeqSerializer::TupleStruct))
     }
 
     fn serialize_tuple_struct_elt<T>(&mut self, value: T) -> Result<(), Error>
-        where T: Serialize,
+        where T: Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::TupleStructSep));
         value.serialize(self)
     }
 
-    fn serialize_tuple_variant<V>(&mut self,
-                                  name: &str,
-                                  _variant_index: usize,
-                                  variant: &str,
-                                  mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
-    {
-        let len = visitor.len();
-
-        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqStart(name, variant, len)));
-
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqEnd));
-
+    fn serialize_tuple_struct_end(&mut self) -> Result<(), Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::TupleStructEnd));
         Ok(())
     }
 
+    fn serialize_tuple_variant<'b>(&'b mut self,
+                               name: &str,
+                               _variant_index: usize,
+                               variant: &str,
+                               len: usize) -> Result<SeqHelper<'b, Self>, Error>
+    {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqStart(name, variant, len)));
+
+        Ok(SeqHelper::new(self, SeqSerializer::Enum))
+    }
+
     fn serialize_tuple_variant_elt<T>(&mut self, value: T) -> Result<(), Error>
-        where T: Serialize,
+        where T: Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::EnumSeqSep));
         value.serialize(self)
     }
 
-    fn serialize_map<V>(&mut self, visitor: V) -> Result<(), Error>
-        where V: MapVisitor
-    {
-        let len = visitor.len();
+    fn serialize_tuple_variant_end(&mut self) -> Result<(), Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqEnd));
+        Ok(())
+    }
 
+    fn serialize_map<'b>(&'b mut self, len: Option<usize>) -> Result<MapHelper<'b, Self>, Error>
+    {
         assert_eq!(self.tokens.next(), Some(&Token::MapStart(len)));
 
-        self.visit_map(visitor)
+        Ok(MapHelper::new(self, MapSerializer::Map))
     }
 
-    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Error>
-        where K: Serialize,
-              V: Serialize,
-    {
+    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::MapSep));
-
         try!(key.serialize(self));
         value.serialize(self)
     }
 
-    fn serialize_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<(), Error>
-        where V: MapVisitor
-    {
-        let len = visitor.len();
+    fn serialize_map_end(&mut self) -> Result<(), Self::Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::MapEnd));
+        Ok(())
+    }
 
+    fn serialize_struct<'b>(&'b mut self, name: &str, len: usize) -> Result<MapHelper<'b, Self>, Error>
+    {
         assert_eq!(self.tokens.next(), Some(&Token::StructStart(name, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::StructEnd));
-
-        Ok(())
+        Ok(MapHelper::new(self, MapSerializer::Struct))
     }
 
-    fn serialize_struct_elt<T>(&mut self, key: &'static str, value: T) -> Result<(), Error>
-        where T: Serialize,
-    {
+    fn serialize_struct_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::StructSep));
-
         try!(key.serialize(self));
         value.serialize(self)
     }
 
-    fn serialize_struct_variant<V>(&mut self,
-                                   name: &str,
-                                   _variant_index: usize,
-                                   variant: &str,
-                                   mut visitor: V) -> Result<(), Error>
-        where V: MapVisitor
-    {
-        let len = visitor.len();
+    fn serialize_struct_end(&mut self) -> Result<(), Self::Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::StructEnd));
+        Ok(())
+    }
 
+    fn serialize_struct_variant<'b>(&'b mut self,
+                                name: &str,
+                                _variant_index: usize,
+                                variant: &str,
+                                len: usize) -> Result<MapHelper<'b, Self>, Error>
+    {
         assert_eq!(self.tokens.next(), Some(&Token::EnumMapStart(name, variant, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
-
-        assert_eq!(self.tokens.next(), Some(&Token::EnumMapEnd));
-
-        Ok(())
+        Ok(MapHelper::new(self, MapSerializer::Enum))
     }
 
-    fn serialize_struct_variant_elt<T>(&mut self, key: &'static str, value: T) -> Result<(), Error>
-        where T: Serialize,
-    {
+    fn serialize_struct_variant_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::EnumMapSep));
-
         try!(key.serialize(self));
         value.serialize(self)
+    }
+
+    fn serialize_struct_variant_end(&mut self) -> Result<(), Self::Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumMapEnd));
+        Ok(())
     }
 }

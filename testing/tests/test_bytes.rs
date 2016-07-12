@@ -50,8 +50,42 @@ impl BytesSerializer {
     }
 }
 
+struct SeqSerializer;
+
+impl serde::ser::SeqSerializer for SeqSerializer {
+    type Error = Error;
+
+    fn serialize_elt<S: ?Sized, T>(&mut self, _serializer: &mut S, _value: T) -> Result<(), Self::Error>
+        where T: Serialize, S: serde::ser::Serializer<Error = Error> {
+        Err(Error)
+    }
+
+    fn drop<S: ?Sized>(self, _serializer: &mut S) -> Result<(), Self::Error> where S: serde::ser::Serializer<Error = Error> {
+        Err(Error)
+    }
+}
+
+struct MapSerializer;
+
+impl serde::ser::MapSerializer for MapSerializer {
+    type Error = Error;
+
+    fn serialize_elt<S: ?Sized, K, V>(&mut self, _serializer: &mut S, _key: K, _value: V) -> Result<(), Self::Error>
+        where K: Serialize,
+              V: Serialize,
+              S: serde::ser::Serializer<Error = Error> {
+        Err(Error)
+    }
+
+    fn drop<S: ?Sized>(self, _serializer: &mut S) -> Result<(), Self::Error> where S: serde::ser::Serializer<Error = Error> {
+        Err(Error)
+    }
+}
+
 impl serde::Serializer for BytesSerializer {
     type Error = Error;
+    type SeqSerializer = SeqSerializer;
+    type MapSerializer = MapSerializer;
 
     fn serialize_unit(&mut self) -> Result<(), Error> {
         Err(Error)
@@ -95,8 +129,7 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_seq<V>(&mut self, _visitor: V) -> Result<(), Error>
-        where V: serde::ser::SeqVisitor,
+    fn serialize_seq<'a>(&'a mut self, _len: Option<usize>) -> Result<serde::ser::SeqHelper<'a, Self>, Error>
     {
         Err(Error)
     }
@@ -107,8 +140,12 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_map<V>(&mut self, _visitor: V) -> Result<(), Error>
-        where V: serde::ser::MapVisitor,
+    fn serialize_seq_end(&mut self) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_map<'a>(&mut self, _: Option<usize>) -> Result<serde::ser::MapHelper<'a, Self>, Error>
     {
         Err(Error)
     }
@@ -116,6 +153,11 @@ impl serde::Serializer for BytesSerializer {
     fn serialize_map_elt<K, V>(&mut self, _key: K, _value: V) -> Result<(), Error>
         where K: serde::Serialize,
               V: serde::Serialize,
+    {
+        Err(Error)
+    }
+
+    fn serialize_map_end(&mut self) -> Result<(), Error>
     {
         Err(Error)
     }

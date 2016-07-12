@@ -82,7 +82,7 @@ fn test_default_struct() {
     assert_de_tokens(
         &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         &[
-            Token::StructStart("DefaultStruct", Some(3)),
+            Token::StructStart("DefaultStruct", 3),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -111,7 +111,7 @@ fn test_default_struct() {
     assert_de_tokens(
         &DefaultStruct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         &[
-            Token::StructStart("DefaultStruct", Some(1)),
+            Token::StructStart("DefaultStruct", 1),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -145,7 +145,7 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
+            Token::EnumMapStart("DefaultEnum", "Struct", 5),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -174,7 +174,7 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
+            Token::EnumMapStart("DefaultEnum", "Struct", 5),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -208,7 +208,7 @@ fn test_no_std_default() {
     assert_de_tokens(
         &ContainsNoStdDefault { a: NoStdDefault(123) },
         &[
-            Token::StructStart("ContainsNoStdDefault", Some(1)),
+            Token::StructStart("ContainsNoStdDefault", 1),
             Token::StructEnd,
         ]
     );
@@ -216,7 +216,7 @@ fn test_no_std_default() {
     assert_de_tokens(
         &ContainsNoStdDefault { a: NoStdDefault(8) },
         &[
-            Token::StructStart("ContainsNoStdDefault", Some(1)),
+            Token::StructStart("ContainsNoStdDefault", 1),
 
             Token::StructSep,
             Token::Str("a"),
@@ -281,7 +281,7 @@ fn test_elt_not_deserialize() {
             e: NotDeserializeEnum::Trouble,
         },
         &[
-            Token::StructStart("ContainsNotDeserialize", Some(3)),
+            Token::StructStart("ContainsNotDeserialize", 3),
             Token::StructEnd,
         ]
     );
@@ -299,7 +299,7 @@ fn test_ignore_unknown() {
     assert_de_tokens(
         &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         &[
-            Token::StructStart("DefaultStruct", Some(5)),
+            Token::StructStart("DefaultStruct", 5),
 
             Token::StructSep,
             Token::Str("whoops1"),
@@ -334,7 +334,7 @@ fn test_ignore_unknown() {
 
     assert_de_tokens_error::<DenyUnknown>(
         &[
-            Token::StructStart("DenyUnknown", Some(2)),
+            Token::StructStart("DenyUnknown", 2),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -368,7 +368,7 @@ fn test_rename_struct() {
     assert_tokens(
         &RenameStruct { a1: 1, a2: 2 },
         &[
-            Token::StructStart("Superhero", Some(2)),
+            Token::StructStart("Superhero", 2),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -385,7 +385,7 @@ fn test_rename_struct() {
     assert_ser_tokens(
         &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
         &[
-            Token::StructStart("SuperheroSer", Some(2)),
+            Token::StructStart("SuperheroSer", 2),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -402,7 +402,7 @@ fn test_rename_struct() {
     assert_de_tokens(
         &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
         &[
-            Token::StructStart("SuperheroDe", Some(2)),
+            Token::StructStart("SuperheroDe", 2),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -465,7 +465,7 @@ fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::WonderWoman(0, 1),
         &[
-            Token::EnumSeqStart("Superhero", "diana_prince", Some(2)),
+            Token::EnumSeqStart("Superhero", "diana_prince", 2),
 
             Token::EnumSeqSep,
             Token::I8(0),
@@ -480,7 +480,7 @@ fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::Flash { a: 1 },
         &[
-            Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
+            Token::EnumMapStart("Superhero", "barry_allan", 1),
 
             Token::EnumMapSep,
             Token::Str("b"),
@@ -496,7 +496,7 @@ fn test_rename_enum() {
             b: String::new(),
         },
         &[
-            Token::EnumMapStart("SuperheroSer", "dick_grayson", Some(2)),
+            Token::EnumMapStart("SuperheroSer", "dick_grayson", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -516,7 +516,7 @@ fn test_rename_enum() {
             b: String::new(),
         },
         &[
-            Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
+            Token::EnumMapStart("SuperheroDe", "jason_todd", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -550,7 +550,7 @@ fn test_skip_serializing_struct() {
             c: 3,
         },
         &[
-            Token::StructStart("SkipSerializingStruct", Some(2)),
+            Token::StructStart("SkipSerializingStruct", 2),
 
             Token::StructSep,
             Token::Str("a"),
@@ -571,7 +571,7 @@ fn test_skip_serializing_struct() {
             c: 123,
         },
         &[
-            Token::StructStart("SkipSerializingStruct", Some(1)),
+            Token::StructStart("SkipSerializingStruct", 1),
 
             Token::StructSep,
             Token::Str("a"),
@@ -603,7 +603,7 @@ fn test_skip_serializing_enum() {
             c: 3,
         },
         &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(2)),
+            Token::EnumMapStart("SkipSerializingEnum", "Struct", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -624,7 +624,7 @@ fn test_skip_serializing_enum() {
             c: 123,
         },
         &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(1)),
+            Token::EnumMapStart("SkipSerializingEnum", "Struct", 1),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -671,7 +671,7 @@ fn test_elt_not_serialize() {
             d: NotSerializeEnum::Trouble,
         },
         &[
-            Token::StructStart("ContainsNotSerialize", Some(2)),
+            Token::StructStart("ContainsNotSerialize", 2),
 
             Token::StructSep,
             Token::Str("a"),
@@ -703,7 +703,7 @@ fn test_serialize_with_struct() {
             b: 2,
         },
         &[
-            Token::StructStart("SerializeWithStruct", Some(2)),
+            Token::StructStart("SerializeWithStruct", 2),
 
             Token::StructSep,
             Token::Str("a"),
@@ -723,7 +723,7 @@ fn test_serialize_with_struct() {
             b: 123,
         },
         &[
-            Token::StructStart("SerializeWithStruct", Some(2)),
+            Token::StructStart("SerializeWithStruct", 2),
 
             Token::StructSep,
             Token::Str("a"),
@@ -756,7 +756,7 @@ fn test_serialize_with_enum() {
             b: 2,
         },
         &[
-            Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+            Token::EnumMapStart("SerializeWithEnum", "Struct", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -776,7 +776,7 @@ fn test_serialize_with_enum() {
             b: 123,
         },
         &[
-            Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+            Token::EnumMapStart("SerializeWithEnum", "Struct", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -806,7 +806,7 @@ fn test_deserialize_with_struct() {
             b: 2,
         },
         &[
-            Token::StructStart("DeserializeWithStruct", Some(2)),
+            Token::StructStart("DeserializeWithStruct", 2),
 
             Token::StructSep,
             Token::Str("a"),
@@ -826,7 +826,7 @@ fn test_deserialize_with_struct() {
             b: 123,
         },
         &[
-            Token::StructStart("DeserializeWithStruct", Some(2)),
+            Token::StructStart("DeserializeWithStruct", 2),
 
             Token::StructSep,
             Token::Str("a"),
@@ -858,7 +858,7 @@ fn test_deserialize_with_enum() {
             b: 2,
         },
         &[
-            Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
+            Token::EnumMapStart("DeserializeWithEnum", "Struct", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -878,7 +878,7 @@ fn test_deserialize_with_enum() {
             b: 123,
         },
         &[
-            Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
+            Token::EnumMapStart("DeserializeWithEnum", "Struct", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -897,7 +897,7 @@ fn test_deserialize_with_enum() {
 fn test_missing_renamed_field_struct() {
     assert_de_tokens_error::<RenameStruct>(
         &[
-            Token::StructStart("Superhero", Some(2)),
+            Token::StructStart("Superhero", 2),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -910,7 +910,7 @@ fn test_missing_renamed_field_struct() {
 
     assert_de_tokens_error::<RenameStructSerializeDeserialize>(
         &[
-            Token::StructStart("SuperheroDe", Some(2)),
+            Token::StructStart("SuperheroDe", 2),
 
             Token::StructSep,
             Token::Str("a1"),
@@ -926,7 +926,7 @@ fn test_missing_renamed_field_struct() {
 fn test_missing_renamed_field_enum() {
     assert_de_tokens_error::<RenameEnum>(
         &[
-            Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
+            Token::EnumMapStart("Superhero", "barry_allan", 1),
 
             Token::EnumMapEnd,
         ],
@@ -935,7 +935,7 @@ fn test_missing_renamed_field_enum() {
 
     assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
         &[
-            Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
+            Token::EnumMapStart("SuperheroDe", "jason_todd", 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -957,7 +957,7 @@ enum InvalidLengthEnum {
 fn test_invalid_length_enum() {
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
-            Token::EnumSeqStart("InvalidLengthEnum", "A", Some(3)),
+            Token::EnumSeqStart("InvalidLengthEnum", "A", 3),
                 Token::EnumSeqSep,
                 Token::I32(1),
             Token::EnumSeqEnd,
@@ -966,7 +966,7 @@ fn test_invalid_length_enum() {
     );
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
-            Token::EnumSeqStart("InvalidLengthEnum", "B", Some(3)),
+            Token::EnumSeqStart("InvalidLengthEnum", "B", 3),
                 Token::EnumSeqSep,
                 Token::I32(1),
             Token::EnumSeqEnd,
