@@ -95,7 +95,7 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_seq<'a>(&'a mut self, _len: Option<usize>) -> Result<(), Error>
+    fn serialize_seq(&mut self, _len: Option<usize>) -> Result<(), Error>
     {
         Err(Error)
     }
@@ -106,12 +106,12 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_seq_end(&mut self) -> Result<(), Error>
+    fn serialize_seq_end(&mut self, _: Option<usize>) -> Result<(), Error>
     {
         Err(Error)
     }
 
-    fn serialize_map<'a>(&mut self, _: Option<usize>) -> Result<(), Error>
+    fn serialize_map(&mut self, _: Option<usize>) -> Result<(), Error>
     {
         Err(Error)
     }
@@ -123,7 +123,7 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_map_end(&mut self) -> Result<(), Error>
+    fn serialize_map_end(&mut self, _: Option<usize>) -> Result<(), Error>
     {
         Err(Error)
     }

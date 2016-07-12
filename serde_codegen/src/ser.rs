@@ -232,7 +232,7 @@ fn serialize_tuple_struct(
     quote_expr!(cx, {
         try!(_serializer.serialize_tuple_struct($type_name, $len));
         $serialize_stmts
-        _serializer.serialize_tuple_struct_end()
+        _serializer.serialize_tuple_struct_end($type_name, $len)
     })
 }
 
@@ -269,9 +269,10 @@ fn serialize_struct(
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_expr!(cx, {
-        try!(_serializer.serialize_struct($type_name, $len));
+        let len = $len;
+        try!(_serializer.serialize_struct($type_name, len));
         $serialize_fields
-        _serializer.serialize_struct_end()
+        _serializer.serialize_struct_end($type_name, len)
     })
 }
 
@@ -465,7 +466,7 @@ fn serialize_tuple_variant(
     quote_expr!(cx, {
         try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
         $serialize_stmts
-        _serializer.serialize_tuple_variant_end()
+        _serializer.serialize_tuple_variant_end($type_name, $variant_index, $variant_name, $len)
     })
 }
 
@@ -505,14 +506,20 @@ fn serialize_struct_variant(
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_expr!(cx, {
+        let len = $len;
         try!(_serializer.serialize_struct_variant(
             $item_name,
             $variant_index,
             $variant_name,
-            $len,
+            len,
         ));
         $serialize_fields
-        _serializer.serialize_struct_variant_end()
+        _serializer.serialize_struct_variant_end(
+            $item_name,
+            $variant_index,
+            $variant_name,
+            len,
+        )
     })
 }
 

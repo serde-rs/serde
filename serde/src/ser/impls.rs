@@ -156,7 +156,7 @@ impl<T> Serialize for [T]
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -173,7 +173,7 @@ macro_rules! array_impls {
                 for e in self.iter() {
                     try!(serializer.serialize_seq_elt(e));
                 }
-                serializer.serialize_seq_end()
+                serializer.serialize_seq_end(Some(self.len()))
             }
         }
     }
@@ -227,7 +227,7 @@ impl<T> Serialize for BinaryHeap<T>
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -243,7 +243,7 @@ impl<T> Serialize for BTreeSet<T>
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -259,7 +259,7 @@ impl<T> Serialize for EnumSet<T>
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -276,7 +276,7 @@ impl<T, H> Serialize for HashSet<T, H>
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -292,7 +292,7 @@ impl<T> Serialize for LinkedList<T>
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -333,7 +333,7 @@ impl<T> Serialize for VecDeque<T> where T: Serialize {
         for e in self.iter() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end()
+        serializer.serialize_seq_end(Some(self.len()))
     }
 }
 
@@ -373,7 +373,7 @@ macro_rules! tuple_impls {
                     $(
                         try!(serializer.serialize_tuple_elt(&e!(self.$idx)));
                     )+
-                    serializer.serialize_tuple_end()
+                    serializer.serialize_tuple_end($len)
                 }
             }
         )+
@@ -566,7 +566,7 @@ impl<K, V> Serialize for BTreeMap<K, V>
         for (k, v) in self.iter() {
             try!(serializer.serialize_map_elt(k, v));
         }
-        serializer.serialize_map_end()
+        serializer.serialize_map_end(Some(self.len()))
     }
 }
 
@@ -584,7 +584,7 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
         for (k, v) in self.iter() {
             try!(serializer.serialize_map_elt(k, v));
         }
-        serializer.serialize_map_end()
+        serializer.serialize_map_end(Some(self.len()))
     }
 }
 

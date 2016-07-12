@@ -140,7 +140,7 @@ pub trait Serializer {
         for b in value.iter() {
             try!(self.serialize_seq_elt(b));
         }
-        self.serialize_seq_end()
+        self.serialize_seq_end(Some(value.len()))
     }
 
     /// Serializes a `()` value.
@@ -176,7 +176,7 @@ pub trait Serializer {
     {
         try!(self.serialize_tuple_struct(name, 1));
         try!(self.serialize_tuple_struct_elt(value));
-        self.serialize_tuple_struct_end()
+        self.serialize_tuple_struct_end(name, 1)
     }
 
     /// Allows a variant with a single item to be more efficiently
@@ -192,7 +192,7 @@ pub trait Serializer {
     {
         try!(self.serialize_tuple_variant(name, variant_index, variant, 1));
         try!(self.serialize_tuple_variant_elt(value));
-        self.serialize_tuple_variant_end()
+        self.serialize_tuple_variant_end(name, variant_index, variant, 1)
     }
 
     /// Serializes a `None` value..serialize
@@ -213,7 +213,7 @@ pub trait Serializer {
         where T: Serialize;
 
     /// Finish serializing a sequence.
-    fn serialize_seq_end(&mut self) -> Result<(), Self::Error>;
+    fn serialize_seq_end(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
 
     /// Serializes a tuple.
     ///
@@ -237,8 +237,8 @@ pub trait Serializer {
     ///
     /// By default, tuples are serialized as a sequence.
     #[inline]
-    fn serialize_tuple_end(&mut self) -> Result<(), Self::Error> {
-        self.serialize_seq_end()
+    fn serialize_tuple_end(&mut self, len: usize) -> Result<(), Self::Error> {
+        self.serialize_seq_end(Some(len))
     }
 
     /// Serializes a fixed-size array.
@@ -276,8 +276,11 @@ pub trait Serializer {
     ///
     /// By default, tuple structs are serialized as a sequence.
     #[inline]
-    fn serialize_tuple_struct_end(&mut self) -> Result<(), Self::Error> {
-        self.serialize_tuple_end()
+    fn serialize_tuple_struct_end(&mut self,
+                              _name: &'static str,
+                              len: usize,
+                              ) -> Result<(), Self::Error> {
+        self.serialize_tuple_end(len)
     }
 
     /// Serializes a tuple variant.
@@ -301,15 +304,20 @@ pub trait Serializer {
     fn serialize_tuple_variant_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize
     {
-        self.serialize_tuple_elt(value)
+        self.serialize_tuple_struct_elt(value)
     }
 
     /// Finishes serialization of a tuple variant.
     ///
     /// By default, tuple variants are serialized as tuples.
     #[inline]
-    fn serialize_tuple_variant_end(&mut self) -> Result<(), Self::Error> {
-        self.serialize_tuple_end()
+    fn serialize_tuple_variant_end(&mut self,
+                               _name: &'static str,
+                               _variant_index: usize,
+                               variant: &'static str,
+                               len: usize,
+                               ) -> Result<(), Self::Error> {
+        self.serialize_tuple_struct_end(variant, len)
     }
 
     /// Serialize a map.
@@ -319,16 +327,16 @@ pub trait Serializer {
     fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize;
 
     /// Finishes serializing a map
-    fn serialize_map_end(&mut self) -> Result<(), Self::Error>;
+    fn serialize_map_end(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
 
     /// Serializes a struct.
     ///
     /// By default, structs are serialized as a map with the field name as the key.
     #[inline]
     fn serialize_struct(&mut self,
-                           _name: &'static str,
-                           len: usize,
-                       ) -> Result<(), Self::Error>
+                        _name: &'static str,
+                        len: usize,
+                        ) -> Result<(), Self::Error>
     {
         self.serialize_map(Some(len))
     }
@@ -343,8 +351,11 @@ pub trait Serializer {
     /// Finishes serializing a struct
     ///
     /// By default, structs are serialized as a map with the field name as the key.
-    fn serialize_struct_end(&mut self) -> Result<(), Self::Error> {
-        self.serialize_map_end()
+    fn serialize_struct_end(&mut self,
+                        _name: &'static str,
+                        len: usize,
+                        ) -> Result<(), Self::Error> {
+        self.serialize_map_end(Some(len))
     }
 
     /// Serializes a struct variant.
@@ -371,7 +382,12 @@ pub trait Serializer {
     /// Finishes serializing a struct variant
     ///
     /// By default, structs are serialized as a map with the field name as the key.
-    fn serialize_struct_variant_end(&mut self) -> Result<(), Self::Error> {
-        self.serialize_struct_end()
+    fn serialize_struct_variant_end(&mut self,
+                                   _name: &'static str,
+                                   _variant_index: usize,
+                                   variant: &'static str,
+                                   len: usize,
+                               ) -> Result<(), Self::Error> {
+        self.serialize_struct_end(variant, len)
     }
 }
