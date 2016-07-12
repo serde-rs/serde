@@ -304,7 +304,7 @@ impl<A> Serialize for ops::Range<A>
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serialize,
+        where S: Serializer,
     {
         let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
