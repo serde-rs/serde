@@ -382,19 +382,19 @@ fn serialize_variant(
             )
         }
         Style::Struct => {
-            let pat = builder.pat().struct_()
-                .id(type_ident).id(variant_ident).build()
-                .with_pats(variant.fields.iter()
-                        .map(|field| {
-                            match field.ident {
-                                Some(name) => (name, builder.pat().ref_id(name)),
-                                None => {
-                                    cx.span_bug(field.span, "struct variant has unnamed fields")
-                                }
-                            }
-                        })
-                )
-                .build();
+            let mut pat = builder.pat().struct_().id(type_ident).id(variant_ident).build();
+            for field in variant.fields.iter() {
+                let name = match field.ident {
+                    Some(name) => name,
+                    None => cx.span_bug(field.span, "struct variant has unnamed fields"),
+                };
+                pat = pat.with_field_pat(ast::FieldPat {
+                    ident: name,
+                    pat: builder.pat().ref_id(name),
+                    is_shorthand: true,
+                });
+            }
+            let pat = pat.build();
 
             let expr = serialize_struct_variant(
                 cx,
