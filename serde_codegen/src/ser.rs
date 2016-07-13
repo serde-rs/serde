@@ -538,7 +538,7 @@ fn serialize_tuple_struct_visitor(
             let mut field_expr = if is_enum {
                 builder.expr().path().id(format!("__field{}", i)).build()
             } else {
-                builder.expr().tup_field(i).ref_().self_()
+                builder.expr().ref_().tup_field(i).self_()
             };
 
             let skip = field.attrs.skip_serializing_if()
