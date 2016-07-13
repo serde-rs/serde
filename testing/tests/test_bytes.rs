@@ -5,19 +5,25 @@ extern crate serde;
 use self::serde::Serialize;
 use self::serde::bytes::{ByteBuf, Bytes};
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, PartialEq)]
 struct Error;
 
 impl serde::ser::Error for Error {
-    fn custom<T: Into<String>>(_: T) -> Error { Error }
+    fn custom<T: Into<String>>(_: T) -> Error {
+        Error
+    }
 }
 
 impl serde::de::Error for Error {
-    fn custom<T: Into<String>>(_: T) -> Error { Error }
+    fn custom<T: Into<String>>(_: T) -> Error {
+        Error
+    }
 
-    fn end_of_stream() -> Error { Error }
+    fn end_of_stream() -> Error {
+        Error
+    }
 }
 
 impl fmt::Display for Error {
@@ -36,7 +42,7 @@ impl error::Error for Error {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 struct BytesSerializer {
     bytes: Vec<u8>,
@@ -102,7 +108,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_seq_elt<T>(&mut self, _value: T) -> Result<(), Error>
-        where T: serde::Serialize
+        where T: serde::Serialize,
     {
         Err(Error)
     }
@@ -126,7 +132,7 @@ impl serde::Serializer for BytesSerializer {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 struct BytesDeserializer {
     bytes: Option<Vec<u8>>,
@@ -156,7 +162,7 @@ impl serde::Deserializer for BytesDeserializer {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 #[test]
 fn test_bytes_ser_bytes() {
@@ -171,7 +177,7 @@ fn test_bytes_ser_bytes() {
     bytes.serialize(&mut ser).unwrap();
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 #[test]
 fn test_byte_buf_de_bytes() {

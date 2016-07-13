@@ -14,11 +14,15 @@ pub trait Error: Debug + Display + ::core::marker::Reflect {
     fn description(&self) -> &str;
 
     /// The lower-level cause of this error, if any.
-    fn cause(&self) -> Option<&Error> { None }
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
 
     /// Get the `TypeId` of `self`
     #[doc(hidden)]
-    fn type_id(&self) -> TypeId where Self: 'static {
+    fn type_id(&self) -> TypeId
+        where Self: 'static,
+    {
         TypeId::of::<Self>()
     }
 }
@@ -34,11 +38,15 @@ pub trait Error: Debug + Display {
     fn description(&self) -> &str;
 
     /// The lower-level cause of this error, if any.
-    fn cause(&self) -> Option<&Error> { None }
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
 
     /// Stubbed! Returns type_id of `()`
     #[doc(hidden)]
-    fn type_id(&self) -> TypeId where Self: 'static {
+    fn type_id(&self) -> TypeId
+        where Self: 'static,
+    {
         TypeId::of::<()>()
     }
 }

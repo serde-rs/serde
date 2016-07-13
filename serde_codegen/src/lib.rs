@@ -58,7 +58,9 @@ pub fn register(reg: &mut syntex::Registry) {
         impl fold::Folder for StripAttributeFolder {
             fn fold_attribute(&mut self, attr: ast::Attribute) -> Option<ast::Attribute> {
                 match attr.node.value.node {
-                    ast::MetaItemKind::List(ref n, _) if n == &"serde" => { return None; }
+                    ast::MetaItemKind::List(ref n, _) if n == &"serde" => {
+                        return None;
+                    }
                     _ => {}
                 }
 

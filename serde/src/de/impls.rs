@@ -6,33 +6,17 @@ use std::borrow::Cow;
 use collections::borrow::Cow;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::{
-    BinaryHeap,
-    BTreeMap,
-    BTreeSet,
-    LinkedList,
-    VecDeque,
-    Vec,
-    String,
-};
+use collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, String, Vec, VecDeque};
 
 #[cfg(feature = "std")]
-use std::collections::{
-    HashMap,
-    HashSet,
-    BinaryHeap,
-    BTreeMap,
-    BTreeSet,
-    LinkedList,
-    VecDeque,
-};
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
 
 #[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::enum_set::{CLike, EnumSet};
 #[cfg(all(feature = "nightly", feature = "collections"))]
 use collections::borrow::ToOwned;
 
-use core::hash::{Hash, BuildHasher};
+use core::hash::{BuildHasher, Hash};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use std::net;
@@ -59,20 +43,11 @@ use core::nonzero::{NonZero, Zeroable};
 #[cfg(feature = "nightly")]
 use core::num::Zero;
 
-use de::{
-    Deserialize,
-    Deserializer,
-    EnumVisitor,
-    Error,
-    MapVisitor,
-    SeqVisitor,
-    Type,
-    VariantVisitor,
-    Visitor,
-};
+use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, Type,
+         VariantVisitor, Visitor};
 use de::from_primitive::FromPrimitive;
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// A visitor that produces a `()`.
 pub struct UnitVisitor;
@@ -101,7 +76,7 @@ impl Deserialize for () {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// A visitor that produces a `bool`.
 pub struct BoolVisitor;
@@ -134,7 +109,7 @@ impl Deserialize for bool {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserialize_num_method {
     ($src_ty:ty, $method:ident, $from_method:ident, $ty:expr) => {
@@ -166,7 +141,7 @@ impl<T> PrimitiveVisitor<T> {
 }
 
 impl<T> Visitor for PrimitiveVisitor<T>
-    where T: Deserialize + FromPrimitive + str::FromStr
+    where T: Deserialize + FromPrimitive + str::FromStr,
 {
     type Value = T;
 
@@ -187,9 +162,8 @@ impl<T> Visitor for PrimitiveVisitor<T>
     fn visit_str<E>(&mut self, s: &str) -> Result<T, E>
         where E: Error,
     {
-        str::FromStr::from_str(s.trim_matches(::utils::Pattern_White_Space)).or_else(|_| {
-            Err(Error::invalid_type(Type::Str))
-        })
+        str::FromStr::from_str(s.trim_matches(::utils::Pattern_White_Space))
+            .or_else(|_| Err(Error::invalid_type(Type::Str)))
     }
 }
 
@@ -219,7 +193,7 @@ impl_deserialize_num!(u64, deserialize_u64);
 impl_deserialize_num!(f32, deserialize_f32);
 impl_deserialize_num!(f64, deserialize_f64);
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 struct CharVisitor;
 
@@ -259,8 +233,7 @@ impl Deserialize for char {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(any(feature = "std", feature = "collections"))]
 struct StringVisitor;
 
@@ -308,15 +281,13 @@ impl Deserialize for String {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 struct OptionVisitor<T> {
     marker: PhantomData<T>,
 }
 
-impl<
-    T: Deserialize,
-> Visitor for OptionVisitor<T> {
+impl<T: Deserialize> Visitor for OptionVisitor<T> {
     type Value = Option<T>;
 
     #[inline]
@@ -341,22 +312,28 @@ impl<
     }
 }
 
-impl<T> Deserialize for Option<T> where T: Deserialize {
+impl<T> Deserialize for Option<T>
+    where T: Deserialize,
+{
     fn deserialize<D>(deserializer: &mut D) -> Result<Option<T>, D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize_option(OptionVisitor { marker: PhantomData })
+        deserializer.deserialize_option(OptionVisitor {
+            marker: PhantomData,
+        })
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// A visitor that produces a `PhantomData`.
 pub struct PhantomDataVisitor<T> {
     marker: PhantomData<T>,
 }
 
-impl<T> Visitor for PhantomDataVisitor<T> where T: Deserialize {
+impl<T> Visitor for PhantomDataVisitor<T>
+    where T: Deserialize,
+{
     type Value = PhantomData<T>;
 
     #[inline]
@@ -367,16 +344,20 @@ impl<T> Visitor for PhantomDataVisitor<T> where T: Deserialize {
     }
 }
 
-impl<T> Deserialize for PhantomData<T> where T: Deserialize {
+impl<T> Deserialize for PhantomData<T>
+    where T: Deserialize,
+{
     fn deserialize<D>(deserializer: &mut D) -> Result<PhantomData<T>, D::Error>
         where D: Deserializer,
     {
-        let visitor = PhantomDataVisitor { marker: PhantomData };
+        let visitor = PhantomDataVisitor {
+            marker: PhantomData,
+        };
         deserializer.deserialize_unit_struct("PhantomData", visitor)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 macro_rules! seq_impl {
     (
@@ -507,7 +488,7 @@ seq_impl!(
     VecDeque::with_capacity(visitor.size_hint().0),
     VecDeque::push_back);
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 struct ArrayVisitor0<T> {
     marker: PhantomData<T>,
@@ -522,7 +503,9 @@ impl<T> ArrayVisitor0<T> {
     }
 }
 
-impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
+impl<T> Visitor for ArrayVisitor0<T>
+    where T: Deserialize + Default,
+{
     type Value = [T; 0];
 
     #[inline]
@@ -542,7 +525,7 @@ impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
 }
 
 impl<T> Deserialize for [T; 0]
-    where T: Deserialize + Default
+    where T: Deserialize + Default,
 {
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
@@ -643,7 +626,7 @@ array_impls! {
                            y, z, aa, ab, ac, ad, ae, af),
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {
     ($($len:expr => $visitor:ident => ($($name:ident),+),)+) => {
@@ -719,7 +702,7 @@ tuple_impls! {
     16 => TupleVisitor16 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15),
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 macro_rules! map_impl {
     (
@@ -804,8 +787,7 @@ map_impl!(
     HashMap::with_hasher(S::default()),
     HashMap::with_capacity_and_hasher(visitor.size_hint().0, S::default()));
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(all(feature = "nightly", feature = "std"))]
 impl Deserialize for net::IpAddr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
@@ -845,8 +827,7 @@ impl Deserialize for net::Ipv6Addr {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(feature = "std")]
 impl Deserialize for net::SocketAddr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
@@ -886,8 +867,7 @@ impl Deserialize for net::SocketAddrV6 {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(feature = "std")]
 struct PathBufVisitor;
 
@@ -917,8 +897,7 @@ impl Deserialize for path::PathBuf {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<T: Deserialize> Deserialize for Box<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Box<T>, D::Error>
@@ -960,7 +939,10 @@ impl<T: Deserialize> Deserialize for Rc<T> {
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deserialize, {
+impl<'a, T: ?Sized> Deserialize for Cow<'a, T>
+    where T: ToOwned,
+          T::Owned: Deserialize,
+{
     #[inline]
     fn deserialize<D>(deserializer: &mut D) -> Result<Cow<'a, T>, D::Error>
         where D: Deserializer,
@@ -970,27 +952,32 @@ impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deser
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(feature = "nightly")]
-impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable + Zero {
-    fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
+impl<T> Deserialize for NonZero<T>
+    where T: Deserialize + PartialEq + Zeroable + Zero,
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error>
+        where D: Deserializer,
+    {
         let value = try!(Deserialize::deserialize(deserializer));
         if value == Zero::zero() {
-            return Err(Error::invalid_value("expected a non-zero value"))
+            return Err(Error::invalid_value("expected a non-zero value"));
         }
-        unsafe {
-            Ok(NonZero::new(value))
-        }
+        unsafe { Ok(NonZero::new(value)) }
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 
-impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
+impl<T, E> Deserialize for Result<T, E>
+    where T: Deserialize,
+          E: Deserialize,
+{
     fn deserialize<D>(deserializer: &mut D) -> Result<Result<T, E>, D::Error>
-                      where D: Deserializer {
+        where D: Deserializer,
+    {
         enum Field {
             Ok,
             Err,
@@ -999,7 +986,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
         impl Deserialize for Field {
             #[inline]
             fn deserialize<D>(deserializer: &mut D) -> Result<Field, D::Error>
-                where D: Deserializer
+                where D: Deserializer,
             {
                 struct FieldVisitor;
 
@@ -1007,7 +994,9 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                     type Value = Field;
 
                     #[cfg(any(feature = "std", feature = "collections"))]
-                    fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E> where E: Error {
+                    fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E>
+                        where E: Error,
+                    {
                         #[cfg(feature = "collections")]
                         use collections::string::ToString;
                         match value {
@@ -1018,7 +1007,9 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                     }
 
                     #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-                    fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E> where E: Error {
+                    fn visit_usize<E>(&mut self, value: usize) -> Result<Field, E>
+                        where E: Error,
+                    {
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),
@@ -1026,7 +1017,9 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                         }
                     }
 
-                    fn visit_str<E>(&mut self, value: &str) -> Result<Field, E> where E: Error {
+                    fn visit_str<E>(&mut self, value: &str) -> Result<Field, E>
+                        where E: Error,
+                    {
                         match value {
                             "Ok" => Ok(Field::Ok),
                             "Err" => Ok(Field::Err),
@@ -1034,7 +1027,9 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                         }
                     }
 
-                    fn visit_bytes<E>(&mut self, value: &[u8]) -> Result<Field, E> where E: Error {
+                    fn visit_bytes<E>(&mut self, value: &[u8]) -> Result<Field, E>
+                        where E: Error,
+                    {
                         match value {
                             b"Ok" => Ok(Field::Ok),
                             b"Err" => Ok(Field::Err),
@@ -1056,12 +1051,12 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
 
         impl<T, E> EnumVisitor for Visitor<T, E>
             where T: Deserialize,
-                  E: Deserialize
+                  E: Deserialize,
         {
             type Value = Result<T, E>;
 
             fn visit<V>(&mut self, mut visitor: V) -> Result<Result<T, E>, V::Error>
-                where V: VariantVisitor
+                where V: VariantVisitor,
             {
                 match try!(visitor.visit_variant()) {
                     Field::Ok => {
@@ -1082,7 +1077,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// A target for deserializers that want to ignore data. Implements
 /// Deserialize and silently eats data given to it.

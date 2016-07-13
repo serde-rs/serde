@@ -4,17 +4,12 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 extern crate serde_test;
-use self::serde_test::{
-    Error,
-    Token,
-    assert_ser_tokens,
-    assert_ser_tokens_error,
-};
+use self::serde_test::{Error, Token, assert_ser_tokens, assert_ser_tokens_error};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize)]
 struct UnitStruct;
@@ -34,10 +29,13 @@ enum Enum {
     Unit,
     One(i32),
     Seq(i32, i32),
-    Map { a: i32, b: i32 },
+    Map {
+        a: i32,
+        b: i32,
+    },
 }
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 declare_ser_tests! {
     test_unit {
@@ -350,27 +348,23 @@ declare_ser_tests! {
 #[cfg(feature = "nightly")]
 #[test]
 fn test_net_ipaddr() {
-    assert_ser_tokens(
-        "1.2.3.4".parse::<net::IpAddr>().unwrap(),
-        &[Token::Str("1.2.3.4")],
-    );
+    assert_ser_tokens("1.2.3.4".parse::<net::IpAddr>().unwrap(),
+                      &[Token::Str("1.2.3.4")]);
 }
 
 #[test]
 fn test_cannot_serialize_paths() {
-    let path = unsafe {
-        str::from_utf8_unchecked(b"Hello \xF0\x90\x80World")
-    };
-    assert_ser_tokens_error(
-        &Path::new(path),
-        &[],
-        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+    let path = unsafe { str::from_utf8_unchecked(b"Hello \xF0\x90\x80World") };
+    assert_ser_tokens_error(&Path::new(path),
+                            &[],
+                            Error::InvalidValue("Path contains invalid UTF-8 characters"
+                                .to_owned()));
 
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
 
-    assert_ser_tokens_error(
-        &path_buf,
-        &[],
-        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+    assert_ser_tokens_error(&path_buf,
+                            &[],
+                            Error::InvalidValue("Path contains invalid UTF-8 characters"
+                                .to_owned()));
 }

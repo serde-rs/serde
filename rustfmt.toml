@@ -1,0 +1,4 @@
+fn_args_layout = "Block"
+reorder_imports = true
+struct_lit_multiline_style = "ForceMulti"
+where_trailing_comma = true

@@ -1,6 +1,6 @@
 use std::{error, fmt};
 
-use serde::{ser, de};
+use serde::{de, ser};
 
 use token::Token;
 

@@ -8,7 +8,7 @@ use rustc_serialize::Decodable;
 use serde;
 use serde::de::Deserialize;
 
-//////////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, PartialEq, Debug, RustcDecodable, Deserialize)]
 pub struct Inner {
@@ -17,14 +17,14 @@ pub struct Inner {
     c: HashMap<String, Option<char>>,
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, PartialEq, Debug, RustcDecodable, Deserialize)]
 pub struct Outer {
     inner: Vec<Inner>,
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -35,11 +35,17 @@ pub enum Error {
 }
 
 impl serde::de::Error for Error {
-    fn custom<T: Into<String>>(_: T) -> Error { Error::Syntax }
+    fn custom<T: Into<String>>(_: T) -> Error {
+        Error::Syntax
+    }
 
-    fn end_of_stream() -> Error { Error::EndOfStream }
+    fn end_of_stream() -> Error {
+        Error::EndOfStream
+    }
 
-    fn unknown_field(_: &str) -> Error { Error::Syntax }
+    fn unknown_field(_: &str) -> Error {
+        Error::Syntax
+    }
 
     fn missing_field(_: &'static str) -> Error {
         Error::MissingField
@@ -66,7 +72,7 @@ mod decoder {
     use std::collections::HashMap;
     use rustc_serialize::Decoder;
 
-    use super::{Outer, Inner, Error};
+    use super::{Error, Inner, Outer};
 
     #[derive(Debug)]
     enum State {
@@ -84,14 +90,13 @@ mod decoder {
 
     pub struct OuterDecoder {
         stack: Vec<State>,
-
     }
 
     impl OuterDecoder {
         #[inline]
         pub fn new(animal: Outer) -> OuterDecoder {
             OuterDecoder {
-                stack: vec!(State::Outer(animal)),
+                stack: vec![State::Outer(animal)],
             }
         }
     }
@@ -118,18 +123,42 @@ mod decoder {
                 _ => Err(Error::Syntax),
             }
         }
-        fn read_u64(&mut self) -> Result<u64, Error> { Err(Error::Syntax) }
-        fn read_u32(&mut self) -> Result<u32, Error> { Err(Error::Syntax) }
-        fn read_u16(&mut self) -> Result<u16, Error> { Err(Error::Syntax) }
-        fn read_u8(&mut self) -> Result<u8, Error> { Err(Error::Syntax) }
-        fn read_isize(&mut self) -> Result<isize, Error> { Err(Error::Syntax) }
-        fn read_i64(&mut self) -> Result<i64, Error> { Err(Error::Syntax) }
-        fn read_i32(&mut self) -> Result<i32, Error> { Err(Error::Syntax) }
-        fn read_i16(&mut self) -> Result<i16, Error> { Err(Error::Syntax) }
-        fn read_i8(&mut self) -> Result<i8, Error> { Err(Error::Syntax) }
-        fn read_bool(&mut self) -> Result<bool, Error> { Err(Error::Syntax) }
-        fn read_f64(&mut self) -> Result<f64, Error> { Err(Error::Syntax) }
-        fn read_f32(&mut self) -> Result<f32, Error> { Err(Error::Syntax) }
+        fn read_u64(&mut self) -> Result<u64, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_u32(&mut self) -> Result<u32, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_u16(&mut self) -> Result<u16, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_u8(&mut self) -> Result<u8, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_isize(&mut self) -> Result<isize, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_i64(&mut self) -> Result<i64, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_i32(&mut self) -> Result<i32, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_i16(&mut self) -> Result<i16, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_i8(&mut self) -> Result<i8, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_bool(&mut self) -> Result<bool, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_f64(&mut self) -> Result<f64, Error> {
+            Err(Error::Syntax)
+        }
+        fn read_f32(&mut self) -> Result<f32, Error> {
+            Err(Error::Syntax)
+        }
         #[inline]
         fn read_char(&mut self) -> Result<char, Error> {
             match self.stack.pop() {
@@ -146,39 +175,44 @@ mod decoder {
         }
 
         // Compound types:
-        fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_enum<T, F>(&mut self, _name: &str, _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
+        fn read_enum_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_enum_variant_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
+        fn read_enum_struct_variant<T, F>(&mut self, _names: &[&str], _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_enum_struct_variant_field<T, F>(&mut self, _f_name: &str, _f_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_enum_struct_variant_field<T, F>(
+            &mut self,
+            _f_name: &str,
+            _f_idx: usize,
+            _f: F
+        ) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
         #[inline]
-        fn read_struct<T, F>(&mut self, s_name: &str, _len: usize, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_struct<T, F>(&mut self, s_name: &str, _len: usize, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(State::Outer(Outer { inner })) => {
@@ -209,8 +243,8 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_struct_field<T, F>(&mut self, f_name: &str, _f_idx: usize, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_struct_field<T, F>(&mut self, f_name: &str, _f_idx: usize, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(State::Field(name)) => {
@@ -220,38 +254,38 @@ mod decoder {
                         Err(Error::Syntax)
                     }
                 }
-                _ => Err(Error::Syntax)
+                _ => Err(Error::Syntax),
             }
         }
 
-        fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_tuple<T, F>(&mut self, _len: usize, _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_tuple_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_tuple_struct<T, F>(&mut self, _s_name: &str, _len: usize, _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
-        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_tuple_struct_arg<T, F>(&mut self, _a_idx: usize, _f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             Err(Error::Syntax)
         }
 
         // Specialized types:
         #[inline]
-        fn read_option<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, bool) -> Result<T, Error>,
+        fn read_option<T, F>(&mut self, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder, bool) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(State::Option(b)) => f(self, b),
@@ -260,8 +294,8 @@ mod decoder {
         }
 
         #[inline]
-        fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
+        fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(State::Vec(value)) => {
@@ -271,19 +305,19 @@ mod decoder {
                     }
                     f(self, len)
                 }
-                _ => Err(Error::Syntax)
+                _ => Err(Error::Syntax),
             }
         }
         #[inline]
-        fn read_seq_elt<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_seq_elt<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             f(self)
         }
 
         #[inline]
-        fn read_map<T, F>(&mut self, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
+        fn read_map<T, F>(&mut self, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder, usize) -> Result<T, Error>,
         {
             match self.stack.pop() {
                 Some(State::Map(map)) => {
@@ -306,28 +340,28 @@ mod decoder {
             }
         }
         #[inline]
-        fn read_map_elt_key<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_map_elt_key<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             f(self)
         }
 
         #[inline]
-        fn read_map_elt_val<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error> where
-            F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
+        fn read_map_elt_val<T, F>(&mut self, _idx: usize, f: F) -> Result<T, Error>
+            where F: FnOnce(&mut OuterDecoder) -> Result<T, Error>,
         {
             f(self)
         }
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////////
 
 mod deserializer {
     use std::collections::HashMap;
     use std::collections::hash_map;
     use std::vec;
-    use super::{Outer, Inner};
+    use super::{Inner, Outer};
     use super::Error;
     use serde::de;
 
@@ -353,7 +387,7 @@ mod deserializer {
         #[inline]
         pub fn new(outer: Outer) -> OuterDeserializer {
             OuterDeserializer {
-                stack: vec!(State::Outer(outer)),
+                stack: vec![State::Outer(outer)],
             }
         }
     }
@@ -377,36 +411,24 @@ mod deserializer {
                         iter: value.into_iter(),
                     })
                 }
-                Some(State::Null) => {
-                    visitor.visit_unit()
-                }
-                Some(State::Usize(x)) => {
-                    visitor.visit_usize(x)
-                }
-                Some(State::Char(x)) => {
-                    visitor.visit_char(x)
-                }
-                Some(State::Str(x)) => {
-                    visitor.visit_str(x)
-                }
-                Some(State::String(x)) => {
-                    visitor.visit_string(x)
-                }
-                Some(State::Option(false)) => {
-                    visitor.visit_none()
-                }
-                Some(State::Option(true)) => {
-                    visitor.visit_some(self)
-                }
+                Some(State::Null) => visitor.visit_unit(),
+                Some(State::Usize(x)) => visitor.visit_usize(x),
+                Some(State::Char(x)) => visitor.visit_char(x),
+                Some(State::Str(x)) => visitor.visit_str(x),
+                Some(State::String(x)) => visitor.visit_string(x),
+                Some(State::Option(false)) => visitor.visit_none(),
+                Some(State::Option(true)) => visitor.visit_some(self),
                 Some(_) => Err(Error::Syntax),
                 None => Err(Error::EndOfStream),
             }
         }
 
-        fn deserialize_struct<V>(&mut self,
-                           name: &str,
-                           _fields: &'static [&'static str],
-                           mut visitor: V) -> Result<V::Value, Error>
+        fn deserialize_struct<V>(
+            &mut self,
+            name: &str,
+            _fields: &'static [&'static str],
+            mut visitor: V
+        ) -> Result<V::Value, Error>
             where V: de::Visitor,
         {
             match self.stack.pop() {
@@ -442,9 +464,7 @@ mod deserializer {
                         state: 0,
                     })
                 }
-                _ => {
-                    Err(Error::Syntax)
-                }
+                _ => Err(Error::Syntax),
             }
         }
     }
@@ -465,9 +485,7 @@ mod deserializer {
                     self.state += 1;
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
-                _ => {
-                    Ok(None)
-                }
+                _ => Ok(None),
             }
         }
 
@@ -507,9 +525,7 @@ mod deserializer {
                     self.de.stack.push(State::Inner(value));
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
-                None => {
-                    Ok(None)
-                }
+                None => Ok(None),
             }
         }
 
@@ -537,13 +553,11 @@ mod deserializer {
             where K: de::Deserialize,
         {
             match self.state {
-                0 ... 2 => {
+                0...2 => {
                     self.state += 1;
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
-                _ => {
-                    Ok(None)
-                }
+                _ => Ok(None),
             }
         }
 
@@ -590,9 +604,7 @@ mod deserializer {
                     self.de.stack.push(State::String(key));
                     Ok(Some(try!(de::Deserialize::deserialize(self.de))))
                 }
-                None => {
-                    Ok(None)
-                }
+                None => Ok(None),
             }
         }
 
@@ -622,7 +634,7 @@ fn bench_decoder_0_0(b: &mut Bencher) {
         map.insert("abc".to_owned(), Some('c'));
 
         let outer = Outer {
-            inner: vec!(),
+            inner: vec![],
         };
 
         let mut d = decoder::OuterDecoder::new(outer.clone());
@@ -644,7 +656,7 @@ fn bench_decoder_1_0(b: &mut Bencher) {
                     b: 5,
                     c: map,
                 },
-            )
+            ),
         };
 
         let mut d = decoder::OuterDecoder::new(outer.clone());
@@ -671,7 +683,7 @@ fn bench_decoder_1_5(b: &mut Bencher) {
                     b: 5,
                     c: map,
                 },
-            )
+            ),
         };
 
         let mut d = decoder::OuterDecoder::new(outer.clone());
@@ -685,7 +697,7 @@ fn bench_decoder_1_5(b: &mut Bencher) {
 fn bench_deserializer_0_0(b: &mut Bencher) {
     b.iter(|| {
         let outer = Outer {
-            inner: vec!(),
+            inner: vec![],
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
@@ -707,7 +719,7 @@ fn bench_deserializer_1_0(b: &mut Bencher) {
                     b: 5,
                     c: map,
                 },
-            )
+            ),
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());
@@ -734,7 +746,7 @@ fn bench_deserializer_1_5(b: &mut Bencher) {
                     b: 5,
                     c: map,
                 },
-            )
+            ),
         };
 
         let mut d = deserializer::OuterDeserializer::new(outer.clone());

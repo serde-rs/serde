@@ -1,6 +1,6 @@
 //! Helper module to enable serializing bytes more efficiently
 
-use core::{ops, fmt, char, iter, slice};
+use core::{char, fmt, iter, ops, slice};
 use core::fmt::Write;
 
 use ser;
@@ -11,7 +11,7 @@ pub use self::bytebuf::{ByteBuf, ByteBufVisitor};
 #[cfg(feature = "collections")]
 use collections::Vec;
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `Bytes` wraps a `&[u8]` in order to serialize into a byte array.
 #[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -55,20 +55,21 @@ impl<'a> Into<&'a [u8]> for Bytes<'a> {
 impl<'a> ops::Deref for Bytes<'a> {
     type Target = [u8];
 
-    fn deref(&self) -> &[u8] { self.bytes }
+    fn deref(&self) -> &[u8] {
+        self.bytes
+    }
 }
 
 impl<'a> ser::Serialize for Bytes<'a> {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: ser::Serializer
+        where S: ser::Serializer,
     {
         serializer.serialize_bytes(self.bytes)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[cfg(any(feature = "std", feature = "collections"))]
 mod bytebuf {
     use core::ops;
@@ -98,7 +99,7 @@ mod bytebuf {
         /// Construct a new, empty `ByteBuf` with the specified capacity.
         pub fn with_capacity(cap: usize) -> Self {
             ByteBuf {
-                bytes: Vec::with_capacity(cap)
+                bytes: Vec::with_capacity(cap),
             }
         }
     }
@@ -154,16 +155,20 @@ mod bytebuf {
     impl ops::Deref for ByteBuf {
         type Target = [u8];
 
-        fn deref(&self) -> &[u8] { &self.bytes[..] }
+        fn deref(&self) -> &[u8] {
+            &self.bytes[..]
+        }
     }
 
     impl ops::DerefMut for ByteBuf {
-        fn deref_mut(&mut self) -> &mut [u8] { &mut self.bytes[..] }
+        fn deref_mut(&mut self) -> &mut [u8] {
+            &mut self.bytes[..]
+        }
     }
 
     impl ser::Serialize for ByteBuf {
         fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where S: ser::Serializer
+            where S: ser::Serializer,
         {
             serializer.serialize_bytes(self)
         }
@@ -222,17 +227,18 @@ mod bytebuf {
     impl de::Deserialize for ByteBuf {
         #[inline]
         fn deserialize<D>(deserializer: &mut D) -> Result<ByteBuf, D::Error>
-            where D: de::Deserializer
+            where D: de::Deserializer,
         {
             deserializer.deserialize_bytes(ByteBufVisitor)
         }
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
+/// ////////////////////////////////////////////////////////////////////////////
 #[inline]
-fn escape_bytestring<'a>(bytes: &'a [u8]) -> iter::FlatMap<slice::Iter<'a, u8>, char::EscapeDefault, fn(&u8) -> char::EscapeDefault> {
+fn escape_bytestring<'a>
+    (bytes: &'a [u8])
+     -> iter::FlatMap<slice::Iter<'a, u8>, char::EscapeDefault, fn(&u8) -> char::EscapeDefault> {
     fn f(b: &u8) -> char::EscapeDefault {
         char::from_u32(*b as u32).unwrap().escape_default()
     }
