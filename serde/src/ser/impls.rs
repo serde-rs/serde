@@ -305,11 +305,12 @@ impl<A> Serialize for ops::Range<A>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let mut seq_serializer = try!(serializer.serialize_seq(Some(self.len())));
+        let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
+        let state = try!(serializer.serialize_seq(Some(len)));
         for e in self.iter() {
-            try!(seq_serializer.serialize_elt(e));
+            try!(serializer.serialize_seq_elt(e));
         }
-        seq_serializer.drop()
+        serializer.serialize_seq_end(Some(len), state);
     }
 }
 
