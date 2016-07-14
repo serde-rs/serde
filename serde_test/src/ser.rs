@@ -34,6 +34,8 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     where I: Iterator<Item=&'a Token<'a>>,
 {
     type Error = Error;
+    type MapState = ();
+    type SeqState = ();
 
     fn serialize_unit(&mut self) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Unit));
@@ -165,7 +167,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_seq_end(&mut self, _len: Option<usize>) -> Result<(), Error> {
+    fn serialize_seq_end(&mut self, _len: Option<usize>, _: ()) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::SeqEnd));
         Ok(())
     }
@@ -189,7 +191,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_tuple_end(&mut self, _len: usize) -> Result<(), Error> {
+    fn serialize_tuple_end(&mut self, _len: usize, _: ()) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::TupleEnd));
         Ok(())
     }
@@ -217,7 +219,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_tuple_struct_end(&mut self, _name: &str, _len: usize) -> Result<(), Error> {
+    fn serialize_tuple_struct_end(&mut self, _name: &str, _len: usize, _: ()) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::TupleStructEnd));
         Ok(())
     }
@@ -244,7 +246,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
                                _name: &str,
                                _variant_index: usize,
                                _variant: &str,
-                               _len: usize) -> Result<(), Error> {
+                               _len: usize, _: ()) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::EnumSeqEnd));
         Ok(())
     }
@@ -262,7 +264,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_map_end(&mut self, _len: Option<usize>) -> Result<(), Self::Error> {
+    fn serialize_map_end(&mut self, _len: Option<usize>, _: ()) -> Result<(), Self::Error> {
         assert_eq!(self.tokens.next(), Some(&Token::MapEnd));
         Ok(())
     }
@@ -280,7 +282,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_struct_end(&mut self, _name: &str, _len: usize) -> Result<(), Self::Error> {
+    fn serialize_struct_end(&mut self, _name: &str, _len: usize, _: ()) -> Result<(), Self::Error> {
         assert_eq!(self.tokens.next(), Some(&Token::StructEnd));
         Ok(())
     }
@@ -306,7 +308,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
                                 _name: &str,
                                 _variant_index: usize,
                                 _variant: &str,
-                                _len: usize) -> Result<(), Self::Error> {
+                                _len: usize, _: ()) -> Result<(), Self::Error> {
         assert_eq!(self.tokens.next(), Some(&Token::EnumMapEnd));
         Ok(())
     }

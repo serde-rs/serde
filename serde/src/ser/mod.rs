@@ -44,6 +44,12 @@ pub trait Serialize {
 pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
+    /// A state object that is returned from `serialize_seq` and needs to be re-inserted into
+    /// `serialize_seq_end` when the serialization of the sequence is done
+    type SeqState;
+    /// A state object that is returned from `serialize_map` and needs to be re-inserted into
+    /// `serialize_map_end` when the serialization of the map is done
+    type MapState;
 
     /// Serializes a `bool` value.
     fn serialize_bool(&mut self, v: bool) -> Result<(), Self::Error>;
@@ -136,11 +142,11 @@ pub trait Serializer {
     /// byte slices separately from generic arrays. By default it serializes as a regular array.
     #[inline]
     fn serialize_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error> {
-        try!(self.serialize_seq(Some(value.len())));
+        let state = try!(self.serialize_seq(Some(value.len())));
         for b in value.iter() {
             try!(self.serialize_seq_elt(b));
         }
-        self.serialize_seq_end(Some(value.len()))
+        self.serialize_seq_end(Some(value.len()), state)
     }
 
     /// Serializes a `()` value.
@@ -174,9 +180,9 @@ pub trait Serializer {
                                    value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
-        try!(self.serialize_tuple_struct(name, 1));
+        let state = try!(self.serialize_tuple_struct(name, 1));
         try!(self.serialize_tuple_struct_elt(value));
-        self.serialize_tuple_struct_end(name, 1)
+        self.serialize_tuple_struct_end(name, 1, state)
     }
 
     /// Allows a variant with a single item to be more efficiently
@@ -190,9 +196,9 @@ pub trait Serializer {
                                     value: T) -> Result<(), Self::Error>
         where T: Serialize,
     {
-        try!(self.serialize_tuple_variant(name, variant_index, variant, 1));
+        let state = try!(self.serialize_tuple_variant(name, variant_index, variant, 1));
         try!(self.serialize_tuple_variant_elt(value));
-        self.serialize_tuple_variant_end(name, variant_index, variant, 1)
+        self.serialize_tuple_variant_end(name, variant_index, variant, 1, state)
     }
 
     /// Serializes a `None` value..serialize
@@ -206,20 +212,20 @@ pub trait Serializer {
     ///
     /// Callees of this method need to construct a `SeqVisitor`, which iterates through each item
     /// in the sequence.
-    fn serialize_seq(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
+    fn serialize_seq(&mut self, len: Option<usize>) -> Result<Self::SeqState, Self::Error>;
 
     /// Serializes a sequence element.
     fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
         where T: Serialize;
 
     /// Finish serializing a sequence.
-    fn serialize_seq_end(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
+    fn serialize_seq_end(&mut self, len: Option<usize>, state: Self::SeqState) -> Result<(), Self::Error>;
 
     /// Serializes a tuple.
     ///
     /// By default this serializes a tuple as a sequence.
     #[inline]
-    fn serialize_tuple(&mut self, len: usize) -> Result<(), Self::Error>
+    fn serialize_tuple(&mut self, len: usize) -> Result<Self::SeqState, Self::Error>
     {
         self.serialize_seq(Some(len))
     }
@@ -237,15 +243,15 @@ pub trait Serializer {
     ///
     /// By default, tuples are serialized as a sequence.
     #[inline]
-    fn serialize_tuple_end(&mut self, len: usize) -> Result<(), Self::Error> {
-        self.serialize_seq_end(Some(len))
+    fn serialize_tuple_end(&mut self, len: usize, state: Self::SeqState) -> Result<(), Self::Error> {
+        self.serialize_seq_end(Some(len), state)
     }
 
     /// Serializes a fixed-size array.
     ///
     /// By default this serializes an array as a sequence.
     #[inline]
-    fn serialize_fixed_size_array(&mut self, size: usize) -> Result<(), Self::Error>
+    fn serialize_fixed_size_array(&mut self, size: usize) -> Result<Self::SeqState, Self::Error>
     {
         self.serialize_seq(Some(size))
     }
@@ -257,7 +263,7 @@ pub trait Serializer {
     fn serialize_tuple_struct(&mut self,
                               _name: &'static str,
                               len: usize,
-                              ) -> Result<(), Self::Error>
+                             ) -> Result<Self::SeqState, Self::Error>
     {
         self.serialize_tuple(len)
     }
@@ -279,8 +285,9 @@ pub trait Serializer {
     fn serialize_tuple_struct_end(&mut self,
                               _name: &'static str,
                               len: usize,
+                              state: Self::SeqState,
                               ) -> Result<(), Self::Error> {
-        self.serialize_tuple_end(len)
+        self.serialize_tuple_end(len, state)
     }
 
     /// Serializes a tuple variant.
@@ -292,7 +299,7 @@ pub trait Serializer {
                                _variant_index: usize,
                                variant: &'static str,
                                len: usize,
-                               ) -> Result<(), Self::Error>
+                               ) -> Result<Self::SeqState, Self::Error>
     {
         self.serialize_tuple_struct(variant, len)
     }
@@ -316,18 +323,19 @@ pub trait Serializer {
                                _variant_index: usize,
                                variant: &'static str,
                                len: usize,
+                               state: Self::SeqState,
                                ) -> Result<(), Self::Error> {
-        self.serialize_tuple_struct_end(variant, len)
+        self.serialize_tuple_struct_end(variant, len, state)
     }
 
     /// Serialize a map.
-    fn serialize_map(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
+    fn serialize_map(&mut self, len: Option<usize>) -> Result<Self::MapState, Self::Error>;
 
     /// Serialize a map element
     fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize;
 
     /// Finishes serializing a map
-    fn serialize_map_end(&mut self, len: Option<usize>) -> Result<(), Self::Error>;
+    fn serialize_map_end(&mut self, len: Option<usize>, state: Self::MapState) -> Result<(), Self::Error>;
 
     /// Serializes a struct.
     ///
@@ -336,7 +344,7 @@ pub trait Serializer {
     fn serialize_struct(&mut self,
                         _name: &'static str,
                         len: usize,
-                        ) -> Result<(), Self::Error>
+                        ) -> Result<Self::MapState, Self::Error>
     {
         self.serialize_map(Some(len))
     }
@@ -354,8 +362,9 @@ pub trait Serializer {
     fn serialize_struct_end(&mut self,
                         _name: &'static str,
                         len: usize,
+                        state: Self::MapState,
                         ) -> Result<(), Self::Error> {
-        self.serialize_map_end(Some(len))
+        self.serialize_map_end(Some(len), state)
     }
 
     /// Serializes a struct variant.
@@ -367,7 +376,7 @@ pub trait Serializer {
                                    _variant_index: usize,
                                    variant: &'static str,
                                    len: usize,
-                               ) -> Result<(), Self::Error>
+                               ) -> Result<Self::MapState, Self::Error>
     {
         self.serialize_struct(variant, len)
     }
@@ -387,7 +396,8 @@ pub trait Serializer {
                                    _variant_index: usize,
                                    variant: &'static str,
                                    len: usize,
+                                   state: Self::MapState,
                                ) -> Result<(), Self::Error> {
-        self.serialize_struct_end(variant, len)
+        self.serialize_struct_end(variant, len, state)
     }
 }

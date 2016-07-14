@@ -52,6 +52,8 @@ impl BytesSerializer {
 
 impl serde::Serializer for BytesSerializer {
     type Error = Error;
+    type SeqState = ();
+    type MapState = ();
 
     fn serialize_unit(&mut self) -> Result<(), Error> {
         Err(Error)
@@ -106,7 +108,7 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_seq_end(&mut self, _: Option<usize>) -> Result<(), Error>
+    fn serialize_seq_end(&mut self, _: Option<usize>, _: ()) -> Result<(), Error>
     {
         Err(Error)
     }
@@ -123,7 +125,7 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_map_end(&mut self, _: Option<usize>) -> Result<(), Error>
+    fn serialize_map_end(&mut self, _: Option<usize>, _: ()) -> Result<(), Error>
     {
         Err(Error)
     }
