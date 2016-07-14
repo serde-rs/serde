@@ -306,11 +306,11 @@ impl<A> Serialize for ops::Range<A>
         where S: Serializer,
     {
         let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
-        let state = try!(serializer.serialize_seq(Some(len)));
-        for e in self.iter() {
+        let state = try!(serializer.serialize_seq(len));
+        for e in self.clone() {
             try!(serializer.serialize_seq_elt(e));
         }
-        serializer.serialize_seq_end(Some(len), state);
+        serializer.serialize_seq_end(len, state);
     }
 }
 
