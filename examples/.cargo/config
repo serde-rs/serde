@@ -1,5 +1,0 @@
-paths = [
-    "../serde",
-    "../serde_codegen",
-    "../serde_macros",
-]
