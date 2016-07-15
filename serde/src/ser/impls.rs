@@ -152,11 +152,11 @@ impl<T> Serialize for [T]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        let state = try!(serializer.serialize_seq(Some(self.len())));
+        let mut state = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
+            try!(serializer.serialize_seq_elt(&mut state, e));
         }
-        serializer.serialize_seq_end(Some(self.len()), state)
+        serializer.serialize_seq_end(state)
     }
 }
 
@@ -169,11 +169,11 @@ macro_rules! array_impls {
             fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                 where S: Serializer,
             {
-                let state = try!(serializer.serialize_fixed_size_array($len));
+                let mut state = try!(serializer.serialize_seq(Some($len)));
                 for e in self.iter() {
-                    try!(serializer.serialize_seq_elt(e));
+                    try!(serializer.serialize_seq_elt(&mut state, e));
                 }
-                serializer.serialize_seq_end(Some(self.len()), state)
+                serializer.serialize_seq_end(state)
             }
         }
     }
@@ -215,52 +215,40 @@ array_impls!(32);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+macro_rules! serialize_seq {
+    () => {
+        #[inline]
+        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where S: Serializer,
+        {
+            let mut state = try!(serializer.serialize_seq(Some(self.len())));
+            for e in self {
+                try!(serializer.serialize_seq_elt(&mut state, e));
+            }
+            serializer.serialize_seq_end(state)
+        }
+    }
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for BinaryHeap<T>
     where T: Serialize + Ord
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
-        }
-        serializer.serialize_seq_end(Some(self.len()), state)
-    }
+    serialize_seq!();
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for BTreeSet<T>
     where T: Serialize + Ord,
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
-        }
-        serializer.serialize_seq_end(Some(self.len()), state)
-    }
+    serialize_seq!();
 }
 
 #[cfg(all(feature = "nightly", feature = "collections"))]
 impl<T> Serialize for EnumSet<T>
     where T: Serialize + CLike
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
-        }
-        serializer.serialize_seq_end(Some(self.len()))
-    }
+    serialize_seq!();
 }
 
 #[cfg(feature = "std")]
@@ -268,32 +256,24 @@ impl<T, H> Serialize for HashSet<T, H>
     where T: Serialize + Eq + Hash,
           H: BuildHasher,
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
-        }
-        serializer.serialize_seq_end(Some(self.len()), state)
-    }
+    serialize_seq!();
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for LinkedList<T>
     where T: Serialize,
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
-        }
-        serializer.serialize_seq_end(Some(self.len()), state)
-    }
+    serialize_seq!();
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<T> Serialize for Vec<T> where T: Serialize {
+    serialize_seq!();
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<T> Serialize for VecDeque<T> where T: Serialize {
+    serialize_seq!();
 }
 
 #[cfg(feature = "nightly")]
@@ -306,35 +286,11 @@ impl<A> Serialize for ops::Range<A>
         where S: Serializer,
     {
         let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
-        let state = try!(serializer.serialize_seq(len));
+        let mut state = try!(serializer.serialize_seq(len));
         for e in self.clone() {
-            try!(serializer.serialize_seq_elt(e));
+            try!(serializer.serialize_seq_elt(&mut state, e));
         }
-        serializer.serialize_seq_end(len, state);
-    }
-}
-
-#[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for Vec<T> where T: Serialize {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        (&self[..]).serialize(serializer)
-    }
-}
-
-#[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for VecDeque<T> where T: Serialize {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
-            try!(serializer.serialize_seq_elt(e));
-        }
-        serializer.serialize_seq_end(Some(self.len()), state)
+        serializer.serialize_seq_end(state)
     }
 }
 
@@ -370,11 +326,11 @@ macro_rules! tuple_impls {
                 fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                     where S: Serializer,
                 {
-                    let state = try!(serializer.serialize_tuple($len));
+                    let mut state = try!(serializer.serialize_tuple($len));
                     $(
-                        try!(serializer.serialize_tuple_elt(&e!(self.$idx)));
+                        try!(serializer.serialize_tuple_elt(&mut state, &e!(self.$idx)));
                     )+
-                    serializer.serialize_tuple_end($len, state)
+                    serializer.serialize_tuple_end(state)
                 }
             }
         )+
@@ -554,21 +510,27 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+macro_rules! serialize_map {
+    () => {
+        #[inline]
+        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where S: Serializer,
+        {
+            let mut state = try!(serializer.serialize_map(Some(self.len())));
+            for (k, v) in self {
+                try!(serializer.serialize_map_elt(&mut state, k, v));
+            }
+            serializer.serialize_map_end(state)
+        }
+    }
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<K, V> Serialize for BTreeMap<K, V>
     where K: Serialize + Ord,
           V: Serialize,
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_map(Some(self.len())));
-        for (k, v) in self.iter() {
-            try!(serializer.serialize_map_elt(k, v));
-        }
-        serializer.serialize_map_end(Some(self.len()), state)
-    }
+    serialize_map!();
 }
 
 #[cfg(feature = "std")]
@@ -577,16 +539,7 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
           V: Serialize,
           H: BuildHasher,
 {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        let state = try!(serializer.serialize_map(Some(self.len())));
-        for (k, v) in self.iter() {
-            try!(serializer.serialize_map_elt(k, v));
-        }
-        serializer.serialize_map_end(Some(self.len()), state)
-    }
+    serialize_map!();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
