@@ -150,7 +150,7 @@ pub trait Serializer {
     /// forward to `serialize_unit`.
     fn serialize_unit_struct(
         &mut self,
-        name: &str,
+        name: &'static str,
     ) -> Result<(), Self::Error>;
 
     /// Serializes a unit variant, otherwise known as a variant with no
@@ -158,9 +158,9 @@ pub trait Serializer {
     /// `serialize_unit`.
     fn serialize_unit_variant(
         &mut self,
-        name: &str,
+        name: &'static str,
         variant_index: usize,
-        variant: &str,
+        variant: &'static str,
     ) -> Result<(), Self::Error>;
 
     /// Allows a tuple struct with a single element, also known as a newtype
@@ -169,7 +169,7 @@ pub trait Serializer {
     /// `serialize_tuple_struct`.
     fn serialize_newtype_struct<T: Serialize>(
         &mut self,
-        name: &str,
+        name: &'static str,
         value: T,
     ) -> Result<(), Self::Error>;
 
@@ -178,9 +178,9 @@ pub trait Serializer {
     /// to forward to `serialize_tuple_variant`.
     fn serialize_newtype_variant<T: Serialize>(
         &mut self,
-        name: &str,
+        name: &'static str,
         variant_index: usize,
-        variant: &str,
+        variant: &'static str,
         value: T,
     ) -> Result<(), Self::Error>;
 
@@ -251,7 +251,7 @@ pub trait Serializer {
     /// forward to `serialize_tuple`.
     fn serialize_tuple_struct(
         &mut self,
-        name: &str,
+        name: &'static str,
         len: usize,
     ) -> Result<Self::TupleStructState, Self::Error>;
 
@@ -275,9 +275,9 @@ pub trait Serializer {
     /// forward to `serialize_tuple_struct`.
     fn serialize_tuple_variant(
         &mut self,
-        name: &str,
+        name: &'static str,
         variant_index: usize,
-        variant: &str,
+        variant: &'static str,
         len: usize,
     ) -> Result<Self::TupleVariantState, Self::Error>;
 
@@ -320,7 +320,7 @@ pub trait Serializer {
     /// calls to `serialize_struct_elt`, then a call to `serialize_struct_end`.
     fn serialize_struct(
         &mut self,
-        name: &str,
+        name: &'static str,
         len: usize,
     ) -> Result<Self::StructState, Self::Error>;
 
@@ -329,7 +329,7 @@ pub trait Serializer {
     fn serialize_struct_elt<V: Serialize>(
         &mut self,
         state: &mut Self::StructState,
-        key: &str,
+        key: &'static str,
         value: V,
     ) -> Result<(), Self::Error>;
 
@@ -344,9 +344,9 @@ pub trait Serializer {
     /// `serialize_struct_variant_end`.
     fn serialize_struct_variant(
         &mut self,
-        name: &str,
+        name: &'static str,
         variant_index: usize,
-        variant: &str,
+        variant: &'static str,
         len: usize,
     ) -> Result<Self::StructVariantState, Self::Error>;
 
@@ -355,7 +355,7 @@ pub trait Serializer {
     fn serialize_struct_variant_elt<V: Serialize>(
         &mut self,
         state: &mut Self::StructVariantState,
-        key: &str,
+        key: &'static str,
         value: V,
     ) -> Result<(), Self::Error>;
 
