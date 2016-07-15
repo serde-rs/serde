@@ -39,6 +39,7 @@ mod core {
 
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer, Error};
+pub use tagger::Tagger;
 
 #[cfg(not(feature = "std"))]
 macro_rules! format {
@@ -52,4 +53,5 @@ pub mod iter;
 pub mod ser;
 #[cfg(not(feature = "std"))]
 pub mod error;
+mod tagger;
 mod utils;
