@@ -52,12 +52,59 @@ impl BytesSerializer {
 
 impl serde::Serializer for BytesSerializer {
     type Error = Error;
+    type SeqState = ();
+    type MapState = ();
+    type TupleState = ();
+    type TupleStructState = ();
+    type TupleVariantState = ();
+    type StructState = ();
+    type StructVariantState = ();
 
     fn serialize_unit(&mut self) -> Result<(), Error> {
         Err(Error)
     }
 
+    fn serialize_unit_struct(&mut self, _name: &'static str) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_unit_variant(&mut self, _: &'static str, _: usize, _: &'static str) -> Result<(), Error> {
+        Err(Error)
+    }
+
     fn serialize_bool(&mut self, _v: bool) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_isize(&mut self, _v: isize) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_usize(&mut self, _v: usize) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_i8(&mut self, _v: i8) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_u8(&mut self, _v: u8) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_i16(&mut self, _v: i16) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_u16(&mut self, _v: u16) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_i32(&mut self, _v: i32) -> Result<(), Error> {
+        Err(Error)
+    }
+
+    fn serialize_u32(&mut self, _v: u32) -> Result<(), Error> {
         Err(Error)
     }
 
@@ -95,27 +142,132 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_seq<V>(&mut self, _visitor: V) -> Result<(), Error>
-        where V: serde::ser::SeqVisitor,
+    fn serialize_newtype_struct<V>(&mut self, _: &'static str, _value: V) -> Result<(), Error>
+        where V: serde::Serialize,
     {
         Err(Error)
     }
 
-    fn serialize_seq_elt<T>(&mut self, _value: T) -> Result<(), Error>
+    fn serialize_newtype_variant<V>(&mut self, _: &'static str, _: usize, _: &'static str, _value: V) -> Result<(), Error>
+        where V: serde::Serialize,
+    {
+        Err(Error)
+    }
+
+    fn serialize_seq(&mut self, _len: Option<usize>) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_seq_fixed_size(&mut self, _len: usize) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_seq_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
         where T: serde::Serialize
     {
         Err(Error)
     }
 
-    fn serialize_map<V>(&mut self, _visitor: V) -> Result<(), Error>
-        where V: serde::ser::MapVisitor,
+    fn serialize_seq_end(&mut self, _: ()) -> Result<(), Error>
     {
         Err(Error)
     }
 
-    fn serialize_map_elt<K, V>(&mut self, _key: K, _value: V) -> Result<(), Error>
+    fn serialize_tuple(&mut self, _len: usize) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
+        where T: serde::Serialize
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_end(&mut self, _: ()) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_struct(&mut self, _: &'static str, _len: usize) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_struct_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
+        where T: serde::Serialize
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_struct_end(&mut self, _: ()) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_variant(&mut self, _: &'static str, _: usize, _: &'static str, _len: usize) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_variant_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
+        where T: serde::Serialize
+    {
+        Err(Error)
+    }
+
+    fn serialize_tuple_variant_end(&mut self, _: ()) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_map(&mut self, _: Option<usize>) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_map_elt<K, V>(&mut self, _: &mut (), _key: K, _value: V) -> Result<(), Error>
         where K: serde::Serialize,
               V: serde::Serialize,
+    {
+        Err(Error)
+    }
+
+    fn serialize_map_end(&mut self, _: ()) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_struct(&mut self, _: &'static str, _: usize) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_struct_elt<V>(&mut self, _: &mut (), _key: &'static str, _value: V) -> Result<(), Error>
+        where V: serde::Serialize,
+    {
+        Err(Error)
+    }
+
+    fn serialize_struct_end(&mut self, _: ()) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_struct_variant(&mut self, _: &'static str, _: usize, _: &'static str, _: usize) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
+    fn serialize_struct_variant_elt<V>(&mut self, _: &mut (), _key: &'static str, _value: V) -> Result<(), Error>
+        where V: serde::Serialize,
+    {
+        Err(Error)
+    }
+
+    fn serialize_struct_variant_end(&mut self, _: ()) -> Result<(), Error>
     {
         Err(Error)
     }

@@ -174,7 +174,7 @@ fn test_ser_named_tuple() {
     assert_ser_tokens(
         &SerNamedTuple(&a, &mut b, c),
         &[
-            Token::TupleStructStart("SerNamedTuple", Some(3)),
+            Token::TupleStructStart("SerNamedTuple", 3),
             Token::TupleStructSep,
             Token::I32(5),
 
@@ -211,7 +211,7 @@ fn test_de_named_tuple() {
     assert_de_tokens(
         &DeNamedTuple(5, 6, 7),
         &[
-            Token::TupleStructStart("DeNamedTuple", Some(3)),
+            Token::TupleStructStart("DeNamedTuple", 3),
             Token::TupleStructSep,
             Token::I32(5),
 
@@ -239,7 +239,7 @@ fn test_ser_named_map() {
             c: c,
         },
         &[
-            Token::StructStart("SerNamedMap", Some(3)),
+            Token::StructStart("SerNamedMap", 3),
 
             Token::StructSep,
             Token::Str("a"),
@@ -267,7 +267,7 @@ fn test_de_named_map() {
             c: 7,
         },
         &[
-            Token::StructStart("DeNamedMap", Some(3)),
+            Token::StructStart("DeNamedMap", 3),
 
             Token::StructSep,
             Token::Str("a"),
@@ -315,7 +315,7 @@ fn test_ser_enum_seq() {
             //f,
         ),
         &[
-            Token::EnumSeqStart("SerEnum", "Seq", Some(4)),
+            Token::EnumSeqStart("SerEnum", "Seq", 4),
 
             Token::EnumSeqSep,
             Token::I8(1),
@@ -353,7 +353,7 @@ fn test_ser_enum_map() {
             //f: f,
         },
         &[
-            Token::EnumMapStart("SerEnum", "Map", Some(4)),
+            Token::EnumMapStart("SerEnum", "Map", 4),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -405,7 +405,7 @@ fn test_de_enum_seq() {
             //f,
         ),
         &[
-            Token::EnumSeqStart("DeEnum", "Seq", Some(4)),
+            Token::EnumSeqStart("DeEnum", "Seq", 4),
 
             Token::EnumSeqSep,
             Token::I8(1),
@@ -443,7 +443,7 @@ fn test_de_enum_map() {
             //f: f,
         },
         &[
-            Token::EnumMapStart("DeEnum", "Map", Some(4)),
+            Token::EnumMapStart("DeEnum", "Map", 4),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -489,7 +489,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::LifetimeMap { a: &value },
         &[
-            Token::EnumMapStart("Lifetimes", "LifetimeMap", Some(1)),
+            Token::EnumMapStart("Lifetimes", "LifetimeMap", 1),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -502,7 +502,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::NoLifetimeMap { a: 5 },
         &[
-            Token::EnumMapStart("Lifetimes", "NoLifetimeMap", Some(1)),
+            Token::EnumMapStart("Lifetimes", "NoLifetimeMap", 1),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -518,7 +518,7 @@ fn test_generic_struct() {
     assert_tokens(
         &GenericStruct { x: 5u32 },
         &[
-            Token::StructStart("GenericStruct", Some(1)),
+            Token::StructStart("GenericStruct", 1),
 
             Token::StructSep,
             Token::Str("x"),
@@ -545,7 +545,7 @@ fn test_generic_tuple_struct() {
     assert_tokens(
         &GenericTupleStruct(5u32, 6u32),
         &[
-            Token::TupleStructStart("GenericTupleStruct", Some(2)),
+            Token::TupleStructStart("GenericTupleStruct", 2),
 
             Token::TupleStructSep,
             Token::U32(5),
@@ -584,7 +584,7 @@ fn test_generic_enum_seq() {
     assert_tokens(
         &GenericEnum::Seq::<u32, u32>(5, 6),
         &[
-            Token::EnumSeqStart("GenericEnum", "Seq", Some(2)),
+            Token::EnumSeqStart("GenericEnum", "Seq", 2),
 
             Token::EnumSeqSep,
             Token::U32(5),
@@ -602,7 +602,7 @@ fn test_generic_enum_map() {
     assert_tokens(
         &GenericEnum::Map::<u32, u32> { x: 5, y: 6 },
         &[
-            Token::EnumMapStart("GenericEnum", "Map", Some(2)),
+            Token::EnumMapStart("GenericEnum", "Map", 2),
 
             Token::EnumMapSep,
             Token::Str("x"),
@@ -622,7 +622,7 @@ fn test_default_ty_param() {
     assert_tokens(
         &DefaultTyParam::<i32> { phantom: PhantomData },
         &[
-            Token::StructStart("DefaultTyParam", Some(1)),
+            Token::StructStart("DefaultTyParam", 1),
 
             Token::StructSep,
             Token::Str("phantom"),

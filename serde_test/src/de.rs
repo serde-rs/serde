@@ -135,14 +135,17 @@ impl<I> de::Deserializer for Deserializer<I>
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),
             Some(Token::UnitStruct(name)) => visitor.visit_unit_struct(name),
-            Some(Token::SeqStart(len)) | Some(Token::TupleStructStart(_, len)) => {
+            Some(Token::SeqStart(len)) => {
                 self.visit_seq(len, visitor)
             }
-            Some(Token::SeqArrayStart(len)) => {
+            Some(Token::SeqArrayStart(len))| Some(Token::TupleStructStart(_, len)) => {
                 self.visit_seq(Some(len), visitor)
             }
-            Some(Token::MapStart(len)) | Some(Token::StructStart(_, len)) => {
+            Some(Token::MapStart(len)) => {
                 self.visit_map(len, visitor)
+            }
+            Some(Token::StructStart(_, len)) => {
+                self.visit_map(Some(len), visitor)
             }
             Some(token) => Err(Error::UnexpectedToken(token)),
             None => Err(Error::EndOfStream),
@@ -745,7 +748,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
         where V: Visitor,
     {
         match self.de.tokens.peek() {
-            Some(&Token::EnumSeqStart(_, _, Some(enum_len))) => {
+            Some(&Token::EnumSeqStart(_, _, enum_len)) => {
                 let token = self.de.tokens.next().unwrap();
 
                 if len == enum_len {
@@ -776,7 +779,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
         where V: Visitor,
     {
         match self.de.tokens.peek() {
-            Some(&Token::EnumMapStart(_, _, Some(enum_len))) => {
+            Some(&Token::EnumMapStart(_, _, enum_len)) => {
                 let token = self.de.tokens.next().unwrap();
 
                 if fields.len() == enum_len {

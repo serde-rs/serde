@@ -45,339 +45,323 @@ pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
 
+    /// A state object that is initialized by `serialize_seq`, passed to
+    /// `serialize_seq_elt`, and consumed by `serialize_seq_end`. Use `()` if no
+    /// state is required.
+    type SeqState;
+    /// A state object that is initialized by `serialize_tuple`, passed to
+    /// `serialize_tuple_elt`, and consumed by `serialize_tuple_end`. Use `()`
+    /// if no state is required.
+    type TupleState;
+    /// A state object that is initialized by `serialize_tuple_struct`, passed
+    /// to `serialize_tuple_struct_elt`, and consumed by
+    /// `serialize_tuple_struct_end`. Use `()` if no state is required.
+    type TupleStructState;
+    /// A state object that is initialized by `serialize_tuple_variant`, passed
+    /// to `serialize_tuple_variant_elt`, and consumed by
+    /// `serialize_tuple_variant_end`. Use `()` if no state is required.
+    type TupleVariantState;
+    /// A state object that is initialized by `serialize_map`, passed to
+    /// `serialize_map_elt`, and consumed by `serialize_map_end`. Use `()` if no
+    /// state is required.
+    type MapState;
+    /// A state object that is initialized by `serialize_struct`, passed to
+    /// `serialize_struct_elt`, and consumed by `serialize_struct_end`. Use `()`
+    /// if no state is required.
+    type StructState;
+    /// A state object that is initialized by `serialize_struct_variant`, passed
+    /// to `serialize_struct_variant_elt`, and consumed by
+    /// `serialize_struct_variant_end`. Use `()` if no state is required.
+    type StructVariantState;
+
     /// Serializes a `bool` value.
     fn serialize_bool(&mut self, v: bool) -> Result<(), Self::Error>;
 
-    /// Serializes a `isize` value. By default it casts the value to a `i64` and
-    /// passes it to the `serialize_i64` method.
-    #[inline]
-    fn serialize_isize(&mut self, v: isize) -> Result<(), Self::Error> {
-        self.serialize_i64(v as i64)
-    }
+    /// Serializes an `isize` value. If the format does not differentiate
+    /// between `isize` and `i64`, a reasonable implementation would be to cast
+    /// the value to `i64` and forward to `serialize_i64`.
+    fn serialize_isize(&mut self, v: isize) -> Result<(), Self::Error>;
 
-    /// Serializes a `i8` value. By default it casts the value to a `i64` and
-    /// passes it to the `serialize_i64` method.
-    #[inline]
-    fn serialize_i8(&mut self, v: i8) -> Result<(), Self::Error> {
-        self.serialize_i64(v as i64)
-    }
+    /// Serializes an `i8` value. If the format does not differentiate between
+    /// `i8` and `i64`, a reasonable implementation would be to cast the value
+    /// to `i64` and forward to `serialize_i64`.
+    fn serialize_i8(&mut self, v: i8) -> Result<(), Self::Error>;
 
-    /// Serializes a `i16` value. By default it casts the value to a `i64` and
-    /// passes it to the `serialize_i64` method.
-    #[inline]
-    fn serialize_i16(&mut self, v: i16) -> Result<(), Self::Error> {
-        self.serialize_i64(v as i64)
-    }
+    /// Serializes an `i16` value. If the format does not differentiate between
+    /// `i16` and `i64`, a reasonable implementation would be to cast the value
+    /// to `i64` and forward to `serialize_i64`.
+    fn serialize_i16(&mut self, v: i16) -> Result<(), Self::Error>;
 
-    /// Serializes a `i32` value. By default it casts the value to a `i64` and
-    /// passes it to the `serialize_i64` method.
-    #[inline]
-    fn serialize_i32(&mut self, v: i32) -> Result<(), Self::Error> {
-        self.serialize_i64(v as i64)
-    }
+    /// Serializes an `i32` value. If the format does not differentiate between
+    /// `i32` and `i64`, a reasonable implementation would be to cast the value
+    /// to `i64` and forward to `serialize_i64`.
+    fn serialize_i32(&mut self, v: i32) -> Result<(), Self::Error>;
 
-    /// Serializes a `i64` value.
-    #[inline]
+    /// Serializes an `i64` value.
     fn serialize_i64(&mut self, v: i64) -> Result<(), Self::Error>;
 
-    /// Serializes a `usize` value. By default it casts the value to a `u64` and
-    /// passes it to the `serialize_u64` method.
-    #[inline]
-    fn serialize_usize(&mut self, v: usize) -> Result<(), Self::Error> {
-        self.serialize_u64(v as u64)
-    }
+    /// Serializes a `usize` value. If the format does not differentiate between
+    /// `usize` and `u64`, a reasonable implementation would be to cast the
+    /// value to `u64` and forward to `serialize_u64`.
+    fn serialize_usize(&mut self, v: usize) -> Result<(), Self::Error>;
 
-    /// Serializes a `u8` value. By default it casts the value to a `u64` and passes
-    /// it to the `serialize_u64` method.
-    #[inline]
-    fn serialize_u8(&mut self, v: u8) -> Result<(), Self::Error> {
-        self.serialize_u64(v as u64)
-    }
+    /// Serializes a `u8` value. If the format does not differentiate between
+    /// `u8` and `u64`, a reasonable implementation would be to cast the value
+    /// to `u64` and forward to `serialize_u64`.
+    fn serialize_u8(&mut self, v: u8) -> Result<(), Self::Error>;
 
-    /// Serializes a `u32` value. By default it casts the value to a `u64` and passes
-    /// it to the `serialize_u64` method.
-    #[inline]
-    fn serialize_u16(&mut self, v: u16) -> Result<(), Self::Error> {
-        self.serialize_u64(v as u64)
-    }
+    /// Serializes a `u16` value. If the format does not differentiate between
+    /// `u16` and `u64`, a reasonable implementation would be to cast the value
+    /// to `u64` and forward to `serialize_u64`.
+    fn serialize_u16(&mut self, v: u16) -> Result<(), Self::Error>;
 
-    /// Serializes a `u32` value. By default it casts the value to a `u64` and passes
-    /// it to the `serialize_u64` method.
-    #[inline]
-    fn serialize_u32(&mut self, v: u32) -> Result<(), Self::Error> {
-        self.serialize_u64(v as u64)
-    }
+    /// Serializes a `u32` value. If the format does not differentiate between
+    /// `u32` and `u64`, a reasonable implementation would be to cast the value
+    /// to `u64` and forward to `serialize_u64`.
+    fn serialize_u32(&mut self, v: u32) -> Result<(), Self::Error>;
 
     /// `Serializes a `u64` value.
-    #[inline]
     fn serialize_u64(&mut self, v: u64) -> Result<(), Self::Error>;
 
-    /// Serializes a `f32` value. By default it casts the value to a `f64` and passes
-    /// it to the `serialize_f64` method.
-    #[inline]
-    fn serialize_f32(&mut self, v: f32) -> Result<(), Self::Error> {
-        self.serialize_f64(v as f64)
-    }
+    /// Serializes an `f32` value. If the format does not differentiate between
+    /// `f32` and `f64`, a reasonable implementation would be to cast the value
+    /// to `f64` and forward to `serialize_f64`.
+    fn serialize_f32(&mut self, v: f32) -> Result<(), Self::Error>;
 
-    /// Serializes a `f64` value.
+    /// Serializes an `f64` value.
     fn serialize_f64(&mut self, v: f64) -> Result<(), Self::Error>;
 
-    /// Serializes a character. By default it serializes it as a `&str` containing a
-    /// single character.
-    #[inline]
-    fn serialize_char(&mut self, v: char) -> Result<(), Self::Error> {
-        self.serialize_str(::utils::encode_utf8(v).as_str())
-    }
+    /// Serializes a character.
+    fn serialize_char(&mut self, v: char) -> Result<(), Self::Error>;
 
     /// Serializes a `&str`.
     fn serialize_str(&mut self, value: &str) -> Result<(), Self::Error>;
 
-    /// Enables those serialization formats that support serializing
-    /// byte slices separately from generic arrays. By default it serializes as a regular array.
-    #[inline]
-    fn serialize_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error> {
-        self.serialize_seq(impls::SeqIteratorVisitor::new(value.iter(), Some(value.len())))
-    }
+    /// Enables serializers to serialize byte slices more compactly or more
+    /// efficiently than other types of slices. If no efficient implementation
+    /// is available, a reasonable implementation would be to forward to
+    /// `serialize_seq`.
+    fn serialize_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error>;
 
     /// Serializes a `()` value.
     fn serialize_unit(&mut self) -> Result<(), Self::Error>;
 
-    /// Serializes a unit struct value.
-    ///
-    /// By default, unit structs are serialized as a `()`.
-    #[inline]
-    fn serialize_unit_struct(&mut self, _name: &'static str) -> Result<(), Self::Error> {
-        self.serialize_unit()
-    }
+    /// Serializes a unit struct value. A reasonable implementation would be to
+    /// forward to `serialize_unit`.
+    fn serialize_unit_struct(
+        &mut self,
+        name: &'static str,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a unit variant, otherwise known as a variant with no arguments.
-    ///
-    /// By default, unit variants are serialized as a `()`.
-    #[inline]
-    fn serialize_unit_variant(&mut self,
-                              _name: &'static str,
-                              _variant_index: usize,
-                              _variant: &'static str) -> Result<(), Self::Error> {
-        self.serialize_unit()
-    }
+    /// Serializes a unit variant, otherwise known as a variant with no
+    /// arguments. A reasonable implementation would be to forward to
+    /// `serialize_unit`.
+    fn serialize_unit_variant(
+        &mut self,
+        name: &'static str,
+        variant_index: usize,
+        variant: &'static str,
+    ) -> Result<(), Self::Error>;
 
-    /// Allows a tuple struct with a single element, also known as a
-    /// newtyped value, to be more efficiently serialized than a tuple struct with multiple items.
-    /// By default it just serializes the value as a tuple struct sequence.
-    #[inline]
-    fn serialize_newtype_struct<T>(&mut self,
-                                   name: &'static str,
-                                   value: T) -> Result<(), Self::Error>
-        where T: Serialize,
-    {
-        self.serialize_tuple_struct(name, Some(value))
-    }
+    /// Allows a tuple struct with a single element, also known as a newtype
+    /// struct, to be more efficiently serialized than a tuple struct with
+    /// multiple items. A reasonable implementation would be to forward to
+    /// `serialize_tuple_struct`.
+    fn serialize_newtype_struct<T: Serialize>(
+        &mut self,
+        name: &'static str,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Allows a variant with a single item to be more efficiently
-    /// serialized than a variant with multiple items. By default it just serializes the value as a
-    /// tuple variant sequence.
-    #[inline]
-    fn serialize_newtype_variant<T>(&mut self,
-                                    name: &'static str,
-                                    variant_index: usize,
-                                    variant: &'static str,
-                                    value: T) -> Result<(), Self::Error>
-        where T: Serialize,
-    {
-        self.serialize_tuple_variant(
-            name,
-            variant_index,
-            variant,
-            Some(value))
-    }
+    /// Allows a variant with a single item to be more efficiently serialized
+    /// than a variant with multiple items. A reasonable implementation would be
+    /// to forward to `serialize_tuple_variant`.
+    fn serialize_newtype_variant<T: Serialize>(
+        &mut self,
+        name: &'static str,
+        variant_index: usize,
+        variant: &'static str,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a `None` value..serialize
+    /// Serializes a `None` value.
     fn serialize_none(&mut self) -> Result<(), Self::Error>;
 
     /// Serializes a `Some(...)` value.
-    fn serialize_some<V>(&mut self, value: V) -> Result<(), Self::Error>
-        where V: Serialize;
+    fn serialize_some<T: Serialize>(
+        &mut self,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a sequence.
-    ///
-    /// Callees of this method need to construct a `SeqVisitor`, which iterates through each item
-    /// in the sequence.
-    fn serialize_seq<V>(&mut self, visitor: V) -> Result<(), Self::Error>
-        where V: SeqVisitor;
+    /// Begins to serialize a sequence. This call must be followed by zero or
+    /// more calls to `serialize_seq_elt`, then a call to `serialize_seq_end`.
+    fn serialize_seq(
+        &mut self,
+        len: Option<usize>,
+    ) -> Result<Self::SeqState, Self::Error>;
 
-    /// Serializes a sequence element.
-    fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
-        where T: Serialize;
+    /// Serializes a sequence element. Must have previously called
+    /// `serialize_seq`.
+    fn serialize_seq_elt<T: Serialize>(
+        &mut self,
+        state: &mut Self::SeqState,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a tuple.
-    ///
-    /// By default this serializes a tuple as a sequence.
-    #[inline]
-    fn serialize_tuple<V>(&mut self, visitor: V) -> Result<(), Self::Error>
-        where V: SeqVisitor,
-    {
-        self.serialize_seq(visitor)
-    }
+    /// Finishes serializing a sequence.
+    fn serialize_seq_end(
+        &mut self,
+        state: Self::SeqState,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a tuple element.
-    ///
-    /// By default, tuples are serialized as a sequence.
-    #[inline]
-    fn serialize_tuple_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
-        where T: Serialize
-    {
-        self.serialize_seq_elt(value)
-    }
+    /// Begins to serialize a sequence whose length will be known at
+    /// deserialization time. This call must be followed by zero or more calls
+    /// to `serialize_seq_elt`, then a call to `serialize_seq_end`. A reasonable
+    /// implementation would be to forward to `serialize_seq`.
+    fn serialize_seq_fixed_size(
+        &mut self,
+        size: usize,
+    ) -> Result<Self::SeqState, Self::Error>;
 
-    /// Serializes a fixed-size array.
-    ///
-    /// By default this serializes an array as a sequence.
-    #[inline]
-    fn serialize_fixed_size_array<V>(&mut self, visitor: V) -> Result<(), Self::Error>
-        where V: SeqVisitor,
-    {
-        self.serialize_seq(visitor)
-    }
+    /// Begins to serialize a tuple. This call must be followed by zero or more
+    /// calls to `serialize_tuple_elt`, then a call to `serialize_tuple_end`. A
+    /// reasonable implementation would be to forward to `serialize_seq`.
+    fn serialize_tuple(
+        &mut self,
+        len: usize,
+    ) -> Result<Self::TupleState, Self::Error>;
 
-    /// Serializes a tuple struct.
-    ///
-    /// By default, tuple structs are serialized as a tuple.
-    #[inline]
-    fn serialize_tuple_struct<V>(&mut self,
-                                 _name: &'static str,
-                                 visitor: V) -> Result<(), Self::Error>
-        where V: SeqVisitor,
-    {
-        self.serialize_tuple(visitor)
-    }
+    /// Serializes a tuple element. Must have previously called
+    /// `serialize_tuple`.
+    fn serialize_tuple_elt<T: Serialize>(
+        &mut self,
+        state: &mut Self::TupleState,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a tuple struct element.
-    ///
-    /// By default, tuple struct elements are serialized as a tuple element.
-    #[inline]
-    fn serialize_tuple_struct_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
-        where T: Serialize
-    {
-        self.serialize_tuple_elt(value)
-    }
+    /// Finishes serializing a tuple.
+    fn serialize_tuple_end(
+        &mut self,
+        state: Self::TupleState,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a tuple variant.
-    ///
-    /// By default, tuple variants are serialized as a tuple struct.
-    #[inline]
-    fn serialize_tuple_variant<V>(&mut self,
-                                  _name: &'static str,
-                                  _variant_index: usize,
-                                  variant: &'static str,
-                                  visitor: V) -> Result<(), Self::Error>
-        where V: SeqVisitor,
-    {
-        self.serialize_tuple_struct(variant, visitor)
-    }
+    /// Begins to serialize a tuple struct. This call must be followed by zero
+    /// or more calls to `serialize_tuple_struct_elt`, then a call to
+    /// `serialize_tuple_struct_end`. A reasonable implementation would be to
+    /// forward to `serialize_tuple`.
+    fn serialize_tuple_struct(
+        &mut self,
+        name: &'static str,
+        len: usize,
+    ) -> Result<Self::TupleStructState, Self::Error>;
 
-    /// Serializes a tuple element.
-    ///
-    /// By default, tuples are serialized as a sequence.
-    #[inline]
-    fn serialize_tuple_variant_elt<T>(&mut self, value: T) -> Result<(), Self::Error>
-        where T: Serialize
-    {
-        self.serialize_tuple_struct_elt(value)
-    }
+    /// Serializes a tuple struct element. Must have previously called
+    /// `serialize_tuple_struct`.
+    fn serialize_tuple_struct_elt<T: Serialize>(
+        &mut self,
+        state: &mut Self::TupleStructState,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a map.
-    ///
-    /// Callees of this method need to construct a `MapVisitor`, which iterates through each item
-    /// in the map.
-    fn serialize_map<V>(&mut self, visitor: V) -> Result<(), Self::Error>
-        where V: MapVisitor;
+    /// Finishes serializing a tuple struct.
+    fn serialize_tuple_struct_end(
+        &mut self,
+        state: Self::TupleStructState,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a map element (key-value pair).
-    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), Self::Error>
-        where K: Serialize,
-              V: Serialize;
+    /// Begins to serialize a tuple variant. This call must be followed by zero
+    /// or more calls to `serialize_tuple_variant_elt`, then a call to
+    /// `serialize_tuple_variant_end`. A reasonable implementation would be to
+    /// forward to `serialize_tuple_struct`.
+    fn serialize_tuple_variant(
+        &mut self,
+        name: &'static str,
+        variant_index: usize,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<Self::TupleVariantState, Self::Error>;
 
-    /// Serializes a struct.
-    ///
-    /// By default, structs are serialized as a map with the field name as the key.
-    #[inline]
-    fn serialize_struct<V>(&mut self,
-                           _name: &'static str,
-                           visitor: V) -> Result<(), Self::Error>
-        where V: MapVisitor,
-    {
-        self.serialize_map(visitor)
-    }
+    /// Serializes a tuple variant element. Must have previously called
+    /// `serialize_tuple_variant`.
+    fn serialize_tuple_variant_elt<T: Serialize>(
+        &mut self,
+        state: &mut Self::TupleVariantState,
+        value: T,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes an element of a struct.
-    ///
-    /// By default, struct elements are serialized as a map element with the field name as the key.
-    #[inline]
-    fn serialize_struct_elt<V>(&mut self,
-                               key: &'static str,
-                               value: V) -> Result<(), Self::Error>
-        where V: Serialize,
-    {
-        self.serialize_map_elt(key, value)
-    }
+    /// Finishes serializing a tuple variant.
+    fn serialize_tuple_variant_end(
+        &mut self,
+        state: Self::TupleVariantState,
+    ) -> Result<(), Self::Error>;
 
-    /// Serializes a struct variant.
-    ///
-    /// By default, struct variants are serialized as a struct.
-    #[inline]
-    fn serialize_struct_variant<V>(&mut self,
-                                   _name: &'static str,
-                                   _variant_index: usize,
-                                   variant: &'static str,
-                                   visitor: V) -> Result<(), Self::Error>
-        where V: MapVisitor,
-    {
-        self.serialize_struct(variant, visitor)
-    }
+    /// Begins to serialize a map. This call must be followed by zero or more
+    /// calls to `serialize_map_elt`, then a call to `serialize_map_end`.
+    fn serialize_map(
+        &mut self,
+        len: Option<usize>,
+    ) -> Result<Self::MapState, Self::Error>;
 
-    /// Serializes an element of a struct variant.
-    ///
-    /// By default, struct variant elements are serialized as a struct element.
-    #[inline]
-    fn serialize_struct_variant_elt<V>(&mut self,
-                                       key: &'static str,
-                                       value: V) -> Result<(), Self::Error>
-        where V: Serialize,
-    {
-        self.serialize_struct_elt(key, value)
-    }
-}
+    /// Serialize a map element. Must have previously called `serialize_map`.
+    fn serialize_map_elt<K: Serialize, V: Serialize>(
+        &mut self,
+        state: &mut Self::MapState,
+        key: K,
+        value: V,
+    ) -> Result<(), Self::Error>;
 
-/// A trait that is used by a `Serialize` to iterate through a sequence.
-#[cfg_attr(feature = "nightly-testing", allow(len_without_is_empty))]
-pub trait SeqVisitor {
-    /// Serializes a sequence item in the serializer.
-    ///
-    /// This returns `Ok(Some(()))` when there are more items to serialize, or `Ok(None)` when
-    /// complete.
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer;
+    /// Finishes serializing a map.
+    fn serialize_map_end(
+        &mut self,
+        state: Self::MapState,
+    ) -> Result<(), Self::Error>;
 
-    /// Return the length of the sequence if known.
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        None
-    }
-}
+    /// Begins to serialize a struct. This call must be followed by zero or more
+    /// calls to `serialize_struct_elt`, then a call to `serialize_struct_end`.
+    fn serialize_struct(
+        &mut self,
+        name: &'static str,
+        len: usize,
+    ) -> Result<Self::StructState, Self::Error>;
 
-/// A trait that is used by a `Serialize` to iterate through a map.
-#[cfg_attr(feature = "nightly-testing", allow(len_without_is_empty))]
-pub trait MapVisitor {
-    /// Serializes a map item in the serializer.
-    ///
-    /// This returns `Ok(Some(()))` when there are more items to serialize, or `Ok(None)` when
-    /// complete.
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer;
+    /// Serializes a struct field. Must have previously called
+    /// `serialize_struct`.
+    fn serialize_struct_elt<V: Serialize>(
+        &mut self,
+        state: &mut Self::StructState,
+        key: &'static str,
+        value: V,
+    ) -> Result<(), Self::Error>;
 
-    /// Return the length of the map if known.
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        None
-    }
+    /// Finishes serializing a struct.
+    fn serialize_struct_end(
+        &mut self,
+        state: Self::StructState,
+    ) -> Result<(), Self::Error>;
+
+    /// Begins to serialize a struct variant. This call must be followed by zero
+    /// or more calls to `serialize_struct_variant_elt`, then a call to
+    /// `serialize_struct_variant_end`.
+    fn serialize_struct_variant(
+        &mut self,
+        name: &'static str,
+        variant_index: usize,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<Self::StructVariantState, Self::Error>;
+
+    /// Serialize a struct variant element. Must have previously called
+    /// `serialize_struct_variant`.
+    fn serialize_struct_variant_elt<V: Serialize>(
+        &mut self,
+        state: &mut Self::StructVariantState,
+        key: &'static str,
+        value: V,
+    ) -> Result<(), Self::Error>;
+
+    /// Finishes serializing a struct variant.
+    fn serialize_struct_variant_end(
+        &mut self,
+        state: Self::StructVariantState,
+    ) -> Result<(), Self::Error>;
 }
