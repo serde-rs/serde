@@ -169,7 +169,7 @@ macro_rules! array_impls {
             fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
                 where S: Serializer,
             {
-                let mut state = try!(serializer.serialize_seq(Some($len)));
+                let mut state = try!(serializer.serialize_seq_fixed_size($len));
                 for e in self.iter() {
                     try!(serializer.serialize_seq_elt(&mut state, e));
                 }
