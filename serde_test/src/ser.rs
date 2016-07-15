@@ -1,24 +1,19 @@
 use std::marker::PhantomData;
 
-use serde::ser::{
-    self,
-    MapVisitor,
-    SeqVisitor,
-    Serialize,
-};
+use serde::ser::{self, MapVisitor, SeqVisitor, Serialize};
 
 use error::Error;
 use token::Token;
 
 pub struct Serializer<'a, I>
-    where I: Iterator<Item=&'a Token<'a>>,
+    where I: Iterator<Item = &'a Token<'a>>,
 {
     tokens: I,
     phantom: PhantomData<&'a Token<'a>>,
 }
 
 impl<'a, I> Serializer<'a, I>
-    where I: Iterator<Item=&'a Token<'a>>,
+    where I: Iterator<Item = &'a Token<'a>>,
 {
     pub fn new(tokens: I) -> Serializer<'a, I> {
         Serializer {
@@ -32,9 +27,10 @@ impl<'a, I> Serializer<'a, I>
     }
 
     fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+        where V: SeqVisitor,
     {
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::SeqEnd));
 
@@ -42,9 +38,10 @@ impl<'a, I> Serializer<'a, I>
     }
 
     fn visit_map<V>(&mut self, mut visitor: V) -> Result<(), Error>
-        where V: MapVisitor
+        where V: MapVisitor,
     {
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::MapEnd));
 
@@ -53,7 +50,7 @@ impl<'a, I> Serializer<'a, I>
 }
 
 impl<'a, I> ser::Serializer for Serializer<'a, I>
-    where I: Iterator<Item=&'a Token<'a>>,
+    where I: Iterator<Item = &'a Token<'a>>,
 {
     type Error = Error;
 
@@ -62,11 +59,13 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_newtype_variant<T>(&mut self,
-                                name: &str,
-                                _variant_index: usize,
-                                variant: &str,
-                                value: T) -> Result<(), Error>
+    fn serialize_newtype_variant<T>(
+        &mut self,
+        name: &str,
+        _variant_index: usize,
+        variant: &str,
+        value: T
+    ) -> Result<(), Error>
         where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::EnumNewType(name, variant)));
@@ -78,10 +77,12 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_unit_variant(&mut self,
-                          name: &str,
-                          _variant_index: usize,
-                          variant: &str) -> Result<(), Error> {
+    fn serialize_unit_variant(
+        &mut self,
+        name: &str,
+        _variant_index: usize,
+        variant: &str
+    ) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::EnumUnit(name, variant)));
 
         Ok(())
@@ -176,7 +177,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
 
 
     fn serialize_seq<V>(&mut self, visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+        where V: SeqVisitor,
     {
         let len = visitor.len();
 
@@ -186,7 +187,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     }
 
     fn serialize_fixed_size_array<V>(&mut self, visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+        where V: SeqVisitor,
     {
         let len = visitor.len().expect("arrays must have a length");
 
@@ -196,20 +197,21 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     }
 
     fn serialize_seq_elt<T>(&mut self, value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::SeqSep));
         value.serialize(self)
     }
 
     fn serialize_tuple<V>(&mut self, mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+        where V: SeqVisitor,
     {
         let len = visitor.len().expect("arrays must have a length");
 
         assert_eq!(self.tokens.next(), Some(&Token::TupleStart(len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::TupleEnd));
 
@@ -217,15 +219,13 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     }
 
     fn serialize_tuple_elt<T>(&mut self, value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::TupleSep));
         value.serialize(self)
     }
 
-    fn serialize_newtype_struct<T>(&mut self,
-                               name: &'static str,
-                               value: T) -> Result<(), Error>
+    fn serialize_newtype_struct<T>(&mut self, name: &'static str, value: T) -> Result<(), Error>
         where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::StructNewType(name)));
@@ -233,13 +233,15 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     }
 
     fn serialize_tuple_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+        where V: SeqVisitor,
     {
         let len = visitor.len();
 
-        assert_eq!(self.tokens.next(), Some(&Token::TupleStructStart(name, len)));
+        assert_eq!(self.tokens.next(),
+                   Some(&Token::TupleStructStart(name, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::TupleStructEnd));
 
@@ -253,18 +255,22 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_tuple_variant<V>(&mut self,
-                                  name: &str,
-                                  _variant_index: usize,
-                                  variant: &str,
-                                  mut visitor: V) -> Result<(), Error>
-        where V: SeqVisitor
+    fn serialize_tuple_variant<V>(
+        &mut self,
+        name: &str,
+        _variant_index: usize,
+        variant: &str,
+        mut visitor: V
+    ) -> Result<(), Error>
+        where V: SeqVisitor,
     {
         let len = visitor.len();
 
-        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqStart(name, variant, len)));
+        assert_eq!(self.tokens.next(),
+                   Some(&Token::EnumSeqStart(name, variant, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::EnumSeqEnd));
 
@@ -279,7 +285,7 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     }
 
     fn serialize_map<V>(&mut self, visitor: V) -> Result<(), Error>
-        where V: MapVisitor
+        where V: MapVisitor,
     {
         let len = visitor.len();
 
@@ -299,13 +305,14 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
     }
 
     fn serialize_struct<V>(&mut self, name: &str, mut visitor: V) -> Result<(), Error>
-        where V: MapVisitor
+        where V: MapVisitor,
     {
         let len = visitor.len();
 
         assert_eq!(self.tokens.next(), Some(&Token::StructStart(name, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::StructEnd));
 
@@ -321,18 +328,22 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         value.serialize(self)
     }
 
-    fn serialize_struct_variant<V>(&mut self,
-                                   name: &str,
-                                   _variant_index: usize,
-                                   variant: &str,
-                                   mut visitor: V) -> Result<(), Error>
-        where V: MapVisitor
+    fn serialize_struct_variant<V>(
+        &mut self,
+        name: &str,
+        _variant_index: usize,
+        variant: &str,
+        mut visitor: V
+    ) -> Result<(), Error>
+        where V: MapVisitor,
     {
         let len = visitor.len();
 
-        assert_eq!(self.tokens.next(), Some(&Token::EnumMapStart(name, variant, len)));
+        assert_eq!(self.tokens.next(),
+                   Some(&Token::EnumMapStart(name, variant, len)));
 
-        while let Some(()) = try!(visitor.visit(self)) { }
+        while let Some(()) = try!(visitor.visit(self)) {
+        }
 
         assert_eq!(self.tokens.next(), Some(&Token::EnumMapEnd));
 

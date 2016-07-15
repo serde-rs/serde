@@ -13,8 +13,8 @@
 // Rust 1.5 is unhappy that this private module is undocumented.
 #![allow(missing_docs)]
 
-use core::{usize, u8, u16, u32, u64};
-use core::{isize, i8, i16, i32, i64};
+use core::{u16, u32, u64, u8, usize};
+use core::{i16, i32, i64, i8, isize};
 use core::{f32, f64};
 use core::mem::size_of;
 

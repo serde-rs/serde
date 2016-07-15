@@ -6,7 +6,7 @@ extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
 use self::serde::de::{Deserialize, Deserializer};
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize)]
 struct With<T> {
@@ -42,37 +42,36 @@ struct NoBounds<T> {
 #[derive(Serialize, Deserialize)]
 enum EnumWith<T> {
     Unit,
-    Newtype(
-        #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-        X),
-    Tuple(
-        T,
-        #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-        X),
+    Newtype(#[serde(serialize_with="ser_x", deserialize_with="de_x")]
+            X),
+    Tuple(T,
+          #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+          X),
     Struct {
         t: T,
         #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-        x: X },
+        x: X,
+    },
 }
 
 #[derive(Serialize)]
-struct MultipleRef<'a, 'b, 'c, T> where T: 'c, 'c: 'b, 'b: 'a {
+struct MultipleRef<'a, 'b, 'c, T>
+    where T: 'c,
+          'c: 'b,
+          'b: 'a,
+{
     t: T,
     rrrt: &'a &'b &'c T,
 }
 
 #[derive(Serialize, Deserialize)]
-struct Newtype(
-    #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-    X
-);
+struct Newtype(#[serde(serialize_with="ser_x", deserialize_with="de_x")]
+               X);
 
 #[derive(Serialize, Deserialize)]
-struct Tuple<T>(
-    T,
-    #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-    X,
-);
+struct Tuple<T>(T,
+                #[serde(serialize_with="ser_x", deserialize_with="de_x")]
+                X);
 
 #[derive(Serialize, Deserialize)]
 enum TreeNode<D> {
@@ -117,7 +116,7 @@ struct WithTraits2<D, E> {
     e: E,
 }
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 trait SerializeWith {
     fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> Result<(), S::Error>;
@@ -129,6 +128,9 @@ trait DeserializeWith: Sized {
 
 // Implements neither Serialize nor Deserialize
 struct X;
-fn ser_x<S: Serializer>(_: &X, _: &mut S) -> Result<(), S::Error> { panic!() }
-fn de_x<D: Deserializer>(_: &mut D) -> Result<X, D::Error> { panic!() }
-
+fn ser_x<S: Serializer>(_: &X, _: &mut S) -> Result<(), S::Error> {
+    panic!()
+}
+fn de_x<D: Deserializer>(_: &mut D) -> Result<X, D::Error> {
+    panic!()
+}

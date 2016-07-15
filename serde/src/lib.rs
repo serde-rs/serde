@@ -5,7 +5,7 @@
 //! handshake protocol between serializers and serializees can be completely optimized away,
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
-//! 
+//!
 //! For a detailed tutorial on the different ways to use serde please check out the
 //! [github repository](https://github.com/serde-rs/serde)
 
@@ -29,8 +29,8 @@ extern crate alloc;
 
 #[cfg(feature = "std")]
 mod core {
-    pub use std::{ops, hash, fmt, cmp, marker, mem, i8, i16, i32, i64, u8, u16, u32, u64, isize,
-            usize, f32, f64, char, str, num, slice, iter};
+    pub use std::{char, cmp, f32, f64, fmt, hash, i16, i32, i64, i8, isize, iter, marker, mem,
+                  num, ops, slice, str, u16, u32, u64, u8, usize};
     #[cfg(feature = "nightly")]
     extern crate core;
     #[cfg(feature = "nightly")]

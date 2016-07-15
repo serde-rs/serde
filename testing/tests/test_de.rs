@@ -9,14 +9,9 @@ extern crate fnv;
 use self::fnv::FnvHasher;
 
 extern crate serde_test;
-use self::serde_test::{
-    Error,
-    Token,
-    assert_de_tokens,
-    assert_de_tokens_error,
-};
+use self::serde_test::{Error, Token, assert_de_tokens, assert_de_tokens_error};
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Clone, PartialEq, Debug, Deserialize)]
 struct UnitStruct;
@@ -37,10 +32,14 @@ enum Enum {
     Unit,
     Simple(i32),
     Seq(i32, i32, i32),
-    Map { a: i32, b: i32, c: i32 }
+    Map {
+        a: i32,
+        b: i32,
+        c: i32,
+    },
 }
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_test {
     ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
@@ -81,42 +80,43 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token<'static>]) {
     struct IgnoreBase {
         a: i32,
     }
- 
-    let expected = IgnoreBase{a: 1};
- 
+
+    let expected = IgnoreBase {
+        a: 1,
+    };
+
     // Embed the tokens to be ignored in the normal token
     // stream for an IgnoreBase type
-    let concated_tokens : Vec<Token<'static>> = vec![
-            Token::MapStart(Some(2)),
-                Token::MapSep,
-                Token::Str("a"),
-                Token::I32(1),
- 
-                Token::MapSep,
-                Token::Str("ignored")
-        ]
+    let concated_tokens: Vec<Token<'static>> = vec![Token::MapStart(Some(2)),
+                                                    Token::MapSep,
+                                                    Token::Str("a"),
+                                                    Token::I32(1),
+
+                                                    Token::MapSep,
+                                                    Token::Str("ignored")]
         .into_iter()
         .chain(ignorable_tokens.to_vec().into_iter())
         .chain(vec![
             Token::MapEnd,
-        ].into_iter())
+        ]
+            .into_iter())
         .collect();
- 
+
     let mut de = serde_test::Deserializer::new(concated_tokens.into_iter());
     let v: Result<IgnoreBase, Error> = Deserialize::deserialize(&mut de);
- 
+
     // We run this test on every token stream for convenience, but
     // some token streams don't make sense embedded as a map value,
     // so we ignore those. SyntaxError is the real sign of trouble.
     if let Err(Error::UnexpectedToken(_)) = v {
         return;
     }
- 
+
     assert_eq!(v.as_ref(), Ok(&expected));
     assert_eq!(de.next_token(), None);
 }
 
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 
 declare_tests! {
     test_bool {
@@ -767,10 +767,8 @@ declare_tests! {
 #[cfg(feature = "nightly")]
 #[test]
 fn test_net_ipaddr() {
-    assert_de_tokens(
-        "1.2.3.4".parse::<net::IpAddr>().unwrap(),
-        &[Token::Str("1.2.3.4")],
-    );
+    assert_de_tokens("1.2.3.4".parse::<net::IpAddr>().unwrap(),
+                     &[Token::Str("1.2.3.4")]);
 }
 
 declare_error_tests! {

@@ -12,19 +12,23 @@ use internals::attr;
 // allowed here".
 pub fn without_defaults(generics: &ast::Generics) -> ast::Generics {
     ast::Generics {
-        ty_params: generics.ty_params.iter().map(|ty_param| {
-            ast::TyParam {
-                default: None,
-                .. ty_param.clone()
-            }}).collect(),
-        .. generics.clone()
+        ty_params: generics.ty_params
+            .iter()
+            .map(|ty_param| {
+                ast::TyParam {
+                    default: None,
+                    ..ty_param.clone()
+                }
+            })
+            .collect(),
+        ..generics.clone()
     }
 }
 
 pub fn with_where_predicates(
     builder: &AstBuilder,
     generics: &ast::Generics,
-    predicates: &[ast::WherePredicate],
+    predicates: &[ast::WherePredicate]
 ) -> ast::Generics {
     builder.from_generics(generics.clone())
         .with_predicates(predicates.to_vec())
@@ -35,15 +39,15 @@ pub fn with_where_predicates_from_fields<F>(
     builder: &AstBuilder,
     item: &Item,
     generics: &ast::Generics,
-    from_field: F,
+    from_field: F
 ) -> ast::Generics
     where F: Fn(&attr::Field) -> Option<&[ast::WherePredicate]>,
 {
     builder.from_generics(generics.clone())
-        .with_predicates(
-            item.body.all_fields()
-                .flat_map(|field| from_field(&field.attrs))
-                .flat_map(|predicates| predicates.to_vec()))
+        .with_predicates(item.body
+            .all_fields()
+            .flat_map(|field| from_field(&field.attrs))
+            .flat_map(|predicates| predicates.to_vec()))
         .build()
 }
 
@@ -52,23 +56,25 @@ pub fn with_bound<F>(
     item: &Item,
     generics: &ast::Generics,
     filter: F,
-    bound: &ast::Path,
+    bound: &ast::Path
 ) -> ast::Generics
     where F: Fn(&attr::Field) -> bool,
 {
     builder.from_generics(generics.clone())
-        .with_predicates(
-            item.body.all_fields()
-                .filter(|&field| filter(&field.attrs))
-                .map(|field| &field.ty)
-                .filter(|ty| !contains_recursion(ty, item.ident))
-                .map(|ty| strip_reference(ty))
-                .map(|ty| builder.where_predicate()
+        .with_predicates(item.body
+            .all_fields()
+            .filter(|&field| filter(&field.attrs))
+            .map(|field| &field.ty)
+            .filter(|ty| !contains_recursion(ty, item.ident))
+            .map(|ty| strip_reference(ty))
+            .map(|ty| {
+                builder.where_predicate()
                     // the type that is being bounded e.g. T
                     .bound().build(ty.clone())
                     // the bound e.g. Serialize
                     .bound().trait_(bound.clone()).build()
-                    .build()))
+                    .build()
+            }))
         .build()
 }
 
@@ -98,9 +104,8 @@ fn contains_recursion(ty: &ast::Ty, ident: ast::Ident) -> bool {
     }
     impl visit::Visitor for FindRecursion {
         fn visit_path(&mut self, path: &ast::Path, _id: ast::NodeId) {
-            if !path.global
-                    && path.segments.len() == 1
-                    && path.segments[0].identifier == self.ident {
+            if !path.global && path.segments.len() == 1 &&
+               path.segments[0].identifier == self.ident {
                 self.found_recursion = true;
             } else {
                 visit::walk_path(self, path);

@@ -1,15 +1,9 @@
 extern crate serde;
-use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
+use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 extern crate serde_test;
-use self::serde_test::{
-    Error,
-    Token,
-    assert_tokens,
-    assert_ser_tokens,
-    assert_de_tokens,
-    assert_de_tokens_error
-};
+use self::serde_test::{Error, Token, assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
+                       assert_tokens};
 
 trait MyDefault: Sized {
     fn my_default() -> Self;
@@ -20,26 +14,28 @@ trait ShouldSkip: Sized {
 }
 
 trait SerializeWith: Sized {
-    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
-        where S: Serializer;
+    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error> where S: Serializer;
 }
 
 trait DeserializeWith: Sized {
-    fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer;
+    fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error> where D: Deserializer;
 }
 
 impl MyDefault for i32 {
-    fn my_default() -> Self { 123 }
+    fn my_default() -> Self {
+        123
+    }
 }
 
 impl ShouldSkip for i32 {
-    fn should_skip(&self) -> bool { *self == 123 }
+    fn should_skip(&self) -> bool {
+        *self == 123
+    }
 }
 
 impl SerializeWith for i32 {
     fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
-        where S: Serializer
+        where S: Serializer,
     {
         if *self == 123 {
             true.serialize(ser)
@@ -51,7 +47,7 @@ impl SerializeWith for i32 {
 
 impl DeserializeWith for i32 {
     fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer
+        where D: Deserializer,
     {
         if try!(Deserialize::deserialize(de)) {
             Ok(123)
@@ -79,53 +75,57 @@ struct DefaultStruct<A, B, C, D, E>
 
 #[test]
 fn test_default_struct() {
-    assert_de_tokens(
-        &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
-        &[
-            Token::StructStart("DefaultStruct", Some(3)),
+    assert_de_tokens(&DefaultStruct {
+                         a1: 1,
+                         a2: 2,
+                         a3: 3,
+                         a4: 0,
+                         a5: 123,
+                     },
+                     &[Token::StructStart("DefaultStruct", Some(3)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                       Token::StructSep,
+                       Token::Str("a1"),
+                       Token::I32(1),
 
-            Token::StructSep,
-            Token::Str("a2"),
-            Token::I32(2),
+                       Token::StructSep,
+                       Token::Str("a2"),
+                       Token::I32(2),
 
-            Token::StructSep,
-            Token::Str("a3"),
-            Token::I32(3),
+                       Token::StructSep,
+                       Token::Str("a3"),
+                       Token::I32(3),
 
-            Token::StructSep,
-            Token::Str("a4"),
-            Token::I32(4),
+                       Token::StructSep,
+                       Token::Str("a4"),
+                       Token::I32(4),
 
-            Token::StructSep,
-            Token::Str("a5"),
-            Token::I32(5),
+                       Token::StructSep,
+                       Token::Str("a5"),
+                       Token::I32(5),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 
-    assert_de_tokens(
-        &DefaultStruct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
-        &[
-            Token::StructStart("DefaultStruct", Some(1)),
+    assert_de_tokens(&DefaultStruct {
+                         a1: 1,
+                         a2: 0,
+                         a3: 123,
+                         a4: 0,
+                         a5: 123,
+                     },
+                     &[Token::StructStart("DefaultStruct", Some(1)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                       Token::StructSep,
+                       Token::Str("a1"),
+                       Token::I32(1),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 enum DefaultEnum<A, B, C, D, E>
     where C: MyDefault,
-          E: MyDefault
+          E: MyDefault,
 {
     Struct {
         a1: A,
@@ -137,52 +137,56 @@ enum DefaultEnum<A, B, C, D, E>
         a4: D,
         #[serde(skip_deserializing, default="MyDefault::my_default")]
         a5: E,
-    }
+    },
 }
 
 #[test]
 fn test_default_enum() {
-    assert_de_tokens(
-        &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
-        &[
-            Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
+    assert_de_tokens(&DefaultEnum::Struct {
+                         a1: 1,
+                         a2: 2,
+                         a3: 3,
+                         a4: 0,
+                         a5: 123,
+                     },
+                     &[Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
 
-            Token::EnumMapSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                       Token::EnumMapSep,
+                       Token::Str("a1"),
+                       Token::I32(1),
 
-            Token::EnumMapSep,
-            Token::Str("a2"),
-            Token::I32(2),
+                       Token::EnumMapSep,
+                       Token::Str("a2"),
+                       Token::I32(2),
 
-            Token::EnumMapSep,
-            Token::Str("a3"),
-            Token::I32(3),
+                       Token::EnumMapSep,
+                       Token::Str("a3"),
+                       Token::I32(3),
 
-            Token::EnumMapSep,
-            Token::Str("a4"),
-            Token::I32(4),
+                       Token::EnumMapSep,
+                       Token::Str("a4"),
+                       Token::I32(4),
 
-            Token::EnumMapSep,
-            Token::Str("a5"),
-            Token::I32(5),
+                       Token::EnumMapSep,
+                       Token::Str("a5"),
+                       Token::I32(5),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                       Token::EnumMapEnd]);
 
-    assert_de_tokens(
-        &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
-        &[
-            Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
+    assert_de_tokens(&DefaultEnum::Struct {
+                         a1: 1,
+                         a2: 0,
+                         a3: 123,
+                         a4: 0,
+                         a5: 123,
+                     },
+                     &[Token::EnumMapStart("DefaultEnum", "Struct", Some(5)),
 
-            Token::EnumMapSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                       Token::EnumMapSep,
+                       Token::Str("a1"),
+                       Token::I32(1),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                       Token::EnumMapEnd]);
 }
 
 // Does not implement std::default::Default.
@@ -205,27 +209,22 @@ struct ContainsNoStdDefault<A: MyDefault> {
 // it is annotated with `default=...`.
 #[test]
 fn test_no_std_default() {
-    assert_de_tokens(
-        &ContainsNoStdDefault { a: NoStdDefault(123) },
-        &[
-            Token::StructStart("ContainsNoStdDefault", Some(1)),
-            Token::StructEnd,
-        ]
-    );
+    assert_de_tokens(&ContainsNoStdDefault {
+                         a: NoStdDefault(123),
+                     },
+                     &[Token::StructStart("ContainsNoStdDefault", Some(1)), Token::StructEnd]);
 
-    assert_de_tokens(
-        &ContainsNoStdDefault { a: NoStdDefault(8) },
-        &[
-            Token::StructStart("ContainsNoStdDefault", Some(1)),
+    assert_de_tokens(&ContainsNoStdDefault {
+                         a: NoStdDefault(8),
+                     },
+                     &[Token::StructStart("ContainsNoStdDefault", Some(1)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::StructNewType("NoStdDefault"),
-            Token::I8(8),
+                       Token::StructSep,
+                       Token::Str("a"),
+                       Token::StructNewType("NoStdDefault"),
+                       Token::I8(8),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 }
 
 // Does not implement Deserialize.
@@ -240,7 +239,7 @@ impl Default for NotDeserializeStruct {
 
 impl DeserializeWith for NotDeserializeStruct {
     fn deserialize_with<D>(_: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer
+        where D: Deserializer,
     {
         panic!()
     }
@@ -248,7 +247,9 @@ impl DeserializeWith for NotDeserializeStruct {
 
 // Does not implement Deserialize.
 #[derive(Debug, PartialEq)]
-enum NotDeserializeEnum { Trouble }
+enum NotDeserializeEnum {
+    Trouble,
+}
 
 impl MyDefault for NotDeserializeEnum {
     fn my_default() -> Self {
@@ -273,18 +274,13 @@ struct ContainsNotDeserialize<A, B, C: DeserializeWith, E: MyDefault> {
 // custom default.
 #[test]
 fn test_elt_not_deserialize() {
-    assert_de_tokens(
-        &ContainsNotDeserialize {
-            a: NotDeserializeStruct(123),
-            b: NotDeserializeStruct(123),
-            c: NotDeserializeStruct(123),
-            e: NotDeserializeEnum::Trouble,
-        },
-        &[
-            Token::StructStart("ContainsNotDeserialize", Some(3)),
-            Token::StructEnd,
-        ]
-    );
+    assert_de_tokens(&ContainsNotDeserialize {
+                         a: NotDeserializeStruct(123),
+                         b: NotDeserializeStruct(123),
+                         c: NotDeserializeStruct(123),
+                         e: NotDeserializeEnum::Trouble,
+                     },
+                     &[Token::StructStart("ContainsNotDeserialize", Some(3)), Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -296,55 +292,53 @@ struct DenyUnknown {
 #[test]
 fn test_ignore_unknown() {
     // 'Default' allows unknown. Basic smoke test of ignore...
-    assert_de_tokens(
-        &DefaultStruct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
-        &[
-            Token::StructStart("DefaultStruct", Some(5)),
+    assert_de_tokens(&DefaultStruct {
+                         a1: 1,
+                         a2: 2,
+                         a3: 3,
+                         a4: 0,
+                         a5: 123,
+                     },
+                     &[Token::StructStart("DefaultStruct", Some(5)),
 
-            Token::StructSep,
-            Token::Str("whoops1"),
-            Token::I32(2),
+                       Token::StructSep,
+                       Token::Str("whoops1"),
+                       Token::I32(2),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                       Token::StructSep,
+                       Token::Str("a1"),
+                       Token::I32(1),
 
-            Token::StructSep,
-            Token::Str("whoops2"),
-            Token::SeqStart(Some(1)),
-            Token::SeqSep,
-            Token::I32(2),
-            Token::SeqEnd,
+                       Token::StructSep,
+                       Token::Str("whoops2"),
+                       Token::SeqStart(Some(1)),
+                       Token::SeqSep,
+                       Token::I32(2),
+                       Token::SeqEnd,
 
-            Token::StructSep,
-            Token::Str("a2"),
-            Token::I32(2),
+                       Token::StructSep,
+                       Token::Str("a2"),
+                       Token::I32(2),
 
-            Token::StructSep,
-            Token::Str("whoops3"),
-            Token::I32(2),
+                       Token::StructSep,
+                       Token::Str("whoops3"),
+                       Token::I32(2),
 
-            Token::StructSep,
-            Token::Str("a3"),
-            Token::I32(3),
+                       Token::StructSep,
+                       Token::Str("a3"),
+                       Token::I32(3),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 
-    assert_de_tokens_error::<DenyUnknown>(
-        &[
-            Token::StructStart("DenyUnknown", Some(2)),
+    assert_de_tokens_error::<DenyUnknown>(&[Token::StructStart("DenyUnknown", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                                            Token::StructSep,
+                                            Token::Str("a1"),
+                                            Token::I32(1),
 
-            Token::StructSep,
-            Token::Str("whoops"),
-        ],
-        Error::UnknownField("whoops".to_owned())
-    );
+                                            Token::StructSep,
+                                            Token::Str("whoops")],
+                                          Error::UnknownField("whoops".to_owned()));
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -365,56 +359,53 @@ struct RenameStructSerializeDeserialize {
 
 #[test]
 fn test_rename_struct() {
-    assert_tokens(
-        &RenameStruct { a1: 1, a2: 2 },
-        &[
-            Token::StructStart("Superhero", Some(2)),
+    assert_tokens(&RenameStruct {
+                      a1: 1,
+                      a2: 2,
+                  },
+                  &[Token::StructStart("Superhero", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                    Token::StructSep,
+                    Token::Str("a1"),
+                    Token::I32(1),
 
-            Token::StructSep,
-            Token::Str("a3"),
-            Token::I32(2),
+                    Token::StructSep,
+                    Token::Str("a3"),
+                    Token::I32(2),
 
-            Token::StructEnd,
-        ]
-    );
+                    Token::StructEnd]);
 
-    assert_ser_tokens(
-        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
-        &[
-            Token::StructStart("SuperheroSer", Some(2)),
+    assert_ser_tokens(&RenameStructSerializeDeserialize {
+                          a1: 1,
+                          a2: 2,
+                      },
+                      &[Token::StructStart("SuperheroSer", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                        Token::StructSep,
+                        Token::Str("a1"),
+                        Token::I32(1),
 
-            Token::StructSep,
-            Token::Str("a4"),
-            Token::I32(2),
+                        Token::StructSep,
+                        Token::Str("a4"),
+                        Token::I32(2),
 
-            Token::StructEnd,
-        ]
-    );
+                        Token::StructEnd]);
 
-    assert_de_tokens(
-        &RenameStructSerializeDeserialize { a1: 1, a2: 2 },
-        &[
-            Token::StructStart("SuperheroDe", Some(2)),
+    assert_de_tokens(&RenameStructSerializeDeserialize {
+                         a1: 1,
+                         a2: 2,
+                     },
+                     &[Token::StructStart("SuperheroDe", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                       Token::StructSep,
+                       Token::Str("a1"),
+                       Token::I32(1),
 
-            Token::StructSep,
-            Token::Str("a5"),
-            Token::I32(2),
+                       Token::StructSep,
+                       Token::Str("a5"),
+                       Token::I32(2),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -447,92 +438,71 @@ enum RenameEnumSerializeDeserialize<A> {
 
 #[test]
 fn test_rename_enum() {
-    assert_tokens(
-        &RenameEnum::Batman,
-        &[
-            Token::EnumUnit("Superhero", "bruce_wayne"),
-        ]
-    );
+    assert_tokens(&RenameEnum::Batman,
+                  &[Token::EnumUnit("Superhero", "bruce_wayne")]);
 
-    assert_tokens(
-        &RenameEnum::Superman(0),
-        &[
-            Token::EnumNewType("Superhero", "clark_kent"),
-            Token::I8(0),
-        ]
-    );
+    assert_tokens(&RenameEnum::Superman(0),
+                  &[Token::EnumNewType("Superhero", "clark_kent"), Token::I8(0)]);
 
-    assert_tokens(
-        &RenameEnum::WonderWoman(0, 1),
-        &[
-            Token::EnumSeqStart("Superhero", "diana_prince", Some(2)),
+    assert_tokens(&RenameEnum::WonderWoman(0, 1),
+                  &[Token::EnumSeqStart("Superhero", "diana_prince", Some(2)),
 
-            Token::EnumSeqSep,
-            Token::I8(0),
+                    Token::EnumSeqSep,
+                    Token::I8(0),
 
-            Token::EnumSeqSep,
-            Token::I8(1),
+                    Token::EnumSeqSep,
+                    Token::I8(1),
 
-            Token::EnumSeqEnd,
-        ]
-    );
+                    Token::EnumSeqEnd]);
 
-    assert_tokens(
-        &RenameEnum::Flash { a: 1 },
-        &[
-            Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
+    assert_tokens(&RenameEnum::Flash {
+                      a: 1,
+                  },
+                  &[Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
 
-            Token::EnumMapSep,
-            Token::Str("b"),
-            Token::I32(1),
+                    Token::EnumMapSep,
+                    Token::Str("b"),
+                    Token::I32(1),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                    Token::EnumMapEnd]);
 
-    assert_ser_tokens(
-        &RenameEnumSerializeDeserialize::Robin {
-            a: 0,
-            b: String::new(),
-        },
-        &[
-            Token::EnumMapStart("SuperheroSer", "dick_grayson", Some(2)),
+    assert_ser_tokens(&RenameEnumSerializeDeserialize::Robin {
+                          a: 0,
+                          b: String::new(),
+                      },
+                      &[Token::EnumMapStart("SuperheroSer", "dick_grayson", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(0),
+                        Token::EnumMapSep,
+                        Token::Str("a"),
+                        Token::I8(0),
 
-            Token::EnumMapSep,
-            Token::Str("c"),
-            Token::Str(""),
+                        Token::EnumMapSep,
+                        Token::Str("c"),
+                        Token::Str(""),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                        Token::EnumMapEnd]);
 
-    assert_de_tokens(
-        &RenameEnumSerializeDeserialize::Robin {
-            a: 0,
-            b: String::new(),
-        },
-        &[
-            Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
+    assert_de_tokens(&RenameEnumSerializeDeserialize::Robin {
+                         a: 0,
+                         b: String::new(),
+                     },
+                     &[Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(0),
+                       Token::EnumMapSep,
+                       Token::Str("a"),
+                       Token::I8(0),
 
-            Token::EnumMapSep,
-            Token::Str("d"),
-            Token::Str(""),
+                       Token::EnumMapSep,
+                       Token::Str("d"),
+                       Token::Str(""),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                       Token::EnumMapEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-struct SkipSerializingStruct<'a, B, C> where C: ShouldSkip {
+struct SkipSerializingStruct<'a, B, C>
+    where C: ShouldSkip,
+{
     a: &'a i8,
     #[serde(skip_serializing)]
     b: B,
@@ -543,114 +513,105 @@ struct SkipSerializingStruct<'a, B, C> where C: ShouldSkip {
 #[test]
 fn test_skip_serializing_struct() {
     let a = 1;
-    assert_ser_tokens(
-        &SkipSerializingStruct {
-            a: &a,
-            b: 2,
-            c: 3,
-        },
-        &[
-            Token::StructStart("SkipSerializingStruct", Some(2)),
+    assert_ser_tokens(&SkipSerializingStruct {
+                          a: &a,
+                          b: 2,
+                          c: 3,
+                      },
+                      &[Token::StructStart("SkipSerializingStruct", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::StructSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::StructSep,
-            Token::Str("c"),
-            Token::I32(3),
+                        Token::StructSep,
+                        Token::Str("c"),
+                        Token::I32(3),
 
-            Token::StructEnd,
-        ]
-    );
+                        Token::StructEnd]);
 
-    assert_ser_tokens(
-        &SkipSerializingStruct {
-            a: &a,
-            b: 2,
-            c: 123,
-        },
-        &[
-            Token::StructStart("SkipSerializingStruct", Some(1)),
+    assert_ser_tokens(&SkipSerializingStruct {
+                          a: &a,
+                          b: 2,
+                          c: 123,
+                      },
+                      &[Token::StructStart("SkipSerializingStruct", Some(1)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::StructSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::StructEnd,
-        ]
-    );
+                        Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SkipSerializingEnum<'a, B, C> where C: ShouldSkip {
+enum SkipSerializingEnum<'a, B, C>
+    where C: ShouldSkip,
+{
     Struct {
         a: &'a i8,
         #[serde(skip_serializing)]
         _b: B,
         #[serde(skip_serializing_if="ShouldSkip::should_skip")]
         c: C,
-    }
+    },
 }
 
 #[test]
 fn test_skip_serializing_enum() {
     let a = 1;
-    assert_ser_tokens(
-        &SkipSerializingEnum::Struct {
-            a: &a,
-            _b: 2,
-            c: 3,
-        },
-        &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(2)),
+    assert_ser_tokens(&SkipSerializingEnum::Struct {
+                          a: &a,
+                          _b: 2,
+                          c: 3,
+                      },
+                      &[Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::EnumMapSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::EnumMapSep,
-            Token::Str("c"),
-            Token::I32(3),
+                        Token::EnumMapSep,
+                        Token::Str("c"),
+                        Token::I32(3),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                        Token::EnumMapEnd]);
 
-    assert_ser_tokens(
-        &SkipSerializingEnum::Struct {
-            a: &a,
-            _b: 2,
-            c: 123,
-        },
-        &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(1)),
+    assert_ser_tokens(&SkipSerializingEnum::Struct {
+                          a: &a,
+                          _b: 2,
+                          c: 123,
+                      },
+                      &[Token::EnumMapStart("SkipSerializingEnum", "Struct", Some(1)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::EnumMapSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                        Token::EnumMapEnd]);
 }
 
 #[derive(Debug, PartialEq)]
 struct NotSerializeStruct(i8);
 
 #[derive(Debug, PartialEq)]
-enum NotSerializeEnum { Trouble }
+enum NotSerializeEnum {
+    Trouble,
+}
 
 impl SerializeWith for NotSerializeEnum {
     fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
-        where S: Serializer
+        where S: Serializer,
     {
         "trouble".serialize(ser)
     }
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-struct ContainsNotSerialize<'a, B, C, D> where B: 'a, D: SerializeWith {
+struct ContainsNotSerialize<'a, B, C, D>
+    where B: 'a,
+          D: SerializeWith,
+{
     a: &'a Option<i8>,
     #[serde(skip_serializing)]
     b: &'a B,
@@ -663,32 +624,30 @@ struct ContainsNotSerialize<'a, B, C, D> where B: 'a, D: SerializeWith {
 #[test]
 fn test_elt_not_serialize() {
     let a = 1;
-    assert_ser_tokens(
-        &ContainsNotSerialize {
-            a: &Some(a),
-            b: &NotSerializeStruct(2),
-            c: Some(NotSerializeEnum::Trouble),
-            d: NotSerializeEnum::Trouble,
-        },
-        &[
-            Token::StructStart("ContainsNotSerialize", Some(2)),
+    assert_ser_tokens(&ContainsNotSerialize {
+                          a: &Some(a),
+                          b: &NotSerializeStruct(2),
+                          c: Some(NotSerializeEnum::Trouble),
+                          d: NotSerializeEnum::Trouble,
+                      },
+                      &[Token::StructStart("ContainsNotSerialize", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::Option(true),
-            Token::I8(1),
+                        Token::StructSep,
+                        Token::Str("a"),
+                        Token::Option(true),
+                        Token::I8(1),
 
-            Token::StructSep,
-            Token::Str("d"),
-            Token::Str("trouble"),
+                        Token::StructSep,
+                        Token::Str("d"),
+                        Token::Str("trouble"),
 
-            Token::StructEnd,
-        ]
-    );
+                        Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-struct SerializeWithStruct<'a, B> where B: SerializeWith {
+struct SerializeWithStruct<'a, B>
+    where B: SerializeWith,
+{
     a: &'a i8,
     #[serde(serialize_with="SerializeWith::serialize_with")]
     b: B,
@@ -697,102 +656,90 @@ struct SerializeWithStruct<'a, B> where B: SerializeWith {
 #[test]
 fn test_serialize_with_struct() {
     let a = 1;
-    assert_ser_tokens(
-        &SerializeWithStruct {
-            a: &a,
-            b: 2,
-        },
-        &[
-            Token::StructStart("SerializeWithStruct", Some(2)),
+    assert_ser_tokens(&SerializeWithStruct {
+                          a: &a,
+                          b: 2,
+                      },
+                      &[Token::StructStart("SerializeWithStruct", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::StructSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::StructSep,
-            Token::Str("b"),
-            Token::Bool(false),
+                        Token::StructSep,
+                        Token::Str("b"),
+                        Token::Bool(false),
 
-            Token::StructEnd,
-        ]
-    );
+                        Token::StructEnd]);
 
-    assert_ser_tokens(
-        &SerializeWithStruct {
-            a: &a,
-            b: 123,
-        },
-        &[
-            Token::StructStart("SerializeWithStruct", Some(2)),
+    assert_ser_tokens(&SerializeWithStruct {
+                          a: &a,
+                          b: 123,
+                      },
+                      &[Token::StructStart("SerializeWithStruct", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::StructSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::StructSep,
-            Token::Str("b"),
-            Token::Bool(true),
+                        Token::StructSep,
+                        Token::Str("b"),
+                        Token::Bool(true),
 
-            Token::StructEnd,
-        ]
-    );
+                        Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SerializeWithEnum<'a, B> where B: SerializeWith {
+enum SerializeWithEnum<'a, B>
+    where B: SerializeWith,
+{
     Struct {
         a: &'a i8,
         #[serde(serialize_with="SerializeWith::serialize_with")]
         b: B,
-    }
+    },
 }
 
 #[test]
 fn test_serialize_with_enum() {
     let a = 1;
-    assert_ser_tokens(
-        &SerializeWithEnum::Struct {
-            a: &a,
-            b: 2,
-        },
-        &[
-            Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+    assert_ser_tokens(&SerializeWithEnum::Struct {
+                          a: &a,
+                          b: 2,
+                      },
+                      &[Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::EnumMapSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::EnumMapSep,
-            Token::Str("b"),
-            Token::Bool(false),
+                        Token::EnumMapSep,
+                        Token::Str("b"),
+                        Token::Bool(false),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                        Token::EnumMapEnd]);
 
-    assert_ser_tokens(
-        &SerializeWithEnum::Struct {
-            a: &a,
-            b: 123,
-        },
-        &[
-            Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
+    assert_ser_tokens(&SerializeWithEnum::Struct {
+                          a: &a,
+                          b: 123,
+                      },
+                      &[Token::EnumMapStart("SerializeWithEnum", "Struct", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(1),
+                        Token::EnumMapSep,
+                        Token::Str("a"),
+                        Token::I8(1),
 
-            Token::EnumMapSep,
-            Token::Str("b"),
-            Token::Bool(true),
+                        Token::EnumMapSep,
+                        Token::Str("b"),
+                        Token::Bool(true),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                        Token::EnumMapEnd]);
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-struct DeserializeWithStruct<B> where B: DeserializeWith {
+struct DeserializeWithStruct<B>
+    where B: DeserializeWith,
+{
     a: i8,
     #[serde(deserialize_with="DeserializeWith::deserialize_with")]
     b: B,
@@ -800,177 +747,151 @@ struct DeserializeWithStruct<B> where B: DeserializeWith {
 
 #[test]
 fn test_deserialize_with_struct() {
-    assert_de_tokens(
-        &DeserializeWithStruct {
-            a: 1,
-            b: 2,
-        },
-        &[
-            Token::StructStart("DeserializeWithStruct", Some(2)),
+    assert_de_tokens(&DeserializeWithStruct {
+                         a: 1,
+                         b: 2,
+                     },
+                     &[Token::StructStart("DeserializeWithStruct", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::I8(1),
+                       Token::StructSep,
+                       Token::Str("a"),
+                       Token::I8(1),
 
-            Token::StructSep,
-            Token::Str("b"),
-            Token::Bool(false),
+                       Token::StructSep,
+                       Token::Str("b"),
+                       Token::Bool(false),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 
-    assert_de_tokens(
-        &DeserializeWithStruct {
-            a: 1,
-            b: 123,
-        },
-        &[
-            Token::StructStart("DeserializeWithStruct", Some(2)),
+    assert_de_tokens(&DeserializeWithStruct {
+                         a: 1,
+                         b: 123,
+                     },
+                     &[Token::StructStart("DeserializeWithStruct", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a"),
-            Token::I8(1),
+                       Token::StructSep,
+                       Token::Str("a"),
+                       Token::I8(1),
 
-            Token::StructSep,
-            Token::Str("b"),
-            Token::Bool(true),
+                       Token::StructSep,
+                       Token::Str("b"),
+                       Token::Bool(true),
 
-            Token::StructEnd,
-        ]
-    );
+                       Token::StructEnd]);
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-enum DeserializeWithEnum<B> where B: DeserializeWith {
+enum DeserializeWithEnum<B>
+    where B: DeserializeWith,
+{
     Struct {
         a: i8,
         #[serde(deserialize_with="DeserializeWith::deserialize_with")]
         b: B,
-    }
+    },
 }
 
 #[test]
 fn test_deserialize_with_enum() {
-    assert_de_tokens(
-        &DeserializeWithEnum::Struct {
-            a: 1,
-            b: 2,
-        },
-        &[
-            Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
+    assert_de_tokens(&DeserializeWithEnum::Struct {
+                         a: 1,
+                         b: 2,
+                     },
+                     &[Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(1),
+                       Token::EnumMapSep,
+                       Token::Str("a"),
+                       Token::I8(1),
 
-            Token::EnumMapSep,
-            Token::Str("b"),
-            Token::Bool(false),
+                       Token::EnumMapSep,
+                       Token::Str("b"),
+                       Token::Bool(false),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                       Token::EnumMapEnd]);
 
-    assert_de_tokens(
-        &DeserializeWithEnum::Struct {
-            a: 1,
-            b: 123,
-        },
-        &[
-            Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
+    assert_de_tokens(&DeserializeWithEnum::Struct {
+                         a: 1,
+                         b: 123,
+                     },
+                     &[Token::EnumMapStart("DeserializeWithEnum", "Struct", Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(1),
+                       Token::EnumMapSep,
+                       Token::Str("a"),
+                       Token::I8(1),
 
-            Token::EnumMapSep,
-            Token::Str("b"),
-            Token::Bool(true),
+                       Token::EnumMapSep,
+                       Token::Str("b"),
+                       Token::Bool(true),
 
-            Token::EnumMapEnd,
-        ]
-    );
+                       Token::EnumMapEnd]);
 }
 
 #[test]
 fn test_missing_renamed_field_struct() {
-    assert_de_tokens_error::<RenameStruct>(
-        &[
-            Token::StructStart("Superhero", Some(2)),
+    assert_de_tokens_error::<RenameStruct>(&[Token::StructStart("Superhero", Some(2)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                                             Token::StructSep,
+                                             Token::Str("a1"),
+                                             Token::I32(1),
 
-            Token::StructEnd,
-        ],
-        Error::MissingField("a3"),
-    );
+                                             Token::StructEnd],
+                                           Error::MissingField("a3"));
 
-    assert_de_tokens_error::<RenameStructSerializeDeserialize>(
-        &[
-            Token::StructStart("SuperheroDe", Some(2)),
+    assert_de_tokens_error::<RenameStructSerializeDeserialize>(&[Token::StructStart("SuperheroDe",
+                                                                                    Some(2)),
 
-            Token::StructSep,
-            Token::Str("a1"),
-            Token::I32(1),
+                                                                 Token::StructSep,
+                                                                 Token::Str("a1"),
+                                                                 Token::I32(1),
 
-            Token::StructEnd,
-        ],
-        Error::MissingField("a5"),
-    );
+                                                                 Token::StructEnd],
+                                                               Error::MissingField("a5"));
 }
 
 #[test]
 fn test_missing_renamed_field_enum() {
-    assert_de_tokens_error::<RenameEnum>(
-        &[
-            Token::EnumMapStart("Superhero", "barry_allan", Some(1)),
+    assert_de_tokens_error::<RenameEnum>(&[Token::EnumMapStart("Superhero",
+                                                               "barry_allan",
+                                                               Some(1)),
 
-            Token::EnumMapEnd,
-        ],
-        Error::MissingField("b"),
-    );
+                                           Token::EnumMapEnd],
+                                         Error::MissingField("b"));
 
-    assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
-        &[
-            Token::EnumMapStart("SuperheroDe", "jason_todd", Some(2)),
+    assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(&[Token::EnumMapStart("SuperheroDe",
+                                                                                       "jason_todd",
+                                                                                       Some(2)),
 
-            Token::EnumMapSep,
-            Token::Str("a"),
-            Token::I8(0),
+                                                                   Token::EnumMapSep,
+                                                                   Token::Str("a"),
+                                                                   Token::I8(0),
 
-            Token::EnumMapEnd,
-        ],
-        Error::MissingField("d"),
-    );
+                                                                   Token::EnumMapEnd],
+                                                                 Error::MissingField("d"));
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
 enum InvalidLengthEnum {
     A(i32, i32, i32),
-    B(#[serde(skip_deserializing)] i32, i32, i32),
+    B(#[serde(skip_deserializing)]
+      i32,
+      i32,
+      i32),
 }
 
 #[test]
 fn test_invalid_length_enum() {
-    assert_de_tokens_error::<InvalidLengthEnum>(
-        &[
-            Token::EnumSeqStart("InvalidLengthEnum", "A", Some(3)),
-                Token::EnumSeqSep,
-                Token::I32(1),
-            Token::EnumSeqEnd,
-        ],
-        Error::InvalidLength(1),
-    );
-    assert_de_tokens_error::<InvalidLengthEnum>(
-        &[
-            Token::EnumSeqStart("InvalidLengthEnum", "B", Some(3)),
-                Token::EnumSeqSep,
-                Token::I32(1),
-            Token::EnumSeqEnd,
-        ],
-        Error::InvalidLength(1),
-    );
+    assert_de_tokens_error::<InvalidLengthEnum>(&[Token::EnumSeqStart("InvalidLengthEnum",
+                                                                      "A",
+                                                                      Some(3)),
+                                                  Token::EnumSeqSep,
+                                                  Token::I32(1),
+                                                  Token::EnumSeqEnd],
+                                                Error::InvalidLength(1));
+    assert_de_tokens_error::<InvalidLengthEnum>(&[Token::EnumSeqStart("InvalidLengthEnum",
+                                                                      "B",
+                                                                      Some(3)),
+                                                  Token::EnumSeqSep,
+                                                  Token::I32(1),
+                                                  Token::EnumSeqEnd],
+                                                Error::InvalidLength(1));
 }

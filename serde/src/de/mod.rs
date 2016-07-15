@@ -14,7 +14,7 @@ pub mod impls;
 pub mod value;
 mod from_primitive;
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `Error` is a trait that allows a `Deserialize` to generically create a
 /// `Deserializer` error.
@@ -174,53 +174,52 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let display = match *self {
-            Type::Bool          => "bool",
-            Type::Usize         => "usize",
-            Type::U8            => "u8",
-            Type::U16           => "u16",
-            Type::U32           => "u32",
-            Type::U64           => "u64",
-            Type::Isize         => "isize",
-            Type::I8            => "i8",
-            Type::I16           => "i16",
-            Type::I32           => "i32",
-            Type::I64           => "i64",
-            Type::F32           => "f32",
-            Type::F64           => "f64",
-            Type::Char          => "char",
-            Type::Str           => "str",
-            Type::String        => "string",
-            Type::Unit          => "unit",
-            Type::Option        => "option",
-            Type::Seq           => "seq",
-            Type::Map           => "map",
-            Type::UnitStruct    => "unit struct",
+            Type::Bool => "bool",
+            Type::Usize => "usize",
+            Type::U8 => "u8",
+            Type::U16 => "u16",
+            Type::U32 => "u32",
+            Type::U64 => "u64",
+            Type::Isize => "isize",
+            Type::I8 => "i8",
+            Type::I16 => "i16",
+            Type::I32 => "i32",
+            Type::I64 => "i64",
+            Type::F32 => "f32",
+            Type::F64 => "f64",
+            Type::Char => "char",
+            Type::Str => "str",
+            Type::String => "string",
+            Type::Unit => "unit",
+            Type::Option => "option",
+            Type::Seq => "seq",
+            Type::Map => "map",
+            Type::UnitStruct => "unit struct",
             Type::NewtypeStruct => "newtype struct",
-            Type::TupleStruct   => "tuple struct",
-            Type::Struct        => "struct",
-            Type::FieldName     => "field name",
-            Type::Tuple         => "tuple",
-            Type::Enum          => "enum",
-            Type::VariantName   => "variant name",
+            Type::TupleStruct => "tuple struct",
+            Type::Struct => "struct",
+            Type::FieldName => "field name",
+            Type::Tuple => "tuple",
+            Type::Enum => "enum",
+            Type::VariantName => "variant name",
             Type::StructVariant => "struct variant",
-            Type::TupleVariant  => "tuple variant",
-            Type::UnitVariant   => "unit variant",
-            Type::Bytes         => "bytes",
+            Type::TupleVariant => "tuple variant",
+            Type::UnitVariant => "unit variant",
+            Type::Bytes => "bytes",
         };
         display.fmt(formatter)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `Deserialize` represents a type that can be deserialized.
 pub trait Deserialize: Sized {
     /// Deserialize this value given this `Deserializer`.
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer;
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: Deserializer;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `Deserializer` is a trait that can deserialize values by threading a `Visitor` trait through a
 /// value. It supports two entry point styles which enables different kinds of deserialization.
@@ -239,8 +238,7 @@ pub trait Deserializer {
     type Error: Error;
 
     /// This method walks a visitor through a value as it is being deserialized.
-    fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor;
+    fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `bool` value.
     #[inline]
@@ -402,9 +400,11 @@ pub trait Deserializer {
     ///
     /// By default, this deserializes arrays from a sequence.
     #[inline]
-    fn deserialize_fixed_size_array<V>(&mut self,
-                                       _len: usize,
-                                       visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_fixed_size_array<V>(
+        &mut self,
+        _len: usize,
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize(visitor)
@@ -432,9 +432,11 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a unit struct. This allows
     /// deserializers to a unit struct that aren't tagged as a unit struct.
     #[inline]
-    fn deserialize_unit_struct<V>(&mut self,
-                                  _name: &'static str,
-                                  visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_unit_struct<V>(
+        &mut self,
+        _name: &'static str,
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_unit(visitor)
@@ -443,9 +445,11 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a newtype struct. This allows
     /// deserializers to a newtype struct that aren't tagged as a newtype struct.
     #[inline]
-    fn deserialize_newtype_struct<V>(&mut self,
-                                     name: &'static str,
-                                     visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_newtype_struct<V>(
+        &mut self,
+        name: &'static str,
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_tuple_struct(name, 1, visitor)
@@ -454,10 +458,12 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
     #[inline]
-    fn deserialize_tuple_struct<V>(&mut self,
-                                   _name: &'static str,
-                                   len: usize,
-                                   visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple_struct<V>(
+        &mut self,
+        _name: &'static str,
+        len: usize,
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_tuple(len, visitor)
@@ -466,10 +472,12 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     #[inline]
-    fn deserialize_struct<V>(&mut self,
-                             _name: &'static str,
-                             _fields: &'static [&'static str],
-                             visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_struct<V>(
+        &mut self,
+        _name: &'static str,
+        _fields: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
         self.deserialize_map(visitor)
@@ -498,10 +506,12 @@ pub trait Deserializer {
     /// deserializers that provide a custom enumeration serialization to properly deserialize the
     /// type.
     #[inline]
-    fn deserialize_enum<V>(&mut self,
-                           _enum: &'static str,
-                           _variants: &'static [&'static str],
-                           _visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_enum<V>(
+        &mut self,
+        _enum: &'static str,
+        _variants: &'static [&'static str],
+        _visitor: V
+    ) -> Result<V::Value, Self::Error>
         where V: EnumVisitor,
     {
         Err(Error::invalid_type(Type::Enum))
@@ -511,13 +521,13 @@ pub trait Deserializer {
     /// doesn't matter because it is ignored.
     #[inline]
     fn deserialize_ignored_any<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor
+        where V: Visitor,
     {
         self.deserialize(visitor)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// This trait represents a visitor that walks through a deserializer.
 pub trait Visitor {
@@ -707,7 +717,7 @@ pub trait Visitor {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `SeqVisitor` visits each item in a sequence.
 ///
@@ -719,8 +729,7 @@ pub trait SeqVisitor {
 
     /// This returns a `Ok(Some(value))` for the next value in the sequence, or `Ok(None)` if there
     /// are no more remaining items.
-    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
-        where T: Deserialize;
+    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error> where T: Deserialize;
 
     /// This signals to the `SeqVisitor` that the `Visitor` does not expect any more items.
     fn end(&mut self) -> Result<(), Self::Error>;
@@ -732,12 +741,14 @@ pub trait SeqVisitor {
     }
 }
 
-impl<'a, V> SeqVisitor for &'a mut V where V: SeqVisitor {
+impl<'a, V> SeqVisitor for &'a mut V
+    where V: SeqVisitor,
+{
     type Error = V::Error;
 
     #[inline]
     fn visit<T>(&mut self) -> Result<Option<T>, V::Error>
-        where T: Deserialize
+        where T: Deserialize,
     {
         (**self).visit()
     }
@@ -753,7 +764,7 @@ impl<'a, V> SeqVisitor for &'a mut V where V: SeqVisitor {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `MapVisitor` visits each item in a sequence.
 ///
@@ -774,18 +785,16 @@ pub trait MapVisitor {
                 let value = try!(self.visit_value());
                 Ok(Some((key, value)))
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
     /// This returns a `Ok(Some(key))` for the next key in the map, or `Ok(None)` if there are no
     /// more remaining items.
-    fn visit_key<K>(&mut self) -> Result<Option<K>, Self::Error>
-        where K: Deserialize;
+    fn visit_key<K>(&mut self) -> Result<Option<K>, Self::Error> where K: Deserialize;
 
     /// This returns a `Ok(value)` for the next value in the map.
-    fn visit_value<V>(&mut self) -> Result<V, Self::Error>
-        where V: Deserialize;
+    fn visit_value<V>(&mut self) -> Result<V, Self::Error> where V: Deserialize;
 
     /// This signals to the `MapVisitor` that the `Visitor` does not expect any more items.
     fn end(&mut self) -> Result<(), Self::Error>;
@@ -804,7 +813,9 @@ pub trait MapVisitor {
     }
 }
 
-impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
+impl<'a, V_> MapVisitor for &'a mut V_
+    where V_: MapVisitor,
+{
     type Error = V_::Error;
 
     #[inline]
@@ -817,14 +828,14 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
 
     #[inline]
     fn visit_key<K>(&mut self) -> Result<Option<K>, V_::Error>
-        where K: Deserialize
+        where K: Deserialize,
     {
         (**self).visit_key()
     }
 
     #[inline]
     fn visit_value<V>(&mut self) -> Result<V, V_::Error>
-        where V: Deserialize
+        where V: Deserialize,
     {
         (**self).visit_value()
     }
@@ -840,7 +851,7 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `EnumVisitor` is a visitor that is created by the `Deserialize` and passed to the
 /// `Deserializer` in order to deserialize enums.
@@ -849,11 +860,10 @@ pub trait EnumVisitor {
     type Value;
 
     /// Visit the specific variant with the `VariantVisitor`.
-    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: VariantVisitor;
+    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error> where V: VariantVisitor;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////////
 
 /// `VariantVisitor` is a visitor that is created by the `Deserializer` and passed to the
 /// `Deserialize` in order to deserialize a specific enum variant.
@@ -862,8 +872,7 @@ pub trait VariantVisitor {
     type Error: Error;
 
     /// `visit_variant` is called to identify which variant to deserialize.
-    fn visit_variant<V>(&mut self) -> Result<V, Self::Error>
-        where V: Deserialize;
+    fn visit_variant<V>(&mut self) -> Result<V, Self::Error> where V: Deserialize;
 
     /// `visit_unit` is called when deserializing a variant with no values.
     fn visit_unit(&mut self) -> Result<(), Self::Error> {
@@ -881,29 +890,31 @@ pub trait VariantVisitor {
     }
 
     /// `visit_tuple` is called when deserializing a tuple-like variant.
-    fn visit_tuple<V>(&mut self,
-                      _len: usize,
-                      _visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor
+    fn visit_tuple<V>(&mut self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
     {
         Err(Error::invalid_type(Type::TupleVariant))
     }
 
     /// `visit_struct` is called when deserializing a struct-like variant.
-    fn visit_struct<V>(&mut self,
-                       _fields: &'static [&'static str],
-                       _visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor
+    fn visit_struct<V>(
+        &mut self,
+        _fields: &'static [&'static str],
+        _visitor: V
+    ) -> Result<V::Value, Self::Error>
+        where V: Visitor,
     {
         Err(Error::invalid_type(Type::StructVariant))
     }
 }
 
-impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
+impl<'a, T> VariantVisitor for &'a mut T
+    where T: VariantVisitor,
+{
     type Error = T::Error;
 
     fn visit_variant<V>(&mut self) -> Result<V, T::Error>
-        where V: Deserialize
+        where V: Deserialize,
     {
         (**self).visit_variant()
     }
@@ -918,17 +929,17 @@ impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
         (**self).visit_newtype()
     }
 
-    fn visit_tuple<V>(&mut self,
-                      len: usize,
-                      visitor: V) -> Result<V::Value, T::Error>
+    fn visit_tuple<V>(&mut self, len: usize, visitor: V) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
         (**self).visit_tuple(len, visitor)
     }
 
-    fn visit_struct<V>(&mut self,
-                       fields: &'static [&'static str],
-                       visitor: V) -> Result<V::Value, T::Error>
+    fn visit_struct<V>(
+        &mut self,
+        fields: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, T::Error>
         where V: Visitor,
     {
         (**self).visit_struct(fields, visitor)

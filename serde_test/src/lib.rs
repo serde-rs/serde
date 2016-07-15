@@ -1,13 +1,8 @@
 extern crate serde;
 
 mod assert;
-pub use assert::{
-    assert_tokens,
-    assert_ser_tokens,
-    assert_ser_tokens_error,
-    assert_de_tokens,
-    assert_de_tokens_error,
-};
+pub use assert::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
+                 assert_ser_tokens_error, assert_tokens};
 
 mod ser;
 pub use ser::Serializer;
