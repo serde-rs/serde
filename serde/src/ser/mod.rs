@@ -214,6 +214,15 @@ pub trait Serializer {
         state: Self::SeqState,
     ) -> Result<(), Self::Error>;
 
+    /// Begins to serialize a sequence whose length will be known at
+    /// deserialization time. This call must be followed by zero or more calls
+    /// to `serialize_seq_elt`, then a call to `serialize_seq_end`. A reasonable
+    /// implementation would be to forward to `serialize_seq`.
+    fn serialize_seq_fixed_size(
+        &mut self,
+        size: usize,
+    ) -> Result<Self::SeqState, Self::Error>;
+
     /// Begins to serialize a tuple. This call must be followed by zero or more
     /// calls to `serialize_tuple_elt`, then a call to `serialize_tuple_end`. A
     /// reasonable implementation would be to forward to `serialize_seq`.
