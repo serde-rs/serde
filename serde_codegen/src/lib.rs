@@ -40,13 +40,6 @@ pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     where S: AsRef<Path>,
           D: AsRef<Path>,
 {
-    let mut registry = syntex::Registry::new();
-    register(&mut registry);
-    registry.expand("", src.as_ref(), dst.as_ref())
-}
-
-#[cfg(feature = "with-syntex")]
-pub fn register(reg: &mut syntex::Registry) {
     use syntax::{ast, fold};
 
     /// Strip the serde attributes from the crate.
@@ -73,6 +66,8 @@ pub fn register(reg: &mut syntex::Registry) {
         fold::Folder::fold_crate(&mut StripAttributeFolder, krate)
     }
 
+    let mut reg = syntex::Registry::new();
+
     reg.add_attr("feature(custom_derive)");
     reg.add_attr("feature(custom_attribute)");
 
@@ -80,6 +75,8 @@ pub fn register(reg: &mut syntex::Registry) {
     reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
 
     reg.add_post_expansion_pass(strip_attributes);
+
+    reg.expand("", src.as_ref(), dst.as_ref())
 }
 
 #[cfg(not(feature = "with-syntex"))]
