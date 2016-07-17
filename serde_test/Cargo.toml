@@ -2,7 +2,7 @@
 name = "serde_test"
 # DO NOT RELEASE ANY MORE 0.7 RELEASES FROM THIS BRANCH
 # USE THE 0.7.x BRANCH
-version = "0.7.14"
+version = "0.8.0-rc1"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"
@@ -13,4 +13,4 @@ keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
-serde = "0.7.14"
+serde = "0.8.0-rc1"
