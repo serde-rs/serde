@@ -16,11 +16,11 @@ name = "serde_macros"
 plugin = true
 
 [features]
-nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-testing"]
+unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-serde_codegen = { version = "^0.8.0-rc1", default-features = false, features = ["nightly"] }
+serde_codegen = { version = "^0.8.0-rc1", default-features = false, features = ["unstable"] }
 
 [dev-dependencies]
 clippy = "^0.*"

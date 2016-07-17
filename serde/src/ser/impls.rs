@@ -26,19 +26,19 @@ use collections::{
     Vec,
 };
 
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::enum_set::{CLike, EnumSet};
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::borrow::ToOwned;
 
 use core::hash::{Hash, BuildHasher};
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 use core::iter;
 #[cfg(feature = "std")]
 use std::net;
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 use core::num;
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 use core::ops;
 #[cfg(feature = "std")]
 use std::path;
@@ -57,7 +57,7 @@ use alloc::boxed::Box;
 
 use core::marker::PhantomData;
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 use core::nonzero::{NonZero, Zeroable};
 
 use super::{
@@ -244,7 +244,7 @@ impl<T> Serialize for BTreeSet<T>
     serialize_seq!();
 }
 
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 impl<T> Serialize for EnumSet<T>
     where T: Serialize + CLike
 {
@@ -276,7 +276,7 @@ impl<T> Serialize for VecDeque<T> where T: Serialize {
     serialize_seq!();
 }
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 impl<A> Serialize for ops::Range<A>
     where A: Serialize + Clone + iter::Step + num::One,
           for<'a> &'a A: ops::Add<&'a A, Output = A>,
@@ -619,7 +619,7 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "std", feature = "nightly"))]
+#[cfg(all(feature = "std", feature = "unstable"))]
 impl Serialize for net::IpAddr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
@@ -704,7 +704,7 @@ impl Serialize for path::PathBuf {
     }
 }
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         (**self).serialize(serializer)

@@ -6,7 +6,7 @@ build = "build.rs"
 
 [features]
 default = ["serde_codegen"]
-nightly = ["serde_macros"]
+unstable = ["serde_macros"]
 
 [build-dependencies]
 serde_codegen = { version = "^0.7", optional = true }

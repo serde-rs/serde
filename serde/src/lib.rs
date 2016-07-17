@@ -11,29 +11,29 @@
 
 #![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "nightly", feature(reflect_marker, unicode, nonzero, plugin, step_trait, zero_one))]
+#![cfg_attr(feature = "unstable", feature(reflect_marker, unicode, nonzero, plugin, step_trait, zero_one))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections, enumset))]
-#![cfg_attr(feature = "nightly-testing", plugin(clippy))]
-#![cfg_attr(feature = "nightly-testing", allow(linkedlist))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", allow(linkedlist))]
 
-#![cfg_attr(any(not(feature = "std"), feature = "nightly"), allow(unused_variables, unused_imports, unused_features, dead_code))]
+#![cfg_attr(any(not(feature = "std"), feature = "unstable"), allow(unused_variables, unused_imports, unused_features, dead_code))]
 
 #![deny(missing_docs)]
 
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 extern crate collections;
 
-#[cfg(all(feature = "nightly", feature = "alloc"))]
+#[cfg(all(feature = "unstable", feature = "alloc"))]
 extern crate alloc;
 
 #[cfg(feature = "std")]
 mod core {
     pub use std::{ops, hash, fmt, cmp, marker, mem, i8, i16, i32, i64, u8, u16, u32, u64, isize,
             usize, f32, f64, char, str, num, slice, iter};
-    #[cfg(feature = "nightly")]
+    #[cfg(feature = "unstable")]
     extern crate core;
-    #[cfg(feature = "nightly")]
+    #[cfg(feature = "unstable")]
     pub use self::core::nonzero;
 }
 

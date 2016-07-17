@@ -16,10 +16,10 @@ include = ["Cargo.toml", "src/**/*.rs"]
 default = ["std"]
 
 std = []
-nightly = []
-alloc = ["nightly"]
+unstable = []
+alloc = ["unstable"]
 collections = ["alloc"]
-nightly-testing = ["clippy", "nightly", "std"]
+unstable-testing = ["clippy", "unstable", "std"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }

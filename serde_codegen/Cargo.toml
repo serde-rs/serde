@@ -14,8 +14,8 @@ include = ["Cargo.toml", "build.rs", "src/**/*.rs", "src/lib.rs.in"]
 
 [features]
 default = ["with-syntex"]
-nightly = ["quasi_macros"]
-nightly-testing = ["clippy"]
+unstable = ["quasi_macros"]
+unstable-testing = ["clippy"]
 with-syntex = [
     "quasi/with-syntex",
     "quasi_codegen",

@@ -11,7 +11,7 @@ keywords = ["serialization"]
 build = "build.rs"
 
 [features]
-nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-testing"]
+unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
 
 [build-dependencies]
 serde_codegen = { version = "*", features = ["with-syntex"] }

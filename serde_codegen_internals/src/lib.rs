@@ -1,5 +1,5 @@
-#![cfg_attr(feature = "nightly-testing", plugin(clippy))]
-#![cfg_attr(feature = "nightly-testing", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 
 #[cfg(feature = "with-syntex")]

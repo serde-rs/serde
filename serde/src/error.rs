@@ -4,7 +4,7 @@ use core::fmt::{Debug, Display};
 
 
 /// A stand-in for `std::error::Error`, which requires no allocation.
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 pub trait Error: Debug + Display + ::core::marker::Reflect {
     /// A short description of the error.
     ///
@@ -24,7 +24,7 @@ pub trait Error: Debug + Display + ::core::marker::Reflect {
 }
 
 /// A stand-in for `std::error::Error`, which requires no allocation.
-#[cfg(not(feature = "nightly"))]
+#[cfg(not(feature = "unstable"))]
 pub trait Error: Debug + Display {
     /// A short description of the error.
     ///
