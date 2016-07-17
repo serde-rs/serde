@@ -25,8 +25,8 @@ script:
 - (cd testing && travis-cargo --skip nightly test)
 - (cd testing && travis-cargo --only nightly test -- --features nightly-testing)
 - (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing)
-- (cd examples/serde-syntex-example && travis-cargo --skip nightly run)
-- (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features nightly)
+#- (cd examples/serde-syntex-example && travis-cargo --skip nightly run)
+#- (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features nightly)
 - (cd serde && travis-cargo --only stable doc)
 after_success:
 - (cd serde && travis-cargo --only stable doc-upload)
