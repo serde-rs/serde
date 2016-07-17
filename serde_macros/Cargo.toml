@@ -23,7 +23,7 @@ clippy = { version = "^0.*", optional = true }
 serde_codegen = { version = "^0.8.0-rc1", default-features = false, features = ["nightly"] }
 
 [dev-dependencies]
-clippy = "^0.0.78"
+clippy = "^0.*"
 compiletest_rs = "^0.2.0"
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
