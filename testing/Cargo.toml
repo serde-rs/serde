@@ -14,13 +14,13 @@ build = "build.rs"
 unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
 
 [build-dependencies]
-serde_codegen = { version = "*", features = ["with-syntex"] }
+serde_codegen = { path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
-serde = "*"
-serde_test = "*"
+serde = { path = "../serde" }
+serde_test = { path = "../serde_test" }
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
