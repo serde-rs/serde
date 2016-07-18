@@ -1,4 +1,14 @@
 //! Generic serialization framework.
+//! # For Developers who want to serialize objects
+//! Implement the `Serialize` trait for the type of objects you want to serialize. Call methods of
+//! the `serializer` object. For which methods to call and how to do so, look at the documentation
+//! of the `Serializer` trait.
+//!
+//! # For Serialization Format Developers
+//! Implement the `Serializer` trait for a structure that contains fields that enable it to write
+//! the serialization result to your target. When a method's argument is an object of type
+//! `Serialize`, you can either forward the serializer object (`self`) or create a new one,
+//! depending on the quirks of your format.
 
 #[cfg(feature = "std")]
 use std::error;
@@ -41,6 +51,26 @@ pub trait Serialize {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A trait that describes a type that can serialize a stream of values into the underlying format.
+///
+/// # For `Serialize` Developers
+/// Non-aggrergate types like integers and strings can be serialized directly by calling the
+/// appropriate function. For Aggregate types there's an initial `serialize_T` method that yields
+/// a State object that you should not interact with. For each part of the aggregate there's a
+/// `serialize_T_elt` method that allows you to pass values or key/value pairs. The types of the
+/// values or the keys may change between calls, but the serialization format may not necessarily
+/// accept it. The `serialize_T_elt` method also takes a mutable reference to the state object.
+/// Make sure that you always use the same state object and only the state object that was returned
+/// by the `serialize_T` method. Finally, when your object is done, call the `serialize_T_end`
+/// method and pass the state object by value
+///
+/// # For Serialization Format Developers
+/// If your format has different situations where it accepts different types, create a
+/// `Serializer` for each situation. You can create the sub-`Serializer` in one of the aggregate
+/// `serialize_T` methods and return it as a state object. Remember to also set the corresponding
+/// associated type `TState`. In the `serialize_T_elt` methods you will be given a mutable
+/// reference to that state. You do not need to do any additional checks for the correctness of the
+/// state object, as it is expected that the user will not modify it. Due to the generic nature
+/// of the `Serialize` impls, modifying the object is impossible on stable Rust.
 pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
@@ -131,7 +161,8 @@ pub trait Serializer {
     /// Serializes an `f64` value.
     fn serialize_f64(&mut self, v: f64) -> Result<(), Self::Error>;
 
-    /// Serializes a character.
+    /// Serializes a character. If the format does not support characters,
+    /// it is reasonable to serialize it as a single element `str` or a `u32`.
     fn serialize_char(&mut self, v: char) -> Result<(), Self::Error>;
 
     /// Serializes a `&str`.
@@ -140,10 +171,17 @@ pub trait Serializer {
     /// Enables serializers to serialize byte slices more compactly or more
     /// efficiently than other types of slices. If no efficient implementation
     /// is available, a reasonable implementation would be to forward to
-    /// `serialize_seq`.
+    /// `serialize_seq`. If forwarded, the implementation looks usually just like this:
+    /// ```rust
+    /// let mut state = try!(self.serialize_seq(value));
+    /// for b in value {
+    ///     try!(self.serialize_seq_elt(&mut state, b));
+    /// }
+    /// self.serialize_seq_end(state)
+    /// ```
     fn serialize_bytes(&mut self, value: &[u8]) -> Result<(), Self::Error>;
 
-    /// Serializes a `()` value.
+    /// Serializes a `()` value. It's reasonable to just not serialize anything.
     fn serialize_unit(&mut self) -> Result<(), Self::Error>;
 
     /// Serializes a unit struct value. A reasonable implementation would be to
@@ -166,7 +204,7 @@ pub trait Serializer {
     /// Allows a tuple struct with a single element, also known as a newtype
     /// struct, to be more efficiently serialized than a tuple struct with
     /// multiple items. A reasonable implementation would be to forward to
-    /// `serialize_tuple_struct`.
+    /// `serialize_tuple_struct` or to just serialize the inner value without wrapping.
     fn serialize_newtype_struct<T: Serialize>(
         &mut self,
         name: &'static str,

@@ -5,7 +5,7 @@
 //! handshake protocol between serializers and serializees can be completely optimized away,
 //! leaving serde to perform roughly the same speed as a hand written serializer for a specific
 //! type.
-//! 
+//!
 //! For a detailed tutorial on the different ways to use serde please check out the
 //! [github repository](https://github.com/serde-rs/serde)
 
