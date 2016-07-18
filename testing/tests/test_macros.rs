@@ -39,23 +39,19 @@ struct DeNamedMap<A, B, C> {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
-enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
+enum SerEnum<'a, B: 'a, C: 'a, D> where D: 'a {
     Unit,
     Seq(
         i8,
         B,
         &'a C,
-        //C::Type,
         &'a mut D,
-        //<D as Trait>::Type,
     ),
     Map {
         a: i8,
         b: B,
         c: &'a C,
-        //d: C::Type,
-        e: &'a mut D,
-        //f: <D as Trait>::Type,
+        d: &'a mut D,
     },
 
     // Make sure we can support more than one variant.
@@ -64,38 +60,30 @@ enum SerEnum<'a, B: 'a, C: /* Trait + */ 'a, D> where D: /* Trait + */ 'a {
         i8,
         B,
         &'a C,
-        //C::Type,
         &'a mut D,
-        //<D as Trait>::Type,
     ),
     _Map2 {
         a: i8,
         b: B,
         c: &'a C,
-        //d: C::Type,
-        e: &'a mut D,
-        //f: <D as Trait>::Type,
+        d: &'a mut D,
     },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
+enum DeEnum<B, C, D> {
     Unit,
     Seq(
         i8,
         B,
         C,
-        //C::Type,
         D,
-        //<D as Trait>::Type,
     ),
     Map {
         a: i8,
         b: B,
         c: C,
-        //d: C::Type,
-        e: D,
-        //f: <D as Trait>::Type,
+        d: D,
     },
 
     // Make sure we can support more than one variant.
@@ -104,17 +92,13 @@ enum DeEnum<B, C: /* Trait */, D> /* where D: Trait */ {
         i8,
         B,
         C,
-        //C::Type,
         D,
-        //<D as Trait>::Type,
     ),
     _Map2 {
         a: i8,
         b: B,
         c: C,
-        //d: C::Type,
-        e: D,
-        //f: <D as Trait>::Type,
+        d: D,
     },
 }
 
@@ -301,18 +285,14 @@ fn test_ser_enum_seq() {
     let a = 1;
     let b = 2;
     let c = 3;
-    //let d = 4;
-    let mut e = 5;
-    //let f = 6;
+    let mut d = 4;
 
     assert_ser_tokens(
         &SerEnum::Seq(
             a,
             b,
             &c,
-            //d,
-            &mut e,
-            //f,
+            &mut d,
         ),
         &[
             Token::EnumSeqStart("SerEnum", "Seq", 4),
@@ -327,7 +307,7 @@ fn test_ser_enum_seq() {
             Token::I32(3),
 
             Token::EnumSeqSep,
-            Token::I32(5),
+            Token::I32(4),
 
             Token::EnumSeqEnd,
         ],
@@ -339,18 +319,14 @@ fn test_ser_enum_map() {
     let a = 1;
     let b = 2;
     let c = 3;
-    //let d = 4;
-    let mut e = 5;
-    //let f = 6;
+    let mut d = 4;
 
     assert_ser_tokens(
         &SerEnum::Map {
             a: a,
             b: b,
             c: &c,
-            //d: d,
-            e: &mut e,
-            //f: f,
+            d: &mut d,
         },
         &[
             Token::EnumMapStart("SerEnum", "Map", 4),
@@ -368,8 +344,8 @@ fn test_ser_enum_map() {
             Token::I32(3),
 
             Token::EnumMapSep,
-            Token::Str("e"),
-            Token::I32(5),
+            Token::Str("d"),
+            Token::I32(4),
 
             Token::EnumMapEnd,
         ],
@@ -391,18 +367,14 @@ fn test_de_enum_seq() {
     let a = 1;
     let b = 2;
     let c = 3;
-    //let d = 4;
-    let e = 5;
-    //let f = 6;
+    let d = 4;
 
     assert_tokens(
         &DeEnum::Seq(
             a,
             b,
             c,
-            //d,
-            e,
-            //f,
+            d,
         ),
         &[
             Token::EnumSeqStart("DeEnum", "Seq", 4),
@@ -417,7 +389,7 @@ fn test_de_enum_seq() {
             Token::I32(3),
 
             Token::EnumSeqSep,
-            Token::I32(5),
+            Token::I32(4),
 
             Token::EnumSeqEnd,
         ],
@@ -429,18 +401,14 @@ fn test_de_enum_map() {
     let a = 1;
     let b = 2;
     let c = 3;
-    //let d = 4;
-    let e = 5;
-    //let f = 6;
+    let d = 4;
 
     assert_tokens(
         &DeEnum::Map {
             a: a,
             b: b,
             c: c,
-            //d: d,
-            e: e,
-            //f: f,
+            d: d,
         },
         &[
             Token::EnumMapStart("DeEnum", "Map", 4),
@@ -458,8 +426,8 @@ fn test_de_enum_map() {
             Token::I32(3),
 
             Token::EnumMapSep,
-            Token::Str("e"),
-            Token::I32(5),
+            Token::Str("d"),
+            Token::I32(4),
 
             Token::EnumMapEnd,
         ],
