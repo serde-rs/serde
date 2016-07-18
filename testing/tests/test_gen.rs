@@ -56,6 +56,7 @@ enum EnumWith<T> {
 }
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct MultipleRef<'a, 'b, 'c, T> where T: 'c, 'c: 'b, 'b: 'a {
     t: T,
     rrrt: &'a &'b &'c T,
