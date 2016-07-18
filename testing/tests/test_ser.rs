@@ -347,7 +347,7 @@ declare_ser_tests! {
     }
 }
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 #[test]
 fn test_net_ipaddr() {
     assert_ser_tokens(

@@ -1,6 +1,6 @@
 [package]
 name = "serde_codegen_internals"
-version = "0.3.0"
+version = "0.4.0-rc1"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "AST representation used by Serde codegen. Unstable."
@@ -11,7 +11,7 @@ include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
 default = ["with-syntex"]
-nightly-testing = ["clippy"]
+unstable-testing = ["clippy"]
 with-syntex = ["syntex_syntax", "syntex_errors"]
 
 [dependencies]

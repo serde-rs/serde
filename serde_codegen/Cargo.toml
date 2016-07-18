@@ -2,7 +2,7 @@
 name = "serde_codegen"
 # DO NOT RELEASE ANY MORE 0.7 RELEASES FROM THIS BRANCH
 # USE THE 0.7.x BRANCH
-version = "0.8.0-rc1"
+version = "0.8.0-rc2"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -14,8 +14,8 @@ include = ["Cargo.toml", "build.rs", "src/**/*.rs", "src/lib.rs.in"]
 
 [features]
 default = ["with-syntex"]
-nightly = ["quasi_macros"]
-nightly-testing = ["clippy"]
+unstable = ["quasi_macros"]
+unstable-testing = ["clippy"]
 with-syntex = [
     "quasi/with-syntex",
     "quasi_codegen",
@@ -34,6 +34,6 @@ aster = { version = "^0.21.1", default-features = false }
 clippy = { version = "^0.*", optional = true }
 quasi = { version = "^0.15.0", default-features = false }
 quasi_macros = { version = "^0.15.0", optional = true }
-serde_codegen_internals = { version = "^0.3.0", default-features = false }
+serde_codegen_internals = { version = "0.4.0-rc1", default-features = false }
 syntex = { version = "^0.38.0", optional = true }
 syntex_syntax = { version = "^0.38.0", optional = true }

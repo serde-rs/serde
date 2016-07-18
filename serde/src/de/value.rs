@@ -25,7 +25,7 @@ use collections::{
     vec,
 };
 
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::borrow::ToOwned;
 
 use core::hash::Hash;

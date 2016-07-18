@@ -2,7 +2,7 @@
 
 #[cfg(feature = "std")]
 use std::borrow::Cow;
-#[cfg(all(feature = "nightly", feature = "collections", not(feature = "std")))]
+#[cfg(all(feature = "unstable", feature = "collections", not(feature = "std")))]
 use collections::borrow::Cow;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
@@ -27,9 +27,9 @@ use std::collections::{
     VecDeque,
 };
 
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::enum_set::{CLike, EnumSet};
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::borrow::ToOwned;
 
 use core::hash::{Hash, BuildHasher};
@@ -42,21 +42,21 @@ use core::str;
 
 #[cfg(feature = "std")]
 use std::rc::Rc;
-#[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "unstable", feature = "alloc", not(feature = "std")))]
 use alloc::rc::Rc;
 
 #[cfg(feature = "std")]
 use std::sync::Arc;
-#[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "unstable", feature = "alloc", not(feature = "std")))]
 use alloc::arc::Arc;
 
-#[cfg(all(feature = "nightly", feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "unstable", feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 use core::nonzero::{NonZero, Zeroable};
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 use core::num::Zero;
 
 use de::{
@@ -461,7 +461,7 @@ seq_impl!(
     BTreeSet::new(),
     BTreeSet::insert);
 
-#[cfg(all(feature = "nightly", feature = "collections"))]
+#[cfg(all(feature = "unstable", feature = "collections"))]
 seq_impl!(
     EnumSet<T>,
     EnumSetVisitor<T: Deserialize + CLike>,
@@ -806,7 +806,7 @@ map_impl!(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "nightly", feature = "std"))]
+#[cfg(all(feature = "unstable", feature = "std"))]
 impl Deserialize for net::IpAddr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
@@ -972,7 +972,7 @@ impl<'a, T: ?Sized> Deserialize for Cow<'a, T> where T: ToOwned, T::Owned: Deser
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable + Zero {
     fn deserialize<D>(deserializer: &mut D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
         let value = try!(Deserialize::deserialize(deserializer));

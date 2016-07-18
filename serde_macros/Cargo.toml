@@ -2,7 +2,7 @@
 name = "serde_macros"
 # DO NOT RELEASE ANY MORE 0.7 RELEASES FROM THIS BRANCH
 # USE THE 0.7.x BRANCH
-version = "0.8.0-rc1"
+version = "0.8.0-rc2"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -16,19 +16,19 @@ name = "serde_macros"
 plugin = true
 
 [features]
-nightly-testing = ["clippy", "serde/nightly-testing", "serde_codegen/nightly-testing"]
+unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-serde_codegen = { version = "^0.8.0-rc1", default-features = false, features = ["nightly"] }
+serde_codegen = { version = "^0.8.0-rc2", default-features = false, features = ["unstable"] }
 
 [dev-dependencies]
 clippy = "^0.*"
 compiletest_rs = "^0.2.0"
 fnv = "1.0"
 rustc-serialize = "^0.3.16"
-serde = "0.8.0-rc1"
-serde_test = "0.8.0-rc1"
+serde = "0.8.0-rc2"
+serde_test = "0.8.0-rc2"
 
 [[test]]
 name = "test"
