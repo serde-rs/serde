@@ -372,6 +372,12 @@ impl<I> de::Deserializer for Deserializer<I>
             None => Err(Error::EndOfStream),
         }
     }
+
+    fn deserialize_tagged_value<V: Deserialize>(&mut self) -> Result<V, Error> {
+        assert_eq!(self.tokens.next(), Some(Token::Tag));
+        assert_eq!(try!(u64::deserialize(self)), 42);
+        V::deserialize(self)
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -12,6 +12,7 @@ extern crate serde_test;
 use self::serde_test::{
     Error,
     Token,
+    Deserializer,
     assert_de_tokens,
     assert_de_tokens_error,
 };
@@ -812,5 +813,42 @@ declare_error_tests! {
                 Token::Str("a"),
         ],
         Error::DuplicateField("a"),
+    }
+}
+
+#[test]
+fn tagging() {
+    struct TaggedValue(String);
+
+    impl self::serde::Deserialize for TaggedValue {
+        fn deserialize<D>(deserializer: &mut D) -> Result<TaggedValue, D::Error>
+            where D: self::serde::Deserializer,
+        {
+            deserializer.deserialize_tag()
+        }
+    }
+    assert_de_tokens(
+        &[
+            Token::Tag,
+            Token::I32(42),
+            Token::Str("cake"),
+        ],
+        &TaggedValue("cake".to_string()),
+    );
+
+    trait DeserializeTag<S: self::serde::Deserialize>: self::serde::Deserializer {
+        fn deserialize_tag(&mut self) -> Result<S, <Self as self::serde::Deserializer>::Error>;
+    }
+
+    impl<I: I: Iterator<Item=Token<'static>>> DeserializeTag<TaggedValue> for Deserializer<I> {
+        fn deserialize_tag(&mut self) -> Result<TaggedValue, Self::Error> {
+            self.deserialize_tagged_value()
+        }
+    }
+
+    impl<S: self::serde::Deserializer> DeserializeTag<TaggedValue> for S {
+        default fn deserialize_tag(&mut self) -> Result<TaggedValue, S::Error> {
+            unimplemented!()
+        }
     }
 }

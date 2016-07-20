@@ -325,7 +325,8 @@ impl serde::Deserializer for BytesDeserializer {
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
