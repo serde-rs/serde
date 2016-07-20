@@ -81,7 +81,7 @@ fn main() {
 
 This produces the following output when run:
 
-```
+```sh
 % cargo run
 serialized vec: "[1,2]"
 deserialized vec: [1, 2]
@@ -123,7 +123,7 @@ serde_json = "*"
 ```
 
 Next, we define our source file, `src/main.rs.in`. Note this is a different
-extension than usual becaues we need to do code generation:
+extension than usual because we need to do code generation:
 
 ```rust,ignore
 #[derive(Serialize, Deserialize, Debug)]
@@ -175,7 +175,7 @@ pub fn main() {
 
 All this produces this when run:
 
-```
+```sh
 % cargo run
 {"x":1,"y":2}
 Point { x: 1, y: 2 }
@@ -232,7 +232,7 @@ fn main() {
 
 This also produces the same output:
 
-```
+```sh
 % cargo run
 {"x":1,"y":2}
 Point { x: 1, y: 2 }
@@ -314,14 +314,14 @@ The `src/main.rs.in` is the same as before.
 
 Then to run with stable:
 
-```
+```sh
 % cargo build
 ...
 ```
 
 Or with nightly:
 
-```
+```sh
 % cargo build --features nightly --no-default-features
 ...
 ```
@@ -762,15 +762,15 @@ how types are serialized. Here are the supported annotations:
 
 Container Annotations:
 
-| Annotation                                  | Function                                                                                                                                           |
-| ----------                                  | --------                                                                                                                                           |
-| `#[serde(rename="name")]`                   | Serialize and deserialize this container with the given name                                                                                       |
-| `#[serde(rename(serialize="name1"))]`       | Serialize this container with the given name                                                                                                       |
-| `#[serde(rename(deserialize="name1"))]`     | Deserialize this container with the given name                                                                                                     |
-| `#[serde(deny_unknown_fields)]`             | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
-| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde.                                                  |
-| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                               |
-| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                             |
+| Annotation                                  | Function                                                                                                                                                                                      |
+| ----------                                  | --------                                                                                                                                                                                      |
+| `#[serde(rename="name")]`                   | Serialize and deserialize this container with the given name                                                                                                                                  |
+| `#[serde(rename(serialize="name1"))]`       | Serialize this container with the given name                                                                                                                                                  |
+| `#[serde(rename(deserialize="name1"))]`     | Deserialize this container with the given name                                                                                                                                                |
+| `#[serde(deny_unknown_fields)]`             | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON.                                            |
+| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde. Setting this to `""` overwrites the generic type bounds and can be used to allow recursion. |
+| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                                                                          |
+| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                                                                        |
 
 Variant Annotations:
 
