@@ -762,15 +762,15 @@ how types are serialized. Here are the supported annotations:
 
 Container Annotations:
 
-| Annotation                                  | Function                                                                                                                                                                                      |
-| ----------                                  | --------                                                                                                                                                                                      |
-| `#[serde(rename="name")]`                   | Serialize and deserialize this container with the given name                                                                                                                                  |
-| `#[serde(rename(serialize="name1"))]`       | Serialize this container with the given name                                                                                                                                                  |
-| `#[serde(rename(deserialize="name1"))]`     | Deserialize this container with the given name                                                                                                                                                |
-| `#[serde(deny_unknown_fields)]`             | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON.                                            |
-| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde. Setting this to `""` overwrites the generic type bounds and can be used to allow recursion. |
-| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                                                                          |
-| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                                                                        |
+| Annotation                                  | Function                                                                                                                                           |
+| ----------                                  | --------                                                                                                                                           |
+| `#[serde(rename="name")]`                   | Serialize and deserialize this container with the given name                                                                                       |
+| `#[serde(rename(serialize="name1"))]`       | Serialize this container with the given name                                                                                                       |
+| `#[serde(rename(deserialize="name1"))]`     | Deserialize this container with the given name                                                                                                     |
+| `#[serde(deny_unknown_fields)]`             | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
+| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde.                                                  |
+| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                               |
+| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                             |
 
 Variant Annotations:
 
@@ -782,21 +782,21 @@ Variant Annotations:
 
 Field Annotations:
 
-| Annotation                                  | Function                                                                                                                |
-| ----------                                  | --------                                                                                                                |
-| `#[serde(rename="name")]`                   | Serialize and deserialize this field with the given name                                                                |
-| `#[serde(rename(serialize="name1"))]`       | Serialize this field with the given name                                                                                |
-| `#[serde(rename(deserialize="name1"))]`     | Deserialize this field with the given name                                                                              |
-| `#[serde(default)]`                         | If the value is not specified, use the `Default::default()`                                                             |
-| `#[serde(default="$path")]`                 | Call the path to a function `fn() -> T` to build the value                                                              |
-| `#[serde(skip_serializing)]`                | Do not serialize this value                                                                                             |
-| `#[serde(skip_deserializing)]`              | Always use `Default::default()` or `#[serde(default="$path")]` instead of deserializing this value                      |
-| `#[serde(skip_serializing_if="$path")]`     | Do not serialize this value if this function `fn(&T) -> bool` returns `true`                                            |
-| `#[serde(serialize_with="$path")]`          | Call a function `fn<S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value of type `T`     |
-| `#[serde(deserialize_with="$path")]`        | Call a function `fn<D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value of type `T`      |
-| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde for the current field. |
-| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                    |
-| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                  |
+| Annotation                                  | Function                                                                                                                                                                                                           |
+| ----------                                  | --------                                                                                                                                                                                                           |
+| `#[serde(rename="name")]`                   | Serialize and deserialize this field with the given name                                                                                                                                                           |
+| `#[serde(rename(serialize="name1"))]`       | Serialize this field with the given name                                                                                                                                                                           |
+| `#[serde(rename(deserialize="name1"))]`     | Deserialize this field with the given name                                                                                                                                                                         |
+| `#[serde(default)]`                         | If the value is not specified, use the `Default::default()`                                                                                                                                                        |
+| `#[serde(default="$path")]`                 | Call the path to a function `fn() -> T` to build the value                                                                                                                                                         |
+| `#[serde(skip_serializing)]`                | Do not serialize this value                                                                                                                                                                                        |
+| `#[serde(skip_deserializing)]`              | Always use `Default::default()` or `#[serde(default="$path")]` instead of deserializing this value                                                                                                                 |
+| `#[serde(skip_serializing_if="$path")]`     | Do not serialize this value if this function `fn(&T) -> bool` returns `true`                                                                                                                                       |
+| `#[serde(serialize_with="$path")]`          | Call a function `fn<S>(&T, &mut S) -> Result<(), S::Error> where S: Serializer` to serialize this value of type `T`                                                                                                |
+| `#[serde(deserialize_with="$path")]`        | Call a function `fn<D>(&mut D) -> Result<T, D::Error> where D: Deserializer` to deserialize this value of type `T`                                                                                                 |
+| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde for the current field. Setting this to `""` overrides the generic type bounds and can be used to allow recursion. |
+| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                                                                                               |
+| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                                                                                             |
 
 Using in `no_std` crates
 ========================
