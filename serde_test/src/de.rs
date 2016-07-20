@@ -110,6 +110,20 @@ impl<I> de::Deserializer for Deserializer<I>
 {
     type Error = Error;
 
+    de_forward_to_deserialize!{
+        deserialize_bool,
+        deserialize_f64, deserialize_f32,
+        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
+        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
+        deserialize_char, deserialize_str, deserialize_string,
+        deserialize_ignored_any,
+        deserialize_bytes,
+        deserialize_unit,
+        deserialize_seq,
+        deserialize_map,
+        deserialize_struct_field
+    }
+
     fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
         where V: Visitor,
     {
