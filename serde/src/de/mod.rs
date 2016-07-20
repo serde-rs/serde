@@ -28,8 +28,8 @@ macro_rules! de_forward_to_deserialize {
     (func: deserialize_tuple) => {
         de_forward_to_deserialize!{tup_fn: deserialize_tuple}
     };
-    (func: deserialize_fixed_size_array) => {
-        de_forward_to_deserialize!{tup_fn: deserialize_fixed_size_array}
+    (func: deserialize_seq_fixed_size) => {
+        de_forward_to_deserialize!{tup_fn: deserialize_seq_fixed_size}
     };
     (func: deserialize_tuple_struct) => {
         #[inline]
@@ -400,7 +400,7 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type is expecting a fixed size array. This allows
     /// deserializers to parse arrays that aren't tagged as arrays.
-    fn deserialize_fixed_size_array<V>(&mut self,
+    fn deserialize_seq_fixed_size<V>(&mut self,
                                        _len: usize,
                                        visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;

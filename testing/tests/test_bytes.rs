@@ -315,7 +315,7 @@ impl serde::Deserializer for BytesDeserializer {
         deserialize_char, deserialize_str, deserialize_string,
         deserialize_ignored_any,
         deserialize_unit_struct, deserialize_unit,
-        deserialize_seq, deserialize_fixed_size_array,
+        deserialize_seq, deserialize_seq_fixed_size,
         deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
         deserialize_tuple,
         deserialize_enum,

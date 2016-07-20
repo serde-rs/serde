@@ -255,7 +255,7 @@ impl<I> de::Deserializer for Deserializer<I>
         }
     }
 
-    fn deserialize_fixed_size_array<V>(&mut self,
+    fn deserialize_seq_fixed_size<V>(&mut self,
                                        len: usize,
                                        visitor: V) -> Result<V::Value, Error>
         where V: Visitor,
