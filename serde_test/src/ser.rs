@@ -317,4 +317,13 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         }
         self.serialize_seq_end(state)
     }
+
+    fn serialize_tagged_value<T, V>(&mut self,
+                                    tag: T,
+                                    value: V) -> Result<(), Self::Error>
+        where T: Serialize, V: Serialize {
+        assert_eq!(self.tokens.next(), Some(&Token::Tag));
+        try!(tag.serialize(self));
+        value.serialize(self)
+    }
 }

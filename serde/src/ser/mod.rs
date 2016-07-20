@@ -405,13 +405,10 @@ pub trait Serializer: Sized {
 
     /// Serializes a tagged value.
     ///
-    /// By default, the tag is discarded and the value is serialized as-is.
+    /// If your format has no tagging mechanism, ignore the tag value
     #[inline]
     fn serialize_tagged_value<T, V>(&mut self,
                                     _tag: T,
                                     value: V) -> Result<(), Self::Error>
-        where T: ::Tagger, V: Serialize,
-    {
-        value.serialize(self)
-    }
+        where T: Serialize, V: Serialize;
 }

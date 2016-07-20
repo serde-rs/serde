@@ -272,6 +272,11 @@ impl serde::Serializer for BytesSerializer {
         Err(Error)
     }
 
+    fn serialize_tagged_value<T, U>(&mut self, _: T, _: U) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
     fn serialize_bytes(&mut self, bytes: &[u8]) -> Result<(), Error> {
         assert_eq!(self.bytes, bytes);
         Ok(())

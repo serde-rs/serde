@@ -3,10 +3,12 @@ use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
+extern crate serde;
 extern crate serde_test;
 use self::serde_test::{
     Error,
     Token,
+    Serializer,
     assert_ser_tokens,
     assert_ser_tokens_error,
 };
@@ -373,4 +375,42 @@ fn test_cannot_serialize_paths() {
         &path_buf,
         &[],
         Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+}
+
+#[test]
+fn tagging() {
+    struct TaggedValue(String);
+
+    trait SerializeTag<S: self::serde::Serialize>: self::serde::Serializer {
+        fn serialize_tag(&mut self, value: &S) -> Result<(), <Self as self::serde::Serializer>::Error>;
+    }
+
+    impl<S: self::serde::Serializer> SerializeTag<TaggedValue> for S {
+        default fn serialize_tag(&mut self, _value: &TaggedValue) -> Result<(), S::Error> {
+            unimplemented!()
+        }
+    }
+
+    impl<'a, I: Iterator<Item=&'a Token<'a>>> SerializeTag<TaggedValue> for Serializer<'a, I> {
+        fn serialize_tag(&mut self, value: &TaggedValue) -> Result<(), Self::Error> {
+            use self::serde::Serializer;
+            self.serialize_tagged_value(42, &value.0)
+        }
+    }
+
+    impl self::serde::Serialize for TaggedValue {
+        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where S: self::serde::Serializer,
+        {
+            serializer.serialize_tag(self)
+        }
+    }
+    assert_ser_tokens(
+        &TaggedValue("cake".to_string()),
+        &[
+            Token::Tag,
+            Token::I32(42),
+            Token::Str("cake"),
+        ],
+    );
 }
