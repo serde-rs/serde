@@ -338,6 +338,29 @@ impl<'a, E> de::VariantVisitor for StrDeserializer<'a, E>
     fn visit_unit(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
+
+    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
+        where T: super::Deserialize,
+    {
+        let (value,) = try!(self.visit_tuple(1, super::impls::TupleVisitor1::new()));
+        Ok(value)
+    }
+
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      _visitor: V) -> Result<V::Value, Self::Error>
+        where V: super::Visitor
+    {
+        Err(super::Error::invalid_type(super::Type::TupleVariant))
+    }
+
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       _visitor: V) -> Result<V::Value, Self::Error>
+        where V: super::Visitor
+    {
+        Err(super::Error::invalid_type(super::Type::StructVariant))
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -412,6 +435,29 @@ impl<'a, E> de::VariantVisitor for StringDeserializer<E>
 
     fn visit_unit(&mut self) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
+        where T: super::Deserialize,
+    {
+        let (value,) = try!(self.visit_tuple(1, super::impls::TupleVisitor1::new()));
+        Ok(value)
+    }
+
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      _visitor: V) -> Result<V::Value, Self::Error>
+        where V: super::Visitor
+    {
+        Err(super::Error::invalid_type(super::Type::TupleVariant))
+    }
+
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       _visitor: V) -> Result<V::Value, Self::Error>
+        where V: super::Visitor
+    {
+        Err(super::Error::invalid_type(super::Type::StructVariant))
     }
 }
 

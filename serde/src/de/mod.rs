@@ -846,29 +846,19 @@ pub trait VariantVisitor {
     /// uses the `visit_tuple` method to deserialize the value.
     #[inline]
     fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
-        where T: Deserialize,
-    {
-        let (value,) = try!(self.visit_tuple(1, impls::TupleVisitor1::new()));
-        Ok(value)
-    }
+        where T: Deserialize;
 
     /// `visit_tuple` is called when deserializing a tuple-like variant.
     fn visit_tuple<V>(&mut self,
                       _len: usize,
                       _visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor
-    {
-        Err(Error::invalid_type(Type::TupleVariant))
-    }
+        where V: Visitor;
 
     /// `visit_struct` is called when deserializing a struct-like variant.
     fn visit_struct<V>(&mut self,
                        _fields: &'static [&'static str],
                        _visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor
-    {
-        Err(Error::invalid_type(Type::StructVariant))
-    }
+        where V: Visitor;
 }
 
 impl<'a, T> VariantVisitor for &'a mut T where T: VariantVisitor {
