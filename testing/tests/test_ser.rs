@@ -1,9 +1,18 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use token::{self, Token};
+extern crate serde_test;
+use self::serde_test::{
+    Error,
+    Token,
+    assert_ser_tokens,
+    assert_ser_tokens_error,
+};
+
+extern crate fnv;
+use self::fnv::FnvHasher;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -144,6 +153,24 @@ declare_ser_tests! {
             Token::SeqEnd,
         ],
     }
+    test_hashset {
+        HashSet::<isize>::new() => &[
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        hashset![1] => &[
+            Token::SeqStart(Some(1)),
+                Token::SeqSep,
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+        hashset![FnvHasher @ 1] => &[
+            Token::SeqStart(Some(1)),
+                Token::SeqSep,
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+    }
     test_tuple {
         (1,) => &[
             Token::TupleStart(1),
@@ -204,12 +231,32 @@ declare_ser_tests! {
             Token::MapEnd,
         ],
     }
+    test_hashmap {
+        HashMap::<isize, isize>::new() => &[
+            Token::MapStart(Some(0)),
+            Token::MapEnd,
+        ],
+        hashmap![1 => 2] => &[
+            Token::MapStart(Some(1)),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        hashmap![FnvHasher @ 1 => 2] => &[
+            Token::MapStart(Some(1)),
+                Token::MapSep,
+                Token::I32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+    }
     test_unit_struct {
         UnitStruct => &[Token::UnitStruct("UnitStruct")],
     }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
-            Token::TupleStructStart("TupleStruct", Some(3)),
+            Token::TupleStructStart("TupleStruct", 3),
                 Token::TupleStructSep,
                 Token::I32(1),
 
@@ -223,7 +270,7 @@ declare_ser_tests! {
     }
     test_struct {
         Struct { a: 1, b: 2, c: 3 } => &[
-            Token::StructStart("Struct", Some(3)),
+            Token::StructStart("Struct", 3),
                 Token::StructSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -242,7 +289,7 @@ declare_ser_tests! {
         Enum::Unit => &[Token::EnumUnit("Enum", "Unit")],
         Enum::One(42) => &[Token::EnumNewType("Enum", "One"), Token::I32(42)],
         Enum::Seq(1, 2) => &[
-            Token::EnumSeqStart("Enum", "Seq", Some(2)),
+            Token::EnumSeqStart("Enum", "Seq", 2),
                 Token::EnumSeqSep,
                 Token::I32(1),
 
@@ -251,7 +298,7 @@ declare_ser_tests! {
             Token::EnumSeqEnd,
         ],
         Enum::Map { a: 1, b: 2 } => &[
-            Token::EnumMapStart("Enum", "Map", Some(2)),
+            Token::EnumMapStart("Enum", "Map", 2),
                 Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -300,7 +347,7 @@ declare_ser_tests! {
     }
 }
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "unstable")]
 #[test]
 fn test_net_ipaddr() {
     assert_ser_tokens(
@@ -314,16 +361,16 @@ fn test_cannot_serialize_paths() {
     let path = unsafe {
         str::from_utf8_unchecked(b"Hello \xF0\x90\x80World")
     };
-    token::assert_ser_tokens_error(
+    assert_ser_tokens_error(
         &Path::new(path),
-        &[Token::Str("Hello �World")],
-        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+        &[],
+        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
 
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
 
-    token::assert_ser_tokens_error(
+    assert_ser_tokens_error(
         &path_buf,
-        &[Token::Str("Hello �World")],
-        token::Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+        &[],
+        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
 }

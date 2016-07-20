@@ -1,5 +1,5 @@
-#![cfg_attr(nightly, feature(custom_derive, plugin))]
-#![cfg_attr(nightly, plugin(serde_macros))]
+#![cfg_attr(feature = "serde_macros", feature(custom_derive, plugin))]
+#![cfg_attr(feature = "serde_macros", plugin(serde_macros))]
 
 extern crate serde;
 extern crate serde_json;

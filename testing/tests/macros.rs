@@ -5,7 +5,7 @@ macro_rules! declare_ser_tests {
             #[test]
             fn $name() {
                 $(
-                    ::token::assert_ser_tokens(&$value, $tokens);
+                    assert_ser_tokens(&$value, $tokens);
                 )+
             }
         )+
@@ -62,6 +62,14 @@ macro_rules! hashset {
             $(set.insert($value);)+
             set
         }
+    };
+    ($hasher:ident @ $($value:expr),+) => {
+        {
+            use std::hash::BuildHasherDefault;
+            let mut set = HashSet::with_hasher(BuildHasherDefault::<$hasher>::default());
+            $(set.insert($value);)+
+            set
+        }
     }
 }
 
@@ -72,6 +80,14 @@ macro_rules! hashmap {
     ($($key:expr => $value:expr),+) => {
         {
             let mut map = HashMap::new();
+            $(map.insert($key, $value);)+
+            map
+        }
+    };
+    ($hasher:ident @ $($key:expr => $value:expr),+) => {
+        {
+            use std::hash::BuildHasherDefault;
+            let mut map = HashMap::with_hasher(BuildHasherDefault::<$hasher>::default());
             $(map.insert($key, $value);)+
             map
         }

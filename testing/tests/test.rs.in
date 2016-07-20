@@ -1,7 +1,8 @@
 #[macro_use]
-mod macros;
+extern crate serde;
 
-mod token;
+#[macro_use]
+mod macros;
 
 mod test_annotations;
 mod test_bytes;

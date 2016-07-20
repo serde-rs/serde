@@ -1,39 +1,36 @@
+sudo: false
 language: rust
 rust:
 - stable
-- beta
 - nightly
-- 1.5.0
+- 1.8.0
+- 1.9.0
+- beta
 addons:
   apt:
     packages:
     - libcurl4-openssl-dev
     - libelf-dev
     - libdw-dev
-    - binutils-dev
 before_script:
 - pip install 'travis-cargo<0.2' --user
 - export PATH=$HOME/.local/bin:$PATH
 script:
 - (cd serde && travis-cargo build)
-- (cd serde && travis-cargo test)
-- (cd serde && travis-cargo --only nightly test -- --features nightly-testing)
-- (cd serde && travis-cargo --skip 1.5.0 build -- --no-default-features)
-- (cd serde && travis-cargo --only nightly build -- --no-default-features)
+- (cd serde && travis-cargo --skip nightly test)
+- (cd serde && travis-cargo --only nightly test -- --features unstable-testing)
+- (cd serde && travis-cargo build -- --no-default-features)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features alloc)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features collections)
-- (cd serde_tests && travis-cargo test)
-- (cd serde_tests && travis-cargo --only nightly test -- --features nightly-testing)
-- (cd serde_macros && travis-cargo --only nightly test -- --features nightly-testing)
-- (cd serde_macros && travis-cargo --only nightly bench -- --features nightly-testing)
+- (cd testing && travis-cargo --skip nightly test)
+- (cd testing && travis-cargo --only nightly test -- --features unstable-testing)
+- (cd serde_macros && travis-cargo --only nightly test -- --features unstable-testing)
+#- (cd examples/serde-syntex-example && travis-cargo --skip nightly run)
+#- (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features unstable)
 - (cd serde && travis-cargo --only stable doc)
-- (cd serde_codegen && travis-cargo --only stable doc)
-- (cd serde_macros && travis-cargo --only nightly doc)
 after_success:
 - (cd serde && travis-cargo --only stable doc-upload)
-#- (cd serde_codegen && travis-cargo --only stable doc-upload)
-#- (cd serde_macros && travis-cargo --only nightly doc-upload)
-- (cd serde_tests && travis-cargo coveralls --no-sudo)
+- (cd testing && travis-cargo --only stable coveralls --no-sudo)
 env:
   global:
   - TRAVIS_CARGO_NIGHTLY_FEATURE=""
