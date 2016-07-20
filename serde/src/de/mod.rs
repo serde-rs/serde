@@ -310,21 +310,25 @@ pub trait Deserializer {
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `usize` value.
+    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
     #[inline]
     fn deserialize_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u8` value.
+    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
     #[inline]
     fn deserialize_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u16` value.
+    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
     #[inline]
     fn deserialize_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u32` value.
+    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
     #[inline]
     fn deserialize_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
@@ -335,21 +339,25 @@ pub trait Deserializer {
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `isize` value.
+    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
     #[inline]
     fn deserialize_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i8` value.
+    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
     #[inline]
     fn deserialize_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i16` value.
+    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
     #[inline]
     fn deserialize_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i32` value.
+    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
     #[inline]
     fn deserialize_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
@@ -360,6 +368,7 @@ pub trait Deserializer {
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `f32` value.
+    /// A reasonable default is to forward to `deserialize_f64` and cast the yielded value.
     #[inline]
     fn deserialize_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
@@ -404,8 +413,6 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type is expecting a fixed size array. This allows
     /// deserializers to parse arrays that aren't tagged as arrays.
-    ///
-    /// By default, this deserializes arrays from a sequence.
     #[inline]
     fn deserialize_fixed_size_array<V>(&mut self,
                                        _len: usize,
@@ -435,6 +442,7 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type is expecting a newtype struct. This allows
     /// deserializers to a newtype struct that aren't tagged as a newtype struct.
+    /// A reasonable default is to simply deserialize the expected value directly.
     #[inline]
     fn deserialize_newtype_struct<V>(&mut self,
                                      name: &'static str,
@@ -842,19 +850,22 @@ pub trait VariantVisitor {
         Err(Error::invalid_type(Type::UnitVariant))
     }
 
-    /// `visit_newtype` is called when deserializing a variant with a single value. By default this
-    /// uses the `visit_tuple` method to deserialize the value.
-    #[inline]
+    /// `visit_newtype` is called when deserializing a variant with a single value.
+    /// A good default is often to use the `visit_tuple` method to deserialize a `(value,)`.
     fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: Deserialize;
 
     /// `visit_tuple` is called when deserializing a tuple-like variant.
+    /// If no tuple variants are expected, yield a
+    /// `Err(serde::de::Error::invalid_type(serde::de::Type::TupleVariant))`
     fn visit_tuple<V>(&mut self,
                       _len: usize,
                       _visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// `visit_struct` is called when deserializing a struct-like variant.
+    /// If no struct variants are expected, yield a
+    /// `Err(serde::de::Error::invalid_type(serde::de::Type::StructVariant))`
     fn visit_struct<V>(&mut self,
                        _fields: &'static [&'static str],
                        _visitor: V) -> Result<V::Value, Self::Error>
