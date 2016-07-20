@@ -939,6 +939,16 @@ impl<T: Deserialize> Deserialize for Box<[T]> {
     }
 }
 
+#[cfg(any(feature = "std", feature = "collections"))]
+impl Deserialize for Box<str> {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: Deserializer
+    {
+        let s = try!(String::deserialize(deserializer));
+        Ok(s.into_boxed_str())
+    }
+}
+
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<T: Deserialize> Deserialize for Arc<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Arc<T>, D::Error>
