@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde::{Deserialize, self};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -817,35 +817,37 @@ declare_error_tests! {
 
 #[test]
 fn tagging() {
+    #[derive(Debug, PartialEq, Eq)]
     struct TaggedValue(String);
 
-    impl self::serde::Deserialize for TaggedValue {
+    impl Deserialize for TaggedValue {
         fn deserialize<D>(deserializer: &mut D) -> Result<TaggedValue, D::Error>
-            where D: self::serde::Deserializer,
+            where D: serde::Deserializer,
         {
             deserializer.deserialize_tag()
         }
     }
     assert_de_tokens(
+        &TaggedValue("cake".to_string()),
         &[
             Token::Tag,
             Token::I32(42),
-            Token::Str("cake"),
+            Token::String("cake".to_owned()),
         ],
-        &TaggedValue("cake".to_string()),
     );
 
-    trait DeserializeTag<S: self::serde::Deserialize>: self::serde::Deserializer {
-        fn deserialize_tag(&mut self) -> Result<S, <Self as self::serde::Deserializer>::Error>;
+    trait DeserializeTag<S: Deserialize>: serde::Deserializer {
+        fn deserialize_tag(&mut self) -> Result<S, <Self as serde::Deserializer>::Error>;
     }
 
-    impl<I: I: Iterator<Item=Token<'static>>> DeserializeTag<TaggedValue> for Deserializer<I> {
+    impl<I: Iterator<Item=Token<'static>>> DeserializeTag<TaggedValue> for Deserializer<I> {
         fn deserialize_tag(&mut self) -> Result<TaggedValue, Self::Error> {
-            self.deserialize_tagged_value()
+            use serde::Deserializer;
+            Ok(TaggedValue(try!(self.deserialize_tagged_value())))
         }
     }
 
-    impl<S: self::serde::Deserializer> DeserializeTag<TaggedValue> for S {
+    impl<S: serde::Deserializer> DeserializeTag<TaggedValue> for S {
         default fn deserialize_tag(&mut self) -> Result<TaggedValue, S::Error> {
             unimplemented!()
         }
