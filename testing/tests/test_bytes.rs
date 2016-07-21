@@ -1,20 +1,21 @@
 use std::fmt;
 use std::error;
 
-extern crate serde;
-use self::serde::Serialize;
-use self::serde::bytes::{ByteBuf, Bytes};
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::bytes::{ByteBuf, Bytes};
+use serde::ser;
+use serde::de;
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, PartialEq)]
 struct Error;
 
-impl serde::ser::Error for Error {
+impl ser::Error for Error {
     fn custom<T: Into<String>>(_: T) -> Error { Error }
 }
 
-impl serde::de::Error for Error {
+impl de::Error for Error {
     fn custom<T: Into<String>>(_: T) -> Error { Error }
 
     fn end_of_stream() -> Error { Error }
@@ -50,7 +51,7 @@ impl BytesSerializer {
     }
 }
 
-impl serde::Serializer for BytesSerializer {
+impl Serializer for BytesSerializer {
     type Error = Error;
     type SeqState = ();
     type MapState = ();
@@ -137,19 +138,19 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_some<V>(&mut self, _value: V) -> Result<(), Error>
-        where V: serde::Serialize,
+        where V: Serialize,
     {
         Err(Error)
     }
 
     fn serialize_newtype_struct<V>(&mut self, _: &'static str, _value: V) -> Result<(), Error>
-        where V: serde::Serialize,
+        where V: Serialize,
     {
         Err(Error)
     }
 
     fn serialize_newtype_variant<V>(&mut self, _: &'static str, _: usize, _: &'static str, _value: V) -> Result<(), Error>
-        where V: serde::Serialize,
+        where V: Serialize,
     {
         Err(Error)
     }
@@ -165,7 +166,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_seq_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: serde::Serialize
+        where T: Serialize
     {
         Err(Error)
     }
@@ -181,7 +182,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_tuple_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: serde::Serialize
+        where T: Serialize
     {
         Err(Error)
     }
@@ -197,7 +198,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_tuple_struct_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: serde::Serialize
+        where T: Serialize
     {
         Err(Error)
     }
@@ -213,7 +214,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_tuple_variant_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: serde::Serialize
+        where T: Serialize
     {
         Err(Error)
     }
@@ -229,8 +230,8 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_map_elt<K, V>(&mut self, _: &mut (), _key: K, _value: V) -> Result<(), Error>
-        where K: serde::Serialize,
-              V: serde::Serialize,
+        where K: Serialize,
+              V: Serialize,
     {
         Err(Error)
     }
@@ -246,7 +247,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_struct_elt<V>(&mut self, _: &mut (), _key: &'static str, _value: V) -> Result<(), Error>
-        where V: serde::Serialize,
+        where V: Serialize,
     {
         Err(Error)
     }
@@ -262,7 +263,7 @@ impl serde::Serializer for BytesSerializer {
     }
 
     fn serialize_struct_variant_elt<V>(&mut self, _: &mut (), _key: &'static str, _value: V) -> Result<(), Error>
-        where V: serde::Serialize,
+        where V: Serialize,
     {
         Err(Error)
     }
@@ -292,35 +293,136 @@ impl BytesDeserializer {
     }
 }
 
-impl serde::Deserializer for BytesDeserializer {
+impl Deserializer for BytesDeserializer {
     type Error = Error;
 
     fn deserialize<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
-        where V: serde::de::Visitor,
+        where V: de::Visitor,
     {
         Err(Error)
     }
 
     fn deserialize_bytes<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: serde::de::Visitor,
+        where V: de::Visitor,
     {
         visitor.visit_byte_buf(self.bytes.take().unwrap())
     }
 
-    de_forward_to_deserialize!{
-        deserialize_bool,
-        deserialize_f64, deserialize_f32,
-        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
-        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
-        deserialize_char, deserialize_str, deserialize_string,
-        deserialize_ignored_any,
-        deserialize_unit_struct, deserialize_unit,
-        deserialize_seq, deserialize_seq_fixed_size,
-        deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
-        deserialize_tuple,
-        deserialize_enum,
-        deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+    fn deserialize_seq<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_struct_field<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_map<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_unit<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_ignored_any<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_string<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_str<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_char<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i16<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i8<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u16<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u8<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_f32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_f64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_bool<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_usize<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_isize<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_option<__V>(&mut self, visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_seq_fixed_size<__V>(&mut self, _: usize, visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_unit_struct<__V>(&mut self, _: &str, visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_newtype_struct<__V>(&mut self, _: &str, visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_tuple_struct<__V>(&mut self, _: &str, _: usize, visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_struct<__V>(&mut self, _: &str, _: &[&str], visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_tuple<__V>(&mut self, _: usize, visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _visitor: __V)
+     -> Result<__V::Value, Self::Error> where __V: de::EnumVisitor {
+        Err(Error)
     }
 }
 
@@ -344,10 +446,10 @@ fn test_bytes_ser_bytes() {
 #[test]
 fn test_byte_buf_de_bytes() {
     let mut de = BytesDeserializer::new(vec![]);
-    let bytes = serde::Deserialize::deserialize(&mut de);
+    let bytes = Deserialize::deserialize(&mut de);
     assert_eq!(bytes, Ok(ByteBuf::new()));
 
     let mut de = BytesDeserializer::new(vec![1, 2, 3]);
-    let bytes = serde::Deserialize::deserialize(&mut de);
+    let bytes = Deserialize::deserialize(&mut de);
     assert_eq!(bytes, Ok(ByteBuf::from(vec![1, 2, 3])));
 }

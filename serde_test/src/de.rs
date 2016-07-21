@@ -110,18 +110,93 @@ impl<I> de::Deserializer for Deserializer<I>
 {
     type Error = Error;
 
-    de_forward_to_deserialize!{
-        deserialize_bool,
-        deserialize_f64, deserialize_f32,
-        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
-        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
-        deserialize_char, deserialize_str, deserialize_string,
-        deserialize_ignored_any,
-        deserialize_bytes,
-        deserialize_unit,
-        deserialize_seq,
-        deserialize_map,
-        deserialize_struct_field
+    fn deserialize_seq<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_struct_field<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_map<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_unit<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_bytes<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_ignored_any<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_string<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_str<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_char<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i16<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_i8<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u16<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_u8<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_f32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_f64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_bool<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_usize<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
+    fn deserialize_isize<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
     }
 
     fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>

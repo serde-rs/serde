@@ -14,7 +14,6 @@ use core::fmt;
 /// Macro helper to not have to re-implement all the defaulted methods.
 /// Every given method ignores all arguments and forwards to `deserialize`.
 /// Note that `deserialize_enum` simply returns an `Error::invalid_type`.
-#[macro_export]
 macro_rules! de_forward_to_deserialize {
     ($($func:ident),*) => {
         $(de_forward_to_deserialize!{func: $func})*
