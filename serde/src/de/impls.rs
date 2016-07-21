@@ -593,7 +593,7 @@ macro_rules! array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.deserialize_fixed_size_array($len, $visitor::new())
+                    deserializer.deserialize_seq_fixed_size($len, $visitor::new())
                 }
             }
         )+

@@ -2,8 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 
-extern crate serde;
-use self::serde::Deserialize;
+use serde::Deserialize;
 
 extern crate fnv;
 use self::fnv::FnvHasher;

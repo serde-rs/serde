@@ -1,3 +1,5 @@
+extern crate serde;
+
 #[macro_use]
 mod macros;
 
