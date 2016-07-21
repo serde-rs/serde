@@ -14,7 +14,6 @@ use core::fmt;
 /// Macro helper to not have to re-implement all the defaulted methods.
 /// Every given method ignores all arguments and forwards to `deserialize`.
 /// Note that `deserialize_enum` simply returns an `Error::invalid_type`.
-#[macro_export]
 macro_rules! de_forward_to_deserialize {
     ($($func:ident),*) => {
         $(de_forward_to_deserialize!{func: $func})*
@@ -28,34 +27,39 @@ macro_rules! de_forward_to_deserialize {
     (func: deserialize_tuple) => {
         de_forward_to_deserialize!{tup_fn: deserialize_tuple}
     };
-    (func: deserialize_fixed_size_array) => {
-        de_forward_to_deserialize!{tup_fn: deserialize_fixed_size_array}
+    (func: deserialize_seq_fixed_size) => {
+        de_forward_to_deserialize!{tup_fn: deserialize_seq_fixed_size}
     };
     (func: deserialize_tuple_struct) => {
+        #[inline]
         fn deserialize_tuple_struct<__V>(&mut self, _: &str, _: usize, visitor: __V) -> Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor {
             self.deserialize(visitor)
         }
     };
     (func: deserialize_struct) => {
+        #[inline]
         fn deserialize_struct<__V>(&mut self, _: &str, _: &[&str], visitor: __V) -> Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor {
             self.deserialize(visitor)
         }
     };
     (func: deserialize_enum) => {
+        #[inline]
         fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> Result<__V::Value, Self::Error>
             where __V: $crate::de::EnumVisitor {
             Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
         }
     };
     (named: $func:ident) => {
+        #[inline]
         fn $func<__V>(&mut self, _: &str, visitor: __V) -> Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor {
             self.deserialize(visitor)
         }
     };
     (tup_fn: $func: ident) => {
+        #[inline]
         fn $func<__V>(&mut self, _: usize, visitor: __V) -> Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor {
             self.deserialize(visitor)
@@ -68,6 +72,7 @@ macro_rules! de_forward_to_deserialize {
         }
     };
     (func: $func:ident) => {
+        #[inline]
         fn $func<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor {
             self.deserialize(visitor)
@@ -315,116 +320,96 @@ pub trait Deserializer {
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `bool` value.
-    #[inline]
     fn deserialize_bool<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `usize` value.
-    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_u64`.
     fn deserialize_usize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u8` value.
-    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_u64`.
     fn deserialize_u8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u16` value.
-    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_u64`.
     fn deserialize_u16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u32` value.
-    /// A reasonable default is to forward to `deserialize_u64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_u64`.
     fn deserialize_u32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `u64` value.
-    #[inline]
     fn deserialize_u64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `isize` value.
-    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_i64`.
     fn deserialize_isize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i8` value.
-    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_i64`.
     fn deserialize_i8<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i16` value.
-    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_i64`.
     fn deserialize_i16<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i32` value.
-    /// A reasonable default is to forward to `deserialize_i64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_i64`.
     fn deserialize_i32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `i64` value.
-    #[inline]
     fn deserialize_i64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `f32` value.
-    /// A reasonable default is to forward to `deserialize_f64` and cast the yielded value.
-    #[inline]
+    /// A reasonable default is to forward to `deserialize_f64`.
     fn deserialize_f32<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `f64` value.
-    #[inline]
     fn deserialize_f64<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `char` value.
-    #[inline]
     fn deserialize_char<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `&str` value.
-    #[inline]
     fn deserialize_str<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `String` value.
-    #[inline]
     fn deserialize_string<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `unit` value.
-    #[inline]
     fn deserialize_unit<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an `Option` value. This allows
     /// deserializers that encode an optional value as a nullable value to convert the null value
     /// into a `None`, and a regular value as `Some(value)`.
-    #[inline]
     fn deserialize_option<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a sequence value. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
-    #[inline]
     fn deserialize_seq<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a fixed size array. This allows
     /// deserializers to parse arrays that aren't tagged as arrays.
-    #[inline]
-    fn deserialize_fixed_size_array<V>(&mut self,
+    fn deserialize_seq_fixed_size<V>(&mut self,
                                        _len: usize,
                                        visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
@@ -432,19 +417,16 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
     /// deserializers that provide a custom byte vector serialization to properly deserialize the
     /// type.
-    #[inline]
     fn deserialize_bytes<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a map of values. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
-    #[inline]
     fn deserialize_map<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a unit struct. This allows
     /// deserializers to a unit struct that aren't tagged as a unit struct.
-    #[inline]
     fn deserialize_unit_struct<V>(&mut self,
                                   _name: &'static str,
                                   visitor: V) -> Result<V::Value, Self::Error>
@@ -453,7 +435,6 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a newtype struct. This allows
     /// deserializers to a newtype struct that aren't tagged as a newtype struct.
     /// A reasonable default is to simply deserialize the expected value directly.
-    #[inline]
     fn deserialize_newtype_struct<V>(&mut self,
                                      name: &'static str,
                                      visitor: V) -> Result<V::Value, Self::Error>
@@ -461,7 +442,6 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
-    #[inline]
     fn deserialize_tuple_struct<V>(&mut self,
                                    _name: &'static str,
                                    len: usize,
@@ -470,7 +450,6 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
-    #[inline]
     fn deserialize_struct<V>(&mut self,
                              _name: &'static str,
                              _fields: &'static [&'static str],
@@ -480,20 +459,17 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting some sort of struct field
     /// name.  This allows deserializers to choose between &str, usize, or &[u8] to properly
     /// deserialize a struct field.
-    #[inline]
     fn deserialize_struct_field<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a tuple value. This allows
     /// deserializers that provide a custom tuple serialization to properly deserialize the type.
-    #[inline]
     fn deserialize_tuple<V>(&mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an enum value. This allows
     /// deserializers that provide a custom enumeration serialization to properly deserialize the
     /// type.
-    #[inline]
     fn deserialize_enum<V>(&mut self,
                            _enum: &'static str,
                            _variants: &'static [&'static str],
@@ -502,7 +478,6 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type needs to deserialize a value whose type
     /// doesn't matter because it is ignored.
-    #[inline]
     fn deserialize_ignored_any<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
