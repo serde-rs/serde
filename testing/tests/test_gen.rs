@@ -6,6 +6,8 @@ extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
 use self::serde::de::{Deserialize, Deserializer};
 
+use std::marker::PhantomData;
+
 //////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize)]
@@ -21,6 +23,11 @@ struct WithRef<'a, T: 'a> {
     t: Option<&'a T>,
     #[serde(serialize_with="ser_x", deserialize_with="de_x")]
     x: X,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PhantomX {
+    x: PhantomData<X>,
 }
 
 #[derive(Serialize, Deserialize)]
