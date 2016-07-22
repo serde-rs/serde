@@ -762,15 +762,15 @@ how types are serialized. Here are the supported annotations:
 
 Container Annotations:
 
-| Annotation                                  | Function                                                                                                                                                                                      |
-| ----------                                  | --------                                                                                                                                                                                      |
-| `#[serde(rename="name")]`                   | Serialize and deserialize this container with the given name                                                                                                                                  |
-| `#[serde(rename(serialize="name1"))]`       | Serialize this container with the given name                                                                                                                                                  |
-| `#[serde(rename(deserialize="name1"))]`     | Deserialize this container with the given name                                                                                                                                                |
-| `#[serde(deny_unknown_fields)]`             | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON.                                            |
-| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde. Setting this to `""` overwrites the generic type bounds and can be used to allow recursion. |
-| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                                                                          |
-| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                                                                        |
+| Annotation                                  | Function                                                                                                                                           |
+| ----------                                  | --------                                                                                                                                           |
+| `#[serde(rename="name")]`                   | Serialize and deserialize this container with the given name                                                                                       |
+| `#[serde(rename(serialize="name1"))]`       | Serialize this container with the given name                                                                                                       |
+| `#[serde(rename(deserialize="name1"))]`     | Deserialize this container with the given name                                                                                                     |
+| `#[serde(deny_unknown_fields)]`             | Always error during serialization when encountering unknown fields. When absent, unknown fields are ignored for self-describing formats like JSON. |
+| `#[serde(bound="T: MyTrait")]`              | Where-clause for the Serialize and Deserialize impls. This replaces any bounds inferred by Serde.                                                  |
+| `#[serde(bound(serialize="T: MyTrait"))]`   | Where-clause for the Serialize impl.                                                                                                               |
+| `#[serde(bound(deserialize="T: MyTrait"))]` | Where-clause for the Deserialize impl.                                                                                                             |
 
 Variant Annotations:
 
