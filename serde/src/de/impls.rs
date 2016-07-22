@@ -356,7 +356,7 @@ pub struct PhantomDataVisitor<T> {
     marker: PhantomData<T>,
 }
 
-impl<T> Visitor for PhantomDataVisitor<T> where T: Deserialize {
+impl<T> Visitor for PhantomDataVisitor<T> {
     type Value = PhantomData<T>;
 
     #[inline]
@@ -367,7 +367,7 @@ impl<T> Visitor for PhantomDataVisitor<T> where T: Deserialize {
     }
 }
 
-impl<T> Deserialize for PhantomData<T> where T: Deserialize {
+impl<T> Deserialize for PhantomData<T> {
     fn deserialize<D>(deserializer: &mut D) -> Result<PhantomData<T>, D::Error>
         where D: Deserializer,
     {
