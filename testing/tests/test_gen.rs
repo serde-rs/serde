@@ -36,6 +36,12 @@ fn test_gen() {
     assert::<PhantomX>();
 
     #[derive(Serialize, Deserialize)]
+    struct PhantomT<T> {
+        t: PhantomData<T>,
+    }
+    assert::<PhantomT<X>>();
+
+    #[derive(Serialize, Deserialize)]
     struct Bounds<T: Serialize + Deserialize> {
         t: T,
         option: Option<T>,
