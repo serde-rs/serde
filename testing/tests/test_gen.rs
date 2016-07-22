@@ -100,6 +100,35 @@ struct ListNode<D> {
 }
 
 #[derive(Serialize, Deserialize)]
+struct RecursiveA {
+    b: Box<RecursiveB>,
+}
+
+#[derive(Serialize, Deserialize)]
+enum RecursiveB {
+    A(RecursiveA),
+}
+
+#[derive(Serialize, Deserialize)]
+struct RecursiveGenericA<T> {
+    t: T,
+    b: Box<RecursiveGenericB<T>>,
+}
+
+#[derive(Serialize, Deserialize)]
+enum RecursiveGenericB<T> {
+    T(T),
+    A(RecursiveGenericA<T>),
+}
+
+#[derive(Serialize)]
+#[allow(dead_code)]
+struct OptionStatic<'a> {
+    a: Option<&'a str>,
+    b: Option<&'static str>,
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(bound="D: SerializeWith + DeserializeWith")]
 struct WithTraits1<D, E> {
     #[serde(serialize_with="SerializeWith::serialize_with",
@@ -139,4 +168,3 @@ trait DeserializeWith: Sized {
 struct X;
 fn ser_x<S: Serializer>(_: &X, _: &mut S) -> Result<(), S::Error> { panic!() }
 fn de_x<D: Deserializer>(_: &mut D) -> Result<X, D::Error> { panic!() }
-
