@@ -71,16 +71,16 @@ pub fn with_bound<F>(
     struct FindTyParams {
         // Set of all generic type parameters on the current struct (A, B, C in
         // the example). Initialized up front.
-        all_ty_params: HashSet<ast::Ident>,
+        all_ty_params: HashSet<ast::Name>,
         // Set of generic type parameters used in fields for which filter
         // returns true (A and B in the example). Filled in as the visitor sees
         // them.
-        relevant_ty_params: HashSet<ast::Ident>,
+        relevant_ty_params: HashSet<ast::Name>,
     }
     impl visit::Visitor for FindTyParams {
         fn visit_path(&mut self, path: &ast::Path, _id: ast::NodeId) {
             if !path.global && path.segments.len() == 1 {
-                let id = path.segments[0].identifier;
+                let id = path.segments[0].identifier.name;
                 if self.all_ty_params.contains(&id) {
                     self.relevant_ty_params.insert(id);
                 }
@@ -90,7 +90,7 @@ pub fn with_bound<F>(
     }
 
     let all_ty_params: HashSet<_> = generics.ty_params.iter()
-        .map(|ty_param| ty_param.ident)
+        .map(|ty_param| ty_param.ident.name)
         .collect();
 
     let relevant_tys = item.body.all_fields()
@@ -108,7 +108,7 @@ pub fn with_bound<F>(
     builder.from_generics(generics.clone())
         .with_predicates(
             generics.ty_params.iter()
-                .map(|ty_param| ty_param.ident)
+                .map(|ty_param| ty_param.ident.name)
                 .filter(|id| visitor.relevant_ty_params.contains(id))
                 .map(|id| builder.where_predicate()
                     // the type parameter that is being bounded e.g. T
