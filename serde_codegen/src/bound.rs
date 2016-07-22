@@ -79,6 +79,13 @@ pub fn with_bound<F>(
     }
     impl visit::Visitor for FindTyParams {
         fn visit_path(&mut self, path: &ast::Path, _id: ast::NodeId) {
+            if let Some(seg) = path.segments.last() {
+                if seg.identifier.name.as_str() == "PhantomData" {
+                    // Hardcoded exception, because PhantomData<T> implements
+                    // Serialize and Deserialize whether or not T implements it.
+                    return;
+                }
+            }
             if !path.global && path.segments.len() == 1 {
                 let id = path.segments[0].identifier.name;
                 if self.all_ty_params.contains(&id) {
