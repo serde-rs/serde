@@ -25,11 +25,11 @@ pub mod impls;
 /// `Error` is a trait that allows a `Serialize` to generically create a
 /// `Serializer` error.
 pub trait Error: Sized + error::Error {
-    /// Raised when there is general error when deserializing a type.
+    /// Raised when there is a general error when serializing a type.
     #[cfg(any(feature = "std", feature = "collections"))]
     fn custom<T: Into<String>>(msg: T) -> Self;
 
-    /// Raised when there is general error when deserializing a type.
+    /// Raised when there is a general error when serializing a type.
     #[cfg(all(not(feature = "std"), not(feature = "collections")))]
     fn custom<T: Into<&'static str>>(msg: T) -> Self;
 
