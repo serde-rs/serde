@@ -400,8 +400,8 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a fixed size array. This allows
     /// deserializers to parse arrays that aren't tagged as arrays.
     fn deserialize_seq_fixed_size<V>(&mut self,
-                                       _len: usize,
-                                       visitor: V) -> Result<V::Value, Self::Error>
+                                     len: usize,
+                                     visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
@@ -418,7 +418,7 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a unit struct. This allows
     /// deserializers to a unit struct that aren't tagged as a unit struct.
     fn deserialize_unit_struct<V>(&mut self,
-                                  _name: &'static str,
+                                  name: &'static str,
                                   visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
@@ -433,7 +433,7 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a tuple struct. This allows
     /// deserializers to parse sequences that aren't tagged as sequences.
     fn deserialize_tuple_struct<V>(&mut self,
-                                   _name: &'static str,
+                                   name: &'static str,
                                    len: usize,
                                    visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
@@ -441,8 +441,8 @@ pub trait Deserializer {
     /// This method hints that the `Deserialize` type is expecting a struct. This allows
     /// deserializers to parse sequences that aren't tagged as maps.
     fn deserialize_struct<V>(&mut self,
-                             _name: &'static str,
-                             _fields: &'static [&'static str],
+                             name: &'static str,
+                             fields: &'static [&'static str],
                              visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
@@ -454,16 +454,16 @@ pub trait Deserializer {
 
     /// This method hints that the `Deserialize` type is expecting a tuple value. This allows
     /// deserializers that provide a custom tuple serialization to properly deserialize the type.
-    fn deserialize_tuple<V>(&mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple<V>(&mut self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting an enum value. This allows
     /// deserializers that provide a custom enumeration serialization to properly deserialize the
     /// type.
     fn deserialize_enum<V>(&mut self,
-                           _enum: &'static str,
-                           _variants: &'static [&'static str],
-                           _visitor: V) -> Result<V::Value, Self::Error>
+                           name: &'static str,
+                           variants: &'static [&'static str],
+                           visitor: V) -> Result<V::Value, Self::Error>
         where V: EnumVisitor;
 
     /// This method hints that the `Deserialize` type needs to deserialize a value whose type
@@ -480,9 +480,10 @@ pub trait Visitor {
     type Value: Deserialize;
 
     /// `visit_bool` deserializes a `bool` into a `Value`.
-    fn visit_bool<E>(&mut self, _v: bool) -> Result<Self::Value, E>
+    fn visit_bool<E>(&mut self, v: bool) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = v;
         Err(Error::invalid_type(Type::Bool))
     }
 
@@ -515,9 +516,10 @@ pub trait Visitor {
     }
 
     /// `visit_i64` deserializes a `i64` into a `Value`.
-    fn visit_i64<E>(&mut self, _v: i64) -> Result<Self::Value, E>
+    fn visit_i64<E>(&mut self, v: i64) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = v;
         Err(Error::invalid_type(Type::I64))
     }
 
@@ -550,9 +552,10 @@ pub trait Visitor {
     }
 
     /// `visit_u64` deserializes a `u64` into a `Value`.
-    fn visit_u64<E>(&mut self, _v: u64) -> Result<Self::Value, E>
+    fn visit_u64<E>(&mut self, v: u64) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = v;
         Err(Error::invalid_type(Type::U64))
     }
 
@@ -564,9 +567,10 @@ pub trait Visitor {
     }
 
     /// `visit_f64` deserializes a `f64` into a `Value`.
-    fn visit_f64<E>(&mut self, _v: f64) -> Result<Self::Value, E>
+    fn visit_f64<E>(&mut self, v: f64) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = v;
         Err(Error::invalid_type(Type::F64))
     }
 
@@ -579,9 +583,10 @@ pub trait Visitor {
     }
 
     /// `visit_str` deserializes a `&str` into a `Value`.
-    fn visit_str<E>(&mut self, _v: &str) -> Result<Self::Value, E>
+    fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = v;
         Err(Error::invalid_type(Type::Str))
     }
 
@@ -605,9 +610,10 @@ pub trait Visitor {
 
     /// `visit_unit_struct` deserializes a unit struct into a `Value`.
     #[inline]
-    fn visit_unit_struct<E>(&mut self, _name: &'static str) -> Result<Self::Value, E>
+    fn visit_unit_struct<E>(&mut self, name: &'static str) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = name;
         self.visit_unit()
     }
 
@@ -619,37 +625,42 @@ pub trait Visitor {
     }
 
     /// `visit_some` deserializes a value into a `Value`.
-    fn visit_some<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
+    fn visit_some<D>(&mut self, deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
+        let _ = deserializer;
         Err(Error::invalid_type(Type::Option))
     }
 
     /// `visit_newtype_struct` deserializes a value into a `Value`.
-    fn visit_newtype_struct<D>(&mut self, _deserializer: &mut D) -> Result<Self::Value, D::Error>
+    fn visit_newtype_struct<D>(&mut self, deserializer: &mut D) -> Result<Self::Value, D::Error>
         where D: Deserializer,
     {
+        let _ = deserializer;
         Err(Error::invalid_type(Type::NewtypeStruct))
     }
 
     /// `visit_seq` deserializes a `SeqVisitor` into a `Value`.
-    fn visit_seq<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_seq<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor,
     {
+        let _ = visitor;
         Err(Error::invalid_type(Type::Seq))
     }
 
     /// `visit_map` deserializes a `MapVisitor` into a `Value`.
-    fn visit_map<V>(&mut self, _visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_map<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor,
     {
+        let _ = visitor;
         Err(Error::invalid_type(Type::Map))
     }
 
     /// `visit_bytes` deserializes a `&[u8]` into a `Value`.
-    fn visit_bytes<E>(&mut self, _v: &[u8]) -> Result<Self::Value, E>
+    fn visit_bytes<E>(&mut self, v: &[u8]) -> Result<Self::Value, E>
         where E: Error,
     {
+        let _ = v;
         Err(Error::invalid_type(Type::Bytes))
     }
 
@@ -834,16 +845,16 @@ pub trait VariantVisitor {
     /// If no tuple variants are expected, yield a
     /// `Err(serde::de::Error::invalid_type(serde::de::Type::TupleVariant))`
     fn visit_tuple<V>(&mut self,
-                      _len: usize,
-                      _visitor: V) -> Result<V::Value, Self::Error>
+                      len: usize,
+                      visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// `visit_struct` is called when deserializing a struct-like variant.
     /// If no struct variants are expected, yield a
     /// `Err(serde::de::Error::invalid_type(serde::de::Type::StructVariant))`
     fn visit_struct<V>(&mut self,
-                       _fields: &'static [&'static str],
-                       _visitor: V) -> Result<V::Value, Self::Error>
+                       fields: &'static [&'static str],
+                       visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 }
 
