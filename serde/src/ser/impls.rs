@@ -522,7 +522,8 @@ macro_rules! serialize_map {
         {
             let mut state = try!(serializer.serialize_map(Some(self.len())));
             for (k, v) in self {
-                try!(serializer.serialize_map_elt(&mut state, k, v));
+                try!(serializer.serialize_map_key(&mut state, k));
+                try!(serializer.serialize_map_value(&mut state, v));
             }
             serializer.serialize_map_end(state)
         }

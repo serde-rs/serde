@@ -334,18 +334,25 @@ pub trait Serializer {
     ) -> Result<(), Self::Error>;
 
     /// Begins to serialize a map. This call must be followed by zero or more
-    /// calls to `serialize_map_elt`, then a call to `serialize_map_end`.
+    /// calls to `serialize_map_key` and `serialize_map_value`, then a call to
+    /// `serialize_map_end`.
     fn serialize_map(
         &mut self,
         len: Option<usize>,
     ) -> Result<Self::MapState, Self::Error>;
 
-    /// Serialize a map element. Must have previously called `serialize_map`.
-    fn serialize_map_elt<K: Serialize, V: Serialize>(
+    /// Serialize a map key. Must have previously called `serialize_map`.
+    fn serialize_map_key<T: Serialize>(
         &mut self,
         state: &mut Self::MapState,
-        key: K,
-        value: V,
+        key: T
+    ) -> Result<(), Self::Error>;
+
+    /// Serialize a map value. Must have previously called `serialize_map`.
+    fn serialize_map_value<T: Serialize>(
+        &mut self,
+        state: &mut Self::MapState,
+        value: T
     ) -> Result<(), Self::Error>;
 
     /// Finishes serializing a map.

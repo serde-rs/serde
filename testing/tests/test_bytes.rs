@@ -229,9 +229,14 @@ impl Serializer for BytesSerializer {
         Err(Error)
     }
 
-    fn serialize_map_elt<K, V>(&mut self, _: &mut (), _key: K, _value: V) -> Result<(), Error>
-        where K: Serialize,
-              V: Serialize,
+    fn serialize_map_key<T>(&mut self, _: &mut (), _key: T) -> Result<(), Error>
+        where T: Serialize
+    {
+        Err(Error)
+    }
+
+    fn serialize_map_value<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
+        where T: Serialize
     {
         Err(Error)
     }
