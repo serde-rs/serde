@@ -259,9 +259,12 @@ impl<'a, I> ser::Serializer for Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_map_elt<K, V>(&mut self, _: &mut (), key: K, value: V) -> Result<(), Self::Error> where K: Serialize, V: Serialize {
+    fn serialize_map_key<T>(&mut self, _: &mut (), key: T) -> Result<(), Self::Error> where T: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::MapSep));
-        try!(key.serialize(self));
+        key.serialize(self)
+    }
+
+    fn serialize_map_value<T>(&mut self, _: &mut (), value: T) -> Result<(), Self::Error> where T: Serialize {
         value.serialize(self)
     }
 
