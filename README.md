@@ -812,12 +812,6 @@ features, and use `default-features = false` in your `Cargo.toml`:
 If you only use `default-features = false`, you will receive a stock `no_std`
 serde with no support for any of the collection types.
 
-Upgrading from Serde 0.6
-========================
-
-* `#[serde(skip_serializing_if_none)]` was replaced with `#[serde(skip_serializing_if="Option::is_none")]`.
-* `#[serde(skip_serializing_if_empty)]` was replaced with `#[serde(skip_serializing_if="Vec::is_empty")]`.
-
 Serialization Formats Using Serde
 =================================
 
