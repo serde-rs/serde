@@ -71,7 +71,7 @@ pub trait Serialize {
 /// reference to that state. You do not need to do any additional checks for the correctness of the
 /// state object, as it is expected that the user will not modify it. Due to the generic nature
 /// of the `Serialize` impls, modifying the object is impossible on stable Rust.
-pub trait Serializer: Sized {
+pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
 
