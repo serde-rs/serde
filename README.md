@@ -29,7 +29,7 @@ version = "0.1.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 
 [dependencies]
-serde_json = "*"
+serde_json = "0.8"
 ```
 
 Next, the `src/main.rs` file itself:
@@ -115,11 +115,11 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 build = "build.rs"
 
 [build-dependencies]
-serde_codegen = "*"
+serde_codegen = "0.8"
 
 [dependencies]
-serde = "*"
-serde_json = "*"
+serde = "0.8"
+serde_json = "0.8"
 ```
 
 Next, we define our source file, `src/main.rs.in`. Note this is a different
@@ -199,9 +199,9 @@ version = "0.1.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 
 [dependencies]
-serde = "*"
-serde_json = "*"
-serde_macros = "*"
+serde = "0.8"
+serde_json = "0.8"
+serde_macros = "0.8"
 ```
 
 Note that it doesn't need a build script. Now the `src/main.rs`, which enables
@@ -256,12 +256,12 @@ default = ["serde_codegen"]
 nightly = ["serde_macros"]
 
 [build-dependencies]
-serde_codegen = { version = "*", optional = true }
+serde_codegen = { version = "0.8", optional = true }
 
 [dependencies]
-serde = "*"
-serde_json = "*"
-serde_macros = { version = "*", optional = true }
+serde = "0.8"
+serde_json = "0.8"
+serde_macros = { version = "0.8", optional = true }
 ```
 
 `build.rs`:
