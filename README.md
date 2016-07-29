@@ -68,8 +68,8 @@ fn main() {
         .insert("array", ArrayBuilder::new()
                 .push(1)
                 .push(2)
-                .unwrap())
-        .unwrap();
+                .build())
+        .build();
 
     let serialized = serde_json::to_string(&value).unwrap();
     println!("serialized value: {:?}", serialized);
