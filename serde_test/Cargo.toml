@@ -11,4 +11,4 @@ keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
-serde = "=0.8.0"
+serde = "0.8.0"
