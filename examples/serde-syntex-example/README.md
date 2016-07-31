@@ -16,5 +16,5 @@ Point { x: 1, y: 2 }
 On nightly, it can use a plugin with:
 
 ```
-% rustup run nightly cargo run --features nightly --no-default-features
+% rustup run nightly cargo run --features unstable --no-default-features
 ```
