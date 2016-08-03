@@ -434,35 +434,10 @@ impl serde::Serialize for Point {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer
     {
-        serializer.serialize_struct("Point", PointMapVisitor {
-            value: self,
-            state: 0,
-        })
-    }
-}
-
-struct PointMapVisitor<'a> {
-    value: &'a Point,
-    state: u8,
-}
-
-impl<'a> serde::ser::MapVisitor for PointMapVisitor<'a> {
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: serde::Serializer
-    {
-        match self.state {
-            0 => {
-                self.state += 1;
-                Ok(Some(try!(serializer.serialize_struct_elt("x", &self.value.x))))
-            }
-            1 => {
-                self.state += 1;
-                Ok(Some(try!(serializer.serialize_struct_elt("y", &self.value.y))))
-            }
-            _ => {
-                Ok(None)
-            }
-        }
+        let mut state = try!(serializer.serialize_struct("Point", 2));
+        try!(serializer.serialize_struct_elt(&mut state, "x", &self.x));
+        try!(serializer.serialize_struct_elt(&mut state, "y", &self.y));
+        serializer.serialize_struct_end(state)
     }
 }
 
