@@ -6,3 +6,4 @@ extern crate test;
 include!("../../testing/tests/test.rs.in");
 
 mod compile_tests;
+mod skeptic;

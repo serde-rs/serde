@@ -356,11 +356,8 @@ impl serde::Serialize for i32 {
 ```
 
 As you can see it's pretty simple. More complex types like `BTreeMap` need to
-pass a
-[MapVisitor](http://serde-rs.github.io/serde/serde/serde/ser/trait.MapVisitor.html)
-to the
-[Serializer](http://serde-rs.github.io/serde/serde/serde/ser/trait.Serializer.html)
-in order to walk through the type:
+use a multi-step process (init, elements, end) in order to walk through the
+type:
 
 ```rust,ignore
 impl<K, V> Serialize for BTreeMap<K, V>
@@ -371,55 +368,17 @@ impl<K, V> Serialize for BTreeMap<K, V>
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.serialize_map(MapIteratorVisitor::new(self.iter(), Some(self.len())))
-    }
-}
-
-pub struct MapIteratorVisitor<Iter> {
-    iter: Iter,
-    len: Option<usize>,
-}
-
-impl<K, V, Iter> MapIteratorVisitor<Iter>
-    where Iter: Iterator<Item=(K, V)>
-{
-    #[inline]
-    pub fn new(iter: Iter, len: Option<usize>) -> MapIteratorVisitor<Iter> {
-        MapIteratorVisitor {
-            iter: iter,
-            len: len,
+        let mut state = try!(serializer.serialize_map(Some(self.len())));
+        for (k, v) in self {
+            try!(serializer.serialize_map_elt(&mut state, k, v));
         }
-    }
-}
-
-impl<K, V, I> MapVisitor for MapIteratorVisitor<I>
-    where K: Serialize,
-          V: Serialize,
-          I: Iterator<Item=(K, V)>,
-{
-    #[inline]
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: Serializer,
-    {
-        match self.iter.next() {
-            Some((key, value)) => {
-                let value = try!(serializer.serialize_map_elt(key, value));
-                Ok(Some(value))
-            }
-            None => Ok(None)
-        }
-    }
-
-    #[inline]
-    fn len(&self) -> Option<usize> {
-        self.len
+        serializer.serialize_map_end(state)
     }
 }
 ```
 
 Serializing structs follow this same pattern. In fact, structs are represented
-as a named map. Its visitor uses a simple state machine to iterate through all
-the fields:
+as a named map, with a known length.
 
 ```rust
 extern crate serde;
@@ -434,35 +393,10 @@ impl serde::Serialize for Point {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer
     {
-        serializer.serialize_struct("Point", PointMapVisitor {
-            value: self,
-            state: 0,
-        })
-    }
-}
-
-struct PointMapVisitor<'a> {
-    value: &'a Point,
-    state: u8,
-}
-
-impl<'a> serde::ser::MapVisitor for PointMapVisitor<'a> {
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: serde::Serializer
-    {
-        match self.state {
-            0 => {
-                self.state += 1;
-                Ok(Some(try!(serializer.serialize_struct_elt("x", &self.value.x))))
-            }
-            1 => {
-                self.state += 1;
-                Ok(Some(try!(serializer.serialize_struct_elt("y", &self.value.y))))
-            }
-            _ => {
-                Ok(None)
-            }
-        }
+        let mut state = try!(serializer.serialize_struct("Point", 2));
+        try!(serializer.serialize_struct_elt(&mut state, "x", &self.x));
+        try!(serializer.serialize_struct_elt(&mut state, "y", &self.y));
+        serializer.serialize_struct_end(state)
     }
 }
 
