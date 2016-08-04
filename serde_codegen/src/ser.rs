@@ -382,7 +382,7 @@ fn serialize_variant(
         }
         Style::Struct => {
             let mut pat = builder.pat().struct_().id(type_ident).id(variant_ident).build();
-            for field in variant.fields.iter() {
+            for field in &variant.fields {
                 let name = match field.ident {
                     Some(name) => name,
                     None => cx.span_bug(field.span, "struct variant has unnamed fields"),
