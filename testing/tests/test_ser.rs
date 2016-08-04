@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
+use std::time::Duration;
 
 extern crate serde_test;
 use self::serde_test::{
@@ -322,6 +323,19 @@ declare_ser_tests! {
             Token::SeqSep,
             Token::I32(2),
             Token::SeqEnd,
+        ],
+    }
+    test_duration {
+        Duration::new(1, 2) => &[
+            Token::StructStart("Duration", 2),
+                Token::StructSep,
+                Token::Str("secs"),
+                Token::U64(1),
+
+                Token::StructSep,
+                Token::Str("nanos"),
+                Token::U32(2),
+            Token::StructEnd,
         ],
     }
     test_net_ipv4addr {

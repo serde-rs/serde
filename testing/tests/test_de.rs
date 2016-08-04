@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use serde::Deserialize;
 
@@ -742,6 +743,28 @@ declare_tests! {
             Token::I32(1),
             Token::SeqSep,
             Token::I32(2),
+            Token::SeqEnd,
+        ],
+    }
+    test_duration {
+        Duration::new(1, 2) => &[
+            Token::StructStart("Duration", 2),
+                Token::StructSep,
+                Token::Str("secs"),
+                Token::U64(1),
+
+                Token::StructSep,
+                Token::Str("nanos"),
+                Token::U32(2),
+            Token::StructEnd,
+        ],
+        Duration::new(1, 2) => &[
+            Token::SeqStart(Some(2)),
+                Token::SeqSep,
+                Token::I64(1),
+
+                Token::SeqSep,
+                Token::I64(2),
             Token::SeqEnd,
         ],
     }
