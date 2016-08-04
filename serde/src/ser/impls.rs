@@ -50,6 +50,8 @@ use std::path;
 use std::rc::Rc;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::rc::Rc;
+#[cfg(feature = "std")]
+use std::time::Duration;
 
 #[cfg(feature = "std")]
 use std::sync::Arc;
@@ -619,6 +621,20 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
                 serializer.serialize_newtype_variant("Result", 1, "Err", value)
             }
         }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "std")]
+impl Serialize for Duration {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        let mut state = try!(serializer.serialize_struct("Duration", 2));
+        try!(serializer.serialize_struct_elt(&mut state, "secs", self.as_secs()));
+        try!(serializer.serialize_struct_elt(&mut state, "nanos", self.subsec_nanos()));
+        serializer.serialize_struct_end(state)
     }
 }
 
