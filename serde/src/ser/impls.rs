@@ -157,7 +157,7 @@ impl<T> Serialize for [T]
         where S: Serializer,
     {
         let mut state = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.iter() {
+        for e in self {
             try!(serializer.serialize_seq_elt(&mut state, e));
         }
         serializer.serialize_seq_end(state)
@@ -174,7 +174,7 @@ macro_rules! array_impls {
                 where S: Serializer,
             {
                 let mut state = try!(serializer.serialize_seq_fixed_size($len));
-                for e in self.iter() {
+                for e in self {
                     try!(serializer.serialize_seq_elt(&mut state, e));
                 }
                 serializer.serialize_seq_end(state)
