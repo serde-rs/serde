@@ -70,10 +70,8 @@ fn serialize_item(
             #[automatically_derived]
             impl $impl_generics _serde::ser::Serialize for $ty $where_clause {
                 fn serialize<__S>(&self, _serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
-                    where __S: _serde::ser::Serializer,
-                {
-                    $body
-                }
+                    where __S: _serde::ser::Serializer
+                $body
             }
         };
     ).unwrap()
@@ -119,7 +117,7 @@ fn serialize_body(
     item: &Item,
     impl_generics: &ast::Generics,
     ty: P<ast::Ty>,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     match item.body {
         Body::Enum(ref variants) => {
             serialize_item_enum(
@@ -179,12 +177,12 @@ fn serialize_unit_struct(
     cx: &ExtCtxt,
     builder: &aster::AstBuilder,
     item_attrs: &attr::Item,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let type_name = name_expr(builder, item_attrs.name());
 
-    quote_expr!(cx,
+    quote_block!(cx, {
         _serializer.serialize_unit_struct($type_name)
-    )
+    }).unwrap()
 }
 
 fn serialize_newtype_struct(
@@ -194,7 +192,7 @@ fn serialize_newtype_struct(
     item_ty: P<ast::Ty>,
     field: &Field,
     item_attrs: &attr::Item,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let type_name = name_expr(builder, item_attrs.name());
 
     let mut field_expr = quote_expr!(cx, &self.0);
@@ -203,9 +201,9 @@ fn serialize_newtype_struct(
             &item_ty, impl_generics, &field.ty, path, field_expr);
     }
 
-    quote_expr!(cx,
+    quote_block!(cx, {
         _serializer.serialize_newtype_struct($type_name, $field_expr)
-    )
+    }).unwrap()
 }
 
 fn serialize_tuple_struct(
@@ -215,7 +213,7 @@ fn serialize_tuple_struct(
     ty: P<ast::Ty>,
     fields: &[Field],
     item_attrs: &attr::Item,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let serialize_stmts = serialize_tuple_struct_visitor(
         cx,
         builder,
@@ -229,11 +227,11 @@ fn serialize_tuple_struct(
     let type_name = name_expr(builder, item_attrs.name());
     let len = serialize_stmts.len();
 
-    quote_expr!(cx, {
+    quote_block!(cx, {
         let mut state = try!(_serializer.serialize_tuple_struct($type_name, $len));
         $serialize_stmts
         _serializer.serialize_tuple_struct_end(state)
-    })
+    }).unwrap()
 }
 
 fn serialize_struct(
@@ -243,7 +241,7 @@ fn serialize_struct(
     ty: P<ast::Ty>,
     fields: &[Field],
     item_attrs: &attr::Item,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let serialize_fields = serialize_struct_visitor(
         cx,
         builder,
@@ -268,11 +266,11 @@ fn serialize_struct(
          })
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
-    quote_expr!(cx, {
+    quote_block!(cx, {
         let mut state = try!(_serializer.serialize_struct($type_name, $len));
         $serialize_fields
         _serializer.serialize_struct_end(state)
-    })
+    }).unwrap()
 }
 
 fn serialize_item_enum(
@@ -283,7 +281,7 @@ fn serialize_item_enum(
     ty: P<ast::Ty>,
     variants: &[Variant],
     item_attrs: &attr::Item,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let arms: Vec<_> =
         variants.iter()
             .enumerate()
@@ -301,11 +299,11 @@ fn serialize_item_enum(
             })
             .collect();
 
-    quote_expr!(cx,
+    quote_block!(cx, {
         match *self {
             $arms
         }
-    )
+    }).unwrap()
 }
 
 fn serialize_variant(
@@ -326,18 +324,17 @@ fn serialize_variant(
     match variant.style {
         Style::Unit => {
             quote_arm!(cx,
-                $type_ident::$variant_ident => {
+                $type_ident::$variant_ident =>
                     _serde::ser::Serializer::serialize_unit_variant(
                         _serializer,
                         $type_name,
                         $variant_index,
                         $variant_name,
-                    )
-                }
+                    ),
             )
         },
         Style::Newtype => {
-            let expr = serialize_newtype_variant(
+            let block = serialize_newtype_variant(
                 cx,
                 builder,
                 type_name,
@@ -349,7 +346,7 @@ fn serialize_variant(
             );
 
             quote_arm!(cx,
-                $type_ident::$variant_ident(ref __simple_value) => { $expr }
+                $type_ident::$variant_ident(ref __simple_value) => $block
             )
         },
         Style::Tuple => {
@@ -365,7 +362,7 @@ fn serialize_variant(
                 )
                 .build();
 
-            let expr = serialize_tuple_variant(
+            let block = serialize_tuple_variant(
                 cx,
                 builder,
                 type_name,
@@ -377,7 +374,7 @@ fn serialize_variant(
             );
 
             quote_arm!(cx,
-                $pat => { $expr }
+                $pat => $block
             )
         }
         Style::Struct => {
@@ -395,7 +392,7 @@ fn serialize_variant(
             }
             let pat = pat.build();
 
-            let expr = serialize_struct_variant(
+            let block = serialize_struct_variant(
                 cx,
                 builder,
                 variant_index,
@@ -407,7 +404,7 @@ fn serialize_variant(
             );
 
             quote_arm!(cx,
-                $pat => { $expr }
+                $pat => $block
             )
         }
     }
@@ -422,14 +419,14 @@ fn serialize_newtype_variant(
     item_ty: P<ast::Ty>,
     generics: &ast::Generics,
     field: &Field,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let mut field_expr = quote_expr!(cx, __simple_value);
     if let Some(path) = field.attrs.serialize_with() {
         field_expr = wrap_serialize_with(cx, builder,
             &item_ty, generics, &field.ty, path, field_expr);
     }
 
-    quote_expr!(cx,
+    quote_block!(cx, {
         _serde::ser::Serializer::serialize_newtype_variant(
             _serializer,
             $type_name,
@@ -437,7 +434,7 @@ fn serialize_newtype_variant(
             $variant_name,
             $field_expr,
         )
-    )
+    }).unwrap()
 }
 
 fn serialize_tuple_variant(
@@ -449,7 +446,7 @@ fn serialize_tuple_variant(
     generics: &ast::Generics,
     structure_ty: P<ast::Ty>,
     fields: &[Field],
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
     let serialize_stmts = serialize_tuple_struct_visitor(
         cx,
         builder,
@@ -462,11 +459,11 @@ fn serialize_tuple_variant(
 
     let len = serialize_stmts.len();
 
-    quote_expr!(cx, {
+    quote_block!(cx, {
         let mut state = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
         $serialize_stmts
         _serializer.serialize_tuple_variant_end(state)
-    })
+    }).unwrap()
 }
 
 fn serialize_struct_variant(
@@ -478,7 +475,7 @@ fn serialize_struct_variant(
     ty: P<ast::Ty>,
     fields: &[Field],
     item_attrs: &attr::Item,
-) -> P<ast::Expr> {
+) -> P<ast::Block> {
 
     let serialize_fields = serialize_struct_visitor(
         cx,
@@ -504,7 +501,7 @@ fn serialize_struct_variant(
          })
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
-    quote_expr!(cx, {
+    quote_block!(cx, {
         let mut state = try!(_serializer.serialize_struct_variant(
             $item_name,
             $variant_index,
@@ -513,7 +510,7 @@ fn serialize_struct_variant(
         ));
         $serialize_fields
         _serializer.serialize_struct_variant_end(state)
-    })
+    }).unwrap()
 }
 
 fn serialize_tuple_struct_visitor(
