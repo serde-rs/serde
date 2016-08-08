@@ -190,31 +190,24 @@ fn deserialize_body(
 // Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
 fn deserialize_visitor(
     builder: &aster::AstBuilder,
-    trait_generics: &ast::Generics,
-    forward_ty_params: Vec<ast::TyParam>,
-    forward_tys: Vec<P<ast::Ty>>
-) -> (P<ast::Item>, P<ast::Ty>, P<ast::Expr>, ast::Generics) {
-    if trait_generics.ty_params.is_empty() && forward_tys.is_empty() {
+    generics: &ast::Generics,
+) -> (P<ast::Item>, P<ast::Ty>, P<ast::Expr>) {
+    if generics.ty_params.is_empty() {
         (
-            builder.item().tuple_struct("__Visitor").build(),
+            builder.item().unit_struct("__Visitor"),
             builder.ty().id("__Visitor"),
             builder.expr().id("__Visitor"),
-            trait_generics.clone(),
         )
     } else {
-        let placeholders : Vec<_> = trait_generics.ty_params.iter()
+        let placeholders : Vec<_> = generics.ty_params.iter()
             .map(|t| builder.ty().id(t.ident))
             .collect();
-        let mut trait_generics = trait_generics.clone();
-        let mut ty_params = forward_ty_params.clone();
-        ty_params.extend(trait_generics.ty_params.into_vec());
-        trait_generics.ty_params = P::from_vec(ty_params);
 
         (
             builder.item().tuple_struct("__Visitor")
-                .generics().with(trait_generics.clone()).build()
+                .generics().with(generics.clone()).build()
                 .with_tys({
-                    let lifetimes = trait_generics.lifetimes.iter()
+                    let lifetimes = generics.lifetimes.iter()
                         .map(|lifetime_def| {
                             builder.ty()
                                 .phantom_data()
@@ -223,7 +216,7 @@ fn deserialize_visitor(
                                 .unit()
                         });
 
-                    let ty_params = trait_generics.ty_params.iter()
+                    let ty_params = generics.ty_params.iter()
                         .map(|ty_param| {
                             builder.ty()
                                 .phantom_data()
@@ -234,37 +227,20 @@ fn deserialize_visitor(
                 })
                 .build(),
             builder.ty().path()
-                .segment("__Visitor").with_generics(trait_generics.clone()).build()
+                .segment("__Visitor").with_generics(generics.clone()).build()
                 .build(),
             builder.expr().call()
                 .path().segment("__Visitor")
-                .with_tys(forward_tys)
                 .with_tys(placeholders)
                 .build().build()
                 .with_args({
-                    let len = trait_generics.lifetimes.len() + trait_generics.ty_params.len();
+                    let len = generics.lifetimes.len() + generics.ty_params.len();
 
                     (0 .. len).map(|_| builder.expr().phantom_data())
                 })
                 .build(),
-            trait_generics,
         )
     }
-}
-
-fn deserializer_ty_param(builder: &aster::AstBuilder) -> ast::TyParam {
-    builder.ty_param("__D")
-        .trait_bound(builder.path()
-                     .segment("_serde").build()
-                     .segment("de").build()
-                     .id("Deserializer")
-                     .build())
-        .build()
-        .build()
-}
-
-fn deserializer_ty_arg(builder: &aster::AstBuilder) -> P<ast::Ty>{
-    builder.ty().id("__D")
 }
 
 fn deserialize_unit_struct(
@@ -313,11 +289,9 @@ fn deserialize_tuple(
 ) -> P<ast::Block> {
     let where_clause = &impl_generics.where_clause;
 
-    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = deserialize_visitor(
+    let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(
         builder,
         impl_generics,
-        vec![deserializer_ty_param(builder)],
-        vec![deserializer_ty_arg(builder)],
     );
 
     let is_enum = variant_ident.is_some();
@@ -367,7 +341,7 @@ fn deserialize_tuple(
     quote_block!(cx, {
         $visitor_item
 
-        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
+        impl $impl_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             $visit_newtype_struct
@@ -512,11 +486,9 @@ fn deserialize_struct(
 ) -> P<ast::Block> {
     let where_clause = &impl_generics.where_clause;
 
-    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = deserialize_visitor(
+    let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(
         builder,
-        &impl_generics,
-        vec![deserializer_ty_param(builder)],
-        vec![deserializer_ty_arg(builder)],
+        impl_generics,
     );
 
     let type_path = match variant_ident {
@@ -559,7 +531,7 @@ fn deserialize_struct(
 
         $visitor_item
 
-        impl $visitor_generics _serde::de::Visitor for $visitor_ty $where_clause {
+        impl $impl_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             #[inline]
@@ -640,11 +612,9 @@ fn deserialize_item_enum(
     }
     variant_arms.extend(ignored_arm.into_iter());
 
-    let (visitor_item, visitor_ty, visitor_expr, visitor_generics) = deserialize_visitor(
+    let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(
         builder,
         impl_generics,
-        vec![deserializer_ty_param(builder)],
-        vec![deserializer_ty_arg(builder)],
     );
 
     quote_block!(cx, {
@@ -652,7 +622,7 @@ fn deserialize_item_enum(
 
         $visitor_item
 
-        impl $visitor_generics _serde::de::EnumVisitor for $visitor_ty $where_clause {
+        impl $impl_generics _serde::de::EnumVisitor for $visitor_ty $where_clause {
             type Value = $ty;
 
             fn visit<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
@@ -871,13 +841,9 @@ fn deserialize_field_visitor(
             fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<__Field, __D::Error>
                 where __D: _serde::de::Deserializer,
             {
-                struct __FieldVisitor<__D> {
-                    phantom: ::std::marker::PhantomData<__D>
-                }
+                struct __FieldVisitor;
 
-                impl<__D> _serde::de::Visitor for __FieldVisitor<__D>
-                    where __D: _serde::de::Deserializer
-                {
+                impl _serde::de::Visitor for __FieldVisitor {
                     type Value = __Field;
 
                     fn visit_usize<__E>(&mut self, value: usize) -> ::std::result::Result<__Field, __E>
@@ -893,11 +859,7 @@ fn deserialize_field_visitor(
                     $bytes_body
                 }
 
-                deserializer.deserialize_struct_field(
-                    __FieldVisitor::<__D>{
-                        phantom: ::std::marker::PhantomData
-                    }
-                )
+                deserializer.deserialize_struct_field(__FieldVisitor)
             }
         }
     ).unwrap();
