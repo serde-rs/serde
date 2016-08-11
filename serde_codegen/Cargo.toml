@@ -1,6 +1,6 @@
 [package]
 name = "serde_codegen"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros to auto-generate implementations for the serde framework"
@@ -32,6 +32,6 @@ aster = { version = "^0.22.0", default-features = false }
 clippy = { version = "^0.*", optional = true }
 quasi = { version = "^0.16.0", default-features = false }
 quasi_macros = { version = "^0.16.0", optional = true }
-serde_codegen_internals = { version = "=0.5.0", default-features = false }
+serde_codegen_internals = { version = "=0.5.0", default-features = false, path = "../serde_codegen_internals" }
 syntex = { version = "^0.39.0", optional = true }
 syntex_syntax = { version = "^0.39.0", optional = true }
