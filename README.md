@@ -483,7 +483,7 @@ impl<K, V> serde::Deserialize for BTreeMap<K, V>
     fn deserialize<D>(deserializer: &mut D) -> Result<BTreeMap<K, V>, D::Error>
         where D: serde::Deserializer,
     {
-        deserializer.deserialize(BTreeMapVisitor::new())
+        deserializer.deserialize_map(BTreeMapVisitor::new())
     }
 }
 
