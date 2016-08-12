@@ -9,7 +9,7 @@
 //! For a detailed tutorial on the different ways to use serde please check out the
 //! [github repository](https://github.com/serde-rs/serde)
 
-#![doc(html_root_url="https://serde-rs.github.io/serde/serde")]
+#![doc(html_root_url="https://serde-rs.github.io/serde")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "unstable", feature(reflect_marker, unicode, nonzero, plugin, step_trait, zero_one))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
