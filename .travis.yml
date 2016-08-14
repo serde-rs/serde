@@ -29,7 +29,7 @@ script:
 - (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features unstable)
 - (cd serde && travis-cargo --only stable doc)
 after_success:
-- (cd serde && mkdir -p target/doc && echo docs.serde.rs > target/doc/CNAME && travis-cargo --only stable doc-upload --branch docs)
+- (cd serde && travis-cargo --only stable doc-upload --branch docs)
 - (cd testing && travis-cargo --only stable coveralls --no-sudo)
 env:
   global:
