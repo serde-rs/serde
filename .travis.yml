@@ -29,9 +29,7 @@ script:
 - (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features unstable)
 - (cd serde && travis-cargo --only stable doc)
 after_success:
-- (cd serde && travis-cargo --only stable doc-upload --branch docs)
 - (cd testing && travis-cargo --only stable coveralls --no-sudo)
 env:
   global:
   - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-  - secure: Jcd11Jy0xLyacBUB+oKOaxKBm9iZNInenRDtNBY8GKOtqF5fHUfEjgDf538hwRl5L0FP7DLr8oK0IHmzA7lPjJxlzoKVKV3IM7bRZEYzW5DMonf/lcliuGte7SH0NVFhifM87T8HI2hjGdAb+7+m34siBR7M3AY/XjLInrvUFvY=
