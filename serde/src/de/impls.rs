@@ -791,7 +791,7 @@ macro_rules! map_impl {
 #[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
     BTreeMap<K, V>,
-    BTreeMapVisitor<K: Deserialize + Eq + Ord,
+    BTreeMapVisitor<K: Deserialize + Ord,
                     V: Deserialize>,
     visitor,
     BTreeMap::new(),
