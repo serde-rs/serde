@@ -1,0 +1,2 @@
+# To prevent compiletest from seeing two versions of serde
+paths = ["../serde"]
