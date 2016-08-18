@@ -16,7 +16,6 @@ plugin = true
 
 [features]
 unstable-testing = [
-    "clippy",
     "skeptic",
     "serde_json",
     "serde/unstable-testing",
