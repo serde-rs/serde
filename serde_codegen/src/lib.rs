@@ -36,47 +36,61 @@ include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 include!("lib.rs.in");
 
 #[cfg(feature = "with-syntex")]
+mod env;
+
+#[cfg(feature = "with-syntex")]
 pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     where S: AsRef<Path>,
           D: AsRef<Path>,
 {
-    use syntax::{ast, fold};
+    let src = src.as_ref().to_owned();
+    let dst = dst.as_ref().to_owned();
 
-    /// Strip the serde attributes from the crate.
-    #[cfg(feature = "with-syntex")]
-    fn strip_attributes(krate: ast::Crate) -> ast::Crate {
-        /// Helper folder that strips the serde attributes after the extensions have been expanded.
-        struct StripAttributeFolder;
+    let expand_thread = move || {
+        use syntax::{ast, fold};
 
-        impl fold::Folder for StripAttributeFolder {
-            fn fold_attribute(&mut self, attr: ast::Attribute) -> Option<ast::Attribute> {
-                match attr.node.value.node {
-                    ast::MetaItemKind::List(ref n, _) if n == &"serde" => { return None; }
-                    _ => {}
+        /// Strip the serde attributes from the crate.
+        #[cfg(feature = "with-syntex")]
+        fn strip_attributes(krate: ast::Crate) -> ast::Crate {
+            /// Helper folder that strips the serde attributes after the extensions have been expanded.
+            struct StripAttributeFolder;
+
+            impl fold::Folder for StripAttributeFolder {
+                fn fold_attribute(&mut self, attr: ast::Attribute) -> Option<ast::Attribute> {
+                    match attr.node.value.node {
+                        ast::MetaItemKind::List(ref n, _) if n == &"serde" => { return None; }
+                        _ => {}
+                    }
+
+                    Some(attr)
                 }
 
-                Some(attr)
+                fn fold_mac(&mut self, mac: ast::Mac) -> ast::Mac {
+                    fold::noop_fold_mac(mac, self)
+                }
             }
 
-            fn fold_mac(&mut self, mac: ast::Mac) -> ast::Mac {
-                fold::noop_fold_mac(mac, self)
-            }
+            fold::Folder::fold_crate(&mut StripAttributeFolder, krate)
         }
 
-        fold::Folder::fold_crate(&mut StripAttributeFolder, krate)
-    }
+        let mut reg = syntex::Registry::new();
 
-    let mut reg = syntex::Registry::new();
+        reg.add_attr("feature(custom_derive)");
+        reg.add_attr("feature(custom_attribute)");
 
-    reg.add_attr("feature(custom_derive)");
-    reg.add_attr("feature(custom_attribute)");
+        reg.add_decorator("derive_Serialize", ser::expand_derive_serialize);
+        reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
 
-    reg.add_decorator("derive_Serialize", ser::expand_derive_serialize);
-    reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
+        reg.add_post_expansion_pass(strip_attributes);
 
-    reg.add_post_expansion_pass(strip_attributes);
+        reg.expand("", src, dst)
+    };
 
-    reg.expand("", src.as_ref(), dst.as_ref())
+    // 16 MB stack unless otherwise specified
+    let _tmp_env = env::set_if_unset("RUST_MIN_STACK", "16777216");
+
+    use std::thread;
+    thread::spawn(expand_thread).join().unwrap()
 }
 
 #[cfg(not(feature = "with-syntex"))]
