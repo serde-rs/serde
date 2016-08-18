@@ -9,9 +9,9 @@ default = ["serde_codegen"]
 unstable = ["serde_macros"]
 
 [build-dependencies]
-serde_codegen = { version = "^0.8", optional = true }
+serde_codegen = { version = "^0.8", optional = true, path = "../../serde_codegen" }
 
 [dependencies]
 serde = "^0.8"
 serde_json = "^0.8"
-serde_macros = { version = "^0.8", optional = true }
+serde_macros = { version = "^0.8", optional = true, path = "../../serde_macros" }

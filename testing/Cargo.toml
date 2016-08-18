@@ -1,6 +1,6 @@
 [package]
 name = "serde_testing"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -11,7 +11,7 @@ keywords = ["serialization"]
 build = "build.rs"
 
 [features]
-unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
+unstable-testing = ["serde/unstable-testing", "serde_codegen/unstable-testing"]
 
 [build-dependencies]
 serde_codegen = { path = "../serde_codegen", features = ["with-syntex"] }

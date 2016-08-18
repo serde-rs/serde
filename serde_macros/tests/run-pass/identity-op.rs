@@ -1,5 +1,5 @@
 #![feature(custom_derive, plugin)]
-#![plugin(serde_macros, clippy)]
+#![plugin(serde_macros)]
 
 #![deny(identity_op)]
 
