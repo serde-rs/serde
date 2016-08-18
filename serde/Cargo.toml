@@ -17,7 +17,7 @@ std = []
 unstable = []
 alloc = ["unstable"]
 collections = ["alloc"]
-unstable-testing = ["clippy", "unstable", "std"]
+unstable-testing = ["unstable", "std"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
