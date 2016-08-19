@@ -192,7 +192,7 @@ fn deserialize_visitor(
     builder: &aster::AstBuilder,
     generics: &ast::Generics,
 ) -> (P<ast::Item>, P<ast::Ty>, P<ast::Expr>) {
-    if generics.ty_params.is_empty() {
+    if generics.lifetimes.is_empty() && generics.ty_params.is_empty() {
         (
             builder.item().unit_struct("__Visitor"),
             builder.ty().id("__Visitor"),
