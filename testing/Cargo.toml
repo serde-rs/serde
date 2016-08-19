@@ -12,7 +12,7 @@ keywords = ["serialization"]
 build = "build.rs"
 
 [features]
-unstable-testing = ["serde/unstable-testing", "serde_codegen/unstable-testing"]
+unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
 
 [build-dependencies]
 serde_codegen = { path = "../serde_codegen", features = ["with-syntex"] }

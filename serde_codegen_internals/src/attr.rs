@@ -449,12 +449,14 @@ impl Field {
     }
 }
 
+type SerAndDe<T> = (Option<Spanned<T>>, Option<Spanned<T>>);
+
 fn get_ser_and_de<T, F>(
     cx: &ExtCtxt,
     attribute: &'static str,
     items: &[P<ast::MetaItem>],
     f: F
-) -> Result<(Option<Spanned<T>>, Option<Spanned<T>>), ()>
+) -> Result<SerAndDe<T>, ()>
     where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, ()>,
 {
     let mut ser_item = Attr::none(cx, attribute);
@@ -492,21 +494,21 @@ fn get_ser_and_de<T, F>(
 fn get_renames(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
-) -> Result<(Option<Spanned<InternedString>>, Option<Spanned<InternedString>>), ()> {
+) -> Result<SerAndDe<InternedString>, ()> {
     get_ser_and_de(cx, "rename", items, get_str_from_lit)
 }
 
 fn get_where_predicates(
     cx: &ExtCtxt,
     items: &[P<ast::MetaItem>],
-) -> Result<(Option<Spanned<Vec<ast::WherePredicate>>>, Option<Spanned<Vec<ast::WherePredicate>>>), ()> {
+) -> Result<SerAndDe<Vec<ast::WherePredicate>>, ()> {
     get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 
 pub fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
     match attr.node.value.node {
         ast::MetaItemKind::List(ref name, ref items) if name == &"serde" => {
-            attr::mark_used(&attr);
+            attr::mark_used(attr);
             Some(items)
         }
         _ => None
@@ -570,7 +572,7 @@ fn get_str_from_lit(cx: &ExtCtxt, name: &str, lit: &ast::Lit) -> Result<Interned
                          name,
                          lit_to_string(lit)));
 
-            return Err(());
+            Err(())
         }
     }
 }

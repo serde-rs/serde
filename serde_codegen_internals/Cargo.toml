@@ -12,7 +12,7 @@ include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
 default = ["with-syntex"]
-unstable-testing = []
+unstable-testing = ["clippy"]
 with-syntex = ["syntex_syntax", "syntex_errors"]
 
 [dependencies]
