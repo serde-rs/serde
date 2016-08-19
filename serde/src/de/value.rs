@@ -128,7 +128,7 @@ impl fmt::Display for Error {
                 write!(formatter, "Unknown variant: {}", variant)
             }
             Error::UnknownField(ref field) => write!(formatter, "Unknown field: {}", field),
-            Error::MissingField(ref field) => write!(formatter, "Missing field: {}", field),
+            Error::MissingField(field) => write!(formatter, "Missing field: {}", field),
         }
     }
 }
