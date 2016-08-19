@@ -6,6 +6,7 @@ extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
 use self::serde::de::{Deserialize, Deserializer};
 
+use std::borrow::Cow;
 use std::marker::PhantomData;
 
 //////////////////////////////////////////////////////////////////////////
@@ -177,6 +178,15 @@ fn test_gen() {
         e: E,
     }
     assert::<WithTraits2<X, X>>();
+
+    #[derive(Serialize, Deserialize)]
+    struct CowStr<'a>(Cow<'a, str>);
+    assert::<CowStr>();
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(bound(deserialize = "T::Owned: Deserialize"))]
+    struct CowT<'a, T: ?Sized + 'a + ToOwned>(Cow<'a, T>);
+    assert::<CowT<str>>();
 }
 
 //////////////////////////////////////////////////////////////////////////
