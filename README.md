@@ -6,11 +6,11 @@
 
 You may be looking for:
 
-- [An overview of Serde](http://serde.rs/)
-- [Data formats supported by Serde](http://serde.rs/#data-formats)
-- [Setting up `#[derive(Serialize, Deserialize)]`](http://serde.rs/codegen.html)
-- [Examples](http://serde.rs/examples.html)
-- [API documentation](http://docs.serde.rs/serde/)
+- [An overview of Serde](https://serde.rs/)
+- [Data formats supported by Serde](https://serde.rs/#data-formats)
+- [Setting up `#[derive(Serialize, Deserialize)]`](https://serde.rs/codegen.html)
+- [Examples](https://serde.rs/examples.html)
+- [API documentation](https://docs.serde.rs/serde/)
 
 ## Serde in action
 
