@@ -36,9 +36,6 @@ include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 include!("lib.rs.in");
 
 #[cfg(feature = "with-syntex")]
-mod env;
-
-#[cfg(feature = "with-syntex")]
 pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     where S: AsRef<Path>,
           D: AsRef<Path>,
@@ -86,11 +83,7 @@ pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
         reg.expand("", src, dst)
     };
 
-    // 16 MB stack unless otherwise specified
-    let _tmp_env = env::set_if_unset("RUST_MIN_STACK", "16777216");
-
-    use std::thread;
-    thread::spawn(expand_thread).join().unwrap()
+    syntex::with_extra_stack(expand_thread)
 }
 
 #[cfg(not(feature = "with-syntex"))]
