@@ -12,6 +12,8 @@ use std::collections::{
     hash_set,
 };
 #[cfg(feature = "std")]
+use std::borrow::Cow;
+#[cfg(feature = "std")]
 use std::vec;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
@@ -24,6 +26,8 @@ use collections::{
     btree_set,
     vec,
 };
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::borrow::Cow;
 
 #[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::borrow::ToOwned;
@@ -423,6 +427,105 @@ impl<E> de::Deserializer for StringDeserializer<E>
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<'a, E> de::VariantVisitor for StringDeserializer<E>
+    where E: de::Error,
+{
+    type Error = E;
+
+    fn visit_variant<T>(&mut self) -> Result<T, Self::Error>
+        where T: de::Deserialize,
+    {
+        de::Deserialize::deserialize(self)
+    }
+
+    fn visit_unit(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
+        where T: super::Deserialize,
+    {
+        let (value,) = try!(self.visit_tuple(1, super::impls::TupleVisitor1::new()));
+        Ok(value)
+    }
+
+    fn visit_tuple<V>(&mut self,
+                      _len: usize,
+                      _visitor: V) -> Result<V::Value, Self::Error>
+        where V: super::Visitor
+    {
+        Err(super::Error::invalid_type(super::Type::TupleVariant))
+    }
+
+    fn visit_struct<V>(&mut self,
+                       _fields: &'static [&'static str],
+                       _visitor: V) -> Result<V::Value, Self::Error>
+        where V: super::Visitor
+    {
+        Err(super::Error::invalid_type(super::Type::StructVariant))
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// A helper deserializer that deserializes a `String`.
+#[cfg(any(feature = "std", feature = "collections"))]
+pub struct CowStrDeserializer<'a, E>(Option<Cow<'a, str>>, PhantomData<E>);
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<'a, E> ValueDeserializer<E> for Cow<'a, str>
+    where E: de::Error,
+{
+    type Deserializer = CowStrDeserializer<'a, E>;
+
+    fn into_deserializer(self) -> CowStrDeserializer<'a, E> {
+        CowStrDeserializer(Some(self), PhantomData)
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<'a, E> de::Deserializer for CowStrDeserializer<'a, E>
+    where E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
+    {
+        match self.0.take() {
+            Some(Cow::Borrowed(string)) => visitor.visit_str(string),
+            Some(Cow::Owned(string)) => visitor.visit_string(string),
+            None => Err(de::Error::end_of_stream()),
+        }
+    }
+
+    fn deserialize_enum<V>(&mut self,
+                     _name: &str,
+                     _variants: &'static [&'static str],
+                     mut visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::EnumVisitor,
+    {
+        visitor.visit(self)
+    }
+
+    de_forward_to_deserialize!{
+        deserialize_bool,
+        deserialize_f64, deserialize_f32,
+        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
+        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
+        deserialize_char, deserialize_str, deserialize_string,
+        deserialize_ignored_any,
+        deserialize_bytes,
+        deserialize_unit_struct, deserialize_unit,
+        deserialize_seq, deserialize_seq_fixed_size,
+        deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
+        deserialize_tuple,
+        deserialize_struct, deserialize_tuple_struct,
+        deserialize_option
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<'a, E> de::VariantVisitor for CowStrDeserializer<'a, E>
     where E: de::Error,
 {
     type Error = E;
