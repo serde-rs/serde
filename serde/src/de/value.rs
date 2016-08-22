@@ -751,7 +751,7 @@ pub struct MapDeserializer<I, K, V, E>
 {
     iter: I,
     value: Option<V>,
-    len: usize,
+    len: Option<usize>,
     marker: PhantomData<E>,
 }
 
@@ -761,12 +761,23 @@ impl<I, K, V, E> MapDeserializer<I, K, V, E>
           V: ValueDeserializer<E>,
           E: de::Error,
 {
-    /// Construct a new `MapDeserializer<I, K, V>`.
+    /// Construct a new `MapDeserializer<I, K, V, E>` with a specific length.
     pub fn new(iter: I, len: usize) -> Self {
         MapDeserializer {
             iter: iter,
             value: None,
-            len: len,
+            len: Some(len),
+            marker: PhantomData,
+        }
+    }
+
+    /// Construct a new `MapDeserializer<I, K, V, E>` that is not bounded
+    /// by a specific length and that delegates to `iter` for its size hint.
+    pub fn unbounded(iter: I) -> Self {
+        MapDeserializer {
+            iter: iter,
+            value: None,
+            len: None,
             marker: PhantomData,
         }
     }
@@ -817,7 +828,9 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
     {
         match self.iter.next() {
             Some((key, value)) => {
-                self.len -= 1;
+                if let Some(len) = self.len.as_mut() {
+                    *len -= 1;
+                }
                 self.value = Some(value);
                 let mut de = key.into_deserializer();
                 Ok(Some(try!(de::Deserialize::deserialize(&mut de))))
@@ -841,15 +854,16 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
     }
 
     fn end(&mut self) -> Result<(), Self::Error> {
-        if self.len == 0 {
-            Ok(())
-        } else {
-            Err(de::Error::invalid_length(self.len))
+        match self.len {
+            Some(len) if len > 0 => Err(de::Error::invalid_length(len)),
+            _ => Ok(())
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
+        self.len.map_or_else(
+            || self.iter.size_hint(),
+            |len| (len, Some(len)))
     }
 }
 
