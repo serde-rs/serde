@@ -19,6 +19,15 @@ pub struct Bytes<'a> {
     bytes: &'a [u8],
 }
 
+impl<'a> Bytes<'a> {
+    /// Wrap an existing `&[u8]`.
+    pub fn new(bytes: &'a [u8]) -> Self {
+        Bytes {
+            bytes: bytes,
+        }
+    }
+}
+
 impl<'a> fmt::Debug for Bytes<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(f.write_str("b\""));
@@ -99,6 +108,13 @@ mod bytebuf {
         pub fn with_capacity(cap: usize) -> Self {
             ByteBuf {
                 bytes: Vec::with_capacity(cap)
+            }
+        }
+
+        /// Wrap existing bytes in a `ByteBuf`.
+        pub fn from<T: Into<Vec<u8>>>(bytes: T) -> Self {
+            ByteBuf {
+                bytes: bytes.into(),
             }
         }
     }
