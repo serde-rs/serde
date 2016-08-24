@@ -8,8 +8,7 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization"]
-include = ["Cargo.toml", "src/**/*.rs", "build.rs"]
-build = "build.rs"
+include = ["Cargo.toml", "src/**/*.rs"]
 
 [lib]
 name = "serde_macros"
@@ -18,20 +17,13 @@ plugin = true
 [features]
 unstable-testing = [
     "clippy",
-    "skeptic",
-    "serde_json",
     "serde/unstable-testing",
     "serde_codegen/unstable-testing"
 ]
 
-[build-dependencies]
-skeptic = { version = "^0.6.0", optional = true }
-
 [dependencies]
 clippy = { version = "^0.*", optional = true }
 serde_codegen = { version = "=0.8.4", default-features = false, features = ["unstable"], path = "../serde_codegen" }
-skeptic = { version = "^0.6.0", optional = true }
-serde_json = { version = "0.8.0", optional = true }
 
 [dev-dependencies]
 compiletest_rs = "^0.2.0"
@@ -43,10 +35,6 @@ serde_test = { version = "0.8.4", path = "../serde_test" }
 [[test]]
 name = "test"
 path = "tests/test.rs"
-
-[[test]]
-name = "skeptic"
-path = "tests/skeptic.rs"
 
 [[bench]]
 name = "bench"
