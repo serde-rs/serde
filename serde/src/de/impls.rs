@@ -65,7 +65,6 @@ use core::num::Zero;
 use de::{
     Deserialize,
     Deserializer,
-    EnumVisitor,
     Error,
     MapVisitor,
     SeqVisitor,
@@ -1145,7 +1144,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
             {
                 struct FieldVisitor;
 
-                impl ::de::Visitor for FieldVisitor {
+                impl Visitor for FieldVisitor {
                     type Value = Field;
 
                     #[cfg(any(feature = "std", feature = "collections"))]
@@ -1194,15 +1193,15 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
             }
         }
 
-        struct Visitor<T, E>(PhantomData<Result<T, E>>);
+        struct ResultVisitor<T, E>(PhantomData<Result<T, E>>);
 
-        impl<T, E> EnumVisitor for Visitor<T, E>
+        impl<T, E> Visitor for ResultVisitor<T, E>
             where T: Deserialize,
                   E: Deserialize
         {
             type Value = Result<T, E>;
 
-            fn visit<V>(&mut self, mut visitor: V) -> Result<Result<T, E>, V::Error>
+            fn visit_enum<V>(&mut self, mut visitor: V) -> Result<Result<T, E>, V::Error>
                 where V: VariantVisitor
             {
                 match try!(visitor.visit_variant()) {
@@ -1220,7 +1219,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
 
         const VARIANTS: &'static [&'static str] = &["Ok", "Err"];
 
-        deserializer.deserialize_enum("Result", VARIANTS, Visitor(PhantomData))
+        deserializer.deserialize_enum("Result", VARIANTS, ResultVisitor(PhantomData))
     }
 }
 

@@ -306,9 +306,9 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
                      _name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Self::Error>
-        where V: de::EnumVisitor,
+        where V: de::Visitor,
     {
-        visitor.visit(self)
+        visitor.visit_enum(self)
     }
 
     de_forward_to_deserialize!{
@@ -346,8 +346,7 @@ impl<'a, E> de::VariantVisitor for StrDeserializer<'a, E>
     fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: super::Deserialize,
     {
-        let (value,) = try!(self.visit_tuple(1, super::impls::TupleVisitor1::new()));
-        Ok(value)
+        Err(super::Error::invalid_type(super::Type::NewtypeVariant))
     }
 
     fn visit_tuple<V>(&mut self,
@@ -403,9 +402,9 @@ impl<E> de::Deserializer for StringDeserializer<E>
                      _name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Self::Error>
-        where V: de::EnumVisitor,
+        where V: de::Visitor,
     {
-        visitor.visit(self)
+        visitor.visit_enum(self)
     }
 
     de_forward_to_deserialize!{
@@ -444,8 +443,7 @@ impl<'a, E> de::VariantVisitor for StringDeserializer<E>
     fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: super::Deserialize,
     {
-        let (value,) = try!(self.visit_tuple(1, super::impls::TupleVisitor1::new()));
-        Ok(value)
+        Err(super::Error::invalid_type(super::Type::NewtypeVariant))
     }
 
     fn visit_tuple<V>(&mut self,
@@ -502,9 +500,9 @@ impl<'a, E> de::Deserializer for CowStrDeserializer<'a, E>
                      _name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Self::Error>
-        where V: de::EnumVisitor,
+        where V: de::Visitor,
     {
-        visitor.visit(self)
+        visitor.visit_enum(self)
     }
 
     de_forward_to_deserialize!{
@@ -543,8 +541,7 @@ impl<'a, E> de::VariantVisitor for CowStrDeserializer<'a, E>
     fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
         where T: super::Deserialize,
     {
-        let (value,) = try!(self.visit_tuple(1, super::impls::TupleVisitor1::new()));
-        Ok(value)
+        Err(super::Error::invalid_type(super::Type::NewtypeVariant))
     }
 
     fn visit_tuple<V>(&mut self,

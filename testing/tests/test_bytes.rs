@@ -426,7 +426,7 @@ impl Deserializer for BytesDeserializer {
         self.deserialize(visitor)
     }
     fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::EnumVisitor {
+     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
         Err(Error)
     }
 }

@@ -46,9 +46,9 @@ macro_rules! de_forward_to_deserialize {
     };
     (func: deserialize_enum) => {
         #[inline]
-        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> Result<__V::Value, Self::Error>
-            where __V: $crate::de::EnumVisitor {
-            Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
+        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], visitor: __V) -> Result<__V::Value, Self::Error>
+            where __V: $crate::de::Visitor {
+            self.deserialize(visitor)
         }
     };
     (named: $func:ident) => {
@@ -234,6 +234,9 @@ pub enum Type {
     /// Represents a unit variant.
     UnitVariant,
 
+    /// Represents a newtype variant.
+    NewtypeVariant,
+
     /// Represents a `&[u8]` type.
     Bytes,
 }
@@ -241,38 +244,39 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let display = match *self {
-            Type::Bool          => "bool",
-            Type::Usize         => "usize",
-            Type::U8            => "u8",
-            Type::U16           => "u16",
-            Type::U32           => "u32",
-            Type::U64           => "u64",
-            Type::Isize         => "isize",
-            Type::I8            => "i8",
-            Type::I16           => "i16",
-            Type::I32           => "i32",
-            Type::I64           => "i64",
-            Type::F32           => "f32",
-            Type::F64           => "f64",
-            Type::Char          => "char",
-            Type::Str           => "str",
-            Type::String        => "string",
-            Type::Unit          => "unit",
-            Type::Option        => "option",
-            Type::Seq           => "seq",
-            Type::Map           => "map",
-            Type::UnitStruct    => "unit struct",
-            Type::NewtypeStruct => "newtype struct",
-            Type::TupleStruct   => "tuple struct",
-            Type::Struct        => "struct",
-            Type::FieldName     => "field name",
-            Type::Tuple         => "tuple",
-            Type::Enum          => "enum",
-            Type::VariantName   => "variant name",
-            Type::StructVariant => "struct variant",
-            Type::TupleVariant  => "tuple variant",
-            Type::UnitVariant   => "unit variant",
-            Type::Bytes         => "bytes",
+            Type::Bool           => "bool",
+            Type::Usize          => "usize",
+            Type::U8             => "u8",
+            Type::U16            => "u16",
+            Type::U32            => "u32",
+            Type::U64            => "u64",
+            Type::Isize          => "isize",
+            Type::I8             => "i8",
+            Type::I16            => "i16",
+            Type::I32            => "i32",
+            Type::I64            => "i64",
+            Type::F32            => "f32",
+            Type::F64            => "f64",
+            Type::Char           => "char",
+            Type::Str            => "str",
+            Type::String         => "string",
+            Type::Unit           => "unit",
+            Type::Option         => "option",
+            Type::Seq            => "seq",
+            Type::Map            => "map",
+            Type::UnitStruct     => "unit struct",
+            Type::NewtypeStruct  => "newtype struct",
+            Type::TupleStruct    => "tuple struct",
+            Type::Struct         => "struct",
+            Type::FieldName      => "field name",
+            Type::Tuple          => "tuple",
+            Type::Enum           => "enum",
+            Type::VariantName    => "variant name",
+            Type::StructVariant  => "struct variant",
+            Type::TupleVariant   => "tuple variant",
+            Type::UnitVariant    => "unit variant",
+            Type::NewtypeVariant => "newtype variant",
+            Type::Bytes          => "bytes",
         };
         display.fmt(formatter)
     }
@@ -464,7 +468,7 @@ pub trait Deserializer {
                            name: &'static str,
                            variants: &'static [&'static str],
                            visitor: V) -> Result<V::Value, Self::Error>
-        where V: EnumVisitor;
+        where V: Visitor;
 
     /// This method hints that the `Deserialize` type needs to deserialize a value whose type
     /// doesn't matter because it is ignored.
@@ -656,6 +660,14 @@ pub trait Visitor {
         Err(Error::invalid_type(Type::Map))
     }
 
+    /// `visit_enum` deserializes a `VariantVisitor` into a `Value`.
+    fn visit_enum<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
+        where V: VariantVisitor,
+    {
+        let _ = visitor;
+        Err(Error::invalid_type(Type::Enum))
+    }
+
     /// `visit_bytes` deserializes a `&[u8]` into a `Value`.
     fn visit_bytes<E>(&mut self, v: &[u8]) -> Result<Self::Value, E>
         where E: Error,
@@ -808,19 +820,6 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// `EnumVisitor` is a visitor that is created by the `Deserialize` and passed to the
-/// `Deserializer` in order to deserialize enums.
-pub trait EnumVisitor {
-    /// The value produced by this visitor.
-    type Value;
-
-    /// Visit the specific variant with the `VariantVisitor`.
-    fn visit<V>(&mut self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: VariantVisitor;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 /// `VariantVisitor` is a visitor that is created by the `Deserializer` and passed to the
 /// `Deserialize` in order to deserialize a specific enum variant.
 pub trait VariantVisitor {
@@ -832,9 +831,7 @@ pub trait VariantVisitor {
         where V: Deserialize;
 
     /// `visit_unit` is called when deserializing a variant with no values.
-    fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Err(Error::invalid_type(Type::UnitVariant))
-    }
+    fn visit_unit(&mut self) -> Result<(), Self::Error>;
 
     /// `visit_newtype` is called when deserializing a variant with a single value.
     /// A good default is often to use the `visit_tuple` method to deserialize a `(value,)`.

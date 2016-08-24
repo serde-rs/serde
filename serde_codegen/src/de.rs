@@ -622,10 +622,10 @@ fn deserialize_item_enum(
 
         $visitor_item
 
-        impl $impl_generics _serde::de::EnumVisitor for $visitor_ty $where_clause {
+        impl $impl_generics _serde::de::Visitor for $visitor_ty $where_clause {
             type Value = $ty;
 
-            fn visit<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
+            fn visit_enum<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<$ty, __V::Error>
                 where __V: _serde::de::VariantVisitor,
             {
                 match try!(visitor.visit_variant()) {
