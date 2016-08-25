@@ -781,6 +781,15 @@ impl<I, K, V, E> MapDeserializer<I, K, V, E>
             marker: PhantomData,
         }
     }
+
+    fn next(&mut self) -> Option<(K, V)> {
+        self.iter.next().map(|(k, v)| {
+            if let Some(len) = self.len.as_mut() {
+                *len -= 1;
+            }
+            (k, v)
+        })
+    }
 }
 
 impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
@@ -826,14 +835,11 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
     fn visit_key<T>(&mut self) -> Result<Option<T>, Self::Error>
         where T: de::Deserialize,
     {
-        match self.iter.next() {
+        match self.next() {
             Some((key, value)) => {
-                if let Some(len) = self.len.as_mut() {
-                    *len -= 1;
-                }
                 self.value = Some(value);
                 let mut de = key.into_deserializer();
-                Ok(Some(try!(de::Deserialize::deserialize(&mut de))))
+                de::Deserialize::deserialize(&mut de).map(Some)
             }
             None => Ok(None),
         }
@@ -864,6 +870,132 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
         self.len.map_or_else(
             || self.iter.size_hint(),
             |len| (len, Some(len)))
+    }
+}
+
+impl<I, K, V, E> de::SeqVisitor for MapDeserializer<I, K, V, E>
+    where I: Iterator<Item=(K, V)>,
+          K: ValueDeserializer<E>,
+          V: ValueDeserializer<E>,
+          E: de::Error,
+{
+    type Error = E;
+
+    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
+        where T: de::Deserialize,
+    {
+        match self.next() {
+            Some(kv) => {
+                let mut de = PairDeserializer(Some(kv), PhantomData);
+                de::Deserialize::deserialize(&mut de).map(Some)
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn end(&mut self) -> Result<(), Self::Error> {
+        de::MapVisitor::end(self)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        de::MapVisitor::size_hint(self)
+    }
+}
+
+// Used in the `impl SeqVisitor for MapDeserializer` to visit the map as a
+// sequence of pairs.
+struct PairDeserializer<A, B, E>(Option<(A, B)>, PhantomData<E>);
+
+impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
+    where A: ValueDeserializer<E>,
+          B: ValueDeserializer<E>,
+          E: de::Error
+{
+    type Error = E;
+
+    de_forward_to_deserialize!{
+        deserialize_bool,
+        deserialize_f64, deserialize_f32,
+        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
+        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
+        deserialize_char, deserialize_str, deserialize_string,
+        deserialize_ignored_any,
+        deserialize_bytes,
+        deserialize_unit_struct, deserialize_unit, deserialize_option,
+        deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
+        deserialize_tuple,
+        deserialize_enum,
+        deserialize_struct, deserialize_tuple_struct
+    }
+
+    fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
+    {
+        self.deserialize_seq(visitor)
+    }
+
+    fn deserialize_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
+    {
+        match self.0.take() {
+            Some((k, v)) => {
+                visitor.visit_seq(PairVisitor(Some(k), Some(v), PhantomData))
+            }
+            None => Err(de::Error::end_of_stream()),
+        }
+    }
+
+    fn deserialize_seq_fixed_size<V>(&mut self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
+    {
+        if len == 2 {
+            self.deserialize_seq(visitor)
+        } else {
+            Err(de::Error::invalid_length(len))
+        }
+    }
+}
+
+struct PairVisitor<A, B, E>(Option<A>, Option<B>, PhantomData<E>);
+
+impl<A, B, E> de::SeqVisitor for PairVisitor<A, B, E>
+    where A: ValueDeserializer<E>,
+          B: ValueDeserializer<E>,
+          E: de::Error,
+{
+    type Error = E;
+
+    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
+        where T: de::Deserialize,
+    {
+        if let Some(k) = self.0.take() {
+            let mut de = k.into_deserializer();
+            de::Deserialize::deserialize(&mut de).map(Some)
+        } else if let Some(v) = self.1.take() {
+            let mut de = v.into_deserializer();
+            de::Deserialize::deserialize(&mut de).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn end(&mut self) -> Result<(), Self::Error> {
+        if self.1.is_none() {
+            Ok(())
+        } else {
+            Err(de::Error::invalid_length(self.size_hint().0))
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = if self.0.is_some() {
+            2
+        } else if self.1.is_some() {
+            1
+        } else {
+            0
+        };
+        (len, Some(len))
     }
 }
 
