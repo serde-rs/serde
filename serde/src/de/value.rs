@@ -806,6 +806,22 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
         visitor.visit_map(self)
     }
 
+    fn deserialize_seq<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
+        where V_: de::Visitor,
+    {
+        visitor.visit_seq(self)
+    }
+
+    fn deserialize_seq_fixed_size<V_>(&mut self, len: usize, mut visitor: V_) -> Result<V_::Value, Self::Error>
+        where V_: de::Visitor,
+    {
+        match self.len {
+            Some(map_len) if map_len == len => visitor.visit_seq(self),
+            Some(_) => Err(de::Error::invalid_length(len)),
+            None => visitor.visit_seq(self),
+        }
+    }
+
     de_forward_to_deserialize!{
         deserialize_bool,
         deserialize_f64, deserialize_f32,
@@ -815,7 +831,6 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
         deserialize_ignored_any,
         deserialize_bytes,
         deserialize_unit_struct, deserialize_unit,
-        deserialize_seq, deserialize_seq_fixed_size,
         deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
         deserialize_tuple,
         deserialize_enum,
