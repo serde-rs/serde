@@ -1,4 +1,4 @@
-# Serde &emsp; [![Build Status](https://api.travis-ci.org/serde-rs/serde.svg?branch=master)](https://travis-ci.org/serde-rs/serde) [![Coverage Status](https://coveralls.io/repos/serde-rs/serde/badge.svg?branch=master&service=github)](https://coveralls.io/github/serde-rs/serde?branch=master) [![Latest Version](https://img.shields.io/crates/v/serde.svg)](https://crates.io/crates/serde)
+# Serde &emsp; [![Build Status](https://api.travis-ci.org/serde-rs/serde.svg?branch=master)](https://travis-ci.org/serde-rs/serde) [![Latest Version](https://img.shields.io/crates/v/serde.svg)](https://crates.io/crates/serde)
 
 **Serde is a framework for *ser*ializing and *de*serializing Rust data structures efficiently and generically.**
 
