@@ -1,3 +1,154 @@
+#[cfg(feature = "std")]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! forward_to_deserialize_method {
+    ($func:ident($($arg:ty),*)) => {
+        #[inline]
+        fn $func<__V>(&mut self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
+            where __V: $crate::de::Visitor
+        {
+            self.deserialize(visitor)
+        }
+    };
+}
+
+#[cfg(not(feature = "std"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! forward_to_deserialize_method {
+    ($func:ident($($arg:ty),*)) => {
+        #[inline]
+        fn $func<__V>(&mut self, $(_: $arg,)* visitor: __V) -> ::core::result::Result<__V::Value, Self::Error>
+            where __V: $crate::de::Visitor
+        {
+            self.deserialize(visitor)
+        }
+    };
+}
+
+#[cfg(feature = "std")]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! forward_to_deserialize_enum {
+    () => {
+        #[inline]
+        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> ::std::result::Result<__V::Value, Self::Error>
+            where __V: $crate::de::EnumVisitor
+        {
+            Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
+        }
+    };
+}
+
+#[cfg(not(feature = "std"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! forward_to_deserialize_enum {
+    () => {
+        #[inline]
+        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> ::core::result::Result<__V::Value, Self::Error>
+            where __V: $crate::de::EnumVisitor
+        {
+            Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! forward_to_deserialize_helper {
+    (bool) => {
+        forward_to_deserialize_method!{deserialize_bool()}
+    };
+    (usize) => {
+        forward_to_deserialize_method!{deserialize_usize()}
+    };
+    (u8) => {
+        forward_to_deserialize_method!{deserialize_u8()}
+    };
+    (u16) => {
+        forward_to_deserialize_method!{deserialize_u16()}
+    };
+    (u32) => {
+        forward_to_deserialize_method!{deserialize_u32()}
+    };
+    (u64) => {
+        forward_to_deserialize_method!{deserialize_u64()}
+    };
+    (isize) => {
+        forward_to_deserialize_method!{deserialize_isize()}
+    };
+    (i8) => {
+        forward_to_deserialize_method!{deserialize_i8()}
+    };
+    (i16) => {
+        forward_to_deserialize_method!{deserialize_i16()}
+    };
+    (i32) => {
+        forward_to_deserialize_method!{deserialize_i32()}
+    };
+    (i64) => {
+        forward_to_deserialize_method!{deserialize_i64()}
+    };
+    (f32) => {
+        forward_to_deserialize_method!{deserialize_f32()}
+    };
+    (f64) => {
+        forward_to_deserialize_method!{deserialize_f64()}
+    };
+    (char) => {
+        forward_to_deserialize_method!{deserialize_char()}
+    };
+    (str) => {
+        forward_to_deserialize_method!{deserialize_str()}
+    };
+    (string) => {
+        forward_to_deserialize_method!{deserialize_string()}
+    };
+    (unit) => {
+        forward_to_deserialize_method!{deserialize_unit()}
+    };
+    (option) => {
+        forward_to_deserialize_method!{deserialize_option()}
+    };
+    (seq) => {
+        forward_to_deserialize_method!{deserialize_seq()}
+    };
+    (seq_fixed_size) => {
+        forward_to_deserialize_method!{deserialize_seq_fixed_size(usize)}
+    };
+    (bytes) => {
+        forward_to_deserialize_method!{deserialize_bytes()}
+    };
+    (map) => {
+        forward_to_deserialize_method!{deserialize_map()}
+    };
+    (unit_struct) => {
+        forward_to_deserialize_method!{deserialize_unit_struct(&'static str)}
+    };
+    (newtype_struct) => {
+        forward_to_deserialize_method!{deserialize_newtype_struct(&'static str)}
+    };
+    (tuple_struct) => {
+        forward_to_deserialize_method!{deserialize_tuple_struct(&'static str, usize)}
+    };
+    (struct) => {
+        forward_to_deserialize_method!{deserialize_struct(&'static str, &'static [&'static str])}
+    };
+    (struct_field) => {
+        forward_to_deserialize_method!{deserialize_struct_field()}
+    };
+    (tuple) => {
+        forward_to_deserialize_method!{deserialize_tuple(usize)}
+    };
+    (ignored_any) => {
+        forward_to_deserialize_method!{deserialize_ignored_any()}
+    };
+    (enum) => {
+        forward_to_deserialize_enum!();
+    };
+}
+
 /// Helper to forward `Deserializer` methods to `Deserializer::deserialize`.
 /// Every given method ignores all arguments and forwards to `deserialize`.
 /// Note that `deserialize_enum` simply returns an `Error::invalid_type`; a
@@ -22,111 +173,7 @@
 /// [1]: https://github.com/serde-rs/serde/issues/521
 #[macro_export]
 macro_rules! forward_to_deserialize {
-    (@func bool) => {
-        forward_to_deserialize!{@forward deserialize_bool()}
-    };
-    (@func usize) => {
-        forward_to_deserialize!{@forward deserialize_usize()}
-    };
-    (@func u8) => {
-        forward_to_deserialize!{@forward deserialize_u8()}
-    };
-    (@func u16) => {
-        forward_to_deserialize!{@forward deserialize_u16()}
-    };
-    (@func u32) => {
-        forward_to_deserialize!{@forward deserialize_u32()}
-    };
-    (@func u64) => {
-        forward_to_deserialize!{@forward deserialize_u64()}
-    };
-    (@func isize) => {
-        forward_to_deserialize!{@forward deserialize_isize()}
-    };
-    (@func i8) => {
-        forward_to_deserialize!{@forward deserialize_i8()}
-    };
-    (@func i16) => {
-        forward_to_deserialize!{@forward deserialize_i16()}
-    };
-    (@func i32) => {
-        forward_to_deserialize!{@forward deserialize_i32()}
-    };
-    (@func i64) => {
-        forward_to_deserialize!{@forward deserialize_i64()}
-    };
-    (@func f32) => {
-        forward_to_deserialize!{@forward deserialize_f32()}
-    };
-    (@func f64) => {
-        forward_to_deserialize!{@forward deserialize_f64()}
-    };
-    (@func char) => {
-        forward_to_deserialize!{@forward deserialize_char()}
-    };
-    (@func str) => {
-        forward_to_deserialize!{@forward deserialize_str()}
-    };
-    (@func string) => {
-        forward_to_deserialize!{@forward deserialize_string()}
-    };
-    (@func unit) => {
-        forward_to_deserialize!{@forward deserialize_unit()}
-    };
-    (@func option) => {
-        forward_to_deserialize!{@forward deserialize_option()}
-    };
-    (@func seq) => {
-        forward_to_deserialize!{@forward deserialize_seq()}
-    };
-    (@func seq_fixed_size) => {
-        forward_to_deserialize!{@forward deserialize_seq_fixed_size(usize)}
-    };
-    (@func bytes) => {
-        forward_to_deserialize!{@forward deserialize_bytes()}
-    };
-    (@func map) => {
-        forward_to_deserialize!{@forward deserialize_map()}
-    };
-    (@func unit_struct) => {
-        forward_to_deserialize!{@forward deserialize_unit_struct(&'static str)}
-    };
-    (@func newtype_struct) => {
-        forward_to_deserialize!{@forward deserialize_newtype_struct(&'static str)}
-    };
-    (@func tuple_struct) => {
-        forward_to_deserialize!{@forward deserialize_tuple_struct(&'static str, usize)}
-    };
-    (@func struct) => {
-        forward_to_deserialize!{@forward deserialize_struct(&'static str, &'static [&'static str])}
-    };
-    (@func struct_field) => {
-        forward_to_deserialize!{@forward deserialize_struct_field()}
-    };
-    (@func tuple) => {
-        forward_to_deserialize!{@forward deserialize_tuple(usize)}
-    };
-    (@func enum) => {
-        #[inline]
-        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> ::std::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::EnumVisitor
-        {
-            Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
-        }
-    };
-    (@func ignored_any) => {
-        forward_to_deserialize!{@forward deserialize_ignored_any()}
-    };
-    (@forward $func:ident($($arg:ty),*)) => {
-        #[inline]
-        fn $func<__V>(&mut self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor
-        {
-            self.deserialize(visitor)
-        }
-    };
-
     ($($func:ident)*) => {
-        $(forward_to_deserialize!{@func $func})*
+        $(forward_to_deserialize_helper!{$func})*
     };
 }
