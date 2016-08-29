@@ -36,6 +36,58 @@ include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 include!("lib.rs.in");
 
 #[cfg(feature = "with-syntex")]
+fn syntex_registry() -> syntex::Registry {
+    use syntax::{ast, fold};
+
+    /// Strip the serde attributes from the crate.
+    #[cfg(feature = "with-syntex")]
+    fn strip_attributes(krate: ast::Crate) -> ast::Crate {
+        /// Helper folder that strips the serde attributes after the extensions have been expanded.
+        struct StripAttributeFolder;
+
+        impl fold::Folder for StripAttributeFolder {
+            fn fold_attribute(&mut self, attr: ast::Attribute) -> Option<ast::Attribute> {
+                match attr.node.value.node {
+                    ast::MetaItemKind::List(ref n, _) if n == &"serde" => { return None; }
+                    _ => {}
+                }
+
+                Some(attr)
+            }
+
+            fn fold_mac(&mut self, mac: ast::Mac) -> ast::Mac {
+                fold::noop_fold_mac(mac, self)
+            }
+        }
+
+        fold::Folder::fold_crate(&mut StripAttributeFolder, krate)
+    }
+
+    let mut reg = syntex::Registry::new();
+
+    reg.add_attr("feature(custom_derive)");
+    reg.add_attr("feature(custom_attribute)");
+
+    reg.add_decorator("derive_Serialize", ser::expand_derive_serialize);
+    reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
+
+    reg.add_post_expansion_pass(strip_attributes);
+
+    reg
+}
+
+#[cfg(feature = "with-syntex")]
+pub fn expand_str(src: &str) -> Result<String, syntex::Error> {
+    let src = src.to_owned();
+
+    let expand_thread = move || {
+        syntex_registry().expand_str("", "", &src)
+    };
+
+    syntex::with_extra_stack(expand_thread)
+}
+
+#[cfg(feature = "with-syntex")]
 pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     where S: AsRef<Path>,
           D: AsRef<Path>,
@@ -44,43 +96,7 @@ pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     let dst = dst.as_ref().to_owned();
 
     let expand_thread = move || {
-        use syntax::{ast, fold};
-
-        /// Strip the serde attributes from the crate.
-        #[cfg(feature = "with-syntex")]
-        fn strip_attributes(krate: ast::Crate) -> ast::Crate {
-            /// Helper folder that strips the serde attributes after the extensions have been expanded.
-            struct StripAttributeFolder;
-
-            impl fold::Folder for StripAttributeFolder {
-                fn fold_attribute(&mut self, attr: ast::Attribute) -> Option<ast::Attribute> {
-                    match attr.node.value.node {
-                        ast::MetaItemKind::List(ref n, _) if n == &"serde" => { return None; }
-                        _ => {}
-                    }
-
-                    Some(attr)
-                }
-
-                fn fold_mac(&mut self, mac: ast::Mac) -> ast::Mac {
-                    fold::noop_fold_mac(mac, self)
-                }
-            }
-
-            fold::Folder::fold_crate(&mut StripAttributeFolder, krate)
-        }
-
-        let mut reg = syntex::Registry::new();
-
-        reg.add_attr("feature(custom_derive)");
-        reg.add_attr("feature(custom_attribute)");
-
-        reg.add_decorator("derive_Serialize", ser::expand_derive_serialize);
-        reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
-
-        reg.add_post_expansion_pass(strip_attributes);
-
-        reg.expand("", src, dst)
+        syntex_registry().expand("", src, dst)
     };
 
     syntex::with_extra_stack(expand_thread)

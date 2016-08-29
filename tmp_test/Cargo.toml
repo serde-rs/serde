@@ -1,0 +1,9 @@
+[package]
+name = "tmp-test"
+version = "0.1.0"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
+
+[dependencies]
+serde = "0.8"
+serde_derive = { path = "../serde_derive" }
+serde_json = "0.8"
