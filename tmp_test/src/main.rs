@@ -4,7 +4,7 @@
 extern crate serde_derive;
 extern crate serde_json;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 enum Macros {
     #[serde(rename = "macros 1.1")]
     OnePointOne,
