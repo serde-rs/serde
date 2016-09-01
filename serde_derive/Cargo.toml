@@ -15,4 +15,4 @@ name = "serde_derive"
 rustc-macro = true
 
 [dependencies]
-serde_codegen = { version = "=0.8.4", path = "../serde_codegen" }
+serde_codegen = { version = "=0.8.5", path = "../serde_codegen" }
