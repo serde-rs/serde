@@ -8,8 +8,7 @@ use syntax::fold::Folder;
 use syntax::parse::parser::{Parser, PathStyle};
 use syntax::parse::token::{self, InternedString};
 use syntax::parse;
-use syntax::print::pprust::{lit_to_string, meta_item_to_string};
-use syntax::ptr::P;
+use syntax::print::pprust::{lit_to_string, meta_item_to_string, meta_list_item_to_string};
 use syntax::tokenstream::{self, TokenTree};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
@@ -165,7 +164,7 @@ impl Item {
                         cx.span_err(
                             meta_item.span,
                             &format!("unknown serde container attribute `{}`",
-                                     meta_item_to_string(meta_item)));
+                                     meta_item_to_string(&meta_item)));
                     }
                 }
             }
@@ -236,7 +235,7 @@ impl Variant {
                         cx.span_err(
                             meta_item.span,
                             &format!("unknown serde variant attribute `{}`",
-                                     meta_item_to_string(meta_item)));
+                                     meta_item_to_string(&meta_item)));
                     }
                 }
             }
@@ -384,7 +383,7 @@ impl Field {
                         cx.span_err(
                             meta_item.span,
                             &format!("unknown serde field attribute `{}`",
-                                     meta_item_to_string(meta_item)));
+                                     meta_item_to_string(&meta_item)));
                     }
                 }
             }
@@ -454,7 +453,7 @@ type SerAndDe<T> = (Option<Spanned<T>>, Option<Spanned<T>>);
 fn get_ser_and_de<T, F>(
     cx: &ExtCtxt,
     attribute: &'static str,
-    items: &[P<ast::MetaItem>],
+    items: &[ast::NestedMetaItem],
     f: F
 ) -> Result<SerAndDe<T>, ()>
     where F: Fn(&ExtCtxt, &str, &ast::Lit) -> Result<T, ()>,
@@ -464,15 +463,29 @@ fn get_ser_and_de<T, F>(
 
     for item in items {
         match item.node {
-            ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize" => {
-                if let Ok(v) = f(cx, name, lit) {
-                    ser_item.set(item.span, v);
-                }
-            }
+            ast::NestedMetaItemKind::MetaItem(ref meta_item) => {
+                match meta_item.node {
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"serialize" => {
+                        if let Ok(v) = f(cx, name, lit) {
+                            ser_item.set(item.span, v);
+                        }
+                    }
 
-            ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize" => {
-                if let Ok(v) = f(cx, name, lit) {
-                    de_item.set(item.span, v);
+                    ast::MetaItemKind::NameValue(ref name, ref lit) if name == &"deserialize" => {
+                        if let Ok(v) = f(cx, name, lit) {
+                            de_item.set(item.span, v);
+                        }
+                    }
+
+                    _ => {
+                        cx.span_err(
+                            item.span,
+                            &format!("unknown {} attribute `{}`",
+                                    attribute,
+                                    meta_item_to_string(meta_item)));
+
+                        return Err(());
+                    }
                 }
             }
 
@@ -481,7 +494,7 @@ fn get_ser_and_de<T, F>(
                     item.span,
                     &format!("unknown {} attribute `{}`",
                              attribute,
-                             meta_item_to_string(item)));
+                             meta_list_item_to_string(item)));
 
                 return Err(());
             }
@@ -493,23 +506,30 @@ fn get_ser_and_de<T, F>(
 
 fn get_renames(
     cx: &ExtCtxt,
-    items: &[P<ast::MetaItem>],
+    items: &[ast::NestedMetaItem],
 ) -> Result<SerAndDe<InternedString>, ()> {
     get_ser_and_de(cx, "rename", items, get_str_from_lit)
 }
 
 fn get_where_predicates(
     cx: &ExtCtxt,
-    items: &[P<ast::MetaItem>],
+    items: &[ast::NestedMetaItem],
 ) -> Result<SerAndDe<Vec<ast::WherePredicate>>, ()> {
     get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 
-pub fn get_serde_meta_items(attr: &ast::Attribute) -> Option<&[P<ast::MetaItem>]> {
+pub fn get_serde_meta_items(attr: &ast::Attribute) -> Option<Vec<ast::MetaItem>> {
     match attr.node.value.node {
         ast::MetaItemKind::List(ref name, ref items) if name == &"serde" => {
             attr::mark_used(attr);
-            Some(items)
+            Some(items.iter().filter_map(|item| {
+                match item.node {
+                    ast::NestedMetaItemKind::MetaItem(ref meta_item) => {
+                        Some((*meta_item.clone()).clone())
+                    }
+                    _ => None,
+                }
+            }).collect())
         }
         _ => None
     }
