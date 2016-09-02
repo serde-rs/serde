@@ -1,4 +1,5 @@
 #![feature(rustc_macro, rustc_macro_lib)]
+#![cfg(not(test))]
 
 extern crate rustc_macro;
 extern crate serde_codegen;
