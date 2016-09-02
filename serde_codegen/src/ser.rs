@@ -4,6 +4,7 @@ use syntax::ast::{self, Ident, MetaItem};
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;
+use syntax::tokenstream::TokenTree;
 
 use bound;
 use span;
@@ -226,9 +227,10 @@ fn serialize_tuple_struct(
 
     let type_name = name_expr(builder, item_attrs.name());
     let len = serialize_stmts.len();
+    let let_mut = mut_if_nonzero(cx, len);
 
     quote_block!(cx, {
-        let mut state = try!(_serializer.serialize_tuple_struct($type_name, $len));
+        let $let_mut state = try!(_serializer.serialize_tuple_struct($type_name, $len));
         $serialize_stmts
         _serializer.serialize_tuple_struct_end(state)
     }).unwrap()
@@ -253,8 +255,12 @@ fn serialize_struct(
     );
 
     let type_name = name_expr(builder, item_attrs.name());
-    let len = fields.iter()
+
+    let serialized_fields: Vec<_> = fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
+        .collect();
+
+    let len = serialized_fields.iter()
         .map(|field| {
             let ident = field.ident.expect("struct has unnamed fields");
             let field_expr = quote_expr!(cx, &self.$ident);
@@ -266,8 +272,10 @@ fn serialize_struct(
          })
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
+    let let_mut = mut_if_nonzero(cx, serialized_fields.len());
+
     quote_block!(cx, {
-        let mut state = try!(_serializer.serialize_struct($type_name, $len));
+        let $let_mut state = try!(_serializer.serialize_struct($type_name, $len));
         $serialize_fields
         _serializer.serialize_struct_end(state)
     }).unwrap()
@@ -458,9 +466,10 @@ fn serialize_tuple_variant(
     );
 
     let len = serialize_stmts.len();
+    let let_mut = mut_if_nonzero(cx, len);
 
     quote_block!(cx, {
-        let mut state = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
+        let $let_mut state = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
         $serialize_stmts
         _serializer.serialize_tuple_variant_end(state)
     }).unwrap()
@@ -488,8 +497,11 @@ fn serialize_struct_variant(
     );
 
     let item_name = name_expr(builder, item_attrs.name());
-    let len = fields.iter()
+    let serialized_fields: Vec<_> = fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
+        .collect();
+
+    let len = serialized_fields.iter()
         .map(|field| {
             let ident = field.ident.expect("struct has unnamed fields");
             let field_expr = quote_expr!(cx, $ident);
@@ -501,8 +513,10 @@ fn serialize_struct_variant(
          })
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
+    let let_mut = mut_if_nonzero(cx, serialized_fields.len());
+
     quote_block!(cx, {
-        let mut state = try!(_serializer.serialize_struct_variant(
+        let $let_mut state = try!(_serializer.serialize_struct_variant(
             $item_name,
             $variant_index,
             $variant_name,
@@ -636,4 +650,18 @@ fn name_expr(
     name: &attr::Name,
 ) -> P<ast::Expr> {
     builder.expr().str(name.serialize_name())
+}
+
+// Serialization of an empty struct results in code like:
+//
+//     let mut state = try!(serializer.serialize_struct("S", 0));
+//     serializer.serialize_struct_end(state)
+//
+// where we want to omit the `mut` to avoid a warning.
+fn mut_if_nonzero(cx: &ExtCtxt, n: usize) -> Vec<TokenTree> {
+    if n == 0 {
+        Vec::new()
+    } else {
+        quote_tokens!(cx, mut)
+    }
 }
