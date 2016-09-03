@@ -539,12 +539,12 @@ fn serialize_tuple_struct_visitor(
                     &structure_ty, generics, &field.ty, path, field_expr);
             }
 
-            let ser = quote_stmt!(cx,
+            let ser = quote_expr!(cx,
                 try!(_serializer.$func(&mut state, $field_expr));
-            ).unwrap();
+            );
 
             match skip {
-                None => ser,
+                None => quote_stmt!(cx, $ser).unwrap(),
                 Some(skip) => quote_stmt!(cx, if !$skip { $ser }).unwrap(),
             }
         })
@@ -580,12 +580,12 @@ fn serialize_struct_visitor(
                     &structure_ty, generics, &field.ty, path, field_expr)
             }
 
-            let ser = quote_stmt!(cx,
+            let ser = quote_expr!(cx,
                 try!(_serializer.$func(&mut state, $key_expr, $field_expr));
-            ).unwrap();
+            );
 
             match skip {
-                None => ser,
+                None => quote_stmt!(cx, $ser).unwrap(),
                 Some(skip) => quote_stmt!(cx, if !$skip { $ser }).unwrap(),
             }
         })
