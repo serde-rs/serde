@@ -532,19 +532,21 @@ fn serialize_tuple_struct_visitor(
             };
 
             let skip = field.attrs.skip_serializing_if()
-                .map(|path| quote_expr!(cx, $path($field_expr)))
-                .unwrap_or(quote_expr!(cx, false));
+                .map(|path| quote_expr!(cx, $path($field_expr)));
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(cx, builder,
                     &structure_ty, generics, &field.ty, path, field_expr);
             }
 
-            quote_stmt!(cx,
-                if !$skip {
-                    try!(_serializer.$func(&mut state, $field_expr));
-                }
-            ).unwrap()
+            let ser = quote_stmt!(cx,
+                try!(_serializer.$func(&mut state, $field_expr));
+            ).unwrap();
+
+            match skip {
+                None => ser,
+                Some(skip) => quote_stmt!(cx, if !$skip { $ser }).unwrap(),
+            }
         })
         .collect()
 }
@@ -571,19 +573,21 @@ fn serialize_struct_visitor(
             let key_expr = name_expr(builder, field.attrs.name());
 
             let skip = field.attrs.skip_serializing_if()
-                .map(|path| quote_expr!(cx, $path($field_expr)))
-                .unwrap_or(quote_expr!(cx, false));
+                .map(|path| quote_expr!(cx, $path($field_expr)));
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(cx, builder,
                     &structure_ty, generics, &field.ty, path, field_expr)
             }
 
-            quote_stmt!(cx,
-                if !$skip {
-                    try!(_serializer.$func(&mut state, $key_expr, $field_expr));
-                }
-            ).unwrap()
+            let ser = quote_stmt!(cx,
+                try!(_serializer.$func(&mut state, $key_expr, $field_expr));
+            ).unwrap();
+
+            match skip {
+                None => ser,
+                Some(skip) => quote_stmt!(cx, if !$skip { $ser }).unwrap(),
+            }
         })
         .collect()
 }
