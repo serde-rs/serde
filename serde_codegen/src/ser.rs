@@ -227,7 +227,7 @@ fn serialize_tuple_struct(
 
     let type_name = name_expr(builder, item_attrs.name());
     let len = serialize_stmts.len();
-    let let_mut = mut_if_nonzero(cx, len);
+    let let_mut = mut_if(cx, len > 0);
 
     quote_block!(cx, {
         let $let_mut state = try!(_serializer.serialize_tuple_struct($type_name, $len));
@@ -256,11 +256,13 @@ fn serialize_struct(
 
     let type_name = name_expr(builder, item_attrs.name());
 
-    let serialized_fields: Vec<_> = fields.iter()
+    let mut serialized_fields = fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
-        .collect();
+        .peekable();
 
-    let len = serialized_fields.iter()
+    let let_mut = mut_if(cx, serialized_fields.peek().is_some());
+
+    let len = serialized_fields
         .map(|field| {
             let ident = field.ident.expect("struct has unnamed fields");
             let field_expr = quote_expr!(cx, &self.$ident);
@@ -271,8 +273,6 @@ fn serialize_struct(
             }
          })
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
-
-    let let_mut = mut_if_nonzero(cx, serialized_fields.len());
 
     quote_block!(cx, {
         let $let_mut state = try!(_serializer.serialize_struct($type_name, $len));
@@ -466,7 +466,7 @@ fn serialize_tuple_variant(
     );
 
     let len = serialize_stmts.len();
-    let let_mut = mut_if_nonzero(cx, len);
+    let let_mut = mut_if(cx, len > 0);
 
     quote_block!(cx, {
         let $let_mut state = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
@@ -497,11 +497,14 @@ fn serialize_struct_variant(
     );
 
     let item_name = name_expr(builder, item_attrs.name());
-    let serialized_fields: Vec<_> = fields.iter()
-        .filter(|&field| !field.attrs.skip_serializing())
-        .collect();
 
-    let len = serialized_fields.iter()
+    let mut serialized_fields = fields.iter()
+        .filter(|&field| !field.attrs.skip_serializing())
+        .peekable();
+
+    let let_mut = mut_if(cx, serialized_fields.peek().is_some());
+
+    let len = serialized_fields
         .map(|field| {
             let ident = field.ident.expect("struct has unnamed fields");
             let field_expr = quote_expr!(cx, $ident);
@@ -512,8 +515,6 @@ fn serialize_struct_variant(
             }
          })
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
-
-    let let_mut = mut_if_nonzero(cx, serialized_fields.len());
 
     quote_block!(cx, {
         let $let_mut state = try!(_serializer.serialize_struct_variant(
@@ -658,10 +659,10 @@ fn name_expr(
 //     serializer.serialize_struct_end(state)
 //
 // where we want to omit the `mut` to avoid a warning.
-fn mut_if_nonzero(cx: &ExtCtxt, n: usize) -> Vec<TokenTree> {
-    if n == 0 {
-        Vec::new()
-    } else {
+fn mut_if(cx: &ExtCtxt, is_mut: bool) -> Vec<TokenTree> {
+    if is_mut {
         quote_tokens!(cx, mut)
+    } else {
+        Vec::new()
     }
 }
