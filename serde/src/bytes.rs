@@ -19,6 +19,15 @@ pub struct Bytes<'a> {
     bytes: &'a [u8],
 }
 
+impl<'a> Bytes<'a> {
+    /// Wrap an existing `&[u8]`.
+    pub fn new(bytes: &'a [u8]) -> Self {
+        Bytes {
+            bytes: bytes,
+        }
+    }
+}
+
 impl<'a> fmt::Debug for Bytes<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(f.write_str("b\""));
@@ -31,18 +40,14 @@ impl<'a> fmt::Debug for Bytes<'a> {
 
 impl<'a> From<&'a [u8]> for Bytes<'a> {
     fn from(bytes: &'a [u8]) -> Self {
-        Bytes {
-            bytes: bytes,
-        }
+        Bytes::new(bytes)
     }
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<'a> From<&'a Vec<u8>> for Bytes<'a> {
     fn from(bytes: &'a Vec<u8>) -> Self {
-        Bytes {
-            bytes: bytes,
-        }
+        Bytes::new(bytes)
     }
 }
 
@@ -90,15 +95,18 @@ mod bytebuf {
     impl ByteBuf {
         /// Construct a new, empty `ByteBuf`.
         pub fn new() -> Self {
-            ByteBuf {
-                bytes: Vec::new(),
-            }
+            ByteBuf::from(Vec::new())
         }
 
         /// Construct a new, empty `ByteBuf` with the specified capacity.
         pub fn with_capacity(cap: usize) -> Self {
+            ByteBuf::from(Vec::with_capacity(cap))
+        }
+
+        /// Wrap existing bytes in a `ByteBuf`.
+        pub fn from<T: Into<Vec<u8>>>(bytes: T) -> Self {
             ByteBuf {
-                bytes: Vec::with_capacity(cap)
+                bytes: bytes.into(),
             }
         }
     }
@@ -121,9 +129,7 @@ mod bytebuf {
 
     impl From<Vec<u8>> for ByteBuf {
         fn from(bytes: Vec<u8>) -> Self {
-            ByteBuf {
-                bytes: bytes,
-            }
+            ByteBuf::from(bytes)
         }
     }
 
@@ -179,9 +185,7 @@ mod bytebuf {
         fn visit_unit<E>(&mut self) -> Result<ByteBuf, E>
             where E: de::Error,
         {
-            Ok(ByteBuf {
-                bytes: Vec::new(),
-            })
+            Ok(ByteBuf::new())
         }
 
         #[inline]
@@ -197,9 +201,7 @@ mod bytebuf {
 
             try!(visitor.end());
 
-            Ok(ByteBuf {
-                bytes: values,
-            })
+            Ok(ByteBuf::from(values))
         }
 
         #[inline]
@@ -213,9 +215,7 @@ mod bytebuf {
         fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<ByteBuf, E>
             where E: de::Error,
         {
-            Ok(ByteBuf {
-                bytes: v,
-            })
+            Ok(ByteBuf::from(v))
         }
     }
 
