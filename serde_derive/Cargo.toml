@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "0.8.6"
+version = "0.8.7"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
@@ -15,9 +15,9 @@ name = "serde_derive"
 rustc-macro = true
 
 [dependencies]
-serde_codegen = { version = "=0.8.6", path = "../serde_codegen" }
+serde_codegen = { version = "=0.8.7", path = "../serde_codegen" }
 
 [dev-dependencies]
 fnv = "1.0"
-serde = { version = "0.8.6", path = "../serde" }
-serde_test = { version = "0.8.6", path = "../serde_test" }
+serde = { version = "0.8.7", path = "../serde" }
+serde_test = { version = "0.8.7", path = "../serde_test" }
