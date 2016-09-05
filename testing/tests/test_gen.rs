@@ -187,6 +187,16 @@ fn test_gen() {
     #[serde(bound(deserialize = "T::Owned: Deserialize"))]
     struct CowT<'a, T: ?Sized + 'a + ToOwned>(Cow<'a, T>);
     assert::<CowT<str>>();
+
+    #[derive(Serialize, Deserialize)]
+    struct EmptyStruct {}
+    assert::<EmptyStruct>();
+
+    #[derive(Serialize, Deserialize)]
+    enum EmptyEnumVariant {
+        EmptyStruct {},
+    }
+    assert::<EmptyEnumVariant>();
 }
 
 //////////////////////////////////////////////////////////////////////////
