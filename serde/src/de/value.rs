@@ -734,28 +734,6 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
         visitor.visit_map(self)
     }
 
-<<<<<<< HEAD
-    forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any
-||||||| merged common ancestors
-    de_forward_to_deserialize!{
-        deserialize_bool,
-        deserialize_f64, deserialize_f32,
-        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
-        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
-        deserialize_char, deserialize_str, deserialize_string,
-        deserialize_ignored_any,
-        deserialize_bytes,
-        deserialize_unit_struct, deserialize_unit,
-        deserialize_seq, deserialize_seq_fixed_size,
-        deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
-        deserialize_tuple,
-        deserialize_enum,
-        deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
-=======
     fn deserialize_seq<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
@@ -772,21 +750,10 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
         }
     }
 
-    de_forward_to_deserialize!{
-        deserialize_bool,
-        deserialize_f64, deserialize_f32,
-        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
-        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
-        deserialize_char, deserialize_str, deserialize_string,
-        deserialize_ignored_any,
-        deserialize_bytes,
-        deserialize_unit_struct, deserialize_unit,
-        deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
-        deserialize_tuple,
-        deserialize_enum,
-        deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
->>>>>>> origin/master
+    forward_to_deserialize! {
+        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
+        unit option bytes map unit_struct newtype_struct tuple_struct struct
+        struct_field tuple enum ignored_any
     }
 }
 
@@ -879,19 +846,10 @@ impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
 {
     type Error = E;
 
-    de_forward_to_deserialize!{
-        deserialize_bool,
-        deserialize_f64, deserialize_f32,
-        deserialize_u8, deserialize_u16, deserialize_u32, deserialize_u64, deserialize_usize,
-        deserialize_i8, deserialize_i16, deserialize_i32, deserialize_i64, deserialize_isize,
-        deserialize_char, deserialize_str, deserialize_string,
-        deserialize_ignored_any,
-        deserialize_bytes,
-        deserialize_unit_struct, deserialize_unit, deserialize_option,
-        deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
-        deserialize_tuple,
-        deserialize_enum,
-        deserialize_struct, deserialize_tuple_struct
+    forward_to_deserialize! {
+        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
+        unit option bytes map unit_struct newtype_struct tuple_struct struct
+        struct_field tuple enum ignored_any
     }
 
     fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
