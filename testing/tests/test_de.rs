@@ -3,7 +3,7 @@ use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use serde::Deserialize;
+use serde::{Deserialize, self};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -12,6 +12,7 @@ extern crate serde_test;
 use self::serde_test::{
     Error,
     Token,
+    Deserializer,
     assert_de_tokens,
     assert_de_tokens_error,
 };

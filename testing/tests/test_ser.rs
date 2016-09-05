@@ -4,10 +4,12 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::time::Duration;
 
+extern crate serde;
 extern crate serde_test;
 use self::serde_test::{
     Error,
     Token,
+    Serializer,
     assert_ser_tokens,
     assert_ser_tokens_error,
 };

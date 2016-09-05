@@ -191,7 +191,8 @@ impl<E> de::Deserializer for UnitDeserializer<E>
         deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
         deserialize_tuple,
         deserialize_enum,
-        deserialize_struct, deserialize_tuple_struct
+        deserialize_struct, deserialize_tuple_struct,
+        deserialize_tagged_value
     }
 
     fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
@@ -243,7 +244,8 @@ macro_rules! primitive_deserializer {
                 deserialize_tuple,
                 deserialize_enum,
                 deserialize_struct, deserialize_tuple_struct,
-                deserialize_option
+                deserialize_option,
+                deserialize_tagged_value
             }
 
             fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
@@ -324,7 +326,8 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
         deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
         deserialize_tuple,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -421,7 +424,8 @@ impl<E> de::Deserializer for StringDeserializer<E>
         deserialize_map, deserialize_newtype_struct, deserialize_struct_field,
         deserialize_tuple,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -613,7 +617,8 @@ impl<I, T, E> de::Deserializer for SeqDeserializer<I, E>
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -736,7 +741,8 @@ impl<V_, E> de::Deserializer for SeqVisitorDeserializer<V_, E>
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -835,7 +841,8 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -1089,7 +1096,8 @@ impl<V_, E> de::Deserializer for MapVisitorDeserializer<V_, E>
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -1136,7 +1144,8 @@ impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }
 
@@ -1187,6 +1196,7 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
         deserialize_tuple,
         deserialize_enum,
         deserialize_struct, deserialize_tuple_struct,
-        deserialize_option
+        deserialize_option,
+        deserialize_tagged_value
     }
 }

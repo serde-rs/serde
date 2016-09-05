@@ -65,6 +65,12 @@ macro_rules! de_forward_to_deserialize {
             self.deserialize(visitor)
         }
     };
+    (func: deserialize_tagged_value) => {
+        fn deserialize_tagged_value<__V>(&mut self) -> Result<__V, Self::Error>
+            where __V: $crate::de::Deserialize {
+            Err($crate::de::Error::invalid_type($crate::de::Type::Tagged))
+        }
+    };
     (func: $func:ident) => {
         #[inline]
         fn $func<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
@@ -236,6 +242,9 @@ pub enum Type {
 
     /// Represents a `&[u8]` type.
     Bytes,
+
+    /// Represents a tagged type.
+    Tagged,
 }
 
 impl fmt::Display for Type {
@@ -273,6 +282,7 @@ impl fmt::Display for Type {
             Type::TupleVariant  => "tuple variant",
             Type::UnitVariant   => "unit variant",
             Type::Bytes         => "bytes",
+            Type::Tagged        => "tagged type",
         };
         display.fmt(formatter)
     }
@@ -470,6 +480,10 @@ pub trait Deserializer {
     /// doesn't matter because it is ignored.
     fn deserialize_ignored_any<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
+
+
+    /// `deserialize_tagged_value` hints that a tag is expected
+    fn deserialize_tagged_value<V: Deserialize>(&mut self) -> Result<V, Self::Error>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

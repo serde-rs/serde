@@ -409,4 +409,13 @@ pub trait Serializer {
         &mut self,
         state: Self::StructVariantState,
     ) -> Result<(), Self::Error>;
+
+    /// Serializes a tagged value.
+    ///
+    /// If your format has no tagging mechanism, ignore the tag value
+    #[inline]
+    fn serialize_tagged_value<T, V>(&mut self,
+                                    _tag: T,
+                                    value: V) -> Result<(), Self::Error>
+        where T: Serialize, V: Serialize;
 }

@@ -18,6 +18,8 @@ pub enum Token<'a> {
     String(String),
     Bytes(&'a [u8]),
 
+    Tag,
+
     Option(bool),
 
     Unit,

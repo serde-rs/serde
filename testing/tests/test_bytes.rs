@@ -278,6 +278,11 @@ impl Serializer for BytesSerializer {
         Err(Error)
     }
 
+    fn serialize_tagged_value<T, U>(&mut self, _: T, _: U) -> Result<(), Error>
+    {
+        Err(Error)
+    }
+
     fn serialize_bytes(&mut self, bytes: &[u8]) -> Result<(), Error> {
         assert_eq!(self.bytes, bytes);
         Ok(())
@@ -311,6 +316,10 @@ impl Deserializer for BytesDeserializer {
         where V: de::Visitor,
     {
         visitor.visit_byte_buf(self.bytes.take().unwrap())
+    }
+
+    fn deserialize_tagged_value<V: Deserialize>(&mut self) -> Result<V, Error> {
+        Err(Error)
     }
 
     fn deserialize_seq<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
