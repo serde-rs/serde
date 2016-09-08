@@ -636,7 +636,7 @@ fn wrap_serialize_with(
         }
 
         impl $wrapper_generics _serde::ser::Serialize for $wrapper_ty $where_clause {
-            fn serialize<__S>(&self, __s: &mut __S) -> Result<(), __S::Error>
+            fn serialize<__S>(&self, __s: &mut __S) -> ::std::result::Result<(), __S::Error>
                 where __S: _serde::ser::Serializer
             {
                 $path(self.value, __s)
