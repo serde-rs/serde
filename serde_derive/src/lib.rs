@@ -9,13 +9,13 @@ use rustc_macro::TokenStream;
 #[rustc_macro_derive(Serialize)]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let item = format!("#[derive(Serialize)]\n{}", input);
-    let expanded = serde_codegen::expand_str(&item).unwrap();
+    let expanded = serde_codegen::expand_single_item(&item);
     expanded.parse().unwrap()
 }
 
 #[rustc_macro_derive(Deserialize)]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let item = format!("#[derive(Deserialize)]\n{}", input);
-    let expanded = serde_codegen::expand_str(&item).unwrap();
+    let expanded = serde_codegen::expand_single_item(&item);
     expanded.parse().unwrap()
 }
