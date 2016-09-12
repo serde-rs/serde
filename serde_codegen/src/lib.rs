@@ -1,3 +1,5 @@
+#![recursion_limit = "1000"]
+
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", allow(too_many_arguments))]
@@ -31,6 +33,7 @@ use std::path::Path;
 use syntax::feature_gate::AttributeType;
 
 mod bound;
+mod de;
 mod ser;
 
 #[cfg(feature = "with-syntex")]
@@ -67,7 +70,7 @@ fn syntex_registry() -> syntex::Registry {
     reg.add_attr("feature(custom_attribute)");
 
     reg.add_decorator("derive_Serialize", expand_derive_serialize);
-    reg.add_decorator("derive_Deserialize", de::expand_derive_deserialize);
+    reg.add_decorator("derive_Deserialize", expand_derive_deserialize);
 
     reg.add_post_expansion_pass(strip_attributes);
 
@@ -107,52 +110,55 @@ pub fn register(reg: &mut rustc_plugin::Registry) {
         syntax::ext::base::MultiDecorator(
             Box::new(expand_derive_serialize)));
 
-    /*reg.register_syntax_extension(
+    reg.register_syntax_extension(
         syntax::parse::token::intern("derive_Deserialize"),
         syntax::ext::base::MultiDecorator(
-            Box::new(de::expand_derive_deserialize)));*/
+            Box::new(expand_derive_deserialize)));
 
     reg.register_attribute("serde".to_owned(), AttributeType::Normal);
 }
 
-#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
-use syntax::ast::MetaItem;
-#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
-use syntax::codemap::Span;
-#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
-use syntax::ext::base::{Annotatable, ExtCtxt};
+macro_rules! shim {
+    ($name:ident $pkg:ident :: $func:ident) => {
+        fn $func(
+            cx: &mut ::syntax::ext::base::ExtCtxt,
+            _span: ::syntax::codemap::Span,
+            meta_item: &::syntax::ast::MetaItem,
+            annotatable: &::syntax::ext::base::Annotatable,
+            push: &mut FnMut(::syntax::ext::base::Annotatable)
+        ) {
+            let item = match *annotatable {
+                ::syntax::ext::base::Annotatable::Item(ref item) => item,
+                _ => {
+                    cx.span_err(
+                        meta_item.span,
+                        concat!("`#[derive(",
+                                stringify!($name),
+                                ")]` may only be applied to structs and enums"));
+                    return;
+                }
+            };
 
-#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
-fn expand_derive_serialize(
-    cx: &mut ExtCtxt,
-    _span: Span,
-    meta_item: &MetaItem,
-    annotatable: &Annotatable,
-    push: &mut FnMut(Annotatable)
-) {
-    let item = match *annotatable {
-        Annotatable::Item(ref item) => item,
-        _ => {
-            cx.span_err(
-                meta_item.span,
-                "`#[derive(Serialize)]` may only be applied to structs and enums");
-            return;
+            use syntax::print::pprust;
+            let s = pprust::item_to_string(item);
+
+            let syn_item = syn::parse_item(&s).unwrap();
+            let expanded = $pkg::$func(&syn_item).to_string();
+
+            use syntax::parse;
+            let name = stringify!($name).to_string();
+            let cfg = Vec::new();
+            let sess = parse::ParseSess::new();
+            let impl_item = parse::parse_item_from_source_str(name, expanded, cfg, &sess);
+            push(::syntax::ext::base::Annotatable::Item(impl_item.unwrap().unwrap()));
         }
     };
-
-    use syntax::print::pprust;
-    let s = pprust::item_to_string(item);
-
-    let syn_item = syn::parse_item(&s).unwrap();
-    let expanded = ser::expand_derive_serialize(&syn_item).to_string();
-
-    use syntax::parse;
-    let name = "Serialize".to_string();
-    let cfg = Vec::new();
-    let sess = parse::ParseSess::new();
-    let impl_item = parse::parse_item_from_source_str(name, expanded, cfg, &sess);
-    push(Annotatable::Item(impl_item.unwrap().unwrap()));
 }
+
+#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
+shim!(Serialize ser::expand_derive_serialize);
+#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
+shim!(Deserialize de::expand_derive_deserialize);
 
 #[cfg(feature = "with-syn")]
 pub fn expand_single_item(item: &str) -> String {
@@ -164,7 +170,7 @@ pub fn expand_single_item(item: &str) -> String {
         None
     };
     let expanded_de = if de {
-        unimplemented!()
+        Some(de::expand_derive_deserialize(&syn_item))
     } else {
         None::<quote::Tokens>
     };
