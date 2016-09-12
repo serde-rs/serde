@@ -1,10 +1,11 @@
-#![recursion_limit = "1000"]
-
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "clippy", allow(used_underscore_binding))]
 #![cfg_attr(feature = "with-libsyntax", feature(rustc_private, plugin))]
+
+// The `quote!` macro requires deep recursion.
+#![recursion_limit = "192"]
 
 extern crate serde_codegen_internals as internals;
 
