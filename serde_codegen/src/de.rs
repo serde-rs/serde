@@ -5,7 +5,7 @@ use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
-pub fn expand_derive_deserialize(item: &syn::Item) -> Tokens {
+pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Tokens {
     let item = {
         let ctxt = internals::Ctxt::new();
         let item = Item::from_ast(&ctxt, item);

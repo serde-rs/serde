@@ -143,7 +143,7 @@ macro_rules! shim {
             use syntax::print::pprust;
             let s = pprust::item_to_string(item);
 
-            let syn_item = syn::parse_item(&s).unwrap();
+            let syn_item = syn::parse_macro_input(&s).unwrap();
             let expanded = $pkg::$func(&syn_item).to_string();
 
             use syntax::parse;
@@ -163,7 +163,7 @@ shim!(Deserialize de::expand_derive_deserialize);
 
 #[cfg(feature = "with-syn")]
 pub fn expand_single_item(item: &str) -> String {
-    let syn_item = syn::parse_item(item).unwrap();
+    let syn_item = syn::parse_macro_input(item).unwrap();
     let (ser, de, syn_item) = strip_serde_derives(syn_item);
     let expanded_ser = if ser {
         Some(ser::expand_derive_serialize(&syn_item))
@@ -178,10 +178,10 @@ pub fn expand_single_item(item: &str) -> String {
     let syn_item = strip_serde_attrs(syn_item);
     return quote!(#expanded_ser #expanded_de #syn_item).to_string();
 
-    fn strip_serde_derives(item: syn::Item) -> (bool, bool, syn::Item) {
+    fn strip_serde_derives(item: syn::MacroInput) -> (bool, bool, syn::MacroInput) {
         let mut ser = false;
         let mut de = false;
-        let item = syn::Item {
+        let item = syn::MacroInput {
             attrs: item.attrs.into_iter().flat_map(|attr| {
                 if attr.is_sugared_doc {
                     return Some(attr);
@@ -223,8 +223,8 @@ pub fn expand_single_item(item: &str) -> String {
         (ser, de, item)
     }
 
-    fn strip_serde_attrs(item: syn::Item) -> syn::Item {
-        syn::Item {
+    fn strip_serde_attrs(item: syn::MacroInput) -> syn::MacroInput {
+        syn::MacroInput {
             attrs: strip_serde_from_attrs(item.attrs),
             body: match item.body {
                 syn::Body::Enum(variants) => syn::Body::Enum(
@@ -233,6 +233,7 @@ pub fn expand_single_item(item: &str) -> String {
                             ident: variant.ident,
                             attrs: strip_serde_from_attrs(variant.attrs),
                             data: strip_serde_from_variant_data(variant.data),
+                            discriminant: variant.discriminant,
                         }
                     }).collect()
                 ),

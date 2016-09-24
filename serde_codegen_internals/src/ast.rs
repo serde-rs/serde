@@ -35,7 +35,7 @@ pub enum Style {
 }
 
 impl<'a> Item<'a> {
-    pub fn from_ast(cx: &Ctxt, item: &'a syn::Item) -> Item<'a> {
+    pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Item<'a> {
         let attrs = attr::Item::from_ast(cx, item);
 
         let body = match item.body {

@@ -94,7 +94,7 @@ pub struct Item {
 
 impl Item {
     /// Extract out the `#[serde(...)]` attributes from an item.
-    pub fn from_ast(cx: &Ctxt, item: &syn::Item) -> Self {
+    pub fn from_ast(cx: &Ctxt, item: &syn::MacroInput) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
@@ -106,8 +106,10 @@ impl Item {
                 match meta_item {
                     // Parse `#[serde(rename="foo")]`
                     syn::MetaItem::NameValue(ref name, ref lit) if name == "rename" => {
-                        ser_name.set(lit.clone());
-                        de_name.set(lit.clone());
+                        if let Ok(s) = get_string_from_lit(cx, name, lit) {
+                            ser_name.set(s.clone());
+                            de_name.set(s);
+                        }
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
@@ -191,8 +193,10 @@ impl Variant {
                 match meta_item {
                     // Parse `#[serde(rename="foo")]`
                     syn::MetaItem::NameValue(ref name, ref lit) if name == "rename" => {
-                        ser_name.set(lit.clone());
-                        de_name.set(lit.clone());
+                        if let Ok(s) = get_string_from_lit(cx, name, lit) {
+                            ser_name.set(s.clone());
+                            de_name.set(s);
+                        }
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
@@ -275,8 +279,10 @@ impl Field {
                 match meta_item {
                     // Parse `#[serde(rename="foo")]`
                     syn::MetaItem::NameValue(ref name, ref lit) if name == "rename" => {
-                        ser_name.set(lit.clone());
-                        de_name.set(lit.clone());
+                        if let Ok(s) = get_string_from_lit(cx, name, lit) {
+                            ser_name.set(s.clone());
+                            de_name.set(s);
+                        }
                     }
 
                     // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
@@ -421,7 +427,7 @@ fn get_ser_and_de<T, F>(
     items: &[syn::MetaItem],
     f: F
 ) -> Result<SerAndDe<T>, ()>
-    where F: Fn(&Ctxt, &Ident, &str) -> Result<T, ()>,
+    where F: Fn(&Ctxt, &Ident, &syn::Lit) -> Result<T, ()>,
 {
     let mut ser_item = Attr::none(cx, attribute);
     let mut de_item = Attr::none(cx, attribute);
@@ -454,7 +460,7 @@ fn get_renames(
     cx: &Ctxt,
     items: &[syn::MetaItem],
 ) -> Result<SerAndDe<String>, ()> {
-    get_ser_and_de(cx, "rename", items, |_, _, s| Ok(s.to_owned()))
+    get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
 
 fn get_where_predicates(
@@ -473,17 +479,28 @@ pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::MetaItem>>
     }
 }
 
-fn parse_lit_into_path(cx: &Ctxt, name: &Ident, lit: &str) -> Result<syn::Path, ()> {
-    // TODO handle error
-    Ok(syn::parse_path(lit).unwrap())
+fn get_string_from_lit(_cx: &Ctxt, _name: &Ident, lit: &syn::Lit) -> Result<String, ()> {
+    if let syn::Lit::Str(ref s, _) = *lit {
+        Ok(s.clone())
+    } else {
+        // TODO handle error
+        Err(())
+    }
 }
 
-fn parse_lit_into_where(cx: &Ctxt, name: &Ident, lit: &str) -> Result<Vec<syn::WherePredicate>, ()> {
-    if lit.is_empty() {
+fn parse_lit_into_path(cx: &Ctxt, name: &Ident, lit: &syn::Lit) -> Result<syn::Path, ()> {
+    let string = try!(get_string_from_lit(cx, name, lit));
+    // TODO handle error
+    Ok(syn::parse_path(&string).unwrap())
+}
+
+fn parse_lit_into_where(cx: &Ctxt, name: &Ident, lit: &syn::Lit) -> Result<Vec<syn::WherePredicate>, ()> {
+    let string = try!(get_string_from_lit(cx, name, lit));
+    if string.is_empty() {
         return Ok(Vec::new());
     }
 
-    let where_string = format!("where {}", lit);
+    let where_string = format!("where {}", string);
 
     // TODO handle error
     Ok(syn::parse_where_clause(&where_string).unwrap().predicates)

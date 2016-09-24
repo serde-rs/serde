@@ -5,7 +5,7 @@ use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
-pub fn expand_derive_serialize(item: &syn::Item) -> Tokens {
+pub fn expand_derive_serialize(item: &syn::MacroInput) -> Tokens {
     let item = Item::from_ast(&internals::Ctxt::new(), item);
 
     let impl_generics = build_impl_generics(&item);
