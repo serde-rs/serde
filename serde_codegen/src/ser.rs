@@ -164,25 +164,11 @@ fn serialize_tuple_struct(
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
 
-<<<<<<< HEAD
     quote! {
-        let #let_mut state = try!(_serializer.serialize_tuple_struct(#type_name, #len));
+        let #let_mut __serde_state = try!(_serializer.serialize_tuple_struct(#type_name, #len));
         #(serialize_stmts)*
-        _serializer.serialize_tuple_struct_end(state)
-    }
-||||||| merged common ancestors
-    quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_tuple_struct($type_name, $len));
-        $serialize_stmts
-        _serializer.serialize_tuple_struct_end(state)
-    }).unwrap()
-=======
-    quote_block!(cx, {
-        let $let_mut __serde_state = try!(_serializer.serialize_tuple_struct($type_name, $len));
-        $serialize_stmts
         _serializer.serialize_tuple_struct_end(__serde_state)
-    }).unwrap()
->>>>>>> origin/master
+    }
 }
 
 fn serialize_struct(
@@ -219,25 +205,11 @@ fn serialize_struct(
          })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
-<<<<<<< HEAD
     quote! {
-        let #let_mut state = try!(_serializer.serialize_struct(#type_name, #len));
+        let #let_mut __serde_state = try!(_serializer.serialize_struct(#type_name, #len));
         #(serialize_fields)*
-        _serializer.serialize_struct_end(state)
-    }
-||||||| merged common ancestors
-    quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_struct($type_name, $len));
-        $serialize_fields
-        _serializer.serialize_struct_end(state)
-    }).unwrap()
-=======
-    quote_block!(cx, {
-        let $let_mut __serde_state = try!(_serializer.serialize_struct($type_name, $len));
-        $serialize_fields
         _serializer.serialize_struct_end(__serde_state)
-    }).unwrap()
->>>>>>> origin/master
+    }
 }
 
 fn serialize_item_enum(
@@ -401,29 +373,15 @@ fn serialize_tuple_variant(
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
 
-<<<<<<< HEAD
     quote! {
-        let #let_mut state = try!(_serializer.serialize_tuple_variant(#type_name, #variant_index, #variant_name, #len));
+        let #let_mut __serde_state = try!(_serializer.serialize_tuple_variant(
+            #type_name,
+            #variant_index,
+            #variant_name,
+            #len));
         #(serialize_stmts)*
-        _serializer.serialize_tuple_variant_end(state)
-    }
-||||||| merged common ancestors
-    quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
-        $serialize_stmts
-        _serializer.serialize_tuple_variant_end(state)
-    }).unwrap()
-=======
-    quote_block!(cx, {
-        let $let_mut __serde_state = try!(_serializer.serialize_tuple_variant(
-            $type_name,
-            $variant_index,
-            $variant_name,
-            $len));
-        $serialize_stmts
         _serializer.serialize_tuple_variant_end(__serde_state)
-    }).unwrap()
->>>>>>> origin/master
+    }
 }
 
 fn serialize_struct_variant(
@@ -459,48 +417,18 @@ fn serialize_struct_variant(
                 None => quote!(1),
             }
          })
-<<<<<<< HEAD
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote! {
-        let #let_mut state = try!(_serializer.serialize_struct_variant(
+        let #let_mut __serde_state = try!(_serializer.serialize_struct_variant(
             #item_name,
             #variant_index,
             #variant_name,
             #len,
-||||||| merged common ancestors
-        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
-
-    quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_struct_variant(
-            $item_name,
-            $variant_index,
-            $variant_name,
-            $len,
-=======
-        .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
-
-    quote_block!(cx, {
-        let $let_mut __serde_state = try!(_serializer.serialize_struct_variant(
-            $item_name,
-            $variant_index,
-            $variant_name,
-            $len,
->>>>>>> origin/master
         ));
-<<<<<<< HEAD
         #(serialize_fields)*
-        _serializer.serialize_struct_variant_end(state)
-    }
-||||||| merged common ancestors
-        $serialize_fields
-        _serializer.serialize_struct_variant_end(state)
-    }).unwrap()
-=======
-        $serialize_fields
         _serializer.serialize_struct_variant_end(__serde_state)
-    }).unwrap()
->>>>>>> origin/master
+    }
 }
 
 fn serialize_tuple_struct_visitor(
@@ -528,19 +456,9 @@ fn serialize_tuple_struct_visitor(
                     &structure_ty, generics, &field.ty, path, field_expr);
             }
 
-<<<<<<< HEAD
             let ser = quote! {
-                try!(_serializer.#func(&mut state, #field_expr));
+                try!(_serializer.#func(&mut __serde_state, #field_expr));
             };
-||||||| merged common ancestors
-            let ser = quote_expr!(cx,
-                try!(_serializer.$func(&mut state, $field_expr));
-            );
-=======
-            let ser = quote_expr!(cx,
-                try!(_serializer.$func(&mut __serde_state, $field_expr));
-            );
->>>>>>> origin/master
 
             match skip {
                 None => ser,
@@ -577,19 +495,9 @@ fn serialize_struct_visitor(
                     &structure_ty, generics, &field.ty, path, field_expr)
             }
 
-<<<<<<< HEAD
             let ser = quote! {
-                try!(_serializer.#func(&mut state, #key_expr, #field_expr));
+                try!(_serializer.#func(&mut __serde_state, #key_expr, #field_expr));
             };
-||||||| merged common ancestors
-            let ser = quote_expr!(cx,
-                try!(_serializer.$func(&mut state, $key_expr, $field_expr));
-            );
-=======
-            let ser = quote_expr!(cx,
-                try!(_serializer.$func(&mut __serde_state, $key_expr, $field_expr));
-            );
->>>>>>> origin/master
 
             match skip {
                 None => ser,
