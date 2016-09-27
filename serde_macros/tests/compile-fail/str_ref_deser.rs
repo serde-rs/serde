@@ -1,9 +1,9 @@
 #![feature(custom_attribute, custom_derive, plugin)]
 #![plugin(serde_macros)]
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)] //~ ERROR: Serde does not support deserializing fields of type &str
 struct Test<'a> {
-    s: &'a str, //~ ERROR: Serde does not support deserializing fields of type &str
+    s: &'a str,
 }
 
 fn main() {}
