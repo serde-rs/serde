@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "clippy", allow(used_underscore_binding))]
-#![cfg_attr(feature = "with-libsyntax", feature(rustc_private, plugin))]
+#![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "192"]
@@ -16,11 +16,11 @@ extern crate syntex;
 #[macro_use]
 extern crate syntex_syntax as syntax;
 
-#[cfg(feature = "with-libsyntax")]
+#[cfg(not(feature = "with-syntex"))]
 #[macro_use]
 extern crate syntax;
 
-#[cfg(feature = "with-libsyntax")]
+#[cfg(not(feature = "with-syntex"))]
 extern crate rustc_plugin;
 
 extern crate syn;
@@ -30,7 +30,7 @@ extern crate quote;
 #[cfg(feature = "with-syntex")]
 use std::path::Path;
 
-#[cfg(feature = "with-libsyntax")]
+#[cfg(not(feature = "with-syntex"))]
 use syntax::feature_gate::AttributeType;
 
 mod bound;
@@ -104,7 +104,7 @@ pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     syntex::with_extra_stack(expand_thread)
 }
 
-#[cfg(feature = "with-libsyntax")]
+#[cfg(not(feature = "with-syntex"))]
 pub fn register(reg: &mut rustc_plugin::Registry) {
     reg.register_syntax_extension(
         syntax::parse::token::intern("derive_Serialize"),
@@ -156,9 +156,7 @@ macro_rules! shim {
     };
 }
 
-#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
 shim!(Serialize ser::expand_derive_serialize);
-#[cfg(any(feature = "with-syntex", feature = "with-libsyntax"))]
 shim!(Deserialize de::expand_derive_deserialize);
 
 #[cfg(feature = "with-syn")]

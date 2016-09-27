@@ -18,7 +18,6 @@ with-syntex = [
     "syntex",
     "syntex_syntax",
 ]
-with-libsyntax = []
 with-syn = []
 
 [dependencies]
