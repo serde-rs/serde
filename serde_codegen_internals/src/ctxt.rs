@@ -25,8 +25,8 @@ impl Ctxt {
             n => {
                 let mut msg = format!("{} errors:", n);
                 for err in errors {
-                    msg += "\n\t# ";
-                    msg += &err;
+                    msg.push_str("\n\t# ");
+                    msg.push_str(&err);
                 }
                 Err(msg)
             }
