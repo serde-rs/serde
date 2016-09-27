@@ -230,9 +230,9 @@ fn serialize_tuple_struct(
     let let_mut = mut_if(cx, len > 0);
 
     quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_tuple_struct($type_name, $len));
+        let $let_mut __serde_state = try!(_serializer.serialize_tuple_struct($type_name, $len));
         $serialize_stmts
-        _serializer.serialize_tuple_struct_end(state)
+        _serializer.serialize_tuple_struct_end(__serde_state)
     }).unwrap()
 }
 
@@ -275,9 +275,9 @@ fn serialize_struct(
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_struct($type_name, $len));
+        let $let_mut __serde_state = try!(_serializer.serialize_struct($type_name, $len));
         $serialize_fields
-        _serializer.serialize_struct_end(state)
+        _serializer.serialize_struct_end(__serde_state)
     }).unwrap()
 }
 
@@ -469,9 +469,13 @@ fn serialize_tuple_variant(
     let let_mut = mut_if(cx, len > 0);
 
     quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_tuple_variant($type_name, $variant_index, $variant_name, $len));
+        let $let_mut __serde_state = try!(_serializer.serialize_tuple_variant(
+            $type_name,
+            $variant_index,
+            $variant_name,
+            $len));
         $serialize_stmts
-        _serializer.serialize_tuple_variant_end(state)
+        _serializer.serialize_tuple_variant_end(__serde_state)
     }).unwrap()
 }
 
@@ -517,14 +521,14 @@ fn serialize_struct_variant(
         .fold(quote_expr!(cx, 0), |sum, expr| quote_expr!(cx, $sum + $expr));
 
     quote_block!(cx, {
-        let $let_mut state = try!(_serializer.serialize_struct_variant(
+        let $let_mut __serde_state = try!(_serializer.serialize_struct_variant(
             $item_name,
             $variant_index,
             $variant_name,
             $len,
         ));
         $serialize_fields
-        _serializer.serialize_struct_variant_end(state)
+        _serializer.serialize_struct_variant_end(__serde_state)
     }).unwrap()
 }
 
@@ -555,7 +559,7 @@ fn serialize_tuple_struct_visitor(
             }
 
             let ser = quote_expr!(cx,
-                try!(_serializer.$func(&mut state, $field_expr));
+                try!(_serializer.$func(&mut __serde_state, $field_expr));
             );
 
             match skip {
@@ -596,7 +600,7 @@ fn serialize_struct_visitor(
             }
 
             let ser = quote_expr!(cx,
-                try!(_serializer.$func(&mut state, $key_expr, $field_expr));
+                try!(_serializer.$func(&mut __serde_state, $key_expr, $field_expr));
             );
 
             match skip {
@@ -659,8 +663,8 @@ fn name_expr(
 
 // Serialization of an empty struct results in code like:
 //
-//     let mut state = try!(serializer.serialize_struct("S", 0));
-//     serializer.serialize_struct_end(state)
+//     let mut __serde_state = try!(serializer.serialize_struct("S", 0));
+//     serializer.serialize_struct_end(__serde_state)
 //
 // where we want to omit the `mut` to avoid a warning.
 fn mut_if(cx: &ExtCtxt, is_mut: bool) -> Vec<TokenTree> {
