@@ -123,7 +123,7 @@ macro_rules! shim {
     ($name:ident $pkg:ident :: $func:ident) => {
         fn $func(
             cx: &mut ::syntax::ext::base::ExtCtxt,
-            _span: ::syntax::codemap::Span,
+            span: ::syntax::codemap::Span,
             meta_item: &::syntax::ast::MetaItem,
             annotatable: &::syntax::ext::base::Annotatable,
             push: &mut FnMut(::syntax::ext::base::Annotatable)
@@ -158,7 +158,13 @@ macro_rules! shim {
             let s = pprust::item_to_string(item);
 
             let syn_item = syn::parse_macro_input(&s).unwrap();
-            let expanded = $pkg::$func(&syn_item).to_string();
+            let expanded = match $pkg::$func(&syn_item) {
+                Ok(expanded) => expanded.to_string(),
+                Err(msg) => {
+                    cx.span_err(span, &msg);
+                    return;
+                }
+            };
 
             use syntax::parse;
             let name = stringify!($name).to_string();
@@ -174,21 +180,21 @@ shim!(Serialize ser::expand_derive_serialize);
 shim!(Deserialize de::expand_derive_deserialize);
 
 #[cfg(feature = "with-syn")]
-pub fn expand_single_item(item: &str) -> String {
+pub fn expand_single_item(item: &str) -> Result<String, String> {
     let syn_item = syn::parse_macro_input(item).unwrap();
     let (ser, de, syn_item) = strip_serde_derives(syn_item);
     let expanded_ser = if ser {
-        Some(ser::expand_derive_serialize(&syn_item))
+        Some(try!(ser::expand_derive_serialize(&syn_item)))
     } else {
         None
     };
     let expanded_de = if de {
-        Some(de::expand_derive_deserialize(&syn_item))
+        Some(try!(de::expand_derive_deserialize(&syn_item)))
     } else {
         None::<quote::Tokens>
     };
     let syn_item = strip_serde_attrs(syn_item);
-    return quote!(#expanded_ser #expanded_de #syn_item).to_string();
+    return Ok(quote!(#expanded_ser #expanded_de #syn_item).to_string());
 
     fn strip_serde_derives(item: syn::MacroInput) -> (bool, bool, syn::MacroInput) {
         let mut ser = false;

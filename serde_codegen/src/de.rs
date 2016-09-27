@@ -5,11 +5,12 @@ use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
-pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Tokens {
+pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, String> {
     let item = {
         let ctxt = internals::Ctxt::new();
         let item = Item::from_ast(&ctxt, item);
         check_no_str(&ctxt, &item);
+        try!(ctxt.check());
         item
     };
 
@@ -27,7 +28,7 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Tokens {
 
     let dummy_const = aster::id(format!("_IMPL_DESERIALIZE_FOR_{}", item.ident));
 
-    quote! {
+    Ok(quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             extern crate serde as _serde;
@@ -40,7 +41,7 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Tokens {
                 }
             }
         };
-    }
+    })
 }
 
 // All the generics in the input, plus a bound `T: Deserialize` for each generic

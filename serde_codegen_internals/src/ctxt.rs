@@ -1,29 +1,43 @@
 use std::fmt::Display;
-use std::cell::Cell;
+use std::cell::RefCell;
 
 #[derive(Default)]
 pub struct Ctxt {
-    err_count: Cell<usize>,
+    errors: RefCell<Option<Vec<String>>>,
 }
 
 impl Ctxt {
     pub fn new() -> Self {
-        Default::default()
+        Ctxt {
+            errors: RefCell::new(Some(Vec::new())),
+        }
     }
 
     pub fn error<T: Display>(&self, msg: T) {
-        println!("{}", msg);
-        self.err_count.set(self.err_count.get() + 1);
+        self.errors.borrow_mut().as_mut().unwrap().push(msg.to_string());
+    }
+
+    pub fn check(self) -> Result<(), String> {
+        let mut errors = self.errors.borrow_mut().take().unwrap();
+        match errors.len() {
+            0 => Ok(()),
+            1 => Err(errors.pop().unwrap()),
+            n => {
+                let mut msg = format!("{} errors:", n);
+                for err in errors {
+                    msg += "\n\t# ";
+                    msg += &err;
+                }
+                Err(msg)
+            }
+        }
     }
 }
 
 impl Drop for Ctxt {
     fn drop(&mut self) {
-        let err_count = self.err_count.get();
-        if err_count == 1 {
-            panic!("1 error");
-        } else if err_count > 1 {
-            panic!("{} errors", err_count);
+        if self.errors.borrow().is_some() {
+            panic!("forgot to check for errors");
         }
     }
 }
