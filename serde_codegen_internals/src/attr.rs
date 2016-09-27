@@ -142,8 +142,8 @@ impl Item {
                     }
 
                     _ => {
-                        // TODO include name of attr
-                        cx.error("unknown serde container attribute");
+                        cx.error(format!("unknown serde container attribute `{}`",
+                                         meta_item.name()));
                     }
                 }
             }
@@ -208,8 +208,8 @@ impl Variant {
                     }
 
                     _ => {
-                        // TODO include attribute
-                        cx.error("unknown serde variant attribute");
+                        cx.error(format!("unknown serde variant attribute `{}`",
+                                         meta_item.name()));
                     }
                 }
             }
@@ -353,8 +353,8 @@ impl Field {
                     }
 
                     _ => {
-                        // TODO include attribute
-                        cx.error("unknown serde field attribute");
+                        cx.error(format!("unknown serde field attribute `{}`",
+                                         meta_item.name()));
                     }
                 }
             }
