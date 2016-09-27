@@ -600,3 +600,28 @@ fn test_default_ty_param() {
         ]
     );
 }
+
+#[test]
+fn test_enum_state_field() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    enum SomeEnum {
+        Key { key: char, state: bool },
+    }
+
+    assert_tokens(
+        &SomeEnum::Key { key: 'a', state: true },
+        &[
+            Token::EnumMapStart("SomeEnum", "Key", 2),
+
+            Token::EnumMapSep,
+            Token::Str("key"),
+            Token::Char('a'),
+
+            Token::EnumMapSep,
+            Token::Str("state"),
+            Token::Bool(true),
+
+            Token::EnumMapEnd,
+        ]
+    );
+}
