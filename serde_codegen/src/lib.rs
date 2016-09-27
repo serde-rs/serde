@@ -140,6 +140,20 @@ macro_rules! shim {
                 }
             };
 
+            use syntax::{attr, ast, visit};
+            struct MarkSerdeAttributesUsed;
+            impl visit::Visitor for MarkSerdeAttributesUsed {
+                fn visit_attribute(&mut self, attr: &ast::Attribute) {
+                    match attr.node.value.node {
+                        ast::MetaItemKind::List(ref name, _) if name == "serde" => {
+                            attr::mark_used(attr);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            visit::walk_item(&mut MarkSerdeAttributesUsed, item);
+
             use syntax::print::pprust;
             let s = pprust::item_to_string(item);
 
