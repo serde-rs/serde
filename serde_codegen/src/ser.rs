@@ -279,7 +279,9 @@ fn serialize_variant(
             );
 
             quote! {
-                #type_ident::#variant_ident(ref __simple_value) => #block,
+                // The braces are unnecessary but quasi used to put them in. We
+                // can remove them separately from the syn conversion.
+                #type_ident::#variant_ident(ref __simple_value) => { #block },
             }
         },
         Style::Tuple => {
@@ -447,6 +449,7 @@ fn serialize_tuple_struct_visitor(
                 let id = aster::id(format!("__field{}", i));
                 quote!(#id)
             } else {
+                let i = aster::id(i);
                 quote!(&self.#i)
             };
 
@@ -459,11 +462,15 @@ fn serialize_tuple_struct_visitor(
             }
 
             let ser = quote! {
-                try!(_serializer.#func(&mut __serde_state, #field_expr));
+                // This line should end in a semicolon but quasi used to behave
+                // differently between skipped and non-skipped so I have
+                // preserved that behavior. We can update it separately from the
+                // syn conversion.
+                try!(_serializer.#func(&mut __serde_state, #field_expr))
             };
 
             match skip {
-                None => ser,
+                None => quote!(#ser;),
                 Some(skip) => quote!(if !#skip { #ser }),
             }
         })
@@ -498,11 +505,15 @@ fn serialize_struct_visitor(
             }
 
             let ser = quote! {
-                try!(_serializer.#func(&mut __serde_state, #key_expr, #field_expr));
+                // This line should end in a semicolon but quasi used to behave
+                // differently between skipped and non-skipped so I have
+                // preserved that behavior. We can update it separately from the
+                // syn conversion.
+                try!(_serializer.#func(&mut __serde_state, #key_expr, #field_expr))
             };
 
             match skip {
-                None => ser,
+                None => quote!(#ser;),
                 Some(skip) => quote!(if !#skip { #ser }),
             }
         })

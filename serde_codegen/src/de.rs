@@ -36,9 +36,7 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, Strin
             impl #impl_generics _serde::de::Deserialize for #ty #where_clause {
                 fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<#ty, __D::Error>
                     where __D: _serde::de::Deserializer
-                {
-                    #body
-                }
+                #body
             }
         };
     })
@@ -151,6 +149,8 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
             quote!(__Visitor),
         )
     } else {
+        let where_clause = &generics.where_clause;
+
         let num_phantoms = generics.lifetimes.len() + generics.ty_params.len();
 
         let phantom_types = generics.lifetimes.iter()
@@ -190,7 +190,7 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
 
         (
             quote! {
-                struct __Visitor #generics ( #(phantom_types),* );
+                struct __Visitor #generics ( #(phantom_types),* ) #where_clause;
             },
             quote!(__Visitor <#(all_params),*> ),
             quote!(__Visitor #ty_param_idents ( #(phantom_exprs),* )),
@@ -204,7 +204,7 @@ fn deserialize_unit_struct(
 ) -> Tokens {
     let type_name = item_attrs.name().deserialize_name();
 
-    quote! {
+    quote!({
         struct __Visitor;
 
         impl _serde::de::Visitor for __Visitor {
@@ -227,7 +227,7 @@ fn deserialize_unit_struct(
         }
 
         deserializer.deserialize_unit_struct(#type_name, __Visitor)
-    }
+    })
 }
 
 fn deserialize_tuple(
@@ -537,7 +537,7 @@ fn deserialize_item_enum(
 
     let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(impl_generics);
 
-    quote! {
+    quote!({
         #variant_visitor
 
         #visitor_item
@@ -557,7 +557,7 @@ fn deserialize_item_enum(
         #variants_stmt
 
         deserializer.deserialize_enum(#type_name, VARIANTS, #visitor_expr)
-    }
+    })
 }
 
 fn deserialize_variant(
@@ -628,9 +628,11 @@ fn deserialize_newtype_variant(
             })
         }
     };
-    quote! {
-        Ok(#type_ident::#variant_ident(#visit)),
-    }
+    // The outer braces are unnecessary but quasi used to have them. We can
+    // remove them separately from the syn conversion.
+    quote!({
+        Ok(#type_ident::#variant_ident(#visit))
+    })
 }
 
 fn deserialize_field_visitor(
@@ -861,11 +863,14 @@ fn deserialize_map(
                 Some(path) => {
                     let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
                         type_ident, impl_generics, field.ty, path);
-                    quote!({
+                    // The outer parentheses are redundant but quasi used to put
+                    // them in. We can remove them separately from the syn
+                    // conversion.
+                    quote!(({
                         #wrapper
                         #wrapper_impl
                         try!(visitor.visit_value::<#wrapper_ty>()).value
-                    })
+                    }))
                 }
             };
             quote! {
