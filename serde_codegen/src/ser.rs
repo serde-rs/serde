@@ -140,7 +140,7 @@ fn serialize_newtype_struct(
     let mut field_expr = quote!(&self.0);
     if let Some(path) = field.attrs.serialize_with() {
         field_expr = wrap_serialize_with(
-            &item_ty, impl_generics, &field.ty, path, field_expr);
+            &item_ty, impl_generics, field.ty, path, field_expr);
     }
 
     quote! {
@@ -342,7 +342,7 @@ fn serialize_newtype_variant(
     let mut field_expr = quote!(__simple_value);
     if let Some(path) = field.attrs.serialize_with() {
         field_expr = wrap_serialize_with(
-            &item_ty, generics, &field.ty, path, field_expr);
+            &item_ty, generics, field.ty, path, field_expr);
     }
 
     quote! {
@@ -397,7 +397,7 @@ fn serialize_struct_variant(
     let serialize_fields = serialize_struct_visitor(
         ty.clone(),
         fields,
-        &generics,
+        generics,
         true,
         aster::id("serialize_struct_variant_elt"),
     );
@@ -455,7 +455,7 @@ fn serialize_tuple_struct_visitor(
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(
-                    &structure_ty, generics, &field.ty, path, field_expr);
+                    &structure_ty, generics, field.ty, path, field_expr);
             }
 
             let ser = quote! {
@@ -494,7 +494,7 @@ fn serialize_struct_visitor(
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(
-                    &structure_ty, generics, &field.ty, path, field_expr)
+                    &structure_ty, generics, field.ty, path, field_expr)
             }
 
             let ser = quote! {

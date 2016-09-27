@@ -62,10 +62,9 @@ fn build_impl_generics(item: &Item) -> syn::Generics {
             let generics = bound::with_bound(item, &generics,
                 needs_deserialize_bound,
                 &aster::path().ids(&["_serde", "de", "Deserialize"]).build());
-            let generics = bound::with_bound(item, &generics,
+            bound::with_bound(item, &generics,
                 requires_default,
-                &aster::path().global().ids(&["std", "default", "Default"]).build());
-            generics
+                &aster::path().global().ids(&["std", "default", "Default"]).build())
         }
     }
 }
@@ -325,7 +324,7 @@ fn deserialize_seq(
                     }
                     Some(path) => {
                         let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
-                            type_ident, impl_generics, &field.ty, path);
+                            type_ident, impl_generics, field.ty, path);
                         quote!({
                             #wrapper
                             #wrapper_impl
@@ -390,7 +389,7 @@ fn deserialize_newtype_struct(
         }
         Some(path) => {
             let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
-                type_ident, impl_generics, &field.ty, path);
+                type_ident, impl_generics, field.ty, path);
             quote!({
                 #wrapper
                 #wrapper_impl
@@ -421,7 +420,7 @@ fn deserialize_struct(
     let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(impl_generics);
 
     let type_path = match variant_ident {
-        Some(ref variant_ident) => quote!(#type_ident::#variant_ident),
+        Some(variant_ident) => quote!(#type_ident::#variant_ident),
         None => quote!(#type_ident),
     };
 
@@ -580,7 +579,7 @@ fn deserialize_variant(
         Style::Newtype => {
             deserialize_newtype_variant(
                 type_ident,
-                &variant_ident,
+                variant_ident,
                 generics,
                 &variant.fields[0],
             )
@@ -621,7 +620,7 @@ fn deserialize_newtype_variant(
         }
         Some(path) => {
             let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
-                type_ident, impl_generics, &field.ty, path);
+                type_ident, impl_generics, field.ty, path);
             quote!({
                 #wrapper
                 #wrapper_impl
@@ -719,7 +718,7 @@ fn deserialize_field_visitor(
     // Match arms to extract a field from a string
     let bytes_field_arms: Vec<_> = field_idents.iter().zip(field_names.iter())
         .map(|(field_ident, field_name)| {
-            let bytes_field_name = quote::ByteStr(&field_name);
+            let bytes_field_name = quote::ByteStr(field_name);
             quote! {
                 #bytes_field_name => { Ok(__Field::#field_ident) }
             }
@@ -849,7 +848,7 @@ fn deserialize_map(
     // Match arms to extract a value for a field.
     let value_arms = fields_names.iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
-        .map(|&(ref field, ref name)| {
+        .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
 
             let visit = match field.attrs.deserialize_with() {
@@ -861,7 +860,7 @@ fn deserialize_map(
                 }
                 Some(path) => {
                     let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
-                        type_ident, impl_generics, &field.ty, path);
+                        type_ident, impl_generics, field.ty, path);
                     quote!({
                         #wrapper
                         #wrapper_impl
