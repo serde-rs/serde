@@ -24,7 +24,7 @@ script:
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features collections)
 - (cd testing && travis-cargo --skip nightly test)
 - (cd testing && travis-cargo --only nightly test -- --features unstable-testing)
-- (cd serde_macros && travis-cargo --only nightly test -- --features unstable-testing)
+- (cd serde_derive && travis-cargo --only nightly test)
 - (cd examples/serde-syntex-example && travis-cargo --skip nightly run)
 - (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features unstable)
 - (cd serde && travis-cargo --only stable doc)

@@ -1,4 +1,4 @@
-#[cfg(not(feature = "serde_macros"))]
+#[cfg(not(feature = "serde_derive"))]
 mod inner {
     extern crate serde_codegen;
 
@@ -15,7 +15,7 @@ mod inner {
     }
 }
 
-#[cfg(feature = "serde_macros")]
+#[cfg(feature = "serde_derive")]
 mod inner {
     pub fn main() {}
 }
