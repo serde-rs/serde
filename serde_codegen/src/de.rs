@@ -5,6 +5,8 @@ use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
+use std::iter;
+
 pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, String> {
     let item = {
         let ctxt = internals::Ctxt::new();
@@ -186,7 +188,7 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
             Some(quote!(::<#(ty_param_idents),*>))
         };
 
-        let phantom_exprs = (0 .. num_phantoms).map(|_| quote!(::std::marker::PhantomData));
+        let phantom_exprs = iter::repeat(quote!(::std::marker::PhantomData)).take(num_phantoms);
 
         (
             quote! {
