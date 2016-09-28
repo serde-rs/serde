@@ -5,24 +5,24 @@ extern crate serde;
 
 #[derive(Serialize)] //~ unknown serde container attribute `abc`
 #[serde(abc="xyz")]
-struct Foo {
+struct A {
     x: u32,
 }
 
 #[derive(Deserialize)] //~ unknown serde container attribute `abc`
 #[serde(abc="xyz")]
-struct Foo {
+struct B {
     x: u32,
 }
 
 #[derive(Serialize)] //~ unknown serde field attribute `abc`
-struct Foo {
+struct C {
     #[serde(abc="xyz")]
     x: u32,
 }
 
 #[derive(Deserialize)] //~ unknown serde field attribute `abc`
-struct Foo {
+struct D {
     #[serde(abc="xyz")]
     x: u32,
 }
