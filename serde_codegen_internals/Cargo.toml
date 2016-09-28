@@ -11,11 +11,8 @@ keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
-default = ["with-syntex"]
 unstable-testing = ["clippy"]
-with-syntex = ["syntex_syntax", "syntex_errors"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-syntex_syntax = { version = "^0.44.0", optional = true }
-syntex_errors = { version = "^0.44.0", optional = true }
+syn = "0.8"

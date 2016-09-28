@@ -14,8 +14,11 @@ include = ["Cargo.toml", "src/**/*.rs"]
 name = "serde_derive"
 rustc-macro = true
 
-[dependencies]
-serde_codegen = { version = "=0.8.9", path = "../serde_codegen" }
+[dependencies.serde_codegen]
+version = "=0.8.9"
+path = "../serde_codegen"
+default-features = false
+features = ["with-syn"]
 
 [dev-dependencies]
 fnv = "1.0"

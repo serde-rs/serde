@@ -1,17 +1,12 @@
-use syntax::ast;
-use syntax::codemap;
-use syntax::ext::base::ExtCtxt;
-use syntax::ptr::P;
-
+use syn;
 use attr;
-use Error;
+use Ctxt;
 
 pub struct Item<'a> {
-    pub ident: ast::Ident,
-    pub span: codemap::Span,
+    pub ident: syn::Ident,
     pub attrs: attr::Item,
     pub body: Body<'a>,
-    pub generics: &'a ast::Generics,
+    pub generics: &'a syn::Generics,
 }
 
 pub enum Body<'a> {
@@ -20,18 +15,16 @@ pub enum Body<'a> {
 }
 
 pub struct Variant<'a> {
-    pub ident: ast::Ident,
-    pub span: codemap::Span,
+    pub ident: syn::Ident,
     pub attrs: attr::Variant,
     pub style: Style,
     pub fields: Vec<Field<'a>>,
 }
 
 pub struct Field<'a> {
-    pub ident: Option<ast::Ident>,
-    pub span: codemap::Span,
+    pub ident: Option<syn::Ident>,
     pub attrs: attr::Field,
-    pub ty: &'a P<ast::Ty>,
+    pub ty: &'a syn::Ty,
 }
 
 pub enum Style {
@@ -42,33 +35,25 @@ pub enum Style {
 }
 
 impl<'a> Item<'a> {
-    pub fn from_ast(
-        cx: &ExtCtxt,
-        item: &'a ast::Item,
-    ) -> Result<Item<'a>, Error> {
+    pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Item<'a> {
         let attrs = attr::Item::from_ast(cx, item);
 
-        let (body, generics) = match item.node {
-            ast::ItemKind::Enum(ref enum_def, ref generics) => {
-                let variants = enum_from_ast(cx, enum_def);
-                (Body::Enum(variants), generics)
+        let body = match item.body {
+            syn::Body::Enum(ref variants) => {
+                Body::Enum(enum_from_ast(cx, variants))
             }
-            ast::ItemKind::Struct(ref variant_data, ref generics) => {
+            syn::Body::Struct(ref variant_data) => {
                 let (style, fields) = struct_from_ast(cx, variant_data);
-                (Body::Struct(style, fields), generics)
-            }
-            _ => {
-                return Err(Error::UnexpectedItemKind);
+                Body::Struct(style, fields)
             }
         };
 
-        Ok(Item {
-            ident: item.ident,
-            span: item.span,
+        Item {
+            ident: item.ident.clone(),
             attrs: attrs,
             body: body,
-            generics: generics,
-        })
+            generics: &item.generics,
+        }
     }
 }
 
@@ -86,16 +71,12 @@ impl<'a> Body<'a> {
     }
 }
 
-fn enum_from_ast<'a>(
-    cx: &ExtCtxt,
-    enum_def: &'a ast::EnumDef,
-) -> Vec<Variant<'a>> {
-    enum_def.variants.iter()
+fn enum_from_ast<'a>(cx: &Ctxt, variants: &'a [syn::Variant]) -> Vec<Variant<'a>> {
+    variants.iter()
         .map(|variant| {
-            let (style, fields) = struct_from_ast(cx, &variant.node.data);
+            let (style, fields) = struct_from_ast(cx, &variant.data);
             Variant {
-                ident: variant.node.name,
-                span: variant.span,
+                ident: variant.ident.clone(),
                 attrs: attr::Variant::from_ast(cx, variant),
                 style: style,
                 fields: fields,
@@ -104,36 +85,29 @@ fn enum_from_ast<'a>(
         .collect()
 }
 
-fn struct_from_ast<'a>(
-    cx: &ExtCtxt,
-    variant_data: &'a ast::VariantData,
-) -> (Style, Vec<Field<'a>>) {
-    match *variant_data {
-        ast::VariantData::Struct(ref fields, _) => {
+fn struct_from_ast<'a>(cx: &Ctxt, data: &'a syn::VariantData) -> (Style, Vec<Field<'a>>) {
+    match *data {
+        syn::VariantData::Struct(ref fields) => {
             (Style::Struct, fields_from_ast(cx, fields))
         }
-        ast::VariantData::Tuple(ref fields, _) if fields.len() == 1 => {
+        syn::VariantData::Tuple(ref fields) if fields.len() == 1 => {
             (Style::Newtype, fields_from_ast(cx, fields))
         }
-        ast::VariantData::Tuple(ref fields, _) => {
+        syn::VariantData::Tuple(ref fields) => {
             (Style::Tuple, fields_from_ast(cx, fields))
         }
-        ast::VariantData::Unit(_) => {
+        syn::VariantData::Unit => {
             (Style::Unit, Vec::new())
         }
     }
 }
 
-fn fields_from_ast<'a>(
-    cx: &ExtCtxt,
-    fields: &'a [ast::StructField],
-) -> Vec<Field<'a>> {
+fn fields_from_ast<'a>(cx: &Ctxt, fields: &'a [syn::Field]) -> Vec<Field<'a>> {
     fields.iter()
         .enumerate()
         .map(|(i, field)| {
             Field {
-                ident: field.ident,
-                span: field.span,
+                ident: field.ident.clone(),
                 attrs: attr::Field::from_ast(cx, i, field),
                 ty: &field.ty,
             }
