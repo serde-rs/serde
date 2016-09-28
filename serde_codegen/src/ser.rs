@@ -279,9 +279,7 @@ fn serialize_variant(
             );
 
             quote! {
-                // The braces are unnecessary but quasi used to put them in. We
-                // can remove them separately from the syn conversion.
-                #type_ident::#variant_ident(ref __simple_value) => { #block },
+                #type_ident::#variant_ident(ref __simple_value) => #block,
             }
         },
         Style::Tuple => {
@@ -462,15 +460,11 @@ fn serialize_tuple_struct_visitor(
             }
 
             let ser = quote! {
-                // This line should end in a semicolon but quasi used to behave
-                // differently between skipped and non-skipped so I have
-                // preserved that behavior. We can update it separately from the
-                // syn conversion.
-                try!(_serializer.#func(&mut __serde_state, #field_expr))
+                try!(_serializer.#func(&mut __serde_state, #field_expr));
             };
 
             match skip {
-                None => quote!(#ser;),
+                None => ser,
                 Some(skip) => quote!(if !#skip { #ser }),
             }
         })
@@ -505,15 +499,11 @@ fn serialize_struct_visitor(
             }
 
             let ser = quote! {
-                // This line should end in a semicolon but quasi used to behave
-                // differently between skipped and non-skipped so I have
-                // preserved that behavior. We can update it separately from the
-                // syn conversion.
-                try!(_serializer.#func(&mut __serde_state, #key_expr, #field_expr))
+                try!(_serializer.#func(&mut __serde_state, #key_expr, #field_expr));
             };
 
             match skip {
-                None => quote!(#ser;),
+                None => ser,
                 Some(skip) => quote!(if !#skip { #ser }),
             }
         })
@@ -540,27 +530,25 @@ fn wrap_serialize_with(
             .build()
         .build();
 
-    quote! {
-        {
-            struct __SerializeWith #wrapper_generics #where_clause {
-                value: &'__a #field_ty,
-                phantom: ::std::marker::PhantomData<#item_ty>,
-            }
+    quote!({
+        struct __SerializeWith #wrapper_generics #where_clause {
+            value: &'__a #field_ty,
+            phantom: ::std::marker::PhantomData<#item_ty>,
+        }
 
-            impl #wrapper_generics _serde::ser::Serialize for #wrapper_ty #where_clause {
-                fn serialize<__S>(&self, __s: &mut __S) -> ::std::result::Result<(), __S::Error>
-                    where __S: _serde::ser::Serializer
-                {
-                    #path(self.value, __s)
-                }
-            }
-
-            __SerializeWith {
-                value: #value,
-                phantom: ::std::marker::PhantomData::<#item_ty>,
+        impl #wrapper_generics _serde::ser::Serialize for #wrapper_ty #where_clause {
+            fn serialize<__S>(&self, __s: &mut __S) -> ::std::result::Result<(), __S::Error>
+                where __S: _serde::ser::Serializer
+            {
+                #path(self.value, __s)
             }
         }
-    }
+
+        __SerializeWith {
+            value: #value,
+            phantom: ::std::marker::PhantomData::<#item_ty>,
+        }
+    })
 }
 
 // Serialization of an empty struct results in code like:
