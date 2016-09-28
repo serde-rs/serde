@@ -6,7 +6,7 @@ extern crate serde_derive;
 #[derive(Serialize)] //~ ERROR: custom derive attribute panicked
 struct S {
     #[serde(rename(serialize="x"))]
-    #[serde(rename(serialize="y"))] // ERROR: duplicate serde attribute `rename`
+    #[serde(rename(serialize="y"))] //~^^^ HELP: duplicate serde attribute `rename`
     x: (),
 }
 

@@ -5,7 +5,7 @@ extern crate serde_derive;
 
 #[derive(Serialize)] //~ ERROR: custom derive attribute panicked
 struct C {
-    #[serde(abc="xyz")] // ERROR: unknown serde field attribute `abc`
+    #[serde(abc="xyz")] //~^^ HELP: unknown serde field attribute `abc`
     x: u32,
 }
 
