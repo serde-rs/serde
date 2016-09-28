@@ -630,11 +630,9 @@ fn deserialize_newtype_variant(
             })
         }
     };
-    // The outer braces are unnecessary but quasi used to have them. We can
-    // remove them separately from the syn conversion.
-    quote!({
-        Ok(#type_ident::#variant_ident(#visit))
-    })
+    quote! {
+        Ok(#type_ident::#variant_ident(#visit)),
+    }
 }
 
 fn deserialize_field_visitor(
@@ -865,14 +863,11 @@ fn deserialize_map(
                 Some(path) => {
                     let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
                         type_ident, impl_generics, field.ty, path);
-                    // The outer parentheses are redundant but quasi used to put
-                    // them in. We can remove them separately from the syn
-                    // conversion.
-                    quote!(({
+                    quote!({
                         #wrapper
                         #wrapper_impl
                         try!(visitor.visit_value::<#wrapper_ty>()).value
-                    }))
+                    })
                 }
             };
             quote! {
