@@ -640,15 +640,12 @@ impl Serialize for Duration {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "std", feature = "unstable"))]
+#[cfg(feature = "std")]
 impl Serialize for net::IpAddr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        match *self {
-            net::IpAddr::V4(ref addr) => addr.serialize(serializer),
-            net::IpAddr::V6(ref addr) => addr.serialize(serializer),
-        }
+        self.to_string().serialize(serializer)
     }
 }
 

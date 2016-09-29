@@ -809,7 +809,7 @@ map_impl!(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "unstable", feature = "std"))]
+#[cfg(feature = "std")]
 impl Deserialize for net::IpAddr {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer,
