@@ -651,14 +651,6 @@ fn deserialize_field_visitor(
         Some(quote!(__ignore,))
     };
 
-    let field_enum = quote! {
-        #[allow(non_camel_case_types)]
-        enum __Field {
-            #(field_idents,)*
-            #ignore_variant
-        }
-    };
-
     let index_field_arms: Vec<_> = field_idents.iter()
         .enumerate()
         .map(|(field_index, field_ident)| {
@@ -742,6 +734,14 @@ fn deserialize_field_visitor(
         match value {
             #(bytes_field_arms)*
             _ => #fallthrough_bytes_arm_expr
+        }
+    };
+
+    let field_enum = quote! {
+        #[allow(non_camel_case_types)]
+        enum __Field {
+            #(field_idents,)*
+            #ignore_variant
         }
     };
 
