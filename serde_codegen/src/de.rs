@@ -737,15 +737,13 @@ fn deserialize_field_visitor(
         }
     };
 
-    let field_enum = quote! {
+    quote! {
         #[allow(non_camel_case_types)]
         enum __Field {
             #(field_idents,)*
             #ignore_variant
         }
-    };
 
-    let impl_item = quote! {
         impl _serde::de::Deserialize for __Field {
             #[inline]
             fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<__Field, __D::Error>
@@ -778,11 +776,6 @@ fn deserialize_field_visitor(
                 deserializer.deserialize_struct_field(__FieldVisitor)
             }
         }
-    };
-
-    quote! {
-        #field_enum
-        #impl_item
     }
 }
 
