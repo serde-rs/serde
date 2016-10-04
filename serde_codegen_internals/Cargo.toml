@@ -15,4 +15,4 @@ unstable-testing = ["clippy"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-syn = "0.8"
+syn = "0.9"

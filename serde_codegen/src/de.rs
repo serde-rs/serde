@@ -185,17 +185,17 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
         let ty_param_idents = if ty_param_idents.is_empty() {
             None
         } else {
-            Some(quote!(::<#(ty_param_idents),*>))
+            Some(quote!(::<#(#ty_param_idents),*>))
         };
 
         let phantom_exprs = iter::repeat(quote!(::std::marker::PhantomData)).take(num_phantoms);
 
         (
             quote! {
-                struct __Visitor #generics ( #(phantom_types),* ) #where_clause;
+                struct __Visitor #generics ( #(#phantom_types),* ) #where_clause;
             },
-            quote!(__Visitor <#(all_params),*> ),
-            quote!(__Visitor #ty_param_idents ( #(phantom_exprs),* )),
+            quote!(__Visitor <#(#all_params),*> ),
+            quote!(__Visitor #ty_param_idents ( #(#phantom_exprs),* )),
         )
     }
 }
@@ -358,17 +358,17 @@ fn deserialize_seq(
                 quote!(#ident: #value)
             });
         quote! {
-            #type_path { #(args),* }
+            #type_path { #(#args),* }
         }
     } else {
         let args = (0..fields.len()).map(|i| aster::id(format!("__field{}", i)));
         quote! {
-            #type_path ( #(args),* )
+            #type_path ( #(#args),* )
         }
     };
 
     quote! {
-        #(let_values)*
+        #(#let_values)*
 
         try!(visitor.end());
 
@@ -505,7 +505,7 @@ fn deserialize_item_enum(
     let variant_names = variants.iter().map(|variant| variant.ident.to_string());
 
     let variants_stmt = quote! {
-        const VARIANTS: &'static [&'static str] = &[ #(variant_names),* ];
+        const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
     };
 
     let ignored_arm = if item_attrs.deny_unknown_fields() {
@@ -551,7 +551,7 @@ fn deserialize_item_enum(
                 where __V: _serde::de::VariantVisitor,
             {
                 match try!(visitor.visit_variant()) {
-                    #(variant_arms)*
+                    #(#variant_arms)*
                 }
             }
         }
@@ -678,7 +678,7 @@ fn deserialize_field_visitor(
 
     let index_body = quote! {
         match value {
-            #(index_field_arms)*
+            #(#index_field_arms)*
             _ => #fallthrough_index_arm_expr
         }
     };
@@ -704,7 +704,7 @@ fn deserialize_field_visitor(
 
     let str_body = quote! {
         match value {
-            #(str_field_arms)*
+            #(#str_field_arms)*
             _ => #fallthrough_str_arm_expr
         }
     };
@@ -732,7 +732,7 @@ fn deserialize_field_visitor(
 
     let bytes_body = quote! {
         match value {
-            #(bytes_field_arms)*
+            #(#bytes_field_arms)*
             _ => #fallthrough_bytes_arm_expr
         }
     };
@@ -740,7 +740,7 @@ fn deserialize_field_visitor(
     quote! {
         #[allow(non_camel_case_types)]
         enum __Field {
-            #(field_idents,)*
+            #(#field_idents,)*
             #ignore_variant
         }
 
@@ -809,7 +809,7 @@ fn deserialize_struct_visitor(
     });
 
     let fields_stmt = quote! {
-        const FIELDS: &'static [&'static str] = &[ #(field_names),* ];
+        const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
     };
 
     (field_visitor, fields_stmt, visit_map)
@@ -922,21 +922,21 @@ fn deserialize_map(
         });
 
     quote! {
-        #(let_values)*
+        #(#let_values)*
 
         while let Some(key) = try!(visitor.visit_key::<__Field>()) {
             match key {
-                #(value_arms)*
-                #(skipped_arms)*
+                #(#value_arms)*
+                #(#skipped_arms)*
                 #ignored_arm
             }
         }
 
         try!(visitor.end());
 
-        #(extract_values)*
+        #(#extract_values)*
 
-        Ok(#struct_path { #(result),* })
+        Ok(#struct_path { #(#result),* })
     }
 }
 

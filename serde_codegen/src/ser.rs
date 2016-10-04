@@ -168,7 +168,7 @@ fn serialize_tuple_struct(
 
     quote! {
         let #let_mut __serde_state = try!(_serializer.serialize_tuple_struct(#type_name, #len));
-        #(serialize_stmts)*
+        #(#serialize_stmts)*
         _serializer.serialize_tuple_struct_end(__serde_state)
     }
 }
@@ -209,7 +209,7 @@ fn serialize_struct(
 
     quote! {
         let #let_mut __serde_state = try!(_serializer.serialize_struct(#type_name, #len));
-        #(serialize_fields)*
+        #(#serialize_fields)*
         _serializer.serialize_struct_end(__serde_state)
     }
 }
@@ -238,7 +238,7 @@ fn serialize_item_enum(
 
     quote! {
         match *self {
-            #(arms)*
+            #(#arms)*
         }
     }
 }
@@ -290,7 +290,7 @@ fn serialize_variant(
                 })
                 .collect();
 
-            let pat = quote!(#type_ident::#variant_ident(#(field_names),*));
+            let pat = quote!(#type_ident::#variant_ident(#(#field_names),*));
 
             let block = serialize_tuple_variant(
                 type_name,
@@ -313,7 +313,7 @@ fn serialize_variant(
                 };
                 quote!(ref #id)
             });
-            let pat = quote!(#type_ident::#variant_ident { #(fields),* });
+            let pat = quote!(#type_ident::#variant_ident { #(#fields),* });
 
             let block = serialize_struct_variant(
                 variant_index,
@@ -381,7 +381,7 @@ fn serialize_tuple_variant(
             #variant_index,
             #variant_name,
             #len));
-        #(serialize_stmts)*
+        #(#serialize_stmts)*
         _serializer.serialize_tuple_variant_end(__serde_state)
     }
 }
@@ -428,7 +428,7 @@ fn serialize_struct_variant(
             #variant_name,
             #len,
         ));
-        #(serialize_fields)*
+        #(#serialize_fields)*
         _serializer.serialize_struct_variant_end(__serde_state)
     }
 }

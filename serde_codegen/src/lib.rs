@@ -201,7 +201,7 @@ pub fn expand_single_item(item: &str) -> Result<String, String> {
         let mut de = false;
         let item = syn::MacroInput {
             attrs: item.attrs.into_iter().flat_map(|attr| {
-                if attr.is_sugared_doc {
+                if attr.is_sugared_doc || attr.style != syn::AttrStyle::Outer {
                     return Some(attr);
                 }
                 let (name, nested) = match attr.value {
@@ -210,6 +210,7 @@ pub fn expand_single_item(item: &str) -> Result<String, String> {
                 };
                 if name != "derive" {
                     return Some(syn::Attribute {
+                        style: syn::AttrStyle::Outer,
                         value: syn::MetaItem::List(name, nested),
                         is_sugared_doc: false,
                     });
@@ -231,6 +232,7 @@ pub fn expand_single_item(item: &str) -> Result<String, String> {
                     None
                 } else {
                     Some(syn::Attribute {
+                        style: syn::AttrStyle::Outer,
                         value: syn::MetaItem::List(name, rest),
                         is_sugared_doc: false,
                     })
