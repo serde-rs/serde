@@ -1,4 +1,4 @@
-#![feature(rustc_macro)]
+#![feature(proc_macro)]
 #![deny(identity_op)]
 
 #[macro_use]

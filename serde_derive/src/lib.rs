@@ -1,12 +1,12 @@
-#![feature(rustc_macro, rustc_macro_lib)]
+#![feature(proc_macro, proc_macro_lib)]
 #![cfg(not(test))]
 
-extern crate rustc_macro;
+extern crate proc_macro;
 extern crate serde_codegen;
 
-use rustc_macro::TokenStream;
+use proc_macro::TokenStream;
 
-#[rustc_macro_derive(Serialize)]
+#[proc_macro_derive(Serialize)]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let item = format!("#[derive(Serialize)]\n{}", input);
     match serde_codegen::expand_single_item(&item) {
@@ -15,7 +15,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
     }
 }
 
-#[rustc_macro_derive(Deserialize)]
+#[proc_macro_derive(Deserialize)]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let item = format!("#[derive(Deserialize)]\n{}", input);
     match serde_codegen::expand_single_item(&item) {
