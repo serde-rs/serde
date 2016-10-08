@@ -1,4 +1,4 @@
-#![feature(test, proc_macro, rustc_attrs)]
+#![feature(test, proc_macro)]
 
 #[macro_use]
 extern crate serde_derive;
