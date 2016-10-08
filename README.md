@@ -15,7 +15,7 @@ You may be looking for:
 ## Serde in action
 
 ```rust
-#![feature(rustc_macro)]
+#![feature(proc_macro)]
 
 #[macro_use]
 extern crate serde_derive;
