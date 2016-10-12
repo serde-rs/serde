@@ -554,7 +554,7 @@ impl<T> Deserialize for [T; 0]
     }
 }
 
-macro_rules! array_impls {
+macro_rules! small_array_impls {
     ($($visitor:ident, $len:expr => ($($name:ident),+),)+) => {
         $(
             struct $visitor<T> {
@@ -603,7 +603,7 @@ macro_rules! array_impls {
     }
 }
 
-array_impls! {
+small_array_impls! {
     ArrayVisitor1, 1 => (a),
     ArrayVisitor2, 2 => (a, b),
     ArrayVisitor3, 3 => (a, b, c),
@@ -612,38 +612,148 @@ array_impls! {
     ArrayVisitor6, 6 => (a, b, c, d, e, f),
     ArrayVisitor7, 7 => (a, b, c, d, e, f, g),
     ArrayVisitor8, 8 => (a, b, c, d, e, f, g, h),
-    ArrayVisitor9, 9 => (a, b, c, d, e, f, g, h, i),
-    ArrayVisitor10, 10 => (a, b, c, d, e, f, g, h, i, j),
-    ArrayVisitor11, 11 => (a, b, c, d, e, f, g, h, i, j, k),
-    ArrayVisitor12, 12 => (a, b, c, d, e, f, g, h, i, j, k, l),
-    ArrayVisitor13, 13 => (a, b, c, d, e, f, g, h, i, j, k, l, m),
-    ArrayVisitor14, 14 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n),
-    ArrayVisitor15, 15 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o),
-    ArrayVisitor16, 16 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p),
-    ArrayVisitor17, 17 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q),
-    ArrayVisitor18, 18 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r),
-    ArrayVisitor19, 19 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s),
-    ArrayVisitor20, 20 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s ,t),
-    ArrayVisitor21, 21 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u),
-    ArrayVisitor22, 22 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v),
-    ArrayVisitor23, 23 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w),
-    ArrayVisitor24, 24 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x),
-    ArrayVisitor25, 25 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y),
-    ArrayVisitor26, 26 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z),
-    ArrayVisitor27, 27 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa),
-    ArrayVisitor28, 28 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab),
-    ArrayVisitor29, 29 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac),
-    ArrayVisitor30, 30 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad),
-    ArrayVisitor31, 31 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad, ae),
-    ArrayVisitor32, 32 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad, ae, af),
+}
+
+macro_rules! big_array_impls {
+    ($($visitor:ident [$len:expr])+) => {
+        $(
+            struct $visitor<T> {
+                marker: PhantomData<T>,
+            }
+
+            impl<T> $visitor<T> {
+                /// Construct a `ArrayVisitor*<T>`.
+                pub fn new() -> Self {
+                    $visitor {
+                        marker: PhantomData
+                    }
+                }
+            }
+
+            impl<T> Visitor for $visitor<T> where T: Deserialize {
+                type Value = [T; $len];
+
+                #[inline]
+                fn visit_seq<V>(&mut self, mut visitor: V) -> Result<[T; $len], V::Error>
+                    where V: SeqVisitor,
+                {
+                    use std::{mem, ptr};
+                    use std::ops::{Deref, DerefMut};
+
+                    enum PartialArray<T> {
+                        Alive([T; $len]),
+                        Dropped,
+                    }
+
+                    impl<T> Drop for PartialArray<T> {
+                        fn drop(&mut self) {
+                            // inhibit dropping the elements
+                            unsafe {
+                                ptr::write(self, PartialArray::Dropped);
+                            }
+                        }
+                    }
+
+                    impl<T> Deref for PartialArray<T> {
+                        type Target = [T; $len];
+
+                        fn deref(&self) -> &Self::Target {
+                            match *self {
+                                PartialArray::Alive(ref inner) => inner,
+                                _ => unreachable!(),
+                            }
+                        }
+                    }
+
+                    impl<T> DerefMut for PartialArray<T> {
+                        fn deref_mut(&mut self) -> &mut Self::Target {
+                            match *self {
+                                PartialArray::Alive(ref mut inner) => inner,
+                                _ => unreachable!(),
+                            }
+                        }
+                    }
+
+                    impl<T> PartialArray<T> {
+                        unsafe fn get_unchecked_mut(&mut self, i: usize) -> &mut T {
+                            &mut *(self.deref_mut() as *mut [T] as *mut T).offset(i as isize)
+                        }
+
+                        unsafe fn clear(&mut self, n: usize) {
+                            for i in (0..n).rev() {
+                                ptr::read(self.get_unchecked_mut(i));
+                            }
+                        }
+                    }
+
+                    unsafe {
+                        let mut partial = PartialArray::Alive(mem::uninitialized());
+
+                        for i in 0..$len {
+                            let element = match visitor.visit() {
+                                Ok(Some(val)) => val,
+                                Ok(None) => {
+                                    partial.clear(i);
+                                    return Err(Error::end_of_stream());
+                                }
+                                Err(err) => {
+                                    partial.clear(i);
+                                    return Err(From::from(err));
+                                }
+                            };
+                            ptr::write(partial.get_unchecked_mut(i), element);
+                        }
+
+                        if let Err(err) = visitor.end() {
+                            partial.clear($len);
+                            return Err(From::from(err));
+                        }
+
+                        let array = ptr::read(&*partial);
+                        mem::forget(partial);
+                        Ok(array)
+                    }
+                }
+            }
+
+            impl<T> Deserialize for [T; $len]
+                where T: Deserialize,
+            {
+                fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
+                    where D: Deserializer,
+                {
+                    deserializer.deserialize_seq_fixed_size($len, $visitor::new())
+                }
+            }
+        )+
+    }
+}
+
+big_array_impls! {
+    ArrayVisitor9 [9]
+    ArrayVisitor10 [10]
+    ArrayVisitor11 [11]
+    ArrayVisitor12 [12]
+    ArrayVisitor13 [13]
+    ArrayVisitor14 [14]
+    ArrayVisitor15 [15]
+    ArrayVisitor16 [16]
+    ArrayVisitor17 [17]
+    ArrayVisitor18 [18]
+    ArrayVisitor19 [19]
+    ArrayVisitor20 [20]
+    ArrayVisitor21 [21]
+    ArrayVisitor22 [22]
+    ArrayVisitor23 [23]
+    ArrayVisitor24 [24]
+    ArrayVisitor25 [25]
+    ArrayVisitor26 [26]
+    ArrayVisitor27 [27]
+    ArrayVisitor28 [28]
+    ArrayVisitor29 [29]
+    ArrayVisitor30 [30]
+    ArrayVisitor31 [31]
+    ArrayVisitor32 [32]
 }
 
 ///////////////////////////////////////////////////////////////////////////////
