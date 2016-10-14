@@ -512,27 +512,26 @@ seq_impl!(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct ArrayVisitor0<T> {
-    marker: PhantomData<T>,
+struct ArrayVisitor<A> {
+    marker: PhantomData<A>,
 }
 
-impl<T> ArrayVisitor0<T> {
-    /// Construct a `ArrayVisitor0<T>`.
+impl<A> ArrayVisitor<A> {
     pub fn new() -> Self {
-        ArrayVisitor0 {
+        ArrayVisitor {
             marker: PhantomData,
         }
     }
 }
 
-impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
+impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize {
     type Value = [T; 0];
 
     #[inline]
     fn visit_unit<E>(&mut self) -> Result<[T; 0], E>
         where E: Error,
     {
-        Ok([T::default(); 0])
+        Ok([])
     }
 
     #[inline]
@@ -540,37 +539,24 @@ impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
         where V: SeqVisitor,
     {
         try!(visitor.end());
-        Ok([T::default(); 0])
+        Ok([])
     }
 }
 
 impl<T> Deserialize for [T; 0]
-    where T: Deserialize + Default
+    where T: Deserialize
 {
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize_seq(ArrayVisitor0::new())
+        deserializer.deserialize_seq_fixed_size(0, ArrayVisitor::<[T; 0]>::new())
     }
 }
 
 macro_rules! array_impls {
-    ($($visitor:ident, $len:expr => ($($name:ident),+),)+) => {
+    ($($len:expr => ($($name:ident)+))+) => {
         $(
-            struct $visitor<T> {
-                marker: PhantomData<T>,
-            }
-
-            impl<T> $visitor<T> {
-                /// Construct a `ArrayVisitor*<T>`.
-                pub fn new() -> Self {
-                    $visitor {
-                        marker: PhantomData
-                    }
-                }
-            }
-
-            impl<T> Visitor for $visitor<T> where T: Deserialize {
+            impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
                 type Value = [T; $len];
 
                 #[inline]
@@ -580,13 +566,13 @@ macro_rules! array_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(val) => val,
-                            None => { return Err(Error::end_of_stream()); }
+                            None => return Err(Error::end_of_stream()),
                         };
-                    )+;
+                    )+
 
                     try!(visitor.end());
 
-                    Ok([$($name,)+])
+                    Ok([$($name),+])
                 }
             }
 
@@ -596,7 +582,7 @@ macro_rules! array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.deserialize_seq_fixed_size($len, $visitor::new())
+                    deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
                 }
             }
         )+
@@ -604,71 +590,58 @@ macro_rules! array_impls {
 }
 
 array_impls! {
-    ArrayVisitor1, 1 => (a),
-    ArrayVisitor2, 2 => (a, b),
-    ArrayVisitor3, 3 => (a, b, c),
-    ArrayVisitor4, 4 => (a, b, c, d),
-    ArrayVisitor5, 5 => (a, b, c, d, e),
-    ArrayVisitor6, 6 => (a, b, c, d, e, f),
-    ArrayVisitor7, 7 => (a, b, c, d, e, f, g),
-    ArrayVisitor8, 8 => (a, b, c, d, e, f, g, h),
-    ArrayVisitor9, 9 => (a, b, c, d, e, f, g, h, i),
-    ArrayVisitor10, 10 => (a, b, c, d, e, f, g, h, i, j),
-    ArrayVisitor11, 11 => (a, b, c, d, e, f, g, h, i, j, k),
-    ArrayVisitor12, 12 => (a, b, c, d, e, f, g, h, i, j, k, l),
-    ArrayVisitor13, 13 => (a, b, c, d, e, f, g, h, i, j, k, l, m),
-    ArrayVisitor14, 14 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n),
-    ArrayVisitor15, 15 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o),
-    ArrayVisitor16, 16 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p),
-    ArrayVisitor17, 17 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q),
-    ArrayVisitor18, 18 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r),
-    ArrayVisitor19, 19 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s),
-    ArrayVisitor20, 20 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s ,t),
-    ArrayVisitor21, 21 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u),
-    ArrayVisitor22, 22 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v),
-    ArrayVisitor23, 23 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w),
-    ArrayVisitor24, 24 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x),
-    ArrayVisitor25, 25 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y),
-    ArrayVisitor26, 26 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z),
-    ArrayVisitor27, 27 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa),
-    ArrayVisitor28, 28 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab),
-    ArrayVisitor29, 29 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac),
-    ArrayVisitor30, 30 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad),
-    ArrayVisitor31, 31 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad, ae),
-    ArrayVisitor32, 32 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad, ae, af),
+    1 => (a)
+    2 => (a b)
+    3 => (a b c)
+    4 => (a b c d)
+    5 => (a b c d e)
+    6 => (a b c d e f)
+    7 => (a b c d e f g)
+    8 => (a b c d e f g h)
+    9 => (a b c d e f g h i)
+    10 => (a b c d e f g h i j)
+    11 => (a b c d e f g h i j k)
+    12 => (a b c d e f g h i j k l)
+    13 => (a b c d e f g h i j k l m)
+    14 => (a b c d e f g h i j k l m n)
+    15 => (a b c d e f g h i j k l m n o)
+    16 => (a b c d e f g h i j k l m n o p)
+    17 => (a b c d e f g h i j k l m n o p q)
+    18 => (a b c d e f g h i j k l m n o p q r)
+    19 => (a b c d e f g h i j k l m n o p q r s)
+    20 => (a b c d e f g h i j k l m n o p q r s t)
+    21 => (a b c d e f g h i j k l m n o p q r s t u)
+    22 => (a b c d e f g h i j k l m n o p q r s t u v)
+    23 => (a b c d e f g h i j k l m n o p q r s t u v w)
+    24 => (a b c d e f g h i j k l m n o p q r s t u v w x)
+    25 => (a b c d e f g h i j k l m n o p q r s t u v w x y)
+    26 => (a b c d e f g h i j k l m n o p q r s t u v w x y z)
+    27 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa)
+    28 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab)
+    29 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac)
+    30 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad)
+    31 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad ae)
+    32 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad ae af)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {
-    ($($len:expr => $visitor:ident => ($($name:ident),+),)+) => {
+    ($($len:expr => $visitor:ident => ($($name:ident)+))+) => {
         $(
             /// Construct a tuple visitor.
             pub struct $visitor<$($name,)+> {
                 marker: PhantomData<($($name,)+)>,
             }
 
-            impl<
-                $($name: Deserialize,)+
-            > $visitor<$($name,)+> {
+            impl<$($name: Deserialize,)+> $visitor<$($name,)+> {
                 /// Construct a `TupleVisitor*<T>`.
                 pub fn new() -> Self {
                     $visitor { marker: PhantomData }
                 }
             }
 
-
-            impl<
-                $($name: Deserialize,)+
-            > Visitor for $visitor<$($name,)+> {
+            impl<$($name: Deserialize),+> Visitor for $visitor<$($name,)+> {
                 type Value = ($($name,)+);
 
                 #[inline]
@@ -679,9 +652,9 @@ macro_rules! tuple_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(value) => value,
-                            None => { return Err(Error::end_of_stream()); }
+                            None => return Err(Error::end_of_stream()),
                         };
-                     )+;
+                    )+
 
                     try!(visitor.end());
 
@@ -689,9 +662,7 @@ macro_rules! tuple_impls {
                 }
             }
 
-            impl<
-                $($name: Deserialize),+
-            > Deserialize for ($($name,)+) {
+            impl<$($name: Deserialize),+> Deserialize for ($($name,)+) {
                 #[inline]
                 fn deserialize<D>(deserializer: &mut D) -> Result<($($name,)+), D::Error>
                     where D: Deserializer,
@@ -704,22 +675,22 @@ macro_rules! tuple_impls {
 }
 
 tuple_impls! {
-    1 => TupleVisitor1 => (T0),
-    2 => TupleVisitor2 => (T0, T1),
-    3 => TupleVisitor3 => (T0, T1, T2),
-    4 => TupleVisitor4 => (T0, T1, T2, T3),
-    5 => TupleVisitor5 => (T0, T1, T2, T3, T4),
-    6 => TupleVisitor6 => (T0, T1, T2, T3, T4, T5),
-    7 => TupleVisitor7 => (T0, T1, T2, T3, T4, T5, T6),
-    8 => TupleVisitor8 => (T0, T1, T2, T3, T4, T5, T6, T7),
-    9 => TupleVisitor9 => (T0, T1, T2, T3, T4, T5, T6, T7, T8),
-    10 => TupleVisitor10 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
-    11 => TupleVisitor11 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
-    12 => TupleVisitor12 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
-    13 => TupleVisitor13 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12),
-    14 => TupleVisitor14 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13),
-    15 => TupleVisitor15 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14),
-    16 => TupleVisitor16 => (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15),
+    1 => TupleVisitor1 => (T0)
+    2 => TupleVisitor2 => (T0 T1)
+    3 => TupleVisitor3 => (T0 T1 T2)
+    4 => TupleVisitor4 => (T0 T1 T2 T3)
+    5 => TupleVisitor5 => (T0 T1 T2 T3 T4)
+    6 => TupleVisitor6 => (T0 T1 T2 T3 T4 T5)
+    7 => TupleVisitor7 => (T0 T1 T2 T3 T4 T5 T6)
+    8 => TupleVisitor8 => (T0 T1 T2 T3 T4 T5 T6 T7)
+    9 => TupleVisitor9 => (T0 T1 T2 T3 T4 T5 T6 T7 T8)
+    10 => TupleVisitor10 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9)
+    11 => TupleVisitor11 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10)
+    12 => TupleVisitor12 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11)
+    13 => TupleVisitor13 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12)
+    14 => TupleVisitor14 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13)
+    15 => TupleVisitor15 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14)
+    16 => TupleVisitor16 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
