@@ -27,6 +27,8 @@ extern crate collections;
 #[cfg(all(feature = "unstable", feature = "alloc"))]
 extern crate alloc;
 
+extern crate arrayvec;
+
 #[cfg(feature = "std")]
 mod core {
     pub use std::{ops, hash, fmt, cmp, marker, mem, i8, i16, i32, i64, u8, u16, u32, u64, isize,

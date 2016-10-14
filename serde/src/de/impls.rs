@@ -610,81 +610,22 @@ macro_rules! big_array_impls {
                 fn visit_seq<V>(&mut self, mut visitor: V) -> Result<[T; $len], V::Error>
                     where V: SeqVisitor,
                 {
-                    use std::{mem, ptr};
-                    use std::ops::{Deref, DerefMut};
+                    let mut av = ::arrayvec::ArrayVec::new();
 
-                    enum PartialArray<T> {
-                        Alive([T; $len]),
-                        Dropped,
+                    for _ in 0..$len {
+                        let element = match try!(visitor.visit()) {
+                            Some(val) => val,
+                            None => return Err(Error::end_of_stream()),
+                        };
+                        av.push(element);
                     }
 
-                    impl<T> Drop for PartialArray<T> {
-                        fn drop(&mut self) {
-                            // inhibit dropping the elements
-                            unsafe {
-                                ptr::write(self, PartialArray::Dropped);
-                            }
-                        }
-                    }
+                    try!(visitor.end());
 
-                    impl<T> Deref for PartialArray<T> {
-                        type Target = [T; $len];
-
-                        fn deref(&self) -> &Self::Target {
-                            match *self {
-                                PartialArray::Alive(ref inner) => inner,
-                                _ => unreachable!(),
-                            }
-                        }
-                    }
-
-                    impl<T> DerefMut for PartialArray<T> {
-                        fn deref_mut(&mut self) -> &mut Self::Target {
-                            match *self {
-                                PartialArray::Alive(ref mut inner) => inner,
-                                _ => unreachable!(),
-                            }
-                        }
-                    }
-
-                    impl<T> PartialArray<T> {
-                        unsafe fn get_unchecked_mut(&mut self, i: usize) -> &mut T {
-                            &mut *(self.deref_mut() as *mut [T] as *mut T).offset(i as isize)
-                        }
-
-                        unsafe fn clear(&mut self, n: usize) {
-                            for i in (0..n).rev() {
-                                ptr::read(self.get_unchecked_mut(i));
-                            }
-                        }
-                    }
-
-                    unsafe {
-                        let mut partial = PartialArray::Alive(mem::uninitialized());
-
-                        for i in 0..$len {
-                            let element = match visitor.visit() {
-                                Ok(Some(val)) => val,
-                                Ok(None) => {
-                                    partial.clear(i);
-                                    return Err(Error::end_of_stream());
-                                }
-                                Err(err) => {
-                                    partial.clear(i);
-                                    return Err(From::from(err));
-                                }
-                            };
-                            ptr::write(partial.get_unchecked_mut(i), element);
-                        }
-
-                        if let Err(err) = visitor.end() {
-                            partial.clear($len);
-                            return Err(From::from(err));
-                        }
-
-                        let array = ptr::read(&*partial);
-                        mem::forget(partial);
-                        Ok(array)
+                    // Can't fail because we know we filled the array
+                    match av.into_inner() {
+                        Ok(array) => Ok(array),
+                        Err(_) => unreachable!(),
                     }
                 }
             }
