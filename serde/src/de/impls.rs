@@ -512,20 +512,19 @@ seq_impl!(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct ArrayVisitor0<T> {
-    marker: PhantomData<T>,
+struct ArrayVisitor<A> {
+    marker: PhantomData<A>,
 }
 
-impl<T> ArrayVisitor0<T> {
-    /// Construct a `ArrayVisitor0<T>`.
+impl<A> ArrayVisitor<A> {
     pub fn new() -> Self {
-        ArrayVisitor0 {
+        ArrayVisitor {
             marker: PhantomData,
         }
     }
 }
 
-impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
+impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize + Default {
     type Value = [T; 0];
 
     #[inline]
@@ -550,27 +549,14 @@ impl<T> Deserialize for [T; 0]
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize_seq(ArrayVisitor0::new())
+        deserializer.deserialize_seq(ArrayVisitor::<[T; 0]>::new())
     }
 }
 
 macro_rules! small_array_impls {
-    ($($visitor:ident, $len:expr => ($($name:ident),+),)+) => {
+    ($($len:expr => ($($name:ident),+),)+) => {
         $(
-            struct $visitor<T> {
-                marker: PhantomData<T>,
-            }
-
-            impl<T> $visitor<T> {
-                /// Construct a `ArrayVisitor*<T>`.
-                pub fn new() -> Self {
-                    $visitor {
-                        marker: PhantomData
-                    }
-                }
-            }
-
-            impl<T> Visitor for $visitor<T> where T: Deserialize {
+            impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
                 type Value = [T; $len];
 
                 #[inline]
@@ -580,9 +566,9 @@ macro_rules! small_array_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(val) => val,
-                            None => { return Err(Error::end_of_stream()); }
+                            None => return Err(Error::end_of_stream()),
                         };
-                    )+;
+                    )+
 
                     try!(visitor.end());
 
@@ -596,7 +582,7 @@ macro_rules! small_array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.deserialize_seq_fixed_size($len, $visitor::new())
+                    deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
                 }
             }
         )+
@@ -604,33 +590,20 @@ macro_rules! small_array_impls {
 }
 
 small_array_impls! {
-    ArrayVisitor1, 1 => (a),
-    ArrayVisitor2, 2 => (a, b),
-    ArrayVisitor3, 3 => (a, b, c),
-    ArrayVisitor4, 4 => (a, b, c, d),
-    ArrayVisitor5, 5 => (a, b, c, d, e),
-    ArrayVisitor6, 6 => (a, b, c, d, e, f),
-    ArrayVisitor7, 7 => (a, b, c, d, e, f, g),
-    ArrayVisitor8, 8 => (a, b, c, d, e, f, g, h),
+    1 => (a),
+    2 => (a, b),
+    3 => (a, b, c),
+    4 => (a, b, c, d),
+    5 => (a, b, c, d, e),
+    6 => (a, b, c, d, e, f),
+    7 => (a, b, c, d, e, f, g),
+    8 => (a, b, c, d, e, f, g, h),
 }
 
 macro_rules! big_array_impls {
-    ($($visitor:ident [$len:expr])+) => {
+    ($($len:expr)+) => {
         $(
-            struct $visitor<T> {
-                marker: PhantomData<T>,
-            }
-
-            impl<T> $visitor<T> {
-                /// Construct a `ArrayVisitor*<T>`.
-                pub fn new() -> Self {
-                    $visitor {
-                        marker: PhantomData
-                    }
-                }
-            }
-
-            impl<T> Visitor for $visitor<T> where T: Deserialize {
+            impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
                 type Value = [T; $len];
 
                 #[inline]
@@ -722,7 +695,7 @@ macro_rules! big_array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.deserialize_seq_fixed_size($len, $visitor::new())
+                    deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
                 }
             }
         )+
@@ -730,30 +703,7 @@ macro_rules! big_array_impls {
 }
 
 big_array_impls! {
-    ArrayVisitor9 [9]
-    ArrayVisitor10 [10]
-    ArrayVisitor11 [11]
-    ArrayVisitor12 [12]
-    ArrayVisitor13 [13]
-    ArrayVisitor14 [14]
-    ArrayVisitor15 [15]
-    ArrayVisitor16 [16]
-    ArrayVisitor17 [17]
-    ArrayVisitor18 [18]
-    ArrayVisitor19 [19]
-    ArrayVisitor20 [20]
-    ArrayVisitor21 [21]
-    ArrayVisitor22 [22]
-    ArrayVisitor23 [23]
-    ArrayVisitor24 [24]
-    ArrayVisitor25 [25]
-    ArrayVisitor26 [26]
-    ArrayVisitor27 [27]
-    ArrayVisitor28 [28]
-    ArrayVisitor29 [29]
-    ArrayVisitor30 [30]
-    ArrayVisitor31 [31]
-    ArrayVisitor32 [32]
+    9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
 }
 
 ///////////////////////////////////////////////////////////////////////////////
