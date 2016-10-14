@@ -524,14 +524,14 @@ impl<A> ArrayVisitor<A> {
     }
 }
 
-impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize + Default {
+impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize {
     type Value = [T; 0];
 
     #[inline]
     fn visit_unit<E>(&mut self) -> Result<[T; 0], E>
         where E: Error,
     {
-        Ok([T::default(); 0])
+        Ok([])
     }
 
     #[inline]
@@ -539,12 +539,12 @@ impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize + Default {
         where V: SeqVisitor,
     {
         try!(visitor.end());
-        Ok([T::default(); 0])
+        Ok([])
     }
 }
 
 impl<T> Deserialize for [T; 0]
-    where T: Deserialize + Default
+    where T: Deserialize
 {
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
