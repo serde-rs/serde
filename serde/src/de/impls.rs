@@ -549,7 +549,7 @@ impl<T> Deserialize for [T; 0]
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize_seq(ArrayVisitor::<[T; 0]>::new())
+        deserializer.deserialize_seq_fixed_size(0, ArrayVisitor::<[T; 0]>::new())
     }
 }
 
