@@ -512,27 +512,26 @@ seq_impl!(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct ArrayVisitor0<T> {
-    marker: PhantomData<T>,
+struct ArrayVisitor<A> {
+    marker: PhantomData<A>,
 }
 
-impl<T> ArrayVisitor0<T> {
-    /// Construct a `ArrayVisitor0<T>`.
+impl<A> ArrayVisitor<A> {
     pub fn new() -> Self {
-        ArrayVisitor0 {
+        ArrayVisitor {
             marker: PhantomData,
         }
     }
 }
 
-impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
+impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize {
     type Value = [T; 0];
 
     #[inline]
     fn visit_unit<E>(&mut self) -> Result<[T; 0], E>
         where E: Error,
     {
-        Ok([T::default(); 0])
+        Ok([])
     }
 
     #[inline]
@@ -540,37 +539,24 @@ impl<T> Visitor for ArrayVisitor0<T> where T: Deserialize + Default {
         where V: SeqVisitor,
     {
         try!(visitor.end());
-        Ok([T::default(); 0])
+        Ok([])
     }
 }
 
 impl<T> Deserialize for [T; 0]
-    where T: Deserialize + Default
+    where T: Deserialize
 {
     fn deserialize<D>(deserializer: &mut D) -> Result<[T; 0], D::Error>
         where D: Deserializer,
     {
-        deserializer.deserialize_seq(ArrayVisitor0::new())
+        deserializer.deserialize_seq_fixed_size(0, ArrayVisitor::<[T; 0]>::new())
     }
 }
 
-macro_rules! array_impls {
-    ($($visitor:ident, $len:expr => ($($name:ident),+),)+) => {
+macro_rules! small_array_impls {
+    ($($len:expr => ($($name:ident),+),)+) => {
         $(
-            struct $visitor<T> {
-                marker: PhantomData<T>,
-            }
-
-            impl<T> $visitor<T> {
-                /// Construct a `ArrayVisitor*<T>`.
-                pub fn new() -> Self {
-                    $visitor {
-                        marker: PhantomData
-                    }
-                }
-            }
-
-            impl<T> Visitor for $visitor<T> where T: Deserialize {
+            impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
                 type Value = [T; $len];
 
                 #[inline]
@@ -580,9 +566,9 @@ macro_rules! array_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(val) => val,
-                            None => { return Err(Error::end_of_stream()); }
+                            None => return Err(Error::end_of_stream()),
                         };
-                    )+;
+                    )+
 
                     try!(visitor.end());
 
@@ -596,54 +582,69 @@ macro_rules! array_impls {
                 fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
                     where D: Deserializer,
                 {
-                    deserializer.deserialize_seq_fixed_size($len, $visitor::new())
+                    deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
                 }
             }
         )+
     }
 }
 
-array_impls! {
-    ArrayVisitor1, 1 => (a),
-    ArrayVisitor2, 2 => (a, b),
-    ArrayVisitor3, 3 => (a, b, c),
-    ArrayVisitor4, 4 => (a, b, c, d),
-    ArrayVisitor5, 5 => (a, b, c, d, e),
-    ArrayVisitor6, 6 => (a, b, c, d, e, f),
-    ArrayVisitor7, 7 => (a, b, c, d, e, f, g),
-    ArrayVisitor8, 8 => (a, b, c, d, e, f, g, h),
-    ArrayVisitor9, 9 => (a, b, c, d, e, f, g, h, i),
-    ArrayVisitor10, 10 => (a, b, c, d, e, f, g, h, i, j),
-    ArrayVisitor11, 11 => (a, b, c, d, e, f, g, h, i, j, k),
-    ArrayVisitor12, 12 => (a, b, c, d, e, f, g, h, i, j, k, l),
-    ArrayVisitor13, 13 => (a, b, c, d, e, f, g, h, i, j, k, l, m),
-    ArrayVisitor14, 14 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n),
-    ArrayVisitor15, 15 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o),
-    ArrayVisitor16, 16 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p),
-    ArrayVisitor17, 17 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q),
-    ArrayVisitor18, 18 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r),
-    ArrayVisitor19, 19 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s),
-    ArrayVisitor20, 20 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s ,t),
-    ArrayVisitor21, 21 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u),
-    ArrayVisitor22, 22 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v),
-    ArrayVisitor23, 23 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w),
-    ArrayVisitor24, 24 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x),
-    ArrayVisitor25, 25 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y),
-    ArrayVisitor26, 26 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z),
-    ArrayVisitor27, 27 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa),
-    ArrayVisitor28, 28 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab),
-    ArrayVisitor29, 29 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac),
-    ArrayVisitor30, 30 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad),
-    ArrayVisitor31, 31 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad, ae),
-    ArrayVisitor32, 32 => (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x,
-                           y, z, aa, ab, ac, ad, ae, af),
+small_array_impls! {
+    1 => (a),
+    2 => (a, b),
+    3 => (a, b, c),
+    4 => (a, b, c, d),
+    5 => (a, b, c, d, e),
+    6 => (a, b, c, d, e, f),
+    7 => (a, b, c, d, e, f, g),
+    8 => (a, b, c, d, e, f, g, h),
+}
+
+macro_rules! big_array_impls {
+    ($($len:expr)+) => {
+        $(
+            impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
+                type Value = [T; $len];
+
+                #[inline]
+                fn visit_seq<V>(&mut self, mut visitor: V) -> Result<[T; $len], V::Error>
+                    where V: SeqVisitor,
+                {
+                    let mut av = ::arrayvec::ArrayVec::new();
+
+                    for _ in 0..$len {
+                        let element = match try!(visitor.visit()) {
+                            Some(val) => val,
+                            None => return Err(Error::end_of_stream()),
+                        };
+                        av.push(element);
+                    }
+
+                    try!(visitor.end());
+
+                    // Can't fail because we know we filled the array
+                    match av.into_inner() {
+                        Ok(array) => Ok(array),
+                        Err(_) => unreachable!(),
+                    }
+                }
+            }
+
+            impl<T> Deserialize for [T; $len]
+                where T: Deserialize,
+            {
+                fn deserialize<D>(deserializer: &mut D) -> Result<[T; $len], D::Error>
+                    where D: Deserializer,
+                {
+                    deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
+                }
+            }
+        )+
+    }
+}
+
+big_array_impls! {
+    9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
 }
 
 ///////////////////////////////////////////////////////////////////////////////
