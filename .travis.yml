@@ -1,11 +1,11 @@
 sudo: false
 language: rust
 rust:
+- 1.10.0
+- 1.11.0
 - stable
-- nightly
-- 1.8.0
-- 1.9.0
 - beta
+- nightly
 addons:
   apt:
     packages:
