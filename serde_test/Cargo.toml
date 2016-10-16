@@ -1,6 +1,6 @@
 [package]
 name = "serde_test"
-version = "0.8.12"
+version = "0.8.13"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"
@@ -12,4 +12,4 @@ keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
-serde = { version = "0.8.12", path = "../serde" }
+serde = { version = "0.8.13", path = "../serde" }
