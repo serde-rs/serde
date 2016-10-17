@@ -4,6 +4,9 @@
 extern crate proc_macro;
 extern crate serde_codegen;
 
+#[macro_use]
+extern crate post_expansion;
+
 use proc_macro::TokenStream;
 
 #[proc_macro_derive(Serialize)]
@@ -23,3 +26,5 @@ pub fn derive_deserialize(input: TokenStream) -> TokenStream {
         Err(msg) => panic!(msg),
     }
 }
+
+register_post_expansion!(PostExpansion_serde);
