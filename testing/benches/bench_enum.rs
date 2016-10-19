@@ -251,7 +251,7 @@ mod decoder {
 mod deserializer {
     use super::{Animal, Error};
 
-    use serde::de;
+    use serde::de::{self, Deserialize};
 
     #[derive(Debug)]
     enum State {
@@ -336,6 +336,12 @@ mod deserializer {
                 }
             }
         }
+
+        forward_to_deserialize! {
+            bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str
+            string unit option seq seq_fixed_size bytes map unit_struct
+            newtype_struct tuple_struct struct struct_field tuple ignored_any
+        }
     }
 
     struct DogVisitor<'a> {
@@ -353,6 +359,24 @@ mod deserializer {
 
         fn visit_unit(&mut self) -> Result<(), Error> {
             de::Deserialize::deserialize(self.de)
+        }
+
+        fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
+            where T: Deserialize
+        {
+            Err(de::Error::invalid_type(de::Type::TupleVariant))
+        }
+
+        fn visit_tuple<V>(&mut self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
+            where V: de::Visitor
+        {
+            Err(de::Error::invalid_type(de::Type::TupleVariant))
+        }
+
+        fn visit_struct<V>(&mut self, _fields: &'static [&'static str], _visitor: V) -> Result<V::Value, Self::Error>
+            where V: de::Visitor
+        {
+            Err(de::Error::invalid_type(de::Type::StructVariant))
         }
     }
 
@@ -376,6 +400,22 @@ mod deserializer {
             where V: de::Visitor,
         {
             visitor.visit_seq(self)
+        }
+
+        fn visit_unit(&mut self) -> Result<(), Error> {
+            Err(de::Error::invalid_type(de::Type::UnitVariant))
+        }
+
+        fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
+            where T: Deserialize
+        {
+            Err(de::Error::invalid_type(de::Type::TupleVariant))
+        }
+
+        fn visit_struct<V>(&mut self, _fields: &'static [&'static str], _visitor: V) -> Result<V::Value, Self::Error>
+            where V: de::Visitor
+        {
+            Err(de::Error::invalid_type(de::Type::StructVariant))
         }
     }
 

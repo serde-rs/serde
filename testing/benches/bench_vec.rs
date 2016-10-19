@@ -411,6 +411,13 @@ mod deserializer {
                 }
             }
         }
+
+        forward_to_deserialize! {
+            bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str
+            string unit option seq seq_fixed_size bytes map unit_struct
+            newtype_struct tuple_struct struct struct_field tuple enum
+            ignored_any
+        }
     }
 
     impl de::SeqVisitor for Deserializer<usize> {
@@ -469,6 +476,13 @@ mod deserializer {
                     Err(Error::EndOfStream)
                 }
             }
+        }
+
+        forward_to_deserialize! {
+            bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str
+            string unit option seq seq_fixed_size bytes map unit_struct
+            newtype_struct tuple_struct struct struct_field tuple enum
+            ignored_any
         }
     }
 
