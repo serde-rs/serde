@@ -29,7 +29,3 @@ clippy = { version = "^0.*", optional = true }
 [[test]]
 name = "test"
 path = "tests/test.rs"
-
-[[bench]]
-name = "bench"
-path = "benches/bench.rs"
