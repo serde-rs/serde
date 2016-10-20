@@ -27,6 +27,9 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
+#[cfg(feature = "with-syn")]
+extern crate post_expansion;
+
 #[cfg(feature = "with-syntex")]
 use std::path::Path;
 
@@ -193,7 +196,7 @@ pub fn expand_single_item(item: &str) -> Result<String, String> {
     } else {
         None::<quote::Tokens>
     };
-    let syn_item = strip_serde_attrs(syn_item);
+    let syn_item = post_expansion::strip_attrs_later(syn_item, &["serde"], "serde");
     return Ok(quote!(#expanded_ser #expanded_de #syn_item).to_string());
 
     fn strip_serde_derives(item: syn::MacroInput) -> (bool, bool, syn::MacroInput) {
@@ -241,55 +244,5 @@ pub fn expand_single_item(item: &str) -> Result<String, String> {
             ..item
         };
         (ser, de, item)
-    }
-
-    fn strip_serde_attrs(item: syn::MacroInput) -> syn::MacroInput {
-        syn::MacroInput {
-            attrs: strip_serde_from_attrs(item.attrs),
-            body: match item.body {
-                syn::Body::Enum(variants) => syn::Body::Enum(
-                    variants.into_iter().map(|variant| {
-                        syn::Variant {
-                            ident: variant.ident,
-                            attrs: strip_serde_from_attrs(variant.attrs),
-                            data: strip_serde_from_variant_data(variant.data),
-                            discriminant: variant.discriminant,
-                        }
-                    }).collect()
-                ),
-                syn::Body::Struct(variant_data) => syn::Body::Struct(
-                    strip_serde_from_variant_data(variant_data)
-                ),
-            },
-            ..item
-        }
-    }
-
-    fn strip_serde_from_variant_data(data: syn::VariantData) -> syn::VariantData {
-        match data {
-            syn::VariantData::Struct(fields) => syn::VariantData::Struct(
-                fields.into_iter().map(strip_serde_from_field).collect()
-            ),
-            syn::VariantData::Tuple(fields) => syn::VariantData::Tuple(
-                fields.into_iter().map(strip_serde_from_field).collect()
-            ),
-            syn::VariantData::Unit => syn::VariantData::Unit,
-        }
-    }
-
-    fn strip_serde_from_field(field: syn::Field) -> syn::Field {
-        syn::Field {
-            attrs: strip_serde_from_attrs(field.attrs),
-            ..field
-        }
-    }
-
-    fn strip_serde_from_attrs(attrs: Vec<syn::Attribute>) -> Vec<syn::Attribute> {
-        attrs.into_iter().filter(|attr| {
-            match attr.value {
-                syn::MetaItem::List(ref ident, _) => ident != "serde",
-                _ => true,
-            }
-        }).collect()
     }
 }

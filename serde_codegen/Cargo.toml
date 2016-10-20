@@ -22,6 +22,7 @@ with-syn = []
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
+post-expansion = "0.1.0"
 quote = "0.3"
 serde_codegen_internals = { version = "=0.10.0", default-features = false, path = "../serde_codegen_internals" }
 syn = { version = "0.9", features = ["aster", "visit"] }
