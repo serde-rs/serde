@@ -6,12 +6,6 @@ rust:
 - stable
 - beta
 - nightly
-addons:
-  apt:
-    packages:
-    - libcurl4-openssl-dev
-    - libelf-dev
-    - libdw-dev
 before_script:
 - pip install 'travis-cargo<0.2' --user
 - export PATH=$HOME/.local/bin:$PATH
@@ -28,8 +22,6 @@ script:
 - (cd examples/serde-syntex-example && travis-cargo --skip nightly run)
 - (cd examples/serde-syntex-example && travis-cargo --only nightly run -- --no-default-features --features unstable)
 - (cd serde && travis-cargo --only stable doc)
-after_success:
-- (cd testing && travis-cargo --only stable coveralls --no-sudo)
 env:
   global:
   - TRAVIS_CARGO_NIGHTLY_FEATURE=""
