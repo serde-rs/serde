@@ -1,6 +1,6 @@
 [package]
 name = "serde_testing"
-version = "0.8.13"
+version = "0.8.14"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -29,7 +29,3 @@ clippy = { version = "^0.*", optional = true }
 [[test]]
 name = "test"
 path = "tests/test.rs"
-
-[[bench]]
-name = "bench"
-path = "benches/bench.rs"

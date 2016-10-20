@@ -1,4 +1,0 @@
-mod bench_enum;
-mod bench_map;
-mod bench_struct;
-mod bench_vec;

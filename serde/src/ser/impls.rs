@@ -313,11 +313,6 @@ impl Serialize for () {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// FIXME(rust #19630) Remove this work-around
-macro_rules! e {
-    ($e:expr) => { $e }
-}
-
 macro_rules! tuple_impls {
     ($(
         $TupleVisitor:ident ($len:expr, $($T:ident),+) {
@@ -334,7 +329,7 @@ macro_rules! tuple_impls {
                 {
                     let mut state = try!(serializer.serialize_tuple($len));
                     $(
-                        try!(serializer.serialize_tuple_elt(&mut state, &e!(self.$idx)));
+                        try!(serializer.serialize_tuple_elt(&mut state, &self.$idx));
                     )+
                     serializer.serialize_tuple_end(state)
                 }
