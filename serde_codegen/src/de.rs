@@ -881,7 +881,7 @@ fn deserialize_map(
         .map(|&(_, ref name)| {
             quote! {
                 __Field::#name => {
-                    try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>());
+                    let _ = try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>());
                 }
             }
         })
@@ -892,7 +892,7 @@ fn deserialize_map(
         None
     } else {
         Some(quote! {
-            _ => { try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>()); }
+            _ => { let _ = try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>()); }
         })
     };
 
