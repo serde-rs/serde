@@ -69,6 +69,7 @@ use core::nonzero::{NonZero, Zeroable};
 use super::{
     Error,
     Serialize,
+    SerializeTo,
     Serializer,
 };
 
@@ -721,5 +722,13 @@ impl Serialize for path::PathBuf {
 impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
         (**self).serialize(serializer)
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+impl<S, T> SerializeTo<S> for T where S: Serializer, T: Serialize {
+    fn serialize_to(&self, serializer: &mut S) -> Result<(), S::Error> {
+        self.serialize(serializer)
     }
 }
