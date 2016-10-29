@@ -3,12 +3,6 @@
 //! Implement the `Serialize` trait for the type of objects you want to serialize. Call methods of
 //! the `serializer` object. For which methods to call and how to do so, look at the documentation
 //! of the `Serializer` trait.
-//!
-//! # For Serialization Format Developers
-//! Implement the `Serializer` trait for a structure that contains fields that enable it to write
-//! the serialization result to your target. When a method's argument is an object of type
-//! `Serialize`, you can either forward the serializer object (`self`) or create a new one,
-//! depending on the quirks of your format.
 
 #[cfg(feature = "std")]
 use std::error;
@@ -75,15 +69,6 @@ pub trait SerializeTo<S: Serializer + ?Sized> {
 /// Make sure that you always use the same state object and only the state object that was returned
 /// by the `serialize_T` method. Finally, when your object is done, call the `serialize_T_end`
 /// method and pass the state object by value
-///
-/// # For Serialization Format Developers
-/// If your format has different situations where it accepts different types, create a
-/// `Serializer` for each situation. You can create the sub-`Serializer` in one of the aggregate
-/// `serialize_T` methods and return it as a state object. Remember to also set the corresponding
-/// associated type `TState`. In the `serialize_T_elt` methods you will be given a mutable
-/// reference to that state. You do not need to do any additional checks for the correctness of the
-/// state object, as it is expected that the user will not modify it. Due to the generic nature
-/// of the `Serialize` impls, modifying the object is impossible on stable Rust.
 pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
