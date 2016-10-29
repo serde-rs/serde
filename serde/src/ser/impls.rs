@@ -727,7 +727,7 @@ impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-impl<S, T> SerializeTo<S> for T where S: Serializer, T: Serialize {
+impl<S, T: ?Sized> SerializeTo<S> for T where S: Serializer, T: Serialize {
     fn serialize_to(&self, serializer: &mut S) -> Result<(), S::Error> {
         self.serialize(serializer)
     }
