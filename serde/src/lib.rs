@@ -37,7 +37,7 @@ mod core {
     pub use self::core::nonzero;
 }
 
-pub use ser::{Serialize, Serializer};
+pub use ser::{Serialize, Serializer, SerializeTo};
 pub use de::{Deserialize, Deserializer, Error};
 
 #[cfg(not(feature = "std"))]

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error;
 
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::{Serialize, SerializeTo, Serializer, Deserialize, Deserializer};
 use serde::bytes::{ByteBuf, Bytes};
 use serde::ser;
 use serde::de;
@@ -138,19 +138,19 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_some<V>(&mut self, _value: V) -> Result<(), Error>
-        where V: Serialize,
+        where V: SerializeTo<Self>,
     {
         Err(Error)
     }
 
     fn serialize_newtype_struct<V>(&mut self, _: &'static str, _value: V) -> Result<(), Error>
-        where V: Serialize,
+        where V: SerializeTo<Self>,
     {
         Err(Error)
     }
 
     fn serialize_newtype_variant<V>(&mut self, _: &'static str, _: usize, _: &'static str, _value: V) -> Result<(), Error>
-        where V: Serialize,
+        where V: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -166,7 +166,7 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_seq_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -182,7 +182,7 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_tuple_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -198,7 +198,7 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_tuple_struct_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -214,7 +214,7 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_tuple_variant_elt<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -230,13 +230,13 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_map_key<T>(&mut self, _: &mut (), _key: T) -> Result<(), Error>
-        where T: Serialize
+        where T: SerializeTo<Self>,
     {
         Err(Error)
     }
 
     fn serialize_map_value<T>(&mut self, _: &mut (), _value: T) -> Result<(), Error>
-        where T: Serialize
+        where T: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -252,7 +252,7 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_struct_elt<V>(&mut self, _: &mut (), _key: &'static str, _value: V) -> Result<(), Error>
-        where V: Serialize,
+        where V: SerializeTo<Self>,
     {
         Err(Error)
     }
@@ -268,7 +268,7 @@ impl Serializer for BytesSerializer {
     }
 
     fn serialize_struct_variant_elt<V>(&mut self, _: &mut (), _key: &'static str, _value: V) -> Result<(), Error>
-        where V: Serialize,
+        where V: SerializeTo<Self>,
     {
         Err(Error)
     }
