@@ -3,12 +3,6 @@
 //! Implement the `Serialize` trait for the type of objects you want to serialize. Call methods of
 //! the `serializer` object. For which methods to call and how to do so, look at the documentation
 //! of the `Serializer` trait.
-//!
-//! # For Serialization Format Developers
-//! Implement the `Serializer` trait for a structure that contains fields that enable it to write
-//! the serialization result to your target. When a method's argument is an object of type
-//! `Serialize`, you can either forward the serializer object (`self`) or create a new one,
-//! depending on the quirks of your format.
 
 #[cfg(feature = "std")]
 use std::error;
@@ -41,11 +35,24 @@ pub trait Error: Sized + error::Error {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// A trait that describes a type that can be serialized by a `Serializer`.
+/// A trait that describes a type that can be serialized by any `Serializer`.
 pub trait Serialize {
     /// Serializes this value into this serializer.
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// A trait that describes a type that can be serialized by a particular
+/// `Serializer`.
+///
+/// This trait is derived for all types which implement `Serialize`. Usually,
+/// you should not implement it, but should instead implement `Serialize`. This
+/// type exists to assist in creating serializable trait objects.
+pub trait SerializeTo<S: Serializer + ?Sized> {
+    /// Serializes this value into its serializer.
+    fn serialize_to(&self, serializer: &mut S) -> Result<(), S::Error>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -62,15 +69,6 @@ pub trait Serialize {
 /// Make sure that you always use the same state object and only the state object that was returned
 /// by the `serialize_T` method. Finally, when your object is done, call the `serialize_T_end`
 /// method and pass the state object by value
-///
-/// # For Serialization Format Developers
-/// If your format has different situations where it accepts different types, create a
-/// `Serializer` for each situation. You can create the sub-`Serializer` in one of the aggregate
-/// `serialize_T` methods and return it as a state object. Remember to also set the corresponding
-/// associated type `TState`. In the `serialize_T_elt` methods you will be given a mutable
-/// reference to that state. You do not need to do any additional checks for the correctness of the
-/// state object, as it is expected that the user will not modify it. Due to the generic nature
-/// of the `Serialize` impls, modifying the object is impossible on stable Rust.
 pub trait Serializer {
     /// The error type that can be returned if some error occurs during serialization.
     type Error: Error;
@@ -205,7 +203,7 @@ pub trait Serializer {
     /// struct, to be more efficiently serialized than a tuple struct with
     /// multiple items. A reasonable implementation would be to forward to
     /// `serialize_tuple_struct` or to just serialize the inner value without wrapping.
-    fn serialize_newtype_struct<T: Serialize>(
+    fn serialize_newtype_struct<T: SerializeTo<Self>>(
         &mut self,
         name: &'static str,
         value: T,
@@ -214,7 +212,7 @@ pub trait Serializer {
     /// Allows a variant with a single item to be more efficiently serialized
     /// than a variant with multiple items. A reasonable implementation would be
     /// to forward to `serialize_tuple_variant`.
-    fn serialize_newtype_variant<T: Serialize>(
+    fn serialize_newtype_variant<T: SerializeTo<Self>>(
         &mut self,
         name: &'static str,
         variant_index: usize,
@@ -226,7 +224,7 @@ pub trait Serializer {
     fn serialize_none(&mut self) -> Result<(), Self::Error>;
 
     /// Serializes a `Some(...)` value.
-    fn serialize_some<T: Serialize>(
+    fn serialize_some<T: SerializeTo<Self>>(
         &mut self,
         value: T,
     ) -> Result<(), Self::Error>;
@@ -240,7 +238,7 @@ pub trait Serializer {
 
     /// Serializes a sequence element. Must have previously called
     /// `serialize_seq`.
-    fn serialize_seq_elt<T: Serialize>(
+    fn serialize_seq_elt<T: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::SeqState,
         value: T,
@@ -271,7 +269,7 @@ pub trait Serializer {
 
     /// Serializes a tuple element. Must have previously called
     /// `serialize_tuple`.
-    fn serialize_tuple_elt<T: Serialize>(
+    fn serialize_tuple_elt<T: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::TupleState,
         value: T,
@@ -295,7 +293,7 @@ pub trait Serializer {
 
     /// Serializes a tuple struct element. Must have previously called
     /// `serialize_tuple_struct`.
-    fn serialize_tuple_struct_elt<T: Serialize>(
+    fn serialize_tuple_struct_elt<T: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::TupleStructState,
         value: T,
@@ -321,7 +319,7 @@ pub trait Serializer {
 
     /// Serializes a tuple variant element. Must have previously called
     /// `serialize_tuple_variant`.
-    fn serialize_tuple_variant_elt<T: Serialize>(
+    fn serialize_tuple_variant_elt<T: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::TupleVariantState,
         value: T,
@@ -342,14 +340,14 @@ pub trait Serializer {
     ) -> Result<Self::MapState, Self::Error>;
 
     /// Serialize a map key. Must have previously called `serialize_map`.
-    fn serialize_map_key<T: Serialize>(
+    fn serialize_map_key<T: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::MapState,
         key: T
     ) -> Result<(), Self::Error>;
 
     /// Serialize a map value. Must have previously called `serialize_map`.
-    fn serialize_map_value<T: Serialize>(
+    fn serialize_map_value<T: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::MapState,
         value: T
@@ -371,7 +369,7 @@ pub trait Serializer {
 
     /// Serializes a struct field. Must have previously called
     /// `serialize_struct`.
-    fn serialize_struct_elt<V: Serialize>(
+    fn serialize_struct_elt<V: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::StructState,
         key: &'static str,
@@ -397,7 +395,7 @@ pub trait Serializer {
 
     /// Serialize a struct variant element. Must have previously called
     /// `serialize_struct_variant`.
-    fn serialize_struct_variant_elt<V: Serialize>(
+    fn serialize_struct_variant_elt<V: SerializeTo<Self>>(
         &mut self,
         state: &mut Self::StructVariantState,
         key: &'static str,
