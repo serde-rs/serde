@@ -171,9 +171,8 @@ macro_rules! shim {
 
             use syntax::parse;
             let name = stringify!($name).to_string();
-            let cfg = Vec::new();
             let sess = cx.parse_sess;
-            let impl_item = parse::parse_item_from_source_str(name, expanded, cfg, sess);
+            let impl_item = parse::parse_item_from_source_str(name, expanded, sess);
             push(::syntax::ext::base::Annotatable::Item(impl_item.unwrap().unwrap()));
         }
     };
