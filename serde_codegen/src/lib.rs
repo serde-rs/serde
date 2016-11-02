@@ -2,25 +2,25 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "clippy", allow(used_underscore_binding))]
-#![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
+#![cfg_attr(all(not(feature = "with-syn"), not(feature = "with-syntex")), feature(rustc_private, plugin))]
 
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "192"]
 
 extern crate serde_codegen_internals as internals;
 
-#[cfg(feature = "with-syntex")]
+#[cfg(all(not(feature = "with-syn"), feature = "with-syntex"))]
 extern crate syntex;
 
-#[cfg(feature = "with-syntex")]
+#[cfg(all(not(feature = "with-syn"), feature = "with-syntex"))]
 #[macro_use]
 extern crate syntex_syntax as syntax;
 
-#[cfg(not(feature = "with-syntex"))]
+#[cfg(all(not(feature = "with-syn"), not(feature = "with-syntex")))]
 #[macro_use]
 extern crate syntax;
 
-#[cfg(not(feature = "with-syntex"))]
+#[cfg(all(not(feature = "with-syn"), not(feature = "with-syntex")))]
 extern crate rustc_plugin;
 
 extern crate syn;
@@ -30,17 +30,17 @@ extern crate quote;
 #[cfg(feature = "with-syn")]
 extern crate post_expansion;
 
-#[cfg(feature = "with-syntex")]
+#[cfg(all(not(feature = "with-syn"), feature = "with-syntex"))]
 use std::path::Path;
 
-#[cfg(not(feature = "with-syntex"))]
+#[cfg(all(not(feature = "with-syn"), not(feature = "with-syntex")))]
 use syntax::feature_gate::AttributeType;
 
 mod bound;
 mod de;
 mod ser;
 
-#[cfg(feature = "with-syntex")]
+#[cfg(all(not(feature = "with-syn"), feature = "with-syntex"))]
 fn syntex_registry() -> syntex::Registry {
     use syntax::{ast, fold};
 
@@ -81,7 +81,7 @@ fn syntex_registry() -> syntex::Registry {
     reg
 }
 
-#[cfg(feature = "with-syntex")]
+#[cfg(all(not(feature = "with-syn"), feature = "with-syntex"))]
 pub fn expand_str(src: &str) -> Result<String, syntex::Error> {
     let src = src.to_owned();
 
@@ -92,7 +92,7 @@ pub fn expand_str(src: &str) -> Result<String, syntex::Error> {
     syntex::with_extra_stack(expand_thread)
 }
 
-#[cfg(feature = "with-syntex")]
+#[cfg(all(not(feature = "with-syn"), feature = "with-syntex"))]
 pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     where S: AsRef<Path>,
           D: AsRef<Path>,
@@ -107,7 +107,7 @@ pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     syntex::with_extra_stack(expand_thread)
 }
 
-#[cfg(not(feature = "with-syntex"))]
+#[cfg(all(not(feature = "with-syn"), not(feature = "with-syntex")))]
 pub fn register(reg: &mut rustc_plugin::Registry) {
     reg.register_syntax_extension(
         syntax::parse::token::intern("derive_Serialize"),
@@ -179,7 +179,9 @@ macro_rules! shim {
     };
 }
 
+#[cfg(not(feature = "with-syn"))]
 shim!(Serialize ser::expand_derive_serialize);
+#[cfg(not(feature = "with-syn"))]
 shim!(Deserialize de::expand_derive_deserialize);
 
 #[cfg(feature = "with-syn")]
