@@ -218,12 +218,14 @@ pub fn expand_single_item(item: &str) -> Result<String, String> {
                     });
                 }
                 let rest: Vec<_> = nested.into_iter().filter(|nested| {
+                    use syn::MetaItem::Word;
+                    use syn::NestedMetaItem::MetaItem;
                     match *nested {
-                        syn::MetaItem::Word(ref word) if word == "Serialize" => {
+                        MetaItem(Word(ref word)) if word == "Serialize" => {
                             ser = true;
                             false
                         }
-                        syn::MetaItem::Word(ref word) if word == "Deserialize" => {
+                        MetaItem(Word(ref word)) if word == "Deserialize" => {
                             de = true;
                             false
                         }
