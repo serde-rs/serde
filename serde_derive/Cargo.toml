@@ -15,7 +15,7 @@ name = "serde_derive"
 proc-macro = true
 
 [dependencies]
-post-expansion = "0.1.0"
+post-expansion = "0.2.0"
 
 [dependencies.serde_codegen]
 version = "=0.8.17"
