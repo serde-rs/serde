@@ -4,27 +4,20 @@
 extern crate proc_macro;
 extern crate serde_codegen;
 
-#[macro_use]
-extern crate post_expansion;
-
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(Serialize)]
+#[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
-    let item = format!("#[derive(Serialize)]\n{}", input);
-    match serde_codegen::expand_single_item(&item) {
+    match serde_codegen::expand_derive_serialize(&input.to_string()) {
         Ok(expanded) => expanded.parse().unwrap(),
         Err(msg) => panic!(msg),
     }
 }
 
-#[proc_macro_derive(Deserialize)]
+#[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
-    let item = format!("#[derive(Deserialize)]\n{}", input);
-    match serde_codegen::expand_single_item(&item) {
+    match serde_codegen::expand_derive_deserialize(&input.to_string()) {
         Ok(expanded) => expanded.parse().unwrap(),
         Err(msg) => panic!(msg),
     }
 }
-
-register_post_expansion!(PostExpansion_serde);
