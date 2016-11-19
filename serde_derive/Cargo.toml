@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "0.8.17"
+version = "0.8.18"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
@@ -15,7 +15,7 @@ name = "serde_derive"
 proc-macro = true
 
 [dependencies.serde_codegen]
-version = "=0.8.17"
+version = "=0.8.18"
 path = "../serde_codegen"
 default-features = false
 features = ["with-syn"]
@@ -23,5 +23,5 @@ features = ["with-syn"]
 [dev-dependencies]
 compiletest_rs = "^0.2.0"
 fnv = "1.0"
-serde = { version = "0.8.17", path = "../serde" }
-serde_test = { version = "0.8.17", path = "../serde_test" }
+serde = { version = "0.8.18", path = "../serde" }
+serde_test = { version = "0.8.18", path = "../serde_test" }
