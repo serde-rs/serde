@@ -14,9 +14,6 @@ include = ["Cargo.toml", "src/**/*.rs"]
 name = "serde_derive"
 proc-macro = true
 
-[dependencies]
-post-expansion = "0.2.0"
-
 [dependencies.serde_codegen]
 version = "=0.8.17"
 path = "../serde_codegen"
