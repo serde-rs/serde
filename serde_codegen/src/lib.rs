@@ -2,7 +2,6 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "clippy", allow(used_underscore_binding))]
-#![cfg_attr(not(feature = "with-syntex"), feature(rustc_private, plugin))]
 
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "192"]
@@ -16,22 +15,12 @@ extern crate syntex;
 #[macro_use]
 extern crate syntex_syntax as syntax;
 
-#[cfg(not(feature = "with-syntex"))]
-#[macro_use]
-extern crate syntax;
-
-#[cfg(not(feature = "with-syntex"))]
-extern crate rustc_plugin;
-
 extern crate syn;
 #[macro_use]
 extern crate quote;
 
 #[cfg(feature = "with-syntex")]
 use std::path::Path;
-
-#[cfg(not(feature = "with-syntex"))]
-use syntax::feature_gate::AttributeType;
 
 mod bound;
 mod de;
@@ -104,21 +93,6 @@ pub fn expand<S, D>(src: S, dst: D) -> Result<(), syntex::Error>
     syntex::with_extra_stack(expand_thread)
 }
 
-#[cfg(not(feature = "with-syntex"))]
-pub fn register(reg: &mut rustc_plugin::Registry) {
-    reg.register_syntax_extension(
-        syntax::parse::token::intern("derive_Serialize"),
-        syntax::ext::base::MultiDecorator(
-            Box::new(shim::expand_derive_serialize)));
-
-    reg.register_syntax_extension(
-        syntax::parse::token::intern("derive_Deserialize"),
-        syntax::ext::base::MultiDecorator(
-            Box::new(shim::expand_derive_deserialize)));
-
-    reg.register_attribute("serde".to_owned(), AttributeType::Normal);
-}
-
 macro_rules! shim {
     ($name:ident $pkg:ident :: $func:ident) => {
         pub fn $func(
@@ -176,6 +150,7 @@ macro_rules! shim {
     };
 }
 
+#[cfg(feature = "with-syntex")]
 mod shim {
     shim!(Serialize ser::expand_derive_serialize);
     shim!(Deserialize de::expand_derive_deserialize);
