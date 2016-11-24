@@ -159,15 +159,15 @@ mod shim {
 #[cfg(feature = "with-syn")]
 #[doc(hidden)]
 /// Not public API. Use the serde_derive crate.
-pub fn expand_derive_serialize(item: &str) -> Result<String, String> {
+pub fn expand_derive_serialize(item: &str) -> Result<quote::Tokens, String> {
     let syn_item = syn::parse_macro_input(item).unwrap();
-    ser::expand_derive_serialize(&syn_item).map(|derive| derive.to_string())
+    ser::expand_derive_serialize(&syn_item)
 }
 
 #[cfg(feature = "with-syn")]
 #[doc(hidden)]
 /// Not public API. Use the serde_derive crate.
-pub fn expand_derive_deserialize(item: &str) -> Result<String, String> {
+pub fn expand_derive_deserialize(item: &str) -> Result<quote::Tokens, String> {
     let syn_item = syn::parse_macro_input(item).unwrap();
-    de::expand_derive_deserialize(&syn_item).map(|derive| derive.to_string())
+    de::expand_derive_deserialize(&syn_item)
 }
