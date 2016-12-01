@@ -215,6 +215,9 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_unit_string {
+        String::new() => &[Token::Unit],
+    }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
             Token::SeqStart(Some(3)),
