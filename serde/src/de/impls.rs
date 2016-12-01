@@ -283,6 +283,12 @@ impl Visitor for StringVisitor {
         Ok(v)
     }
 
+    fn visit_unit<E>(&mut self) -> Result<String, E>
+        where E: Error,
+    {
+        Ok(String::new())
+    }
+
     fn visit_bytes<E>(&mut self, v: &[u8]) -> Result<String, E>
         where E: Error,
     {
