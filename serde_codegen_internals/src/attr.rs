@@ -187,12 +187,14 @@ impl Item {
 #[derive(Debug)]
 pub struct Variant {
     name: Name,
+    skip_deserializing: bool,
 }
 
 impl Variant {
     pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
+        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -212,6 +214,10 @@ impl Variant {
                             de_name.set_opt(de);
                         }
                     }
+                    // Parse `#[serde(skip_deserializing)]`
+                    MetaItem(Word(ref name)) if name == "skip_deserializing" => {
+                        skip_deserializing.set_true();
+                    }
 
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde variant attribute `{}`",
@@ -230,11 +236,16 @@ impl Variant {
                 serialize: ser_name.get().unwrap_or_else(|| variant.ident.to_string()),
                 deserialize: de_name.get().unwrap_or_else(|| variant.ident.to_string()),
             },
+            skip_deserializing: skip_deserializing.get(),
         }
     }
 
     pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    pub fn skip_deserializing(&self) -> bool {
+        self.skip_deserializing
     }
 }
 
