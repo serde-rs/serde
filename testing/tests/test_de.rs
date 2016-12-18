@@ -38,6 +38,7 @@ enum Enum {
     Simple(i32),
     Seq(i32, i32, i32),
     Map { a: i32, b: i32, c: i32 },
+    #[allow(dead_code)]
     #[serde(skip_deserializing)]
     Skipped,
 }
