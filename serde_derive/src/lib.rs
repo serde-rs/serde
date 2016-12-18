@@ -1,5 +1,4 @@
 #![feature(proc_macro, proc_macro_lib)]
-#![cfg(not(test))]
 
 extern crate proc_macro;
 extern crate serde_codegen;
