@@ -11,6 +11,7 @@ You may be looking for:
 - [Setting up `#[derive(Serialize, Deserialize)]`](https://serde.rs/codegen.html)
 - [Examples](https://serde.rs/examples.html)
 - [API documentation](https://docs.serde.rs/serde/)
+- [Release notes](https://github.com/serde-rs/serde/releases)
 
 ## Serde in action
 
