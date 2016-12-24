@@ -266,40 +266,17 @@ fn serialize_variant(
         match variant.style {
             Style::Unit => {
                 quote! {
-                    #type_ident::#variant_ident =>  #skipped_err,
+                    #type_ident::#variant_ident => #skipped_err,
                 }
             },
-            Style::Newtype => {
+            Style::Newtype | Style::Tuple => {
                 quote! {
-                    #type_ident::#variant_ident(ref __simple_value) => #skipped_err,
+                    #type_ident::#variant_ident(..) => #skipped_err,
                 }
             },
-            Style::Tuple => {
-                let field_names: Vec<Tokens> = (0 .. variant.fields.len())
-                    .map(|i| {
-                        let id = aster::id(format!("__field{}", i));
-                        quote!(ref #id)
-                    })
-                    .collect();
-
-                let pat = quote!(#type_ident::#variant_ident(#(#field_names),*));
-
-                quote! {
-                    #pat => #skipped_err,
-                }
-            }
             Style::Struct => {
-                let fields = variant.fields.iter().map(|field| {
-                    let id = match field.ident {
-                        Some(ref name) => name.clone(),
-                        None => panic!("struct variant has unnamed fields"),
-                    };
-                    quote!(ref #id)
-                });
-                let pat = quote!(#type_ident::#variant_ident { #(#fields),* });
-
                 quote! {
-                    #pat => #skipped_err,
+                    #type_ident::#variant_ident{..} => #skipped_err,
                 }
             }
         }
@@ -338,8 +315,6 @@ fn serialize_variant(
                     })
                     .collect();
 
-                let pat = quote!(#type_ident::#variant_ident(#(#field_names),*));
-
                 let block = serialize_tuple_variant(
                     type_name,
                     variant_index,
@@ -350,7 +325,7 @@ fn serialize_variant(
                 );
 
                 quote! {
-                    #pat => { #block }
+                    #type_ident::#variant_ident(#(#field_names),*) => { #block }
                 }
             }
             Style::Struct => {
@@ -361,7 +336,6 @@ fn serialize_variant(
                     };
                     quote!(ref #id)
                 });
-                let pat = quote!(#type_ident::#variant_ident { #(#fields),* });
 
                 let block = serialize_struct_variant(
                     variant_index,
@@ -373,7 +347,7 @@ fn serialize_variant(
                 );
 
                 quote! {
-                    #pat => { #block }
+                    #type_ident::#variant_ident { #(#fields),* } => { #block }
                 }
             }
         }
