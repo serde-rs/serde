@@ -30,12 +30,20 @@ struct Struct {
     c: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, PartialEq, Debug)]
 enum Enum {
     Unit,
     One(i32),
     Seq(i32, i32),
     Map { a: i32, b: i32 },
+    #[serde(skip_serializing)]
+    SkippedUnit,
+    #[serde(skip_serializing)]
+    SkippedOne(i32),
+    #[serde(skip_serializing)]
+    SkippedSeq(i32, i32),
+    #[serde(skip_serializing)]
+    SkippedMap { _a: i32, _b: i32 },
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -387,4 +395,24 @@ fn test_cannot_serialize_paths() {
         &path_buf,
         &[],
         Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+}
+
+#[test]
+fn test_enum_skipped() {
+    assert_ser_tokens_error(
+        &Enum::SkippedUnit,
+        &[],
+        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+    assert_ser_tokens_error(
+        &Enum::SkippedOne(42),
+        &[],
+        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+    assert_ser_tokens_error(
+        &Enum::SkippedSeq(1, 2),
+        &[],
+        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+    assert_ser_tokens_error(
+        &Enum::SkippedMap { _a: 1, _b: 2 },
+        &[],
+        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
 }
