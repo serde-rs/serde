@@ -84,7 +84,7 @@ mod bytebuf {
     use de;
 
     #[cfg(feature = "collections")]
-    use collections::Vec;
+    use collections::{String, Vec};
 
     /// `ByteBuf` wraps a `Vec<u8>` and serializes as a byte array.
     #[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
