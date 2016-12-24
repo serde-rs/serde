@@ -208,11 +208,23 @@ mod bytebuf {
         fn visit_bytes<E>(&mut self, v: &[u8]) -> Result<ByteBuf, E>
             where E: de::Error,
         {
-            self.visit_byte_buf(v.to_vec())
+            Ok(ByteBuf::from(v))
         }
 
         #[inline]
         fn visit_byte_buf<E>(&mut self, v: Vec<u8>) -> Result<ByteBuf, E>
+            where E: de::Error,
+        {
+            Ok(ByteBuf::from(v))
+        }
+
+        fn visit_str<E>(&mut self, v: &str) -> Result<ByteBuf, E>
+            where E: de::Error,
+        {
+            Ok(ByteBuf::from(v))
+        }
+
+        fn visit_string<E>(&mut self, v: String) -> Result<ByteBuf, E>
             where E: de::Error,
         {
             Ok(ByteBuf::from(v))
