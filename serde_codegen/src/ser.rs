@@ -256,29 +256,19 @@ fn serialize_variant(
     let variant_ident = variant.ident.clone();
     let variant_name = variant.attrs.name().serialize_name();
 
-    let skipped_msg = format!("The enum variant {}::{} cannot be serialized",
-                              type_ident, variant_ident);
-    let skipped_err = quote! {
-        Err(_serde::ser::Error::invalid_value(#skipped_msg))
-    };
-
     if variant.attrs.skip_serializing() {
-        match variant.style {
-            Style::Unit => {
-                quote! {
-                    #type_ident::#variant_ident => #skipped_err,
-                }
-            },
-            Style::Newtype | Style::Tuple => {
-                quote! {
-                    #type_ident::#variant_ident(..) => #skipped_err,
-                }
-            },
-            Style::Struct => {
-                quote! {
-                    #type_ident::#variant_ident{..} => #skipped_err,
-                }
-            }
+        let skipped_msg = format!("The enum variant {}::{} cannot be serialized",
+                                type_ident, variant_ident);
+        let skipped_err = quote! {
+            Err(_serde::ser::Error::invalid_value(#skipped_msg))
+        };
+        let fields_pat = match variant.style {
+            Style::Unit => quote!(),
+            Style::Newtype | Style::Tuple => quote!( (..) ),
+            Style::Struct => quote!( {..} ),
+        };
+        quote! {
+            #type_ident::#variant_ident #fields_pat => #skipped_err,
         }
     } else { // variant wasn't skipped
         match variant.style {
