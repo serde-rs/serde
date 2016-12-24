@@ -255,77 +255,123 @@ fn serialize_variant(
 
     let variant_ident = variant.ident.clone();
     let variant_name = variant.attrs.name().serialize_name();
+    let skipped_err = quote! {
+        Err(_serde::ser::Error::invalid_value("The enum variant was skipped for serialization"))
+    };
 
-    match variant.style {
-        Style::Unit => {
-            quote! {
-                #type_ident::#variant_ident =>
-                    _serde::ser::Serializer::serialize_unit_variant(
-                        _serializer,
-                        #type_name,
-                        #variant_index,
-                        #variant_name,
-                    ),
-            }
-        },
-        Style::Newtype => {
-            let block = serialize_newtype_variant(
-                type_name,
-                variant_index,
-                variant_name,
-                ty,
-                generics,
-                &variant.fields[0],
-            );
+    if variant.attrs.skip_serializing() {
+        match variant.style {
+            Style::Unit => {
+                quote! {
+                    #type_ident::#variant_ident =>  #skipped_err,
+                }
+            },
+            Style::Newtype => {
+                quote! {
+                    #type_ident::#variant_ident(ref __simple_value) => #skipped_err,
+                }
+            },
+            Style::Tuple => {
+                let field_names: Vec<Tokens> = (0 .. variant.fields.len())
+                    .map(|i| {
+                        let id = aster::id(format!("__field{}", i));
+                        quote!(ref #id)
+                    })
+                    .collect();
 
-            quote! {
-                #type_ident::#variant_ident(ref __simple_value) => #block,
+                let pat = quote!(#type_ident::#variant_ident(#(#field_names),*));
+
+                quote! {
+                    #pat => #skipped_err,
+                }
             }
-        },
-        Style::Tuple => {
-            let field_names: Vec<Tokens> = (0 .. variant.fields.len())
-                .map(|i| {
-                    let id = aster::id(format!("__field{}", i));
+            Style::Struct => {
+                let fields = variant.fields.iter().map(|field| {
+                    let id = match field.ident {
+                        Some(ref name) => name.clone(),
+                        None => panic!("struct variant has unnamed fields"),
+                    };
                     quote!(ref #id)
-                })
-                .collect();
+                });
+                let pat = quote!(#type_ident::#variant_ident { #(#fields),* });
 
-            let pat = quote!(#type_ident::#variant_ident(#(#field_names),*));
-
-            let block = serialize_tuple_variant(
-                type_name,
-                variant_index,
-                variant_name,
-                generics,
-                ty,
-                &variant.fields,
-            );
-
-            quote! {
-                #pat => { #block }
+                quote! {
+                    #pat => #skipped_err,
+                }
             }
         }
-        Style::Struct => {
-            let fields = variant.fields.iter().map(|field| {
-                let id = match field.ident {
-                    Some(ref name) => name.clone(),
-                    None => panic!("struct variant has unnamed fields"),
-                };
-                quote!(ref #id)
-            });
-            let pat = quote!(#type_ident::#variant_ident { #(#fields),* });
+    } else { // variant wasn't skipped
+        match variant.style {
+            Style::Unit => {
+                quote! {
+                    #type_ident::#variant_ident =>
+                        _serde::ser::Serializer::serialize_unit_variant(
+                            _serializer,
+                            #type_name,
+                            #variant_index,
+                            #variant_name,
+                        ),
+                }
+            },
+            Style::Newtype => {
+                let block = serialize_newtype_variant(
+                    type_name,
+                    variant_index,
+                    variant_name,
+                    ty,
+                    generics,
+                    &variant.fields[0],
+                );
 
-            let block = serialize_struct_variant(
-                variant_index,
-                variant_name,
-                generics,
-                ty,
-                &variant.fields,
-                item_attrs,
-            );
+                quote! {
+                    #type_ident::#variant_ident(ref __simple_value) => #block,
+                }
+            },
+            Style::Tuple => {
+                let field_names: Vec<Tokens> = (0 .. variant.fields.len())
+                    .map(|i| {
+                        let id = aster::id(format!("__field{}", i));
+                        quote!(ref #id)
+                    })
+                    .collect();
 
-            quote! {
-                #pat => { #block }
+                let pat = quote!(#type_ident::#variant_ident(#(#field_names),*));
+
+                let block = serialize_tuple_variant(
+                    type_name,
+                    variant_index,
+                    variant_name,
+                    generics,
+                    ty,
+                    &variant.fields,
+                );
+
+                quote! {
+                    #pat => { #block }
+                }
+            }
+            Style::Struct => {
+                let fields = variant.fields.iter().map(|field| {
+                    let id = match field.ident {
+                        Some(ref name) => name.clone(),
+                        None => panic!("struct variant has unnamed fields"),
+                    };
+                    quote!(ref #id)
+                });
+                let pat = quote!(#type_ident::#variant_ident { #(#fields),* });
+
+                let block = serialize_struct_variant(
+                    variant_index,
+                    variant_name,
+                    generics,
+                    ty,
+                    &variant.fields,
+                    item_attrs,
+                );
+
+                quote! {
+                    #pat => { #block }
+                }
             }
         }
     }
