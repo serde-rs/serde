@@ -255,8 +255,11 @@ fn serialize_variant(
 
     let variant_ident = variant.ident.clone();
     let variant_name = variant.attrs.name().serialize_name();
+
+    let skipped_msg = format!("The enum variant {}::{} cannot be serialized",
+                              type_ident, variant_ident);
     let skipped_err = quote! {
-        Err(_serde::ser::Error::invalid_value("The enum variant was skipped for serialization"))
+        Err(_serde::ser::Error::invalid_value(#skipped_msg))
     };
 
     if variant.attrs.skip_serializing() {

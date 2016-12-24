@@ -402,17 +402,17 @@ fn test_enum_skipped() {
     assert_ser_tokens_error(
         &Enum::SkippedUnit,
         &[],
-        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+        Error::InvalidValue("The enum variant Enum::SkippedUnit cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedOne(42),
         &[],
-        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+        Error::InvalidValue("The enum variant Enum::SkippedOne cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedSeq(1, 2),
         &[],
-        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+        Error::InvalidValue("The enum variant Enum::SkippedSeq cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedMap { _a: 1, _b: 2 },
         &[],
-        Error::InvalidValue("The enum variant was skipped for serialization".to_owned()));
+        Error::InvalidValue("The enum variant Enum::SkippedMap cannot be serialized".to_owned()));
 }
