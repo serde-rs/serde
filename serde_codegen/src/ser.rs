@@ -308,12 +308,8 @@ fn serialize_variant(
                 }
             },
             Style::Tuple => {
-                let field_names: Vec<Tokens> = (0 .. variant.fields.len())
-                    .map(|i| {
-                        let id = aster::id(format!("__field{}", i));
-                        quote!(ref #id)
-                    })
-                    .collect();
+                let field_names = (0 .. variant.fields.len())
+                    .map(|i| aster::id(format!("__field{}", i)));
 
                 let block = serialize_tuple_variant(
                     type_name,
@@ -325,17 +321,12 @@ fn serialize_variant(
                 );
 
                 quote! {
-                    #type_ident::#variant_ident(#(#field_names),*) => { #block }
+                    #type_ident::#variant_ident(#(ref #field_names),*) => { #block }
                 }
             }
             Style::Struct => {
-                let fields = variant.fields.iter().map(|field| {
-                    let id = match field.ident {
-                        Some(ref name) => name.clone(),
-                        None => panic!("struct variant has unnamed fields"),
-                    };
-                    quote!(ref #id)
-                });
+                let fields = variant.fields.iter()
+                    .map(|f| f.ident.clone().expect("struct variant has unnamed fields"));
 
                 let block = serialize_struct_variant(
                     variant_index,
@@ -347,7 +338,7 @@ fn serialize_variant(
                 );
 
                 quote! {
-                    #type_ident::#variant_ident { #(#fields),* } => { #block }
+                    #type_ident::#variant_ident { #(ref #fields),* } => { #block }
                 }
             }
         }
