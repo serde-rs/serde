@@ -116,7 +116,7 @@ macro_rules! shim {
 
             use syntax::{attr, ast, visit};
             struct MarkSerdeAttributesUsed;
-            impl visit::Visitor for MarkSerdeAttributesUsed {
+            impl<'a> visit::Visitor<'a> for MarkSerdeAttributesUsed {
                 fn visit_attribute(&mut self, attr: &ast::Attribute) {
                     if attr.value.name == "serde" {
                         if let ast::MetaItemKind::List(..) = attr.value.node {
