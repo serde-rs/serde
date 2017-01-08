@@ -10,6 +10,7 @@ documentation = "https://docs.serde.rs/serde/"
 readme = "README.md"
 keywords = ["serialization"]
 build = "build.rs"
+publish = false
 
 [features]
 unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]

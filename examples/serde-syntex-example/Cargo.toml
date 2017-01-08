@@ -3,6 +3,7 @@ name = "serde-syntex-example"
 version = "0.1.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 build = "build.rs"
+publish = false
 
 [features]
 default = ["serde_codegen"]
