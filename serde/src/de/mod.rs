@@ -412,7 +412,7 @@ pub trait Deserializer {
 /// This trait represents a visitor that walks through a deserializer.
 pub trait Visitor {
     /// The value produced by this visitor.
-    type Value: Deserialize;
+    type Value;
 
     /// `visit_bool` deserializes a `bool` into a `Value`.
     fn visit_bool<E>(&mut self, v: bool) -> Result<Self::Value, E>

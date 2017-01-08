@@ -856,7 +856,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
                 }
             }
             Some(_) => {
-                Deserialize::deserialize(self.de)
+                de::Deserializer::deserialize(self.de, visitor)
             }
             None => Err(Error::EndOfStream),
         }
@@ -887,7 +887,7 @@ impl<'a, I> VariantVisitor for DeserializerVariantVisitor<'a, I>
                 }
             }
             Some(_) => {
-                Deserialize::deserialize(self.de)
+                de::Deserializer::deserialize(self.de, visitor)
             }
             None => Err(Error::EndOfStream),
         }
