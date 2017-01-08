@@ -11,5 +11,7 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+publish = false # this branch contains breaking changes for 0.9
+
 [dependencies]
 serde = { version = "0.8.21", path = "../serde" }

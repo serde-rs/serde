@@ -10,6 +10,8 @@ documentation = "https://docs.serde.rs/serde_codegen_internals/"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+publish = false # this branch contains breaking changes for 0.9
+
 [features]
 unstable-testing = ["clippy"]
 

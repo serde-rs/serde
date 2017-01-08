@@ -10,6 +10,8 @@ documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+publish = false # this branch contains breaking changes for 0.9
+
 [features]
 default = ["with-syntex"]
 unstable = []
