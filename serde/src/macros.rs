@@ -26,34 +26,6 @@ macro_rules! forward_to_deserialize_method {
     };
 }
 
-#[cfg(feature = "std")]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! forward_to_deserialize_enum {
-    () => {
-        #[inline]
-        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> ::std::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::EnumVisitor
-        {
-            Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
-        }
-    };
-}
-
-#[cfg(not(feature = "std"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! forward_to_deserialize_enum {
-    () => {
-        #[inline]
-        fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _: __V) -> ::core::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::EnumVisitor
-        {
-            Err($crate::de::Error::invalid_type($crate::de::Type::Enum))
-        }
-    };
-}
-
 #[doc(hidden)]
 #[macro_export]
 macro_rules! forward_to_deserialize_helper {
@@ -141,11 +113,11 @@ macro_rules! forward_to_deserialize_helper {
     (tuple) => {
         forward_to_deserialize_method!{deserialize_tuple(usize)}
     };
+    (enum) => {
+        forward_to_deserialize_method!{deserialize_enum(&'static str, &'static [&'static str])}
+    };
     (ignored_any) => {
         forward_to_deserialize_method!{deserialize_ignored_any()}
-    };
-    (enum) => {
-        forward_to_deserialize_enum!();
     };
 }
 

@@ -3,7 +3,6 @@ use std::iter;
 use serde::de::{
     self,
     Deserialize,
-    EnumVisitor,
     MapVisitor,
     SeqVisitor,
     VariantVisitor,
@@ -268,13 +267,13 @@ impl<I> de::Deserializer for Deserializer<I>
                      name: &str,
                      _variants: &'static [&'static str],
                      mut visitor: V) -> Result<V::Value, Error>
-        where V: EnumVisitor,
+        where V: Visitor,
     {
         match self.tokens.peek() {
             Some(&Token::EnumStart(n)) if name == n => {
                 self.tokens.next();
 
-                visitor.visit(DeserializerVariantVisitor {
+                visitor.visit_enum(DeserializerVariantVisitor {
                     de: self,
                 })
             }
@@ -282,7 +281,7 @@ impl<I> de::Deserializer for Deserializer<I>
             | Some(&Token::EnumNewType(n, _))
             | Some(&Token::EnumSeqStart(n, _, _))
             | Some(&Token::EnumMapStart(n, _, _)) if name == n => {
-                visitor.visit(DeserializerVariantVisitor {
+                visitor.visit_enum(DeserializerVariantVisitor {
                     de: self,
                 })
             }
