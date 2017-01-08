@@ -1,4 +1,4 @@
-#![feature(test, proc_macro)]
+#![feature(test)]
 
 #[macro_use]
 extern crate serde_derive;
