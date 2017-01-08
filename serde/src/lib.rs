@@ -45,6 +45,9 @@ macro_rules! format {
     ($s:expr, $($rest:tt)*) => ($s)
 }
 
+#[macro_use]
+mod macros;
+
 pub mod bytes;
 pub mod de;
 #[cfg(feature = "std")]

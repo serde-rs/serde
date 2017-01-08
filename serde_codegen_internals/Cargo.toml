@@ -1,6 +1,6 @@
 [package]
 name = "serde_codegen_internals"
-version = "0.7.0"
+version = "0.11.3"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "AST representation used by Serde codegen. Unstable."
@@ -10,12 +10,11 @@ documentation = "https://docs.serde.rs/serde_codegen_internals/"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+publish = false # this branch contains breaking changes for 0.9
+
 [features]
-default = ["with-syntex"]
 unstable-testing = ["clippy"]
-with-syntex = ["syntex_syntax", "syntex_errors"]
 
 [dependencies]
 clippy = { version = "^0.*", optional = true }
-syntex_syntax = { version = "^0.42.0", optional = true }
-syntex_errors = { version = "^0.42.0", optional = true }
+syn = "0.10"

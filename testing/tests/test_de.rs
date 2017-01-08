@@ -37,7 +37,10 @@ enum Enum {
     Unit,
     Simple(i32),
     Seq(i32, i32, i32),
-    Map { a: i32, b: i32, c: i32 }
+    Map { a: i32, b: i32, c: i32 },
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -214,6 +217,9 @@ declare_tests! {
             Token::SeqStart(None),
             Token::SeqEnd,
         ],
+    }
+    test_unit_string {
+        String::new() => &[Token::Unit],
     }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
@@ -801,6 +807,12 @@ declare_error_tests! {
             Token::EnumUnit("Enum", "Foo"),
         ],
         Error::UnknownVariant("Foo".to_owned()),
+    }
+    test_enum_skipped_variant<Enum> {
+        &[
+            Token::EnumUnit("Enum", "Skipped"),
+        ],
+        Error::UnknownVariant("Skipped".to_owned()),
     }
     test_struct_seq_too_long<Struct> {
         &[

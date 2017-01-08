@@ -1,6 +1,6 @@
 [package]
 name = "serde_test"
-version = "0.8.4"
+version = "0.8.21"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"
@@ -11,5 +11,7 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+publish = false # this branch contains breaking changes for 0.9
+
 [dependencies]
-serde = { version = "0.8.4", path = "../serde" }
+serde = { version = "0.8.21", path = "../serde" }

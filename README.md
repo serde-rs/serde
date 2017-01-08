@@ -1,4 +1,4 @@
-# Serde &emsp; [![Build Status](https://api.travis-ci.org/serde-rs/serde.svg?branch=master)](https://travis-ci.org/serde-rs/serde) [![Coverage Status](https://coveralls.io/repos/serde-rs/serde/badge.svg?branch=master&service=github)](https://coveralls.io/github/serde-rs/serde?branch=master) [![Latest Version](https://img.shields.io/crates/v/serde.svg)](https://crates.io/crates/serde) [![Clippy Linting Result](https://clippy.bashy.io/github/serde-rs/serde/master/badge.svg)](https://clippy.bashy.io/github/serde-rs/serde/master/log)
+# Serde &emsp; [![Build Status](https://api.travis-ci.org/serde-rs/serde.svg?branch=master)](https://travis-ci.org/serde-rs/serde) [![Latest Version](https://img.shields.io/crates/v/serde.svg)](https://crates.io/crates/serde)
 
 **Serde is a framework for *ser*ializing and *de*serializing Rust data structures efficiently and generically.**
 
@@ -11,12 +11,13 @@ You may be looking for:
 - [Setting up `#[derive(Serialize, Deserialize)]`](https://serde.rs/codegen.html)
 - [Examples](https://serde.rs/examples.html)
 - [API documentation](https://docs.serde.rs/serde/)
+- [Release notes](https://github.com/serde-rs/serde/releases)
 
 ## Serde in action
 
 ```rust
-#![feature(plugin, custom_derive)]
-#![plugin(serde_macros)]
+#[macro_use]
+extern crate serde_derive;
 
 extern crate serde_json;
 

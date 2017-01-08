@@ -9,6 +9,11 @@ use self::serde::de::{Deserialize, Deserializer};
 use std::borrow::Cow;
 use std::marker::PhantomData;
 
+// Try to trip up the generated code if it fails to use fully qualified paths.
+#[allow(dead_code)]
+struct Result;
+use std::result::Result as StdResult;
+
 //////////////////////////////////////////////////////////////////////////
 
 #[test]
@@ -187,6 +192,16 @@ fn test_gen() {
     #[serde(bound(deserialize = "T::Owned: Deserialize"))]
     struct CowT<'a, T: ?Sized + 'a + ToOwned>(Cow<'a, T>);
     assert::<CowT<str>>();
+
+    #[derive(Serialize, Deserialize)]
+    struct EmptyStruct {}
+    assert::<EmptyStruct>();
+
+    #[derive(Serialize, Deserialize)]
+    enum EmptyEnumVariant {
+        EmptyStruct {},
+    }
+    assert::<EmptyEnumVariant>();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -195,32 +210,32 @@ fn assert<T: Serialize + Deserialize>() {}
 fn assert_ser<T: Serialize>() {}
 
 trait SerializeWith {
-    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> Result<(), S::Error>;
+    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> StdResult<(), S::Error>;
 }
 
 trait DeserializeWith: Sized {
-    fn deserialize_with<D: Deserializer>(_: &mut D) -> Result<Self, D::Error>;
+    fn deserialize_with<D: Deserializer>(_: &mut D) -> StdResult<Self, D::Error>;
 }
 
 // Implements neither Serialize nor Deserialize
 struct X;
 
-fn ser_x<S: Serializer>(_: &X, _: &mut S) -> Result<(), S::Error> {
+fn ser_x<S: Serializer>(_: &X, _: &mut S) -> StdResult<(), S::Error> {
     unimplemented!()
 }
 
-fn de_x<D: Deserializer>(_: &mut D) -> Result<X, D::Error> {
+fn de_x<D: Deserializer>(_: &mut D) -> StdResult<X, D::Error> {
     unimplemented!()
 }
 
 impl SerializeWith for X {
-    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> Result<(), S::Error> {
+    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> StdResult<(), S::Error> {
         unimplemented!()
     }
 }
 
 impl DeserializeWith for X {
-    fn deserialize_with<D: Deserializer>(_: &mut D) -> Result<Self, D::Error> {
+    fn deserialize_with<D: Deserializer>(_: &mut D) -> StdResult<Self, D::Error> {
         unimplemented!()
     }
 }

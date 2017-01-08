@@ -1,10 +1,12 @@
 use std::fmt;
 use std::error;
 
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::{Serialize, Serializer};
 use serde::bytes::{ByteBuf, Bytes};
 use serde::ser;
 use serde::de;
+
+use serde_test::{assert_de_tokens, Token};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -286,153 +288,6 @@ impl Serializer for BytesSerializer {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct BytesDeserializer {
-    bytes: Option<Vec<u8>>,
-}
-
-impl BytesDeserializer {
-    fn new(bytes: Vec<u8>) -> Self {
-        BytesDeserializer {
-            bytes: Some(bytes),
-        }
-    }
-}
-
-impl Deserializer for BytesDeserializer {
-    type Error = Error;
-
-    fn deserialize<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        Err(Error)
-    }
-
-    fn deserialize_bytes<V>(&mut self, mut visitor: V) -> Result<V::Value, Error>
-        where V: de::Visitor,
-    {
-        visitor.visit_byte_buf(self.bytes.take().unwrap())
-    }
-
-    fn deserialize_seq<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_struct_field<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_map<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_unit<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_ignored_any<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_string<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_str<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_char<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_i64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_i32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_i16<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_i8<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_u64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_u32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_u16<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_u8<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_f32<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_f64<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_bool<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_usize<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_isize<__V>(&mut self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_option<__V>(&mut self, visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_seq_fixed_size<__V>(&mut self, _: usize, visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_unit_struct<__V>(&mut self, _: &str, visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_newtype_struct<__V>(&mut self, _: &str, visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_tuple_struct<__V>(&mut self, _: &str, _: usize, visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_struct<__V>(&mut self, _: &str, _: &[&str], visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_tuple<__V>(&mut self, _: usize, visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_enum<__V>(&mut self, _: &str, _: &[&str], _visitor: __V)
-     -> Result<__V::Value, Self::Error> where __V: de::Visitor {
-        Err(Error)
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 #[test]
 fn test_bytes_ser_bytes() {
     let buf = vec![];
@@ -449,12 +304,42 @@ fn test_bytes_ser_bytes() {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[test]
-fn test_byte_buf_de_bytes() {
-    let mut de = BytesDeserializer::new(vec![]);
-    let bytes = Deserialize::deserialize(&mut de);
-    assert_eq!(bytes, Ok(ByteBuf::new()));
+fn test_byte_buf_de() {
+    let empty = ByteBuf::new();
+    assert_de_tokens(&empty, &[Token::Bytes(b""),]);
+    assert_de_tokens(&empty, &[Token::Str("")]);
+    assert_de_tokens(&empty, &[Token::String(String::new())]);
+    assert_de_tokens(&empty, &[
+        Token::SeqStart(None),
+        Token::SeqEnd,
+    ]);
+    assert_de_tokens(&empty, &[
+        Token::SeqStart(Some(0)),
+        Token::SeqEnd,
+    ]);
 
-    let mut de = BytesDeserializer::new(vec![1, 2, 3]);
-    let bytes = Deserialize::deserialize(&mut de);
-    assert_eq!(bytes, Ok(ByteBuf::from(vec![1, 2, 3])));
+    let buf = ByteBuf::from(vec![65, 66, 67]);
+    assert_de_tokens(&buf, &[Token::Bytes(b"ABC")]);
+    assert_de_tokens(&buf, &[Token::Str("ABC")]);
+    assert_de_tokens(&buf, &[Token::String("ABC".to_owned())]);
+    assert_de_tokens(&buf, &[
+        Token::SeqStart(None),
+        Token::SeqSep,
+        Token::U8(65),
+        Token::SeqSep,
+        Token::U8(66),
+        Token::SeqSep,
+        Token::U8(67),
+        Token::SeqEnd,
+    ]);
+    assert_de_tokens(&buf, &[
+        Token::SeqStart(Some(3)),
+        Token::SeqSep,
+        Token::U8(65),
+        Token::SeqSep,
+        Token::U8(66),
+        Token::SeqSep,
+        Token::U8(67),
+        Token::SeqEnd,
+    ]);
 }
