@@ -35,9 +35,9 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, Strin
         const #dummy_const: () = {
             extern crate serde as _serde;
             #[automatically_derived]
-            impl #impl_generics _serde::de::Deserialize for #ty #where_clause {
+            impl #impl_generics _serde::Deserialize for #ty #where_clause {
                 fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<#ty, __D::Error>
-                    where __D: _serde::de::Deserializer
+                    where __D: _serde::Deserializer
                 #body
             }
         };
@@ -402,7 +402,7 @@ fn deserialize_newtype_struct(
     quote! {
         #[inline]
         fn visit_newtype_struct<__E>(&mut self, __e: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
-            where __E: _serde::de::Deserializer,
+            where __E: _serde::Deserializer,
         {
             Ok(#type_path(#value))
         }
@@ -745,10 +745,10 @@ fn deserialize_field_visitor(
             #ignore_variant
         }
 
-        impl _serde::de::Deserialize for __Field {
+        impl _serde::Deserialize for __Field {
             #[inline]
             fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<__Field, __D::Error>
-                where __D: _serde::de::Deserializer,
+                where __D: _serde::Deserializer,
             {
                 struct __FieldVisitor;
 
@@ -975,9 +975,9 @@ fn wrap_deserialize_with(
             }
         },
         quote! {
-            impl #impl_generics _serde::de::Deserialize for #wrapper_ty #where_clause {
+            impl #impl_generics _serde::Deserialize for #wrapper_ty #where_clause {
                 fn deserialize<__D>(__d: &mut __D) -> ::std::result::Result<Self, __D::Error>
-                    where __D: _serde::de::Deserializer
+                    where __D: _serde::Deserializer
                 {
                     let value = try!(#deserialize_with(__d));
                     Ok(__SerdeDeserializeWithStruct {

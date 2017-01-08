@@ -29,9 +29,9 @@ pub fn expand_derive_serialize(item: &syn::MacroInput) -> Result<Tokens, String>
         const #dummy_const: () = {
             extern crate serde as _serde;
             #[automatically_derived]
-            impl #impl_generics _serde::ser::Serialize for #ty #where_clause {
+            impl #impl_generics _serde::Serialize for #ty #where_clause {
                 fn serialize<__S>(&self, _serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
-                    where __S: _serde::ser::Serializer
+                    where __S: _serde::Serializer
                 {
                     #body
                 }
@@ -275,7 +275,7 @@ fn serialize_variant(
             Style::Unit => {
                 quote! {
                     #type_ident::#variant_ident =>
-                        _serde::ser::Serializer::serialize_unit_variant(
+                        _serde::Serializer::serialize_unit_variant(
                             _serializer,
                             #type_name,
                             #variant_index,
@@ -350,7 +350,7 @@ fn serialize_newtype_variant(
     }
 
     quote! {
-        _serde::ser::Serializer::serialize_newtype_variant(
+        _serde::Serializer::serialize_newtype_variant(
             _serializer,
             #type_name,
             #variant_index,
@@ -540,9 +540,9 @@ fn wrap_serialize_with(
             phantom: ::std::marker::PhantomData<#item_ty>,
         }
 
-        impl #wrapper_generics _serde::ser::Serialize for #wrapper_ty #where_clause {
+        impl #wrapper_generics _serde::Serialize for #wrapper_ty #where_clause {
             fn serialize<__S>(&self, __s: &mut __S) -> ::std::result::Result<(), __S::Error>
-                where __S: _serde::ser::Serializer
+                where __S: _serde::Serializer
             {
                 #path(self.value, __s)
             }
