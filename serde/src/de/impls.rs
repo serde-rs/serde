@@ -88,10 +88,10 @@ impl Visitor for UnitVisitor {
         Ok(())
     }
 
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<(), V::Error>
+    fn visit_seq<V>(&mut self, _: V) -> Result<(), V::Error>
         where V: SeqVisitor,
     {
-        visitor.end()
+        Ok(())
     }
 }
 
@@ -433,8 +433,6 @@ macro_rules! seq_impl {
                     $insert(&mut values, value);
                 }
 
-                try!($visitor.end());
-
                 Ok(values)
             }
         }
@@ -540,10 +538,9 @@ impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize {
     }
 
     #[inline]
-    fn visit_seq<V>(&mut self, mut visitor: V) -> Result<[T; 0], V::Error>
+    fn visit_seq<V>(&mut self, _: V) -> Result<[T; 0], V::Error>
         where V: SeqVisitor,
     {
-        try!(visitor.end());
         Ok([])
     }
 }
@@ -574,8 +571,6 @@ macro_rules! array_impls {
                             None => return Err(Error::end_of_stream()),
                         };
                     )+
-
-                    try!(visitor.end());
 
                     Ok([$($name),+])
                 }
@@ -661,8 +656,6 @@ macro_rules! tuple_impls {
                         };
                     )+
 
-                    try!(visitor.end());
-
                     Ok(($($name,)+))
                 }
             }
@@ -745,8 +738,6 @@ macro_rules! map_impl {
                 while let Some((key, value)) = try!($visitor.visit()) {
                     values.insert(key, value);
                 }
-
-                try!($visitor.end());
 
                 Ok(values)
             }
@@ -1034,18 +1025,15 @@ impl Deserialize for Duration {
                 let secs: u64 = match try!(visitor.visit()) {
                     Some(value) => value,
                     None => {
-                        try!(visitor.end());
                         return Err(Error::invalid_length(0));
                     }
                 };
                 let nanos: u32 = match try!(visitor.visit()) {
                     Some(value) => value,
                     None => {
-                        try!(visitor.end());
                         return Err(Error::invalid_length(1));
                     }
                 };
-                try!(visitor.end());
                 Ok(Duration::new(secs, nanos))
             }
 
@@ -1070,7 +1058,6 @@ impl Deserialize for Duration {
                         }
                     }
                 }
-                try!(visitor.end());
                 let secs = match secs {
                     Some(secs) => secs,
                     None => try!(visitor.missing_field("secs")),
@@ -1274,8 +1261,6 @@ impl Deserialize for IgnoredAny {
                 while let Some(_) = try!(visitor.visit::<IgnoredAny>()) {
                     // Gobble
                 }
-
-                try!(visitor.end());
                 Ok(IgnoredAny)
             }
 
@@ -1286,8 +1271,6 @@ impl Deserialize for IgnoredAny {
                 while let Some((_, _)) = try!(visitor.visit::<IgnoredAny, IgnoredAny>()) {
                     // Gobble
                 }
-
-                try!(visitor.end());
                 Ok(IgnoredAny)
             }
 

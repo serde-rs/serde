@@ -214,11 +214,10 @@ fn deserialize_unit_struct(
             }
 
             #[inline]
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<#type_ident, __V::Error>
+            fn visit_seq<__V>(&mut self, _: __V) -> ::std::result::Result<#type_ident, __V::Error>
                 where __V: _serde::de::SeqVisitor,
             {
-                try!(visitor.end());
-                self.visit_unit()
+                Ok(#type_ident)
             }
         }
 
@@ -332,7 +331,6 @@ fn deserialize_seq(
                     let #var = match #visit {
                         Some(value) => { value },
                         None => {
-                            try!(visitor.end());
                             return Err(_serde::de::Error::invalid_length(#index_in_seq));
                         }
                     };
@@ -355,9 +353,6 @@ fn deserialize_seq(
 
     quote! {
         #(#let_values)*
-
-        try!(visitor.end());
-
         Ok(#result)
     }
 }
@@ -841,8 +836,6 @@ fn deserialize_map(
         #(#let_values)*
 
         #match_keys
-
-        try!(visitor.end());
 
         #(#extract_values)*
 

@@ -41,7 +41,7 @@ use error;
 use core::fmt;
 use core::marker::PhantomData;
 
-use de;
+use de::{self, SeqVisitor};
 use bytes;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -543,7 +543,12 @@ impl<I, T, E> de::Deserializer for SeqDeserializer<I, E>
     fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        visitor.visit_seq(self)
+        let v = try!(visitor.visit_seq(&mut *self));
+        if self.len == 0 {
+            Ok(v)
+        } else {
+            Err(de::Error::invalid_length(self.len))
+        }
     }
 
     forward_to_deserialize! {
@@ -570,14 +575,6 @@ impl<I, T, E> de::SeqVisitor for SeqDeserializer<I, E>
                 Ok(Some(try!(de::Deserialize::deserialize(&mut de))))
             }
             None => Ok(None),
-        }
-    }
-
-    fn end(&mut self) -> Result<(), Self::Error> {
-        if self.len == 0 {
-            Ok(())
-        } else {
-            Err(de::Error::invalid_length(self.len))
         }
     }
 
@@ -715,6 +712,13 @@ impl<I, K, V, E> MapDeserializer<I, K, V, E>
             (k, v)
         })
     }
+
+    fn end(&mut self) -> Result<(), E> {
+        match self.len {
+            Some(len) if len > 0 => Err(de::Error::invalid_length(len)),
+            _ => Ok(())
+        }
+    }
 }
 
 impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
@@ -728,22 +732,29 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
     fn deserialize<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
-        visitor.visit_map(self)
+        let value = try!(visitor.visit_map(&mut *self));
+        try!(self.end());
+        Ok(value)
     }
 
     fn deserialize_seq<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
-        visitor.visit_seq(self)
+        let value = try!(visitor.visit_seq(&mut *self));
+        try!(self.end());
+        Ok(value)
     }
 
     fn deserialize_seq_fixed_size<V_>(&mut self, len: usize, mut visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
         match self.len {
-            Some(map_len) if map_len == len => visitor.visit_seq(self),
-            Some(_) => Err(de::Error::invalid_length(len)),
-            None => visitor.visit_seq(self),
+            Some(map_len) if map_len != len => Err(de::Error::invalid_length(len)),
+            _ => {
+                let value = try!(visitor.visit_seq(&mut *self));
+                try!(self.end());
+                Ok(value)
+            }
         }
     }
 
@@ -789,13 +800,6 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
         }
     }
 
-    fn end(&mut self) -> Result<(), Self::Error> {
-        match self.len {
-            Some(len) if len > 0 => Err(de::Error::invalid_length(len)),
-            _ => Ok(())
-        }
-    }
-
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.len.map_or_else(
             || self.iter.size_hint(),
@@ -821,10 +825,6 @@ impl<I, K, V, E> de::SeqVisitor for MapDeserializer<I, K, V, E>
             }
             None => Ok(None),
         }
-    }
-
-    fn end(&mut self) -> Result<(), Self::Error> {
-        de::MapVisitor::end(self)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -860,7 +860,13 @@ impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
     {
         match self.0.take() {
             Some((k, v)) => {
-                visitor.visit_seq(PairVisitor(Some(k), Some(v), PhantomData))
+                let mut pair_visitor = PairVisitor(Some(k), Some(v), PhantomData);
+                let pair = try!(visitor.visit_seq(&mut pair_visitor));
+                if pair_visitor.1.is_none() {
+                    Ok(pair)
+                } else {
+                    Err(de::Error::invalid_length(pair_visitor.size_hint().0))
+                }
             }
             None => Err(de::Error::end_of_stream()),
         }
@@ -897,14 +903,6 @@ impl<A, B, E> de::SeqVisitor for PairVisitor<A, B, E>
             de::Deserialize::deserialize(&mut de).map(Some)
         } else {
             Ok(None)
-        }
-    }
-
-    fn end(&mut self) -> Result<(), Self::Error> {
-        if self.1.is_none() {
-            Ok(())
-        } else {
-            Err(de::Error::invalid_length(self.size_hint().0))
         }
     }
 

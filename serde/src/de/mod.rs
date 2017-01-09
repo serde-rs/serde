@@ -635,9 +635,6 @@ pub trait SeqVisitor {
     fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
         where T: Deserialize;
 
-    /// This signals to the `SeqVisitor` that the `Visitor` does not expect any more items.
-    fn end(&mut self) -> Result<(), Self::Error>;
-
     /// Return the lower and upper bound of items remaining in the sequence.
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -653,11 +650,6 @@ impl<'a, V> SeqVisitor for &'a mut V where V: SeqVisitor {
         where T: Deserialize
     {
         (**self).visit()
-    }
-
-    #[inline]
-    fn end(&mut self) -> Result<(), V::Error> {
-        (**self).end()
     }
 
     #[inline]
@@ -700,9 +692,6 @@ pub trait MapVisitor {
     fn visit_value<V>(&mut self) -> Result<V, Self::Error>
         where V: Deserialize;
 
-    /// This signals to the `MapVisitor` that the `Visitor` does not expect any more items.
-    fn end(&mut self) -> Result<(), Self::Error>;
-
     /// Return the lower and upper bound of items remaining in the sequence.
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -740,11 +729,6 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
         where V: Deserialize
     {
         (**self).visit_value()
-    }
-
-    #[inline]
-    fn end(&mut self) -> Result<(), V_::Error> {
-        (**self).end()
     }
 
     #[inline]
