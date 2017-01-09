@@ -642,7 +642,7 @@ fn deserialize_field_visitor(
     is_variant: bool,
 ) -> Tokens {
     // Create the field names for the fields.
-    let field_idents: Vec<_> = (0 .. field_names.len())
+    let ref field_idents: Vec<_> = (0 .. field_names.len())
         .map(|i| aster::id(format!("__field{}", i)))
         .collect();
 
@@ -652,16 +652,7 @@ fn deserialize_field_visitor(
         Some(quote!(__ignore,))
     };
 
-    // Match arms to extract a field from a string
-    let str_field_arms: Vec<_> = field_idents.iter().zip(field_names.iter())
-        .map(|(field_ident, field_name)| {
-            quote! {
-                #field_name => { Ok(__Field::#field_ident) }
-            }
-        })
-        .collect();
-
-    let fallthrough_str_arm_expr = if is_variant {
+    let fallthrough_arm = if is_variant {
         quote! {
             Err(_serde::de::Error::unknown_variant(value))
         }
@@ -696,8 +687,10 @@ fn deserialize_field_visitor(
                         where __E: _serde::de::Error
                     {
                         match value {
-                            #(#str_field_arms)*
-                            _ => #fallthrough_str_arm_expr
+                            #(
+                                #field_names => Ok(__Field::#field_idents),
+                            )*
+                            _ => #fallthrough_arm
                         }
                     }
                 }
