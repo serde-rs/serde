@@ -1,5 +1,5 @@
 use syn::{self, aster};
-use quote::{self, Tokens};
+use quote::Tokens;
 
 use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
@@ -642,7 +642,7 @@ fn deserialize_field_visitor(
     is_variant: bool,
 ) -> Tokens {
     // Create the field names for the fields.
-    let field_idents: Vec<_> = (0 .. field_names.len())
+    let ref field_idents: Vec<_> = (0 .. field_names.len())
         .map(|i| aster::id(format!("__field{}", i)))
         .collect();
 
@@ -652,89 +652,17 @@ fn deserialize_field_visitor(
         Some(quote!(__ignore,))
     };
 
-    let index_field_arms: Vec<_> = field_idents.iter()
-        .enumerate()
-        .map(|(field_index, field_ident)| {
-            quote! {
-                #field_index => { Ok(__Field::#field_ident) }
-            }
-        })
-        .collect();
-
-    let (index_error_msg, unknown_ident) = if is_variant {
-        ("expected a variant", aster::id("unknown_variant"))
+    let fallthrough_arm = if is_variant {
+        quote! {
+            Err(_serde::de::Error::unknown_variant(value))
+        }
+    } else if item_attrs.deny_unknown_fields() {
+        quote! {
+            Err(_serde::de::Error::unknown_field(value))
+        }
     } else {
-        ("expected a field", aster::id("unknown_field"))
-    };
-
-    let fallthrough_index_arm_expr = if !is_variant && !item_attrs.deny_unknown_fields() {
         quote! {
             Ok(__Field::__ignore)
-        }
-    } else {
-        quote! {
-            Err(_serde::de::Error::invalid_value(#index_error_msg))
-        }
-    };
-
-    let index_body = quote! {
-        match value {
-            #(#index_field_arms)*
-            _ => #fallthrough_index_arm_expr
-        }
-    };
-
-    // Match arms to extract a field from a string
-    let str_field_arms: Vec<_> = field_idents.iter().zip(field_names.iter())
-        .map(|(field_ident, field_name)| {
-            quote! {
-                #field_name => { Ok(__Field::#field_ident) }
-            }
-        })
-        .collect();
-
-    let fallthrough_str_arm_expr = if !is_variant && !item_attrs.deny_unknown_fields() {
-        quote! {
-            Ok(__Field::__ignore)
-        }
-    } else {
-        quote! {
-            Err(_serde::de::Error::#unknown_ident(value))
-        }
-    };
-
-    let str_body = quote! {
-        match value {
-            #(#str_field_arms)*
-            _ => #fallthrough_str_arm_expr
-        }
-    };
-
-    // Match arms to extract a field from a string
-    let bytes_field_arms: Vec<_> = field_idents.iter().zip(field_names.iter())
-        .map(|(field_ident, field_name)| {
-            let bytes_field_name = quote::ByteStr(field_name);
-            quote! {
-                #bytes_field_name => { Ok(__Field::#field_ident) }
-            }
-        })
-        .collect();
-
-    let fallthrough_bytes_arm_expr = if !is_variant && !item_attrs.deny_unknown_fields() {
-        quote! {
-            Ok(__Field::__ignore)
-        }
-    } else {
-        quote!({
-            let value = ::std::string::String::from_utf8_lossy(value);
-            Err(_serde::de::Error::#unknown_ident(&value))
-        })
-    };
-
-    let bytes_body = quote! {
-        match value {
-            #(#bytes_field_arms)*
-            _ => #fallthrough_bytes_arm_expr
         }
     };
 
@@ -755,22 +683,15 @@ fn deserialize_field_visitor(
                 impl _serde::de::Visitor for __FieldVisitor {
                     type Value = __Field;
 
-                    fn visit_usize<__E>(&mut self, value: usize) -> ::std::result::Result<__Field, __E>
-                        where __E: _serde::de::Error
-                    {
-                        #index_body
-                    }
-
                     fn visit_str<__E>(&mut self, value: &str) -> ::std::result::Result<__Field, __E>
                         where __E: _serde::de::Error
                     {
-                        #str_body
-                    }
-
-                    fn visit_bytes<__E>(&mut self, value: &[u8]) -> ::std::result::Result<__Field, __E>
-                        where __E: _serde::de::Error
-                    {
-                        #bytes_body
+                        match value {
+                            #(
+                                #field_names => Ok(__Field::#field_idents),
+                            )*
+                            _ => #fallthrough_arm
+                        }
                     }
                 }
 
