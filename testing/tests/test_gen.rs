@@ -202,6 +202,12 @@ fn test_gen() {
         EmptyStruct {},
     }
     assert::<EmptyEnumVariant>();
+
+    #[cfg(feature = "unstable-testing")]
+    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    struct NonAsciiIdents {
+        σ: f64
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
