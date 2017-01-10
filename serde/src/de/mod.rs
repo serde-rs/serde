@@ -415,7 +415,7 @@ pub trait Deserialize: Sized {
 /// to deserialize it into a flat representation like `vec![1, 2, 3, 4, 5, 6]`.
 /// Allocating a brand new `Vec<T>` for each subarray would be slow. Instead we
 /// would like to allocate a single `Vec<T>` and then deserialize each subarray
-/// into it. This requires stateful deserialization using the DeserializeSeed
+/// into it. This requires stateful deserialization using the `DeserializeSeed`
 /// trait.
 ///
 /// ```rust

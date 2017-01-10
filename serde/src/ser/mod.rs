@@ -15,11 +15,6 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::String;
-
-#[cfg(feature = "unstable")]
-use core::marker::PhantomData;
 #[cfg(feature = "unstable")]
 use core::cell::RefCell;
 

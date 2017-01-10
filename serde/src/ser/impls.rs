@@ -30,18 +30,17 @@ use collections::{
     Vec,
 };
 
-#[cfg(all(feature = "unstable", feature = "collections"))]
+#[cfg(feature = "collections")]
 use collections::enum_set::{CLike, EnumSet};
-#[cfg(all(feature = "unstable", feature = "collections"))]
+#[cfg(feature = "collections")]
 use collections::borrow::ToOwned;
 
+#[cfg(feature = "std")]
 use core::hash::{Hash, BuildHasher};
 #[cfg(feature = "unstable")]
 use core::iter;
 #[cfg(feature = "std")]
 use std::net;
-#[cfg(feature = "unstable")]
-use core::num;
 #[cfg(feature = "unstable")]
 use core::ops;
 #[cfg(feature = "std")]
@@ -67,14 +66,13 @@ use core::marker::PhantomData;
 use core::nonzero::{NonZero, Zeroable};
 
 use super::{
-    Error,
     Serialize,
-    SerializeMap,
     SerializeSeq,
-    SerializeStruct,
     SerializeTuple,
     Serializer,
 };
+#[cfg(any(feature = "std", feature = "unstable"))]
+use super::Error;
 
 #[cfg(feature = "unstable")]
 use super::Iterator;
@@ -241,7 +239,7 @@ impl<'a, I> Serialize for Iterator<I>
         // FIXME: use specialization to prevent invalidating the object in case of clonable iterators?
         let iter = match self.0.borrow_mut().take() {
             Some(iter) => iter.into_iter(),
-            None => return Err(S::Error::custom("Iterator used twice")),
+            None => return Err(Error::custom("Iterator used twice")),
         };
         let size = match iter.size_hint() {
             (lo, Some(hi)) if lo == hi => Some(lo),
@@ -286,7 +284,7 @@ impl<T> Serialize for BTreeSet<T>
     serialize_seq!();
 }
 
-#[cfg(all(feature = "unstable", feature = "collections"))]
+#[cfg(feature = "collections")]
 impl<T> Serialize for EnumSet<T>
     where T: Serialize + CLike
 {
@@ -573,6 +571,7 @@ macro_rules! serialize_map {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where S: Serializer,
         {
+            use super::SerializeMap;
             let mut map = try!(serializer.serialize_map(Some(self.len())));
             for (k, v) in self {
                 try!(map.serialize_key(k));
@@ -695,6 +694,7 @@ impl Serialize for Duration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
+        use super::SerializeStruct;
         let mut state = try!(serializer.serialize_struct("Duration", 2));
         try!(state.serialize_field("secs", self.as_secs()));
         try!(state.serialize_field("nanos", self.subsec_nanos()));

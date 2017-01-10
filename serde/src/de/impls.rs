@@ -2,7 +2,7 @@
 
 #[cfg(feature = "std")]
 use std::borrow::Cow;
-#[cfg(all(feature = "unstable", feature = "collections", not(feature = "std")))]
+#[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::borrow::Cow;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
@@ -27,12 +27,13 @@ use std::collections::{
     VecDeque,
 };
 
-#[cfg(all(feature = "unstable", feature = "collections"))]
+#[cfg(feature = "collections")]
 use collections::enum_set::{CLike, EnumSet};
-#[cfg(all(feature = "unstable", feature = "collections"))]
+#[cfg(feature = "collections")]
 use collections::borrow::ToOwned;
 
 use core::fmt;
+#[cfg(feature = "std")]
 use core::hash::{Hash, BuildHasher};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
@@ -43,15 +44,15 @@ use core::str;
 
 #[cfg(feature = "std")]
 use std::rc::Rc;
-#[cfg(all(feature = "unstable", feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::rc::Rc;
 
 #[cfg(feature = "std")]
 use std::sync::Arc;
-#[cfg(all(feature = "unstable", feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::arc::Arc;
 
-#[cfg(all(feature = "unstable", feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 
 #[cfg(feature = "std")]
@@ -482,7 +483,7 @@ seq_impl!(
     BTreeSet::new(),
     BTreeSet::insert);
 
-#[cfg(all(feature = "unstable", feature = "collections"))]
+#[cfg(feature = "collections")]
 seq_impl!(
     EnumSet<T>,
     EnumSetVisitor<T: Deserialize + CLike>,

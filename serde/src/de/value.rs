@@ -33,9 +33,7 @@ use collections::boxed::Box;
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::string::ToString;
 
-#[cfg(all(feature = "unstable", feature = "collections"))]
-use collections::borrow::ToOwned;
-
+#[cfg(feature = "std")]
 use core::hash::Hash;
 #[cfg(feature = "std")]
 use std::error;
@@ -67,7 +65,7 @@ impl de::Error for Error {
     }
 
     #[cfg(not(any(feature = "std", feature = "collections")))]
-    fn custom<T: Display>(msg: T) -> Self {
+    fn custom<T: Display>(_msg: T) -> Self {
         Error(())
     }
 }
@@ -579,7 +577,7 @@ impl<I, E> MapDeserializer<I, E>
         }
     }
 
-    fn next(&mut self) -> Option<(<I::Item as private::Pair>::First, <I::Item as private::Pair>::Second)> {
+    fn next_pair(&mut self) -> Option<(<I::Item as private::Pair>::First, <I::Item as private::Pair>::Second)> {
         match self.iter.next() {
             Some(kv) => {
                 self.count += 1;
@@ -654,7 +652,7 @@ impl<I, E> de::MapVisitor for MapDeserializer<I, E>
     fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
         where T: de::DeserializeSeed,
     {
-        match self.next() {
+        match self.next_pair() {
             Some((key, value)) => {
                 self.value = Some(value);
                 seed.deserialize(key.into_deserializer()).map(Some)
@@ -677,7 +675,7 @@ impl<I, E> de::MapVisitor for MapDeserializer<I, E>
         where TK: de::DeserializeSeed,
               TV: de::DeserializeSeed
     {
-        match self.next() {
+        match self.next_pair() {
             Some((key, value)) => {
                 let key = try!(kseed.deserialize(key.into_deserializer()));
                 let value = try!(vseed.deserialize(value.into_deserializer()));
@@ -704,7 +702,7 @@ impl<I, E> de::SeqVisitor for MapDeserializer<I, E>
     fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
         where T: de::DeserializeSeed,
     {
-        match self.next() {
+        match self.next_pair() {
             Some((k, v)) => {
                 let de = PairDeserializer(k, v, PhantomData);
                 seed.deserialize(de).map(Some)
@@ -993,8 +991,8 @@ mod private {
         }
     }
 
-    /// Avoid having to restate the generic types on MapDeserializer. The
-    /// Iterator::Item contains enough information to figure out K and V.
+    /// Avoid having to restate the generic types on `MapDeserializer`. The
+    /// `Iterator::Item` contains enough information to figure out K and V.
     pub trait Pair {
         type First;
         type Second;
