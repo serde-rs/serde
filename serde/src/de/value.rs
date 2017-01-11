@@ -38,7 +38,7 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
-use core::fmt;
+use core::fmt::{self, Display};
 use core::marker::PhantomData;
 
 use de::{self, SeqVisitor};
@@ -48,102 +48,46 @@ use bytes;
 
 /// This represents all the possible errors that can occur using the `ValueDeserializer`.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Error {
-    /// The value had some custom error.
-    #[cfg(any(feature = "std", feature = "collections"))]
-    Custom(String),
-    /// The value had some custom error.
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    Custom(&'static str),
+pub struct Error(ErrorImpl);
 
-    /// The value had an incorrect type.
-    InvalidType(de::Type),
-
-    /// The value had an invalid length.
-    InvalidLength(usize),
-
-    /// The value is invalid and cannot be deserialized.
-    #[cfg(any(feature = "std", feature = "collections"))]
-    InvalidValue(String),
-    /// The value is invalid and cannot be deserialized.
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    InvalidValue(&'static str),
-
-    /// EOF while deserializing a value.
-    EndOfStream,
-
-    /// Unknown variant in enum.
-    #[cfg(any(feature = "std", feature = "collections"))]
-    UnknownVariant(String),
-    /// Unknown variant in enum.
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    UnknownVariant(&'static str),
-
-    /// Unknown field in struct.
-    #[cfg(any(feature = "std", feature = "collections"))]
-    UnknownField(String),
-    /// Unknown field in struct.
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    UnknownField(&'static str),
-
-    /// Struct is missing a field.
-    MissingField(&'static str),
-}
+#[cfg(any(feature = "std", feature = "collections"))]
+type ErrorImpl = Box<str>;
+#[cfg(not(any(feature = "std", feature = "collections")))]
+type ErrorImpl = ();
 
 impl de::Error for Error {
     #[cfg(any(feature = "std", feature = "collections"))]
-    fn custom<T: Into<String>>(msg: T) -> Self { Error::Custom(msg.into()) }
+    fn custom<T: Display>(msg: T) -> Self {
+        Error(msg.to_string().into_boxed_str())
+    }
 
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    fn custom<T: Into<&'static str>>(msg: T) -> Self { Error::Custom(msg.into()) }
-
-    fn end_of_stream() -> Self { Error::EndOfStream }
-    fn invalid_type(ty: de::Type) -> Self { Error::InvalidType(ty) }
-
-    #[cfg(any(feature = "std", feature = "collections"))]
-    fn invalid_value(msg: &str) -> Self { Error::InvalidValue(msg.to_owned()) }
-
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    fn invalid_value(msg: &str) -> Self { Error::InvalidValue("invalid value") }
-
-    fn invalid_length(len: usize) -> Self { Error::InvalidLength(len) }
-
-    #[cfg(any(feature = "std", feature = "collections"))]
-    fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant(String::from(variant)) }
-    #[cfg(any(feature = "std", feature = "collections"))]
-    fn unknown_field(field: &str) -> Self { Error::UnknownField(String::from(field)) }
-
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    fn unknown_variant(variant: &str) -> Self { Error::UnknownVariant("unknown variant") }
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    fn unknown_field(field: &str) -> Self { Error::UnknownField("unknown field") }
-    fn missing_field(field: &'static str) -> Self { Error::MissingField(field) }
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    fn custom<T: Display>(msg: T) -> Self {
+        Error(())
+    }
 }
 
-impl fmt::Display for Error {
+impl Display for Error {
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Error::Custom(ref s) => write!(formatter, "{}", s),
-            Error::EndOfStream => formatter.write_str("End of stream"),
-            Error::InvalidType(ty) => write!(formatter, "Invalid type, expected `{:?}`", ty),
-            Error::InvalidValue(ref value) => write!(formatter, "Invalid value: {}", value),
-            Error::InvalidLength(len) => write!(formatter, "Invalid length: {}", len),
-            Error::UnknownVariant(ref variant) => {
-                write!(formatter, "Unknown variant: {}", variant)
-            }
-            Error::UnknownField(ref field) => write!(formatter, "Unknown field: {}", field),
-            Error::MissingField(field) => write!(formatter, "Missing field: {}", field),
-        }
+        formatter.write_str(&self.0)
+    }
+
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        formatter.write_str("Serde deserialization error")
     }
 }
 
 impl error::Error for Error {
+    #[cfg(any(feature = "std", feature = "collections"))]
     fn description(&self) -> &str {
-        "Serde Deserialization Error"
+        &self.0
     }
 
-    fn cause(&self) -> Option<&error::Error> {
-        None
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    fn description(&self) -> &str {
+        "Serde deserialization error"
     }
 }
 
@@ -462,7 +406,7 @@ impl<I, T, E> de::Deserializer for SeqDeserializer<I, E>
         if self.len == 0 {
             Ok(v)
         } else {
-            Err(de::Error::invalid_length(self.len))
+            Err(de::Error::invalid_length(self.len, &"TODO"))
         }
     }
 
@@ -629,7 +573,7 @@ impl<I, K, V, E> MapDeserializer<I, K, V, E>
 
     fn end(&mut self) -> Result<(), E> {
         match self.len {
-            Some(len) if len > 0 => Err(de::Error::invalid_length(len)),
+            Some(len) if len > 0 => Err(de::Error::invalid_length(len, &"TODO")),
             _ => Ok(())
         }
     }
@@ -663,7 +607,7 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
         where V_: de::Visitor,
     {
         match self.len {
-            Some(map_len) if map_len != len => Err(de::Error::invalid_length(len)),
+            Some(map_len) if map_len != len => Err(de::Error::invalid_length(len, &"TODO")),
             _ => {
                 let value = try!(visitor.visit_seq(&mut self));
                 try!(self.end());
@@ -702,14 +646,11 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
     fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
         where T: de::DeserializeSeed,
     {
-        match self.value.take() {
-            Some(value) => {
-                seed.deserialize(value.into_deserializer())
-            }
-            None => {
-                Err(de::Error::end_of_stream())
-            }
-        }
+        let value = self.value.take();
+        // Panic because this indicates a bug in the program rather than an
+        // expected failure.
+        let value = value.expect("MapVisitor::visit_value called before visit_key");
+        seed.deserialize(value.into_deserializer())
     }
 
     fn visit_seed<TK, TV>(&mut self, kseed: TK, vseed: TV) -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
@@ -789,7 +730,7 @@ impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
         if pair_visitor.1.is_none() {
             Ok(pair)
         } else {
-            Err(de::Error::invalid_length(pair_visitor.size_hint().0))
+            Err(de::Error::invalid_length(pair_visitor.size_hint().0, &"TODO"))
         }
     }
 
@@ -799,7 +740,7 @@ impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
         if len == 2 {
             self.deserialize_seq(visitor)
         } else {
-            Err(de::Error::invalid_length(len))
+            Err(de::Error::invalid_length(len, &"TODO"))
         }
     }
 }
@@ -977,7 +918,7 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
 ///////////////////////////////////////////////////////////////////////////////
 
 mod private {
-    use de;
+    use de::{self, Unexpected};
     use core::marker::PhantomData;
 
     pub struct UnitOnly<E>(PhantomData<E>);
@@ -998,7 +939,7 @@ mod private {
         fn visit_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
             where T: de::DeserializeSeed,
         {
-            Err(de::Error::invalid_type(de::Type::NewtypeVariant))
+            Err(de::Error::invalid_type(Unexpected::UnitVariant, &"newtype variant"))
         }
 
         fn visit_tuple<V>(self,
@@ -1006,7 +947,7 @@ mod private {
                         _visitor: V) -> Result<V::Value, Self::Error>
             where V: de::Visitor
         {
-            Err(de::Error::invalid_type(de::Type::TupleVariant))
+            Err(de::Error::invalid_type(Unexpected::UnitVariant, &"tuple variant"))
         }
 
         fn visit_struct<V>(self,
@@ -1014,7 +955,7 @@ mod private {
                         _visitor: V) -> Result<V::Value, Self::Error>
             where V: de::Visitor
         {
-            Err(de::Error::invalid_type(de::Type::StructVariant))
+            Err(de::Error::invalid_type(Unexpected::UnitVariant, &"struct variant"))
         }
     }
 }

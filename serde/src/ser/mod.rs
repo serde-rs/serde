@@ -23,6 +23,8 @@ use core::marker::PhantomData;
 #[cfg(feature = "unstable")]
 use core::cell::RefCell;
 
+use core::fmt::Display;
+
 pub mod impls;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -31,17 +33,7 @@ pub mod impls;
 /// `Serializer` error.
 pub trait Error: Sized + error::Error {
     /// Raised when there is a general error when serializing a type.
-    #[cfg(any(feature = "std", feature = "collections"))]
-    fn custom<T: Into<String>>(msg: T) -> Self;
-
-    /// Raised when there is a general error when serializing a type.
-    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
-    fn custom<T: Into<&'static str>>(msg: T) -> Self;
-
-    /// Raised when a `Serialize` was passed an incorrect value.
-    fn invalid_value(msg: &str) -> Self {
-        Error::custom(format!("invalid value: {}", msg))
-    }
+    fn custom<T: Display>(msg: T) -> Self;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

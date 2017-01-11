@@ -200,11 +200,17 @@ fn deserialize_unit_struct(
 ) -> Tokens {
     let type_name = item_attrs.name().deserialize_name();
 
+    let expecting = format!("unit struct {}", type_ident);
+
     quote!({
         struct __Visitor;
 
         impl _serde::de::Visitor for __Visitor {
             type Value = #type_ident;
+
+            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                formatter.write_str(#expecting)
+            }
 
             #[inline]
             fn visit_unit<__E>(self) -> ::std::result::Result<#type_ident, __E>
@@ -241,6 +247,10 @@ fn deserialize_tuple(
     let type_path = match variant_ident {
         Some(variant_ident) => quote!(#type_ident::#variant_ident),
         None => quote!(#type_ident),
+    };
+    let expecting = match variant_ident {
+        Some(variant_ident) => format!("tuple variant {}::{}", type_ident, variant_ident),
+        None => format!("tuple struct {}", type_ident),
     };
 
     let nfields = fields.len();
@@ -287,6 +297,10 @@ fn deserialize_tuple(
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
 
+            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                formatter.write_str(#expecting)
+            }
+
             #visit_newtype_struct
 
             #[inline]
@@ -309,6 +323,11 @@ fn deserialize_seq(
     is_struct: bool,
 ) -> Tokens {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
+
+    let deserialized_count = fields.iter()
+        .filter(|field| !field.attrs.skip_deserializing())
+        .count();
+    let expecting = format!("tuple of {} elements", deserialized_count);
 
     let mut index_in_seq = 0usize;
     let let_values = vars.clone().zip(fields)
@@ -338,7 +357,7 @@ fn deserialize_seq(
                     let #var = match #visit {
                         Some(value) => { value },
                         None => {
-                            return Err(_serde::de::Error::invalid_length(#index_in_seq));
+                            return Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                         }
                     };
                 };
@@ -413,6 +432,10 @@ fn deserialize_struct(
         Some(variant_ident) => quote!(#type_ident::#variant_ident),
         None => quote!(#type_ident),
     };
+    let expecting = match variant_ident {
+        Some(variant_ident) => format!("struct variant {}::{}", type_ident, variant_ident),
+        None => format!("struct {}", type_ident),
+    };
 
     let visit_seq = deserialize_seq(
         type_ident,
@@ -457,6 +480,10 @@ fn deserialize_struct(
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
 
+            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                formatter.write_str(#expecting)
+            }
+
             #[inline]
             fn visit_seq<__V>(self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
@@ -488,6 +515,8 @@ fn deserialize_item_enum(
     let where_clause = &impl_generics.where_clause;
 
     let type_name = item_attrs.name().deserialize_name();
+
+    let expecting = format!("enum {}", type_ident);
 
     let variant_names_idents = variants.iter()
         .enumerate()
@@ -554,6 +583,10 @@ fn deserialize_item_enum(
 
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
+
+            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                formatter.write_str(#expecting)
+            }
 
             fn visit_enum<__V>(self, visitor: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::EnumVisitor,
@@ -659,11 +692,11 @@ fn deserialize_field_visitor(
 
     let fallthrough_arm = if is_variant {
         quote! {
-            Err(_serde::de::Error::unknown_variant(value))
+            Err(_serde::de::Error::unknown_variant(value, VARIANTS))
         }
     } else if item_attrs.deny_unknown_fields() {
         quote! {
-            Err(_serde::de::Error::unknown_field(value))
+            Err(_serde::de::Error::unknown_field(value, FIELDS))
         }
     } else {
         quote! {
@@ -687,6 +720,10 @@ fn deserialize_field_visitor(
 
                 impl _serde::de::Visitor for __FieldVisitor {
                     type Value = __Field;
+
+                    fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                        formatter.write_str("field name")
+                    }
 
                     fn visit_str<__E>(self, value: &str) -> ::std::result::Result<__Field, __E>
                         where __E: _serde::de::Error

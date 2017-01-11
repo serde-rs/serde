@@ -32,6 +32,7 @@ use collections::enum_set::{CLike, EnumSet};
 #[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::borrow::ToOwned;
 
+use core::fmt;
 use core::hash::{Hash, BuildHasher};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
@@ -69,7 +70,7 @@ use de::{
     Error,
     MapVisitor,
     SeqVisitor,
-    Type,
+    Unexpected,
     VariantVisitor,
     Visitor,
 };
@@ -82,6 +83,10 @@ pub struct UnitVisitor;
 
 impl Visitor for UnitVisitor {
     type Value = ();
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("unit")
+    }
 
     fn visit_unit<E>(self) -> Result<(), E>
         where E: Error,
@@ -112,6 +117,10 @@ pub struct BoolVisitor;
 impl Visitor for BoolVisitor {
     type Value = bool;
 
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a boolean")
+    }
+
     fn visit_bool<E>(self, v: bool) -> Result<bool, E>
         where E: Error,
     {
@@ -124,7 +133,7 @@ impl Visitor for BoolVisitor {
         match s.trim_matches(::utils::Pattern_White_Space) {
             "true" => Ok(true),
             "false" => Ok(false),
-            _ => Err(Error::invalid_type(Type::Bool)),
+            _ => Err(Error::invalid_type(Unexpected::Str(s), &self)),
         }
     }
 }
@@ -140,70 +149,59 @@ impl Deserialize for bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserialize_num_method {
-    ($src_ty:ty, $method:ident, $from_method:ident, $ty:expr) => {
+    ($ty:ident, $src_ty:ident, $method:ident, $from_method:ident, $group:ident, $group_ty:ident) => {
         #[inline]
-        fn $method<E>(self, v: $src_ty) -> Result<T, E>
+        fn $method<E>(self, v: $src_ty) -> Result<$ty, E>
             where E: Error,
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => Err(Error::invalid_type($ty)),
+                None => Err(Error::invalid_value(Unexpected::$group(v as $group_ty), &self)),
             }
         }
     }
 }
 
-/// A visitor that produces a primitive type.
-struct PrimitiveVisitor<T> {
-    marker: PhantomData<T>,
-}
-
-impl<T> PrimitiveVisitor<T> {
-    /// Construct a new `PrimitiveVisitor`.
-    #[inline]
-    fn new() -> Self {
-        PrimitiveVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<T> Visitor for PrimitiveVisitor<T>
-    where T: Deserialize + FromPrimitive + str::FromStr
-{
-    type Value = T;
-
-    impl_deserialize_num_method!(isize, visit_isize, from_isize, Type::Isize);
-    impl_deserialize_num_method!(i8, visit_i8, from_i8, Type::I8);
-    impl_deserialize_num_method!(i16, visit_i16, from_i16, Type::I16);
-    impl_deserialize_num_method!(i32, visit_i32, from_i32, Type::I32);
-    impl_deserialize_num_method!(i64, visit_i64, from_i64, Type::I64);
-    impl_deserialize_num_method!(usize, visit_usize, from_usize, Type::Usize);
-    impl_deserialize_num_method!(u8, visit_u8, from_u8, Type::U8);
-    impl_deserialize_num_method!(u16, visit_u16, from_u16, Type::U16);
-    impl_deserialize_num_method!(u32, visit_u32, from_u32, Type::U32);
-    impl_deserialize_num_method!(u64, visit_u64, from_u64, Type::U64);
-    impl_deserialize_num_method!(f32, visit_f32, from_f32, Type::F32);
-    impl_deserialize_num_method!(f64, visit_f64, from_f64, Type::F64);
-
-    #[inline]
-    fn visit_str<E>(self, s: &str) -> Result<T, E>
-        where E: Error,
-    {
-        str::FromStr::from_str(s.trim_matches(::utils::Pattern_White_Space)).or_else(|_| {
-            Err(Error::invalid_type(Type::Str))
-        })
-    }
-}
-
 macro_rules! impl_deserialize_num {
-    ($ty:ty, $method:ident) => {
+    ($ty:ident, $method:ident) => {
         impl Deserialize for $ty {
             #[inline]
             fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.$method(PrimitiveVisitor::new())
+                struct PrimitiveVisitor;
+
+                impl Visitor for PrimitiveVisitor {
+                    type Value = $ty;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str(stringify!($ty))
+                    }
+
+                    impl_deserialize_num_method!($ty, isize, visit_isize, from_isize, Signed, i64);
+                    impl_deserialize_num_method!($ty, i8, visit_i8, from_i8, Signed, i64);
+                    impl_deserialize_num_method!($ty, i16, visit_i16, from_i16, Signed, i64);
+                    impl_deserialize_num_method!($ty, i32, visit_i32, from_i32, Signed, i64);
+                    impl_deserialize_num_method!($ty, i64, visit_i64, from_i64, Signed, i64);
+                    impl_deserialize_num_method!($ty, usize, visit_usize, from_usize, Unsigned, u64);
+                    impl_deserialize_num_method!($ty, u8, visit_u8, from_u8, Unsigned, u64);
+                    impl_deserialize_num_method!($ty, u16, visit_u16, from_u16, Unsigned, u64);
+                    impl_deserialize_num_method!($ty, u32, visit_u32, from_u32, Unsigned, u64);
+                    impl_deserialize_num_method!($ty, u64, visit_u64, from_u64, Unsigned, u64);
+                    impl_deserialize_num_method!($ty, f32, visit_f32, from_f32, Float, f64);
+                    impl_deserialize_num_method!($ty, f64, visit_f64, from_f64, Float, f64);
+
+                    #[inline]
+                    fn visit_str<E>(self, s: &str) -> Result<$ty, E>
+                        where E: Error,
+                    {
+                        str::FromStr::from_str(s.trim_matches(::utils::Pattern_White_Space)).or_else(|_| {
+                            Err(Error::invalid_type(Unexpected::Str(s), &self))
+                        })
+                    }
+                }
+
+                deserializer.$method(PrimitiveVisitor)
             }
         }
     }
@@ -229,6 +227,10 @@ struct CharVisitor;
 impl Visitor for CharVisitor {
     type Value = char;
 
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a character")
+    }
+
     #[inline]
     fn visit_char<E>(self, v: char) -> Result<char, E>
         where E: Error,
@@ -241,14 +243,9 @@ impl Visitor for CharVisitor {
         where E: Error,
     {
         let mut iter = v.chars();
-        if let Some(v) = iter.next() {
-            if iter.next().is_some() {
-                Err(Error::invalid_type(Type::Char))
-            } else {
-                Ok(v)
-            }
-        } else {
-            Err(Error::end_of_stream())
+        match (iter.next(), iter.next()) {
+            (Some(c), None) => Ok(c),
+            _ => Err(Error::invalid_value(Unexpected::Str(v), &self)),
         }
     }
 }
@@ -270,6 +267,10 @@ struct StringVisitor;
 #[cfg(any(feature = "std", feature = "collections"))]
 impl Visitor for StringVisitor {
     type Value = String;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string")
+    }
 
     fn visit_str<E>(self, v: &str) -> Result<String, E>
         where E: Error,
@@ -294,7 +295,7 @@ impl Visitor for StringVisitor {
     {
         match str::from_utf8(v) {
             Ok(s) => Ok(s.to_owned()),
-            Err(_) => Err(Error::invalid_type(Type::String)),
+            Err(_) => Err(Error::invalid_value(Unexpected::Bytes, &self)),
         }
     }
 
@@ -303,7 +304,7 @@ impl Visitor for StringVisitor {
     {
         match String::from_utf8(v) {
             Ok(s) => Ok(s),
-            Err(_) => Err(Error::invalid_type(Type::String)),
+            Err(_) => Err(Error::invalid_value(Unexpected::Bytes, &self)),
         }
     }
 }
@@ -327,6 +328,10 @@ impl<
     T: Deserialize,
 > Visitor for OptionVisitor<T> {
     type Value = Option<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("option")
+    }
 
     #[inline]
     fn visit_unit<E>(self) -> Result<Option<T>, E>
@@ -367,6 +372,10 @@ pub struct PhantomDataVisitor<T> {
 
 impl<T> Visitor for PhantomDataVisitor<T> {
     type Value = PhantomData<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("unit")
+    }
 
     #[inline]
     fn visit_unit<E>(self) -> Result<PhantomData<T>, E>
@@ -416,6 +425,10 @@ macro_rules! seq_impl {
             where $($typaram: $bound1 $(+ $bound2)*),*
         {
             type Value = $ty;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
 
             #[inline]
             fn visit_unit<E>(self) -> Result<$ty, E>
@@ -531,6 +544,10 @@ impl<A> ArrayVisitor<A> {
 impl<T> Visitor for ArrayVisitor<[T; 0]> where T: Deserialize {
     type Value = [T; 0];
 
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("an empty array")
+    }
+
     #[inline]
     fn visit_unit<E>(self) -> Result<[T; 0], E>
         where E: Error,
@@ -562,6 +579,10 @@ macro_rules! array_impls {
             impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
                 type Value = [T; $len];
 
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str(concat!("an array of length ", $len))
+                }
+
                 #[inline]
                 fn visit_seq<V>(self, mut visitor: V) -> Result<[T; $len], V::Error>
                     where V: SeqVisitor,
@@ -569,7 +590,7 @@ macro_rules! array_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(val) => val,
-                            None => return Err(Error::end_of_stream()),
+                            None => return Err(Error::invalid_length(0, &self)),
                         };
                     )+
 
@@ -645,6 +666,10 @@ macro_rules! tuple_impls {
             impl<$($name: Deserialize),+> Visitor for $visitor<$($name,)+> {
                 type Value = ($($name,)+);
 
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str(concat!("a tuple of size ", $len))
+                }
+
                 #[inline]
                 #[allow(non_snake_case)]
                 fn visit_seq<V>(self, mut visitor: V) -> Result<($($name,)+), V::Error>
@@ -653,7 +678,7 @@ macro_rules! tuple_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(value) => value,
-                            None => return Err(Error::end_of_stream()),
+                            None => return Err(Error::invalid_length(0, &self)),
                         };
                     )+
 
@@ -723,6 +748,10 @@ macro_rules! map_impl {
         {
             type Value = $ty;
 
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a map")
+            }
+
             #[inline]
             fn visit_unit<E>(self) -> Result<$ty, E>
                 where E: Error,
@@ -785,7 +814,7 @@ impl Deserialize for net::IpAddr {
         let s = try!(String::deserialize(deserializer));
         match s.parse() {
             Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+            Err(err) => Err(D::Error::custom(err)),
         }
     }
 }
@@ -798,7 +827,7 @@ impl Deserialize for net::Ipv4Addr {
         let s = try!(String::deserialize(deserializer));
         match s.parse() {
             Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+            Err(err) => Err(D::Error::custom(err)),
         }
     }
 }
@@ -811,7 +840,7 @@ impl Deserialize for net::Ipv6Addr {
         let s = try!(String::deserialize(deserializer));
         match s.parse() {
             Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+            Err(err) => Err(D::Error::custom(err)),
         }
     }
 }
@@ -826,7 +855,7 @@ impl Deserialize for net::SocketAddr {
         let s = try!(String::deserialize(deserializer));
         match s.parse() {
             Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+            Err(err) => Err(D::Error::custom(err)),
         }
     }
 }
@@ -839,7 +868,7 @@ impl Deserialize for net::SocketAddrV4 {
         let s = try!(String::deserialize(deserializer));
         match s.parse() {
             Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+            Err(err) => Err(D::Error::custom(err)),
         }
     }
 }
@@ -852,7 +881,7 @@ impl Deserialize for net::SocketAddrV6 {
         let s = try!(String::deserialize(deserializer));
         match s.parse() {
             Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::invalid_value(&err.to_string())),
+            Err(err) => Err(D::Error::custom(err)),
         }
     }
 }
@@ -866,6 +895,10 @@ struct PathBufVisitor;
 impl Visitor for PathBufVisitor {
     type Value = path::PathBuf;
 
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("path string")
+    }
+
     fn visit_str<E>(self, v: &str) -> Result<path::PathBuf, E>
         where E: Error,
     {
@@ -875,7 +908,7 @@ impl Visitor for PathBufVisitor {
     fn visit_string<E>(self, v: String) -> Result<path::PathBuf, E>
         where E: Error,
     {
-        self.visit_str(&v)
+        Ok(From::from(v))
     }
 }
 
@@ -977,13 +1010,17 @@ impl Deserialize for Duration {
                 impl Visitor for FieldVisitor {
                     type Value = Field;
 
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`secs` or `nanos`")
+                    }
+
                     fn visit_usize<E>(self, value: usize) -> Result<Field, E>
                         where E: Error,
                     {
                         match value {
                             0usize => Ok(Field::Secs),
                             1usize => Ok(Field::Nanos),
-                            _ => Err(Error::invalid_value("expected a field")),
+                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self)),
                         }
                     }
 
@@ -993,7 +1030,7 @@ impl Deserialize for Duration {
                         match value {
                             "secs" => Ok(Field::Secs),
                             "nanos" => Ok(Field::Nanos),
-                            _ => Err(Error::unknown_field(value)),
+                            _ => Err(Error::unknown_field(value, FIELDS)),
                         }
                     }
 
@@ -1005,7 +1042,7 @@ impl Deserialize for Duration {
                             b"nanos" => Ok(Field::Nanos),
                             _ => {
                                 let value = String::from_utf8_lossy(value);
-                                Err(Error::unknown_field(&value))
+                                Err(Error::unknown_field(&value, FIELDS))
                             }
                         }
                     }
@@ -1020,19 +1057,23 @@ impl Deserialize for Duration {
         impl Visitor for DurationVisitor {
             type Value = Duration;
 
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Duration")
+            }
+
             fn visit_seq<V>(self, mut visitor: V) -> Result<Duration, V::Error>
                 where V: SeqVisitor,
             {
                 let secs: u64 = match try!(visitor.visit()) {
                     Some(value) => value,
                     None => {
-                        return Err(Error::invalid_length(0));
+                        return Err(Error::invalid_length(0, &self));
                     }
                 };
                 let nanos: u32 = match try!(visitor.visit()) {
                     Some(value) => value,
                     None => {
-                        return Err(Error::invalid_length(1));
+                        return Err(Error::invalid_length(1, &self));
                     }
                 };
                 Ok(Duration::new(secs, nanos))
@@ -1083,7 +1124,7 @@ impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable +
     fn deserialize<D>(deserializer: D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
         let value = try!(Deserialize::deserialize(deserializer));
         if value == Zero::zero() {
-            return Err(Error::invalid_value("expected a non-zero value"))
+            return Err(Error::custom("expected a non-zero value"))
         }
         unsafe {
             Ok(NonZero::new(value))
@@ -1112,23 +1153,15 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                 impl Visitor for FieldVisitor {
                     type Value = Field;
 
-                    #[cfg(any(feature = "std", feature = "collections"))]
-                    fn visit_usize<E>(self, value: usize) -> Result<Field, E> where E: Error {
-                        #[cfg(feature = "collections")]
-                        use collections::string::ToString;
-                        match value {
-                            0 => Ok(Field::Ok),
-                            1 => Ok(Field::Err),
-                            _ => Err(Error::unknown_field(&value.to_string())),
-                        }
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`Ok` or `Err`")
                     }
 
-                    #[cfg(all(not(feature = "std"), not(feature = "collections")))]
                     fn visit_usize<E>(self, value: usize) -> Result<Field, E> where E: Error {
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),
-                            _ => Err(Error::unknown_field("some number")),
+                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self)),
                         }
                     }
 
@@ -1136,7 +1169,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                         match value {
                             "Ok" => Ok(Field::Ok),
                             "Err" => Ok(Field::Err),
-                            _ => Err(Error::unknown_field(value)),
+                            _ => Err(Error::unknown_variant(value, VARIANTS)),
                         }
                     }
 
@@ -1146,8 +1179,8 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                             b"Err" => Ok(Field::Err),
                             _ => {
                                 match str::from_utf8(value) {
-                                    Ok(value) => Err(Error::unknown_field(value)),
-                                    Err(_) => Err(Error::invalid_type(Type::String)),
+                                    Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                    Err(_) => Err(Error::invalid_value(Unexpected::Bytes, &self)),
                                 }
                             }
                         }
@@ -1165,6 +1198,10 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                   E: Deserialize
         {
             type Value = Result<T, E>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("enum Result")
+            }
 
             fn visit_enum<V>(self, visitor: V) -> Result<Result<T, E>, V::Error>
                 where V: EnumVisitor
@@ -1197,6 +1234,10 @@ impl Deserialize for IgnoredAny {
 
         impl Visitor for IgnoredAnyVisitor {
             type Value = IgnoredAny;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("anything at all")
+            }
 
             #[inline]
             fn visit_bool<E>(self, _: bool) -> Result<IgnoredAny, E> {

@@ -257,10 +257,10 @@ fn serialize_variant(
     let variant_name = variant.attrs.name().serialize_name();
 
     if variant.attrs.skip_serializing() {
-        let skipped_msg = format!("The enum variant {}::{} cannot be serialized",
+        let skipped_msg = format!("the enum variant {}::{} cannot be serialized",
                                 type_ident, variant_ident);
         let skipped_err = quote! {
-            Err(_serde::ser::Error::invalid_value(#skipped_msg))
+            Err(_serde::ser::Error::custom(#skipped_msg))
         };
         let fields_pat = match variant.style {
             Style::Unit => quote!(),
