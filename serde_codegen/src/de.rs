@@ -533,6 +533,9 @@ fn deserialize_item_enum(
         // This is an empty enum like `enum Impossible {}` or an enum in which
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
+            // FIXME: Once we drop support for Rust 1.15:
+            // let Err(err) = visitor.visit_variant::<__Field>();
+            // Err(err)
             visitor.visit_variant::<__Field>().map(|impossible| match impossible {})
         }
     } else {
@@ -749,7 +752,7 @@ fn deserialize_map(
 ) -> Tokens {
     if fields.is_empty() && item_attrs.deny_unknown_fields() {
         return quote! {
-            // Once we drop support for Rust 1.15:
+            // FIXME: Once we drop support for Rust 1.15:
             // let None::<__Field> = try!(visitor.visit_key());
             try!(visitor.visit_key::<__Field>()).map(|impossible| match impossible {});
             try!(visitor.end());
