@@ -208,6 +208,85 @@ fn test_gen() {
     struct NonAsciiIdents {
         σ: f64
     }
+
+    #[derive(Serialize, Deserialize)]
+    struct EmptyBraced {}
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct EmptyBracedDenyUnknown {}
+
+    #[derive(Serialize, Deserialize)]
+    struct BracedSkipAll {
+        #[serde(skip_deserializing)]
+        f: u8,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct BracedSkipAllDenyUnknown {
+        #[serde(skip_deserializing)]
+        f: u8,
+    }
+
+    #[cfg(feature = "unstable-testing")]
+    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    struct EmptyTuple();
+
+    #[cfg(feature = "unstable-testing")]
+    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[serde(deny_unknown_fields)]
+    struct EmptyTupleDenyUnknown();
+
+    #[derive(Serialize, Deserialize)]
+    struct TupleSkipAll(#[serde(skip_deserializing)] u8);
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct TupleSkipAllDenyUnknown(#[serde(skip_deserializing)] u8);
+
+    #[derive(Serialize, Deserialize)]
+    enum EmptyEnum {}
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    enum EmptyEnumDenyUnknown {}
+
+    #[derive(Serialize, Deserialize)]
+    enum EnumSkipAll {
+        #[serde(skip_deserializing)]
+        #[allow(dead_code)]
+        Variant,
+    }
+
+    #[cfg(feature = "unstable-testing")]
+    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    enum EmptyVariants {
+        Braced {},
+        Tuple(),
+        BracedSkip {
+            #[serde(skip_deserializing)]
+            f: u8,
+        },
+        TupleSkip(#[serde(skip_deserializing)] u8),
+    }
+
+    #[cfg(feature = "unstable-testing")]
+    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[serde(deny_unknown_fields)]
+    enum EmptyVariantsDenyUnknown {
+        Braced {},
+        Tuple(),
+        BracedSkip {
+            #[serde(skip_deserializing)]
+            f: u8,
+        },
+        TupleSkip(#[serde(skip_deserializing)] u8),
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct UnitDenyUnknown;
 }
 
 //////////////////////////////////////////////////////////////////////////
