@@ -509,14 +509,6 @@ fn deserialize_item_enum(
         const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
     };
 
-    let ignored_arm = if item_attrs.deny_unknown_fields() {
-        None
-    } else {
-        Some(quote! {
-            __Field::__ignore => { Err(_serde::de::Error::end_of_stream()) }
-        })
-    };
-
     // Match arms to extract a variant from a string
     let mut variant_arms = vec![];
     for (i, variant) in variants.iter().filter(|variant| !variant.attrs.skip_deserializing()).enumerate() {
@@ -536,7 +528,20 @@ fn deserialize_item_enum(
         };
         variant_arms.push(arm);
     }
-    variant_arms.extend(ignored_arm.into_iter());
+
+    let match_variant = if variant_arms.is_empty() {
+        // This is an empty enum like `enum Impossible {}` or an enum in which
+        // all variants have `#[serde(skip_deserializing)]`.
+        quote! {
+            visitor.visit_variant::<__Field>().map(|impossible| match impossible {})
+        }
+    } else {
+        quote! {
+            match try!(visitor.visit_variant()) {
+                #(#variant_arms)*
+            }
+        }
+    };
 
     let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(impl_generics);
 
@@ -551,9 +556,7 @@ fn deserialize_item_enum(
             fn visit_enum<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::VariantVisitor,
             {
-                match try!(visitor.visit_variant()) {
-                    #(#variant_arms)*
-                }
+                #match_variant
             }
         }
 
@@ -646,7 +649,7 @@ fn deserialize_field_visitor(
         .map(|i| aster::id(format!("__field{}", i)))
         .collect();
 
-    let ignore_variant = if item_attrs.deny_unknown_fields() {
+    let ignore_variant = if is_variant || item_attrs.deny_unknown_fields() {
         None
     } else {
         Some(quote!(__ignore,))
@@ -744,6 +747,16 @@ fn deserialize_map(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> Tokens {
+    if fields.is_empty() && item_attrs.deny_unknown_fields() {
+        return quote! {
+            // Once we drop support for Rust 1.15:
+            // let None::<__Field> = try!(visitor.visit_key());
+            try!(visitor.visit_key::<__Field>()).map(|impossible| match impossible {});
+            try!(visitor.end());
+            Ok(#struct_path {})
+        };
+    }
+
     // Create the field names for the fields.
     let fields_names = fields.iter()
         .enumerate()
