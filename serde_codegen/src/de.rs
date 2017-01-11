@@ -642,7 +642,7 @@ fn deserialize_field_visitor(
     is_variant: bool,
 ) -> Tokens {
     // Create the field names for the fields.
-    let ref field_idents: Vec<_> = (0 .. field_names.len())
+    let field_idents: &Vec<_> = &(0 .. field_names.len())
         .map(|i| aster::id(format!("__field{}", i)))
         .collect();
 
