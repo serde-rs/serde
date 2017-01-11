@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.8.21"
+version = "0.8.22"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
