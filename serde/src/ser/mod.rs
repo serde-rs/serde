@@ -431,8 +431,8 @@ pub struct Iterator<I>(RefCell<Option<I>>)
 /// serialize the given iterator as a sequence
 #[cfg(feature = "unstable")]
 pub fn iterator<I>(iter: I) -> Iterator<I>
-    where <I as iter::Iterator>::Item: Serialize,
-          I: iter::Iterator
+    where <I as iter::IntoIterator>::Item: Serialize,
+          I: iter::IntoIterator
 {
-    Iterator(RefCell::new(Some(iter)))
+    Iterator(RefCell::new(Some(iter.into_iter())))
 }
