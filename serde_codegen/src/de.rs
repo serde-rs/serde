@@ -714,7 +714,7 @@ fn deserialize_struct_visitor(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Tokens, Tokens, Tokens) {
-    let field_exprs = fields.iter()
+    let field_exprs: Vec<_> = fields.iter()
         .map(|field| field.attrs.name().deserialize_name())
         .collect();
     let field_names = field_exprs.clone();
