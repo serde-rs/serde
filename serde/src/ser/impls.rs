@@ -72,6 +72,9 @@ use super::{
     Serializer,
 };
 
+#[cfg(feature = "unstable")]
+use super::Iterator;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_visit {
@@ -218,6 +221,33 @@ array_impls!(29);
 array_impls!(30);
 array_impls!(31);
 array_impls!(32);
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "unstable")]
+impl<'a, I> Serialize for Iterator<I>
+    where I: iter::Iterator, <I as iter::Iterator>::Item: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        // FIXME: use specialization to prevent invalidating the object in case of clonable iterators?
+        let iter = match self.0.borrow_mut().take() {
+            Some(iter) => iter,
+            None => return Err(S::Error::custom("Iterator used twice")),
+        };
+        let size = match iter.size_hint() {
+            (lo, Some(hi)) if lo == hi => Some(lo),
+            _ => None,
+        };
+        let mut state = try!(serializer.serialize_seq(size));
+        for e in iter {
+            try!(serializer.serialize_seq_elt(&mut state, e));
+        }
+        serializer.serialize_seq_end(state)
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

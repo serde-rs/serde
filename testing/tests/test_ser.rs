@@ -15,6 +15,9 @@ use self::serde_test::{
 extern crate fnv;
 use self::fnv::FnvHasher;
 
+#[cfg(feature = "unstable")]
+use serde::ser::iterator;
+
 //////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize)]
@@ -367,6 +370,49 @@ declare_ser_tests! {
             Token::Str("/usr/local/lib"),
         ],
     }
+}
+
+
+#[cfg(feature = "unstable")]
+#[test]
+fn test_iterator() {
+    assert_ser_tokens(iterator([0; 0].iter()), &[
+        Token::SeqStart(Some(0)),
+        Token::SeqEnd,
+    ]);
+    assert_ser_tokens(iterator([1, 2, 3].iter()), &[
+        Token::SeqStart(Some(3)),
+            Token::SeqSep,
+            Token::I32(1),
+
+            Token::SeqSep,
+            Token::I32(2),
+
+            Token::SeqSep,
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
+    assert_ser_tokens(iterator([1, 2, 3].iter().map(|x| x * 2)), &[
+        Token::SeqStart(Some(3)),
+            Token::SeqSep,
+            Token::I32(2),
+
+            Token::SeqSep,
+            Token::I32(4),
+
+            Token::SeqSep,
+            Token::I32(6),
+        Token::SeqEnd,
+    ]);
+    assert_ser_tokens(iterator([1, 2, 3].iter().filter(|&x| x % 2 != 0)), &[
+        Token::SeqStart(None),
+            Token::SeqSep,
+            Token::I32(1),
+
+            Token::SeqSep,
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
 }
 
 #[cfg(feature = "unstable")]
