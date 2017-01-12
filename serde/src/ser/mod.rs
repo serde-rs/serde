@@ -22,8 +22,6 @@ use collections::String;
 use core::marker::PhantomData;
 #[cfg(feature = "unstable")]
 use core::cell::RefCell;
-#[cfg(feature = "unstable")]
-use core::iter;
 
 pub mod impls;
 
@@ -424,15 +422,15 @@ pub trait Serializer {
 /// every time you want to serialize an iterator.
 #[cfg(feature = "unstable")]
 pub struct Iterator<I>(RefCell<Option<I>>)
-    where <I as iter::Iterator>::Item: Serialize,
-          I: iter::Iterator;
+    where <I as IntoIterator>::Item: Serialize,
+          I: IntoIterator;
 
 /// Creates a temporary type that can be passed to any function expecting a `Serialize` and will
 /// serialize the given iterator as a sequence
 #[cfg(feature = "unstable")]
 pub fn iterator<I>(iter: I) -> Iterator<I>
-    where <I as iter::IntoIterator>::Item: Serialize,
-          I: iter::IntoIterator
+    where <I as IntoIterator>::Item: Serialize,
+          I: IntoIterator
 {
     Iterator(RefCell::new(Some(iter.into_iter())))
 }
