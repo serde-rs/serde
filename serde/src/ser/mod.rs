@@ -18,6 +18,9 @@ use error;
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::String;
 
+use core::marker::PhantomData;
+use core::cell::RefCell;
+
 pub mod impls;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -409,4 +412,21 @@ pub trait Serializer {
         &mut self,
         state: Self::StructVariantState,
     ) -> Result<(), Self::Error>;
+}
+
+
+/// A wrapper type for iterators that implements `Serialize` for iterators whose items implement
+/// `Serialize`. Don't use multiple times. Create new versions of this with the `iterator` function
+/// every time you want to serialize an iterator.
+pub struct IteratorSerializer<I>(RefCell<Option<I>>)
+    where <I as Iterator>::Item: Serialize,
+          I: Iterator;
+
+/// Creates a temporary type that can be passed to any function expecting a `Serialize` and will
+/// serialize the given iterator as a sequence
+pub fn iterator<I>(iter: I) -> IteratorSerializer<I>
+    where <I as Iterator>::Item: Serialize,
+          I: Iterator
+{
+    IteratorSerializer(RefCell::new(Some(iter)))
 }
