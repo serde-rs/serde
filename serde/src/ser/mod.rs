@@ -432,5 +432,5 @@ pub fn iterator<I>(iter: I) -> Iterator<I>
     where <I as IntoIterator>::Item: Serialize,
           I: IntoIterator
 {
-    Iterator(RefCell::new(Some(iter.into_iter())))
+    Iterator(RefCell::new(Some(iter)))
 }
