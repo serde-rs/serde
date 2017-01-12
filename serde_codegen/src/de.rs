@@ -503,7 +503,7 @@ fn deserialize_item_enum(
         true,
     );
 
-    let variant_names = variants.iter().map(|variant| variant.ident.to_string());
+    let variant_names = variants.iter().map(|variant| variant.attrs.name().deserialize_name());
 
     let variants_stmt = quote! {
         const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
