@@ -70,8 +70,10 @@ use super::{
     Error,
     Serialize,
     Serializer,
-    IteratorSerializer,
 };
+
+#[cfg(feature = "unstable")]
+use super::IteratorSerializer;
 
 ///////////////////////////////////////////////////////////////////////////////
 
