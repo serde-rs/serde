@@ -717,6 +717,7 @@ fn deserialize_struct_visitor(
     let field_exprs = fields.iter()
         .map(|field| field.attrs.name().deserialize_name())
         .collect();
+    let field_names = field_exprs.clone();
 
     let field_visitor = deserialize_field_visitor(
         field_exprs,
@@ -731,10 +732,6 @@ fn deserialize_struct_visitor(
         fields,
         item_attrs,
     );
-
-    let field_names = fields.iter().map(|field| {
-        field.ident.clone().expect("struct contains unnamed field").to_string()
-    });
 
     let fields_stmt = quote! {
         const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
