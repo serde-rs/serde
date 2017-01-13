@@ -1,4 +1,4 @@
-use syn::{self, aster};
+use syn::{self, aster, Ident};
 use quote::Tokens;
 
 use bound;
@@ -28,7 +28,7 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, Strin
 
     let where_clause = &impl_generics.where_clause;
 
-    let dummy_const = aster::id(format!("_IMPL_DESERIALIZE_FOR_{}", item.ident));
+    let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", item.ident));
 
     Ok(quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -312,7 +312,7 @@ fn deserialize_seq(
     let let_values: Vec<_> = fields.iter()
         .enumerate()
         .map(|(i, field)| {
-            let name = aster::id(format!("__field{}", i));
+            let name = Ident::new(format!("__field{}", i));
             if field.attrs.skip_deserializing() {
                 let default = expr_is_missing(&field.attrs);
                 quote! {
@@ -354,14 +354,14 @@ fn deserialize_seq(
             .enumerate()
             .map(|(i, field)| {
                 let ident = field.ident.clone().expect("struct contains unnamed fields");
-                let value = aster::id(format!("__field{}", i));
+                let value = Ident::new(format!("__field{}", i));
                 quote!(#ident: #value)
             });
         quote! {
             #type_path { #(#args),* }
         }
     } else {
-        let args = (0..fields.len()).map(|i| aster::id(format!("__field{}", i)));
+        let args = (0..fields.len()).map(|i| Ident::new(format!("__field{}", i)));
         quote! {
             #type_path ( #(#args),* )
         }
@@ -512,7 +512,7 @@ fn deserialize_item_enum(
     // Match arms to extract a variant from a string
     let mut variant_arms = vec![];
     for (i, variant) in variants.iter().filter(|variant| !variant.attrs.skip_deserializing()).enumerate() {
-        let variant_name = aster::id(format!("__field{}", i));
+        let variant_name = Ident::new(format!("__field{}", i));
         let variant_name = quote!(__Field::#variant_name);
 
         let block = deserialize_variant(
@@ -649,7 +649,7 @@ fn deserialize_field_visitor(
 ) -> Tokens {
     // Create the field names for the fields.
     let field_idents: &Vec<_> = &(0 .. field_names.len())
-        .map(|i| aster::id(format!("__field{}", i)))
+        .map(|i| Ident::new(format!("__field{}", i)))
         .collect();
 
     let ignore_variant = if is_variant || item_attrs.deny_unknown_fields() {
@@ -764,7 +764,7 @@ fn deserialize_map(
     let fields_names = fields.iter()
         .enumerate()
         .map(|(i, field)|
-             (field, aster::id(format!("__field{}", i))))
+             (field, Ident::new(format!("__field{}", i))))
         .collect::<Vec<_>>();
 
     // Declare each field that will be deserialized.

@@ -1,4 +1,4 @@
-use syn::{self, aster};
+use syn::{self, aster, Ident};
 use quote::Tokens;
 
 use bound;
@@ -22,7 +22,7 @@ pub fn expand_derive_serialize(item: &syn::MacroInput) -> Result<Tokens, String>
 
     let where_clause = &impl_generics.where_clause;
 
-    let dummy_const = aster::id(format!("_IMPL_SERIALIZE_FOR_{}", item.ident));
+    let dummy_const = Ident::new(format!("_IMPL_SERIALIZE_FOR_{}", item.ident));
 
     Ok(quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -159,7 +159,7 @@ fn serialize_tuple_struct(
         fields,
         impl_generics,
         false,
-        aster::id("serialize_tuple_struct_elt"),
+        Ident::new("serialize_tuple_struct_elt"),
     );
 
     let type_name = item_attrs.name().serialize_name();
@@ -184,7 +184,7 @@ fn serialize_struct(
         fields,
         impl_generics,
         false,
-        aster::id("serialize_struct_elt"),
+        Ident::new("serialize_struct_elt"),
     );
 
     let type_name = item_attrs.name().serialize_name();
@@ -299,7 +299,7 @@ fn serialize_variant(
             },
             Style::Tuple => {
                 let field_names = (0 .. variant.fields.len())
-                    .map(|i| aster::id(format!("__field{}", i)));
+                    .map(|i| Ident::new(format!("__field{}", i)));
 
                 let block = serialize_tuple_variant(
                     type_name,
@@ -373,7 +373,7 @@ fn serialize_tuple_variant(
         fields,
         generics,
         true,
-        aster::id("serialize_tuple_variant_elt"),
+        Ident::new("serialize_tuple_variant_elt"),
     );
 
     let len = serialize_stmts.len();
@@ -403,7 +403,7 @@ fn serialize_struct_variant(
         fields,
         generics,
         true,
-        aster::id("serialize_struct_variant_elt"),
+        Ident::new("serialize_struct_variant_elt"),
     );
 
     let item_name = item_attrs.name().serialize_name();
@@ -448,10 +448,10 @@ fn serialize_tuple_struct_visitor(
         .enumerate()
         .map(|(i, field)| {
             let mut field_expr = if is_enum {
-                let id = aster::id(format!("__field{}", i));
+                let id = Ident::new(format!("__field{}", i));
                 quote!(#id)
             } else {
-                let i = aster::id(i);
+                let i = Ident::new(i);
                 quote!(&self.#i)
             };
 
