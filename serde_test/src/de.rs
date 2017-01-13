@@ -85,12 +85,12 @@ impl<I> Deserializer<I>
         })
     }
 
-    fn visit_struct<V>(&mut self, len: Option<usize>, mut visitor: V) -> Result<V::Value, Error>
+    fn visit_struct<V>(&mut self, fields: &'static [&'static str], mut visitor: V) -> Result<V::Value, Error>
         where V: Visitor,
     {
         visitor.visit_map(DeserializerStructVisitor {
             de: self,
-            len: len,
+            len: fields.len(),
         })
     }
 
@@ -433,7 +433,7 @@ impl<I> de::Deserializer for Deserializer<I>
             Some(&Token::StructStart(n, _)) => {
                 self.tokens.next();
                 if name == n {
-                    self.visit_struct(Some(fields.len()), visitor)
+                    self.visit_struct(fields, visitor)
                 } else {
                     Err(Error::InvalidName(n))
                 }
@@ -725,7 +725,7 @@ impl<'a, I> MapVisitor for DeserializerMapVisitor<'a, I>
 
 struct DeserializerStructVisitor<'a, I: 'a> where I: Iterator<Item=Token<'static>> {
     de: &'a mut Deserializer<I>,
-    len: Option<usize>,
+    len: usize,
 }
 
 impl<'a, I> MapVisitor for DeserializerStructVisitor<'a, I>
@@ -739,7 +739,7 @@ impl<'a, I> MapVisitor for DeserializerStructVisitor<'a, I>
         match self.de.tokens.peek() {
             Some(&Token::StructSep) => {
                 self.de.tokens.next();
-                self.len = self.len.map(|len| if len > 0 { len - 1} else { 0 });
+                self.len = self.len.saturating_sub(1);
                 Ok(Some(try!(Deserialize::deserialize(self.de))))
             }
             Some(&Token::StructEnd) => Ok(None),
@@ -767,8 +767,7 @@ impl<'a, I> MapVisitor for DeserializerStructVisitor<'a, I>
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.len.unwrap_or(0);
-        (len, self.len)
+        (self.len, Some(self.len))
     }
 }
 
