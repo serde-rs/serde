@@ -226,7 +226,7 @@ array_impls!(32);
 
 #[cfg(feature = "unstable")]
 impl<'a, I> Serialize for Iterator<I>
-    where I: iter::Iterator, <I as iter::Iterator>::Item: Serialize
+    where I: IntoIterator, <I as IntoIterator>::Item: Serialize
 {
     #[inline]
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -234,7 +234,7 @@ impl<'a, I> Serialize for Iterator<I>
     {
         // FIXME: use specialization to prevent invalidating the object in case of clonable iterators?
         let iter = match self.0.borrow_mut().take() {
-            Some(iter) => iter,
+            Some(iter) => iter.into_iter(),
             None => return Err(S::Error::custom("Iterator used twice")),
         };
         let size = match iter.size_hint() {
