@@ -499,25 +499,27 @@ fn deserialize_item_enum(
     };
 
     // Match arms to extract a variant from a string
-    let mut variant_arms = vec![];
-    for (i, variant) in variants.iter().filter(|variant| !variant.attrs.skip_deserializing()).enumerate() {
-        let variant_name = field_i(i);
+    let variant_arms = variants.iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(|(i, variant)| {
+            let variant_name = field_i(i);
 
-        let block = deserialize_variant(
-            type_ident,
-            impl_generics,
-            ty.clone(),
-            variant,
-            item_attrs,
-        );
+            let block = deserialize_variant(
+                type_ident,
+                impl_generics,
+                ty.clone(),
+                variant,
+                item_attrs,
+            );
 
-        let arm = quote! {
-            __Field::#variant_name => #block
-        };
-        variant_arms.push(arm);
-    }
+            quote! {
+                __Field::#variant_name => #block
+            }
+        });
 
-    let match_variant = if variant_arms.is_empty() {
+    let all_skipped = variants.iter().all(|variant| variant.attrs.skip_deserializing());
+    let match_variant = if all_skipped {
         // This is an empty enum like `enum Impossible {}` or an enum in which
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
