@@ -302,15 +302,15 @@ fn deserialize_seq(
     fields: &[Field],
     is_struct: bool,
 ) -> Tokens {
+    let vars = (0..fields.len()).map(field_i as fn(_) -> _);
+
     let mut index_in_seq = 0usize;
-    let let_values = fields.iter()
-        .enumerate()
-        .map(|(i, field)| {
-            let name = Ident::new(format!("__field{}", i));
+    let let_values = vars.clone().zip(fields)
+        .map(|(var, field)| {
             if field.attrs.skip_deserializing() {
                 let default = expr_is_missing(&field.attrs);
                 quote! {
-                    let #name = #default;
+                    let #var = #default;
                 }
             } else {
                 let visit = match field.attrs.deserialize_with() {
@@ -329,7 +329,7 @@ fn deserialize_seq(
                     }
                 };
                 let assign = quote! {
-                    let #name = match #visit {
+                    let #var = match #visit {
                         Some(value) => { value },
                         None => {
                             try!(visitor.end());
@@ -343,20 +343,13 @@ fn deserialize_seq(
         });
 
     let result = if is_struct {
-        let args = fields.iter()
-            .enumerate()
-            .map(|(i, field)| {
-                let ident = field.ident.clone().expect("struct contains unnamed fields");
-                let value = Ident::new(format!("__field{}", i));
-                quote!(#ident: #value)
-            });
+        let names = fields.iter().map(|f| &f.ident);
         quote! {
-            #type_path { #(#args),* }
+            #type_path { #( #names: #vars ),* }
         }
     } else {
-        let args = (0..fields.len()).map(|i| Ident::new(format!("__field{}", i)));
         quote! {
-            #type_path ( #(#args),* )
+            #type_path ( #(#vars),* )
         }
     };
 
@@ -869,6 +862,10 @@ fn deserialize_map(
 
         Ok(#struct_path { #(#result),* })
     }
+}
+
+fn field_i(i: usize) -> Ident {
+    Ident::new(format!("__field{}", i))
 }
 
 /// This function wraps the expression in `#[serde(deserialize_with="...")]` in
