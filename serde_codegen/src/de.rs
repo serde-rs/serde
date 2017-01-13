@@ -480,11 +480,14 @@ fn deserialize_item_enum(
 
     let type_name = item_attrs.name().deserialize_name();
 
+    let variant_names = variants.iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)))
+        .collect();
+
     let variant_visitor = deserialize_field_visitor(
-        variants.iter()
-            .filter(|variant| !variant.attrs.skip_deserializing())
-            .map(|variant| variant.attrs.name().deserialize_name())
-            .collect(),
+        variant_names,
         item_attrs,
         true,
     );
@@ -628,12 +631,12 @@ fn deserialize_newtype_variant(
 }
 
 fn deserialize_field_visitor(
-    field_names: Vec<String>,
+    fields: Vec<(String, Ident)>,
     item_attrs: &attr::Item,
     is_variant: bool,
 ) -> Tokens {
-    // Create the field names for the fields.
-    let field_idents: &Vec<_> = &(0 .. field_names.len()).map(field_i).collect();
+    let field_names = fields.iter().map(|&(ref name, _)| name);
+    let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
 
     let ignore_variant = if is_variant || item_attrs.deny_unknown_fields() {
         None
@@ -697,12 +700,14 @@ fn deserialize_struct_visitor(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Tokens, Tokens, Tokens) {
-    let field_exprs = fields.iter()
-        .map(|field| field.attrs.name().deserialize_name())
+    let field_names = fields.iter()
+        .enumerate()
+        .filter(|&(_, field)| !field.attrs.skip_deserializing())
+        .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
         .collect();
 
     let field_visitor = deserialize_field_visitor(
-        field_exprs,
+        field_names,
         item_attrs,
         false,
     );
@@ -733,16 +738,6 @@ fn deserialize_map(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> Tokens {
-    if fields.is_empty() && item_attrs.deny_unknown_fields() {
-        return quote! {
-            // FIXME: Once we drop support for Rust 1.15:
-            // let None::<__Field> = try!(visitor.visit_key());
-            try!(visitor.visit_key::<__Field>()).map(|impossible| match impossible {});
-            try!(visitor.end());
-            Ok(#struct_path {})
-        };
-    }
-
     // Create the field names for the fields.
     let fields_names: Vec<_> = fields.iter()
         .enumerate()
@@ -792,18 +787,6 @@ fn deserialize_map(
             }
         });
 
-    // Match arms to ignore value for fields that have `skip_deserializing`.
-    // Ignored even if `deny_unknown_fields` is set.
-    let skipped_arms = fields_names.iter()
-        .filter(|&&(field, _)| field.attrs.skip_deserializing())
-        .map(|&(_, ref name)| {
-            quote! {
-                __Field::#name => {
-                    let _ = try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>());
-                }
-            }
-        });
-
     // Visit ignored values to consume them
     let ignored_arm = if item_attrs.deny_unknown_fields() {
         None
@@ -811,6 +794,24 @@ fn deserialize_map(
         Some(quote! {
             _ => { let _ = try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>()); }
         })
+    };
+
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
+    let match_keys = if item_attrs.deny_unknown_fields() && all_skipped {
+        quote! {
+            // FIXME: Once we drop support for Rust 1.15:
+            // let None::<__Field> = try!(visitor.visit_key());
+            try!(visitor.visit_key::<__Field>()).map(|impossible| match impossible {});
+        }
+    } else {
+        quote! {
+            while let Some(key) = try!(visitor.visit_key::<__Field>()) {
+                match key {
+                    #(#value_arms)*
+                    #ignored_arm
+                }
+            }
+        }
     };
 
     let extract_values = fields_names.iter()
@@ -840,13 +841,7 @@ fn deserialize_map(
     quote! {
         #(#let_values)*
 
-        while let Some(key) = try!(visitor.visit_key::<__Field>()) {
-            match key {
-                #(#value_arms)*
-                #(#skipped_arms)*
-                #ignored_arm
-            }
-        }
+        #match_keys
 
         try!(visitor.end());
 

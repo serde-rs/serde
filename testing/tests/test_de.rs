@@ -33,6 +33,14 @@ struct Struct {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StructDenyUnknown {
+    a: i32,
+    #[serde(skip_deserializing)]
+    b: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
     Unit,
     Simple(i32),
@@ -788,6 +796,26 @@ fn test_net_ipaddr() {
 }
 
 declare_error_tests! {
+    test_unknown_field<StructDenyUnknown> {
+        &[
+            Token::StructStart("StructDenyUnknown", 2),
+                Token::StructSep,
+                Token::Str("a"),
+                Token::I32(0),
+
+                Token::StructSep,
+                Token::Str("d"),
+        ],
+        Error::UnknownField("d".to_owned()),
+    }
+    test_skipped_field_is_unknown<StructDenyUnknown> {
+        &[
+            Token::StructStart("StructDenyUnknown", 2),
+                Token::StructSep,
+                Token::Str("b"),
+        ],
+        Error::UnknownField("b".to_owned()),
+    }
     test_unknown_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Foo"),
