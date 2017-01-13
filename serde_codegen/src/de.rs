@@ -489,7 +489,7 @@ fn deserialize_item_enum(
         true,
     );
 
-    let variant_names = variants.iter().map(|variant| variant.ident.to_string());
+    let variant_names = variants.iter().map(|variant| variant.attrs.name().deserialize_name());
 
     let variants_stmt = quote! {
         const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
@@ -697,9 +697,10 @@ fn deserialize_struct_visitor(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Tokens, Tokens, Tokens) {
-    let field_exprs = fields.iter()
+    let field_exprs: Vec<_> = fields.iter()
         .map(|field| field.attrs.name().deserialize_name())
         .collect();
+    let field_names = field_exprs.clone();
 
     let field_visitor = deserialize_field_visitor(
         field_exprs,
@@ -714,10 +715,6 @@ fn deserialize_struct_visitor(
         fields,
         item_attrs,
     );
-
-    let field_names = fields.iter().map(|field| {
-        field.ident.clone().expect("struct contains unnamed field").to_string()
-    });
 
     let fields_stmt = quote! {
         const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
