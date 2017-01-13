@@ -303,7 +303,7 @@ fn deserialize_seq(
     is_struct: bool,
 ) -> Tokens {
     let mut index_in_seq = 0usize;
-    let let_values: Vec<_> = fields.iter()
+    let let_values = fields.iter()
         .enumerate()
         .map(|(i, field)| {
             let name = Ident::new(format!("__field{}", i));
@@ -340,8 +340,7 @@ fn deserialize_seq(
                 index_in_seq += 1;
                 assign
             }
-        })
-        .collect();
+        });
 
     let result = if is_struct {
         let args = fields.iter()
