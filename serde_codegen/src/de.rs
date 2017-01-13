@@ -702,20 +702,11 @@ fn deserialize_struct_visitor(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Tokens, Tokens, Tokens) {
-<<<<<<< HEAD
     let field_names_idents = fields.iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
-||||||| merged common ancestors
-    let field_exprs = fields.iter()
-        .map(|field| field.attrs.name().deserialize_name())
-=======
-    let field_exprs: Vec<_> = fields.iter()
-        .map(|field| field.attrs.name().deserialize_name())
->>>>>>> origin/master
         .collect();
-    let field_names = field_exprs.clone();
 
     let field_visitor = deserialize_field_visitor(
         field_names_idents,
@@ -731,6 +722,7 @@ fn deserialize_struct_visitor(
         item_attrs,
     );
 
+    let field_names = fields.iter().map(|field| field.attrs.name().deserialize_name());
     let fields_stmt = quote! {
         const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
     };
