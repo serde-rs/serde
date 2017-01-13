@@ -64,6 +64,13 @@ enum Enum {
     Map { a: i32, b: i32, c: i32 },
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+enum EnumSkipAll {
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_test {
@@ -869,6 +876,12 @@ declare_error_tests! {
     test_enum_skipped_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Skipped"),
+        ],
+        Error::UnknownVariant("Skipped".to_owned()),
+    }
+    test_enum_skip_all<EnumSkipAll> {
+        &[
+            Token::EnumUnit("EnumSkipAll", "Skipped"),
         ],
         Error::UnknownVariant("Skipped".to_owned()),
     }
