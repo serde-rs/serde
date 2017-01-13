@@ -175,16 +175,10 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
                     quote!(#ident)
                 }));
 
-        let ty_param_idents: Vec<_> = generics.ty_params.iter()
-            .map(|t| {
-                let ident = &t.ident;
-                quote!(#ident)
-            })
-            .collect();
-
-        let ty_param_idents = if ty_param_idents.is_empty() {
+        let ty_param_idents = if generics.ty_params.is_empty() {
             None
         } else {
+            let ty_param_idents = generics.ty_params.iter().map(|t| &t.ident);
             Some(quote!(::<#(#ty_param_idents),*>))
         };
 
