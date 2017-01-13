@@ -751,6 +751,13 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (**self).size_hint()
     }
+
+    #[inline]
+    fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
+        where V: Deserialize
+    {
+        (**self).missing_field(field)
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
