@@ -56,7 +56,7 @@ fn build_impl_generics(item: &Item) -> syn::Generics {
         None => {
             bound::with_bound(item, &generics,
                 needs_serialize_bound,
-                &aster::path().ids(&["_serde", "ser", "Serialize"]).build())
+                &aster::path().ids(&["_serde", "Serialize"]).build())
         }
     }
 }

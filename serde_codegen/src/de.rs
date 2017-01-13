@@ -61,7 +61,7 @@ fn build_impl_generics(item: &Item) -> syn::Generics {
         None => {
             let generics = bound::with_bound(item, &generics,
                 needs_deserialize_bound,
-                &aster::path().ids(&["_serde", "de", "Deserialize"]).build());
+                &aster::path().ids(&["_serde", "Deserialize"]).build());
             bound::with_bound(item, &generics,
                 requires_default,
                 &aster::path().global().ids(&["std", "default", "Default"]).build())
