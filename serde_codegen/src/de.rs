@@ -498,8 +498,7 @@ fn deserialize_item_enum(
     // Match arms to extract a variant from a string
     let mut variant_arms = vec![];
     for (i, variant) in variants.iter().filter(|variant| !variant.attrs.skip_deserializing()).enumerate() {
-        let variant_name = Ident::new(format!("__field{}", i));
-        let variant_name = quote!(__Field::#variant_name);
+        let variant_name = field_i(i);
 
         let block = deserialize_variant(
             type_ident,
@@ -510,7 +509,7 @@ fn deserialize_item_enum(
         );
 
         let arm = quote! {
-            #variant_name => #block
+            __Field::#variant_name => #block
         };
         variant_arms.push(arm);
     }
@@ -634,9 +633,7 @@ fn deserialize_field_visitor(
     is_variant: bool,
 ) -> Tokens {
     // Create the field names for the fields.
-    let field_idents: &Vec<_> = &(0 .. field_names.len())
-        .map(|i| Ident::new(format!("__field{}", i)))
-        .collect();
+    let field_idents: &Vec<_> = &(0 .. field_names.len()).map(field_i).collect();
 
     let ignore_variant = if is_variant || item_attrs.deny_unknown_fields() {
         None
@@ -749,8 +746,7 @@ fn deserialize_map(
     // Create the field names for the fields.
     let fields_names = fields.iter()
         .enumerate()
-        .map(|(i, field)|
-             (field, Ident::new(format!("__field{}", i))))
+        .map(|(i, field)| (field, field_i(i)))
         .collect::<Vec<_>>();
 
     // Declare each field that will be deserialized.
