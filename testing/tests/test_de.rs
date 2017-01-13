@@ -33,11 +33,39 @@ struct Struct {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StructDenyUnknown {
+    a: i32,
+    #[serde(skip_deserializing)]
+    b: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+struct StructSkipAll {
+    #[serde(skip_deserializing)]
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StructSkipAllDenyUnknown {
+    #[serde(skip_deserializing)]
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
     Unit,
     Simple(i32),
     Seq(i32, i32, i32),
     Map { a: i32, b: i32, c: i32 },
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+enum EnumSkipAll {
     #[allow(dead_code)]
     #[serde(skip_deserializing)]
     Skipped,
@@ -681,6 +709,29 @@ declare_tests! {
             Token::StructEnd,
         ],
     }
+    test_struct_skip_all {
+        StructSkipAll { a: 0 } => &[
+            Token::StructStart("StructSkipAll", 0),
+            Token::StructEnd,
+        ],
+        StructSkipAll { a: 0 } => &[
+            Token::StructStart("StructSkipAll", 1),
+                Token::StructSep,
+                Token::Str("a"),
+                Token::I32(1),
+
+                Token::StructSep,
+                Token::Str("b"),
+                Token::I32(2),
+            Token::StructEnd,
+        ],
+    }
+    test_struct_skip_all_deny_unknown {
+        StructSkipAllDenyUnknown { a: 0 } => &[
+            Token::StructStart("StructSkipAllDenyUnknown", 0),
+            Token::StructEnd,
+        ],
+    }
     test_enum_unit {
         Enum::Unit => &[
             Token::EnumUnit("Enum", "Unit"),
@@ -788,6 +839,34 @@ fn test_net_ipaddr() {
 }
 
 declare_error_tests! {
+    test_unknown_field<StructDenyUnknown> {
+        &[
+            Token::StructStart("StructDenyUnknown", 2),
+                Token::StructSep,
+                Token::Str("a"),
+                Token::I32(0),
+
+                Token::StructSep,
+                Token::Str("d"),
+        ],
+        Error::UnknownField("d".to_owned()),
+    }
+    test_skipped_field_is_unknown<StructDenyUnknown> {
+        &[
+            Token::StructStart("StructDenyUnknown", 2),
+                Token::StructSep,
+                Token::Str("b"),
+        ],
+        Error::UnknownField("b".to_owned()),
+    }
+    test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
+        &[
+            Token::StructStart("StructSkipAllDenyUnknown", 1),
+                Token::StructSep,
+                Token::Str("a"),
+        ],
+        Error::UnknownField("a".to_owned()),
+    }
     test_unknown_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Foo"),
@@ -797,6 +876,12 @@ declare_error_tests! {
     test_enum_skipped_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Skipped"),
+        ],
+        Error::UnknownVariant("Skipped".to_owned()),
+    }
+    test_enum_skip_all<EnumSkipAll> {
+        &[
+            Token::EnumUnit("EnumSkipAll", "Skipped"),
         ],
         Error::UnknownVariant("Skipped".to_owned()),
     }
