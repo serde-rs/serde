@@ -744,21 +744,20 @@ fn deserialize_map(
     }
 
     // Create the field names for the fields.
-    let fields_names = fields.iter()
+    let fields_names: Vec<_> = fields.iter()
         .enumerate()
         .map(|(i, field)| (field, field_i(i)))
-        .collect::<Vec<_>>();
+        .collect();
 
     // Declare each field that will be deserialized.
-    let let_values: Vec<_> = fields_names.iter()
+    let let_values = fields_names.iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
             let field_ty = &field.ty;
             quote! {
                 let mut #name: Option<#field_ty> = None;
             }
-        })
-        .collect();
+        });
 
     // Match arms to extract a value for a field.
     let value_arms = fields_names.iter()
@@ -791,8 +790,7 @@ fn deserialize_map(
                     #name = Some(#visit);
                 }
             }
-        })
-        .collect::<Vec<_>>();
+        });
 
     // Match arms to ignore value for fields that have `skip_deserializing`.
     // Ignored even if `deny_unknown_fields` is set.
@@ -804,8 +802,7 @@ fn deserialize_map(
                     let _ = try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>());
                 }
             }
-        })
-        .collect::<Vec<_>>();
+        });
 
     // Visit ignored values to consume them
     let ignored_arm = if item_attrs.deny_unknown_fields() {
@@ -827,8 +824,7 @@ fn deserialize_map(
                     None => #missing_expr
                 };
             }
-        })
-        .collect::<Vec<_>>();
+        });
 
     let result = fields_names.iter()
         .map(|&(field, ref name)| {
