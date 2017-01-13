@@ -274,6 +274,13 @@ fn deserialize_tuple(
         quote!(deserializer.deserialize_tuple_struct(#type_name, #nfields, #visitor_expr))
     };
 
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
+    let visitor_var = if all_skipped {
+        quote!(_)
+    } else {
+        quote!(mut visitor)
+    };
+
     quote!({
         #visitor_item
 
@@ -283,7 +290,7 @@ fn deserialize_tuple(
             #visit_newtype_struct
 
             #[inline]
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_seq<__V>(&mut self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
@@ -435,6 +442,13 @@ fn deserialize_struct(
         }
     };
 
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
+    let visitor_var = if all_skipped {
+        quote!(_)
+    } else {
+        quote!(mut visitor)
+    };
+
     quote!({
         #field_visitor
 
@@ -444,7 +458,7 @@ fn deserialize_struct(
             type Value = #ty;
 
             #[inline]
-            fn visit_seq<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_seq<__V>(&mut self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
