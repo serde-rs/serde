@@ -480,14 +480,14 @@ fn deserialize_item_enum(
 
     let type_name = item_attrs.name().deserialize_name();
 
-    let variant_names = variants.iter()
+    let variant_names_idents = variants.iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
         .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)))
         .collect();
 
     let variant_visitor = deserialize_field_visitor(
-        variant_names,
+        variant_names_idents,
         item_attrs,
         true,
     );
@@ -700,14 +700,14 @@ fn deserialize_struct_visitor(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Tokens, Tokens, Tokens) {
-    let field_names = fields.iter()
+    let field_names_idents = fields.iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
         .collect();
 
     let field_visitor = deserialize_field_visitor(
-        field_names,
+        field_names_idents,
         item_attrs,
         false,
     );
