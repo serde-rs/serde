@@ -58,7 +58,7 @@ pub trait Serialize {
 /// A trait that describes a type that can serialize a stream of values into the underlying format.
 ///
 /// # For `Serialize` Developers
-/// Non-aggrergate types like integers and strings can be serialized directly by calling the
+/// Non-aggregate types like integers and strings can be serialized directly by calling the
 /// appropriate function. For Aggregate types there's an initial `serialize_T` method that yields
 /// a State object that you should not interact with. For each part of the aggregate there's a
 /// `serialize_T_elt` method that allows you to pass values or key/value pairs. The types of the
