@@ -25,7 +25,7 @@ trait SerializeWith: Sized {
 }
 
 trait DeserializeWith: Sized {
-    fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with<D>(de: D) -> Result<Self, D::Error>
         where D: Deserializer;
 }
 
@@ -50,7 +50,7 @@ impl SerializeWith for i32 {
 }
 
 impl DeserializeWith for i32 {
-    fn deserialize_with<D>(de: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with<D>(de: D) -> Result<Self, D::Error>
         where D: Deserializer
     {
         if try!(Deserialize::deserialize(de)) {
@@ -239,7 +239,7 @@ impl Default for NotDeserializeStruct {
 }
 
 impl DeserializeWith for NotDeserializeStruct {
-    fn deserialize_with<D>(_: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with<D>(_: D) -> Result<Self, D::Error>
         where D: Deserializer
     {
         panic!()
