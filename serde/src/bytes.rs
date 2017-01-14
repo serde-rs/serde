@@ -199,8 +199,6 @@ mod bytebuf {
                 values.push(value);
             }
 
-            try!(visitor.end());
-
             Ok(ByteBuf::from(values))
         }
 
