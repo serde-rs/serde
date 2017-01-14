@@ -976,7 +976,6 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "collections"))]
 mod private {
     use de;
     use core::marker::PhantomData;
