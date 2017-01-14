@@ -65,7 +65,7 @@ impl<'a> ops::Deref for Bytes<'a> {
 
 impl<'a> ser::Serialize for Bytes<'a> {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: ser::Serializer
     {
         serializer.serialize_bytes(self.bytes)
@@ -168,7 +168,7 @@ mod bytebuf {
     }
 
     impl ser::Serialize for ByteBuf {
-        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where S: ser::Serializer
         {
             serializer.serialize_bytes(self)
