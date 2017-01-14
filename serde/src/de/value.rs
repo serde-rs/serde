@@ -978,7 +978,8 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
 
 #[cfg(any(feature = "std", feature = "collections"))]
 mod private {
-    use super::*;
+    use de;
+    use core::marker::PhantomData;
 
     pub struct UnitOnly<E>(PhantomData<E>);
 
