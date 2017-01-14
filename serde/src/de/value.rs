@@ -184,13 +184,13 @@ impl<E> de::Deserializer for UnitDeserializer<E>
         tuple_struct struct struct_field tuple enum ignored_any
     }
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_unit()
     }
 
-    fn deserialize_option<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_none()
@@ -202,7 +202,7 @@ impl<E> de::Deserializer for UnitDeserializer<E>
 macro_rules! primitive_deserializer {
     ($ty:ty, $name:ident, $method:ident) => {
         /// A helper deserializer that deserializes a number.
-        pub struct $name<E>(Option<$ty>, PhantomData<E>);
+        pub struct $name<E>($ty, PhantomData<E>);
 
         impl<E> ValueDeserializer<E> for $ty
             where E: de::Error,
@@ -210,7 +210,7 @@ macro_rules! primitive_deserializer {
             type Deserializer = $name<E>;
 
             fn into_deserializer(self) -> $name<E> {
-                $name(Some(self), PhantomData)
+                $name(self, PhantomData)
             }
         }
 
@@ -226,13 +226,10 @@ macro_rules! primitive_deserializer {
                 ignored_any
             }
 
-            fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+            fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
                 where V: de::Visitor,
             {
-                match self.0.take() {
-                    Some(v) => visitor.$method(v),
-                    None => Err(de::Error::end_of_stream()),
-                }
+                visitor.$method(self.0)
             }
         }
     }
@@ -256,7 +253,7 @@ primitive_deserializer!(char, CharDeserializer, visit_char);
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a `&str`.
-pub struct StrDeserializer<'a, E>(Option<&'a str>, PhantomData<E>);
+pub struct StrDeserializer<'a, E>(&'a str, PhantomData<E>);
 
 impl<'a, E> ValueDeserializer<E> for &'a str
     where E: de::Error,
@@ -264,7 +261,7 @@ impl<'a, E> ValueDeserializer<E> for &'a str
     type Deserializer = StrDeserializer<'a, E>;
 
     fn into_deserializer(self) -> StrDeserializer<'a, E> {
-        StrDeserializer(Some(self), PhantomData)
+        StrDeserializer(self, PhantomData)
     }
 }
 
@@ -273,19 +270,16 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
 {
     type Error = E;
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0.take() {
-            Some(v) => visitor.visit_str(v),
-            None => Err(de::Error::end_of_stream()),
-        }
+        visitor.visit_str(self.0)
     }
 
-    fn deserialize_enum<V>(&mut self,
+    fn deserialize_enum<V>(self,
                      _name: &str,
                      _variants: &'static [&'static str],
-                     mut visitor: V) -> Result<V::Value, Self::Error>
+                     visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_enum(self)
@@ -298,41 +292,16 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
     }
 }
 
-impl<'a, E> de::VariantVisitor for StrDeserializer<'a, E>
+impl<'a, E> de::EnumVisitor for StrDeserializer<'a, E>
     where E: de::Error,
 {
     type Error = E;
+    type Variant = private::UnitOnly<E>;
 
-    fn visit_variant<T>(&mut self) -> Result<T, Self::Error>
+    fn visit_variant<T>(self) -> Result<(T, Self::Variant), Self::Error>
         where T: de::Deserialize,
     {
-        de::Deserialize::deserialize(self)
-    }
-
-    fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
-        where T: super::Deserialize,
-    {
-        Err(super::Error::invalid_type(super::Type::NewtypeVariant))
-    }
-
-    fn visit_tuple<V>(&mut self,
-                      _len: usize,
-                      _visitor: V) -> Result<V::Value, Self::Error>
-        where V: super::Visitor
-    {
-        Err(super::Error::invalid_type(super::Type::TupleVariant))
-    }
-
-    fn visit_struct<V>(&mut self,
-                       _fields: &'static [&'static str],
-                       _visitor: V) -> Result<V::Value, Self::Error>
-        where V: super::Visitor
-    {
-        Err(super::Error::invalid_type(super::Type::StructVariant))
+        de::Deserialize::deserialize(self).map(private::unit_only)
     }
 }
 
@@ -340,7 +309,7 @@ impl<'a, E> de::VariantVisitor for StrDeserializer<'a, E>
 
 /// A helper deserializer that deserializes a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
-pub struct StringDeserializer<E>(Option<String>, PhantomData<E>);
+pub struct StringDeserializer<E>(String, PhantomData<E>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<E> ValueDeserializer<E> for String
@@ -349,7 +318,7 @@ impl<E> ValueDeserializer<E> for String
     type Deserializer = StringDeserializer<E>;
 
     fn into_deserializer(self) -> StringDeserializer<E> {
-        StringDeserializer(Some(self), PhantomData)
+        StringDeserializer(self, PhantomData)
     }
 }
 
@@ -359,19 +328,16 @@ impl<E> de::Deserializer for StringDeserializer<E>
 {
     type Error = E;
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0.take() {
-            Some(string) => visitor.visit_string(string),
-            None => Err(de::Error::end_of_stream()),
-        }
+        visitor.visit_string(self.0)
     }
 
-    fn deserialize_enum<V>(&mut self,
+    fn deserialize_enum<V>(self,
                      _name: &str,
                      _variants: &'static [&'static str],
-                     mut visitor: V) -> Result<V::Value, Self::Error>
+                     visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_enum(self)
@@ -385,41 +351,16 @@ impl<E> de::Deserializer for StringDeserializer<E>
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'a, E> de::VariantVisitor for StringDeserializer<E>
+impl<'a, E> de::EnumVisitor for StringDeserializer<E>
     where E: de::Error,
 {
     type Error = E;
+    type Variant = private::UnitOnly<E>;
 
-    fn visit_variant<T>(&mut self) -> Result<T, Self::Error>
+    fn visit_variant<T>(self) -> Result<(T, Self::Variant), Self::Error>
         where T: de::Deserialize,
     {
-        de::Deserialize::deserialize(self)
-    }
-
-    fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
-        where T: super::Deserialize,
-    {
-        Err(super::Error::invalid_type(super::Type::NewtypeVariant))
-    }
-
-    fn visit_tuple<V>(&mut self,
-                      _len: usize,
-                      _visitor: V) -> Result<V::Value, Self::Error>
-        where V: super::Visitor
-    {
-        Err(super::Error::invalid_type(super::Type::TupleVariant))
-    }
-
-    fn visit_struct<V>(&mut self,
-                       _fields: &'static [&'static str],
-                       _visitor: V) -> Result<V::Value, Self::Error>
-        where V: super::Visitor
-    {
-        Err(super::Error::invalid_type(super::Type::StructVariant))
+        de::Deserialize::deserialize(self).map(private::unit_only)
     }
 }
 
@@ -427,7 +368,7 @@ impl<'a, E> de::VariantVisitor for StringDeserializer<E>
 
 /// A helper deserializer that deserializes a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
-pub struct CowStrDeserializer<'a, E>(Option<Cow<'a, str>>, PhantomData<E>);
+pub struct CowStrDeserializer<'a, E>(Cow<'a, str>, PhantomData<E>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<'a, E> ValueDeserializer<E> for Cow<'a, str>
@@ -436,7 +377,7 @@ impl<'a, E> ValueDeserializer<E> for Cow<'a, str>
     type Deserializer = CowStrDeserializer<'a, E>;
 
     fn into_deserializer(self) -> CowStrDeserializer<'a, E> {
-        CowStrDeserializer(Some(self), PhantomData)
+        CowStrDeserializer(self, PhantomData)
     }
 }
 
@@ -446,20 +387,19 @@ impl<'a, E> de::Deserializer for CowStrDeserializer<'a, E>
 {
     type Error = E;
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0.take() {
-            Some(Cow::Borrowed(string)) => visitor.visit_str(string),
-            Some(Cow::Owned(string)) => visitor.visit_string(string),
-            None => Err(de::Error::end_of_stream()),
+        match self.0 {
+            Cow::Borrowed(string) => visitor.visit_str(string),
+            Cow::Owned(string) => visitor.visit_string(string),
         }
     }
 
-    fn deserialize_enum<V>(&mut self,
+    fn deserialize_enum<V>(self,
                      _name: &str,
                      _variants: &'static [&'static str],
-                     mut visitor: V) -> Result<V::Value, Self::Error>
+                     visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         visitor.visit_enum(self)
@@ -473,41 +413,16 @@ impl<'a, E> de::Deserializer for CowStrDeserializer<'a, E>
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'a, E> de::VariantVisitor for CowStrDeserializer<'a, E>
+impl<'a, E> de::EnumVisitor for CowStrDeserializer<'a, E>
     where E: de::Error,
 {
     type Error = E;
+    type Variant = private::UnitOnly<E>;
 
-    fn visit_variant<T>(&mut self) -> Result<T, Self::Error>
+    fn visit_variant<T>(self) -> Result<(T, Self::Variant), Self::Error>
         where T: de::Deserialize,
     {
-        de::Deserialize::deserialize(self)
-    }
-
-    fn visit_unit(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn visit_newtype<T>(&mut self) -> Result<T, Self::Error>
-        where T: super::Deserialize,
-    {
-        Err(super::Error::invalid_type(super::Type::NewtypeVariant))
-    }
-
-    fn visit_tuple<V>(&mut self,
-                      _len: usize,
-                      _visitor: V) -> Result<V::Value, Self::Error>
-        where V: super::Visitor
-    {
-        Err(super::Error::invalid_type(super::Type::TupleVariant))
-    }
-
-    fn visit_struct<V>(&mut self,
-                       _fields: &'static [&'static str],
-                       _visitor: V) -> Result<V::Value, Self::Error>
-        where V: super::Visitor
-    {
-        Err(super::Error::invalid_type(super::Type::StructVariant))
+        de::Deserialize::deserialize(self).map(private::unit_only)
     }
 }
 
@@ -540,10 +455,10 @@ impl<I, T, E> de::Deserializer for SeqDeserializer<I, E>
 {
     type Error = E;
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        let v = try!(visitor.visit_seq(&mut *self));
+        let v = try!(visitor.visit_seq(&mut self));
         if self.len == 0 {
             Ok(v)
         } else {
@@ -571,8 +486,7 @@ impl<I, T, E> de::SeqVisitor for SeqDeserializer<I, E>
         match self.iter.next() {
             Some(value) => {
                 self.len -= 1;
-                let mut de = value.into_deserializer();
-                Ok(Some(try!(de::Deserialize::deserialize(&mut de))))
+                de::Deserialize::deserialize(value.into_deserializer()).map(Some)
             }
             None => Ok(None),
         }
@@ -651,8 +565,8 @@ impl<V_, E> de::Deserializer for SeqVisitorDeserializer<V_, E>
 {
     type Error = E;
 
-    fn deserialize<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_seq(&mut self.visitor)
+    fn deserialize<V: de::Visitor>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_seq(self.visitor)
     }
 
     forward_to_deserialize! {
@@ -729,29 +643,29 @@ impl<I, K, V, E> de::Deserializer for MapDeserializer<I, K, V, E>
 {
     type Error = E;
 
-    fn deserialize<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
-        let value = try!(visitor.visit_map(&mut *self));
+        let value = try!(visitor.visit_map(&mut self));
         try!(self.end());
         Ok(value)
     }
 
-    fn deserialize_seq<V_>(&mut self, mut visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize_seq<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
-        let value = try!(visitor.visit_seq(&mut *self));
+        let value = try!(visitor.visit_seq(&mut self));
         try!(self.end());
         Ok(value)
     }
 
-    fn deserialize_seq_fixed_size<V_>(&mut self, len: usize, mut visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize_seq_fixed_size<V_>(mut self, len: usize, visitor: V_) -> Result<V_::Value, Self::Error>
         where V_: de::Visitor,
     {
         match self.len {
             Some(map_len) if map_len != len => Err(de::Error::invalid_length(len)),
             _ => {
-                let value = try!(visitor.visit_seq(&mut *self));
+                let value = try!(visitor.visit_seq(&mut self));
                 try!(self.end());
                 Ok(value)
             }
@@ -779,8 +693,7 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
         match self.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                let mut de = key.into_deserializer();
-                de::Deserialize::deserialize(&mut de).map(Some)
+                de::Deserialize::deserialize(key.into_deserializer()).map(Some)
             }
             None => Ok(None),
         }
@@ -791,12 +704,25 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
     {
         match self.value.take() {
             Some(value) => {
-                let mut de = value.into_deserializer();
-                de::Deserialize::deserialize(&mut de)
+                de::Deserialize::deserialize(value.into_deserializer())
             }
             None => {
                 Err(de::Error::end_of_stream())
             }
+        }
+    }
+
+    fn visit<TK, TV>(&mut self) -> Result<Option<(TK, TV)>, Self::Error>
+        where TK: de::Deserialize,
+              TV: de::Deserialize
+    {
+        match self.next() {
+            Some((key, value)) => {
+                let key = try!(de::Deserialize::deserialize(key.into_deserializer()));
+                let value = try!(de::Deserialize::deserialize(value.into_deserializer()));
+                Ok(Some((key, value)))
+            }
+            None => Ok(None)
         }
     }
 
@@ -819,9 +745,9 @@ impl<I, K, V, E> de::SeqVisitor for MapDeserializer<I, K, V, E>
         where T: de::Deserialize,
     {
         match self.next() {
-            Some(kv) => {
-                let mut de = PairDeserializer(Some(kv), PhantomData);
-                de::Deserialize::deserialize(&mut de).map(Some)
+            Some((k, v)) => {
+                let de = PairDeserializer(k, v, PhantomData);
+                de::Deserialize::deserialize(de).map(Some)
             }
             None => Ok(None),
         }
@@ -834,7 +760,7 @@ impl<I, K, V, E> de::SeqVisitor for MapDeserializer<I, K, V, E>
 
 // Used in the `impl SeqVisitor for MapDeserializer` to visit the map as a
 // sequence of pairs.
-struct PairDeserializer<A, B, E>(Option<(A, B)>, PhantomData<E>);
+struct PairDeserializer<A, B, E>(A, B, PhantomData<E>);
 
 impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
     where A: ValueDeserializer<E>,
@@ -849,30 +775,25 @@ impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
         struct_field tuple enum ignored_any
     }
 
-    fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         self.deserialize_seq(visitor)
     }
 
-    fn deserialize_seq<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0.take() {
-            Some((k, v)) => {
-                let mut pair_visitor = PairVisitor(Some(k), Some(v), PhantomData);
-                let pair = try!(visitor.visit_seq(&mut pair_visitor));
-                if pair_visitor.1.is_none() {
-                    Ok(pair)
-                } else {
-                    Err(de::Error::invalid_length(pair_visitor.size_hint().0))
-                }
-            }
-            None => Err(de::Error::end_of_stream()),
+        let mut pair_visitor = PairVisitor(Some(self.0), Some(self.1), PhantomData);
+        let pair = try!(visitor.visit_seq(&mut pair_visitor));
+        if pair_visitor.1.is_none() {
+            Ok(pair)
+        } else {
+            Err(de::Error::invalid_length(pair_visitor.size_hint().0))
         }
     }
 
-    fn deserialize_seq_fixed_size<V>(&mut self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_seq_fixed_size<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
         if len == 2 {
@@ -896,11 +817,9 @@ impl<A, B, E> de::SeqVisitor for PairVisitor<A, B, E>
         where T: de::Deserialize,
     {
         if let Some(k) = self.0.take() {
-            let mut de = k.into_deserializer();
-            de::Deserialize::deserialize(&mut de).map(Some)
+            de::Deserialize::deserialize(k.into_deserializer()).map(Some)
         } else if let Some(v) = self.1.take() {
-            let mut de = v.into_deserializer();
-            de::Deserialize::deserialize(&mut de).map(Some)
+            de::Deserialize::deserialize(v.into_deserializer()).map(Some)
         } else {
             Ok(None)
         }
@@ -975,8 +894,8 @@ impl<V_, E> de::Deserializer for MapVisitorDeserializer<V_, E>
 {
     type Error = E;
 
-    fn deserialize<V: de::Visitor>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_map(&mut self.visitor)
+    fn deserialize<V: de::Visitor>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_map(self.visitor)
     }
 
     forward_to_deserialize! {
@@ -994,25 +913,22 @@ impl<'a, E> ValueDeserializer<E> for bytes::Bytes<'a>
     type Deserializer = BytesDeserializer<'a, E>;
 
     fn into_deserializer(self) -> BytesDeserializer<'a, E> {
-        BytesDeserializer(Some(self.into()), PhantomData)
+        BytesDeserializer(self.into(), PhantomData)
     }
 }
 
 /// A helper deserializer that deserializes a `&[u8]`.
-pub struct BytesDeserializer<'a, E> (Option<&'a [u8]>, PhantomData<E>);
+pub struct BytesDeserializer<'a, E>(&'a [u8], PhantomData<E>);
 
 impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
     where E: de::Error
 {
     type Error = E;
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0.take() {
-            Some(bytes) => visitor.visit_bytes(bytes),
-            None => Err(de::Error::end_of_stream()),
-        }
+        visitor.visit_bytes(self.0)
     }
 
     forward_to_deserialize! {
@@ -1031,13 +947,13 @@ impl<E> ValueDeserializer<E> for bytes::ByteBuf
     type Deserializer = ByteBufDeserializer<E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
-        ByteBufDeserializer(Some(self.into()), PhantomData)
+        ByteBufDeserializer(self.into(), PhantomData)
     }
 }
 
 /// A helper deserializer that deserializes a `Vec<u8>`.
 #[cfg(any(feature = "std", feature = "collections"))]
-pub struct ByteBufDeserializer<E>(Option<Vec<u8>>, PhantomData<E>);
+pub struct ByteBufDeserializer<E>(Vec<u8>, PhantomData<E>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<E> de::Deserializer for ByteBufDeserializer<E>
@@ -1045,18 +961,60 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
 {
     type Error = E;
 
-    fn deserialize<V>(&mut self, mut visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0.take() {
-            Some(bytes) => visitor.visit_byte_buf(bytes),
-            None => Err(de::Error::end_of_stream()),
-        }
+        visitor.visit_byte_buf(self.0)
     }
 
     forward_to_deserialize! {
         bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
         unit option seq seq_fixed_size bytes map unit_struct newtype_struct
         tuple_struct struct struct_field tuple enum ignored_any
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(any(feature = "std", feature = "collections"))]
+mod private {
+    use super::*;
+
+    pub struct UnitOnly<E>(PhantomData<E>);
+
+    pub fn unit_only<T, E>(t: T) -> (T, UnitOnly<E>) {
+        (t, UnitOnly(PhantomData))
+    }
+
+    impl<E> de::VariantVisitor for UnitOnly<E>
+        where E: de::Error
+    {
+        type Error = E;
+
+        fn visit_unit(self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+
+        fn visit_newtype<T>(self) -> Result<T, Self::Error>
+            where T: de::Deserialize,
+        {
+            Err(de::Error::invalid_type(de::Type::NewtypeVariant))
+        }
+
+        fn visit_tuple<V>(self,
+                        _len: usize,
+                        _visitor: V) -> Result<V::Value, Self::Error>
+            where V: de::Visitor
+        {
+            Err(de::Error::invalid_type(de::Type::TupleVariant))
+        }
+
+        fn visit_struct<V>(self,
+                        _fields: &'static [&'static str],
+                        _visitor: V) -> Result<V::Value, Self::Error>
+            where V: de::Visitor
+        {
+            Err(de::Error::invalid_type(de::Type::StructVariant))
+        }
     }
 }
