@@ -69,6 +69,10 @@ use core::nonzero::{NonZero, Zeroable};
 use super::{
     Error,
     Serialize,
+    SerializeMap,
+    SerializeSeq,
+    SerializeStruct,
+    SerializeTuple,
     Serializer,
 };
 
@@ -81,7 +85,7 @@ macro_rules! impl_visit {
     ($ty:ty, $method:ident) => {
         impl Serialize for $ty {
             #[inline]
-            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where S: Serializer,
             {
                 serializer.$method(*self)
@@ -109,7 +113,7 @@ impl_visit!(char, serialize_char);
 
 impl Serialize for str {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         serializer.serialize_str(self)
@@ -119,7 +123,7 @@ impl Serialize for str {
 #[cfg(any(feature = "std", feature = "collections"))]
 impl Serialize for String {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (&self[..]).serialize(serializer)
@@ -128,9 +132,11 @@ impl Serialize for String {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<T> Serialize for Option<T> where T: Serialize {
+impl<T> Serialize for Option<T>
+    where T: Serialize
+{
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         match *self {
@@ -144,7 +150,7 @@ impl<T> Serialize for Option<T> where T: Serialize {
 
 impl<T> Serialize for PhantomData<T> {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         serializer.serialize_unit_struct("PhantomData")
@@ -158,14 +164,14 @@ impl<T> Serialize for [T]
     where T: Serialize,
 {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
-        let mut state = try!(serializer.serialize_seq(Some(self.len())));
+        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
         for e in self {
-            try!(serializer.serialize_seq_elt(&mut state, e));
+            try!(seq.serialize_element(e));
         }
-        serializer.serialize_seq_end(state)
+        seq.end()
     }
 }
 
@@ -175,14 +181,14 @@ macro_rules! array_impls {
     ($len:expr) => {
         impl<T> Serialize for [T; $len] where T: Serialize {
             #[inline]
-            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where S: Serializer,
             {
-                let mut state = try!(serializer.serialize_seq_fixed_size($len));
+                let mut seq = try!(serializer.serialize_seq_fixed_size($len));
                 for e in self {
-                    try!(serializer.serialize_seq_elt(&mut state, e));
+                    try!(seq.serialize_element(e));
                 }
-                serializer.serialize_seq_end(state)
+                seq.end()
             }
         }
     }
@@ -229,7 +235,7 @@ impl<'a, I> Serialize for Iterator<I>
     where I: IntoIterator, <I as IntoIterator>::Item: Serialize
 {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         // FIXME: use specialization to prevent invalidating the object in case of clonable iterators?
@@ -241,11 +247,11 @@ impl<'a, I> Serialize for Iterator<I>
             (lo, Some(hi)) if lo == hi => Some(lo),
             _ => None,
         };
-        let mut state = try!(serializer.serialize_seq(size));
+        let mut seq = try!(serializer.serialize_seq(size));
         for e in iter {
-            try!(serializer.serialize_seq_elt(&mut state, e));
+            try!(seq.serialize_element(e));
         }
-        serializer.serialize_seq_end(state)
+        seq.end()
     }
 }
 
@@ -254,14 +260,14 @@ impl<'a, I> Serialize for Iterator<I>
 macro_rules! serialize_seq {
     () => {
         #[inline]
-        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where S: Serializer,
         {
-            let mut state = try!(serializer.serialize_seq(Some(self.len())));
+            let mut seq = try!(serializer.serialize_seq(Some(self.len())));
             for e in self {
-                try!(serializer.serialize_seq_elt(&mut state, e));
+                try!(seq.serialize_element(e));
             }
-            serializer.serialize_seq_end(state)
+            seq.end()
         }
     }
 }
@@ -303,12 +309,16 @@ impl<T> Serialize for LinkedList<T>
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for Vec<T> where T: Serialize {
+impl<T> Serialize for Vec<T>
+    where T: Serialize
+{
     serialize_seq!();
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for VecDeque<T> where T: Serialize {
+impl<T> Serialize for VecDeque<T>
+    where T: Serialize
+{
     serialize_seq!();
 }
 
@@ -318,15 +328,15 @@ impl<A> Serialize for ops::Range<A>
           for<'a> &'a A: ops::Add<&'a A, Output = A>,
 {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
-        let mut state = try!(serializer.serialize_seq(len));
+        let mut seq = try!(serializer.serialize_seq(len));
         for e in self.clone() {
-            try!(serializer.serialize_seq_elt(&mut state, e));
+            try!(seq.serialize_element(e));
         }
-        serializer.serialize_seq_end(state)
+        seq.end()
     }
 }
 
@@ -334,7 +344,7 @@ impl<A> Serialize for ops::Range<A>
 
 impl Serialize for () {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         serializer.serialize_unit()
@@ -354,14 +364,14 @@ macro_rules! tuple_impls {
                 where $($T: Serialize),+
             {
                 #[inline]
-                fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                     where S: Serializer,
                 {
-                    let mut state = try!(serializer.serialize_tuple($len));
+                    let mut tuple = try!(serializer.serialize_tuple($len));
                     $(
-                        try!(serializer.serialize_tuple_elt(&mut state, &self.$idx));
+                        try!(tuple.serialize_element(&self.$idx));
                     )+
-                    serializer.serialize_tuple_end(state)
+                    tuple.end()
                 }
             }
         )+
@@ -544,15 +554,15 @@ tuple_impls! {
 macro_rules! serialize_map {
     () => {
         #[inline]
-        fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where S: Serializer,
         {
-            let mut state = try!(serializer.serialize_map(Some(self.len())));
+            let mut map = try!(serializer.serialize_map(Some(self.len())));
             for (k, v) in self {
-                try!(serializer.serialize_map_key(&mut state, k));
-                try!(serializer.serialize_map_value(&mut state, v));
+                try!(map.serialize_key(k));
+                try!(map.serialize_value(v));
             }
-            serializer.serialize_map_end(state)
+            map.end()
         }
     }
 }
@@ -578,7 +588,7 @@ impl<K, V, H> Serialize for HashMap<K, V, H>
 
 impl<'a, T: ?Sized> Serialize for &'a T where T: Serialize {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (**self).serialize(serializer)
@@ -587,7 +597,7 @@ impl<'a, T: ?Sized> Serialize for &'a T where T: Serialize {
 
 impl<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize {
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (**self).serialize(serializer)
@@ -595,9 +605,11 @@ impl<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<T: ?Sized> Serialize for Box<T> where T: Serialize {
+impl<T: ?Sized> Serialize for Box<T>
+    where T: Serialize
+{
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (**self).serialize(serializer)
@@ -605,9 +617,11 @@ impl<T: ?Sized> Serialize for Box<T> where T: Serialize {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<T> Serialize for Rc<T> where T: Serialize, {
+impl<T> Serialize for Rc<T>
+    where T: Serialize
+{
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (**self).serialize(serializer)
@@ -615,9 +629,11 @@ impl<T> Serialize for Rc<T> where T: Serialize, {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<T> Serialize for Arc<T> where T: Serialize, {
+impl<T> Serialize for Arc<T>
+    where T: Serialize
+{
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (**self).serialize(serializer)
@@ -625,9 +641,11 @@ impl<T> Serialize for Arc<T> where T: Serialize, {
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned, {
+impl<'a, T: ?Sized> Serialize for Cow<'a, T>
+    where T: Serialize + ToOwned
+{
     #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         (**self).serialize(serializer)
@@ -636,8 +654,13 @@ impl<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned, {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+impl<T, E> Serialize for Result<T, E>
+    where T: Serialize,
+          E: Serialize
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
         match *self {
             Result::Ok(ref value) => {
                 serializer.serialize_newtype_variant("Result", 0, "Ok", value)
@@ -653,13 +676,13 @@ impl<T, E> Serialize for Result<T, E> where T: Serialize, E: Serialize {
 
 #[cfg(feature = "std")]
 impl Serialize for Duration {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         let mut state = try!(serializer.serialize_struct("Duration", 2));
-        try!(serializer.serialize_struct_elt(&mut state, "secs", self.as_secs()));
-        try!(serializer.serialize_struct_elt(&mut state, "nanos", self.subsec_nanos()));
-        serializer.serialize_struct_end(state)
+        try!(state.serialize_field("secs", self.as_secs()));
+        try!(state.serialize_field("nanos", self.subsec_nanos()));
+        state.end()
     }
 }
 
@@ -667,7 +690,7 @@ impl Serialize for Duration {
 
 #[cfg(feature = "std")]
 impl Serialize for net::IpAddr {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         self.to_string().serialize(serializer)
@@ -676,7 +699,7 @@ impl Serialize for net::IpAddr {
 
 #[cfg(feature = "std")]
 impl Serialize for net::Ipv4Addr {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         self.to_string().serialize(serializer)
@@ -685,7 +708,7 @@ impl Serialize for net::Ipv4Addr {
 
 #[cfg(feature = "std")]
 impl Serialize for net::Ipv6Addr {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         self.to_string().serialize(serializer)
@@ -696,7 +719,7 @@ impl Serialize for net::Ipv6Addr {
 
 #[cfg(feature = "std")]
 impl Serialize for net::SocketAddr {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         match *self {
@@ -708,7 +731,7 @@ impl Serialize for net::SocketAddr {
 
 #[cfg(feature = "std")]
 impl Serialize for net::SocketAddrV4 {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         self.to_string().serialize(serializer)
@@ -717,7 +740,7 @@ impl Serialize for net::SocketAddrV4 {
 
 #[cfg(feature = "std")]
 impl Serialize for net::SocketAddrV6 {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         self.to_string().serialize(serializer)
@@ -728,7 +751,7 @@ impl Serialize for net::SocketAddrV6 {
 
 #[cfg(feature = "std")]
 impl Serialize for path::Path {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         match self.to_str() {
@@ -740,7 +763,7 @@ impl Serialize for path::Path {
 
 #[cfg(feature = "std")]
 impl Serialize for path::PathBuf {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
         self.as_path().serialize(serializer)
@@ -748,8 +771,12 @@ impl Serialize for path::PathBuf {
 }
 
 #[cfg(feature = "unstable")]
-impl<T> Serialize for NonZero<T> where T: Serialize + Zeroable {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+impl<T> Serialize for NonZero<T>
+    where T: Serialize + Zeroable
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
         (**self).serialize(serializer)
     }
 }
