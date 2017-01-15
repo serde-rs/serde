@@ -20,7 +20,7 @@ trait ShouldSkip: Sized {
 }
 
 trait SerializeWith: Sized {
-    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
+    fn serialize_with<S>(&self, ser: S) -> Result<S::Ok, S::Error>
         where S: Serializer;
 }
 
@@ -38,7 +38,7 @@ impl ShouldSkip for i32 {
 }
 
 impl SerializeWith for i32 {
-    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
+    fn serialize_with<S>(&self, ser: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         if *self == 123 {
@@ -642,7 +642,7 @@ struct NotSerializeStruct(i8);
 enum NotSerializeEnum { Trouble }
 
 impl SerializeWith for NotSerializeEnum {
-    fn serialize_with<S>(&self, ser: &mut S) -> Result<(), S::Error>
+    fn serialize_with<S>(&self, ser: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         "trouble".serialize(ser)

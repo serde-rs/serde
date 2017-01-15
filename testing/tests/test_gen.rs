@@ -295,7 +295,7 @@ fn assert<T: Serialize + Deserialize>() {}
 fn assert_ser<T: Serialize>() {}
 
 trait SerializeWith {
-    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> StdResult<(), S::Error>;
+    fn serialize_with<S: Serializer>(_: &Self, _: S) -> StdResult<S::Ok, S::Error>;
 }
 
 trait DeserializeWith: Sized {
@@ -305,7 +305,7 @@ trait DeserializeWith: Sized {
 // Implements neither Serialize nor Deserialize
 struct X;
 
-fn ser_x<S: Serializer>(_: &X, _: &mut S) -> StdResult<(), S::Error> {
+fn ser_x<S: Serializer>(_: &X, _: S) -> StdResult<S::Ok, S::Error> {
     unimplemented!()
 }
 
@@ -314,7 +314,7 @@ fn de_x<D: Deserializer>(_: &mut D) -> StdResult<X, D::Error> {
 }
 
 impl SerializeWith for X {
-    fn serialize_with<S: Serializer>(_: &Self, _: &mut S) -> StdResult<(), S::Error> {
+    fn serialize_with<S: Serializer>(_: &Self, _: S) -> StdResult<S::Ok, S::Error> {
         unimplemented!()
     }
 }
