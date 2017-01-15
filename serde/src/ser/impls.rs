@@ -169,9 +169,9 @@ impl<T> Serialize for [T]
     {
         let mut seq = try!(serializer.serialize_seq(Some(self.len())));
         for e in self {
-            try!(seq.serialize_elem(e));
+            try!(seq.serialize_element(e));
         }
-        seq.serialize_end()
+        seq.end()
     }
 }
 
@@ -186,9 +186,9 @@ macro_rules! array_impls {
             {
                 let mut seq = try!(serializer.serialize_seq_fixed_size($len));
                 for e in self {
-                    try!(seq.serialize_elem(e));
+                    try!(seq.serialize_element(e));
                 }
-                seq.serialize_end()
+                seq.end()
             }
         }
     }
@@ -249,9 +249,9 @@ impl<'a, I> Serialize for Iterator<I>
         };
         let mut seq = try!(serializer.serialize_seq(size));
         for e in iter {
-            try!(seq.serialize_elem(e));
+            try!(seq.serialize_element(e));
         }
-        seq.serialize_end()
+        seq.end()
     }
 }
 
@@ -265,9 +265,9 @@ macro_rules! serialize_seq {
         {
             let mut seq = try!(serializer.serialize_seq(Some(self.len())));
             for e in self {
-                try!(seq.serialize_elem(e));
+                try!(seq.serialize_element(e));
             }
-            seq.serialize_end()
+            seq.end()
         }
     }
 }
@@ -334,9 +334,9 @@ impl<A> Serialize for ops::Range<A>
         let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
         let mut seq = try!(serializer.serialize_seq(len));
         for e in self.clone() {
-            try!(seq.serialize_elem(e));
+            try!(seq.serialize_element(e));
         }
-        seq.serialize_end()
+        seq.end()
     }
 }
 
@@ -369,9 +369,9 @@ macro_rules! tuple_impls {
                 {
                     let mut tuple = try!(serializer.serialize_tuple($len));
                     $(
-                        try!(tuple.serialize_elem(&self.$idx));
+                        try!(tuple.serialize_element(&self.$idx));
                     )+
-                    tuple.serialize_end()
+                    tuple.end()
                 }
             }
         )+
@@ -562,7 +562,7 @@ macro_rules! serialize_map {
                 try!(map.serialize_key(k));
                 try!(map.serialize_value(v));
             }
-            map.serialize_end()
+            map.end()
         }
     }
 }
@@ -682,7 +682,7 @@ impl Serialize for Duration {
         let mut state = try!(serializer.serialize_struct("Duration", 2));
         try!(state.serialize_field("secs", self.as_secs()));
         try!(state.serialize_field("nanos", self.subsec_nanos()));
-        state.serialize_end()
+        state.end()
     }
 }
 

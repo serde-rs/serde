@@ -183,9 +183,9 @@ pub trait Serializer {
     /// ```rust
     /// let mut seq = self.serialize_seq(Some(value.len()))?;
     /// for b in value {
-    ///     seq.serialize_elem(b)?;
+    ///     seq.serialize_element(b)?;
     /// }
-    /// seq.serialize_end()
+    /// seq.end()
     /// ```
     fn serialize_bytes(self, value: &[u8]) -> Result<Self::Ok, Self::Error>;
 
@@ -324,10 +324,10 @@ pub trait SerializeSeq {
     type Error: Error;
 
     /// Serializes a sequence element.
-    fn serialize_elem<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_element<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a sequence.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_tuple`.
@@ -340,10 +340,10 @@ pub trait SerializeTuple {
     type Error: Error;
 
     /// Serializes a tuple element.
-    fn serialize_elem<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_element<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a tuple.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_tuple_struct`.
@@ -356,10 +356,10 @@ pub trait SerializeTupleStruct {
     type Error: Error;
 
     /// Serializes a tuple struct element.
-    fn serialize_elem<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_field<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a tuple struct.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_tuple_variant`.
@@ -372,10 +372,10 @@ pub trait SerializeTupleVariant {
     type Error: Error;
 
     /// Serializes a tuple variant element.
-    fn serialize_elem<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_field<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a tuple variant.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_map`.
@@ -394,7 +394,7 @@ pub trait SerializeMap {
     fn serialize_value<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a map.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_struct`.
@@ -410,7 +410,7 @@ pub trait SerializeStruct {
     fn serialize_field<V: Serialize>(&mut self, key: &'static str, value: V) -> Result<(), Self::Error>;
 
     /// Finishes serializing a struct.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_struct_variant`.
@@ -426,7 +426,7 @@ pub trait SerializeStructVariant {
     fn serialize_field<V: Serialize>(&mut self, key: &'static str, value: V) -> Result<(), Self::Error>;
 
     /// Finishes serializing a struct variant.
-    fn serialize_end(self) -> Result<Self::Ok, Self::Error>;
+    fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
 /// A wrapper type for iterators that implements `Serialize` for iterators whose items implement

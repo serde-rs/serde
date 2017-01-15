@@ -159,7 +159,7 @@ fn serialize_tuple_struct(
         fields,
         impl_generics,
         false,
-        quote!(_serde::ser::SerializeTupleStruct::serialize_elem),
+        quote!(_serde::ser::SerializeTupleStruct::serialize_field),
     );
 
     let type_name = item_attrs.name().serialize_name();
@@ -169,7 +169,7 @@ fn serialize_tuple_struct(
     quote! {
         let #let_mut __serde_state = try!(_serializer.serialize_tuple_struct(#type_name, #len));
         #(#serialize_stmts)*
-        _serde::ser::SerializeTupleStruct::serialize_end(__serde_state)
+        _serde::ser::SerializeTupleStruct::end(__serde_state)
     }
 }
 
@@ -210,7 +210,7 @@ fn serialize_struct(
     quote! {
         let #let_mut __serde_state = try!(_serializer.serialize_struct(#type_name, #len));
         #(#serialize_fields)*
-        _serde::ser::SerializeStruct::serialize_end(__serde_state)
+        _serde::ser::SerializeStruct::end(__serde_state)
     }
 }
 
@@ -373,7 +373,7 @@ fn serialize_tuple_variant(
         fields,
         generics,
         true,
-        quote!(_serde::ser::SerializeTupleVariant::serialize_elem),
+        quote!(_serde::ser::SerializeTupleVariant::serialize_field),
     );
 
     let len = serialize_stmts.len();
@@ -386,7 +386,7 @@ fn serialize_tuple_variant(
             #variant_name,
             #len));
         #(#serialize_stmts)*
-        _serde::ser::SerializeTupleVariant::serialize_end(__serde_state)
+        _serde::ser::SerializeTupleVariant::end(__serde_state)
     }
 }
 
@@ -433,7 +433,7 @@ fn serialize_struct_variant(
             #len,
         ));
         #(#serialize_fields)*
-        _serde::ser::SerializeStructVariant::serialize_end(__serde_state)
+        _serde::ser::SerializeStructVariant::end(__serde_state)
     }
 }
 
@@ -558,7 +558,7 @@ fn wrap_serialize_with(
 // Serialization of an empty struct results in code like:
 //
 //     let mut __serde_state = try!(serializer.serialize_struct("S", 0));
-//     _serde::ser::SerializeStruct::serialize_end(__serde_state)
+//     _serde::ser::SerializeStruct::end(__serde_state)
 //
 // where we want to omit the `mut` to avoid a warning.
 fn mut_if(is_mut: bool) -> Option<Tokens> {
