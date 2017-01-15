@@ -30,7 +30,7 @@ pub fn expand_derive_serialize(item: &syn::MacroInput) -> Result<Tokens, String>
             extern crate serde as _serde;
             #[automatically_derived]
             impl #impl_generics _serde::Serialize for #ty #where_clause {
-                fn serialize<__S>(&self, _serializer: &mut __S) -> ::std::result::Result<(), __S::Error>
+                fn serialize<__S>(&self, _serializer: __S) -> ::std::result::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body
@@ -159,7 +159,7 @@ fn serialize_tuple_struct(
         fields,
         impl_generics,
         false,
-        Ident::new("serialize_tuple_struct_elt"),
+        quote!(_serde::ser::SerializeTupleStruct::serialize_elem),
     );
 
     let type_name = item_attrs.name().serialize_name();
@@ -169,7 +169,7 @@ fn serialize_tuple_struct(
     quote! {
         let #let_mut __serde_state = try!(_serializer.serialize_tuple_struct(#type_name, #len));
         #(#serialize_stmts)*
-        _serializer.serialize_tuple_struct_end(__serde_state)
+        _serde::ser::SerializeTupleStruct::serialize_end(__serde_state)
     }
 }
 
@@ -184,7 +184,7 @@ fn serialize_struct(
         fields,
         impl_generics,
         false,
-        Ident::new("serialize_struct_elt"),
+        quote!(_serde::ser::SerializeStruct::serialize_field),
     );
 
     let type_name = item_attrs.name().serialize_name();
@@ -210,7 +210,7 @@ fn serialize_struct(
     quote! {
         let #let_mut __serde_state = try!(_serializer.serialize_struct(#type_name, #len));
         #(#serialize_fields)*
-        _serializer.serialize_struct_end(__serde_state)
+        _serde::ser::SerializeStruct::serialize_end(__serde_state)
     }
 }
 
@@ -373,7 +373,7 @@ fn serialize_tuple_variant(
         fields,
         generics,
         true,
-        Ident::new("serialize_tuple_variant_elt"),
+        quote!(_serde::ser::SerializeTupleVariant::serialize_elem),
     );
 
     let len = serialize_stmts.len();
@@ -386,7 +386,7 @@ fn serialize_tuple_variant(
             #variant_name,
             #len));
         #(#serialize_stmts)*
-        _serializer.serialize_tuple_variant_end(__serde_state)
+        _serde::ser::SerializeTupleVariant::serialize_end(__serde_state)
     }
 }
 
@@ -403,7 +403,7 @@ fn serialize_struct_variant(
         fields,
         generics,
         true,
-        Ident::new("serialize_struct_variant_elt"),
+        quote!(_serde::ser::SerializeStructVariant::serialize_field),
     );
 
     let item_name = item_attrs.name().serialize_name();
@@ -433,7 +433,7 @@ fn serialize_struct_variant(
             #len,
         ));
         #(#serialize_fields)*
-        _serializer.serialize_struct_variant_end(__serde_state)
+        _serde::ser::SerializeStructVariant::serialize_end(__serde_state)
     }
 }
 
@@ -442,7 +442,7 @@ fn serialize_tuple_struct_visitor(
     fields: &[Field],
     generics: &syn::Generics,
     is_enum: bool,
-    func: syn::Ident,
+    func: Tokens,
 ) -> Vec<Tokens> {
     fields.iter()
         .enumerate()
@@ -464,7 +464,7 @@ fn serialize_tuple_struct_visitor(
             }
 
             let ser = quote! {
-                try!(_serializer.#func(&mut __serde_state, #field_expr));
+                try!(#func(&mut __serde_state, #field_expr));
             };
 
             match skip {
@@ -480,7 +480,7 @@ fn serialize_struct_visitor(
     fields: &[Field],
     generics: &syn::Generics,
     is_enum: bool,
-    func: syn::Ident,
+    func: Tokens,
 ) -> Vec<Tokens> {
     fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
@@ -503,7 +503,7 @@ fn serialize_struct_visitor(
             }
 
             let ser = quote! {
-                try!(_serializer.#func(&mut __serde_state, #key_expr, #field_expr));
+                try!(#func(&mut __serde_state, #key_expr, #field_expr));
             };
 
             match skip {
@@ -541,7 +541,7 @@ fn wrap_serialize_with(
         }
 
         impl #wrapper_generics _serde::Serialize for #wrapper_ty #where_clause {
-            fn serialize<__S>(&self, __s: &mut __S) -> ::std::result::Result<(), __S::Error>
+            fn serialize<__S>(&self, __s: __S) -> ::std::result::Result<__S::Ok, __S::Error>
                 where __S: _serde::Serializer
             {
                 #path(self.value, __s)
@@ -558,7 +558,7 @@ fn wrap_serialize_with(
 // Serialization of an empty struct results in code like:
 //
 //     let mut __serde_state = try!(serializer.serialize_struct("S", 0));
-//     serializer.serialize_struct_end(__serde_state)
+//     _serde::ser::SerializeStruct::serialize_end(__serde_state)
 //
 // where we want to omit the `mut` to avoid a warning.
 fn mut_if(is_mut: bool) -> Option<Tokens> {
