@@ -299,7 +299,7 @@ trait SerializeWith {
 }
 
 trait DeserializeWith: Sized {
-    fn deserialize_with<D: Deserializer>(_: &mut D) -> StdResult<Self, D::Error>;
+    fn deserialize_with<D: Deserializer>(_: D) -> StdResult<Self, D::Error>;
 }
 
 // Implements neither Serialize nor Deserialize
@@ -309,7 +309,7 @@ fn ser_x<S: Serializer>(_: &X, _: &mut S) -> StdResult<(), S::Error> {
     unimplemented!()
 }
 
-fn de_x<D: Deserializer>(_: &mut D) -> StdResult<X, D::Error> {
+fn de_x<D: Deserializer>(_: D) -> StdResult<X, D::Error> {
     unimplemented!()
 }
 
@@ -320,7 +320,7 @@ impl SerializeWith for X {
 }
 
 impl DeserializeWith for X {
-    fn deserialize_with<D: Deserializer>(_: &mut D) -> StdResult<Self, D::Error> {
+    fn deserialize_with<D: Deserializer>(_: D) -> StdResult<Self, D::Error> {
         unimplemented!()
     }
 }

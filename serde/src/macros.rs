@@ -4,7 +4,7 @@
 macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
-        fn $func<__V>(&mut self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
+        fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor
         {
             self.deserialize(visitor)
@@ -18,7 +18,7 @@ macro_rules! forward_to_deserialize_method {
 macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
-        fn $func<__V>(&mut self, $(_: $arg,)* visitor: __V) -> ::core::result::Result<__V::Value, Self::Error>
+        fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::core::result::Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor
         {
             self.deserialize(visitor)
@@ -128,7 +128,7 @@ macro_rules! forward_to_deserialize_helper {
 ///
 /// ```rust,ignore
 /// impl Deserializer for MyDeserializer {
-///     fn deserialize<V>(&mut self, visitor: V) -> Result<V::Value, Self::Error>
+///     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
 ///         where V: Visitor
 ///     {
 ///         /* ... */

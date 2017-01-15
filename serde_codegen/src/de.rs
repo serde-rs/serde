@@ -36,7 +36,7 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, Strin
             extern crate serde as _serde;
             #[automatically_derived]
             impl #impl_generics _serde::Deserialize for #ty #where_clause {
-                fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<#ty, __D::Error>
+                fn deserialize<__D>(deserializer: __D) -> ::std::result::Result<#ty, __D::Error>
                     where __D: _serde::Deserializer
                 #body
             }
@@ -207,14 +207,14 @@ fn deserialize_unit_struct(
             type Value = #type_ident;
 
             #[inline]
-            fn visit_unit<__E>(&mut self) -> ::std::result::Result<#type_ident, __E>
+            fn visit_unit<__E>(self) -> ::std::result::Result<#type_ident, __E>
                 where __E: _serde::de::Error,
             {
                 Ok(#type_ident)
             }
 
             #[inline]
-            fn visit_seq<__V>(&mut self, _: __V) -> ::std::result::Result<#type_ident, __V::Error>
+            fn visit_seq<__V>(self, _: __V) -> ::std::result::Result<#type_ident, __V::Error>
                 where __V: _serde::de::SeqVisitor,
             {
                 Ok(#type_ident)
@@ -265,7 +265,7 @@ fn deserialize_tuple(
     );
 
     let dispatch = if is_enum {
-        quote!(visitor.visit_tuple(#nfields, #visitor_expr))
+        quote!(_serde::de::VariantVisitor::visit_tuple(visitor, #nfields, #visitor_expr))
     } else if nfields == 1 {
         let type_name = item_attrs.name().deserialize_name();
         quote!(deserializer.deserialize_newtype_struct(#type_name, #visitor_expr))
@@ -290,7 +290,7 @@ fn deserialize_tuple(
             #visit_newtype_struct
 
             #[inline]
-            fn visit_seq<__V>(&mut self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_seq<__V>(self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
@@ -389,7 +389,7 @@ fn deserialize_newtype_struct(
     };
     quote! {
         #[inline]
-        fn visit_newtype_struct<__E>(&mut self, __e: &mut __E) -> ::std::result::Result<Self::Value, __E::Error>
+        fn visit_newtype_struct<__E>(self, __e: __E) -> ::std::result::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer,
         {
             Ok(#type_path(#value))
@@ -433,7 +433,7 @@ fn deserialize_struct(
     let is_enum = variant_ident.is_some();
     let dispatch = if is_enum {
         quote! {
-            visitor.visit_struct(FIELDS, #visitor_expr)
+            _serde::de::VariantVisitor::visit_struct(visitor, FIELDS, #visitor_expr)
         }
     } else {
         let type_name = item_attrs.name().deserialize_name();
@@ -458,14 +458,14 @@ fn deserialize_struct(
             type Value = #ty;
 
             #[inline]
-            fn visit_seq<__V>(&mut self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_seq<__V>(self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
             }
 
             #[inline]
-            fn visit_map<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_map<__V>(self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
                 where __V: _serde::de::MapVisitor
             {
                 #visit_map
@@ -523,7 +523,7 @@ fn deserialize_item_enum(
             );
 
             quote! {
-                __Field::#variant_name => #block
+                (__Field::#variant_name, visitor) => #block
             }
         });
 
@@ -535,7 +535,7 @@ fn deserialize_item_enum(
             // FIXME: Once we drop support for Rust 1.15:
             // let Err(err) = visitor.visit_variant::<__Field>();
             // Err(err)
-            visitor.visit_variant::<__Field>().map(|impossible| match impossible {})
+            visitor.visit_variant::<__Field>().map(|(impossible, _)| match impossible {})
         }
     } else {
         quote! {
@@ -555,8 +555,8 @@ fn deserialize_item_enum(
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
 
-            fn visit_enum<__V>(&mut self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
-                where __V: _serde::de::VariantVisitor,
+            fn visit_enum<__V>(self, visitor: __V) -> ::std::result::Result<#ty, __V::Error>
+                where __V: _serde::de::EnumVisitor,
             {
                 #match_variant
             }
@@ -580,7 +580,7 @@ fn deserialize_variant(
     match variant.style {
         Style::Unit => {
             quote!({
-                try!(visitor.visit_unit());
+                try!(_serde::de::VariantVisitor::visit_unit(visitor));
                 Ok(#type_ident::#variant_ident)
             })
         }
@@ -624,7 +624,9 @@ fn deserialize_newtype_variant(
     let visit = match field.attrs.deserialize_with() {
         None => {
             let field_ty = &field.ty;
-            quote!(try!(visitor.visit_newtype::<#field_ty>()))
+            quote! {
+                try!(_serde::de::VariantVisitor::visit_newtype::<#field_ty>(visitor))
+            }
         }
         Some(path) => {
             let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
@@ -632,7 +634,7 @@ fn deserialize_newtype_variant(
             quote!({
                 #wrapper
                 #wrapper_impl
-                try!(visitor.visit_newtype::<#wrapper_ty>()).value
+                try!(_serde::de::VariantVisitor::visit_newtype::<#wrapper_ty>(visitor)).value
             })
         }
     };
@@ -678,7 +680,7 @@ fn deserialize_field_visitor(
 
         impl _serde::Deserialize for __Field {
             #[inline]
-            fn deserialize<__D>(deserializer: &mut __D) -> ::std::result::Result<__Field, __D::Error>
+            fn deserialize<__D>(deserializer: __D) -> ::std::result::Result<__Field, __D::Error>
                 where __D: _serde::Deserializer,
             {
                 struct __FieldVisitor;
@@ -686,7 +688,7 @@ fn deserialize_field_visitor(
                 impl _serde::de::Visitor for __FieldVisitor {
                     type Value = __Field;
 
-                    fn visit_str<__E>(&mut self, value: &str) -> ::std::result::Result<__Field, __E>
+                    fn visit_str<__E>(self, value: &str) -> ::std::result::Result<__Field, __E>
                         where __E: _serde::de::Error
                     {
                         match value {
@@ -896,7 +898,7 @@ fn wrap_deserialize_with(
         },
         quote! {
             impl #impl_generics _serde::Deserialize for #wrapper_ty #where_clause {
-                fn deserialize<__D>(__d: &mut __D) -> ::std::result::Result<Self, __D::Error>
+                fn deserialize<__D>(__d: __D) -> ::std::result::Result<Self, __D::Error>
                     where __D: _serde::Deserializer
                 {
                     let value = try!(#deserialize_with(__d));
