@@ -160,6 +160,10 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
         where __V: de::Visitor {
         self.deserialize(visitor)
     }
+    fn deserialize_byte_buf<__V>(self, visitor: __V) -> Result<__V::Value, Self::Error>
+        where __V: de::Visitor {
+        self.deserialize(visitor)
+    }
     fn deserialize_ignored_any<__V>(self, visitor: __V) -> Result<__V::Value, Self::Error>
         where __V: de::Visitor {
         self.deserialize(visitor)
@@ -250,6 +254,7 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
             Some(Token::Str(v)) => visitor.visit_str(v),
             Some(Token::String(v)) => visitor.visit_string(v),
             Some(Token::Bytes(v)) => visitor.visit_bytes(v),
+            Some(Token::ByteBuf(v)) => visitor.visit_byte_buf(v),
             Some(Token::Option(false)) => visitor.visit_none(),
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),

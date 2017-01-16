@@ -174,6 +174,9 @@ pub enum Type {
 
     /// Represents a `&[u8]` type.
     Bytes,
+
+    /// Represents a `Vec<u8>` type.
+    ByteBuf,
 }
 
 impl fmt::Display for Type {
@@ -212,6 +215,7 @@ impl fmt::Display for Type {
             Type::UnitVariant    => "unit variant",
             Type::NewtypeVariant => "newtype variant",
             Type::Bytes          => "bytes",
+            Type::ByteBuf        => "bytes buf",
         };
         display.fmt(formatter)
     }
@@ -343,10 +347,17 @@ pub trait Deserializer {
                                      visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
-    /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
+    /// This method hints that the `Deserialize` type is expecting a `&[u8]`. This allows
     /// deserializers that provide a custom byte vector serialization to properly deserialize the
     /// type.
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor;
+
+    /// This method hints that the `Deserialize` type is expecting a `Vec<u8>`. This allows
+    /// deserializers that provide a custom byte vector serialization to properly deserialize the
+    /// type and prevent needless intermediate allocations that would occur when going through
+    /// `&[u8]`.
+    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// This method hints that the `Deserialize` type is expecting a map of values. This allows

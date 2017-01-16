@@ -17,6 +17,7 @@ pub enum Token<'a> {
     Str(&'a str),
     String(String),
     Bytes(&'a [u8]),
+    ByteBuf(Vec<u8>),
 
     Option(bool),
 

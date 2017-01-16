@@ -92,6 +92,9 @@ macro_rules! forward_to_deserialize_helper {
     (bytes) => {
         forward_to_deserialize_method!{deserialize_bytes()}
     };
+    (byte_buf) => {
+        forward_to_deserialize_method!{deserialize_byte_buf()}
+    };
     (map) => {
         forward_to_deserialize_method!{deserialize_map()}
     };
