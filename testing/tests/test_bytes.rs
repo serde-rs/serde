@@ -15,6 +15,7 @@ fn test_bytes() {
 fn test_byte_buf() {
     let empty = ByteBuf::new();
     assert_tokens(&empty, &[Token::Bytes(b"")]);
+    assert_de_tokens(&empty, &[Token::ByteBuf(Vec::new())]);
     assert_de_tokens(&empty, &[Token::Str("")]);
     assert_de_tokens(&empty, &[Token::String(String::new())]);
     assert_de_tokens(&empty, &[
@@ -28,6 +29,7 @@ fn test_byte_buf() {
 
     let buf = ByteBuf::from(vec![65, 66, 67]);
     assert_tokens(&buf, &[Token::Bytes(b"ABC")]);
+    assert_de_tokens(&buf, &[Token::ByteBuf(vec![65, 66, 67])]);
     assert_de_tokens(&buf, &[Token::Str("ABC")]);
     assert_de_tokens(&buf, &[Token::String("ABC".to_owned())]);
     assert_de_tokens(&buf, &[

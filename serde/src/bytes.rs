@@ -234,7 +234,7 @@ mod bytebuf {
         fn deserialize<D>(deserializer: D) -> Result<ByteBuf, D::Error>
             where D: de::Deserializer
         {
-            deserializer.deserialize_bytes(ByteBufVisitor)
+            deserializer.deserialize_byte_buf(ByteBufVisitor)
         }
     }
 }
