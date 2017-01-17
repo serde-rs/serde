@@ -324,15 +324,31 @@ impl<T> Serialize for VecDeque<T>
 
 #[cfg(feature = "unstable")]
 impl<A> Serialize for ops::Range<A>
-    where A: Serialize + Clone + iter::Step + num::One,
-          for<'a> &'a A: ops::Add<&'a A, Output = A>,
+    where ops::Range<A>: ExactSizeIterator + iter::Iterator<Item = A> + Clone,
+          A: Serialize,
 {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
-        let len = iter::Step::steps_between(&self.start, &self.end, &A::one());
-        let mut seq = try!(serializer.serialize_seq(len));
+        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
+        for e in self.clone() {
+            try!(seq.serialize_element(e));
+        }
+        seq.end()
+    }
+}
+
+#[cfg(feature = "unstable")]
+impl<A> Serialize for ops::RangeInclusive<A>
+    where ops::RangeInclusive<A>: ExactSizeIterator + iter::Iterator<Item = A> + Clone,
+          A: Serialize,
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer,
+    {
+        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.clone() {
             try!(seq.serialize_element(e));
         }

@@ -11,7 +11,7 @@
 
 #![doc(html_root_url="https://docs.serde.rs")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "unstable", feature(reflect_marker, unicode, nonzero, plugin, step_trait, zero_one))]
+#![cfg_attr(feature = "unstable", feature(reflect_marker, unicode, nonzero, plugin, step_trait, zero_one, inclusive_range))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections, enumset))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
