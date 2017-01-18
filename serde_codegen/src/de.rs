@@ -657,6 +657,25 @@ fn deserialize_field_visitor(
         Some(quote!(__ignore,))
     };
 
+    let visit_usize = if is_variant {
+        let variant_indices = 0usize..;
+        let fallthrough_msg = format!("expected variant index 0 <= i < {}", fields.len());
+        Some(quote! {
+            fn visit_usize<__E>(self, value: usize) -> ::std::result::Result<__Field, __E>
+                where __E: _serde::de::Error
+            {
+                match value {
+                    #(
+                        #variant_indices => Ok(__Field::#field_idents),
+                    )*
+                    _ => Err(_serde::de::Error::invalid_value(#fallthrough_msg))
+                }
+            }
+        })
+    } else {
+        None
+    };
+
     let fallthrough_arm = if is_variant {
         quote! {
             Err(_serde::de::Error::unknown_variant(value))
@@ -687,6 +706,8 @@ fn deserialize_field_visitor(
 
                 impl _serde::de::Visitor for __FieldVisitor {
                     type Value = __Field;
+
+                    #visit_usize
 
                     fn visit_str<__E>(self, value: &str) -> ::std::result::Result<__Field, __E>
                         where __E: _serde::de::Error

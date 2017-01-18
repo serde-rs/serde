@@ -774,6 +774,13 @@ declare_tests! {
             Token::EnumMapEnd,
         ],
     }
+    test_enum_unit_usize {
+        Enum::Unit => &[
+            Token::EnumStart("Enum"),
+            Token::Usize(0),
+            Token::Unit,
+        ],
+    }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],
     }
@@ -918,13 +925,13 @@ declare_error_tests! {
         ],
         Error::DuplicateField("a"),
     }
-    test_enum_unit_usize<Enum> {
+    test_enum_out_of_range<Enum> {
         &[
             Token::EnumStart("Enum"),
-            Token::Usize(0),
+            Token::Usize(4),
             Token::Unit,
         ],
-        Error::InvalidType(Type::U64),
+        Error::InvalidValue("expected variant index 0 <= i < 4".to_owned()),
     }
     test_enum_unit_bytes<Enum> {
         &[
