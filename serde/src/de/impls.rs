@@ -977,16 +977,6 @@ impl Deserialize for Duration {
                 impl Visitor for FieldVisitor {
                     type Value = Field;
 
-                    fn visit_usize<E>(self, value: usize) -> Result<Field, E>
-                        where E: Error,
-                    {
-                        match value {
-                            0usize => Ok(Field::Secs),
-                            1usize => Ok(Field::Nanos),
-                            _ => Err(Error::invalid_value("expected a field")),
-                        }
-                    }
-
                     fn visit_str<E>(self, value: &str) -> Result<Field, E>
                         where E: Error,
                     {
@@ -994,19 +984,6 @@ impl Deserialize for Duration {
                             "secs" => Ok(Field::Secs),
                             "nanos" => Ok(Field::Nanos),
                             _ => Err(Error::unknown_field(value)),
-                        }
-                    }
-
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
-                        where E: Error,
-                    {
-                        match value {
-                            b"secs" => Ok(Field::Secs),
-                            b"nanos" => Ok(Field::Nanos),
-                            _ => {
-                                let value = String::from_utf8_lossy(value);
-                                Err(Error::unknown_field(&value))
-                            }
                         }
                     }
                 }
