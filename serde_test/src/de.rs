@@ -301,24 +301,18 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
 
     fn deserialize_enum<V>(self,
                      name: &str,
-                     _variants: &'static [&'static str],
+                     variants: &'static [&'static str],
                      visitor: V) -> Result<V::Value, Error>
         where V: Visitor,
     {
         match self.tokens.peek() {
-            Some(&Token::EnumStart(n)) if name == n => {
+            Some(&Token::EnumStart(n, tok_variants)) if name == n => {
+                assert_eq!(variants, tok_variants);
                 self.tokens.next();
 
                 visitor.visit_enum(DeserializerEnumVisitor {
                     de: self,
-                })
-            }
-            Some(&Token::EnumUnit(n, _))
-            | Some(&Token::EnumNewType(n, _))
-            | Some(&Token::EnumSeqStart(n, _, _))
-            | Some(&Token::EnumMapStart(n, _, _)) if name == n => {
-                visitor.visit_enum(DeserializerEnumVisitor {
-                    de: self,
+                    variants: variants,
                 })
             }
             Some(_) => {
@@ -748,6 +742,7 @@ impl<'a, I> MapVisitor for DeserializerStructVisitor<'a, I>
 
 struct DeserializerEnumVisitor<'a, I: 'a> where I: Iterator<Item=Token<'static>> {
     de: &'a mut Deserializer<I>,
+    variants: &'static [&'static str],
 }
 
 impl<'a, I> EnumVisitor for DeserializerEnumVisitor<'a, I>
@@ -760,13 +755,17 @@ impl<'a, I> EnumVisitor for DeserializerEnumVisitor<'a, I>
         where V: Deserialize,
     {
         match self.de.tokens.peek() {
-            Some(&Token::EnumUnit(_, v))
-            | Some(&Token::EnumNewType(_, v))
-            | Some(&Token::EnumSeqStart(_, v, _))
-            | Some(&Token::EnumMapStart(_, v, _)) => {
-                let de = v.into_deserializer();
-                let value = try!(Deserialize::deserialize(de));
-                Ok((value, self))
+            Some(&Token::EnumUnit(v))
+            | Some(&Token::EnumNewType(v))
+            | Some(&Token::EnumSeqStart(v, _))
+            | Some(&Token::EnumMapStart(v, _)) => {
+                if let Some(variant_name) = self.variants.get(v) {
+                    let de = variant_name.into_deserializer();
+                    let value = try!(Deserialize::deserialize(de));
+                    Ok((value, self))
+                } else {
+                    Err(Error::UnknownDiscriminant(v))
+                }
             }
             Some(_) => {
                 let value = try!(Deserialize::deserialize(&mut *self.de));
@@ -784,7 +783,7 @@ impl<'a, I> VariantVisitor for DeserializerEnumVisitor<'a, I>
 
     fn visit_unit(self) -> Result<(), Error> {
         match self.de.tokens.peek() {
-            Some(&Token::EnumUnit(_, _)) => {
+            Some(&Token::EnumUnit(_)) => {
                 self.de.tokens.next();
                 Ok(())
             }
@@ -799,7 +798,7 @@ impl<'a, I> VariantVisitor for DeserializerEnumVisitor<'a, I>
         where T: Deserialize,
     {
         match self.de.tokens.peek() {
-            Some(&Token::EnumNewType(_, _)) => {
+            Some(&Token::EnumNewType(_)) => {
                 self.de.tokens.next();
                 Deserialize::deserialize(self.de)
             }
@@ -816,7 +815,7 @@ impl<'a, I> VariantVisitor for DeserializerEnumVisitor<'a, I>
         where V: Visitor,
     {
         match self.de.tokens.peek() {
-            Some(&Token::EnumSeqStart(_, _, enum_len)) => {
+            Some(&Token::EnumSeqStart(_, enum_len)) => {
                 let token = self.de.tokens.next().unwrap();
 
                 if len == enum_len {
@@ -847,7 +846,7 @@ impl<'a, I> VariantVisitor for DeserializerEnumVisitor<'a, I>
         where V: Visitor,
     {
         match self.de.tokens.peek() {
-            Some(&Token::EnumMapStart(_, _, enum_len)) => {
+            Some(&Token::EnumMapStart(_, enum_len)) => {
                 let token = self.de.tokens.next().unwrap();
 
                 if fields.len() == enum_len {

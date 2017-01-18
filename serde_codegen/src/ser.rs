@@ -231,12 +231,32 @@ fn serialize_item_enum(
                     ty.clone(),
                     variant,
                     variant_index,
-                    item_attrs,
                 )
             })
             .collect();
 
+    let variant_names: Vec<_> =
+        variants.iter()
+            .filter_map(|variant| {
+                if variant.attrs.skip_serializing() {
+                    None
+                } else {
+                    Some(variant.attrs.name().serialize_name())
+                }
+            })
+            .collect();
+
+    let type_name = item_attrs.name().serialize_name();
+
     quote! {
+        const _VARIANTS: &'static [&'static str] = &[
+            #(#variant_names,)*
+        ];
+        let _variant_serializer = try!(_serde::Serializer::serialize_enum(
+            _serializer,
+            #type_name,
+            _VARIANTS,
+        ));
         match *self {
             #(#arms)*
         }
@@ -249,12 +269,8 @@ fn serialize_variant(
     ty: syn::Ty,
     variant: &Variant,
     variant_index: usize,
-    item_attrs: &attr::Item,
 ) -> Tokens {
-    let type_name = item_attrs.name().serialize_name();
-
     let variant_ident = variant.ident.clone();
-    let variant_name = variant.attrs.name().serialize_name();
 
     if variant.attrs.skip_serializing() {
         let skipped_msg = format!("The enum variant {}::{} cannot be serialized",
@@ -275,19 +291,15 @@ fn serialize_variant(
             Style::Unit => {
                 quote! {
                     #type_ident::#variant_ident =>
-                        _serde::Serializer::serialize_unit_variant(
-                            _serializer,
-                            #type_name,
+                        _serde::ser::SerializeEnum::serialize_unit_variant(
+                            _variant_serializer,
                             #variant_index,
-                            #variant_name,
                         ),
                 }
             },
             Style::Newtype => {
                 let block = serialize_newtype_variant(
-                    type_name,
                     variant_index,
-                    variant_name,
                     ty,
                     generics,
                     &variant.fields[0],
@@ -302,9 +314,7 @@ fn serialize_variant(
                     .map(|i| Ident::new(format!("__field{}", i)));
 
                 let block = serialize_tuple_variant(
-                    type_name,
                     variant_index,
-                    variant_name,
                     generics,
                     ty,
                     &variant.fields,
@@ -320,11 +330,9 @@ fn serialize_variant(
 
                 let block = serialize_struct_variant(
                     variant_index,
-                    variant_name,
                     generics,
                     ty,
                     &variant.fields,
-                    item_attrs,
                 );
 
                 quote! {
@@ -336,9 +344,7 @@ fn serialize_variant(
 }
 
 fn serialize_newtype_variant(
-    type_name: String,
     variant_index: usize,
-    variant_name: String,
     item_ty: syn::Ty,
     generics: &syn::Generics,
     field: &Field,
@@ -350,20 +356,16 @@ fn serialize_newtype_variant(
     }
 
     quote! {
-        _serde::Serializer::serialize_newtype_variant(
-            _serializer,
-            #type_name,
+        _serde::ser::SerializeEnum::serialize_newtype_variant(
+            _variant_serializer,
             #variant_index,
-            #variant_name,
             #field_expr,
         )
     }
 }
 
 fn serialize_tuple_variant(
-    type_name: String,
     variant_index: usize,
-    variant_name: String,
     generics: &syn::Generics,
     structure_ty: syn::Ty,
     fields: &[Field],
@@ -380,10 +382,9 @@ fn serialize_tuple_variant(
     let let_mut = mut_if(len > 0);
 
     quote! {
-        let #let_mut __serde_state = try!(_serializer.serialize_tuple_variant(
-            #type_name,
+        let #let_mut __serde_state = try!(_serde::ser::SerializeEnum::serialize_tuple_variant(
+            _variant_serializer,
             #variant_index,
-            #variant_name,
             #len));
         #(#serialize_stmts)*
         _serde::ser::SerializeTupleVariant::end(__serde_state)
@@ -392,11 +393,9 @@ fn serialize_tuple_variant(
 
 fn serialize_struct_variant(
     variant_index: usize,
-    variant_name: String,
     generics: &syn::Generics,
     ty: syn::Ty,
     fields: &[Field],
-    item_attrs: &attr::Item,
 ) -> Tokens {
     let serialize_fields = serialize_struct_visitor(
         ty.clone(),
@@ -405,8 +404,6 @@ fn serialize_struct_variant(
         true,
         quote!(_serde::ser::SerializeStructVariant::serialize_field),
     );
-
-    let item_name = item_attrs.name().serialize_name();
 
     let mut serialized_fields = fields.iter()
         .filter(|&field| !field.attrs.skip_serializing())
@@ -426,10 +423,9 @@ fn serialize_struct_variant(
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote! {
-        let #let_mut __serde_state = try!(_serializer.serialize_struct_variant(
-            #item_name,
+        let #let_mut __serde_state = try!(_serde::ser::SerializeEnum::serialize_struct_variant(
+            _variant_serializer,
             #variant_index,
-            #variant_name,
             #len,
         ));
         #(#serialize_fields)*

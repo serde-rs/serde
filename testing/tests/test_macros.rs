@@ -275,7 +275,8 @@ fn test_ser_enum_unit() {
     assert_ser_tokens(
         &SerEnum::Unit::<u32, u32, u32>,
         &[
-            Token::EnumUnit("SerEnum", "Unit"),
+            Token::EnumStart("SerEnum", &["Unit", "Seq", "Map", "_Unit2", "_Seq2", "_Map2"]),
+            Token::EnumUnit(0),
         ]
     );
 }
@@ -295,7 +296,8 @@ fn test_ser_enum_seq() {
             &mut d,
         ),
         &[
-            Token::EnumSeqStart("SerEnum", "Seq", 4),
+            Token::EnumStart("SerEnum", &["Unit", "Seq", "Map", "_Unit2", "_Seq2", "_Map2"]),
+            Token::EnumSeqStart(1, 4),
 
             Token::EnumSeqSep,
             Token::I8(1),
@@ -329,7 +331,8 @@ fn test_ser_enum_map() {
             d: &mut d,
         },
         &[
-            Token::EnumMapStart("SerEnum", "Map", 4),
+            Token::EnumStart("SerEnum", &["Unit", "Seq", "Map", "_Unit2", "_Seq2", "_Map2"]),
+            Token::EnumMapStart(2, 4),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -352,12 +355,15 @@ fn test_ser_enum_map() {
     );
 }
 
+const DEENUM: &'static[&'static str] = &["Unit", "Seq", "Map", "_Unit2", "_Seq2", "_Map2"];
+
 #[test]
 fn test_de_enum_unit() {
     assert_tokens(
         &DeEnum::Unit::<u32, u32, u32>,
         &[
-            Token::EnumUnit("DeEnum", "Unit"),
+            Token::EnumStart("DeEnum", DEENUM),
+            Token::EnumUnit(0),
         ],
     );
 }
@@ -377,7 +383,8 @@ fn test_de_enum_seq() {
             d,
         ),
         &[
-            Token::EnumSeqStart("DeEnum", "Seq", 4),
+            Token::EnumStart("DeEnum", DEENUM),
+            Token::EnumSeqStart(1, 4),
 
             Token::EnumSeqSep,
             Token::I8(1),
@@ -411,7 +418,8 @@ fn test_de_enum_map() {
             d: d,
         },
         &[
-            Token::EnumMapStart("DeEnum", "Map", 4),
+            Token::EnumStart("DeEnum", DEENUM),
+            Token::EnumMapStart(2, 4),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -434,6 +442,8 @@ fn test_de_enum_map() {
     );
 }
 
+const LIFETIMES: &'static[&'static str] = &["LifetimeSeq", "NoLifetimeSeq", "LifetimeMap", "NoLifetimeMap"];
+
 #[test]
 fn test_lifetimes() {
     let value = 5;
@@ -441,7 +451,8 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::LifetimeSeq(&value),
         &[
-            Token::EnumNewType("Lifetimes", "LifetimeSeq"),
+            Token::EnumStart("Lifetimes", LIFETIMES),
+            Token::EnumNewType(0),
             Token::I32(5),
         ]
     );
@@ -449,7 +460,8 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::NoLifetimeSeq(5),
         &[
-            Token::EnumNewType("Lifetimes", "NoLifetimeSeq"),
+            Token::EnumStart("Lifetimes", LIFETIMES),
+            Token::EnumNewType(1),
             Token::I32(5),
         ]
     );
@@ -457,7 +469,8 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::LifetimeMap { a: &value },
         &[
-            Token::EnumMapStart("Lifetimes", "LifetimeMap", 1),
+            Token::EnumStart("Lifetimes", LIFETIMES),
+            Token::EnumMapStart(2, 1),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -470,7 +483,8 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::NoLifetimeMap { a: 5 },
         &[
-            Token::EnumMapStart("Lifetimes", "NoLifetimeMap", 1),
+            Token::EnumStart("Lifetimes", LIFETIMES),
+            Token::EnumMapStart(3, 1),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -526,12 +540,15 @@ fn test_generic_tuple_struct() {
     );
 }
 
+const GENERIC: &'static [&'static str] = &["Unit", "NewType", "Seq", "Map"];
+
 #[test]
 fn test_generic_enum_unit() {
     assert_tokens(
         &GenericEnum::Unit::<u32, u32>,
         &[
-            Token::EnumUnit("GenericEnum", "Unit"),
+            Token::EnumStart("GenericEnum", GENERIC),
+            Token::EnumUnit(0),
         ]
     );
 }
@@ -541,7 +558,8 @@ fn test_generic_enum_newtype() {
     assert_tokens(
         &GenericEnum::NewType::<u32, u32>(5),
         &[
-            Token::EnumNewType("GenericEnum", "NewType"),
+            Token::EnumStart("GenericEnum", GENERIC),
+            Token::EnumNewType(1),
             Token::U32(5),
         ]
     );
@@ -552,7 +570,8 @@ fn test_generic_enum_seq() {
     assert_tokens(
         &GenericEnum::Seq::<u32, u32>(5, 6),
         &[
-            Token::EnumSeqStart("GenericEnum", "Seq", 2),
+            Token::EnumStart("GenericEnum", GENERIC),
+            Token::EnumSeqStart(2, 2),
 
             Token::EnumSeqSep,
             Token::U32(5),
@@ -570,7 +589,8 @@ fn test_generic_enum_map() {
     assert_tokens(
         &GenericEnum::Map::<u32, u32> { x: 5, y: 6 },
         &[
-            Token::EnumMapStart("GenericEnum", "Map", 2),
+            Token::EnumStart("GenericEnum", GENERIC),
+            Token::EnumMapStart(3, 2),
 
             Token::EnumMapSep,
             Token::Str("x"),
@@ -608,10 +628,13 @@ fn test_enum_state_field() {
         Key { key: char, state: bool },
     }
 
+    const SOME: &'static [&'static str] = &["Key"];
+
     assert_tokens(
         &SomeEnum::Key { key: 'a', state: true },
         &[
-            Token::EnumMapStart("SomeEnum", "Key", 2),
+            Token::EnumStart("SomeEnum", SOME),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("key"),

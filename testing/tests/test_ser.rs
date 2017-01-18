@@ -93,11 +93,13 @@ declare_ser_tests! {
     }
     test_result {
         Ok::<i32, i32>(0) => &[
-            Token::EnumNewType("Result", "Ok"),
+            Token::EnumStart("Result", &["Ok", "Err"]),
+            Token::EnumNewType(0),
             Token::I32(0),
         ],
         Err::<i32, i32>(1) => &[
-            Token::EnumNewType("Result", "Err"),
+            Token::EnumStart("Result", &["Ok", "Err"]),
+            Token::EnumNewType(1),
             Token::I32(1),
         ],
     }
@@ -298,10 +300,18 @@ declare_ser_tests! {
         ],
     }
     test_enum {
-        Enum::Unit => &[Token::EnumUnit("Enum", "Unit")],
-        Enum::One(42) => &[Token::EnumNewType("Enum", "One"), Token::I32(42)],
+        Enum::Unit => &[
+            Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"]),
+            Token::EnumUnit(0)
+        ],
+        Enum::One(42) => &[
+            Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"]),
+            Token::EnumNewType(1),
+            Token::I32(42),
+        ],
         Enum::Seq(1, 2) => &[
-            Token::EnumSeqStart("Enum", "Seq", 2),
+            Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"]),
+            Token::EnumSeqStart(2, 2),
                 Token::EnumSeqSep,
                 Token::I32(1),
 
@@ -310,7 +320,8 @@ declare_ser_tests! {
             Token::EnumSeqEnd,
         ],
         Enum::Map { a: 1, b: 2 } => &[
-            Token::EnumMapStart("Enum", "Map", 2),
+            Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"]),
+            Token::EnumMapStart(3, 2),
                 Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -447,18 +458,18 @@ fn test_cannot_serialize_paths() {
 fn test_enum_skipped() {
     assert_ser_tokens_error(
         &Enum::SkippedUnit,
-        &[],
+        &[Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"])],
         Error::InvalidValue("The enum variant Enum::SkippedUnit cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedOne(42),
-        &[],
+        &[Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"])],
         Error::InvalidValue("The enum variant Enum::SkippedOne cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedSeq(1, 2),
-        &[],
+        &[Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"])],
         Error::InvalidValue("The enum variant Enum::SkippedSeq cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedMap { _a: 1, _b: 2 },
-        &[],
+        &[Token::EnumStart("Enum", &["Unit", "One", "Seq", "Map"])],
         Error::InvalidValue("The enum variant Enum::SkippedMap cannot be serialized".to_owned()));
 }

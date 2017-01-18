@@ -664,21 +664,13 @@ impl<T, E> Serialize for Result<T, E>
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
+        let ser = try!(serializer.serialize_enum(
+            "Result",
+            RESULT_VARIANTS,
+        ));
         match *self {
-            Result::Ok(ref value) => {
-                let ser = try!(serializer.serialize_enum(
-                    "Result",
-                    RESULT_VARIANTS,
-                ));
-                ser.serialize_newtype_variant(0, value)
-            }
-            Result::Err(ref value) => {
-                let ser = try!(serializer.serialize_enum(
-                    "Result",
-                    RESULT_VARIANTS,
-                ));
-                ser.serialize_newtype_variant(1, value)
-            }
+            Result::Ok(ref value) => ser.serialize_newtype_variant(0, value),
+            Result::Err(ref value) => ser.serialize_newtype_variant(1, value),
         }
     }
 }

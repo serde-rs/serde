@@ -36,10 +36,9 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
     type SerializeSeq = Self;
     type SerializeTuple = Self;
     type SerializeTupleStruct = Self;
-    type SerializeTupleVariant = Self;
     type SerializeMap = Self;
     type SerializeStruct = Self;
-    type SerializeStructVariant = Self;
+    type SerializeEnum = Self;
 
     fn serialize_bool(self, v: bool) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::Bool(v)));
@@ -131,31 +130,12 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_unit_variant(self,
-                              name: &str,
-                              _variant_index: usize,
-                              variant: &str) -> Result<(), Error> {
-        assert_eq!(self.tokens.next(), Some(&Token::EnumUnit(name, variant)));
-        Ok(())
-    }
-
     fn serialize_newtype_struct<T>(self,
                                    name: &'static str,
                                    value: T) -> Result<(), Error>
         where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::StructNewType(name)));
-        value.serialize(self)
-    }
-
-    fn serialize_newtype_variant<T>(self,
-                                    name: &str,
-                                    _variant_index: usize,
-                                    variant: &str,
-                                    value: T) -> Result<(), Error>
-        where T: Serialize,
-    {
-        assert_eq!(self.tokens.next(), Some(&Token::EnumNewType(name, variant)));
         value.serialize(self)
     }
 
@@ -191,16 +171,6 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(self)
     }
 
-    fn serialize_tuple_variant(self,
-                               name: &str,
-                               _variant_index: usize,
-                               variant: &str,
-                               len: usize) -> Result<Self, Error>
-    {
-        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqStart(name, variant, len)));
-        Ok(self)
-    }
-
     fn serialize_map(self, len: Option<usize>) -> Result<Self, Error> {
         assert_eq!(self.tokens.next(), Some(&Token::MapStart(len)));
         Ok(self)
@@ -211,13 +181,8 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(self)
     }
 
-    fn serialize_struct_variant(self,
-                                name: &str,
-                                _variant_index: usize,
-                                variant: &str,
-                                len: usize) -> Result<Self, Error>
-    {
-        assert_eq!(self.tokens.next(), Some(&Token::EnumMapStart(name, variant, len)));
+    fn serialize_enum(self, name: &str, variants: &'static [&'static str]) -> Result<Self, Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumStart(name, variants)));
         Ok(self)
     }
 }
@@ -352,5 +317,46 @@ impl<'s, 'a, I> ser::SerializeStructVariant for &'s mut Serializer<'a, I>
     fn end(self) -> Result<(), Self::Error> {
         assert_eq!(self.tokens.next(), Some(&Token::EnumMapEnd));
         Ok(())
+    }
+}
+
+impl<'s, 'a, I> ser::SerializeEnum for &'s mut Serializer<'a, I>
+    where I: Iterator<Item=&'a Token<'a>>,
+{
+    type Ok = ();
+    type Error = Error;
+
+    type SerializeTupleVariant = Self;
+    type SerializeStructVariant = Self;
+
+    fn serialize_struct_variant(self,
+                                variant_index: usize,
+                                len: usize) -> Result<Self, Error>
+    {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumMapStart(variant_index, len)));
+        Ok(self)
+    }
+
+    fn serialize_unit_variant(self,
+                              variant_index: usize) -> Result<(), Error> {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumUnit(variant_index)));
+        Ok(())
+    }
+
+    fn serialize_newtype_variant<T>(self,
+                                    variant_index: usize,
+                                    value: T) -> Result<(), Error>
+        where T: Serialize,
+    {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumNewType(variant_index)));
+        value.serialize(self)
+    }
+
+    fn serialize_tuple_variant(self,
+                               variant_index: usize,
+                               len: usize) -> Result<Self, Error>
+    {
+        assert_eq!(self.tokens.next(), Some(&Token::EnumSeqStart(variant_index, len)));
+        Ok(self)
     }
 }

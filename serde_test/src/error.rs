@@ -15,6 +15,7 @@ pub enum Error {
     InvalidType(de::Type),
     InvalidLength(usize),
     UnknownVariant(String),
+    UnknownDiscriminant(usize),
     UnknownField(String),
     MissingField(&'static str),
     DuplicateField(&'static str),
