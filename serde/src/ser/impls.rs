@@ -74,6 +74,7 @@ use super::{
     SerializeStruct,
     SerializeTuple,
     Serializer,
+    SerializeEnum,
 };
 
 #[cfg(feature = "unstable")]
@@ -670,6 +671,8 @@ impl<'a, T: ?Sized> Serialize for Cow<'a, T>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+const RESULT_VARIANTS: &'static [&'static str] = &["Ok", "Err"];
+
 impl<T, E> Serialize for Result<T, E>
     where T: Serialize,
           E: Serialize
@@ -677,13 +680,13 @@ impl<T, E> Serialize for Result<T, E>
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
+        let ser = try!(serializer.serialize_enum(
+            "Result",
+            RESULT_VARIANTS,
+        ));
         match *self {
-            Result::Ok(ref value) => {
-                serializer.serialize_newtype_variant("Result", 0, "Ok", value)
-            }
-            Result::Err(ref value) => {
-                serializer.serialize_newtype_variant("Result", 1, "Err", value)
-            }
+            Result::Ok(ref value) => ser.serialize_newtype_variant(0, value),
+            Result::Err(ref value) => ser.serialize_newtype_variant(1, value),
         }
     }
 }

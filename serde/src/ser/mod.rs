@@ -84,6 +84,9 @@ pub trait Serializer {
     /// The error type when some error occurs during serialization.
     type Error: Error;
 
+    /// Type returned from `serialize_enum` for serializing the variant
+    type SerializeEnum: SerializeEnum<Ok=Self::Ok, Error=Self::Error>;
+
     /// Type returned from `serialize_seq` and `serialize_seq_fixed_size` for
     /// serializing the content of the sequence.
     type SerializeSeq: SerializeSeq<Ok=Self::Ok, Error=Self::Error>;
@@ -96,10 +99,6 @@ pub trait Serializer {
     /// of the tuple struct.
     type SerializeTupleStruct: SerializeTupleStruct<Ok=Self::Ok, Error=Self::Error>;
 
-    /// Type returned from `serialize_tuple_variant` for serializing the content
-    /// of the tuple variant.
-    type SerializeTupleVariant: SerializeTupleVariant<Ok=Self::Ok, Error=Self::Error>;
-
     /// Type returned from `serialize_map` for serializing the content of the
     /// map.
     type SerializeMap: SerializeMap<Ok=Self::Ok, Error=Self::Error>;
@@ -107,10 +106,6 @@ pub trait Serializer {
     /// Type returned from `serialize_struct` for serializing the content of the
     /// struct.
     type SerializeStruct: SerializeStruct<Ok=Self::Ok, Error=Self::Error>;
-
-    /// Type returned from `serialize_struct_variant` for serializing the
-    /// content of the struct variant.
-    type SerializeStructVariant: SerializeStructVariant<Ok=Self::Ok, Error=Self::Error>;
 
     /// Serializes a `bool` value.
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error>;
@@ -199,16 +194,6 @@ pub trait Serializer {
         name: &'static str,
     ) -> Result<Self::Ok, Self::Error>;
 
-    /// Serializes a unit variant, otherwise known as a variant with no
-    /// arguments. A reasonable implementation would be to forward to
-    /// `serialize_unit`.
-    fn serialize_unit_variant(
-        self,
-        name: &'static str,
-        variant_index: usize,
-        variant: &'static str,
-    ) -> Result<Self::Ok, Self::Error>;
-
     /// Allows a tuple struct with a single element, also known as a newtype
     /// struct, to be more efficiently serialized than a tuple struct with
     /// multiple items. A reasonable implementation would be to forward to
@@ -216,17 +201,6 @@ pub trait Serializer {
     fn serialize_newtype_struct<T: Serialize>(
         self,
         name: &'static str,
-        value: T,
-    ) -> Result<Self::Ok, Self::Error>;
-
-    /// Allows a variant with a single item to be more efficiently serialized
-    /// than a variant with multiple items. A reasonable implementation would be
-    /// to forward to `serialize_tuple_variant`.
-    fn serialize_newtype_variant<T: Serialize>(
-        self,
-        name: &'static str,
-        variant_index: usize,
-        variant: &'static str,
         value: T,
     ) -> Result<Self::Ok, Self::Error>;
 
@@ -273,18 +247,6 @@ pub trait Serializer {
         len: usize,
     ) -> Result<Self::SerializeTupleStruct, Self::Error>;
 
-    /// Begins to serialize a tuple variant. This call must be followed by zero
-    /// or more calls to `serialize_tuple_variant_elt`, then a call to
-    /// `serialize_tuple_variant_end`. A reasonable implementation would be to
-    /// forward to `serialize_tuple_struct`.
-    fn serialize_tuple_variant(
-        self,
-        name: &'static str,
-        variant_index: usize,
-        variant: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeTupleVariant, Self::Error>;
-
     /// Begins to serialize a map. This call must be followed by zero or more
     /// calls to `serialize_map_key` and `serialize_map_value`, then a call to
     /// `serialize_map_end`.
@@ -301,16 +263,13 @@ pub trait Serializer {
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error>;
 
-    /// Begins to serialize a struct variant. This call must be followed by zero
-    /// or more calls to `serialize_struct_variant_elt`, then a call to
-    /// `serialize_struct_variant_end`.
-    fn serialize_struct_variant(
+    /// Begins to serialize an enum. This call must be followed by zero or more
+    /// calls to `serialize_struct_elt`, then a call to `serialize_struct_end`.
+    fn serialize_enum(
         self,
         name: &'static str,
-        variant_index: usize,
-        variant: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeStructVariant, Self::Error>;
+        variants: &'static [&'static str],
+    ) -> Result<Self::SerializeEnum, Self::Error>;
 }
 
 /// Returned from `Serializer::serialize_seq` and
@@ -445,4 +404,59 @@ pub fn iterator<I>(iter: I) -> Iterator<I>
           I: IntoIterator
 {
     Iterator(RefCell::new(Some(iter)))
+}
+
+
+/// Returned from `Serializer::serialize_enum`.
+pub trait SerializeEnum {
+    /// Trickery to enforce correct use of the `Serialize` trait. Every
+    /// `SerializeTupleStruct` should set `Ok = ()`.
+    type Ok;
+
+    /// The error type when some error occurs during serialization.
+    type Error: Error;
+
+    /// Type returned from `serialize_tuple_variant` for serializing the content
+    /// of the tuple variant.
+    type SerializeTupleVariant: SerializeTupleVariant<Ok=Self::Ok, Error=Self::Error>;
+
+    /// Type returned from `serialize_struct_variant` for serializing the
+    /// content of the struct variant.
+    type SerializeStructVariant: SerializeStructVariant<Ok=Self::Ok, Error=Self::Error>;
+
+    /// Serializes a unit variant, otherwise known as a variant with no
+    /// arguments. A reasonable implementation would be to forward to
+    /// `serialize_unit`.
+    fn serialize_unit_variant(
+        self,
+        variant_index: usize,
+    ) -> Result<Self::Ok, Self::Error>;
+
+    /// Allows a variant with a single item to be more efficiently serialized
+    /// than a variant with multiple items. A reasonable implementation would be
+    /// to forward to `serialize_tuple_variant`.
+    fn serialize_newtype_variant<T: Serialize>(
+        self,
+        variant_index: usize,
+        value: T,
+    ) -> Result<Self::Ok, Self::Error>;
+
+    /// Begins to serialize a tuple variant. This call must be followed by zero
+    /// or more calls to `serialize_tuple_variant_elt`, then a call to
+    /// `serialize_tuple_variant_end`. A reasonable implementation would be to
+    /// forward to `serialize_tuple_struct`.
+    fn serialize_tuple_variant(
+        self,
+        variant_index: usize,
+        len: usize,
+    ) -> Result<Self::SerializeTupleVariant, Self::Error>;
+
+    /// Begins to serialize a struct variant. This call must be followed by zero
+    /// or more calls to `serialize_struct_variant_elt`, then a call to
+    /// `serialize_struct_variant_end`.
+    fn serialize_struct_variant(
+        self,
+        variant_index: usize,
+        len: usize,
+    ) -> Result<Self::SerializeStructVariant, Self::Error>;
 }

@@ -149,6 +149,8 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token<'static>]) {
 
 //////////////////////////////////////////////////////////////////////////
 
+const RESULT: &'static[&'static str] = &["Ok", "Err"];
+
 declare_tests! {
     test_bool {
         true => &[Token::Bool(true)],
@@ -207,13 +209,13 @@ declare_tests! {
     }
     test_result {
         Ok::<i32, i32>(0) => &[
-            Token::EnumStart("Result"),
-            Token::Str("Ok"),
+            Token::EnumStart("Result", RESULT),
+            Token::EnumNewType(0),
             Token::I32(0),
         ],
         Err::<i32, i32>(1) => &[
-            Token::EnumStart("Result"),
-            Token::Str("Err"),
+            Token::EnumStart("Result", RESULT),
+            Token::EnumNewType(1),
             Token::I32(1),
         ],
     }
@@ -734,18 +736,21 @@ declare_tests! {
     }
     test_enum_unit {
         Enum::Unit => &[
-            Token::EnumUnit("Enum", "Unit"),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumUnit(0),
         ],
     }
     test_enum_simple {
         Enum::Simple(1) => &[
-            Token::EnumNewType("Enum", "Simple"),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumNewType(1),
             Token::I32(1),
         ],
     }
     test_enum_seq {
         Enum::Seq(1, 2, 3) => &[
-            Token::EnumSeqStart("Enum", "Seq", 3),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumSeqStart(2, 3),
                 Token::EnumSeqSep,
                 Token::I32(1),
 
@@ -759,7 +764,8 @@ declare_tests! {
     }
     test_enum_map {
         Enum::Map { a: 1, b: 2, c: 3 } => &[
-            Token::EnumMapStart("Enum", "Map", 3),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumMapStart(3, 3),
                 Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -838,6 +844,8 @@ fn test_net_ipaddr() {
     );
 }
 
+const ENUM_VARIANTS: &'static [&'static str] = &["Unit", "Simple", "Seq", "Map"];
+
 declare_error_tests! {
     test_unknown_field<StructDenyUnknown> {
         &[
@@ -869,21 +877,24 @@ declare_error_tests! {
     }
     test_unknown_variant<Enum> {
         &[
-            Token::EnumUnit("Enum", "Foo"),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumUnit(5),
         ],
-        Error::UnknownVariant("Foo".to_owned()),
+        Error::UnknownDiscriminant(5),
     }
     test_enum_skipped_variant<Enum> {
         &[
-            Token::EnumUnit("Enum", "Skipped"),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumUnit(6),
         ],
-        Error::UnknownVariant("Skipped".to_owned()),
+        Error::UnknownDiscriminant(6),
     }
     test_enum_skip_all<EnumSkipAll> {
         &[
-            Token::EnumUnit("EnumSkipAll", "Skipped"),
+            Token::EnumStart("EnumSkipAll", &[]),
+            Token::EnumUnit(0),
         ],
-        Error::UnknownVariant("Skipped".to_owned()),
+        Error::UnknownDiscriminant(0),
     }
     test_struct_seq_too_long<Struct> {
         &[
@@ -908,7 +919,8 @@ declare_error_tests! {
     }
     test_duplicate_field_enum<Enum> {
         &[
-            Token::EnumMapStart("Enum", "Map", 3),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
+            Token::EnumMapStart(3, 3),
                 Token::EnumMapSep,
                 Token::Str("a"),
                 Token::I32(1),
@@ -920,7 +932,7 @@ declare_error_tests! {
     }
     test_enum_unit_usize<Enum> {
         &[
-            Token::EnumStart("Enum"),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
             Token::Usize(0),
             Token::Unit,
         ],
@@ -928,7 +940,7 @@ declare_error_tests! {
     }
     test_enum_unit_bytes<Enum> {
         &[
-            Token::EnumStart("Enum"),
+            Token::EnumStart("Enum", ENUM_VARIANTS),
             Token::Bytes(b"Unit"),
             Token::Unit,
         ],

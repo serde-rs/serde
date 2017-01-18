@@ -140,12 +140,15 @@ enum DefaultEnum<A, B, C, D, E>
     }
 }
 
+const STRUCT: &'static[&'static str] = &["Struct"];
+
 #[test]
 fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", 5),
+            Token::EnumStart("DefaultEnum", STRUCT),
+            Token::EnumMapStart(0, 5),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -174,7 +177,8 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", 5),
+            Token::EnumStart("DefaultEnum", STRUCT),
+            Token::EnumMapStart(0, 5),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -445,19 +449,25 @@ enum RenameEnumSerializeDeserialize<A> {
     },
 }
 
+const SUPERHEROS: &'static [&'static str] = &["bruce_wayne", "clark_kent", "diana_prince", "barry_allan"];
+const ROBIN: &'static [&'static str] = &["dick_grayson"];
+const ROBIN2: &'static [&'static str] = &["jason_todd"];
+
 #[test]
 fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::Batman,
         &[
-            Token::EnumUnit("Superhero", "bruce_wayne"),
+            Token::EnumStart("Superhero", SUPERHEROS),
+            Token::EnumUnit(0),
         ]
     );
 
     assert_tokens(
         &RenameEnum::Superman(0),
         &[
-            Token::EnumNewType("Superhero", "clark_kent"),
+            Token::EnumStart("Superhero", SUPERHEROS),
+            Token::EnumNewType(1),
             Token::I8(0),
         ]
     );
@@ -465,7 +475,8 @@ fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::WonderWoman(0, 1),
         &[
-            Token::EnumSeqStart("Superhero", "diana_prince", 2),
+            Token::EnumStart("Superhero", SUPERHEROS),
+            Token::EnumSeqStart(2, 2),
 
             Token::EnumSeqSep,
             Token::I8(0),
@@ -480,7 +491,8 @@ fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::Flash { a: 1 },
         &[
-            Token::EnumMapStart("Superhero", "barry_allan", 1),
+            Token::EnumStart("Superhero", SUPERHEROS),
+            Token::EnumMapStart(3, 1),
 
             Token::EnumMapSep,
             Token::Str("b"),
@@ -496,7 +508,8 @@ fn test_rename_enum() {
             b: String::new(),
         },
         &[
-            Token::EnumMapStart("SuperheroSer", "dick_grayson", 2),
+            Token::EnumStart("SuperheroSer", ROBIN),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -516,7 +529,8 @@ fn test_rename_enum() {
             b: String::new(),
         },
         &[
-            Token::EnumMapStart("SuperheroDe", "jason_todd", 2),
+            Token::EnumStart("SuperheroDe", ROBIN2),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -603,7 +617,8 @@ fn test_skip_serializing_enum() {
             c: 3,
         },
         &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", 2),
+            Token::EnumStart("SkipSerializingEnum", &["Struct"]),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -624,7 +639,8 @@ fn test_skip_serializing_enum() {
             c: 123,
         },
         &[
-            Token::EnumMapStart("SkipSerializingEnum", "Struct", 1),
+            Token::EnumStart("SkipSerializingEnum", &["Struct"]),
+            Token::EnumMapStart(0, 1),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -756,7 +772,8 @@ fn test_serialize_with_enum() {
             b: 2,
         },
         &[
-            Token::EnumMapStart("SerializeWithEnum", "Struct", 2),
+            Token::EnumStart("SerializeWithEnum", &["Struct"]),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -776,7 +793,8 @@ fn test_serialize_with_enum() {
             b: 123,
         },
         &[
-            Token::EnumMapStart("SerializeWithEnum", "Struct", 2),
+            Token::EnumStart("SerializeWithEnum", &["Struct"]),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -858,7 +876,8 @@ fn test_deserialize_with_enum() {
             b: 2,
         },
         &[
-            Token::EnumMapStart("DeserializeWithEnum", "Struct", 2),
+            Token::EnumStart("DeserializeWithEnum", STRUCT),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -878,7 +897,8 @@ fn test_deserialize_with_enum() {
             b: 123,
         },
         &[
-            Token::EnumMapStart("DeserializeWithEnum", "Struct", 2),
+            Token::EnumStart("DeserializeWithEnum", STRUCT),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -926,7 +946,8 @@ fn test_missing_renamed_field_struct() {
 fn test_missing_renamed_field_enum() {
     assert_de_tokens_error::<RenameEnum>(
         &[
-            Token::EnumMapStart("Superhero", "barry_allan", 1),
+            Token::EnumStart("Superhero", SUPERHEROS),
+            Token::EnumMapStart(3, 1),
 
             Token::EnumMapEnd,
         ],
@@ -935,7 +956,8 @@ fn test_missing_renamed_field_enum() {
 
     assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
         &[
-            Token::EnumMapStart("SuperheroDe", "jason_todd", 2),
+            Token::EnumStart("SuperheroDe", ROBIN2),
+            Token::EnumMapStart(0, 2),
 
             Token::EnumMapSep,
             Token::Str("a"),
@@ -953,11 +975,14 @@ enum InvalidLengthEnum {
     B(#[serde(skip_deserializing)] i32, i32, i32),
 }
 
+const INVALID_LEN_ENUM: &'static [&'static str] = &["A", "B"];
+
 #[test]
 fn test_invalid_length_enum() {
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
-            Token::EnumSeqStart("InvalidLengthEnum", "A", 3),
+            Token::EnumStart("InvalidLengthEnum", INVALID_LEN_ENUM),
+            Token::EnumSeqStart(0, 3),
                 Token::EnumSeqSep,
                 Token::I32(1),
             Token::EnumSeqEnd,
@@ -966,7 +991,8 @@ fn test_invalid_length_enum() {
     );
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
-            Token::EnumSeqStart("InvalidLengthEnum", "B", 3),
+            Token::EnumStart("InvalidLengthEnum", INVALID_LEN_ENUM),
+            Token::EnumSeqStart(1, 3),
                 Token::EnumSeqSep,
                 Token::I32(1),
             Token::EnumSeqEnd,

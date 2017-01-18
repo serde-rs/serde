@@ -26,9 +26,9 @@ pub enum Token<'a> {
 
     StructNewType(&'a str),
 
-    EnumStart(&'a str),
-    EnumUnit(&'a str, &'a str),
-    EnumNewType(&'a str, &'a str),
+    EnumStart(&'a str, &'a [&'a str]),
+    EnumUnit(usize),
+    EnumNewType(usize),
 
     SeqStart(Option<usize>),
     SeqArrayStart(usize),
@@ -51,11 +51,11 @@ pub enum Token<'a> {
     StructSep,
     StructEnd,
 
-    EnumSeqStart(&'a str, &'a str, usize),
+    EnumSeqStart(usize, usize),
     EnumSeqSep,
     EnumSeqEnd,
 
-    EnumMapStart(&'a str, &'a str, usize),
+    EnumMapStart(usize, usize),
     EnumMapSep,
     EnumMapEnd,
 }
