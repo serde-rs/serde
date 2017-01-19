@@ -869,11 +869,11 @@ pub trait MapVisitor {
     /// `Deserialize` implementations should typically use `MapVisitor::visit`
     /// instead.
     #[inline]
-    fn visit_seed<K, V>(&mut self, key_seed: K, vseed: V) -> Result<Option<(K::Value, V::Value)>, Self::Error>
+    fn visit_seed<K, V>(&mut self, kseed: K, vseed: V) -> Result<Option<(K::Value, V::Value)>, Self::Error>
         where K: DeserializeSeed,
               V: DeserializeSeed
     {
-        match try!(self.visit_key_seed(key_seed)) {
+        match try!(self.visit_key_seed(kseed)) {
             Some(key) => {
                 let value = try!(self.visit_value_seed(vseed));
                 Ok(Some((key, value)))
@@ -971,11 +971,11 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
     }
 
     #[inline]
-    fn visit_seed<K, V>(&mut self, kseed: K, value_seed: V) -> Result<Option<(K::Value, V::Value)>, Self::Error>
+    fn visit_seed<K, V>(&mut self, kseed: K, vseed: V) -> Result<Option<(K::Value, V::Value)>, Self::Error>
         where K: DeserializeSeed,
               V: DeserializeSeed
     {
-        (**self).visit_seed(kseed, value_seed)
+        (**self).visit_seed(kseed, vseed)
     }
 
     #[inline]
