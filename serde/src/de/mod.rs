@@ -9,6 +9,7 @@ use error;
 use collections::{String, Vec};
 
 use core::fmt;
+use core::marker::PhantomData;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -230,6 +231,149 @@ pub trait Deserialize: Sized {
         where D: Deserializer;
 }
 
+/// `DeserializeSeed` is the stateful form of the `Deserialize` trait. If you
+/// ever find yourself looking for a way to pass data into a `Deserialize` impl,
+/// this trait is the way to do it.
+///
+/// As one example of stateful deserialization consider deserializing a JSON
+/// array into an existing buffer. Using the `Deserialize` trait we could
+/// deserialize a JSON array into a `Vec<T>` but it would be a freshly allocated
+/// `Vec<T>`; there is no way for `Deserialize` to reuse a previously allocated
+/// buffer. Using `DeserializeSeed` instead makes this possible as in the
+/// example code below.
+///
+/// The canonical API for stateless deserialization looks like this:
+///
+/// ```rust
+/// # use serde::Deserialize;
+/// # enum Error {}
+/// fn func<T: Deserialize>() -> Result<T, Error>
+/// # { unimplemented!() }
+/// ```
+///
+/// Adjusting an API like this to support stateful deserialization is a matter
+/// of accepting a seed as input:
+///
+/// ```rust
+/// # use serde::de::DeserializeSeed;
+/// # enum Error {}
+/// fn func_seed<T: DeserializeSeed>(seed: T) -> Result<T::Value, Error>
+/// # { unimplemented!() }
+/// ```
+///
+/// In practice the majority of deserialization is stateless. An API expecting a
+/// seed can be appeased by passing `std::marker::PhantomData` as a seed in the
+/// case of stateless deserialization.
+///
+/// # Example
+///
+/// Suppose we have JSON that looks like `[[1, 2], [3, 4, 5], [6]]` and we need
+/// to deserialize it into a flat representation like `vec![1, 2, 3, 4, 5, 6]`.
+/// Allocating a brand new `Vec<T>` for each subarray would be slow. Instead we
+/// would like to allocate a single `Vec<T>` and then deserialize each subarray
+/// into it. This requires stateful deserialization using the DeserializeSeed
+/// trait.
+///
+/// ```rust
+/// # use serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor};
+/// # use std::marker::PhantomData;
+/// #
+/// // A DeserializeSeed implementation that uses stateful deserialization to
+/// // append array elements onto the end of an existing vector. The preexisting
+/// // state ("seed") in this case is the Vec<T>. The `deserialize` method of
+/// // `ExtendVec` will be traversing the inner arrays of the JSON input and
+/// // appending each integer into the existing Vec.
+/// struct ExtendVec<'a, T: 'a>(&'a mut Vec<T>);
+///
+/// impl<'a, T> DeserializeSeed for ExtendVec<'a, T>
+///     where T: Deserialize
+/// {
+///     // The return type of the `deserialize` method. This implementation
+///     // appends onto an existing vector but does not create any new data
+///     // structure, so the return type is ().
+///     type Value = ();
+///
+///     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+///         where D: Deserializer
+///     {
+///         // Visitor implementation that will walk an inner array of the JSON
+///         // input.
+///         struct ExtendVecVisitor<'a, T: 'a>(&'a mut Vec<T>);
+///
+///         impl<'a, T> Visitor for ExtendVecVisitor<'a, T>
+///             where T: Deserialize
+///         {
+///             type Value = ();
+///
+///             fn visit_seq<V>(self, mut visitor: V) -> Result<(), V::Error>
+///                 where V: SeqVisitor
+///             {
+///                 // Visit each element in the inner array and push it onto
+///                 // the existing vector.
+///                 while let Some(elem) = visitor.visit()? {
+///                     self.0.push(elem);
+///                 }
+///                 Ok(())
+///             }
+///         }
+///
+///         deserializer.deserialize_seq(ExtendVecVisitor(self.0))
+///     }
+/// }
+///
+/// // Visitor implementation that will walk the outer array of the JSON input.
+/// struct FlattenedVecVisitor<T>(PhantomData<T>);
+///
+/// impl<T> Visitor for FlattenedVecVisitor<T>
+///     where T: Deserialize
+/// {
+///     // This Visitor constructs a single Vec<T> to hold the flattened
+///     // contents of the inner arrays.
+///     type Value = Vec<T>;
+///
+///     fn visit_seq<V>(self, mut visitor: V) -> Result<Vec<T>, V::Error>
+///         where V: SeqVisitor
+///     {
+///         // Create a single Vec to hold the flattened contents.
+///         let mut vec = Vec::new();
+///
+///         // Each iteration through this loop is one inner array.
+///         while let Some(()) = visitor.visit_seed(ExtendVec(&mut vec))? {
+///             // Nothing to do; inner array has been appended into `vec`.
+///         }
+///
+///         // Return the finished vec.
+///         Ok(vec)
+///     }
+/// }
+///
+/// # fn example<D: Deserializer>(deserializer: D) -> Result<(), D::Error> {
+/// let visitor = FlattenedVecVisitor(PhantomData);
+/// let flattened: Vec<u64> = deserializer.deserialize_seq(visitor)?;
+/// # Ok(()) }
+/// ```
+pub trait DeserializeSeed: Sized {
+    /// The type produced by using this seed.
+    type Value;
+
+    /// Equivalent to the more common `Deserialize::deserialize` method, except
+    /// with some initial piece of data (the seed) passed in.
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where D: Deserializer;
+}
+
+impl<T> DeserializeSeed for PhantomData<T>
+    where T: Deserialize
+{
+    type Value = T;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<T, D::Error>
+        where D: Deserializer
+    {
+        T::deserialize(deserializer)
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `Deserializer` is a trait that can deserialize values by threading a `Visitor` trait through a
@@ -244,7 +388,7 @@ pub trait Deserialize: Sized {
 ///    with the `deserialize_*` methods how it should parse the next value. One downside though to
 ///    only supporting the `deserialize_*` types is that it does not allow for deserializing into a
 ///    generic `json::Value`-esque type.
-pub trait Deserializer {
+pub trait Deserializer: Sized {
     /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
@@ -641,10 +785,26 @@ pub trait SeqVisitor {
     /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
-    /// This returns a `Ok(Some(value))` for the next value in the sequence, or `Ok(None)` if there
-    /// are no more remaining items.
+    /// This returns `Ok(Some(value))` for the next value in the sequence, or
+    /// `Ok(None)` if there are no more remaining items.
+    ///
+    /// `Deserialize` implementations should typically use `SeqVisitor::visit`
+    /// instead.
+    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where T: DeserializeSeed;
+
+    /// This returns `Ok(Some(value))` for the next value in the sequence, or
+    /// `Ok(None)` if there are no more remaining items.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `SeqVisitor` implementations should not need to override the default
+    /// behavior.
+    #[inline]
     fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
-        where T: Deserialize;
+        where T: Deserialize
+    {
+        self.visit_seed(PhantomData)
+    }
 
     /// Return the lower and upper bound of items remaining in the sequence.
     #[inline]
@@ -655,6 +815,13 @@ pub trait SeqVisitor {
 
 impl<'a, V> SeqVisitor for &'a mut V where V: SeqVisitor {
     type Error = V::Error;
+
+    #[inline]
+    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, V::Error>
+        where T: DeserializeSeed
+    {
+        (**self).visit_seed(seed)
+    }
 
     #[inline]
     fn visit<T>(&mut self) -> Result<Option<T>, V::Error>
@@ -678,30 +845,81 @@ pub trait MapVisitor {
     /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
-    /// This returns a `Ok(Some((key, value)))` for the next (key-value) pair in the map, or
-    /// `Ok(None)` if there are no more remaining items.
+    /// This returns `Ok(Some(key))` for the next key in the map, or `Ok(None)`
+    /// if there are no more remaining entries.
+    ///
+    /// `Deserialize` implementations should typically use
+    /// `MapVisitor::visit_key` or `MapVisitor::visit` instead.
+    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+        where K: DeserializeSeed;
+
+    /// This returns a `Ok(value)` for the next value in the map.
+    ///
+    /// `Deserialize` implementations should typically use
+    /// `MapVisitor::visit_value` instead.
+    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
+        where V: DeserializeSeed;
+
+    /// This returns `Ok(Some((key, value)))` for the next (key-value) pair in
+    /// the map, or `Ok(None)` if there are no more remaining items.
+    ///
+    /// `MapVisitor` implementations should override the default behavior if a
+    /// more efficient implementation is possible.
+    ///
+    /// `Deserialize` implementations should typically use `MapVisitor::visit`
+    /// instead.
     #[inline]
-    fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
-        where K: Deserialize,
-              V: Deserialize,
+    fn visit_seed<K, V>(&mut self, key_seed: K, vseed: V) -> Result<Option<(K::Value, V::Value)>, Self::Error>
+        where K: DeserializeSeed,
+              V: DeserializeSeed
     {
-        match try!(self.visit_key()) {
+        match try!(self.visit_key_seed(key_seed)) {
             Some(key) => {
-                let value = try!(self.visit_value());
+                let value = try!(self.visit_value_seed(vseed));
                 Ok(Some((key, value)))
             }
             None => Ok(None)
         }
     }
 
-    /// This returns a `Ok(Some(key))` for the next key in the map, or `Ok(None)` if there are no
-    /// more remaining items.
+    /// This returns `Ok(Some(key))` for the next key in the map, or `Ok(None)`
+    /// if there are no more remaining entries.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `MapVisitor` implementations should not need to override the default
+    /// behavior.
+    #[inline]
     fn visit_key<K>(&mut self) -> Result<Option<K>, Self::Error>
-        where K: Deserialize;
+        where K: Deserialize
+    {
+        self.visit_key_seed(PhantomData)
+    }
 
     /// This returns a `Ok(value)` for the next value in the map.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `MapVisitor` implementations should not need to override the default
+    /// behavior.
+    #[inline]
     fn visit_value<V>(&mut self) -> Result<V, Self::Error>
-        where V: Deserialize;
+        where V: Deserialize
+    {
+        self.visit_value_seed(PhantomData)
+    }
+
+    /// This returns `Ok(Some((key, value)))` for the next (key-value) pair in
+    /// the map, or `Ok(None)` if there are no more remaining items.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `MapVisitor` implementations should not need to override the default
+    /// behavior.
+    #[inline]
+    fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
+        where K: Deserialize,
+              V: Deserialize,
+    {
+        self.visit_seed(PhantomData, PhantomData)
+    }
 
     /// Return the lower and upper bound of items remaining in the sequence.
     #[inline]
@@ -709,16 +927,56 @@ pub trait MapVisitor {
         (0, None)
     }
 
-    /// Report that the struct has a field that wasn't deserialized
+    /// Report that the struct has a field that wasn't deserialized. The
+    /// MapVisitor may consider this an error or it may return a default value
+    /// for the field.
+    ///
+    /// `Deserialize` implementations should typically use
+    /// `MapVisitor::missing_field` instead.
+    fn missing_field_seed<V>(&mut self, _seed: V, field: &'static str) -> Result<V::Value, Self::Error>
+        where V: DeserializeSeed
+    {
+        Err(Error::missing_field(field))
+    }
+
+    /// Report that the struct has a field that wasn't deserialized. The
+    /// MapVisitor may consider this an error or it may return a default value
+    /// for the field.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `MapVisitor` implementations should not need to override the default
+    /// behavior.
     fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
         where V: Deserialize,
     {
-        Err(Error::missing_field(field))
+        self.missing_field_seed(PhantomData, field)
     }
 }
 
 impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
     type Error = V_::Error;
+
+    #[inline]
+    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+        where K: DeserializeSeed
+    {
+        (**self).visit_key_seed(seed)
+    }
+
+    #[inline]
+    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
+        where V: DeserializeSeed
+    {
+        (**self).visit_value_seed(seed)
+    }
+
+    #[inline]
+    fn visit_seed<K, V>(&mut self, kseed: K, value_seed: V) -> Result<Option<(K::Value, V::Value)>, Self::Error>
+        where K: DeserializeSeed,
+              V: DeserializeSeed
+    {
+        (**self).visit_seed(kseed, value_seed)
+    }
 
     #[inline]
     fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, V_::Error>
@@ -748,6 +1006,13 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
     }
 
     #[inline]
+    fn missing_field_seed<V>(&mut self, seed: V, field: &'static str) -> Result<V::Value, Self::Error>
+        where V: DeserializeSeed
+    {
+        (**self).missing_field_seed(seed, field)
+    }
+
+    #[inline]
     fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
         where V: Deserialize
     {
@@ -760,7 +1025,7 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
 /// `EnumVisitor` is a visitor that is created by the `Deserializer` and passed
 /// to the `Deserialize` in order to identify which variant of an enum to
 /// deserialize.
-pub trait EnumVisitor {
+pub trait EnumVisitor: Sized {
     /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
     /// The `Visitor` that will be used to deserialize the content of the enum
@@ -768,14 +1033,29 @@ pub trait EnumVisitor {
     type Variant: VariantVisitor<Error=Self::Error>;
 
     /// `visit_variant` is called to identify which variant to deserialize.
+    ///
+    /// `Deserialize` implementations should typically use
+    /// `EnumVisitor::visit_variant` instead.
+    fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
+        where V: DeserializeSeed;
+
+    /// `visit_variant` is called to identify which variant to deserialize.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `EnumVisitor` implementations should not need to override the default
+    /// behavior.
+    #[inline]
     fn visit_variant<V>(self) -> Result<(V, Self::Variant), Self::Error>
-        where V: Deserialize;
+        where V: Deserialize
+    {
+        self.visit_variant_seed(PhantomData)
+    }
 }
 
 /// `VariantVisitor` is a visitor that is created by the `Deserializer` and
 /// passed to the `Deserialize` to deserialize the content of a particular enum
 /// variant.
-pub trait VariantVisitor {
+pub trait VariantVisitor: Sized {
     /// The error type that can be returned if some error occurs during deserialization.
     type Error: Error;
 
@@ -784,8 +1064,24 @@ pub trait VariantVisitor {
 
     /// `visit_newtype` is called when deserializing a variant with a single value.
     /// A good default is often to use the `visit_tuple` method to deserialize a `(value,)`.
+    ///
+    /// `Deserialize` implementations should typically use
+    /// `VariantVisitor::visit_newtype` instead.
+    fn visit_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+        where T: DeserializeSeed;
+
+    /// `visit_newtype` is called when deserializing a variant with a single value.
+    /// A good default is often to use the `visit_tuple` method to deserialize a `(value,)`.
+    ///
+    /// This method exists as a convenience for `Deserialize` implementations.
+    /// `VariantVisitor` implementations should not need to override the default
+    /// behavior.
+    #[inline]
     fn visit_newtype<T>(self) -> Result<T, Self::Error>
-        where T: Deserialize;
+        where T: Deserialize
+    {
+        self.visit_newtype_seed(PhantomData)
+    }
 
     /// `visit_tuple` is called when deserializing a tuple-like variant.
     /// If no tuple variants are expected, yield a

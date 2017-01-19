@@ -298,10 +298,10 @@ impl<'a, E> de::EnumVisitor for StrDeserializer<'a, E>
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant<T>(self) -> Result<(T, Self::Variant), Self::Error>
-        where T: de::Deserialize,
+    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+        where T: de::DeserializeSeed,
     {
-        de::Deserialize::deserialize(self).map(private::unit_only)
+        seed.deserialize(self).map(private::unit_only)
     }
 }
 
@@ -357,10 +357,10 @@ impl<'a, E> de::EnumVisitor for StringDeserializer<E>
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant<T>(self) -> Result<(T, Self::Variant), Self::Error>
-        where T: de::Deserialize,
+    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+        where T: de::DeserializeSeed,
     {
-        de::Deserialize::deserialize(self).map(private::unit_only)
+        seed.deserialize(self).map(private::unit_only)
     }
 }
 
@@ -419,10 +419,10 @@ impl<'a, E> de::EnumVisitor for CowStrDeserializer<'a, E>
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant<T>(self) -> Result<(T, Self::Variant), Self::Error>
-        where T: de::Deserialize,
+    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+        where T: de::DeserializeSeed,
     {
-        de::Deserialize::deserialize(self).map(private::unit_only)
+        seed.deserialize(self).map(private::unit_only)
     }
 }
 
@@ -480,13 +480,13 @@ impl<I, T, E> de::SeqVisitor for SeqDeserializer<I, E>
 {
     type Error = E;
 
-    fn visit<V>(&mut self) -> Result<Option<V>, Self::Error>
-        where V: de::Deserialize
+    fn visit_seed<V>(&mut self, seed: V) -> Result<Option<V::Value>, Self::Error>
+        where V: de::DeserializeSeed
     {
         match self.iter.next() {
             Some(value) => {
                 self.len -= 1;
-                de::Deserialize::deserialize(value.into_deserializer()).map(Some)
+                seed.deserialize(value.into_deserializer()).map(Some)
             }
             None => Ok(None),
         }
@@ -687,24 +687,24 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
 {
     type Error = E;
 
-    fn visit_key<T>(&mut self) -> Result<Option<T>, Self::Error>
-        where T: de::Deserialize,
+    fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where T: de::DeserializeSeed,
     {
         match self.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                de::Deserialize::deserialize(key.into_deserializer()).map(Some)
+                seed.deserialize(key.into_deserializer()).map(Some)
             }
             None => Ok(None),
         }
     }
 
-    fn visit_value<T>(&mut self) -> Result<T, Self::Error>
-        where T: de::Deserialize,
+    fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+        where T: de::DeserializeSeed,
     {
         match self.value.take() {
             Some(value) => {
-                de::Deserialize::deserialize(value.into_deserializer())
+                seed.deserialize(value.into_deserializer())
             }
             None => {
                 Err(de::Error::end_of_stream())
@@ -712,14 +712,14 @@ impl<I, K, V, E> de::MapVisitor for MapDeserializer<I, K, V, E>
         }
     }
 
-    fn visit<TK, TV>(&mut self) -> Result<Option<(TK, TV)>, Self::Error>
-        where TK: de::Deserialize,
-              TV: de::Deserialize
+    fn visit_seed<TK, TV>(&mut self, kseed: TK, vseed: TV) -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
+        where TK: de::DeserializeSeed,
+              TV: de::DeserializeSeed
     {
         match self.next() {
             Some((key, value)) => {
-                let key = try!(de::Deserialize::deserialize(key.into_deserializer()));
-                let value = try!(de::Deserialize::deserialize(value.into_deserializer()));
+                let key = try!(kseed.deserialize(key.into_deserializer()));
+                let value = try!(vseed.deserialize(value.into_deserializer()));
                 Ok(Some((key, value)))
             }
             None => Ok(None)
@@ -741,13 +741,13 @@ impl<I, K, V, E> de::SeqVisitor for MapDeserializer<I, K, V, E>
 {
     type Error = E;
 
-    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
-        where T: de::Deserialize,
+    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where T: de::DeserializeSeed,
     {
         match self.next() {
             Some((k, v)) => {
                 let de = PairDeserializer(k, v, PhantomData);
-                de::Deserialize::deserialize(de).map(Some)
+                seed.deserialize(de).map(Some)
             }
             None => Ok(None),
         }
@@ -813,13 +813,13 @@ impl<A, B, E> de::SeqVisitor for PairVisitor<A, B, E>
 {
     type Error = E;
 
-    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
-        where T: de::Deserialize,
+    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where T: de::DeserializeSeed,
     {
         if let Some(k) = self.0.take() {
-            de::Deserialize::deserialize(k.into_deserializer()).map(Some)
+            seed.deserialize(k.into_deserializer()).map(Some)
         } else if let Some(v) = self.1.take() {
-            de::Deserialize::deserialize(v.into_deserializer()).map(Some)
+            seed.deserialize(v.into_deserializer()).map(Some)
         } else {
             Ok(None)
         }
@@ -995,8 +995,8 @@ mod private {
             Ok(())
         }
 
-        fn visit_newtype<T>(self) -> Result<T, Self::Error>
-            where T: de::Deserialize,
+        fn visit_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+            where T: de::DeserializeSeed,
         {
             Err(de::Error::invalid_type(de::Type::NewtypeVariant))
         }
