@@ -986,6 +986,19 @@ impl Deserialize for Duration {
                             _ => Err(Error::unknown_field(value)),
                         }
                     }
+
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
+                        where E: Error,
+                    {
+                        match value {
+                            b"secs" => Ok(Field::Secs),
+                            b"nanos" => Ok(Field::Nanos),
+                            _ => {
+                                let value = String::from_utf8_lossy(value);
+                                Err(Error::unknown_field(&value))
+                            }
+                        }
+                    }
                 }
 
                 deserializer.deserialize_struct_field(FieldVisitor)
