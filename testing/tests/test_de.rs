@@ -3,7 +3,7 @@ use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use serde::de::{Deserialize, Type};
+use serde::de::Deserialize;
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -781,6 +781,13 @@ declare_tests! {
             Token::Unit,
         ],
     }
+    test_enum_unit_bytes {
+        Enum::Unit => &[
+            Token::EnumStart("Enum"),
+            Token::Bytes(b"Unit"),
+            Token::Unit,
+        ],
+    }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],
     }
@@ -932,13 +939,5 @@ declare_error_tests! {
             Token::Unit,
         ],
         Error::InvalidValue("expected variant index 0 <= i < 4".to_owned()),
-    }
-    test_enum_unit_bytes<Enum> {
-        &[
-            Token::EnumStart("Enum"),
-            Token::Bytes(b"Unit"),
-            Token::Unit,
-        ],
-        Error::InvalidType(Type::Bytes),
     }
 }

@@ -1,5 +1,5 @@
 use syn::{self, aster, Ident};
-use quote::Tokens;
+use quote::{self, Tokens};
 
 use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
@@ -648,7 +648,8 @@ fn deserialize_field_visitor(
     item_attrs: &attr::Item,
     is_variant: bool,
 ) -> Tokens {
-    let field_names = fields.iter().map(|&(ref name, _)| name);
+    let field_strs = fields.iter().map(|&(ref name, _)| name);
+    let field_bytes = fields.iter().map(|&(ref name, _)| quote::ByteStr(name));
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
 
     let ignore_variant = if is_variant || item_attrs.deny_unknown_fields() {
@@ -690,6 +691,16 @@ fn deserialize_field_visitor(
         }
     };
 
+    let bytes_to_str = if is_variant || item_attrs.deny_unknown_fields() {
+        Some(quote! {
+            // TODO https://github.com/serde-rs/serde/issues/666
+            // update this to use str::from_utf8(value).unwrap_or("���") on no_std
+            let value = &::std::string::String::from_utf8_lossy(value);
+        })
+    } else {
+        None
+    };
+
     quote! {
         #[allow(non_camel_case_types)]
         enum __Field {
@@ -714,9 +725,23 @@ fn deserialize_field_visitor(
                     {
                         match value {
                             #(
-                                #field_names => Ok(__Field::#field_idents),
+                                #field_strs => Ok(__Field::#field_idents),
                             )*
                             _ => #fallthrough_arm
+                        }
+                    }
+
+                    fn visit_bytes<__E>(self, value: &[u8]) -> ::std::result::Result<__Field, __E>
+                        where __E: _serde::de::Error
+                    {
+                        match value {
+                            #(
+                                #field_bytes => Ok(__Field::#field_idents),
+                            )*
+                            _ => {
+                                #bytes_to_str
+                                #fallthrough_arm
+                            }
                         }
                     }
                 }
