@@ -1061,11 +1061,11 @@ impl Deserialize for Duration {
                 }
                 let secs = match secs {
                     Some(secs) => secs,
-                    None => try!(visitor.missing_field("secs")),
+                    None => return Err(<V::Error as Error>::missing_field("secs")),
                 };
                 let nanos = match nanos {
                     Some(nanos) => nanos,
-                    None => try!(visitor.missing_field("nanos")),
+                    None => return Err(<V::Error as Error>::missing_field("nanos")),
                 };
                 Ok(Duration::new(secs, nanos))
             }

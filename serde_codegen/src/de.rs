@@ -928,7 +928,7 @@ fn expr_is_missing(attrs: &attr::Field) -> Tokens {
     match attrs.deserialize_with() {
         None => {
             quote! {
-                try!(visitor.missing_field(#name))
+                try!(_serde::de::private::missing_field(#name))
             }
         }
         Some(_) => {

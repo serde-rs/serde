@@ -17,6 +17,10 @@ pub mod impls;
 pub mod value;
 mod from_primitive;
 
+// Helpers used by generated code. Not public API.
+#[doc(hidden)]
+pub mod private;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /// `Error` is a trait that allows a `Deserialize` to generically create a
@@ -926,31 +930,6 @@ pub trait MapVisitor {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
     }
-
-    /// Report that the struct has a field that wasn't deserialized. The
-    /// MapVisitor may consider this an error or it may return a default value
-    /// for the field.
-    ///
-    /// `Deserialize` implementations should typically use
-    /// `MapVisitor::missing_field` instead.
-    fn missing_field_seed<V>(&mut self, _seed: V, field: &'static str) -> Result<V::Value, Self::Error>
-        where V: DeserializeSeed
-    {
-        Err(Error::missing_field(field))
-    }
-
-    /// Report that the struct has a field that wasn't deserialized. The
-    /// MapVisitor may consider this an error or it may return a default value
-    /// for the field.
-    ///
-    /// This method exists as a convenience for `Deserialize` implementations.
-    /// `MapVisitor` implementations should not need to override the default
-    /// behavior.
-    fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
-        where V: Deserialize,
-    {
-        self.missing_field_seed(PhantomData, field)
-    }
 }
 
 impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
@@ -1003,20 +982,6 @@ impl<'a, V_> MapVisitor for &'a mut V_ where V_: MapVisitor {
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         (**self).size_hint()
-    }
-
-    #[inline]
-    fn missing_field_seed<V>(&mut self, seed: V, field: &'static str) -> Result<V::Value, Self::Error>
-        where V: DeserializeSeed
-    {
-        (**self).missing_field_seed(seed, field)
-    }
-
-    #[inline]
-    fn missing_field<V>(&mut self, field: &'static str) -> Result<V, Self::Error>
-        where V: Deserialize
-    {
-        (**self).missing_field(field)
     }
 }
 
