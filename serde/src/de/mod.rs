@@ -367,6 +367,7 @@ impl<T> DeserializeSeed for PhantomData<T>
 {
     type Value = T;
 
+    #[inline]
     fn deserialize<D>(self, deserializer: D) -> Result<T, D::Error>
         where D: Deserializer
     {
