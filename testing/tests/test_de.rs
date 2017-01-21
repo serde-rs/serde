@@ -849,7 +849,7 @@ declare_error_tests! {
                 Token::StructSep,
                 Token::Str("d"),
         ],
-        Error::Message("unknown field `d`, expected `a` or `b`".to_owned()),
+        Error::Message("unknown field `d`, expected `a`".to_owned()),
     }
     test_skipped_field_is_unknown<StructDenyUnknown> {
         &[
@@ -857,7 +857,7 @@ declare_error_tests! {
                 Token::StructSep,
                 Token::Str("b"),
         ],
-        Error::Message("unknown field `b`, expected `a` or `b`".to_owned()),
+        Error::Message("unknown field `b`, expected `a`".to_owned()),
     }
     test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
         &[
@@ -865,25 +865,25 @@ declare_error_tests! {
                 Token::StructSep,
                 Token::Str("a"),
         ],
-        Error::Message("unknown field `a`, expected `a`".to_owned()),
+        Error::Message("unknown field `a`, there are no fields".to_owned()),
     }
     test_unknown_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Foo"),
         ],
-        Error::Message("unknown variant `Foo`, expected one of `Skipped`, `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
+        Error::Message("unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
     }
     test_enum_skipped_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Skipped"),
         ],
-        Error::Message("unknown variant `Skipped`, expected one of `Skipped`, `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
+        Error::Message("unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
     }
     test_enum_skip_all<EnumSkipAll> {
         &[
             Token::EnumUnit("EnumSkipAll", "Skipped"),
         ],
-        Error::Message("unknown variant `Skipped`, expected `Skipped`".to_owned()),
+        Error::Message("unknown variant `Skipped`, there are no variants".to_owned()),
     }
     test_struct_seq_too_long<Struct> {
         &[

@@ -145,7 +145,7 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", 5),
+            Token::EnumMapStart("DefaultEnum", "Struct", 3),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -174,7 +174,7 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", 5),
+            Token::EnumMapStart("DefaultEnum", "Struct", 3),
 
             Token::EnumMapSep,
             Token::Str("a1"),
