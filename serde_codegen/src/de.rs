@@ -489,23 +489,24 @@ fn deserialize_item_enum(
 
     let type_name = item_attrs.name().deserialize_name();
 
-    let variant_names_idents = variants.iter()
+    let variant_names_idents: Vec<_> = variants.iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
         .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)))
         .collect();
+
+    let variants_stmt = {
+        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name);
+        quote! {
+            const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
+        }
+    };
 
     let variant_visitor = deserialize_field_visitor(
         variant_names_idents,
         item_attrs,
         true,
     );
-
-    let variant_names = variants.iter().map(|variant| variant.attrs.name().deserialize_name());
-
-    let variants_stmt = quote! {
-        const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
-    };
 
     // Match arms to extract a variant from a string
     let variant_arms = variants.iter()
@@ -713,11 +714,18 @@ fn deserialize_struct_visitor(
     fields: &[Field],
     item_attrs: &attr::Item,
 ) -> (Tokens, Tokens, Tokens) {
-    let field_names_idents = fields.iter()
+    let field_names_idents: Vec<_> = fields.iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
         .collect();
+
+    let fields_stmt = {
+        let field_names = field_names_idents.iter().map(|&(ref name, _)| name);
+        quote! {
+            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+        }
+    };
 
     let field_visitor = deserialize_field_visitor(
         field_names_idents,
@@ -732,11 +740,6 @@ fn deserialize_struct_visitor(
         fields,
         item_attrs,
     );
-
-    let field_names = fields.iter().map(|field| field.attrs.name().deserialize_name());
-    let fields_stmt = quote! {
-        const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-    };
 
     (field_visitor, fields_stmt, visit_map)
 }
