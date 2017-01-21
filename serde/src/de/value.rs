@@ -28,6 +28,10 @@ use collections::{
 };
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::borrow::Cow;
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::boxed::Box;
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::string::ToString;
 
 #[cfg(all(feature = "unstable", feature = "collections"))]
 use collections::borrow::ToOwned;
