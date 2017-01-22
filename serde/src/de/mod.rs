@@ -237,6 +237,9 @@ pub enum Unexpected<'a> {
     /// The input contained a `&str` or `String` that was not expected.
     Str(&'a str),
 
+    /// The input contained a `&[u8]` or `Vec<u8>` that was not expected.
+    Bytes(&'a [u8]),
+
     /// The input contained a unit `()` that was not expected.
     Unit,
 
@@ -266,9 +269,6 @@ pub enum Unexpected<'a> {
 
     /// The input contained a struct variant that was not expected.
     StructVariant,
-
-    /// The input contained a `&[u8]` or `Vec<u8>` that was not expected.
-    Bytes,
 }
 
 impl<'a> fmt::Display for Unexpected<'a> {
@@ -281,6 +281,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
             Float(f) => write!(formatter, "floating point `{}`", f),
             Char(c) => write!(formatter, "character `{}`", c),
             Str(s) => write!(formatter, "string {:?}", s),
+            Bytes(_) => write!(formatter, "byte array"),
             Unit => write!(formatter, "unit value"),
             Option => write!(formatter, "Option value"),
             NewtypeStruct => write!(formatter, "newtype struct"),
@@ -291,7 +292,6 @@ impl<'a> fmt::Display for Unexpected<'a> {
             NewtypeVariant => write!(formatter, "newtype variant"),
             TupleVariant => write!(formatter, "tuple variant"),
             StructVariant => write!(formatter, "struct variant"),
-            Bytes => write!(formatter, "byte array"),
         }
     }
 }
@@ -942,7 +942,7 @@ pub trait Visitor: Sized {
         where E: Error,
     {
         let _ = v;
-        Err(Error::invalid_type(Unexpected::Bytes, &self))
+        Err(Error::invalid_type(Unexpected::Bytes(v), &self))
     }
 
     /// `visit_byte_buf` deserializes a `Vec<u8>` into a `Value`.

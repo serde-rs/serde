@@ -295,7 +295,7 @@ impl Visitor for StringVisitor {
     {
         match str::from_utf8(v) {
             Ok(s) => Ok(s.to_owned()),
-            Err(_) => Err(Error::invalid_value(Unexpected::Bytes, &self)),
+            Err(_) => Err(Error::invalid_value(Unexpected::Bytes(v), &self)),
         }
     }
 
@@ -304,7 +304,7 @@ impl Visitor for StringVisitor {
     {
         match String::from_utf8(v) {
             Ok(s) => Ok(s),
-            Err(_) => Err(Error::invalid_value(Unexpected::Bytes, &self)),
+            Err(e) => Err(Error::invalid_value(Unexpected::Bytes(&e.into_bytes()), &self)),
         }
     }
 }
@@ -1180,7 +1180,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                             _ => {
                                 match str::from_utf8(value) {
                                     Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
-                                    Err(_) => Err(Error::invalid_value(Unexpected::Bytes, &self)),
+                                    Err(_) => Err(Error::invalid_value(Unexpected::Bytes(value), &self)),
                                 }
                             }
                         }
