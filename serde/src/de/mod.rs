@@ -269,6 +269,13 @@ pub enum Unexpected<'a> {
 
     /// The input contained a struct variant that was not expected.
     StructVariant,
+
+    /// A message stating what uncategorized thing the input contained that was
+    /// not expected.
+    ///
+    /// The message should be a noun or noun phrase, not capitalized and without
+    /// a period. An example message is "unoriginal superhero".
+    Other(&'a str),
 }
 
 impl<'a> fmt::Display for Unexpected<'a> {
@@ -292,6 +299,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
             NewtypeVariant => write!(formatter, "newtype variant"),
             TupleVariant => write!(formatter, "tuple variant"),
             StructVariant => write!(formatter, "struct variant"),
+            Other(other) => formatter.write_str(other),
         }
     }
 }
