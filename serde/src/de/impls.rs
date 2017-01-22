@@ -60,6 +60,7 @@ use std::time::Duration;
 use core::nonzero::{NonZero, Zeroable};
 
 #[cfg(feature = "unstable")]
+#[allow(deprecated)] // required for impl Deserialize for NonZero<T>
 use core::num::Zero;
 
 use de::{
@@ -1079,6 +1080,7 @@ impl Deserialize for Duration {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
+#[allow(deprecated)] // num::Zero is deprecated but there is no replacement
 impl<T> Deserialize for NonZero<T> where T: Deserialize + PartialEq + Zeroable + Zero {
     fn deserialize<D>(deserializer: D) -> Result<NonZero<T>, D::Error> where D: Deserializer {
         let value = try!(Deserialize::deserialize(deserializer));
