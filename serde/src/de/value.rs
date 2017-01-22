@@ -14,7 +14,7 @@ use std::collections::{
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 #[cfg(feature = "std")]
-use std::vec;
+use std::{vec, io};
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::{
@@ -38,7 +38,7 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
-use core::fmt;
+use core::{fmt, iter, slice};
 use core::marker::PhantomData;
 
 use de::{self, SeqVisitor};
@@ -305,6 +305,35 @@ impl<'a, E> de::EnumVisitor for StrDeserializer<'a, E>
     }
 }
 
+impl<'a, E> de::ByteDeserializer for StrDeserializer<'a, E> where E: de::Error {
+    #[cfg(feature = "std")]
+    fn from_reader<R, T>(mut reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: de::Deserialize {
+        // FIXME: remove this allocation by implementing a streaming str deserializer
+        let mut s = String::new();
+        match reader.read_to_string(&mut s) {
+            Ok(_) => Self::from_str(&s),
+            Err(_) => Err(de::Error::custom("could not read utf8 from reader")),
+        }
+    }
+
+    fn from_str<T>(s: &str) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        T::deserialize(s.into_deserializer())
+    }
+
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        match ::core::str::from_utf8(v) {
+            Ok(s) => Self::from_str(s),
+            Err(_) => Err(de::Error::custom("byte string does not contain valid utf8")),
+        }
+    }
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a `String`.
@@ -351,7 +380,7 @@ impl<E> de::Deserializer for StringDeserializer<E>
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'a, E> de::EnumVisitor for StringDeserializer<E>
+impl<E> de::EnumVisitor for StringDeserializer<E>
     where E: de::Error,
 {
     type Error = E;
@@ -361,6 +390,35 @@ impl<'a, E> de::EnumVisitor for StringDeserializer<E>
         where T: de::DeserializeSeed,
     {
         seed.deserialize(self).map(private::unit_only)
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<E> de::ByteDeserializer for StringDeserializer<E> where E: de::Error {
+    #[cfg(feature = "std")]
+    fn from_reader<R, T>(mut reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: de::Deserialize {
+        // FIXME: remove this allocation by implementing a streaming str deserializer
+        let mut s = String::new();
+        match reader.read_to_string(&mut s) {
+            Ok(_) => T::deserialize(s.into_deserializer()),
+            Err(_) => Err(de::Error::custom("could not read utf8 from reader")),
+        }
+    }
+
+    fn from_str<T>(s: &str) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        T::deserialize(s.to_owned().into_deserializer())
+    }
+
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        match ::core::str::from_utf8(v) {
+            Ok(s) => Self::from_str(s),
+            Err(_) => Err(de::Error::custom("byte string does not contain valid utf8")),
+        }
     }
 }
 
@@ -423,6 +481,35 @@ impl<'a, E> de::EnumVisitor for CowStrDeserializer<'a, E>
         where T: de::DeserializeSeed,
     {
         seed.deserialize(self).map(private::unit_only)
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<'a, E> de::ByteDeserializer for CowStrDeserializer<'a, E> where E: de::Error {
+    #[cfg(feature = "std")]
+    fn from_reader<R, T>(mut reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: de::Deserialize {
+        // FIXME: remove this allocation by implementing a streaming str deserializer
+        let mut s = String::new();
+        match reader.read_to_string(&mut s) {
+            Ok(_) => T::deserialize(Cow::Owned::<'a, str>(s).into_deserializer()),
+            Err(_) => Err(de::Error::custom("could not read utf8 from reader")),
+        }
+    }
+
+    fn from_str<T>(s: &str) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        T::deserialize(Cow::Borrowed(s).into_deserializer())
+    }
+
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        match ::core::str::from_utf8(v) {
+            Ok(s) => Self::from_str(s),
+            Err(_) => Err(de::Error::custom("byte string does not contain valid utf8")),
+        }
     }
 }
 
@@ -499,6 +586,18 @@ impl<I, T, E> de::SeqVisitor for SeqDeserializer<I, E>
 
 ///////////////////////////////////////////////////////////////////////////////
 
+impl<'a, T, E> ValueDeserializer<E> for &'a [T]
+    where T: ValueDeserializer<E> + Copy,
+          E: de::Error,
+{
+    type Deserializer = SeqDeserializer<iter::Cloned<slice::Iter<'a, T>>, E>;
+
+    fn into_deserializer(self) -> Self::Deserializer {
+        let len = self.len();
+        SeqDeserializer::new(self.iter().cloned(), len)
+    }
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<T, E> ValueDeserializer<E> for Vec<T>
     where T: ValueDeserializer<E>,
@@ -535,6 +634,60 @@ impl<T, E> ValueDeserializer<E> for HashSet<T>
     fn into_deserializer(self) -> Self::Deserializer {
         let len = self.len();
         SeqDeserializer::new(self.into_iter(), len)
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<E> de::ByteDeserializer for SeqDeserializer<vec::IntoIter<u8>, E>
+    where E: de::Error,
+{
+    #[cfg(feature = "std")]
+    fn from_reader<R, T>(mut reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: de::Deserialize {
+        let mut v = Vec::new();
+        match reader.read_to_end(&mut v) {
+            Ok(_) => T::deserialize(v.into_deserializer()),
+            Err(_) => Err(de::Error::custom("could not read from reader")),
+        }
+    }
+
+    fn from_str<T>(s: &str) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        Self::from_bytes(s.as_bytes())
+    }
+
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        T::deserialize(v.to_owned().into_deserializer())
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<'a, E> de::ByteDeserializer for SeqDeserializer<iter::Cloned<slice::Iter<'a, u8>>, E>
+    where E: de::Error,
+{
+    #[cfg(feature = "std")]
+    fn from_reader<R, T>(mut reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: de::Deserialize {
+        let mut v = Vec::new();
+        match reader.read_to_end(&mut v) {
+            Ok(_) => T::deserialize(v[..].into_deserializer()),
+            Err(_) => Err(de::Error::custom("could not read from reader")),
+        }
+    }
+
+    fn from_str<T>(s: &str) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        Self::from_bytes(s.as_bytes())
+    }
+
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        T::deserialize(v.into_deserializer())
     }
 }
 
@@ -935,6 +1088,25 @@ impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
         bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
         unit option seq seq_fixed_size bytes map unit_struct newtype_struct
         tuple_struct struct struct_field tuple enum ignored_any byte_buf
+    }
+}
+
+impl<'a, E> de::ByteDeserializer for BytesDeserializer<'a, E> where E: de::Error {
+    #[cfg(feature = "std")]
+    fn from_reader<R, T>(mut reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: de::Deserialize {
+        // FIXME: remove this allocation by implementing a streaming str deserializer
+        let mut s = Vec::new();
+        match reader.read_to_end(&mut s) {
+            Ok(_) => Self::from_bytes(&s),
+            Err(_) => Err(de::Error::custom("could not read from reader")),
+        }
+    }
+
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: de::Deserialize
+    {
+        T::deserialize(BytesDeserializer(v, PhantomData))
     }
 }
 

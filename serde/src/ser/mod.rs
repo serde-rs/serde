@@ -11,12 +11,12 @@
 //! depending on the quirks of your format.
 
 #[cfg(feature = "std")]
-use std::error;
+use std::{error, io};
 #[cfg(not(feature = "std"))]
 use error;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::String;
+use collections::{String, Vec};
 
 #[cfg(feature = "unstable")]
 use core::marker::PhantomData;
@@ -24,6 +24,7 @@ use core::marker::PhantomData;
 use core::cell::RefCell;
 
 pub mod impls;
+pub mod value;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -445,4 +446,52 @@ pub fn iterator<I>(iter: I) -> Iterator<I>
           I: IntoIterator
 {
     Iterator(RefCell::new(Some(iter)))
+}
+
+/// Implement this trait for your format, if your format is stored as bytes.
+/// Do not implement in case it's an in-memory format like `serde_json::Value`.
+#[cfg(any(feature = "collections", feature = "std"))]
+pub trait ByteSerializer: Serializer {
+    /// Serializes `value` with the implementing `Serializer` into the given writer
+    #[cfg(feature = "std")]
+    fn to_writer<W, T: ?Sized>(writer: W, value: &T) -> Result<(), Self::Error>
+        where W: io::Write, T: Serialize;
+
+    #[cfg(feature = "std")]
+    /// Serializes `value` with the implementing `Serializer` into a `String`, given that
+    /// the serialized bytes are valid utf8. Implement this function yourself if you can do
+    /// better than calling `to_bytes` and doing a utf8 check, or if you disabled the `std` feature
+    fn to_string<T: ?Sized>(value: &T) -> Result<String, Self::Error>
+        where T: Serialize
+    {
+        Self::to_bytes(value).and_then(|vec| {
+            String::from_utf8(vec).map_err(|_| {
+                Error::custom("serialized bytes not representable as utf8")
+            })
+        })
+    }
+    #[cfg(all(not(feature = "std"), feature = "collections"))]
+    /// Serializes `value` with the implementing `Serializer` into a `String`, given that
+    /// the serialized bytes are valid utf8. Implement this function yourself if you can do
+    /// better than calling `to_bytes` and doing a utf8 check, or if you disabled the `std` feature
+    fn to_string<T: ?Sized>(value: &T) -> Result<String, Self::Error>
+        where T: Serialize;
+
+    #[cfg(feature = "std")]
+    /// Serializes `value` with the implementing `Serializer` into a `Vec<u8>`.
+    /// Implement this function yourself if you can do
+    /// better than calling `to_writer` on a new `Vec`, or if you disabled the `std` feature
+    fn to_bytes<T: ?Sized>(value: &T) -> Result<Vec<u8>, Self::Error>
+        where T: Serialize
+    {
+        let mut result = Vec::new();
+        Self::to_writer(&mut result, value).map(|()| result)
+    }
+
+    #[cfg(all(not(feature = "std"), feature = "collections"))]
+    /// Serializes `value` with the implementing `Serializer` into a `Vec<u8>`.
+    /// Implement this function yourself if you can do
+    /// better than calling `to_writer` on a new `Vec`, or if you disabled the `std` feature
+    fn to_bytes<T: ?Sized>(value: &T) -> Result<Vec<u8>, Self::Error>
+        where T: Serialize;
 }

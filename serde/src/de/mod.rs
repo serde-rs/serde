@@ -1,7 +1,7 @@
 //! Generic deserialization framework.
 
 #[cfg(feature = "std")]
-use std::error;
+use std::{error, io};
 #[cfg(not(feature = "std"))]
 use error;
 
@@ -1099,4 +1099,36 @@ pub trait VariantVisitor: Sized {
                        fields: &'static [&'static str],
                        visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
+}
+
+/// Implement this trait for your format, if your format is stored as bytes.
+/// Do not implement in case it's an in-memory format like `serde_json::Value`.
+pub trait ByteDeserializer: Deserializer {
+    #[cfg(feature = "std")]
+    /// Deserializes a `T` with the implementing `Deserializer` from the given reader.
+    fn from_reader<R, T>(reader: R) -> Result<T, Self::Error>
+        where R: io::Read, T: Deserialize;
+
+    /// Forwards to `from_bytes`. Implement yourself, if your format benefits from not needing to
+    /// do utf8 checks.
+    fn from_str<T>(s: &str) -> Result<T, Self::Error>
+        where T: Deserialize
+    {
+        Self::from_bytes(s.as_bytes())
+    }
+
+    #[cfg(feature = "std")]
+    /// Forwards to `from_reader`. Implement yourself, if your format benefits from knowing that
+    /// the memory it is deserializing from is contigous and nonvolatile.
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: Deserialize
+    {
+        Self::from_reader(v)
+    }
+
+    #[cfg(not(feature = "std"))]
+    /// Forwards to `from_reader`. Implement yourself, if your format benefits from knowing that
+    /// the memory it is deserializing from is contigous and nonvolatile.
+    fn from_bytes<T>(v: &[u8]) -> Result<T, Self::Error>
+        where T: Deserialize;
 }
