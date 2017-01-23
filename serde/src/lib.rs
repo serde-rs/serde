@@ -40,11 +40,6 @@ mod core {
 pub use ser::{Serialize, Serializer};
 pub use de::{Deserialize, Deserializer};
 
-#[cfg(not(feature = "std"))]
-macro_rules! format {
-    ($s:expr, $($rest:tt)*) => ($s)
-}
-
 #[macro_use]
 mod macros;
 

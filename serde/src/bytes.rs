@@ -181,6 +181,10 @@ mod bytebuf {
     impl de::Visitor for ByteBufVisitor {
         type Value = ByteBuf;
 
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("byte array")
+        }
+
         #[inline]
         fn visit_unit<E>(self) -> Result<ByteBuf, E>
             where E: de::Error,

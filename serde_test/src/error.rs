@@ -1,4 +1,5 @@
-use std::{error, fmt};
+use std::error;
+use std::fmt::{self, Display};
 
 use serde::{ser, de};
 
@@ -6,82 +7,42 @@ use token::Token;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
-    // Shared
-    Custom(String),
-    InvalidValue(String),
-
-    // De
-    EndOfStream,
-    InvalidType(de::Type),
-    InvalidLength(usize),
-    UnknownVariant(String),
-    UnknownField(String),
-    MissingField(&'static str),
-    DuplicateField(&'static str),
+    Message(String),
     InvalidName(&'static str),
     UnexpectedToken(Token<'static>),
+    EndOfTokens,
 }
 
 impl ser::Error for Error {
-    fn custom<T: Into<String>>(msg: T) -> Error {
-        Error::Custom(msg.into())
-    }
-
-    fn invalid_value(msg: &str) -> Error {
-        Error::InvalidValue(msg.to_owned())
+    fn custom<T: Display>(msg: T) -> Error {
+        Error::Message(msg.to_string())
     }
 }
 
 impl de::Error for Error {
-    fn custom<T: Into<String>>(msg: T) -> Error {
-        Error::Custom(msg.into())
-    }
-
-    fn end_of_stream() -> Error {
-        Error::EndOfStream
-    }
-
-    fn invalid_type(ty: de::Type) -> Error {
-        Error::InvalidType(ty)
-    }
-
-    fn invalid_value(msg: &str) -> Error {
-        Error::InvalidValue(msg.to_owned())
-    }
-
-    fn invalid_length(len: usize) -> Error {
-        Error::InvalidLength(len)
-    }
-
-    fn unknown_variant(variant: &str) -> Error {
-        Error::UnknownVariant(variant.to_owned())
-    }
-
-    fn unknown_field(field: &str) -> Error {
-        Error::UnknownField(field.to_owned())
-    }
-
-    fn missing_field(field: &'static str) -> Error {
-        Error::MissingField(field)
-    }
-
-    fn duplicate_field(field: &'static str) -> Error {
-        Error::DuplicateField(field)
+    fn custom<T: Display>(msg: T) -> Error {
+        Error::Message(msg.to_string())
     }
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        formatter.write_str(format!("{:?}", self).as_ref())
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::Message(ref msg) => formatter.write_str(msg),
+            Error::InvalidName(name) => write!(formatter, "invalid name `{}`", name),
+            Error::UnexpectedToken(_) => formatter.write_str("unexpected token"),
+            Error::EndOfTokens => formatter.write_str("end of tokens"),
+        }
     }
 }
 
 impl error::Error for Error {
     fn description(&self) -> &str {
-        "Serde Error"
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        None
+        match *self {
+            Error::Message(ref msg) => msg,
+            Error::InvalidName(_) => "invalid name",
+            Error::UnexpectedToken(_) => "unexpected token",
+            Error::EndOfTokens => "end of tokens",
+        }
     }
 }

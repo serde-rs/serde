@@ -145,7 +145,7 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 2, a3: 3, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", 5),
+            Token::EnumMapStart("DefaultEnum", "Struct", 3),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -174,7 +174,7 @@ fn test_default_enum() {
     assert_de_tokens(
         &DefaultEnum::Struct { a1: 1, a2: 0, a3: 123, a4: 0, a5: 123 },
         &[
-            Token::EnumMapStart("DefaultEnum", "Struct", 5),
+            Token::EnumMapStart("DefaultEnum", "Struct", 3),
 
             Token::EnumMapSep,
             Token::Str("a1"),
@@ -343,7 +343,7 @@ fn test_ignore_unknown() {
             Token::StructSep,
             Token::Str("whoops"),
         ],
-        Error::UnknownField("whoops".to_owned())
+        Error::Message("unknown field `whoops`, expected `a1`".to_owned())
     );
 }
 
@@ -905,7 +905,7 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::MissingField("a3"),
+        Error::Message("missing field `a3`".to_owned()),
     );
 
     assert_de_tokens_error::<RenameStructSerializeDeserialize>(
@@ -918,7 +918,7 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::MissingField("a5"),
+        Error::Message("missing field `a5`".to_owned()),
     );
 }
 
@@ -930,7 +930,7 @@ fn test_missing_renamed_field_enum() {
 
             Token::EnumMapEnd,
         ],
-        Error::MissingField("b"),
+        Error::Message("missing field `b`".to_owned()),
     );
 
     assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
@@ -943,7 +943,7 @@ fn test_missing_renamed_field_enum() {
 
             Token::EnumMapEnd,
         ],
-        Error::MissingField("d"),
+        Error::Message("missing field `d`".to_owned()),
     );
 }
 
@@ -962,7 +962,7 @@ fn test_invalid_length_enum() {
                 Token::I32(1),
             Token::EnumSeqEnd,
         ],
-        Error::InvalidLength(1),
+        Error::Message("invalid length 1, expected tuple of 3 elements".to_owned()),
     );
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
@@ -971,6 +971,6 @@ fn test_invalid_length_enum() {
                 Token::I32(1),
             Token::EnumSeqEnd,
         ],
-        Error::InvalidLength(1),
+        Error::Message("invalid length 1, expected tuple of 2 elements".to_owned()),
     );
 }

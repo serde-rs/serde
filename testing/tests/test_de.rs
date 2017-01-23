@@ -3,7 +3,7 @@ use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use serde::de::Deserialize;
+use serde::Deserialize;
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -863,7 +863,7 @@ declare_error_tests! {
                 Token::StructSep,
                 Token::Str("d"),
         ],
-        Error::UnknownField("d".to_owned()),
+        Error::Message("unknown field `d`, expected `a`".to_owned()),
     }
     test_skipped_field_is_unknown<StructDenyUnknown> {
         &[
@@ -871,7 +871,7 @@ declare_error_tests! {
                 Token::StructSep,
                 Token::Str("b"),
         ],
-        Error::UnknownField("b".to_owned()),
+        Error::Message("unknown field `b`, expected `a`".to_owned()),
     }
     test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
         &[
@@ -879,25 +879,25 @@ declare_error_tests! {
                 Token::StructSep,
                 Token::Str("a"),
         ],
-        Error::UnknownField("a".to_owned()),
+        Error::Message("unknown field `a`, there are no fields".to_owned()),
     }
     test_unknown_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Foo"),
         ],
-        Error::UnknownVariant("Foo".to_owned()),
+        Error::Message("unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
     }
     test_enum_skipped_variant<Enum> {
         &[
             Token::EnumUnit("Enum", "Skipped"),
         ],
-        Error::UnknownVariant("Skipped".to_owned()),
+        Error::Message("unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
     }
     test_enum_skip_all<EnumSkipAll> {
         &[
             Token::EnumUnit("EnumSkipAll", "Skipped"),
         ],
-        Error::UnknownVariant("Skipped".to_owned()),
+        Error::Message("unknown variant `Skipped`, there are no variants".to_owned()),
     }
     test_struct_seq_too_long<Struct> {
         &[
@@ -918,7 +918,7 @@ declare_error_tests! {
                 Token::MapSep,
                 Token::Str("a"),
         ],
-        Error::DuplicateField("a"),
+        Error::Message("duplicate field `a`".to_owned()),
     }
     test_duplicate_field_enum<Enum> {
         &[
@@ -930,7 +930,7 @@ declare_error_tests! {
                 Token::EnumMapSep,
                 Token::Str("a"),
         ],
-        Error::DuplicateField("a"),
+        Error::Message("duplicate field `a`".to_owned()),
     }
     test_enum_out_of_range<Enum> {
         &[
@@ -938,6 +938,6 @@ declare_error_tests! {
             Token::Usize(4),
             Token::Unit,
         ],
-        Error::InvalidValue("expected variant index 0 <= i < 4".to_owned()),
+        Error::Message("invalid value: integer `4`, expected variant index 0 <= i < 4".into()),
     }
 }
