@@ -432,7 +432,7 @@ fn test_cannot_serialize_paths() {
     assert_ser_tokens_error(
         &Path::new(path),
         &[],
-        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+        Error::Message("Path contains invalid UTF-8 characters".to_owned()));
 
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
@@ -440,7 +440,7 @@ fn test_cannot_serialize_paths() {
     assert_ser_tokens_error(
         &path_buf,
         &[],
-        Error::InvalidValue("Path contains invalid UTF-8 characters".to_owned()));
+        Error::Message("Path contains invalid UTF-8 characters".to_owned()));
 }
 
 #[test]
@@ -448,17 +448,17 @@ fn test_enum_skipped() {
     assert_ser_tokens_error(
         &Enum::SkippedUnit,
         &[],
-        Error::InvalidValue("The enum variant Enum::SkippedUnit cannot be serialized".to_owned()));
+        Error::Message("the enum variant Enum::SkippedUnit cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedOne(42),
         &[],
-        Error::InvalidValue("The enum variant Enum::SkippedOne cannot be serialized".to_owned()));
+        Error::Message("the enum variant Enum::SkippedOne cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedSeq(1, 2),
         &[],
-        Error::InvalidValue("The enum variant Enum::SkippedSeq cannot be serialized".to_owned()));
+        Error::Message("the enum variant Enum::SkippedSeq cannot be serialized".to_owned()));
     assert_ser_tokens_error(
         &Enum::SkippedMap { _a: 1, _b: 2 },
         &[],
-        Error::InvalidValue("The enum variant Enum::SkippedMap cannot be serialized".to_owned()));
+        Error::Message("the enum variant Enum::SkippedMap cannot be serialized".to_owned()));
 }

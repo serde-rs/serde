@@ -1,5 +1,4 @@
 //! A stand-in for `std::error`
-use core::any::TypeId;
 use core::fmt::{Debug, Display};
 
 /// A stand-in for `std::error::Error`, which requires no allocation.
@@ -13,10 +12,4 @@ pub trait Error: Debug + Display {
 
     /// The lower-level cause of this error, if any.
     fn cause(&self) -> Option<&Error> { None }
-
-    /// Get the `TypeId` of `self`
-    #[doc(hidden)]
-    fn type_id(&self) -> TypeId where Self: 'static {
-        TypeId::of::<Self>()
-    }
 }

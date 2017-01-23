@@ -772,7 +772,7 @@ impl Serialize for path::Path {
     {
         match self.to_str() {
             Some(s) => s.serialize(serializer),
-            None => Err(Error::invalid_value("Path contains invalid UTF-8 characters")),
+            None => Err(Error::custom("Path contains invalid UTF-8 characters")),
         }
     }
 }
