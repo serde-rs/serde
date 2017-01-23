@@ -1016,16 +1016,6 @@ impl Deserialize for Duration {
                         formatter.write_str("`secs` or `nanos`")
                     }
 
-                    fn visit_usize<E>(self, value: usize) -> Result<Field, E>
-                        where E: Error,
-                    {
-                        match value {
-                            0usize => Ok(Field::Secs),
-                            1usize => Ok(Field::Nanos),
-                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self)),
-                        }
-                    }
-
                     fn visit_str<E>(self, value: &str) -> Result<Field, E>
                         where E: Error,
                     {
