@@ -774,6 +774,20 @@ declare_tests! {
             Token::EnumMapEnd,
         ],
     }
+    test_enum_unit_usize {
+        Enum::Unit => &[
+            Token::EnumStart("Enum"),
+            Token::Usize(0),
+            Token::Unit,
+        ],
+    }
+    test_enum_unit_bytes {
+        Enum::Unit => &[
+            Token::EnumStart("Enum"),
+            Token::Bytes(b"Unit"),
+            Token::Unit,
+        ],
+    }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],
     }
@@ -918,20 +932,12 @@ declare_error_tests! {
         ],
         Error::Message("duplicate field `a`".to_owned()),
     }
-    test_enum_unit_usize<Enum> {
+    test_enum_out_of_range<Enum> {
         &[
             Token::EnumStart("Enum"),
-            Token::Usize(0),
+            Token::Usize(4),
             Token::Unit,
         ],
-        Error::Message("invalid type: integer `0`, expected field name".into()),
-    }
-    test_enum_unit_bytes<Enum> {
-        &[
-            Token::EnumStart("Enum"),
-            Token::Bytes(b"Unit"),
-            Token::Unit,
-        ],
-        Error::Message("invalid type: byte array, expected field name".into()),
+        Error::Message("invalid value: integer `4`, expected variant index 0 <= i < 4".into()),
     }
 }
