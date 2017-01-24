@@ -200,30 +200,30 @@ pub trait Serializer {
     /// struct, to be more efficiently serialized than a tuple struct with
     /// multiple items. A reasonable implementation would be to forward to
     /// `serialize_tuple_struct` or to just serialize the inner value without wrapping.
-    fn serialize_newtype_struct<T: Serialize>(
+    fn serialize_newtype_struct<T: ?Sized + Serialize>(
         self,
         name: &'static str,
-        value: T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>;
 
     /// Allows a variant with a single item to be more efficiently serialized
     /// than a variant with multiple items. A reasonable implementation would be
     /// to forward to `serialize_tuple_variant`.
-    fn serialize_newtype_variant<T: Serialize>(
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(
         self,
         name: &'static str,
         variant_index: usize,
         variant: &'static str,
-        value: T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>;
 
     /// Serializes a `None` value.
     fn serialize_none(self) -> Result<Self::Ok, Self::Error>;
 
     /// Serializes a `Some(...)` value.
-    fn serialize_some<T: Serialize>(
+    fn serialize_some<T: ?Sized + Serialize>(
         self,
-        value: T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>;
 
     /// Begins to serialize a sequence. This call must be followed by zero or
@@ -311,7 +311,7 @@ pub trait SerializeSeq {
     type Error: Error;
 
     /// Serializes a sequence element.
-    fn serialize_element<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a sequence.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -327,7 +327,7 @@ pub trait SerializeTuple {
     type Error: Error;
 
     /// Serializes a tuple element.
-    fn serialize_element<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a tuple.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -343,7 +343,7 @@ pub trait SerializeTupleStruct {
     type Error: Error;
 
     /// Serializes a tuple struct element.
-    fn serialize_field<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a tuple struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -359,7 +359,7 @@ pub trait SerializeTupleVariant {
     type Error: Error;
 
     /// Serializes a tuple variant element.
-    fn serialize_field<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a tuple variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -375,10 +375,10 @@ pub trait SerializeMap {
     type Error: Error;
 
     /// Serialize a map key.
-    fn serialize_key<T: Serialize>(&mut self, key: T) -> Result<(), Self::Error>;
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Self::Error>;
 
     /// Serialize a map value.
-    fn serialize_value<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error>;
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a map.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -394,7 +394,7 @@ pub trait SerializeStruct {
     type Error: Error;
 
     /// Serializes a struct field.
-    fn serialize_field<V: Serialize>(&mut self, key: &'static str, value: V) -> Result<(), Self::Error>;
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -410,7 +410,7 @@ pub trait SerializeStructVariant {
     type Error: Error;
 
     /// Serialize a struct variant element.
-    fn serialize_field<V: Serialize>(&mut self, key: &'static str, value: V) -> Result<(), Self::Error>;
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>;
 
     /// Finishes serializing a struct variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;

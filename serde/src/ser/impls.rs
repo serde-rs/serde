@@ -247,7 +247,7 @@ impl<'a, I> Serialize for Iterator<I>
         };
         let mut seq = try!(serializer.serialize_seq(size));
         for e in iter {
-            try!(seq.serialize_element(e));
+            try!(seq.serialize_element(&e));
         }
         seq.end()
     }
@@ -263,7 +263,7 @@ macro_rules! serialize_seq {
         {
             let mut seq = try!(serializer.serialize_seq(Some(self.len())));
             for e in self {
-                try!(seq.serialize_element(e));
+                try!(seq.serialize_element(&e));
             }
             seq.end()
         }
@@ -331,7 +331,7 @@ impl<A> Serialize for ops::Range<A>
     {
         let mut seq = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.clone() {
-            try!(seq.serialize_element(e));
+            try!(seq.serialize_element(&e));
         }
         seq.end()
     }
@@ -348,7 +348,7 @@ impl<A> Serialize for ops::RangeInclusive<A>
     {
         let mut seq = try!(serializer.serialize_seq(Some(self.len())));
         for e in self.clone() {
-            try!(seq.serialize_element(e));
+            try!(seq.serialize_element(&e));
         }
         seq.end()
     }
@@ -696,8 +696,8 @@ impl Serialize for Duration {
     {
         use super::SerializeStruct;
         let mut state = try!(serializer.serialize_struct("Duration", 2));
-        try!(state.serialize_field("secs", self.as_secs()));
-        try!(state.serialize_field("nanos", self.subsec_nanos()));
+        try!(state.serialize_field("secs", &self.as_secs()));
+        try!(state.serialize_field("nanos", &self.subsec_nanos()));
         state.end()
     }
 }

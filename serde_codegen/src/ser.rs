@@ -548,7 +548,7 @@ fn wrap_serialize_with(
             }
         }
 
-        __SerializeWith {
+        &__SerializeWith {
             value: #value,
             phantom: ::std::marker::PhantomData::<#item_ty>,
         }
