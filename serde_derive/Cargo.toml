@@ -10,6 +10,9 @@ documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+[badges]
+travis-ci = { repository = "serde-rs/serde" }
+
 [lib]
 name = "serde_derive"
 proc-macro = true

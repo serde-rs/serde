@@ -13,3 +13,6 @@ include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
 serde = { version = "0.9.0-rc3", path = "../serde" }
+
+[badges]
+travis-ci = { repository = "serde-rs/serde" }

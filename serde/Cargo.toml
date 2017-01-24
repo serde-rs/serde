@@ -12,6 +12,9 @@ keywords = ["serde", "serialization"]
 categories = ["encoding"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+[badges]
+travis-ci = { repository = "serde-rs/serde" }
+
 [features]
 default = ["std"]
 
