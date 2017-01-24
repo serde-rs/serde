@@ -30,7 +30,7 @@ pub fn expand_derive_serialize(item: &syn::MacroInput) -> Result<Tokens, String>
             extern crate serde as _serde;
             #[automatically_derived]
             impl #impl_generics _serde::Serialize for #ty #where_clause {
-                fn serialize<__S>(&self, _serializer: __S) -> ::std::result::Result<__S::Ok, __S::Error>
+                fn serialize<__S>(&self, _serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body
@@ -541,7 +541,7 @@ fn wrap_serialize_with(
         }
 
         impl #wrapper_generics _serde::Serialize for #wrapper_ty #where_clause {
-            fn serialize<__S>(&self, __s: __S) -> ::std::result::Result<__S::Ok, __S::Error>
+            fn serialize<__S>(&self, __s: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                 where __S: _serde::Serializer
             {
                 #path(self.value, __s)

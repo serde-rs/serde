@@ -31,7 +31,7 @@ extern crate core as actual_core;
 #[cfg(feature = "std")]
 mod core {
     pub use std::{ops, hash, fmt, cmp, marker, mem, i8, i16, i32, i64, u8, u16, u32, u64, isize,
-            usize, f32, f64, char, str, num, slice, iter, cell};
+            usize, f32, f64, char, str, num, slice, iter, cell, default, result};
     #[cfg(feature = "unstable")]
     pub use actual_core::nonzero;
 }
@@ -50,3 +50,7 @@ pub mod ser;
 #[cfg_attr(feature = "std", doc(hidden))]
 pub mod error;
 mod utils;
+
+// Generated code uses these to support no_std. Not public API.
+#[doc(hidden)]
+pub mod export;
