@@ -36,7 +36,7 @@ pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, Strin
             extern crate serde as _serde;
             #[automatically_derived]
             impl #impl_generics _serde::Deserialize for #ty #where_clause {
-                fn deserialize<__D>(deserializer: __D) -> ::std::result::Result<#ty, __D::Error>
+                fn deserialize<__D>(deserializer: __D) -> _serde::export::Result<#ty, __D::Error>
                     where __D: _serde::Deserializer
                 #body
             }
@@ -158,11 +158,11 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
         let phantom_types = generics.lifetimes.iter()
             .map(|lifetime_def| {
                 let lifetime = &lifetime_def.lifetime;
-                quote!(::std::marker::PhantomData<& #lifetime ()>)
+                quote!(_serde::export::PhantomData<& #lifetime ()>)
             }).chain(generics.ty_params.iter()
                 .map(|ty_param| {
                     let ident = &ty_param.ident;
-                    quote!(::std::marker::PhantomData<#ident>)
+                    quote!(_serde::export::PhantomData<#ident>)
                 }));
 
         let all_params = generics.lifetimes.iter()
@@ -182,7 +182,7 @@ fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
             Some(quote!(::<#(#ty_param_idents),*>))
         };
 
-        let phantom_exprs = iter::repeat(quote!(::std::marker::PhantomData)).take(num_phantoms);
+        let phantom_exprs = iter::repeat(quote!(_serde::export::PhantomData)).take(num_phantoms);
 
         (
             quote! {
@@ -208,19 +208,19 @@ fn deserialize_unit_struct(
         impl _serde::de::Visitor for __Visitor {
             type Value = #type_ident;
 
-            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 formatter.write_str(#expecting)
             }
 
             #[inline]
-            fn visit_unit<__E>(self) -> ::std::result::Result<#type_ident, __E>
+            fn visit_unit<__E>(self) -> _serde::export::Result<#type_ident, __E>
                 where __E: _serde::de::Error,
             {
                 Ok(#type_ident)
             }
 
             #[inline]
-            fn visit_seq<__V>(self, _: __V) -> ::std::result::Result<#type_ident, __V::Error>
+            fn visit_seq<__V>(self, _: __V) -> _serde::export::Result<#type_ident, __V::Error>
                 where __V: _serde::de::SeqVisitor,
             {
                 Ok(#type_ident)
@@ -297,14 +297,14 @@ fn deserialize_tuple(
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
 
-            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 formatter.write_str(#expecting)
             }
 
             #visit_newtype_struct
 
             #[inline]
-            fn visit_seq<__V>(self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_seq<__V>(self, #visitor_var: __V) -> _serde::export::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
@@ -408,7 +408,7 @@ fn deserialize_newtype_struct(
     };
     quote! {
         #[inline]
-        fn visit_newtype_struct<__E>(self, __e: __E) -> ::std::result::Result<Self::Value, __E::Error>
+        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer,
         {
             Ok(#type_path(#value))
@@ -480,19 +480,19 @@ fn deserialize_struct(
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
 
-            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 formatter.write_str(#expecting)
             }
 
             #[inline]
-            fn visit_seq<__V>(self, #visitor_var: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_seq<__V>(self, #visitor_var: __V) -> _serde::export::Result<#ty, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
             }
 
             #[inline]
-            fn visit_map<__V>(self, mut visitor: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_map<__V>(self, mut visitor: __V) -> _serde::export::Result<#ty, __V::Error>
                 where __V: _serde::de::MapVisitor
             {
                 #visit_map
@@ -585,11 +585,11 @@ fn deserialize_item_enum(
         impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
             type Value = #ty;
 
-            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 formatter.write_str(#expecting)
             }
 
-            fn visit_enum<__V>(self, visitor: __V) -> ::std::result::Result<#ty, __V::Error>
+            fn visit_enum<__V>(self, visitor: __V) -> _serde::export::Result<#ty, __V::Error>
                 where __V: _serde::de::EnumVisitor,
             {
                 #match_variant
@@ -696,7 +696,7 @@ fn deserialize_field_visitor(
         let variant_indices = 0usize..;
         let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
         Some(quote! {
-            fn visit_usize<__E>(self, value: usize) -> ::std::result::Result<__Field, __E>
+            fn visit_usize<__E>(self, value: usize) -> _serde::export::Result<__Field, __E>
                 where __E: _serde::de::Error
             {
                 match value {
@@ -731,7 +731,7 @@ fn deserialize_field_visitor(
         Some(quote! {
             // TODO https://github.com/serde-rs/serde/issues/666
             // update this to use str::from_utf8(value).unwrap_or("���") on no_std
-            let value = &::std::string::String::from_utf8_lossy(value);
+            let value = &_serde::export::from_utf8_lossy(value);
         })
     } else {
         None
@@ -746,7 +746,7 @@ fn deserialize_field_visitor(
 
         impl _serde::Deserialize for __Field {
             #[inline]
-            fn deserialize<__D>(deserializer: __D) -> ::std::result::Result<__Field, __D::Error>
+            fn deserialize<__D>(deserializer: __D) -> _serde::export::Result<__Field, __D::Error>
                 where __D: _serde::Deserializer,
             {
                 struct __FieldVisitor;
@@ -754,13 +754,13 @@ fn deserialize_field_visitor(
                 impl _serde::de::Visitor for __FieldVisitor {
                     type Value = __Field;
 
-                    fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                         formatter.write_str("field name")
                     }
 
                     #visit_usize
 
-                    fn visit_str<__E>(self, value: &str) -> ::std::result::Result<__Field, __E>
+                    fn visit_str<__E>(self, value: &str) -> _serde::export::Result<__Field, __E>
                         where __E: _serde::de::Error
                     {
                         match value {
@@ -771,7 +771,7 @@ fn deserialize_field_visitor(
                         }
                     }
 
-                    fn visit_bytes<__E>(self, value: &[u8]) -> ::std::result::Result<__Field, __E>
+                    fn visit_bytes<__E>(self, value: &[u8]) -> _serde::export::Result<__Field, __E>
                         where __E: _serde::de::Error
                     {
                         match value {
@@ -981,18 +981,18 @@ fn wrap_deserialize_with(
         quote! {
             struct __SerdeDeserializeWithStruct #impl_generics #where_clause {
                 value: #field_ty,
-                phantom: ::std::marker::PhantomData<#phantom_ty>,
+                phantom: _serde::export::PhantomData<#phantom_ty>,
             }
         },
         quote! {
             impl #impl_generics _serde::Deserialize for #wrapper_ty #where_clause {
-                fn deserialize<__D>(__d: __D) -> ::std::result::Result<Self, __D::Error>
+                fn deserialize<__D>(__d: __D) -> _serde::export::Result<Self, __D::Error>
                     where __D: _serde::Deserializer
                 {
                     let value = try!(#deserialize_with(__d));
                     Ok(__SerdeDeserializeWithStruct {
                         value: value,
-                        phantom: ::std::marker::PhantomData,
+                        phantom: _serde::export::PhantomData,
                     })
                 }
             }
@@ -1004,7 +1004,7 @@ fn wrap_deserialize_with(
 fn expr_is_missing(attrs: &attr::Field) -> Tokens {
     match *attrs.default() {
         attr::FieldDefault::Default => {
-            return quote!(::std::default::Default::default());
+            return quote!(_serde::export::Default::default());
         }
         attr::FieldDefault::Path(ref path) => {
             return quote!(#path());
