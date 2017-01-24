@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive_tests_no_std"
-version = "0.9.0-rc2"
+version = "0.9.0-rc3"
 publish = false
 
 [dependencies]

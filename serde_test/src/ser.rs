@@ -139,20 +139,20 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_newtype_struct<T>(self,
-                                   name: &'static str,
-                                   value: T) -> Result<(), Error>
+    fn serialize_newtype_struct<T: ?Sized>(self,
+                                           name: &'static str,
+                                           value: &T) -> Result<(), Error>
         where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::StructNewType(name)));
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T>(self,
-                                    name: &str,
-                                    _variant_index: usize,
-                                    variant: &str,
-                                    value: T) -> Result<(), Error>
+    fn serialize_newtype_variant<T: ?Sized>(self,
+                                            name: &str,
+                                            _variant_index: usize,
+                                            variant: &str,
+                                            value: &T) -> Result<(), Error>
         where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::EnumNewType(name, variant)));
@@ -164,8 +164,8 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_some<V>(self, value: V) -> Result<(), Error>
-        where V: Serialize,
+    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<(), Error>
+        where T: Serialize,
     {
         assert_eq!(self.tokens.next(), Some(&Token::Option(true)));
         value.serialize(self)
@@ -228,7 +228,7 @@ impl<'s, 'a, I> ser::SerializeSeq for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T>(&mut self, value: T) -> Result<(), Error>
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::SeqSep));
@@ -247,7 +247,7 @@ impl<'s, 'a, I> ser::SerializeTuple for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T>(&mut self, value: T) -> Result<(), Error>
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::TupleSep));
@@ -266,7 +266,7 @@ impl<'s, 'a, I> ser::SerializeTupleStruct for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, value: T) -> Result<(), Error>
+    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::TupleStructSep));
@@ -285,7 +285,7 @@ impl<'s, 'a, I> ser::SerializeTupleVariant for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, value: T) -> Result<(), Error>
+    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
         assert_eq!(self.tokens.next(), Some(&Token::EnumSeqSep));
@@ -304,12 +304,12 @@ impl<'s, 'a, I> ser::SerializeMap for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_key<T>(&mut self, key: T) -> Result<(), Self::Error> where T: Serialize {
+    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error> where T: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::MapSep));
         key.serialize(&mut **self)
     }
 
-    fn serialize_value<T>(&mut self, value: T) -> Result<(), Self::Error> where T: Serialize {
+    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: Serialize {
         value.serialize(&mut **self)
     }
 
@@ -325,7 +325,7 @@ impl<'s, 'a, I> ser::SerializeStruct for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<V>(&mut self, key: &'static str, value: V) -> Result<(), Self::Error> where V: Serialize {
+    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error> where T: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::StructSep));
         try!(key.serialize(&mut **self));
         value.serialize(&mut **self)
@@ -343,7 +343,7 @@ impl<'s, 'a, I> ser::SerializeStructVariant for &'s mut Serializer<'a, I>
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<V>(&mut self, key: &'static str, value: V) -> Result<(), Self::Error> where V: Serialize {
+    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error> where T: Serialize {
         assert_eq!(self.tokens.next(), Some(&Token::EnumMapSep));
         try!(key.serialize(&mut **self));
         value.serialize(&mut **self)
