@@ -12,7 +12,6 @@ extern crate serde_codegen_internals as internals;
 extern crate syntex;
 
 #[cfg(feature = "with-syntex")]
-#[macro_use]
 extern crate syntex_syntax as syntax;
 
 extern crate syn;
