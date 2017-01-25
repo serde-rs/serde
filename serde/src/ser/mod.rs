@@ -179,7 +179,7 @@ pub trait Serialize {
 /// data structure supported by Serde.
 ///
 /// The role of this trait is to define the serialization half of the Serde data
-/// model, which is a way to categorize every Rust data structure into one of 30
+/// model, which is a way to categorize every Rust data structure into one of 28
 /// possible types. Each method of the `Serializer` trait corresponds to one of
 /// the types of the data model.
 ///
@@ -188,13 +188,13 @@ pub trait Serialize {
 ///
 /// The types that make up the Serde data model are:
 ///
-///  - 15 primitive types:
+///  - 12 primitive types:
 ///    - bool
-///    - isize, i8, i16, i32, i64
-///    - usize, u8, u16, u32, u64
+///    - i8, i16, i32, i64
+///    - u8, u16, u32, u64
 ///    - f32, f64
 ///    - char
-///    - string
+///  - string
 ///  - byte array - [u8]
 ///  - option
 ///    - either none or some value
@@ -279,13 +279,6 @@ pub trait Serializer {
     /// Serialize a `bool` value.
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error>;
 
-    /// Serialize an `isize` value.
-    ///
-    /// If the format does not differentiate between `isize` and `i64`, a
-    /// reasonable implementation would be to cast the value to `i64` and
-    /// forward to `serialize_i64`.
-    fn serialize_isize(self, v: isize) -> Result<Self::Ok, Self::Error>;
-
     /// Serialize an `i8` value.
     ///
     /// If the format does not differentiate between `i8` and `i64`, a
@@ -309,13 +302,6 @@ pub trait Serializer {
 
     /// Serialize an `i64` value.
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error>;
-
-    /// Serialize a `usize` value.
-    ///
-    /// If the format does not differentiate between `usize` and `u64`, a
-    /// reasonable implementation would be to cast the value to `u64` and
-    /// forward to `serialize_u64`.
-    fn serialize_usize(self, v: usize) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `u8` value.
     ///

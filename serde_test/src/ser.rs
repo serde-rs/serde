@@ -46,11 +46,6 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_isize(self, v: isize) -> Result<(), Error> {
-        assert_eq!(self.tokens.next(), Some(&Token::Isize(v)));
-        Ok(())
-    }
-
     fn serialize_i8(self, v: i8) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::I8(v)));
         Ok(())
@@ -68,11 +63,6 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
 
     fn serialize_i64(self, v: i64) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::I64(v)));
-        Ok(())
-    }
-
-    fn serialize_usize(self, v: usize) -> Result<(), Error> {
-        assert_eq!(self.tokens.next(), Some(&Token::Usize(v)));
         Ok(())
     }
 

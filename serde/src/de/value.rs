@@ -126,9 +126,9 @@ impl<E> de::Deserializer for UnitDeserializer<E>
     type Error = E;
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
+        seq_fixed_size bytes map unit_struct newtype_struct tuple_struct struct
+        struct_field tuple enum ignored_any byte_buf
     }
 
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -147,7 +147,7 @@ impl<E> de::Deserializer for UnitDeserializer<E>
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! primitive_deserializer {
-    ($ty:ty, $name:ident, $method:ident) => {
+    ($ty:ty, $name:ident, $method:ident $($cast:tt)*) => {
         /// A helper deserializer that deserializes a number.
         pub struct $name<E>($ty, PhantomData<E>);
 
@@ -167,16 +167,15 @@ macro_rules! primitive_deserializer {
             type Error = E;
 
             forward_to_deserialize! {
-                bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str
-                string unit option seq seq_fixed_size bytes map unit_struct
-                newtype_struct tuple_struct struct struct_field tuple enum
-                ignored_any byte_buf
+                bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit
+                option seq seq_fixed_size bytes map unit_struct newtype_struct
+                tuple_struct struct struct_field tuple enum ignored_any byte_buf
             }
 
             fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
                 where V: de::Visitor,
             {
-                visitor.$method(self.0)
+                visitor.$method(self.0 $($cast)*)
             }
         }
     }
@@ -187,12 +186,12 @@ primitive_deserializer!(i8, I8Deserializer, visit_i8);
 primitive_deserializer!(i16, I16Deserializer, visit_i16);
 primitive_deserializer!(i32, I32Deserializer, visit_i32);
 primitive_deserializer!(i64, I64Deserializer, visit_i64);
-primitive_deserializer!(isize, IsizeDeserializer, visit_isize);
+primitive_deserializer!(isize, IsizeDeserializer, visit_i64 as i64);
 primitive_deserializer!(u8, U8Deserializer, visit_u8);
 primitive_deserializer!(u16, U16Deserializer, visit_u16);
 primitive_deserializer!(u32, U32Deserializer, visit_u32);
 primitive_deserializer!(u64, U64Deserializer, visit_u64);
-primitive_deserializer!(usize, UsizeDeserializer, visit_usize);
+primitive_deserializer!(usize, UsizeDeserializer, visit_u64 as u64);
 primitive_deserializer!(f32, F32Deserializer, visit_f32);
 primitive_deserializer!(f64, F64Deserializer, visit_f64);
 primitive_deserializer!(char, CharDeserializer, visit_char);
@@ -233,9 +232,9 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple ignored_any byte_buf
     }
 }
 
@@ -291,9 +290,9 @@ impl<E> de::Deserializer for StringDeserializer<E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple ignored_any byte_buf
     }
 }
 
@@ -353,9 +352,9 @@ impl<'a, E> de::Deserializer for CowStrDeserializer<'a, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple ignored_any byte_buf
     }
 }
 
@@ -426,9 +425,9 @@ impl<I, T, E> de::Deserializer for SeqDeserializer<I, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple enum ignored_any byte_buf
     }
 }
 
@@ -538,9 +537,9 @@ impl<V_, E> de::Deserializer for SeqVisitorDeserializer<V_, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple enum ignored_any byte_buf
     }
 }
 
@@ -634,9 +633,9 @@ impl<I, E> de::Deserializer for MapDeserializer<I, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option bytes map unit_struct newtype_struct tuple_struct struct
-        struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        bytes map unit_struct newtype_struct tuple_struct struct struct_field
+        tuple enum ignored_any byte_buf
     }
 }
 
@@ -728,9 +727,9 @@ impl<A, B, E> de::Deserializer for PairDeserializer<A, B, E>
     type Error = E;
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option bytes map unit_struct newtype_struct tuple_struct struct
-        struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        bytes map unit_struct newtype_struct tuple_struct struct struct_field
+        tuple enum ignored_any byte_buf
     }
 
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -872,9 +871,9 @@ impl<V_, E> de::Deserializer for MapVisitorDeserializer<V_, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple enum ignored_any byte_buf
     }
 }
 
@@ -905,9 +904,9 @@ impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple enum ignored_any byte_buf
     }
 }
 
@@ -941,9 +940,9 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
     }
 
     forward_to_deserialize! {
-        bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-        unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-        tuple_struct struct struct_field tuple enum ignored_any byte_buf
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple enum ignored_any byte_buf
     }
 }
 

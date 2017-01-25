@@ -339,12 +339,12 @@ pub enum Unexpected<'a> {
     /// The input contained a boolean value that was not expected.
     Bool(bool),
 
-    /// The input contained an unsigned integer `usize`, `u8`, `u16`, `u32` or
-    /// `u64` that was not expected.
+    /// The input contained an unsigned integer `u8`, `u16`, `u32` or `u64` that
+    /// was not expected.
     Unsigned(u64),
 
-    /// The input contained a signed integer `isize`, `i8`, `i16`, `i32` or
-    /// `i64` that was not expected.
+    /// The input contained a signed integer `i8`, `i16`, `i32` or `i64` that
+    /// was not expected.
     Signed(i64),
 
     /// The input contained a floating point `f32` or `f64` that was not
@@ -694,7 +694,7 @@ impl<T> DeserializeSeed for PhantomData<T>
 /// any data structure supported by Serde.
 ///
 /// The role of this trait is to define the deserialization half of the Serde
-/// data model, which is a way to categorize every Rust data type into one of 30
+/// data model, which is a way to categorize every Rust data type into one of 28
 /// possible types. Each method of the `Serializer` trait corresponds to one of
 /// the types of the data model.
 ///
@@ -704,13 +704,13 @@ impl<T> DeserializeSeed for PhantomData<T>
 ///
 /// The types that make up the Serde data model are:
 ///
-///  - 15 primitive types:
+///  - 12 primitive types:
 ///    - bool
-///    - isize, i8, i16, i32, i64
-///    - usize, u8, u16, u32, u64
+///    - i8, i16, i32, i64
+///    - u8, u16, u32, u64
 ///    - f32, f64
 ///    - char
-///    - string
+///  - string
 ///  - byte array - [u8]
 ///  - option
 ///    - either none or some value
@@ -792,10 +792,6 @@ pub trait Deserializer: Sized {
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
-    /// Hint that the `Deserialize` type is expecting a `usize` value.
-    fn deserialize_usize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor;
-
     /// Hint that the `Deserialize` type is expecting a `u8` value.
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
@@ -810,10 +806,6 @@ pub trait Deserializer: Sized {
 
     /// Hint that the `Deserialize` type is expecting a `u64` value.
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: Visitor;
-
-    /// Hint that the `Deserialize` type is expecting an `isize` value.
-    fn deserialize_isize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor;
 
     /// Hint that the `Deserialize` type is expecting an `i8` value.
@@ -1030,13 +1022,6 @@ pub trait Visitor: Sized {
         Err(Error::invalid_type(Unexpected::Bool(v), &self))
     }
 
-    /// Deserialize an `isize` into a `Value`.
-    fn visit_isize<E>(self, v: isize) -> Result<Self::Value, E>
-        where E: Error,
-    {
-        self.visit_i64(v as i64)
-    }
-
     /// Deserialize an `i8` into a `Value`.
     fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
         where E: Error,
@@ -1063,13 +1048,6 @@ pub trait Visitor: Sized {
         where E: Error,
     {
         Err(Error::invalid_type(Unexpected::Signed(v), &self))
-    }
-
-    /// Deserialize a `usize` into a `Value`.
-    fn visit_usize<E>(self, v: usize) -> Result<Self::Value, E>
-        where E: Error,
-    {
-        self.visit_u64(v as u64)
     }
 
     /// Deserialize a `u8` into a `Value`.
