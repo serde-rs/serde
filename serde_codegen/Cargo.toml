@@ -21,12 +21,12 @@ with-syntex = [
 with-syn = []
 
 [dependencies]
-clippy = { version = "^0.*", optional = true }
+clippy = { version = "0.*", optional = true }
 quote = "0.3.8"
 serde_codegen_internals = { version = "=0.11.3", default-features = false, path = "../serde_codegen_internals" }
 syn = { version = "0.10", features = ["aster", "visit"] }
-syntex = { version = "^0.54.0", optional = true }
-syntex_syntax = { version = "^0.54.0", optional = true }
+syntex = { version = "0.54", optional = true }
+syntex_syntax = { version = "0.54", optional = true }
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }

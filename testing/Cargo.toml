@@ -20,12 +20,12 @@ serde_codegen = { path = "../serde_codegen", features = ["with-syntex"] }
 
 [dev-dependencies]
 fnv = "1.0"
-rustc-serialize = "^0.3.16"
+rustc-serialize = "0.3.16"
 serde = { path = "../serde" }
 serde_test = { path = "../serde_test" }
 
 [dependencies]
-clippy = { version = "^0.*", optional = true }
+clippy = { version = "0.*", optional = true }
 
 [[test]]
 name = "test"

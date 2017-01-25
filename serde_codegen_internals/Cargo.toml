@@ -14,7 +14,7 @@ include = ["Cargo.toml", "src/**/*.rs"]
 unstable-testing = ["clippy"]
 
 [dependencies]
-clippy = { version = "^0.*", optional = true }
+clippy = { version = "0.*", optional = true }
 syn = "0.10"
 
 [badges]

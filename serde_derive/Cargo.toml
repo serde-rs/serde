@@ -24,7 +24,7 @@ default-features = false
 features = ["with-syn"]
 
 [dev-dependencies]
-compiletest_rs = "^0.2.0"
+compiletest_rs = "0.2"
 fnv = "1.0"
-serde = { version = "0.9.0", path = "../serde" }
-serde_test = { version = "0.9.0", path = "../serde_test" }
+serde = { version = "0.9", path = "../serde" }
+serde_test = { version = "0.9", path = "../serde_test" }
