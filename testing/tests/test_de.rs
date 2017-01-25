@@ -155,12 +155,10 @@ declare_tests! {
         false => &[Token::Bool(false)],
     }
     test_isize {
-        0isize => &[Token::Isize(0)],
         0isize => &[Token::I8(0)],
         0isize => &[Token::I16(0)],
         0isize => &[Token::I32(0)],
         0isize => &[Token::I64(0)],
-        0isize => &[Token::Usize(0)],
         0isize => &[Token::U8(0)],
         0isize => &[Token::U16(0)],
         0isize => &[Token::U32(0)],
@@ -169,14 +167,12 @@ declare_tests! {
         0isize => &[Token::F64(0.)],
     }
     test_ints {
-        0isize => &[Token::Isize(0)],
         0i8 => &[Token::I8(0)],
         0i16 => &[Token::I16(0)],
         0i32 => &[Token::I32(0)],
         0i64 => &[Token::I64(0)],
     }
     test_uints {
-        0usize => &[Token::Usize(0)],
         0u8 => &[Token::U8(0)],
         0u16 => &[Token::U16(0)],
         0u32 => &[Token::U32(0)],
@@ -777,7 +773,7 @@ declare_tests! {
     test_enum_unit_usize {
         Enum::Unit => &[
             Token::EnumStart("Enum"),
-            Token::Usize(0),
+            Token::U32(0),
             Token::Unit,
         ],
     }
@@ -935,7 +931,7 @@ declare_error_tests! {
     test_enum_out_of_range<Enum> {
         &[
             Token::EnumStart("Enum"),
-            Token::Usize(4),
+            Token::U32(4),
             Token::Unit,
         ],
         Error::Message("invalid value: integer `4`, expected variant index 0 <= i < 4".into()),

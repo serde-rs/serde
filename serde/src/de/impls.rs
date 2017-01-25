@@ -180,12 +180,10 @@ macro_rules! impl_deserialize_num {
                         formatter.write_str(stringify!($ty))
                     }
 
-                    impl_deserialize_num_method!($ty, isize, visit_isize, from_isize, Signed, i64);
                     impl_deserialize_num_method!($ty, i8, visit_i8, from_i8, Signed, i64);
                     impl_deserialize_num_method!($ty, i16, visit_i16, from_i16, Signed, i64);
                     impl_deserialize_num_method!($ty, i32, visit_i32, from_i32, Signed, i64);
                     impl_deserialize_num_method!($ty, i64, visit_i64, from_i64, Signed, i64);
-                    impl_deserialize_num_method!($ty, usize, visit_usize, from_usize, Unsigned, u64);
                     impl_deserialize_num_method!($ty, u8, visit_u8, from_u8, Unsigned, u64);
                     impl_deserialize_num_method!($ty, u16, visit_u16, from_u16, Unsigned, u64);
                     impl_deserialize_num_method!($ty, u32, visit_u32, from_u32, Unsigned, u64);
@@ -209,12 +207,12 @@ macro_rules! impl_deserialize_num {
     }
 }
 
-impl_deserialize_num!(isize, deserialize_isize);
+impl_deserialize_num!(isize, deserialize_i64);
 impl_deserialize_num!(i8, deserialize_i8);
 impl_deserialize_num!(i16, deserialize_i16);
 impl_deserialize_num!(i32, deserialize_i32);
 impl_deserialize_num!(i64, deserialize_i64);
-impl_deserialize_num!(usize, deserialize_usize);
+impl_deserialize_num!(usize, deserialize_u64);
 impl_deserialize_num!(u8, deserialize_u8);
 impl_deserialize_num!(u16, deserialize_u16);
 impl_deserialize_num!(u32, deserialize_u32);
@@ -1150,7 +1148,7 @@ impl<T, E> Deserialize for Result<T, E> where T: Deserialize, E: Deserialize {
                         formatter.write_str("`Ok` or `Err`")
                     }
 
-                    fn visit_usize<E>(self, value: usize) -> Result<Field, E> where E: Error {
+                    fn visit_u32<E>(self, value: u32) -> Result<Field, E> where E: Error {
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),

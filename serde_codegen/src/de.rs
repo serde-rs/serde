@@ -692,11 +692,11 @@ fn deserialize_field_visitor(
         Some(quote!(__ignore,))
     };
 
-    let visit_usize = if is_variant {
-        let variant_indices = 0usize..;
+    let visit_index = if is_variant {
+        let variant_indices = 0u32..;
         let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
         Some(quote! {
-            fn visit_usize<__E>(self, value: usize) -> _serde::export::Result<__Field, __E>
+            fn visit_u32<__E>(self, value: u32) -> _serde::export::Result<__Field, __E>
                 where __E: _serde::de::Error
             {
                 match value {
@@ -758,7 +758,7 @@ fn deserialize_field_visitor(
                         formatter.write_str("field name")
                     }
 
-                    #visit_usize
+                    #visit_index
 
                     fn visit_str<__E>(self, value: &str) -> _serde::export::Result<__Field, __E>
                         where __E: _serde::de::Error

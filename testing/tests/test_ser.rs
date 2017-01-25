@@ -60,14 +60,12 @@ declare_ser_tests! {
         false => &[Token::Bool(false)],
     }
     test_isizes {
-        0isize => &[Token::Isize(0)],
         0i8 => &[Token::I8(0)],
         0i16 => &[Token::I16(0)],
         0i32 => &[Token::I32(0)],
         0i64 => &[Token::I64(0)],
     }
     test_usizes {
-        0usize => &[Token::Usize(0)],
         0u8 => &[Token::U8(0)],
         0u16 => &[Token::U16(0)],
         0u32 => &[Token::U32(0)],

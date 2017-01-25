@@ -32,9 +32,6 @@ macro_rules! forward_to_deserialize_helper {
     (bool) => {
         forward_to_deserialize_method!{deserialize_bool()}
     };
-    (usize) => {
-        forward_to_deserialize_method!{deserialize_usize()}
-    };
     (u8) => {
         forward_to_deserialize_method!{deserialize_u8()}
     };
@@ -46,9 +43,6 @@ macro_rules! forward_to_deserialize_helper {
     };
     (u64) => {
         forward_to_deserialize_method!{deserialize_u64()}
-    };
-    (isize) => {
-        forward_to_deserialize_method!{deserialize_isize()}
     };
     (i8) => {
         forward_to_deserialize_method!{deserialize_i8()}
@@ -154,9 +148,9 @@ macro_rules! forward_to_deserialize_helper {
 ///     self.deserialize(visitor)
 /// }
 /// #     forward_to_deserialize! {
-/// #         usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-/// #         unit option seq seq_fixed_size bytes byte_buf map unit_struct
-/// #         newtype_struct tuple_struct struct struct_field tuple enum ignored_any
+/// #         u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+/// #         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
+/// #         tuple_struct struct struct_field tuple enum ignored_any
 /// #     }
 /// # }
 /// # fn main() {}
@@ -181,9 +175,9 @@ macro_rules! forward_to_deserialize_helper {
 ///     }
 ///
 ///     forward_to_deserialize! {
-///         bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str
-///         string unit option seq seq_fixed_size bytes byte_buf map unit_struct
-///         newtype_struct tuple_struct struct struct_field tuple enum ignored_any
+///         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+///         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
+///         tuple_struct struct struct_field tuple enum ignored_any
 ///     }
 /// }
 /// # fn main() {}

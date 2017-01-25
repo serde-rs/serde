@@ -74,25 +74,25 @@ use super::Iterator;
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_visit {
-    ($ty:ty, $method:ident) => {
+    ($ty:ty, $method:ident $($cast:tt)*) => {
         impl Serialize for $ty {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where S: Serializer,
             {
-                serializer.$method(*self)
+                serializer.$method(*self $($cast)*)
             }
         }
     }
 }
 
 impl_visit!(bool, serialize_bool);
-impl_visit!(isize, serialize_isize);
+impl_visit!(isize, serialize_i64 as i64);
 impl_visit!(i8, serialize_i8);
 impl_visit!(i16, serialize_i16);
 impl_visit!(i32, serialize_i32);
 impl_visit!(i64, serialize_i64);
-impl_visit!(usize, serialize_usize);
+impl_visit!(usize, serialize_u64 as u64);
 impl_visit!(u8, serialize_u8);
 impl_visit!(u16, serialize_u16);
 impl_visit!(u32, serialize_u32);

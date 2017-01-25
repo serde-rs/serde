@@ -225,26 +225,16 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
         where __V: de::Visitor {
         self.deserialize(visitor)
     }
-    fn deserialize_usize<__V>(self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
-    fn deserialize_isize<__V>(self, visitor: __V) -> Result<__V::Value, Self::Error>
-        where __V: de::Visitor {
-        self.deserialize(visitor)
-    }
 
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Error>
         where V: Visitor,
     {
         match self.tokens.next() {
             Some(Token::Bool(v)) => visitor.visit_bool(v),
-            Some(Token::Isize(v)) => visitor.visit_isize(v),
             Some(Token::I8(v)) => visitor.visit_i8(v),
             Some(Token::I16(v)) => visitor.visit_i16(v),
             Some(Token::I32(v)) => visitor.visit_i32(v),
             Some(Token::I64(v)) => visitor.visit_i64(v),
-            Some(Token::Usize(v)) => visitor.visit_usize(v),
             Some(Token::U8(v)) => visitor.visit_u8(v),
             Some(Token::U16(v)) => visitor.visit_u16(v),
             Some(Token::U32(v)) => visitor.visit_u32(v),
