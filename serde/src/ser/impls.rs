@@ -1,9 +1,3 @@
-//! Implementations for all of Rust's builtin types. Tuples implement the `Serialize` trait if they
-//! have at most 16 fields. Arrays implement the `Serialize` trait if their length is 32 or less.
-//! You can always forward array serialization to slice serialization, which works for any length.
-//! Long tuples are best replaced by tuple structs, for which you can use `derive(Serialize)`. In
-//! that case the number of fields is irrelevant.
-
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 #[cfg(all(feature = "collections", not(feature = "std")))]
@@ -772,7 +766,7 @@ impl Serialize for path::Path {
     {
         match self.to_str() {
             Some(s) => s.serialize(serializer),
-            None => Err(Error::custom("Path contains invalid UTF-8 characters")),
+            None => Err(Error::custom("path contains invalid UTF-8 characters")),
         }
     }
 }

@@ -1,4 +1,20 @@
-//! Helper module to enable serializing bytes more efficiently
+//! Wrapper types to enable optimized handling of `&[u8]` and `Vec<u8>`.
+//!
+//! Without specialization, Rust forces us to treat `&[u8]` just like any other
+//! slice and `Vec<u8>` just like any other vector. In reality this particular
+//! slice and vector can often be serialized and deserialized in a more
+//! efficient, compact representation in many formats.
+//!
+//! When working with such a format, you can opt into specialized handling of
+//! `&[u8]` by wrapping it in `bytes::Bytes` and `Vec<u8>` by wrapping it in
+//! `bytes::ByteBuf`.
+//!
+//! Rust support for specialization is being tracked in
+//! [rust-lang/rust#31844][specialization]. Once it lands in the stable compiler
+//! we will be deprecating these wrapper types in favor of optimizing `&[u8]`
+//! and `Vec<u8>` out of the box.
+//!
+//! [specialization]: https://github.com/rust-lang/rust/issues/31844
 
 use core::{ops, fmt, char, iter, slice};
 use core::fmt::Write;
@@ -6,14 +22,36 @@ use core::fmt::Write;
 use ser;
 
 #[cfg(any(feature = "std", feature = "collections"))]
-pub use self::bytebuf::{ByteBuf, ByteBufVisitor};
+pub use self::bytebuf::ByteBuf;
+
+#[cfg(any(feature = "std", feature = "collections"))]
+#[doc(hidden)] // does anybody need this?
+pub use self::bytebuf::ByteBufVisitor;
 
 #[cfg(feature = "collections")]
 use collections::Vec;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// `Bytes` wraps a `&[u8]` in order to serialize into a byte array.
+/// Wraps a `&[u8]` in order to serialize in an efficient way. Does not support
+/// deserialization.
+///
+/// ```rust
+/// # #[macro_use] extern crate serde_derive;
+/// # extern crate serde;
+/// # use std::net::IpAddr;
+/// #
+/// use serde::bytes::Bytes;
+///
+/// # #[allow(dead_code)]
+/// #[derive(Serialize)]
+/// struct Packet<'a> {
+///     destination: IpAddr,
+///     payload: Bytes<'a>,
+/// }
+/// #
+/// # fn main() {}
+/// ```
 #[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Bytes<'a> {
     bytes: &'a [u8],
@@ -86,7 +124,25 @@ mod bytebuf {
     #[cfg(feature = "collections")]
     use collections::{String, Vec};
 
-    /// `ByteBuf` wraps a `Vec<u8>` and serializes as a byte array.
+    /// Wraps a `Vec<u8>` in order to serialize and deserialize in an efficient
+    /// way.
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate serde_derive;
+    /// # extern crate serde;
+    /// # use std::net::IpAddr;
+    /// #
+    /// use serde::bytes::ByteBuf;
+    ///
+    /// # #[allow(dead_code)]
+    /// #[derive(Serialize, Deserialize)]
+    /// struct Packet {
+    ///     destination: IpAddr,
+    ///     payload: ByteBuf,
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     #[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
     pub struct ByteBuf {
         bytes: Vec<u8>,
