@@ -10,7 +10,7 @@ before_script:
 - export PATH=$HOME/.local/bin:$PATH
 script:
 - (cd serde && travis-cargo build)
-- (cd serde && travis-cargo --skip nightly test)
+- (cd serde && travis-cargo --only beta test)
 - (cd serde && travis-cargo --only nightly test -- --features unstable-testing)
 - (cd serde && travis-cargo build -- --no-default-features)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features alloc)
