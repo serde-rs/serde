@@ -1,13 +1,63 @@
-//! Serde Serialization Framework
+//! # Serde
 //!
-//! Serde is a powerful framework that enables serialization libraries to generically serialize
-//! Rust data structures without the overhead of runtime type information. In many situations, the
-//! handshake protocol between serializers and serializees can be completely optimized away,
-//! leaving serde to perform roughly the same speed as a hand written serializer for a specific
-//! type.
+//! Serde is a framework for ***ser***ializing and ***de***serializing Rust data
+//! structures efficiently and generically.
 //!
-//! For a detailed tutorial on the different ways to use serde please check out the
-//! [github repository](https://github.com/serde-rs/serde)
+//! The Serde ecosystem consists of data structures that know how to serialize
+//! and deserialize themselves along with data formats that know how to
+//! serialize and deserialize other things. Serde provides the layer by which
+//! these two groups interact with each other, allowing any supported data
+//! structure to be serialized and deserialized using any supported data format.
+//!
+//! See the Serde website https://serde.rs/ for additional documentation and
+//! usage examples.
+//!
+//! ### Design
+//!
+//! Where many other languages rely on runtime reflection for serializing data,
+//! Serde is instead built on Rust's powerful trait system. A data structure
+//! that knows how to serialize and deserialize itself is one that implements
+//! Serde's `Serialize` and `Deserialize` traits (or uses Serde's code
+//! generation to automatically derive implementations at compile time). This
+//! avoids any overhead of reflection or runtime type information. In fact in
+//! many situations the interaction between data structure and data format can
+//! be completely optimized away by the Rust compiler, leaving Serde
+//! serialization to perform roughly the same speed as a handwritten serializer
+//! for the specific selection of data structure and data format.
+//!
+//! ### Data formats
+//!
+//! The following is a partial list of data formats that have been implemented
+//! for Serde by the community.
+//!
+//! - [JSON](https://github.com/serde-rs/json), the ubiquitous JavaScript Object
+//!   Notation used by many HTTP APIs.
+//! - [Bincode](https://github.com/TyOverby/bincode), a compact binary format
+//!   used for IPC within the Servo rendering engine.
+//! - [CBOR](https://github.com/pyfisch/cbor), a Concise Binary Object
+//!   Representation designed for small message size without the need for
+//!   version negotiation.
+//! - [YAML](https://github.com/dtolnay/serde-yaml), a popular human-friendly
+//!   configuration language that ain't markup language.
+//! - [MessagePack](https://github.com/3Hren/msgpack-rust), an efficient binary
+//!   format that resembles a compact JSON.
+//! - [TOML](https://github.com/alexcrichton/toml-rs), a minimal configuration
+//!   format used by [Cargo](http://doc.crates.io/manifest.html).
+//! - [Pickle](https://github.com/birkenfeld/serde-pickle), a format common in
+//!   the Python world.
+//! - [Hjson](https://github.com/laktak/hjson-rust), a variant of JSON designed
+//!   to be readable and writable by humans.
+//! - [BSON](https://github.com/zonyitoo/bson-rs), the data storage and network
+//!   transfer format used by MongoDB.
+//! - [URL](https://github.com/nox/serde_urlencoded), the x-www-form-urlencoded
+//!   format.
+//! - [XML](https://github.com/serde-rs/xml), the flexible machine-friendly W3C
+//!   standard. *(deserialization only)*
+//! - [Envy](https://github.com/softprops/envy), a way to deserialize
+//!   environment variables into Rust structs. *(deserialization only)*
+//! - [Redis](https://github.com/OneSignal/serde-redis), deserialize values from
+//!   Redis when using [redis-rs](https://crates.io/crates/redis).
+//!   *(deserialization only)*
 
 #![doc(html_root_url="https://docs.serde.rs")]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -45,6 +95,7 @@ mod macros;
 pub mod bytes;
 pub mod de;
 #[cfg(feature = "std")]
+#[doc(hidden)]
 pub mod iter;
 pub mod ser;
 #[cfg_attr(feature = "std", doc(hidden))]

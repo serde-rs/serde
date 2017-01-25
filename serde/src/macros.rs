@@ -124,28 +124,70 @@ macro_rules! forward_to_deserialize_helper {
     };
 }
 
-/// Helper to forward `Deserializer` methods to `Deserializer::deserialize`.
-/// Every given method ignores all arguments and forwards to `deserialize`.
-/// Note that `deserialize_enum` simply returns an `Error::invalid_type`; a
-/// better approach is tracked in [serde-rs/serde#521][1].
+// Super explicit first paragraph because this shows up at the top level and
+// trips up people who are just looking for basic Serialize / Deserialize
+// documentation.
+//
+/// Helper macro when implementing the `Deserializer` part of a new data format
+/// for Serde.
 ///
-/// ```rust,ignore
+/// Some `Deserializer` implementations for self-describing formats do not care
+/// what hint the `Visitor` gives them, they just want to blindly call the
+/// `Visitor` method corresponding to the data they can tell is in the input.
+/// This requires repetitive implementations of all the `Deserializer` trait
+/// methods.
+///
+/// ```rust
+/// # #[macro_use] extern crate serde;
+/// # use serde::de::{value, Deserializer, Visitor};
+/// # pub struct MyDeserializer;
+/// # impl Deserializer for MyDeserializer {
+/// #     type Error = value::Error;
+/// #     fn deserialize<V>(self, _: V) -> Result<V::Value, Self::Error>
+/// #         where V: Visitor
+/// #     { unimplemented!() }
+/// #
+/// #[inline]
+/// fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+///     where V: Visitor
+/// {
+///     self.deserialize(visitor)
+/// }
+/// #     forward_to_deserialize! {
+/// #         usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
+/// #         unit option seq seq_fixed_size bytes byte_buf map unit_struct
+/// #         newtype_struct tuple_struct struct struct_field tuple enum ignored_any
+/// #     }
+/// # }
+/// # fn main() {}
+/// ```
+///
+/// The `forward_to_deserialize!` macro implements these simple forwarding
+/// methods so that they forward directly to `Deserializer::deserialize`. You
+/// can choose which methods to forward.
+///
+/// ```rust
+/// # #[macro_use] extern crate serde;
+/// # use serde::de::{value, Deserializer, Visitor};
+/// # pub struct MyDeserializer;
 /// impl Deserializer for MyDeserializer {
+/// #   type Error = value::Error;
 ///     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
 ///         where V: Visitor
 ///     {
 ///         /* ... */
+/// #       let _ = visitor;
+/// #       unimplemented!()
 ///     }
 ///
 ///     forward_to_deserialize! {
-///         bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str string
-///         unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-///         tuple_struct struct struct_field tuple enum ignored_any
+///         bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 char str
+///         string unit option seq seq_fixed_size bytes byte_buf map unit_struct
+///         newtype_struct tuple_struct struct struct_field tuple enum ignored_any
 ///     }
 /// }
+/// # fn main() {}
 /// ```
-///
-/// [1]: https://github.com/serde-rs/serde/issues/521
 #[macro_export]
 macro_rules! forward_to_deserialize {
     ($($func:ident)*) => {

@@ -432,7 +432,7 @@ fn test_cannot_serialize_paths() {
     assert_ser_tokens_error(
         &Path::new(path),
         &[],
-        Error::Message("Path contains invalid UTF-8 characters".to_owned()));
+        Error::Message("path contains invalid UTF-8 characters".to_owned()));
 
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
@@ -440,7 +440,7 @@ fn test_cannot_serialize_paths() {
     assert_ser_tokens_error(
         &path_buf,
         &[],
-        Error::Message("Path contains invalid UTF-8 characters".to_owned()));
+        Error::Message("path contains invalid UTF-8 characters".to_owned()));
 }
 
 #[test]

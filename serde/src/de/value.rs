@@ -975,16 +975,16 @@ mod private {
         }
 
         fn visit_tuple<V>(self,
-                        _len: usize,
-                        _visitor: V) -> Result<V::Value, Self::Error>
+                          _len: usize,
+                          _visitor: V) -> Result<V::Value, Self::Error>
             where V: de::Visitor
         {
             Err(de::Error::invalid_type(Unexpected::UnitVariant, &"tuple variant"))
         }
 
         fn visit_struct<V>(self,
-                        _fields: &'static [&'static str],
-                        _visitor: V) -> Result<V::Value, Self::Error>
+                           _fields: &'static [&'static str],
+                           _visitor: V) -> Result<V::Value, Self::Error>
             where V: de::Visitor
         {
             Err(de::Error::invalid_type(Unexpected::UnitVariant, &"struct variant"))
