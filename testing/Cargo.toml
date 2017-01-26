@@ -12,7 +12,12 @@ keywords = ["serialization"]
 publish = false
 
 [features]
-unstable-testing = ["clippy", "serde/unstable-testing", "serde_derive/unstable-testing"]
+unstable-testing = [
+    "clippy",
+    "serde/unstable-testing",
+    "serde_derive/unstable-testing",
+    "serde_test/unstable-testing",
+]
 
 [dev-dependencies]
 compiletest_rs = "0.2"
