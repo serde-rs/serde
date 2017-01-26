@@ -1,5 +1,5 @@
 [package]
-name = "serde_testing"
+name = "serde_test_suite"
 version = "0.0.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
