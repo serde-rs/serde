@@ -14,13 +14,13 @@ publish = false
 [features]
 unstable-testing = [
     "clippy",
+    "compiletest_rs",
     "serde/unstable-testing",
     "serde_derive/unstable-testing",
     "serde_test/unstable-testing",
 ]
 
 [dev-dependencies]
-compiletest_rs = "0.2"
 fnv = "1.0"
 rustc-serialize = "0.3.16"
 serde = { path = "../serde" }
@@ -29,6 +29,7 @@ serde_test = { path = "../serde_test" }
 
 [dependencies]
 clippy = { version = "0.*", optional = true }
+compiletest_rs = { version = "0.2", optional = true }
 
 [[test]]
 name = "test"
