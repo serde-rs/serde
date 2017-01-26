@@ -15,7 +15,7 @@ script:
 - (cd serde && travis-cargo build -- --no-default-features)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features alloc)
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features collections)
-- (cd test-suite && travis-cargo --skip nightly test)
+- (cd test-suite && travis-cargo --only beta test)
 - (cd test-suite && travis-cargo --only nightly test -- --features unstable-testing)
 - (cd test-suite/no-std-tests && travis-cargo --only nightly build)
 - (cd serde && travis-cargo --only stable doc)
