@@ -273,17 +273,13 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
         where V: Visitor,
     {
         match self.tokens.peek() {
-            Some(&Token::Option(false)) => {
+            Some(&Token::Unit) | Some(&Token::Option(false)) => {
                 self.tokens.next();
                 visitor.visit_none()
             }
             Some(&Token::Option(true)) => {
                 self.tokens.next();
                 visitor.visit_some(self)
-            }
-            Some(&Token::Unit) => {
-                self.tokens.next();
-                visitor.visit_none()
             }
             Some(_) => visitor.visit_some(self),
             None => Err(Error::EndOfTokens),
@@ -316,7 +312,7 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
                 let token = self.tokens.next().unwrap();
                 Err(Error::UnexpectedToken(token))
             }
-            None => { return Err(Error::EndOfTokens); }
+            None => Err(Error::EndOfTokens),
         }
     }
 
@@ -377,11 +373,7 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
         where V: Visitor,
     {
         match self.tokens.peek() {
-            Some(&Token::Unit) => {
-                self.tokens.next();
-                visitor.visit_unit()
-            }
-            Some(&Token::UnitStruct(_)) => {
+            Some(&Token::Unit) | Some(&Token::UnitStruct(_)) => {
                 self.tokens.next();
                 visitor.visit_unit()
             }
