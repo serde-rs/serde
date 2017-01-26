@@ -18,7 +18,6 @@ script:
 - (cd test_suite && travis-cargo --only beta test)
 - (cd test_suite && travis-cargo --only nightly test -- --features unstable-testing)
 - (cd test_suite/no_std && travis-cargo --only nightly build)
-- (cd serde && travis-cargo --only stable doc)
 env:
   global:
   - TRAVIS_CARGO_NIGHTLY_FEATURE=""
