@@ -17,11 +17,8 @@ travis-ci = { repository = "serde-rs/serde" }
 name = "serde_derive"
 proc-macro = true
 
-[dependencies.serde_codegen]
-version = "=0.9.0"
-path = "../serde_codegen"
-default-features = false
-features = ["with-syn"]
+[dependencies]
+serde_codegen = { version = "=0.9.0", path = "../serde_codegen" }
 
 [dev-dependencies]
 compiletest_rs = "0.2"
