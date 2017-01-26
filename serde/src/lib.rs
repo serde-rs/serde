@@ -66,7 +66,7 @@
 #![cfg_attr(feature = "collections", feature(collections, enumset))]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
-#![cfg_attr(feature = "clippy", allow(linkedlist, type_complexity))]
+#![cfg_attr(feature = "clippy", allow(linkedlist, type_complexity, doc_markdown))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "collections")]
