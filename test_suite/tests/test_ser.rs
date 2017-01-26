@@ -51,7 +51,20 @@ enum Enum {
 
 //////////////////////////////////////////////////////////////////////////
 
-declare_ser_tests! {
+macro_rules! declare_tests {
+    ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
+        $(
+            #[test]
+            fn $name() {
+                $(
+                    assert_ser_tokens(&$value, $tokens);
+                )+
+            }
+        )+
+    }
+}
+
+declare_tests! {
     test_unit {
         () => &[Token::Unit],
     }

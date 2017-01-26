@@ -1,17 +1,3 @@
-#[macro_export]
-macro_rules! declare_ser_tests {
-    ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
-        $(
-            #[test]
-            fn $name() {
-                $(
-                    assert_ser_tokens(&$value, $tokens);
-                )+
-            }
-        )+
-    }
-}
-
 macro_rules! btreeset {
     () => {
         BTreeSet::new()
