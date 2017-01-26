@@ -149,7 +149,7 @@ impl Item {
                     }
 
                     Literal(_) => {
-                        cx.error(format!("unexpected literal in serde container attribute"));
+                        cx.error("unexpected literal in serde container attribute");
                     }
                 }
             }
@@ -231,7 +231,7 @@ impl Variant {
                     }
 
                     Literal(_) => {
-                        cx.error(format!("unexpected literal in serde variant attribute"));
+                        cx.error("unexpected literal in serde variant attribute");
                     }
                 }
             }
@@ -390,7 +390,7 @@ impl Field {
                     }
 
                     Literal(_) => {
-                        cx.error(format!("unexpected literal in serde field attribute"));
+                        cx.error("unexpected literal in serde field attribute");
                     }
                 }
             }
@@ -404,7 +404,7 @@ impl Field {
 
         Field {
             name: Name {
-                serialize: ser_name.get().unwrap_or(ident.clone()),
+                serialize: ser_name.get().unwrap_or_else(|| ident.clone()),
                 deserialize: de_name.get().unwrap_or(ident),
             },
             skip_serializing: skip_serializing.get(),

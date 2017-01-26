@@ -12,7 +12,7 @@ include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
 unstable = []
-unstable-testing = ["clippy"]
+unstable-testing = ["clippy", "serde_codegen_internals/unstable-testing"]
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
