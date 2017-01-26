@@ -17,8 +17,7 @@ script:
 - (cd serde && travis-cargo --only nightly build -- --no-default-features --features collections)
 - (cd testing && travis-cargo --skip nightly test)
 - (cd testing && travis-cargo --only nightly test -- --features unstable-testing)
-- (cd serde_derive && travis-cargo --only nightly test)
-- (cd serde_derive/no-std-tests && travis-cargo --only nightly build)
+- (cd testing/no-std-tests && travis-cargo --only nightly build)
 - (cd serde && travis-cargo --only stable doc)
 env:
   global:

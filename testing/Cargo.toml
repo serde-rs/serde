@@ -15,6 +15,7 @@ publish = false
 unstable-testing = ["clippy", "serde/unstable-testing", "serde_derive/unstable-testing"]
 
 [dev-dependencies]
+compiletest_rs = "0.2"
 fnv = "1.0"
 rustc-serialize = "0.3.16"
 serde = { path = "../serde" }
