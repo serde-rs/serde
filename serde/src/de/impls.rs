@@ -765,7 +765,13 @@ macro_rules! map_impl {
             {
                 let mut values = $with_capacity;
 
-                while let Some((key, value)) = try!($visitor.visit()) {
+                while let Some((key, value)) = try!(
+                    $visitor.visit()
+                    .or_else(
+                        $visitor.visit()
+                        .and_then(|(k,v)|(k.parse(),v))
+                    )
+                ) {
                     values.insert(key, value);
                 }
 
