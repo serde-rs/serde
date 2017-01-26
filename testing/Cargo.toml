@@ -9,19 +9,16 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde/"
 readme = "README.md"
 keywords = ["serialization"]
-build = "build.rs"
 publish = false
 
 [features]
-unstable-testing = ["clippy", "serde/unstable-testing", "serde_codegen/unstable-testing"]
-
-[build-dependencies]
-serde_codegen = { path = "../serde_codegen", features = ["with-syntex"] }
+unstable-testing = ["clippy", "serde/unstable-testing", "serde_derive/unstable-testing"]
 
 [dev-dependencies]
 fnv = "1.0"
 rustc-serialize = "0.3.16"
 serde = { path = "../serde" }
+serde_derive = { path = "../serde_derive" }
 serde_test = { path = "../serde_test" }
 
 [dependencies]
