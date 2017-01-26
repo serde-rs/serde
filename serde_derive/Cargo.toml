@@ -10,6 +10,10 @@ documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
+[features]
+unstable = []
+unstable-testing = ["clippy"]
+
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
 
@@ -18,7 +22,10 @@ name = "serde_derive"
 proc-macro = true
 
 [dependencies]
-serde_codegen = { version = "=0.9.0", path = "../serde_codegen" }
+clippy = { version = "0.*", optional = true }
+quote = "0.3.8"
+serde_codegen_internals = { version = "=0.11.3", default-features = false, path = "../serde_codegen_internals" }
+syn = { version = "0.10", features = ["aster", "visit"] }
 
 [dev-dependencies]
 compiletest_rs = "0.2"
