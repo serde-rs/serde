@@ -12,20 +12,6 @@ macro_rules! declare_ser_tests {
     }
 }
 
-#[macro_export]
-macro_rules! btreemap {
-    () => {
-        BTreeMap::new()
-    };
-    ($($key:expr => $value:expr),+) => {
-        {
-            let mut map = BTreeMap::new();
-            $(map.insert($key, $value);)+
-            map
-        }
-    }
-}
-
 macro_rules! btreeset {
     () => {
         BTreeSet::new()
