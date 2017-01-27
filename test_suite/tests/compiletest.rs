@@ -6,7 +6,7 @@ fn run_mode(mode: &'static str) {
     let mut config = compiletest::default_config();
 
     config.mode = mode.parse().expect("invalid mode");
-    config.target_rustcflags = Some("-L target/debug/ -L target/debug/deps/".to_owned());
+    config.target_rustcflags = Some("-L deps/target/debug/deps".to_owned());
     if let Ok(name) = env::var("TESTNAME") {
         config.filter = Some(name);
     }

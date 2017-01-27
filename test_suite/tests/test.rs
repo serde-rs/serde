@@ -23,4 +23,4 @@ mod test_macros;
 mod test_ser;
 
 #[cfg(feature = "unstable-testing")]
-mod compile_tests;
+mod compiletest;
