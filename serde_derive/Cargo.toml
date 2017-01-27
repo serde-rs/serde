@@ -25,4 +25,4 @@ proc-macro = true
 clippy = { version = "0.*", optional = true }
 quote = "0.3.8"
 serde_codegen_internals = { version = "=0.11.3", default-features = false, path = "../serde_codegen_internals" }
-syn = { version = "0.10", features = ["aster", "visit"] }
+syn = { version = "0.11", features = ["aster", "visit"] }
