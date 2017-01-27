@@ -5,7 +5,7 @@ use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
-pub fn expand_derive_serialize(item: &syn::MacroInput) -> Result<Tokens, String> {
+pub fn expand_derive_serialize(item: &syn::DeriveInput) -> Result<Tokens, String> {
     let ctxt = internals::Ctxt::new();
     let item = Item::from_ast(&ctxt, item);
     try!(ctxt.check());

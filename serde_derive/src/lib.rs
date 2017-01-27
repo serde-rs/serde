@@ -21,7 +21,7 @@ mod ser;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input(&input.to_string()).unwrap();
+    let input = syn::parse_derive_input(&input.to_string()).unwrap();
     match ser::expand_derive_serialize(&input) {
         Ok(expanded) => expanded.parse().unwrap(),
         Err(msg) => panic!(msg),
@@ -30,7 +30,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input(&input.to_string()).unwrap();
+    let input = syn::parse_derive_input(&input.to_string()).unwrap();
     match de::expand_derive_deserialize(&input) {
         Ok(expanded) => expanded.parse().unwrap(),
         Err(msg) => panic!(msg),

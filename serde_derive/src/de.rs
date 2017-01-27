@@ -7,7 +7,7 @@ use internals::{self, attr};
 
 use std::iter;
 
-pub fn expand_derive_deserialize(item: &syn::MacroInput) -> Result<Tokens, String> {
+pub fn expand_derive_deserialize(item: &syn::DeriveInput) -> Result<Tokens, String> {
     let item = {
         let ctxt = internals::Ctxt::new();
         let item = Item::from_ast(&ctxt, item);
