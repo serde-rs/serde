@@ -150,10 +150,7 @@ pub trait Error: Sized + error::Error {
     ///         where D: Deserializer
     ///     {
     ///         let s = try!(String::deserialize(deserializer));
-    ///         match s.parse() {
-    ///             Ok(s) => Ok(s),
-    ///             Err(err) => Err(Error::custom(err)),
-    ///         }
+    ///         s.parse().map_err(Error::custom)
     ///     }
     /// }
     /// ```
