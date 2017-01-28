@@ -97,7 +97,7 @@ macro_rules! declare_tests {
 }
 
 macro_rules! declare_error_tests {
-    ($($name:ident<$target:ident> { $tokens:expr, $expected:expr, })+) => {
+    ($($name:ident<$target:ty> { $tokens:expr, $expected:expr, })+) => {
         $(
             #[test]
             fn $name() {
@@ -935,5 +935,23 @@ declare_error_tests! {
             Token::Unit,
         ],
         Error::Message("invalid value: integer `4`, expected variant index 0 <= i < 4".into()),
+    }
+    test_short_tuple<(u8, u8, u8)> {
+        &[
+            Token::TupleStart(1),
+            Token::TupleSep,
+            Token::U8(1),
+            Token::TupleEnd,
+        ],
+        Error::Message("invalid length 1, expected a tuple of size 3".into()),
+    }
+    test_short_array<[u8; 3]> {
+        &[
+            Token::SeqStart(Some(1)),
+            Token::SeqSep,
+            Token::U8(1),
+            Token::SeqEnd,
+        ],
+        Error::Message("invalid length 1, expected an array of length 3".into()),
     }
 }

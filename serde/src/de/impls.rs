@@ -574,7 +574,7 @@ impl<T> Deserialize for [T; 0]
 }
 
 macro_rules! array_impls {
-    ($($len:expr => ($($name:ident)+))+) => {
+    ($($len:expr => ($($n:tt $name:ident)+))+) => {
         $(
             impl<T> Visitor for ArrayVisitor<[T; $len]> where T: Deserialize {
                 type Value = [T; $len];
@@ -590,7 +590,7 @@ macro_rules! array_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(val) => val,
-                            None => return Err(Error::invalid_length(0, &self)),
+                            None => return Err(Error::invalid_length($n, &self)),
                         };
                     )+
 
@@ -612,44 +612,44 @@ macro_rules! array_impls {
 }
 
 array_impls! {
-    1 => (a)
-    2 => (a b)
-    3 => (a b c)
-    4 => (a b c d)
-    5 => (a b c d e)
-    6 => (a b c d e f)
-    7 => (a b c d e f g)
-    8 => (a b c d e f g h)
-    9 => (a b c d e f g h i)
-    10 => (a b c d e f g h i j)
-    11 => (a b c d e f g h i j k)
-    12 => (a b c d e f g h i j k l)
-    13 => (a b c d e f g h i j k l m)
-    14 => (a b c d e f g h i j k l m n)
-    15 => (a b c d e f g h i j k l m n o)
-    16 => (a b c d e f g h i j k l m n o p)
-    17 => (a b c d e f g h i j k l m n o p q)
-    18 => (a b c d e f g h i j k l m n o p q r)
-    19 => (a b c d e f g h i j k l m n o p q r s)
-    20 => (a b c d e f g h i j k l m n o p q r s t)
-    21 => (a b c d e f g h i j k l m n o p q r s t u)
-    22 => (a b c d e f g h i j k l m n o p q r s t u v)
-    23 => (a b c d e f g h i j k l m n o p q r s t u v w)
-    24 => (a b c d e f g h i j k l m n o p q r s t u v w x)
-    25 => (a b c d e f g h i j k l m n o p q r s t u v w x y)
-    26 => (a b c d e f g h i j k l m n o p q r s t u v w x y z)
-    27 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa)
-    28 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab)
-    29 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac)
-    30 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad)
-    31 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad ae)
-    32 => (a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad ae af)
+    1 => (0 a)
+    2 => (0 a 1 b)
+    3 => (0 a 1 b 2 c)
+    4 => (0 a 1 b 2 c 3 d)
+    5 => (0 a 1 b 2 c 3 d 4 e)
+    6 => (0 a 1 b 2 c 3 d 4 e 5 f)
+    7 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g)
+    8 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h)
+    9 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i)
+    10 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j)
+    11 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k)
+    12 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l)
+    13 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m)
+    14 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n)
+    15 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o)
+    16 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p)
+    17 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q)
+    18 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r)
+    19 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s)
+    20 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t)
+    21 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u)
+    22 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v)
+    23 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w)
+    24 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x)
+    25 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y)
+    26 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z)
+    27 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 aa)
+    28 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 aa 27 ab)
+    29 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 aa 27 ab 28 ac)
+    30 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 aa 27 ab 28 ac 29 ad)
+    31 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 aa 27 ab 28 ac 29 ad 30 ae)
+    32 => (0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 aa 27 ab 28 ac 29 ad 30 ae 31 af)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {
-    ($($len:expr => $visitor:ident => ($($name:ident)+))+) => {
+    ($($len:expr => $visitor:ident => ($($n:tt $name:ident)+))+) => {
         $(
             /// Construct a tuple visitor.
             pub struct $visitor<$($name,)+> {
@@ -678,7 +678,7 @@ macro_rules! tuple_impls {
                     $(
                         let $name = match try!(visitor.visit()) {
                             Some(value) => value,
-                            None => return Err(Error::invalid_length(0, &self)),
+                            None => return Err(Error::invalid_length($n, &self)),
                         };
                     )+
 
@@ -699,22 +699,22 @@ macro_rules! tuple_impls {
 }
 
 tuple_impls! {
-    1 => TupleVisitor1 => (T0)
-    2 => TupleVisitor2 => (T0 T1)
-    3 => TupleVisitor3 => (T0 T1 T2)
-    4 => TupleVisitor4 => (T0 T1 T2 T3)
-    5 => TupleVisitor5 => (T0 T1 T2 T3 T4)
-    6 => TupleVisitor6 => (T0 T1 T2 T3 T4 T5)
-    7 => TupleVisitor7 => (T0 T1 T2 T3 T4 T5 T6)
-    8 => TupleVisitor8 => (T0 T1 T2 T3 T4 T5 T6 T7)
-    9 => TupleVisitor9 => (T0 T1 T2 T3 T4 T5 T6 T7 T8)
-    10 => TupleVisitor10 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9)
-    11 => TupleVisitor11 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10)
-    12 => TupleVisitor12 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11)
-    13 => TupleVisitor13 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12)
-    14 => TupleVisitor14 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13)
-    15 => TupleVisitor15 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14)
-    16 => TupleVisitor16 => (T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15)
+    1 => TupleVisitor1 => (0 T0)
+    2 => TupleVisitor2 => (0 T0 1 T1)
+    3 => TupleVisitor3 => (0 T0 1 T1 2 T2)
+    4 => TupleVisitor4 => (0 T0 1 T1 2 T2 3 T3)
+    5 => TupleVisitor5 => (0 T0 1 T1 2 T2 3 T3 4 T4)
+    6 => TupleVisitor6 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5)
+    7 => TupleVisitor7 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6)
+    8 => TupleVisitor8 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7)
+    9 => TupleVisitor9 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8)
+    10 => TupleVisitor10 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9)
+    11 => TupleVisitor11 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10)
+    12 => TupleVisitor12 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11)
+    13 => TupleVisitor13 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12)
+    14 => TupleVisitor14 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13)
+    15 => TupleVisitor15 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14)
+    16 => TupleVisitor16 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
