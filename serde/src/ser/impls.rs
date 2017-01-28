@@ -568,8 +568,7 @@ macro_rules! serialize_map {
             use super::SerializeMap;
             let mut map = try!(serializer.serialize_map(Some(self.len())));
             for (k, v) in self {
-                try!(map.serialize_key(k));
-                try!(map.serialize_value(v));
+                try!(map.serialize_entry(k, v));
             }
             map.end()
         }
