@@ -546,8 +546,7 @@ pub trait Serializer {
     /// ```rust,ignore
     /// let mut map = serializer.serialize_map(Some(self.len()))?;
     /// for (k, v) in self {
-    ///     map.serialize_key(k)?;
-    ///     map.serialize_value(v)?;
+    ///     map.serialize_entry(k, v)?;
     /// }
     /// map.end()
     /// ```
@@ -705,8 +704,7 @@ pub trait SerializeTupleVariant {
 /// ```rust,ignore
 /// let mut map = serializer.serialize_map(Some(self.len()))?;
 /// for (k, v) in self {
-///     map.serialize_key(k)?;
-///     map.serialize_value(v)?;
+///     map.serialize_entry(k, v)?;
 /// }
 /// map.end()
 /// ```
@@ -722,6 +720,28 @@ pub trait SerializeMap {
 
     /// Serialize a map value.
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
+
+    /// Serialize a map entry consisting of a key and a value.
+    ///
+    /// Some `Serialize` types are not able to hold a key and value in memory at
+    /// the same time so `SerializeMap` implementations are required to support
+    /// `serialize_key` and `serialize_value` individually. The
+    /// `serialize_entry` method allows serializers to optimize for the case
+    /// where key and value are both available. `Serialize` implementations are
+    /// encouraged to use `serialize_entry` if possible.
+    ///
+    /// The default implementation delegates to `serialize_key` and
+    /// `serialize_value`. This is appropriate for serializers that do not care
+    /// about performance or are not able to optimize `serialize_entry` any
+    /// better than this.
+    fn serialize_entry<K: ?Sized + Serialize, V: ?Sized + Serialize>(
+        &mut self,
+        key: &K,
+        value: &V,
+    ) -> Result<(), Self::Error> {
+        try!(self.serialize_key(key));
+        self.serialize_value(value)
+    }
 
     /// Finish serializing a map.
     fn end(self) -> Result<Self::Ok, Self::Error>;
