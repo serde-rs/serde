@@ -27,7 +27,7 @@ script:
   - (cd test_suite && travis-cargo --only beta test)
   - (cd test_suite/deps && travis-cargo --only nightly build && cd .. && travis-cargo --only nightly test -- --features unstable-testing)
   - (cd test_suite/no_std && travis-cargo --only nightly build)
-  - ./clippy.sh
+  - sh clippy.sh
 
 env:
   global:
