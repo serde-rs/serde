@@ -3,7 +3,6 @@ set -ev
 if [ "${CLIPPY}" = "true" ]; then
     if cargo install clippy; then
         (cd serde && travis-cargo clippy -- --features unstable-testing)
-        (cd serde_codegen && travis-cargo clippy -- --features unstable-testing)
         (cd serde_derive && travis-cargo clippy -- --features unstable-testing)
         (cd test_suite && travis-cargo clippy -- --features unstable-testing)
         (cd test_suite/deps && travis-cargo clippy -- --features unstable-testing)
