@@ -22,10 +22,7 @@ std = []
 unstable = []
 alloc = ["unstable"]
 collections = ["alloc"]
-unstable-testing = ["clippy", "unstable", "std"]
-
-[dependencies]
-clippy = { version = "0.*", optional = true }
+unstable-testing = ["unstable", "std"]
 
 [dev-dependencies]
 serde_derive = "0.9"

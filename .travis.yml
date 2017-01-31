@@ -8,6 +8,11 @@ rust:
   - beta
   - nightly
 
+matrix:
+  include:
+    - rust: nightly
+      env: CLIPPY=true
+
 before_script:
   - pip install 'travis-cargo<0.2' --user
   - export PATH=$HOME/.local/bin:$PATH
@@ -22,6 +27,7 @@ script:
   - (cd test_suite && travis-cargo --only beta test)
   - (cd test_suite/deps && travis-cargo --only nightly build && cd .. && travis-cargo --only nightly test -- --features unstable-testing)
   - (cd test_suite/no_std && travis-cargo --only nightly build)
+  - ./clippy.sh
 
 env:
   global:

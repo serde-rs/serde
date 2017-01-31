@@ -13,11 +13,8 @@ publish = false
 
 [features]
 unstable-testing = [
-    "clippy",
     "compiletest_rs",
     "serde/unstable-testing",
-    "serde_derive/unstable-testing",
-    "serde_test/unstable-testing",
 ]
 
 [dev-dependencies]
@@ -28,7 +25,6 @@ serde_derive = { path = "../serde_derive" }
 serde_test = { path = "../serde_test" }
 
 [dependencies]
-clippy = { version = "0.*", optional = true }
 compiletest_rs = { version = "0.2", optional = true }
 
 [[test]]

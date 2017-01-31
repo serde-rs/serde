@@ -64,9 +64,7 @@
 #![cfg_attr(feature = "unstable", feature(nonzero, inclusive_range, zero_one))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections, enumset))]
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
-#![cfg_attr(feature = "clippy", allow(linkedlist, type_complexity, doc_markdown))]
+#![cfg_attr(feature = "cargo-clippy", allow(linkedlist, type_complexity, doc_markdown))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "collections")]
