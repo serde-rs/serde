@@ -14,16 +14,23 @@ use ser::{
     SerializeStructVariant,
 };
 
-/// The impossible serializer.
+/// Helper type for implementing a `Serializer` that does not support
+/// serializing one of the compound types.
 ///
-/// This serializer cannot be instantiated, to be used in the associated types
-/// of the `Serializer` trait, when implementing serializers that don't support
-/// some constructs, like sequences or tuples.
+/// This type cannot be instantiated, but implements every one of the traits
+/// corresponding to the `Serializer` compound types: `SerializeSeq`,
+/// `SerializeTuple`, `SerializeTupleStruct`, `SerializeTupleVariant`,
+/// `SerializeMap`, `SerializeStruct`, and `SerializeStructVariant`.
 ///
 /// ```rust,ignore
 /// impl Serializer for MySerializer {
-///     type SerializeSeq = Impossible<(), Error>;
+///     type Ok = ();
+///     type Error = Error;
 ///
+///     type SerializeSeq = Impossible<(), Error>;
+///     /* other associated types */
+///
+///     /// This data format does not support serializing sequences.
 ///     fn serialize_seq(self,
 ///                      len: Option<usize>)
 ///                      -> Result<Self::SerializeSeq, Error> {
@@ -32,7 +39,7 @@ use ser::{
 ///         Err(...)
 ///     }
 ///
-///     ...
+///     /* other Serializer methods */
 /// }
 /// ```
 pub struct Impossible<Ok, E> {
