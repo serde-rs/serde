@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ev
 if [ "${CLIPPY}" = "true" ]; then
-    if cargo install clippy; then
+    if cargo install clippy -f; then
         (cd serde && cargo clippy -- -Dclippy --features unstable-testing)
         (cd serde_derive && cargo clippy -- -Dclippy --features unstable-testing)
         (cd test_suite && cargo clippy -- -Dclippy --features unstable-testing)
