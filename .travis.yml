@@ -13,6 +13,10 @@ matrix:
   include:
     - rust: nightly
       env: CLIPPY=true
+  allow_failures:
+    - rust: nightly
+      env: CLIPPY=true
+  fast_finish: true
 
 before_script:
   - pip install 'travis-cargo<0.2' --user
