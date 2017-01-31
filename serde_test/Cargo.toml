@@ -11,11 +11,7 @@ readme = "../README.md"
 keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
-[features]
-unstable-testing = ["clippy"]
-
 [dependencies]
-clippy = { version = "0.*", optional = true }
 serde = { version = "0.9", path = "../serde" }
 
 [badges]

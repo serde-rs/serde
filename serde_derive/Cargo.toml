@@ -12,7 +12,6 @@ include = ["Cargo.toml", "src/**/*.rs"]
 
 [features]
 unstable = []
-unstable-testing = ["clippy", "serde_codegen_internals/unstable-testing"]
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
@@ -22,7 +21,6 @@ name = "serde_derive"
 proc-macro = true
 
 [dependencies]
-clippy = { version = "0.*", optional = true }
 quote = "0.3.8"
 serde_codegen_internals = { version = "=0.12.0", default-features = false, path = "../serde_codegen_internals" }
 syn = { version = "0.11", features = ["aster", "visit"] }

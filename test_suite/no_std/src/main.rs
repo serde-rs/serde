@@ -21,7 +21,9 @@ pub extern fn rust_eh_unwind_resume() {}
 pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
                                _file: &'static str,
                                _line: u32) -> ! {
-    loop {}
+    unsafe {
+        libc::abort()
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
