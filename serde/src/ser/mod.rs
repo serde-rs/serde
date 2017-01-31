@@ -104,6 +104,9 @@ use core::cell::RefCell;
 use core::fmt::Display;
 
 mod impls;
+mod impossible;
+
+pub use self::impossible::Impossible;
 
 ///////////////////////////////////////////////////////////////////////////////
 
