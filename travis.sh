@@ -5,8 +5,8 @@ if [ "${CLIPPY}" = "true" ]; then
         (cd serde && travis-cargo clippy -- --features unstable-testing)
         (cd serde_derive && travis-cargo clippy -- --features unstable-testing)
         (cd test_suite && travis-cargo clippy -- --features unstable-testing)
-        (cd test_suite/deps && travis-cargo clippy -- --features unstable-testing)
-        (cd test_suite/no_std && travis-cargo clippy -- --features unstable-testing)
+        (cd test_suite/deps && travis-cargo clippy)
+        (cd test_suite/no_std && travis-cargo clippy)
     else
         echo "could not compile clippy, ignoring clippy tests"
     fi
