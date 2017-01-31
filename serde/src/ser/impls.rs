@@ -231,7 +231,7 @@ impl<'a, I> Serialize for Iterator<I>
         where S: Serializer,
     {
         // FIXME: use specialization to prevent invalidating the object in case of clonable iterators?
-        let iter = match self.0.borrow_mut().take() {
+        let iter = match self.data.borrow_mut().take() {
             Some(iter) => iter.into_iter(),
             None => return Err(Error::custom("Iterator used twice")),
         };

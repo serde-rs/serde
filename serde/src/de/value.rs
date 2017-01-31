@@ -51,7 +51,9 @@ use bytes;
 
 /// This represents all the possible errors that can occur using the `ValueDeserializer`.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Error(ErrorImpl);
+pub struct Error {
+    err: ErrorImpl,
+}
 
 #[cfg(any(feature = "std", feature = "collections"))]
 type ErrorImpl = Box<str>;
@@ -61,19 +63,23 @@ type ErrorImpl = ();
 impl de::Error for Error {
     #[cfg(any(feature = "std", feature = "collections"))]
     fn custom<T: Display>(msg: T) -> Self {
-        Error(msg.to_string().into_boxed_str())
+        Error {
+            err: msg.to_string().into_boxed_str(),
+        }
     }
 
     #[cfg(not(any(feature = "std", feature = "collections")))]
     fn custom<T: Display>(_msg: T) -> Self {
-        Error(())
+        Error {
+            err: (),
+        }
     }
 }
 
 impl Display for Error {
     #[cfg(any(feature = "std", feature = "collections"))]
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        formatter.write_str(&self.0)
+        formatter.write_str(&self.err)
     }
 
     #[cfg(not(any(feature = "std", feature = "collections")))]
@@ -85,7 +91,7 @@ impl Display for Error {
 impl error::Error for Error {
     #[cfg(any(feature = "std", feature = "collections"))]
     fn description(&self) -> &str {
-        &self.0
+        &self.err
     }
 
     #[cfg(not(any(feature = "std", feature = "collections")))]
@@ -113,12 +119,16 @@ impl<E> ValueDeserializer<E> for ()
     type Deserializer = UnitDeserializer<E>;
 
     fn into_deserializer(self) -> UnitDeserializer<E> {
-        UnitDeserializer(PhantomData)
+        UnitDeserializer {
+            marker: PhantomData,
+        }
     }
 }
 
 /// A helper deserializer that deserializes a `()`.
-pub struct UnitDeserializer<E>(PhantomData<E>);
+pub struct UnitDeserializer<E> {
+    marker: PhantomData<E>,
+}
 
 impl<E> de::Deserializer for UnitDeserializer<E>
     where E: de::Error
@@ -149,7 +159,10 @@ impl<E> de::Deserializer for UnitDeserializer<E>
 macro_rules! primitive_deserializer {
     ($ty:ty, $name:ident, $method:ident $($cast:tt)*) => {
         /// A helper deserializer that deserializes a number.
-        pub struct $name<E>($ty, PhantomData<E>);
+        pub struct $name<E> {
+            value: $ty,
+            marker: PhantomData<E>
+        }
 
         impl<E> ValueDeserializer<E> for $ty
             where E: de::Error,
@@ -157,7 +170,10 @@ macro_rules! primitive_deserializer {
             type Deserializer = $name<E>;
 
             fn into_deserializer(self) -> $name<E> {
-                $name(self, PhantomData)
+                $name {
+                    value: self,
+                    marker: PhantomData,
+                }
             }
         }
 
@@ -175,7 +191,7 @@ macro_rules! primitive_deserializer {
             fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
                 where V: de::Visitor,
             {
-                visitor.$method(self.0 $($cast)*)
+                visitor.$method(self.value $($cast)*)
             }
         }
     }
@@ -199,7 +215,10 @@ primitive_deserializer!(char, CharDeserializer, visit_char);
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a `&str`.
-pub struct StrDeserializer<'a, E>(&'a str, PhantomData<E>);
+pub struct StrDeserializer<'a, E> {
+    value: &'a str,
+    marker: PhantomData<E>,
+}
 
 impl<'a, E> ValueDeserializer<E> for &'a str
     where E: de::Error,
@@ -207,7 +226,10 @@ impl<'a, E> ValueDeserializer<E> for &'a str
     type Deserializer = StrDeserializer<'a, E>;
 
     fn into_deserializer(self) -> StrDeserializer<'a, E> {
-        StrDeserializer(self, PhantomData)
+        StrDeserializer {
+            value: self,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -219,7 +241,7 @@ impl<'a, E> de::Deserializer for StrDeserializer<'a, E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        visitor.visit_str(self.0)
+        visitor.visit_str(self.value)
     }
 
     fn deserialize_enum<V>(self,
@@ -255,7 +277,10 @@ impl<'a, E> de::EnumVisitor for StrDeserializer<'a, E>
 
 /// A helper deserializer that deserializes a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
-pub struct StringDeserializer<E>(String, PhantomData<E>);
+pub struct StringDeserializer<E> {
+    value: String,
+    marker: PhantomData<E>,
+}
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<E> ValueDeserializer<E> for String
@@ -264,7 +289,10 @@ impl<E> ValueDeserializer<E> for String
     type Deserializer = StringDeserializer<E>;
 
     fn into_deserializer(self) -> StringDeserializer<E> {
-        StringDeserializer(self, PhantomData)
+        StringDeserializer {
+            value: self,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -277,7 +305,7 @@ impl<E> de::Deserializer for StringDeserializer<E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.value)
     }
 
     fn deserialize_enum<V>(self,
@@ -314,7 +342,10 @@ impl<'a, E> de::EnumVisitor for StringDeserializer<E>
 
 /// A helper deserializer that deserializes a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
-pub struct CowStrDeserializer<'a, E>(Cow<'a, str>, PhantomData<E>);
+pub struct CowStrDeserializer<'a, E> {
+    value: Cow<'a, str>,
+    marker: PhantomData<E>,
+}
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<'a, E> ValueDeserializer<E> for Cow<'a, str>
@@ -323,7 +354,10 @@ impl<'a, E> ValueDeserializer<E> for Cow<'a, str>
     type Deserializer = CowStrDeserializer<'a, E>;
 
     fn into_deserializer(self) -> CowStrDeserializer<'a, E> {
-        CowStrDeserializer(self, PhantomData)
+        CowStrDeserializer {
+            value: self,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -336,7 +370,7 @@ impl<'a, E> de::Deserializer for CowStrDeserializer<'a, E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        match self.0 {
+        match self.value {
             Cow::Borrowed(string) => visitor.visit_str(string),
             Cow::Owned(string) => visitor.visit_string(string),
         }
@@ -885,12 +919,18 @@ impl<'a, E> ValueDeserializer<E> for bytes::Bytes<'a>
     type Deserializer = BytesDeserializer<'a, E>;
 
     fn into_deserializer(self) -> BytesDeserializer<'a, E> {
-        BytesDeserializer(self.into(), PhantomData)
+        BytesDeserializer {
+            value: self.into(),
+            marker: PhantomData,
+        }
     }
 }
 
 /// A helper deserializer that deserializes a `&[u8]`.
-pub struct BytesDeserializer<'a, E>(&'a [u8], PhantomData<E>);
+pub struct BytesDeserializer<'a, E> {
+    value: &'a [u8],
+    marker: PhantomData<E>,
+}
 
 impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
     where E: de::Error
@@ -900,7 +940,7 @@ impl<'a, E> de::Deserializer for BytesDeserializer<'a, E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        visitor.visit_bytes(self.0)
+        visitor.visit_bytes(self.value)
     }
 
     forward_to_deserialize! {
@@ -919,13 +959,19 @@ impl<E> ValueDeserializer<E> for bytes::ByteBuf
     type Deserializer = ByteBufDeserializer<E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
-        ByteBufDeserializer(self.into(), PhantomData)
+        ByteBufDeserializer {
+            value: self.into(),
+            marker: PhantomData,
+        }
     }
 }
 
 /// A helper deserializer that deserializes a `Vec<u8>`.
 #[cfg(any(feature = "std", feature = "collections"))]
-pub struct ByteBufDeserializer<E>(Vec<u8>, PhantomData<E>);
+pub struct ByteBufDeserializer<E> {
+    value: Vec<u8>,
+    marker: PhantomData<E>,
+}
 
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<E> de::Deserializer for ByteBufDeserializer<E>
@@ -936,7 +982,7 @@ impl<E> de::Deserializer for ByteBufDeserializer<E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: de::Visitor,
     {
-        visitor.visit_byte_buf(self.0)
+        visitor.visit_byte_buf(self.value)
     }
 
     forward_to_deserialize! {
@@ -952,10 +998,12 @@ mod private {
     use de::{self, Unexpected};
     use core::marker::PhantomData;
 
-    pub struct UnitOnly<E>(PhantomData<E>);
+    pub struct UnitOnly<E> {
+        marker: PhantomData<E>,
+    }
 
     pub fn unit_only<T, E>(t: T) -> (T, UnitOnly<E>) {
-        (t, UnitOnly(PhantomData))
+        (t, UnitOnly { marker: PhantomData })
     }
 
     impl<E> de::VariantVisitor for UnitOnly<E>

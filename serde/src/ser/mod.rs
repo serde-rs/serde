@@ -805,9 +805,12 @@ pub trait SerializeStructVariant {
 /// of this with the `serde::ser::iterator` function every time you want to
 /// serialize an iterator.
 #[cfg(feature = "unstable")]
-pub struct Iterator<I>(RefCell<Option<I>>)
+pub struct Iterator<I>
     where <I as IntoIterator>::Item: Serialize,
-          I: IntoIterator;
+          I: IntoIterator
+{
+    data: RefCell<Option<I>>,
+}
 
 /// Create a wrapper type that can be passed to any function expecting a
 /// `Serialize` and will serialize the given iterator as a sequence.
@@ -816,5 +819,7 @@ pub fn iterator<I>(iter: I) -> Iterator<I>
     where <I as IntoIterator>::Item: Serialize,
           I: IntoIterator
 {
-    Iterator(RefCell::new(Some(iter)))
+    Iterator {
+        data: RefCell::new(Some(iter)),
+    }
 }
