@@ -2,11 +2,11 @@
 set -ev
 if [ "${CLIPPY}" = "true" ]; then
     if cargo install clippy; then
-        (cd serde && travis-cargo clippy -- --features unstable-testing)
-        (cd serde_derive && travis-cargo clippy -- --features unstable-testing)
-        (cd test_suite && travis-cargo clippy -- --features unstable-testing)
-        (cd test_suite/deps && travis-cargo clippy)
-        (cd test_suite/no_std && travis-cargo clippy)
+        (cd serde && travis-cargo clippy -- -Dclippy --features unstable-testing)
+        (cd serde_derive && travis-cargo clippy -- -Dclippy --features unstable-testing)
+        (cd test_suite && travis-cargo clippy -- -Dclippy --features unstable-testing)
+        (cd test_suite/deps && travis-cargo clippy -- -Dclippy)
+        (cd test_suite/no_std && travis-cargo clippy -- -Dclippy)
     else
         echo "could not compile clippy, ignoring clippy tests"
     fi
