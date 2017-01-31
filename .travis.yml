@@ -18,12 +18,4 @@ matrix:
       env: CLIPPY=true
   fast_finish: true
 
-before_script:
-  - pip install 'travis-cargo<0.2' --user
-  - export PATH=$HOME/.local/bin:$PATH
-
 script: ./travis.sh
-
-env:
-  global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
