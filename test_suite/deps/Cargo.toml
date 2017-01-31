@@ -4,6 +4,8 @@ version = "0.0.0"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 publish = false
 
+[workspace]
+
 [dependencies]
 serde = { path = "../../serde" }
 serde_derive = { path = "../../serde_derive" }
