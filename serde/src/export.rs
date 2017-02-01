@@ -9,6 +9,7 @@ use collections::borrow::Cow;
 pub use core::default::Default;
 pub use core::fmt;
 pub use core::marker::PhantomData;
+pub use core::option::Option::{self, None, Some};
 pub use core::result::Result::{self, Ok, Err};
 
 #[cfg(any(feature = "collections", feature = "std"))]
