@@ -216,14 +216,14 @@ fn deserialize_unit_struct(
             fn visit_unit<__E>(self) -> _serde::export::Result<#type_ident, __E>
                 where __E: _serde::de::Error,
             {
-                Ok(#type_ident)
+                _serde::export::Ok(#type_ident)
             }
 
             #[inline]
             fn visit_seq<__V>(self, _: __V) -> _serde::export::Result<#type_ident, __V::Error>
                 where __V: _serde::de::SeqVisitor,
             {
-                Ok(#type_ident)
+                _serde::export::Ok(#type_ident)
             }
         }
 
@@ -357,7 +357,7 @@ fn deserialize_seq(
                     let #var = match #visit {
                         Some(value) => { value },
                         None => {
-                            return Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                            return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                         }
                     };
                 };
@@ -379,7 +379,7 @@ fn deserialize_seq(
 
     quote! {
         #(#let_values)*
-        Ok(#result)
+        _serde::export::Ok(#result)
     }
 }
 
@@ -411,7 +411,7 @@ fn deserialize_newtype_struct(
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer,
         {
-            Ok(#type_path(#value))
+            _serde::export::Ok(#type_path(#value))
         }
     }
 }
@@ -563,8 +563,8 @@ fn deserialize_item_enum(
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let Err(err) = visitor.visit_variant::<__Field>();
-            // Err(err)
+            // let _serde::export::Err(err) = visitor.visit_variant::<__Field>();
+            // _serde::export::Err(err)
             visitor.visit_variant::<__Field>().map(|(impossible, _)| match impossible {})
         }
     } else {
@@ -615,7 +615,7 @@ fn deserialize_variant(
         Style::Unit => {
             quote!({
                 try!(_serde::de::VariantVisitor::visit_unit(visitor));
-                Ok(#type_ident::#variant_ident)
+                _serde::export::Ok(#type_ident::#variant_ident)
             })
         }
         Style::Newtype => {
@@ -673,7 +673,7 @@ fn deserialize_newtype_variant(
         }
     };
     quote! {
-        Ok(#type_ident::#variant_ident(#visit)),
+        _serde::export::Ok(#type_ident::#variant_ident(#visit)),
     }
 }
 
@@ -701,9 +701,9 @@ fn deserialize_field_visitor(
             {
                 match value {
                     #(
-                        #variant_indices => Ok(__Field::#field_idents),
+                        #variant_indices => _serde::export::Ok(__Field::#field_idents),
                     )*
-                    _ => Err(_serde::de::Error::invalid_value(
+                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
                                 _serde::de::Unexpected::Unsigned(value as u64),
                                 &#fallthrough_msg))
                 }
@@ -715,15 +715,15 @@ fn deserialize_field_visitor(
 
     let fallthrough_arm = if is_variant {
         quote! {
-            Err(_serde::de::Error::unknown_variant(value, VARIANTS))
+            _serde::export::Err(_serde::de::Error::unknown_variant(value, VARIANTS))
         }
     } else if item_attrs.deny_unknown_fields() {
         quote! {
-            Err(_serde::de::Error::unknown_field(value, FIELDS))
+            _serde::export::Err(_serde::de::Error::unknown_field(value, FIELDS))
         }
     } else {
         quote! {
-            Ok(__Field::__ignore)
+            _serde::export::Ok(__Field::__ignore)
         }
     };
 
@@ -765,7 +765,7 @@ fn deserialize_field_visitor(
                     {
                         match value {
                             #(
-                                #field_strs => Ok(__Field::#field_idents),
+                                #field_strs => _serde::export::Ok(__Field::#field_idents),
                             )*
                             _ => #fallthrough_arm
                         }
@@ -776,7 +776,7 @@ fn deserialize_field_visitor(
                     {
                         match value {
                             #(
-                                #field_bytes => Ok(__Field::#field_idents),
+                                #field_bytes => _serde::export::Ok(__Field::#field_idents),
                             )*
                             _ => {
                                 #bytes_to_str
@@ -878,7 +878,7 @@ fn deserialize_map(
             quote! {
                 __Field::#name => {
                     if #name.is_some() {
-                        return Err(<__V::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                        return _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
                     #name = Some(#visit);
                 }
@@ -943,7 +943,7 @@ fn deserialize_map(
 
         #(#extract_values)*
 
-        Ok(#struct_path { #(#result),* })
+        _serde::export::Ok(#struct_path { #(#result),* })
     }
 }
 
@@ -990,7 +990,7 @@ fn wrap_deserialize_with(
                     where __D: _serde::Deserializer
                 {
                     let value = try!(#deserialize_with(__d));
-                    Ok(__SerdeDeserializeWithStruct {
+                    _serde::export::Ok(__SerdeDeserializeWithStruct {
                         value: value,
                         phantom: _serde::export::PhantomData,
                     })
@@ -1021,7 +1021,7 @@ fn expr_is_missing(attrs: &attr::Field) -> Tokens {
         }
         Some(_) => {
             quote! {
-                return Err(<__V::Error as _serde::de::Error>::missing_field(#name))
+                return _serde::export::Err(<__V::Error as _serde::de::Error>::missing_field(#name))
             }
         }
     }
