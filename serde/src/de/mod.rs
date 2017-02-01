@@ -488,8 +488,8 @@ impl<'a> Display for Expected + 'a {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// An implementation of this trait is a **data structure** that can be
-/// deserialized from any data format supported by Serde.
+/// A **data structure** that can be deserialized from any data format supported
+/// by Serde.
 ///
 /// Serde provides `Deserialize` implementations for many Rust primitive and
 /// standard library types. The complete list is [here][de]. All of these can
@@ -687,8 +687,8 @@ impl<T> DeserializeSeed for PhantomData<T>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// An implementation of this trait is a **data format** that can deserialize
-/// any data structure supported by Serde.
+/// A **data format** that can deserialize any data structure supported by
+/// Serde.
 ///
 /// The role of this trait is to define the deserialization half of the Serde
 /// data model, which is a way to categorize every Rust data type into one of 28

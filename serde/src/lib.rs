@@ -84,7 +84,9 @@ mod core {
     pub use actual_core::nonzero;
 }
 
+#[doc(inline)]
 pub use ser::{Serialize, Serializer};
+#[doc(inline)]
 pub use de::{Deserialize, Deserializer};
 
 #[macro_use]

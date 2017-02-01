@@ -141,8 +141,8 @@ pub trait Error: Sized + error::Error {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// An implementation of this trait is a **data structure** that can be
-/// serialized into any data format supported by Serde.
+/// A **data structure** that can be serialized into any data format supported
+/// by Serde.
 ///
 /// Serde provides `Serialize` implementations for many Rust primitive and
 /// standard library types. The complete list is [here][ser]. All of these can
@@ -178,8 +178,7 @@ pub trait Serialize {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// An implementation of this trait is a **data format** that can serialize any
-/// data structure supported by Serde.
+/// A **data format** that can serialize any data structure supported by Serde.
 ///
 /// The role of this trait is to define the serialization half of the Serde data
 /// model, which is a way to categorize every Rust data structure into one of 28
