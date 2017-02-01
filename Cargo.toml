@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "serde",
+    "serde_codegen_internals",
+    "serde_derive",
+    "serde_test",
+    "test_suite",
+    "test_suite/no_std",
+]
