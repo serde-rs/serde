@@ -17,9 +17,10 @@ channel() {
 }
 
 if [ -n "${CLIPPY}" ]; then
-    if [ -n "${TRAVIS}" ]; then
-        # cached installation will not work on a later nightly
-        cargo install clippy --debug --force
+    # cached installation will not work on a later nightly
+    if [ -n "${TRAVIS}" ] && ! cargo install clippy --debug --force; then
+        echo "COULD NOT COMPILE CLIPPY, IGNORING CLIPPY TESTS"
+        exit
     fi
 
     cd "$DIR/serde"

@@ -13,9 +13,5 @@ matrix:
   include:
     - rust: nightly
       env: CLIPPY=true
-  allow_failures:
-    - rust: nightly
-      env: CLIPPY=true
-  fast_finish: true
 
 script: ./travis.sh
