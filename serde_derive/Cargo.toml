@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "0.9.4"
+version = "0.9.5"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
@@ -22,5 +22,5 @@ proc-macro = true
 
 [dependencies]
 quote = "0.3.8"
-serde_codegen_internals = { version = "=0.12.0", default-features = false, path = "../serde_codegen_internals" }
+serde_codegen_internals = { version = "=0.12.1", default-features = false, path = "../serde_codegen_internals" }
 syn = { version = "0.11", features = ["aster", "visit"] }
