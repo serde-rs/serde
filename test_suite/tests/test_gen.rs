@@ -8,11 +8,15 @@ use self::serde::de::{Deserialize, Deserializer};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::result::Result as StdResult;
 
 // Try to trip up the generated code if it fails to use fully qualified paths.
 #[allow(dead_code)]
 struct Result;
-use std::result::Result as StdResult;
+#[allow(dead_code)]
+struct Ok;
+#[allow(dead_code)]
+struct Err;
 
 //////////////////////////////////////////////////////////////////////////
 

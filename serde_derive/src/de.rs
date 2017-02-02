@@ -209,21 +209,21 @@ fn deserialize_unit_struct(
             type Value = #type_ident;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                formatter.write_str(#expecting)
+                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
             }
 
             #[inline]
             fn visit_unit<__E>(self) -> _serde::export::Result<#type_ident, __E>
                 where __E: _serde::de::Error,
             {
-                Ok(#type_ident)
+                _serde::export::Ok(#type_ident)
             }
 
             #[inline]
             fn visit_seq<__V>(self, _: __V) -> _serde::export::Result<#type_ident, __V::Error>
                 where __V: _serde::de::SeqVisitor,
             {
-                Ok(#type_ident)
+                _serde::export::Ok(#type_ident)
             }
         }
 
@@ -278,10 +278,10 @@ fn deserialize_tuple(
         quote!(_serde::de::VariantVisitor::visit_tuple(visitor, #nfields, #visitor_expr))
     } else if nfields == 1 {
         let type_name = item_attrs.name().deserialize_name();
-        quote!(deserializer.deserialize_newtype_struct(#type_name, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_newtype_struct(deserializer, #type_name, #visitor_expr))
     } else {
         let type_name = item_attrs.name().deserialize_name();
-        quote!(deserializer.deserialize_tuple_struct(#type_name, #nfields, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_tuple_struct(deserializer, #type_name, #nfields, #visitor_expr))
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -298,7 +298,7 @@ fn deserialize_tuple(
             type Value = #ty;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                formatter.write_str(#expecting)
+                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
             }
 
             #visit_newtype_struct
@@ -341,7 +341,7 @@ fn deserialize_seq(
                 let visit = match field.attrs.deserialize_with() {
                     None => {
                         let field_ty = &field.ty;
-                        quote!(try!(visitor.visit::<#field_ty>()))
+                        quote!(try!(_serde::de::SeqVisitor::visit::<#field_ty>(&mut visitor)))
                     }
                     Some(path) => {
                         let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
@@ -349,7 +349,8 @@ fn deserialize_seq(
                         quote!({
                             #wrapper
                             #wrapper_impl
-                            try!(visitor.visit::<#wrapper_ty>()).map(|wrap| wrap.value)
+                            try!(_serde::de::SeqVisitor::visit::<#wrapper_ty>(&mut visitor))
+                                .map(|wrap| wrap.value)
                         })
                     }
                 };
@@ -357,7 +358,7 @@ fn deserialize_seq(
                     let #var = match #visit {
                         Some(value) => { value },
                         None => {
-                            return Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                            return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                         }
                     };
                 };
@@ -379,7 +380,7 @@ fn deserialize_seq(
 
     quote! {
         #(#let_values)*
-        Ok(#result)
+        _serde::export::Ok(#result)
     }
 }
 
@@ -411,7 +412,7 @@ fn deserialize_newtype_struct(
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer,
         {
-            Ok(#type_path(#value))
+            _serde::export::Ok(#type_path(#value))
         }
     }
 }
@@ -461,7 +462,7 @@ fn deserialize_struct(
     } else {
         let type_name = item_attrs.name().deserialize_name();
         quote! {
-            deserializer.deserialize_struct(#type_name, FIELDS, #visitor_expr)
+            _serde::Deserializer::deserialize_struct(deserializer, #type_name, FIELDS, #visitor_expr)
         }
     };
 
@@ -481,7 +482,7 @@ fn deserialize_struct(
             type Value = #ty;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                formatter.write_str(#expecting)
+                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
             }
 
             #[inline]
@@ -563,13 +564,14 @@ fn deserialize_item_enum(
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let Err(err) = visitor.visit_variant::<__Field>();
-            // Err(err)
-            visitor.visit_variant::<__Field>().map(|(impossible, _)| match impossible {})
+            // let _serde::export::Err(err) = _serde::de::EnumVisitor::visit_variant::<__Field>(visitor);
+            // _serde::export::Err(err)
+            _serde::de::EnumVisitor::visit_variant::<__Field>(visitor)
+                .map(|(impossible, _)| match impossible {})
         }
     } else {
         quote! {
-            match try!(visitor.visit_variant()) {
+            match try!(_serde::de::EnumVisitor::visit_variant(visitor)) {
                 #(#variant_arms)*
             }
         }
@@ -586,7 +588,7 @@ fn deserialize_item_enum(
             type Value = #ty;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                formatter.write_str(#expecting)
+                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
             }
 
             fn visit_enum<__V>(self, visitor: __V) -> _serde::export::Result<#ty, __V::Error>
@@ -598,7 +600,7 @@ fn deserialize_item_enum(
 
         #variants_stmt
 
-        deserializer.deserialize_enum(#type_name, VARIANTS, #visitor_expr)
+        _serde::Deserializer::deserialize_enum(deserializer, #type_name, VARIANTS, #visitor_expr)
     })
 }
 
@@ -615,7 +617,7 @@ fn deserialize_variant(
         Style::Unit => {
             quote!({
                 try!(_serde::de::VariantVisitor::visit_unit(visitor));
-                Ok(#type_ident::#variant_ident)
+                _serde::export::Ok(#type_ident::#variant_ident)
             })
         }
         Style::Newtype => {
@@ -673,7 +675,7 @@ fn deserialize_newtype_variant(
         }
     };
     quote! {
-        Ok(#type_ident::#variant_ident(#visit)),
+        _serde::export::Ok(#type_ident::#variant_ident(#visit)),
     }
 }
 
@@ -701,9 +703,9 @@ fn deserialize_field_visitor(
             {
                 match value {
                     #(
-                        #variant_indices => Ok(__Field::#field_idents),
+                        #variant_indices => _serde::export::Ok(__Field::#field_idents),
                     )*
-                    _ => Err(_serde::de::Error::invalid_value(
+                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
                                 _serde::de::Unexpected::Unsigned(value as u64),
                                 &#fallthrough_msg))
                 }
@@ -715,15 +717,15 @@ fn deserialize_field_visitor(
 
     let fallthrough_arm = if is_variant {
         quote! {
-            Err(_serde::de::Error::unknown_variant(value, VARIANTS))
+            _serde::export::Err(_serde::de::Error::unknown_variant(value, VARIANTS))
         }
     } else if item_attrs.deny_unknown_fields() {
         quote! {
-            Err(_serde::de::Error::unknown_field(value, FIELDS))
+            _serde::export::Err(_serde::de::Error::unknown_field(value, FIELDS))
         }
     } else {
         quote! {
-            Ok(__Field::__ignore)
+            _serde::export::Ok(__Field::__ignore)
         }
     };
 
@@ -755,7 +757,7 @@ fn deserialize_field_visitor(
                     type Value = __Field;
 
                     fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                        formatter.write_str("field name")
+                        _serde::export::fmt::Formatter::write_str(formatter, "field name")
                     }
 
                     #visit_index
@@ -765,7 +767,7 @@ fn deserialize_field_visitor(
                     {
                         match value {
                             #(
-                                #field_strs => Ok(__Field::#field_idents),
+                                #field_strs => _serde::export::Ok(__Field::#field_idents),
                             )*
                             _ => #fallthrough_arm
                         }
@@ -776,7 +778,7 @@ fn deserialize_field_visitor(
                     {
                         match value {
                             #(
-                                #field_bytes => Ok(__Field::#field_idents),
+                                #field_bytes => _serde::export::Ok(__Field::#field_idents),
                             )*
                             _ => {
                                 #bytes_to_str
@@ -786,7 +788,7 @@ fn deserialize_field_visitor(
                     }
                 }
 
-                deserializer.deserialize_struct_field(__FieldVisitor)
+                _serde::Deserializer::deserialize_struct_field(deserializer, __FieldVisitor)
             }
         }
     }
@@ -848,7 +850,7 @@ fn deserialize_map(
         .map(|&(field, ref name)| {
             let field_ty = &field.ty;
             quote! {
-                let mut #name: Option<#field_ty> = None;
+                let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
             }
         });
 
@@ -862,7 +864,7 @@ fn deserialize_map(
                 None => {
                     let field_ty = &field.ty;
                     quote! {
-                        try!(visitor.visit_value::<#field_ty>())
+                        try!(_serde::de::MapVisitor::visit_value::<#field_ty>(&mut visitor))
                     }
                 }
                 Some(path) => {
@@ -871,16 +873,16 @@ fn deserialize_map(
                     quote!({
                         #wrapper
                         #wrapper_impl
-                        try!(visitor.visit_value::<#wrapper_ty>()).value
+                        try!(_serde::de::MapVisitor::visit_value::<#wrapper_ty>(&mut visitor)).value
                     })
                 }
             };
             quote! {
                 __Field::#name => {
-                    if #name.is_some() {
-                        return Err(<__V::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                    if _serde::export::Option::is_some(&#name) {
+                        return _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
-                    #name = Some(#visit);
+                    #name = _serde::export::Some(#visit);
                 }
             }
         });
@@ -890,7 +892,7 @@ fn deserialize_map(
         None
     } else {
         Some(quote! {
-            _ => { let _ = try!(visitor.visit_value::<_serde::de::impls::IgnoredAny>()); }
+            _ => { let _ = try!(_serde::de::MapVisitor::visit_value::<_serde::de::impls::IgnoredAny>(&mut visitor)); }
         })
     };
 
@@ -898,12 +900,13 @@ fn deserialize_map(
     let match_keys = if item_attrs.deny_unknown_fields() && all_skipped {
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let None::<__Field> = try!(visitor.visit_key());
-            try!(visitor.visit_key::<__Field>()).map(|impossible| match impossible {});
+            // let _serde::export::None::<__Field> = try!(_serde::de::MapVisitor::visit_key(&mut visitor));
+            try!(_serde::de::MapVisitor::visit_key::<__Field>(&mut visitor))
+                .map(|impossible| match impossible {});
         }
     } else {
         quote! {
-            while let Some(key) = try!(visitor.visit_key::<__Field>()) {
+            while let _serde::export::Some(key) = try!(_serde::de::MapVisitor::visit_key::<__Field>(&mut visitor)) {
                 match key {
                     #(#value_arms)*
                     #ignored_arm
@@ -919,8 +922,8 @@ fn deserialize_map(
 
             quote! {
                 let #name = match #name {
-                    Some(#name) => #name,
-                    None => #missing_expr
+                    _serde::export::Some(#name) => #name,
+                    _serde::export::None => #missing_expr
                 };
             }
         });
@@ -943,7 +946,7 @@ fn deserialize_map(
 
         #(#extract_values)*
 
-        Ok(#struct_path { #(#result),* })
+        _serde::export::Ok(#struct_path { #(#result),* })
     }
 }
 
@@ -990,7 +993,7 @@ fn wrap_deserialize_with(
                     where __D: _serde::Deserializer
                 {
                     let value = try!(#deserialize_with(__d));
-                    Ok(__SerdeDeserializeWithStruct {
+                    _serde::export::Ok(__SerdeDeserializeWithStruct {
                         value: value,
                         phantom: _serde::export::PhantomData,
                     })
@@ -1021,7 +1024,7 @@ fn expr_is_missing(attrs: &attr::Field) -> Tokens {
         }
         Some(_) => {
             quote! {
-                return Err(<__V::Error as _serde::de::Error>::missing_field(#name))
+                return _serde::export::Err(<__V::Error as _serde::de::Error>::missing_field(#name))
             }
         }
     }

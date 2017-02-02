@@ -125,7 +125,7 @@ fn serialize_unit_struct(item_attrs: &attr::Item) -> Tokens {
     let type_name = item_attrs.name().serialize_name();
 
     quote! {
-        _serializer.serialize_unit_struct(#type_name)
+        _serde::Serializer::serialize_unit_struct(_serializer, #type_name)
     }
 }
 
@@ -144,7 +144,7 @@ fn serialize_newtype_struct(
     }
 
     quote! {
-        _serializer.serialize_newtype_struct(#type_name, #field_expr)
+        _serde::Serializer::serialize_newtype_struct(_serializer, #type_name, #field_expr)
     }
 }
 
@@ -167,7 +167,7 @@ fn serialize_tuple_struct(
     let let_mut = mut_if(len > 0);
 
     quote! {
-        let #let_mut __serde_state = try!(_serializer.serialize_tuple_struct(#type_name, #len));
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(_serializer, #type_name, #len));
         #(#serialize_stmts)*
         _serde::ser::SerializeTupleStruct::end(__serde_state)
     }
@@ -208,7 +208,7 @@ fn serialize_struct(
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote! {
-        let #let_mut __serde_state = try!(_serializer.serialize_struct(#type_name, #len));
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(_serializer, #type_name, #len));
         #(#serialize_fields)*
         _serde::ser::SerializeStruct::end(__serde_state)
     }
@@ -260,7 +260,7 @@ fn serialize_variant(
         let skipped_msg = format!("the enum variant {}::{} cannot be serialized",
                                 type_ident, variant_ident);
         let skipped_err = quote! {
-            Err(_serde::ser::Error::custom(#skipped_msg))
+            _serde::export::Err(_serde::ser::Error::custom(#skipped_msg))
         };
         let fields_pat = match variant.style {
             Style::Unit => quote!(),
@@ -380,7 +380,8 @@ fn serialize_tuple_variant(
     let let_mut = mut_if(len > 0);
 
     quote! {
-        let #let_mut __serde_state = try!(_serializer.serialize_tuple_variant(
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_variant(
+            _serializer,
             #type_name,
             #variant_index,
             #variant_name,
@@ -426,7 +427,8 @@ fn serialize_struct_variant(
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote! {
-        let #let_mut __serde_state = try!(_serializer.serialize_struct_variant(
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct_variant(
+            _serializer,
             #item_name,
             #variant_index,
             #variant_name,
@@ -537,7 +539,7 @@ fn wrap_serialize_with(
     quote!({
         struct __SerializeWith #wrapper_generics #where_clause {
             value: &'__a #field_ty,
-            phantom: ::std::marker::PhantomData<#item_ty>,
+            phantom: _serde::export::PhantomData<#item_ty>,
         }
 
         impl #wrapper_generics _serde::Serialize for #wrapper_ty #where_clause {
@@ -550,7 +552,7 @@ fn wrap_serialize_with(
 
         &__SerializeWith {
             value: #value,
-            phantom: ::std::marker::PhantomData::<#item_ty>,
+            phantom: _serde::export::PhantomData::<#item_ty>,
         }
     })
 }
