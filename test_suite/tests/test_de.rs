@@ -225,7 +225,7 @@ declare_tests! {
         ],
         () => &[
             Token::TupleStructStart("Anything", 0),
-            Token::SeqEnd,
+            Token::TupleStructEnd,
         ],
     }
     test_unit_struct {
@@ -330,7 +330,7 @@ declare_tests! {
         ],
         BTreeSet::<isize>::new() => &[
             Token::TupleStructStart("Anything", 0),
-            Token::SeqEnd,
+            Token::TupleStructEnd,
         ],
     }
     test_hashset {
@@ -358,7 +358,7 @@ declare_tests! {
         ],
         HashSet::<isize>::new() => &[
             Token::TupleStructStart("Anything", 0),
-            Token::SeqEnd,
+            Token::TupleStructEnd,
         ],
         hashset![FnvHasher @ 1, 2, 3] => &[
             Token::SeqStart(Some(3)),
@@ -408,7 +408,7 @@ declare_tests! {
         ],
         Vec::<isize>::new() => &[
             Token::TupleStructStart("Anything", 0),
-            Token::SeqEnd,
+            Token::TupleStructEnd,
         ],
     }
     test_array {
@@ -472,7 +472,7 @@ declare_tests! {
         ],
         [0; 0] => &[
             Token::TupleStructStart("Anything", 0),
-            Token::SeqEnd,
+            Token::TupleStructEnd,
         ],
     }
     test_tuple {
@@ -564,7 +564,7 @@ declare_tests! {
         ],
         BTreeMap::<isize, isize>::new() => &[
             Token::StructStart("Anything", 0),
-            Token::MapEnd,
+            Token::StructEnd,
         ],
     }
     test_hashmap {
@@ -618,7 +618,7 @@ declare_tests! {
         ],
         HashMap::<isize, isize>::new() => &[
             Token::StructStart("Anything", 0),
-            Token::MapEnd,
+            Token::StructEnd,
         ],
         hashmap![FnvHasher @ 1 => 2, 3 => 4] => &[
             Token::MapStart(Some(2)),

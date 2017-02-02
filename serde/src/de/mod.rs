@@ -115,6 +115,7 @@ mod from_primitive;
 // Helpers used by generated code. Not public API.
 #[doc(hidden)]
 pub mod private;
+mod content;
 
 ///////////////////////////////////////////////////////////////////////////////
 
