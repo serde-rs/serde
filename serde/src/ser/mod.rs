@@ -625,6 +625,24 @@ pub trait Serializer: Sized {
         }
         serializer.end()
     }
+
+    /// Collect an iterator as a map.
+    ///
+    /// The default implementation serializes each pair yielded by the iterator
+    /// using `Self::SerializeMap`. Implementors should not need to override
+    /// this method.
+    fn collect_map<K, V, I>(self, iter: I) -> Result<Self::Ok, Self::Error>
+        where K: Serialize,
+              V: Serialize,
+              I: IntoIterator<Item = (K, V)>,
+    {
+        let iter = iter.into_iter();
+        let mut serializer = try!(self.serialize_map(iterator_len_hint(&iter)));
+        for (key, value) in iter {
+            try!(serializer.serialize_entry(&key, &value));
+        }
+        serializer.end()
+    }
 }
 
 /// Returned from `Serializer::serialize_seq` and
