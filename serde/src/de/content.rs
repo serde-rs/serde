@@ -1,3 +1,15 @@
+// This module is doc(hidden) and nothing here should be used outside of
+// generated code.
+//
+// We will iterate on the implementation for a few releases and only have to
+// worry about backward compatibility for the `untagged` and `tag` attributes
+// rather than for this entire mechanism.
+//
+// This issue is tracking making some of this stuff public:
+// https://github.com/serde-rs/serde/issues/741
+
+#![doc(hidden)]
+
 use core::fmt;
 use core::marker::PhantomData;
 
@@ -22,7 +34,6 @@ use de::{
 /// deserializing untagged enums and internally tagged enums.
 ///
 /// Not public API. Use serde-value instead.
-#[allow(missing_docs)]
 #[derive(Debug)]
 pub enum Content<E> {
     // Don't mind the PhantomData, just need to use E somewhere.
