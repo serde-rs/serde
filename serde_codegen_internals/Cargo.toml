@@ -1,6 +1,6 @@
 [package]
 name = "serde_codegen_internals"
-version = "0.12.1"
+version = "0.13.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "AST representation used by Serde codegen. Unstable."
