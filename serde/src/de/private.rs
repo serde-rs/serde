@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use de::{Deserialize, Deserializer, Error, Visitor};
 
+#[cfg(any(feature = "std", feature = "collections"))]
 pub use de::content::{
     Content,
     TaggedContentVisitor,

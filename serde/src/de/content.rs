@@ -1,5 +1,11 @@
-use std::fmt;
-use std::marker::PhantomData;
+use core::fmt;
+use core::marker::PhantomData;
+
+#[cfg(all(not(feature = "std"), feature = "collections"))]
+use collections::{String, Vec};
+
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::boxed::Box;
 
 use de::{
     self,

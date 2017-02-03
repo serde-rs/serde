@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use core::fmt::{self, Display};
 
 use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct};
 
