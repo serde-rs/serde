@@ -63,7 +63,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "unstable", feature(nonzero, inclusive_range, zero_one))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
-#![cfg_attr(feature = "collections", feature(collections, enumset))]
+#![cfg_attr(feature = "collections", feature(collections))]
 #![cfg_attr(feature = "cargo-clippy", allow(linkedlist, type_complexity, doc_markdown))]
 #![deny(missing_docs)]
 

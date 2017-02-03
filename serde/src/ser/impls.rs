@@ -25,8 +25,6 @@ use collections::{
 };
 
 #[cfg(feature = "collections")]
-use collections::enum_set::{CLike, EnumSet};
-#[cfg(feature = "collections")]
 use collections::borrow::ToOwned;
 
 #[cfg(feature = "std")]
@@ -274,13 +272,6 @@ impl<T> Serialize for BinaryHeap<T>
 #[cfg(any(feature = "std", feature = "collections"))]
 impl<T> Serialize for BTreeSet<T>
     where T: Serialize + Ord,
-{
-    serialize_seq!();
-}
-
-#[cfg(feature = "collections")]
-impl<T> Serialize for EnumSet<T>
-    where T: Serialize + CLike
 {
     serialize_seq!();
 }

@@ -28,8 +28,6 @@ use std::collections::{
 };
 
 #[cfg(feature = "collections")]
-use collections::enum_set::{CLike, EnumSet};
-#[cfg(feature = "collections")]
 use collections::borrow::ToOwned;
 
 use core::fmt;
@@ -480,15 +478,6 @@ seq_impl!(
     BTreeSet::new(),
     BTreeSet::new(),
     BTreeSet::insert);
-
-#[cfg(feature = "collections")]
-seq_impl!(
-    EnumSet<T>,
-    EnumSetVisitor<T: Deserialize + CLike>,
-    visitor,
-    EnumSet::new(),
-    EnumSet::new(),
-    EnumSet::insert);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
