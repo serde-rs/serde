@@ -725,6 +725,24 @@ fn test_untagged_enum() {
         ],
         Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
     );
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::TupleStart(3),
+
+            Token::TupleSep,
+            Token::U8(1),
+
+            Token::TupleSep,
+            Token::U8(2),
+
+            Token::TupleSep,
+            Token::U8(3),
+
+            Token::TupleEnd,
+        ],
+        Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
+    );
 }
 
 #[test]

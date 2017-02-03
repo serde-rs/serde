@@ -537,11 +537,17 @@ impl<E> Deserializer for Content<E>
             Content::Newtype(v) => visitor.visit_newtype_struct(*v),
             Content::Seq(v) => {
                 let seq = v.into_iter();
-                visitor.visit_seq(de::value::SeqDeserializer::new(seq))
+                let mut seq_visitor = de::value::SeqDeserializer::new(seq);
+                let value = try!(visitor.visit_seq(&mut seq_visitor));
+                try!(seq_visitor.end());
+                Ok(value)
             },
             Content::Map(v) => {
                 let map = v.into_iter();
-                visitor.visit_map(de::value::MapDeserializer::new(map))
+                let mut map_visitor = de::value::MapDeserializer::new(map);
+                let value = try!(visitor.visit_map(&mut map_visitor));
+                try!(map_visitor.end());
+                Ok(value)
             },
             Content::Bytes(v) => visitor.visit_byte_buf(v),
         }
@@ -611,11 +617,17 @@ impl<'a, E> Deserializer for &'a Content<E>
             Content::Newtype(ref v) => visitor.visit_newtype_struct(&**v),
             Content::Seq(ref v) => {
                 let seq = v.into_iter();
-                visitor.visit_seq(de::value::SeqDeserializer::new(seq))
+                let mut seq_visitor = de::value::SeqDeserializer::new(seq);
+                let value = try!(visitor.visit_seq(&mut seq_visitor));
+                try!(seq_visitor.end());
+                Ok(value)
             },
             Content::Map(ref v) => {
                 let map = v.into_iter().map(|&(ref k, ref v)| (k, v));
-                visitor.visit_map(de::value::MapDeserializer::new(map))
+                let mut map_visitor = de::value::MapDeserializer::new(map);
+                let value = try!(visitor.visit_map(&mut map_visitor));
+                try!(map_visitor.end());
+                Ok(value)
             },
             Content::Bytes(ref v) => visitor.visit_bytes(v),
         }
