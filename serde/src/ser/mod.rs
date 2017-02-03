@@ -106,6 +106,10 @@ use core::fmt::Display;
 mod impls;
 mod impossible;
 
+// Helpers used by generated code. Not public API.
+#[doc(hidden)]
+pub mod private;
+
 pub use self::impossible::Impossible;
 
 ///////////////////////////////////////////////////////////////////////////////

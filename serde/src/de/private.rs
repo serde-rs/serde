@@ -2,6 +2,14 @@ use core::marker::PhantomData;
 
 use de::{Deserialize, Deserializer, Error, Visitor};
 
+#[cfg(any(feature = "std", feature = "collections"))]
+pub use de::content::{
+    Content,
+    TaggedContentVisitor,
+    InternallyTaggedUnitVisitor,
+    UntaggedUnitVisitor,
+};
+
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
 pub fn missing_field<V, E>(field: &'static str) -> Result<V, E>

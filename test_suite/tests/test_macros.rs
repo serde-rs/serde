@@ -1,11 +1,14 @@
 extern crate serde_test;
 use self::serde_test::{
+    Error,
     Token,
     assert_tokens,
     assert_ser_tokens,
     assert_de_tokens,
+    assert_de_tokens_error,
 };
 
+use std::collections::BTreeMap;
 use std::marker::PhantomData;
 
 // That tests that the derived Serialize implementation doesn't trigger
@@ -623,5 +626,258 @@ fn test_enum_state_field() {
 
             Token::EnumMapEnd,
         ]
+    );
+}
+
+#[test]
+fn test_untagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum Untagged {
+        A {
+            a: u8,
+        },
+        B {
+            b: u8,
+        },
+        C,
+        D(u8),
+        E(String),
+        F(u8, u8),
+    }
+
+    assert_tokens(
+        &Untagged::A { a: 1 },
+        &[
+            Token::StructStart("Untagged", 1),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_tokens(
+        &Untagged::B { b: 2 },
+        &[
+            Token::StructStart("Untagged", 1),
+
+            Token::StructSep,
+            Token::Str("b"),
+            Token::U8(2),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_tokens(
+        &Untagged::C,
+        &[
+            Token::Unit,
+        ]
+    );
+
+    assert_tokens(
+        &Untagged::D(4),
+        &[
+            Token::U8(4),
+        ]
+    );
+    assert_tokens(
+        &Untagged::E("e".to_owned()),
+        &[
+            Token::Str("e"),
+        ]
+    );
+
+    assert_tokens(
+        &Untagged::F(1, 2),
+        &[
+            Token::TupleStart(2),
+
+            Token::TupleSep,
+            Token::U8(1),
+
+            Token::TupleSep,
+            Token::U8(2),
+
+            Token::TupleEnd,
+        ]
+    );
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::Option(false),
+        ],
+        Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
+    );
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::TupleStart(1),
+
+            Token::TupleSep,
+            Token::U8(1),
+
+            Token::TupleEnd,
+        ],
+        Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
+    );
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::TupleStart(3),
+
+            Token::TupleSep,
+            Token::U8(1),
+
+            Token::TupleSep,
+            Token::U8(2),
+
+            Token::TupleSep,
+            Token::U8(3),
+
+            Token::TupleEnd,
+        ],
+        Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
+    );
+}
+
+#[test]
+fn test_internally_tagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTagged {
+        A {
+            a: u8,
+        },
+        B {
+            b: u8,
+        },
+        C,
+        D(BTreeMap<String, String>),
+        E(Newtype),
+        F(Struct),
+    }
+
+    assert_tokens(
+        &InternallyTagged::A { a: 1 },
+        &[
+            Token::StructStart("InternallyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("A"),
+
+            Token::StructSep,
+            Token::Str("a"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_tokens(
+        &InternallyTagged::B { b: 2 },
+        &[
+            Token::StructStart("InternallyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("B"),
+
+            Token::StructSep,
+            Token::Str("b"),
+            Token::U8(2),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_tokens(
+        &InternallyTagged::C,
+        &[
+            Token::StructStart("InternallyTagged", 1),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("C"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_tokens(
+        &InternallyTagged::D(BTreeMap::new()),
+        &[
+            Token::MapStart(Some(1)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("D"),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &InternallyTagged::E(Newtype(BTreeMap::new())),
+        &[
+            Token::MapStart(Some(1)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("E"),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &InternallyTagged::F(Struct { f: 6 }),
+        &[
+            Token::StructStart("Struct", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("F"),
+
+            Token::StructSep,
+            Token::Str("f"),
+            Token::U8(6),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::MapStart(Some(0)),
+            Token::MapEnd,
+        ],
+        Error::Message("missing field `type`".to_owned()),
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::MapStart(Some(1)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("Z"),
+
+            Token::MapEnd,
+        ],
+        Error::Message("unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`".to_owned()),
     );
 }

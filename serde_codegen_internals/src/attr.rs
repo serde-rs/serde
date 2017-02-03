@@ -92,6 +92,32 @@ pub struct Item {
     deny_unknown_fields: bool,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
+    tag: EnumTag,
+}
+
+/// Styles of representing an enum.
+#[derive(Debug)]
+pub enum EnumTag {
+    /// The default.
+    ///
+    /// ```json
+    /// {"variant1": {"key1": "value1", "key2": "value2"}}
+    /// ```
+    External,
+
+    /// `#[serde(tag = "type")]`
+    ///
+    /// ```json
+    /// {"type": "variant1", "key1": "value1", "key2": "value2"}
+    /// ```
+    Internal(String),
+
+    /// `#[serde(untagged)]`
+    ///
+    /// ```json
+    /// {"key1": "value1", "key2": "value2"}
+    /// ```
+    None,
 }
 
 impl Item {
@@ -102,6 +128,8 @@ impl Item {
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
+        let mut untagged = BoolAttr::none(cx, "untagged");
+        let mut internal_tag = Attr::none(cx, "tag");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -143,6 +171,32 @@ impl Item {
                         }
                     }
 
+                    // Parse `#[serde(untagged)]`
+                    MetaItem(Word(ref name)) if name == "untagged" => {
+                        match item.body {
+                            syn::Body::Enum(_) => {
+                                untagged.set_true();
+                            }
+                            syn::Body::Struct(_) => {
+                                cx.error("#[serde(untagged)] can only be used on enums")
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(tag = "type")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "tag" => {
+                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
+                            match item.body {
+                                syn::Body::Enum(_) => {
+                                    internal_tag.set(s);
+                                }
+                                syn::Body::Struct(_) => {
+                                    cx.error("#[serde(tag = \"...\")] can only be used on enums")
+                                }
+                            }
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -155,6 +209,32 @@ impl Item {
             }
         }
 
+        let tag = match (untagged.get(), internal_tag.get()) {
+            (false, None) => EnumTag::External,
+            (true, None) => EnumTag::None,
+            (false, Some(tag)) => {
+                // Check that there are no tuple variants.
+                if let syn::Body::Enum(ref variants) = item.body {
+                    for variant in variants {
+                        match variant.data {
+                            syn::VariantData::Struct(_) | syn::VariantData::Unit => {}
+                            syn::VariantData::Tuple(ref fields) => {
+                                if fields.len() != 1 {
+                                    cx.error("#[serde(tag = \"...\")] cannot be used with tuple variants");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                EnumTag::Internal(tag)
+            }
+            (true, Some(_)) => {
+                cx.error("enum cannot be both untagged and internally tagged");
+                EnumTag::External // doesn't matter, will error
+            }
+        };
+
         Item {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
@@ -163,6 +243,7 @@ impl Item {
             deny_unknown_fields: deny_unknown_fields.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
+            tag: tag,
         }
     }
 
@@ -180,6 +261,10 @@ impl Item {
 
     pub fn de_bound(&self) -> Option<&[syn::WherePredicate]> {
         self.de_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn tag(&self) -> &EnumTag {
+        &self.tag
     }
 }
 

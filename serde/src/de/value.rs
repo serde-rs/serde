@@ -428,7 +428,9 @@ impl<I, E> SeqDeserializer<I, E>
         }
     }
 
-    fn end(&mut self) -> Result<(), E> {
+    /// Check for remaining elements after passing a `SeqDeserializer` to
+    /// `Visitor::visit_seq`.
+    pub fn end(mut self) -> Result<(), E> {
         let mut remaining = 0;
         while self.iter.next().is_some() {
             remaining += 1;
@@ -610,17 +612,9 @@ impl<I, E> MapDeserializer<I, E>
         }
     }
 
-    fn next_pair(&mut self) -> Option<(<I::Item as private::Pair>::First, <I::Item as private::Pair>::Second)> {
-        match self.iter.next() {
-            Some(kv) => {
-                self.count += 1;
-                Some(private::Pair::split(kv))
-            }
-            None => None,
-        }
-    }
-
-    fn end(&mut self) -> Result<(), E> {
+    /// Check for remaining elements after passing a `MapDeserializer` to
+    /// `Visitor::visit_map`.
+    pub fn end(mut self) -> Result<(), E> {
         let mut remaining = 0;
         while self.iter.next().is_some() {
             remaining += 1;
@@ -631,6 +625,16 @@ impl<I, E> MapDeserializer<I, E>
             // First argument is the number of elements in the data, second
             // argument is the number of elements expected by the Deserialize.
             Err(de::Error::invalid_length(self.count + remaining, &ExpectedInMap(self.count)))
+        }
+    }
+
+    fn next_pair(&mut self) -> Option<(<I::Item as private::Pair>::First, <I::Item as private::Pair>::Second)> {
+        match self.iter.next() {
+            Some(kv) => {
+                self.count += 1;
+                Some(private::Pair::split(kv))
+            }
+            None => None,
         }
     }
 }
