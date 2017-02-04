@@ -711,87 +711,93 @@ tuple_impls! {
 macro_rules! map_impl {
     (
         $ty:ty,
-        $visitor_ty:ident < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
-        $visitor:ident,
-        $ctor:expr,
+        < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
         $with_capacity:expr
     ) => {
-        /// A visitor that produces a map.
-        pub struct $visitor_ty<$($typaram),*> {
-            marker: PhantomData<$ty>,
-        }
-
-        impl<$($typaram),*> $visitor_ty<$($typaram),*>
-            where $($typaram: $bound1 $(+ $bound2)*),*
-        {
-            /// Construct a `MapVisitor*<T>`.
-            pub fn new() -> Self {
-                $visitor_ty {
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl<$($typaram),*> Visitor for $visitor_ty<$($typaram),*>
-            where $($typaram: $bound1 $(+ $bound2)*),*
-        {
-            type Value = $ty;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a map")
-            }
-
-            #[inline]
-            fn visit_unit<E>(self) -> Result<$ty, E>
-                where E: Error,
-            {
-                Ok($ctor)
-            }
-
-            #[inline]
-            fn visit_map<Visitor>(self, mut $visitor: Visitor) -> Result<$ty, Visitor::Error>
-                where Visitor: MapVisitor,
-            {
-                let mut values = $with_capacity;
-
-                while let Some((key, value)) = try!($visitor.visit()) {
-                    values.insert(key, value);
-                }
-
-                Ok(values)
-            }
-        }
-
         impl<$($typaram),*> Deserialize for $ty
             where $($typaram: $bound1 $(+ $bound2)*),*
         {
             fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.deserialize_map($visitor_ty::new())
+                deserialize_map(deserializer, $with_capacity, |key, value| (key, value))
             }
         }
     }
 }
 
+/// Deserializes a map-like type.
+///
+/// Can be used to deserialize map-like types where the keys or values do not implement
+/// `Deserialize`.
+pub fn deserialize_map<D, F, G, R, K, V, K2, V2>(deserializer: D, with_capacity: F, convert: G) -> Result<R, D::Error>
+    where D: Deserializer,
+          F: FnOnce(usize, Option<usize>) ->  R,
+          G: FnMut(K, V) -> (K2, V2),
+          R: Extend<(K2, V2)>,
+          K: Deserialize,
+          V: Deserialize,
+{
+    /// A visitor that produces a map.
+    pub struct MapVisitor_<F, G, R, K, V> {
+        convert: G,
+        with_capacity: F,
+        marker: PhantomData<(R, K, V)>,
+    }
+
+    impl<F, G, R, K, V, K2, V2> Visitor for MapVisitor_<F, G, R, K, V>
+        where F: FnOnce(usize, Option<usize>) ->  R,
+              G: FnMut(K, V) -> (K2, V2),
+              R: Extend<(K2, V2)>,
+              K: Deserialize,
+              V: Deserialize,
+    {
+        type Value = R;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a map")
+        }
+
+        #[inline]
+        fn visit_unit<E>(self) -> Result<R, E>
+            where E: Error,
+        {
+            Ok((self.with_capacity)(0, Some(0)))
+        }
+
+        #[inline]
+        fn visit_map<Visitor>(mut self, mut visitor: Visitor) -> Result<R, Visitor::Error>
+            where Visitor: MapVisitor,
+        {
+            let hint = visitor.size_hint();
+            let mut values = (self.with_capacity)(hint.0, hint.1);
+
+            while let Some((key, value)) = try!(visitor.visit()) {
+                let entry = (self.convert)(key, value);
+                values.extend(Some(entry));
+            }
+
+            Ok(values)
+        }
+    }
+    deserializer.deserialize_map(MapVisitor_ {
+        convert: convert,
+        with_capacity: with_capacity,
+        marker: PhantomData,
+    })
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
     BTreeMap<K, V>,
-    BTreeMapVisitor<K: Deserialize + Ord,
-                    V: Deserialize>,
-    visitor,
-    BTreeMap::new(),
-    BTreeMap::new());
+    <K: Deserialize + Ord, V: Deserialize>,
+    |_, _| BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
     HashMap<K, V, S>,
-    HashMapVisitor<K: Deserialize + Eq + Hash,
-                   V: Deserialize,
-                   S: BuildHasher + Default>,
-    visitor,
-    HashMap::with_hasher(S::default()),
-    HashMap::with_capacity_and_hasher(visitor.size_hint().0, S::default()));
+    <K: Deserialize + Eq + Hash, V: Deserialize, S: BuildHasher + Default>,
+    |min, _| HashMap::with_capacity_and_hasher(min, S::default()));
 
 ///////////////////////////////////////////////////////////////////////////////
 
