@@ -66,9 +66,6 @@ use super::{
 #[cfg(any(feature = "std", feature = "unstable"))]
 use super::Error;
 
-#[cfg(feature = "unstable")]
-use super::Iterator;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_visit {
@@ -147,24 +144,6 @@ impl<T> Serialize for PhantomData<T> {
     }
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-
-impl<T> Serialize for [T]
-    where T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer,
-    {
-        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self {
-            try!(seq.serialize_element(e));
-        }
-        seq.end()
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! array_impls {
@@ -220,33 +199,7 @@ array_impls!(32);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "unstable")]
-impl<'a, I> Serialize for Iterator<I>
-    where I: IntoIterator, <I as IntoIterator>::Item: Serialize
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer,
-    {
-        // FIXME: use specialization to prevent invalidating the object in case of clonable iterators?
-        let iter = match self.data.borrow_mut().take() {
-            Some(iter) => iter.into_iter(),
-            None => return Err(Error::custom("Iterator used twice")),
-        };
-        let size = match iter.size_hint() {
-            (lo, Some(hi)) if lo == hi => Some(lo),
-            _ => None,
-        };
-        let mut seq = try!(serializer.serialize_seq(size));
-        for e in iter {
-            try!(seq.serialize_element(&e));
-        }
-        seq.end()
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
+#[cfg(not(feature = "unstable"))]
 macro_rules! serialize_seq {
     () => {
         #[inline]
@@ -260,6 +213,24 @@ macro_rules! serialize_seq {
             seq.end()
         }
     }
+}
+
+#[cfg(feature = "unstable")]
+macro_rules! serialize_seq {
+    () => {
+        #[inline]
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: Serializer,
+        {
+            serializer.collect_seq(self)
+        }
+    }
+}
+
+impl<T> Serialize for [T]
+    where T: Serialize,
+{
+    serialize_seq!();
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -550,6 +521,7 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(not(feature = "unstable"))]
 macro_rules! serialize_map {
     () => {
         #[inline]
@@ -562,6 +534,18 @@ macro_rules! serialize_map {
                 try!(map.serialize_entry(k, v));
             }
             map.end()
+        }
+    }
+}
+
+#[cfg(feature = "unstable")]
+macro_rules! serialize_map {
+    () => {
+        #[inline]
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: Serializer,
+        {
+            serializer.collect_map(self)
         }
     }
 }

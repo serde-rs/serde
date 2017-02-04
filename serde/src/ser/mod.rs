@@ -98,10 +98,8 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
-#[cfg(feature = "unstable")]
-use core::cell::RefCell;
-
 use core::fmt::Display;
+use core::iter::IntoIterator;
 
 mod impls;
 mod impossible;
@@ -242,7 +240,7 @@ pub trait Serialize {
 /// is the `serde_json::value::Serializer` (distinct from the main `serde_json`
 /// serializer) that produces a `serde_json::Value` data structure in memory as
 /// output.
-pub trait Serializer {
+pub trait Serializer: Sized {
     /// The output type produced by this `Serializer` during successful
     /// serialization. Most serializers that produce text or binary output
     /// should set `Ok = ()` and serialize into an `io::Write` or buffer
@@ -607,6 +605,41 @@ pub trait Serializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error>;
+
+    /// Collect an iterator as a sequence.
+    ///
+    /// The default implementation serializes each item yielded by the iterator
+    /// using `Self::SerializeSeq`. Implementors should not need to override
+    /// this method.
+    fn collect_seq<I>(self, iter: I) -> Result<Self::Ok, Self::Error>
+        where I: IntoIterator,
+              <I as IntoIterator>::Item: Serialize,
+    {
+        let iter = iter.into_iter();
+        let mut serializer = try!(self.serialize_seq(iter.len_hint()));
+        for item in iter {
+            try!(serializer.serialize_element(&item));
+        }
+        serializer.end()
+    }
+
+    /// Collect an iterator as a map.
+    ///
+    /// The default implementation serializes each pair yielded by the iterator
+    /// using `Self::SerializeMap`. Implementors should not need to override
+    /// this method.
+    fn collect_map<K, V, I>(self, iter: I) -> Result<Self::Ok, Self::Error>
+        where K: Serialize,
+              V: Serialize,
+              I: IntoIterator<Item = (K, V)>,
+    {
+        let iter = iter.into_iter();
+        let mut serializer = try!(self.serialize_map(iter.len_hint()));
+        for (key, value) in iter {
+            try!(serializer.serialize_entry(&key, &value));
+        }
+        serializer.end()
+    }
 }
 
 /// Returned from `Serializer::serialize_seq` and
@@ -803,26 +836,32 @@ pub trait SerializeStructVariant {
     fn end(self) -> Result<Self::Ok, Self::Error>;
 }
 
-/// A wrapper type for iterators that implements `Serialize` for iterators whose
-/// items implement `Serialize`. Don't use multiple times. Create new versions
-/// of this with the `serde::ser::iterator` function every time you want to
-/// serialize an iterator.
-#[cfg(feature = "unstable")]
-pub struct Iterator<I>
-    where <I as IntoIterator>::Item: Serialize,
-          I: IntoIterator
-{
-    data: RefCell<Option<I>>,
+trait LenHint: Iterator {
+    fn len_hint(&self) -> Option<usize>;
 }
 
-/// Create a wrapper type that can be passed to any function expecting a
-/// `Serialize` and will serialize the given iterator as a sequence.
+impl<I: Iterator> LenHint for I {
+    #[cfg(not(feature = "unstable"))]
+    fn len_hint(&self) -> Option<usize> {
+        iterator_len_hint(self)
+    }
+
+    #[cfg(feature = "unstable")]
+    default fn len_hint(&self) -> Option<usize> {
+        iterator_len_hint(self)
+    }
+}
+
 #[cfg(feature = "unstable")]
-pub fn iterator<I>(iter: I) -> Iterator<I>
-    where <I as IntoIterator>::Item: Serialize,
-          I: IntoIterator
-{
-    Iterator {
-        data: RefCell::new(Some(iter)),
+impl<I: ExactSizeIterator> LenHint for I {
+    fn len_hint(&self) -> Option<usize> {
+        Some(self.len())
+    }
+}
+
+fn iterator_len_hint<I: Iterator>(iter: &I) -> Option<usize> {
+    match iter.size_hint() {
+        (lo, Some(hi)) if lo == hi => Some(lo),
+        _ => None,
     }
 }
