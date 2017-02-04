@@ -397,124 +397,114 @@ impl<T> Deserialize for PhantomData<T> {
 macro_rules! seq_impl {
     (
         $ty:ty,
-        $visitor_ty:ident < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
-        $visitor:ident,
-        $ctor:expr,
-        $with_capacity:expr,
-        $insert:expr
+        < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
+        $with_capacity:expr
     ) => {
-        /// A visitor that produces a sequence.
-        pub struct $visitor_ty<$($typaram),*> {
-            marker: PhantomData<$ty>,
-        }
-
-        impl<$($typaram),*> $visitor_ty<$($typaram),*>
-            where $($typaram: $bound1 $(+ $bound2)*),*
-        {
-            /// Construct a new sequence visitor.
-            pub fn new() -> Self {
-                $visitor_ty {
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl<$($typaram),*> Visitor for $visitor_ty<$($typaram),*>
-            where $($typaram: $bound1 $(+ $bound2)*),*
-        {
-            type Value = $ty;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a sequence")
-            }
-
-            #[inline]
-            fn visit_unit<E>(self) -> Result<$ty, E>
-                where E: Error,
-            {
-                Ok($ctor)
-            }
-
-            #[inline]
-            fn visit_seq<V>(self, mut $visitor: V) -> Result<$ty, V::Error>
-                where V: SeqVisitor,
-            {
-                let mut values = $with_capacity;
-
-                while let Some(value) = try!($visitor.visit()) {
-                    $insert(&mut values, value);
-                }
-
-                Ok(values)
-            }
-        }
-
         impl<$($typaram),*> Deserialize for $ty
             where $($typaram: $bound1 $(+ $bound2)*),*
         {
             fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
                 where D: Deserializer,
             {
-                deserializer.deserialize_seq($visitor_ty::new())
+                deserialize_seq(deserializer, $with_capacity, |v| v)
             }
         }
     }
 }
 
+/// Deserializes a sequence-like type.
+///
+/// Can be used to deserialize sequence-like types where the values do not implement `Deserialize`.
+pub fn deserialize_seq<D, F, G, R, V, V2>(deserializer: D, with_capacity: F, convert: G) -> Result<R, D::Error>
+    where D: Deserializer,
+          F: FnOnce(usize, Option<usize>) ->  R,
+          G: FnMut(V) -> V2,
+          R: Extend<V2>,
+          V: Deserialize,
+{
+    /// A visitor that produces a sequence.
+    pub struct SeqVisitor_<F, G, R, V> {
+        convert: G,
+        with_capacity: F,
+        marker: PhantomData<(R, V)>,
+    }
+
+    impl<F, G, R, V, V2> Visitor for SeqVisitor_<F, G, R, V>
+        where F: FnOnce(usize, Option<usize>) ->  R,
+              G: FnMut(V) -> V2,
+              R: Extend<V2>,
+              V: Deserialize,
+    {
+        type Value = R;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a sequence")
+        }
+
+        #[inline]
+        fn visit_unit<E>(self) -> Result<R, E>
+            where E: Error,
+        {
+            Ok((self.with_capacity)(0, Some(0)))
+        }
+
+        #[inline]
+        fn visit_seq<Visitor>(mut self, mut visitor: Visitor) -> Result<R, Visitor::Error>
+            where Visitor: SeqVisitor,
+        {
+            let hint = visitor.size_hint();
+            let mut values = (self.with_capacity)(hint.0, hint.1);
+
+            while let Some(value) = try!(visitor.visit()) {
+                let value = (self.convert)(value);
+                values.extend(Some(value));
+            }
+
+            Ok(values)
+        }
+    }
+    deserializer.deserialize_map(SeqVisitor_ {
+        convert: convert,
+        with_capacity: with_capacity,
+        marker: PhantomData,
+    })
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BinaryHeap<T>,
-    BinaryHeapVisitor<T: Deserialize + Ord>,
-    visitor,
-    BinaryHeap::new(),
-    BinaryHeap::with_capacity(visitor.size_hint().0),
-    BinaryHeap::push);
+    <T: Deserialize + Ord>,
+    |_, _| BinaryHeap::new());
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BTreeSet<T>,
-    BTreeSetVisitor<T: Deserialize + Eq + Ord>,
-    visitor,
-    BTreeSet::new(),
-    BTreeSet::new(),
-    BTreeSet::insert);
+    <T: Deserialize + Eq + Ord>,
+    |_, _| BTreeSet::new());
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     LinkedList<T>,
-    LinkedListVisitor<T: Deserialize>,
-    visitor,
-    LinkedList::new(),
-    LinkedList::new(),
-    LinkedList::push_back);
+    <T: Deserialize>,
+    |_, _| LinkedList::new());
 
 #[cfg(feature = "std")]
 seq_impl!(
     HashSet<T, S>,
-    HashSetVisitor<T: Deserialize + Eq + Hash,
-                   S: BuildHasher + Default>,
-    visitor,
-    HashSet::with_hasher(S::default()),
-    HashSet::with_capacity_and_hasher(visitor.size_hint().0, S::default()),
-    HashSet::insert);
+    <T: Deserialize + Eq + Hash, S: BuildHasher + Default>,
+    |min, _| HashSet::with_capacity_and_hasher(min, S::default()));
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     Vec<T>,
-    VecVisitor<T: Deserialize>,
-    visitor,
-    Vec::new(),
-    Vec::with_capacity(visitor.size_hint().0),
-    Vec::push);
+    <T: Deserialize>,
+    |min, _| Vec::with_capacity(min));
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     VecDeque<T>,
-    VecDequeVisitor<T: Deserialize>,
-    visitor,
-    VecDeque::new(),
-    VecDeque::with_capacity(visitor.size_hint().0),
-    VecDeque::push_back);
+    <T: Deserialize>,
+    |min, _| VecDeque::with_capacity(min));
 
 ///////////////////////////////////////////////////////////////////////////////
 

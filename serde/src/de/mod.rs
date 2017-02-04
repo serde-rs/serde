@@ -118,7 +118,7 @@ pub mod private;
 #[cfg(any(feature = "std", feature = "collections"))]
 mod content;
 
-pub use self::impls::deserialize_map;
+pub use self::impls::{deserialize_map, deserialize_seq};
 
 ///////////////////////////////////////////////////////////////////////////////
 
