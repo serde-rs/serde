@@ -35,9 +35,9 @@ use de::{
 ///
 /// Not public API. Use serde-value instead.
 #[derive(Debug)]
-pub enum Content<E> {
+pub enum Content {
     // Don't mind the PhantomData, just need to use E somewhere.
-    Bool(bool, PhantomData<E>),
+    Bool(bool),
 
     U8(u8),
     U16(u16),
@@ -57,36 +57,26 @@ pub enum Content<E> {
     Bytes(Vec<u8>),
 
     None,
-    Some(Box<Content<E>>),
+    Some(Box<Content>),
 
     Unit,
-    Newtype(Box<Content<E>>),
-    Seq(Vec<Content<E>>),
-    Map(Vec<(Content<E>, Content<E>)>),
+    Newtype(Box<Content>),
+    Seq(Vec<Content>),
+    Map(Vec<(Content, Content)>),
 }
 
-impl<E> Deserialize for Content<E> {
+impl Deserialize for Content {
     fn deserialize<D: Deserializer>(deserializer: D) -> Result<Self, D::Error> {
         // Untagged and internally tagged enums are only supported in
         // self-describing formats.
-        deserializer.deserialize(ContentVisitor::new())
+        deserializer.deserialize(ContentVisitor)
     }
 }
 
-struct ContentVisitor<E> {
-    err: PhantomData<E>,
-}
+struct ContentVisitor;
 
-impl<E> ContentVisitor<E> {
-    fn new() -> Self {
-        ContentVisitor {
-            err: PhantomData,
-        }
-    }
-}
-
-impl<E> Visitor for ContentVisitor<E> {
-    type Value = Content<E>;
+impl Visitor for ContentVisitor {
+    type Value = Content;
 
     fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("any value")
@@ -95,7 +85,7 @@ impl<E> Visitor for ContentVisitor<E> {
     fn visit_bool<F>(self, value: bool) -> Result<Self::Value, F>
         where F: de::Error
     {
-        Ok(Content::Bool(value, PhantomData))
+        Ok(Content::Bool(value))
     }
 
     fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
@@ -242,27 +232,25 @@ impl<E> Visitor for ContentVisitor<E> {
 /// This is the type of the map keys in an internally tagged enum.
 ///
 /// Not public API.
-pub enum TagOrContent<E> {
+pub enum TagOrContent {
     Tag,
-    Content(Content<E>),
+    Content(Content),
 }
 
-struct TagOrContentVisitor<E> {
+struct TagOrContentVisitor {
     name: &'static str,
-    err: PhantomData<E>,
 }
 
-impl<E> TagOrContentVisitor<E> {
+impl TagOrContentVisitor {
     fn new(name: &'static str) -> Self {
         TagOrContentVisitor {
             name: name,
-            err: PhantomData,
         }
     }
 }
 
-impl<E> DeserializeSeed for TagOrContentVisitor<E> {
-    type Value = TagOrContent<E>;
+impl DeserializeSeed for TagOrContentVisitor {
+    type Value = TagOrContent;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where D: Deserializer
@@ -273,8 +261,8 @@ impl<E> DeserializeSeed for TagOrContentVisitor<E> {
     }
 }
 
-impl<E> Visitor for TagOrContentVisitor<E> {
-    type Value = TagOrContent<E>;
+impl Visitor for TagOrContentVisitor {
+    type Value = TagOrContent;
 
     fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "a type tag `{}` or any other value", self.name)
@@ -283,73 +271,73 @@ impl<E> Visitor for TagOrContentVisitor<E> {
     fn visit_bool<F>(self, value: bool) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_bool(value).map(TagOrContent::Content)
+        ContentVisitor.visit_bool(value).map(TagOrContent::Content)
     }
 
     fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_i8(value).map(TagOrContent::Content)
+        ContentVisitor.visit_i8(value).map(TagOrContent::Content)
     }
 
     fn visit_i16<F>(self, value: i16) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_i16(value).map(TagOrContent::Content)
+        ContentVisitor.visit_i16(value).map(TagOrContent::Content)
     }
 
     fn visit_i32<F>(self, value: i32) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_i32(value).map(TagOrContent::Content)
+        ContentVisitor.visit_i32(value).map(TagOrContent::Content)
     }
 
     fn visit_i64<F>(self, value: i64) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_i64(value).map(TagOrContent::Content)
+        ContentVisitor.visit_i64(value).map(TagOrContent::Content)
     }
 
     fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_u8(value).map(TagOrContent::Content)
+        ContentVisitor.visit_u8(value).map(TagOrContent::Content)
     }
 
     fn visit_u16<F>(self, value: u16) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_u16(value).map(TagOrContent::Content)
+        ContentVisitor.visit_u16(value).map(TagOrContent::Content)
     }
 
     fn visit_u32<F>(self, value: u32) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_u32(value).map(TagOrContent::Content)
+        ContentVisitor.visit_u32(value).map(TagOrContent::Content)
     }
 
     fn visit_u64<F>(self, value: u64) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_u64(value).map(TagOrContent::Content)
+        ContentVisitor.visit_u64(value).map(TagOrContent::Content)
     }
 
     fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_f32(value).map(TagOrContent::Content)
+        ContentVisitor.visit_f32(value).map(TagOrContent::Content)
     }
 
     fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_f64(value).map(TagOrContent::Content)
+        ContentVisitor.visit_f64(value).map(TagOrContent::Content)
     }
 
     fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_char(value).map(TagOrContent::Content)
+        ContentVisitor.visit_char(value).map(TagOrContent::Content)
     }
 
     fn visit_str<F>(self, value: &str) -> Result<Self::Value, F>
@@ -358,7 +346,7 @@ impl<E> Visitor for TagOrContentVisitor<E> {
         if value == self.name {
             Ok(TagOrContent::Tag)
         } else {
-            ContentVisitor::new().visit_str(value).map(TagOrContent::Content)
+            ContentVisitor.visit_str(value).map(TagOrContent::Content)
         }
     }
 
@@ -368,7 +356,7 @@ impl<E> Visitor for TagOrContentVisitor<E> {
         if value == self.name {
             Ok(TagOrContent::Tag)
         } else {
-            ContentVisitor::new().visit_string(value).map(TagOrContent::Content)
+            ContentVisitor.visit_string(value).map(TagOrContent::Content)
         }
     }
 
@@ -378,7 +366,7 @@ impl<E> Visitor for TagOrContentVisitor<E> {
         if value == self.name.as_bytes() {
             Ok(TagOrContent::Tag)
         } else {
-            ContentVisitor::new().visit_bytes(value).map(TagOrContent::Content)
+            ContentVisitor.visit_bytes(value).map(TagOrContent::Content)
         }
     }
 
@@ -388,84 +376,82 @@ impl<E> Visitor for TagOrContentVisitor<E> {
         if value == self.name.as_bytes() {
             Ok(TagOrContent::Tag)
         } else {
-            ContentVisitor::new().visit_byte_buf(value).map(TagOrContent::Content)
+            ContentVisitor.visit_byte_buf(value).map(TagOrContent::Content)
         }
     }
 
     fn visit_unit<F>(self) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_unit().map(TagOrContent::Content)
+        ContentVisitor.visit_unit().map(TagOrContent::Content)
     }
 
     fn visit_none<F>(self) -> Result<Self::Value, F>
         where F: de::Error
     {
-        ContentVisitor::new().visit_none().map(TagOrContent::Content)
+        ContentVisitor.visit_none().map(TagOrContent::Content)
     }
 
     fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where D: Deserializer
     {
-        ContentVisitor::new().visit_some(deserializer).map(TagOrContent::Content)
+        ContentVisitor.visit_some(deserializer).map(TagOrContent::Content)
     }
 
     fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where D: Deserializer
     {
-        ContentVisitor::new().visit_newtype_struct(deserializer).map(TagOrContent::Content)
+        ContentVisitor.visit_newtype_struct(deserializer).map(TagOrContent::Content)
     }
 
     fn visit_seq<V>(self, visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor
     {
-        ContentVisitor::new().visit_seq(visitor).map(TagOrContent::Content)
+        ContentVisitor.visit_seq(visitor).map(TagOrContent::Content)
     }
 
     fn visit_map<V>(self, visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor
     {
-        ContentVisitor::new().visit_map(visitor).map(TagOrContent::Content)
+        ContentVisitor.visit_map(visitor).map(TagOrContent::Content)
     }
 
     fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
         where V: EnumVisitor
     {
-        ContentVisitor::new().visit_enum(visitor).map(TagOrContent::Content)
+        ContentVisitor.visit_enum(visitor).map(TagOrContent::Content)
     }
 }
 
 /// Used by generated code to deserialize an internally tagged enum.
 ///
 /// Not public API.
-pub struct TaggedContent<T, E> {
+pub struct TaggedContent<T> {
     pub tag: T,
-    pub content: Content<E>,
+    pub content: Content,
 }
 
 /// Not public API.
-pub struct TaggedContentVisitor<T, E> {
+pub struct TaggedContentVisitor<T> {
     tag_name: &'static str,
     tag: PhantomData<T>,
-    err: PhantomData<E>,
 }
 
-impl<T, E> TaggedContentVisitor<T, E> {
+impl<T> TaggedContentVisitor<T> {
     /// Visitor for the content of an internally tagged enum with the given tag
     /// name.
     pub fn new(name: &'static str) -> Self {
         TaggedContentVisitor {
             tag_name: name,
             tag: PhantomData,
-            err: PhantomData,
         }
     }
 }
 
-impl<T, E> DeserializeSeed for TaggedContentVisitor<T, E>
+impl<T> DeserializeSeed for TaggedContentVisitor<T>
     where T: Deserialize
 {
-    type Value = TaggedContent<T, E>;
+    type Value = TaggedContent<T>;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where D: Deserializer
@@ -476,10 +462,10 @@ impl<T, E> DeserializeSeed for TaggedContentVisitor<T, E>
     }
 }
 
-impl<T, E> Visitor for TaggedContentVisitor<T, E>
+impl<T> Visitor for TaggedContentVisitor<T>
     where T: Deserialize
 {
-    type Value = TaggedContent<T, E>;
+    type Value = TaggedContent<T>;
 
     fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("any value")
@@ -518,9 +504,15 @@ impl<T, E> Visitor for TaggedContentVisitor<T, E>
     }
 }
 
+/// Not public API
+pub struct ContentDeserializer<E> {
+    content: Content,
+    err: PhantomData<E>,
+}
+
 /// Used when deserializing an internally tagged enum because the content will
 /// be used exactly once.
-impl<E> Deserializer for Content<E>
+impl<E> Deserializer for ContentDeserializer<E>
     where E: de::Error
 {
     type Error = E;
@@ -528,8 +520,8 @@ impl<E> Deserializer for Content<E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        match self {
-            Content::Bool(v, _) => visitor.visit_bool(v),
+        match self.content {
+            Content::Bool(v) => visitor.visit_bool(v),
             Content::U8(v) => visitor.visit_u8(v),
             Content::U16(v) => visitor.visit_u16(v),
             Content::U32(v) => visitor.visit_u32(v),
@@ -544,17 +536,17 @@ impl<E> Deserializer for Content<E>
             Content::String(v) => visitor.visit_string(v),
             Content::Unit => visitor.visit_unit(),
             Content::None => visitor.visit_none(),
-            Content::Some(v) => visitor.visit_some(*v),
-            Content::Newtype(v) => visitor.visit_newtype_struct(*v),
+            Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
+            Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
             Content::Seq(v) => {
-                let seq = v.into_iter();
+                let seq = v.into_iter().map(ContentDeserializer::new);
                 let mut seq_visitor = de::value::SeqDeserializer::new(seq);
                 let value = try!(visitor.visit_seq(&mut seq_visitor));
                 try!(seq_visitor.end());
                 Ok(value)
             },
             Content::Map(v) => {
-                let map = v.into_iter();
+                let map = v.into_iter().map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
                 let mut map_visitor = de::value::MapDeserializer::new(map);
                 let value = try!(visitor.visit_map(&mut map_visitor));
                 try!(map_visitor.end());
@@ -567,9 +559,9 @@ impl<E> Deserializer for Content<E>
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        match self {
+        match self.content {
             Content::None => visitor.visit_none(),
-            Content::Some(v) => visitor.visit_some(*v),
+            Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
             Content::Unit => visitor.visit_unit(),
             _ => visitor.visit_some(self)
         }
@@ -588,19 +580,25 @@ impl<E> Deserializer for Content<E>
     }
 }
 
-impl<E> de::value::ValueDeserializer<E> for Content<E>
-    where E: de::Error
-{
-    type Deserializer = Self;
-
-    fn into_deserializer(self) -> Self {
-        self
+impl<E> ContentDeserializer<E> {
+    /// private API, don't use
+    pub fn new(content: Content) -> Self {
+        ContentDeserializer {
+            content: content,
+            err: PhantomData,
+        }
     }
+}
+
+/// Not public API.
+pub struct ContentRefDeserializer<'a, E> {
+    content: &'a Content,
+    err: PhantomData<E>,
 }
 
 /// Used when deserializing an untagged enum because the content may need to be
 /// used more than once.
-impl<'a, E> Deserializer for &'a Content<E>
+impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
     where E: de::Error
 {
     type Error = E;
@@ -608,8 +606,8 @@ impl<'a, E> Deserializer for &'a Content<E>
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        match *self {
-            Content::Bool(v, _) => visitor.visit_bool(v),
+        match *self.content {
+            Content::Bool(v) => visitor.visit_bool(v),
             Content::U8(v) => visitor.visit_u8(v),
             Content::U16(v) => visitor.visit_u16(v),
             Content::U32(v) => visitor.visit_u32(v),
@@ -624,17 +622,17 @@ impl<'a, E> Deserializer for &'a Content<E>
             Content::String(ref v) => visitor.visit_str(v),
             Content::Unit => visitor.visit_unit(),
             Content::None => visitor.visit_none(),
-            Content::Some(ref v) => visitor.visit_some(&**v),
-            Content::Newtype(ref v) => visitor.visit_newtype_struct(&**v),
+            Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
+            Content::Newtype(ref v) => visitor.visit_newtype_struct(ContentRefDeserializer::new(v)),
             Content::Seq(ref v) => {
-                let seq = v.into_iter();
+                let seq = v.into_iter().map(ContentRefDeserializer::new);
                 let mut seq_visitor = de::value::SeqDeserializer::new(seq);
                 let value = try!(visitor.visit_seq(&mut seq_visitor));
                 try!(seq_visitor.end());
                 Ok(value)
             },
             Content::Map(ref v) => {
-                let map = v.into_iter().map(|&(ref k, ref v)| (k, v));
+                let map = v.into_iter().map(|&(ref k, ref v)| (ContentRefDeserializer::new(k), ContentRefDeserializer::new(v)));
                 let mut map_visitor = de::value::MapDeserializer::new(map);
                 let value = try!(visitor.visit_map(&mut map_visitor));
                 try!(map_visitor.end());
@@ -647,9 +645,9 @@ impl<'a, E> Deserializer for &'a Content<E>
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor
     {
-        match *self {
+        match *self.content {
             Content::None => visitor.visit_none(),
-            Content::Some(ref v) => visitor.visit_some(&**v),
+            Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
             Content::Unit => visitor.visit_unit(),
             _ => visitor.visit_some(self)
         }
@@ -668,7 +666,27 @@ impl<'a, E> Deserializer for &'a Content<E>
     }
 }
 
-impl<'a, E> de::value::ValueDeserializer<E> for &'a Content<E>
+impl<'a, E> ContentRefDeserializer<'a, E> {
+    /// private API, don't use
+    pub fn new(content: &'a Content) -> Self {
+        ContentRefDeserializer {
+            content: content,
+            err: PhantomData,
+        }
+    }
+}
+
+impl<E> de::value::ValueDeserializer<E> for ContentDeserializer<E>
+    where E: de::Error
+{
+    type Deserializer = Self;
+
+    fn into_deserializer(self) -> Self {
+        self
+    }
+}
+
+impl<'a, E> de::value::ValueDeserializer<E> for ContentRefDeserializer<'a, E>
     where E: de::Error
 {
     type Deserializer = Self;

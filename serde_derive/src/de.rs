@@ -704,7 +704,7 @@ fn deserialize_internally_tagged_enum(
                 ty.clone(),
                 variant,
                 item_attrs,
-                quote!(_tagged.content),
+                quote!(_serde::de::private::ContentDeserializer::<__D::Error>::new(_tagged.content)),
             );
 
             quote! {
@@ -719,7 +719,7 @@ fn deserialize_internally_tagged_enum(
 
         let _tagged = try!(_serde::Deserializer::deserialize(
             deserializer,
-            _serde::de::private::TaggedContentVisitor::<__Field, __D::Error>::new(#tag)));
+            _serde::de::private::TaggedContentVisitor::<__Field>::new(#tag)));
 
         match _tagged.tag {
             #(#variant_arms)*
@@ -743,7 +743,7 @@ fn deserialize_untagged_enum(
                 ty.clone(),
                 variant,
                 item_attrs,
-                quote!(&_content),
+                quote!(_serde::de::private::ContentRefDeserializer::<__D::Error>::new(&_content)),
             )
         });
 
@@ -756,7 +756,7 @@ fn deserialize_untagged_enum(
     let fallthrough_msg = format!("data did not match any variant of untagged enum {}", type_ident);
 
     quote!({
-        let _content = try!(<_serde::de::private::Content<__D::Error> as _serde::Deserialize>::deserialize(deserializer));
+        let _content = try!(<_serde::de::private::Content as _serde::Deserialize>::deserialize(deserializer));
 
         #(
             if let _serde::export::Ok(ok) = #attempts {
