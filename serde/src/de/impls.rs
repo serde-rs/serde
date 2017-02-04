@@ -396,14 +396,13 @@ impl<T> Deserialize for PhantomData<T> {
 
 macro_rules! seq_impl {
     (
-        $ty:ty,
-        < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
+        $ty:ident< $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
         $with_capacity:expr
     ) => {
-        impl<$($typaram),*> Deserialize for $ty
+        impl<$($typaram),*> Deserialize for $ty<$($typaram),*>
             where $($typaram: $bound1 $(+ $bound2)*),*
         {
-            fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where D: Deserializer,
             {
                 deserialize_seq(deserializer, $with_capacity, |v| v)
@@ -472,38 +471,32 @@ pub fn deserialize_seq<D, F, G, R, V, V2>(deserializer: D, with_capacity: F, con
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    BinaryHeap<T>,
-    <T: Deserialize + Ord>,
+    BinaryHeap<T: Deserialize + Ord>,
     |_, _| BinaryHeap::new());
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    BTreeSet<T>,
-    <T: Deserialize + Eq + Ord>,
+    BTreeSet<T: Deserialize + Eq + Ord>,
     |_, _| BTreeSet::new());
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    LinkedList<T>,
-    <T: Deserialize>,
+    LinkedList<T: Deserialize>,
     |_, _| LinkedList::new());
 
 #[cfg(feature = "std")]
 seq_impl!(
-    HashSet<T, S>,
-    <T: Deserialize + Eq + Hash, S: BuildHasher + Default>,
+    HashSet<T: Deserialize + Eq + Hash, S: BuildHasher + Default>,
     |min, _| HashSet::with_capacity_and_hasher(min, S::default()));
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    Vec<T>,
-    <T: Deserialize>,
+    Vec<T: Deserialize>,
     |min, _| Vec::with_capacity(min));
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    VecDeque<T>,
-    <T: Deserialize>,
+    VecDeque<T: Deserialize>,
     |min, _| VecDeque::with_capacity(min));
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -700,14 +693,13 @@ tuple_impls! {
 
 macro_rules! map_impl {
     (
-        $ty:ty,
-        < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
+        $ty:ident < $($typaram:ident : $bound1:ident $(+ $bound2:ident)*),* >,
         $with_capacity:expr
     ) => {
-        impl<$($typaram),*> Deserialize for $ty
+        impl<$($typaram),*> Deserialize for $ty<$($typaram),*>
             where $($typaram: $bound1 $(+ $bound2)*),*
         {
-            fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where D: Deserializer,
             {
                 deserialize_map(deserializer, $with_capacity, |key, value| (key, value))
@@ -779,14 +771,12 @@ pub fn deserialize_map<D, F, G, R, K, V, K2, V2>(deserializer: D, with_capacity:
 
 #[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
-    BTreeMap<K, V>,
-    <K: Deserialize + Ord, V: Deserialize>,
+    BTreeMap<K: Deserialize + Ord, V: Deserialize>,
     |_, _| BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
-    HashMap<K, V, S>,
-    <K: Deserialize + Eq + Hash, V: Deserialize, S: BuildHasher + Default>,
+    HashMap<K: Deserialize + Eq + Hash, V: Deserialize, S: BuildHasher + Default>,
     |min, _| HashMap::with_capacity_and_hasher(min, S::default()));
 
 ///////////////////////////////////////////////////////////////////////////////
