@@ -199,6 +199,7 @@ array_impls!(32);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(not(feature = "unstable"))]
 macro_rules! serialize_seq {
     () => {
         #[inline]
@@ -210,6 +211,18 @@ macro_rules! serialize_seq {
                 try!(seq.serialize_element(&e));
             }
             seq.end()
+        }
+    }
+}
+
+#[cfg(feature = "unstable")]
+macro_rules! serialize_seq {
+    () => {
+        #[inline]
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: Serializer,
+        {
+            serializer.collect_seq(self)
         }
     }
 }
@@ -508,6 +521,7 @@ tuple_impls! {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[cfg(not(feature = "unstable"))]
 macro_rules! serialize_map {
     () => {
         #[inline]
@@ -520,6 +534,18 @@ macro_rules! serialize_map {
                 try!(map.serialize_entry(k, v));
             }
             map.end()
+        }
+    }
+}
+
+#[cfg(feature = "unstable")]
+macro_rules! serialize_map {
+    () => {
+        #[inline]
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: Serializer,
+        {
+            serializer.collect_map(self)
         }
     }
 }

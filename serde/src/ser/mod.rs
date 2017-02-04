@@ -616,7 +616,7 @@ pub trait Serializer: Sized {
               <I as IntoIterator>::Item: Serialize,
     {
         let iter = iter.into_iter();
-        let mut serializer = try!(self.serialize_seq(iterator_len_hint(&iter)));
+        let mut serializer = try!(self.serialize_seq(iter.len_hint()));
         for item in iter {
             try!(serializer.serialize_element(&item));
         }
@@ -634,7 +634,7 @@ pub trait Serializer: Sized {
               I: IntoIterator<Item = (K, V)>,
     {
         let iter = iter.into_iter();
-        let mut serializer = try!(self.serialize_map(iterator_len_hint(&iter)));
+        let mut serializer = try!(self.serialize_map(iter.len_hint()));
         for (key, value) in iter {
             try!(serializer.serialize_entry(&key, &value));
         }
@@ -834,6 +834,29 @@ pub trait SerializeStructVariant {
 
     /// Finish serializing a struct variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;
+}
+
+trait LenHint: Iterator {
+    fn len_hint(&self) -> Option<usize>;
+}
+
+impl<I: Iterator> LenHint for I {
+    #[cfg(not(feature = "unstable"))]
+    fn len_hint(&self) -> Option<usize> {
+        iterator_len_hint(self)
+    }
+
+    #[cfg(feature = "unstable")]
+    default fn len_hint(&self) -> Option<usize> {
+        iterator_len_hint(self)
+    }
+}
+
+#[cfg(feature = "unstable")]
+impl<I: ExactSizeIterator> LenHint for I {
+    fn len_hint(&self) -> Option<usize> {
+        Some(self.len())
+    }
 }
 
 fn iterator_len_hint<I: Iterator>(iter: &I) -> Option<usize> {
