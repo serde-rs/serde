@@ -98,9 +98,6 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
-#[cfg(feature = "unstable")]
-use core::cell::RefCell;
-
 use core::fmt::Display;
 use core::iter::IntoIterator;
 
@@ -837,30 +834,6 @@ pub trait SerializeStructVariant {
 
     /// Finish serializing a struct variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;
-}
-
-/// A wrapper type for iterators that implements `Serialize` for iterators whose
-/// items implement `Serialize`. Don't use multiple times. Create new versions
-/// of this with the `serde::ser::iterator` function every time you want to
-/// serialize an iterator.
-#[cfg(feature = "unstable")]
-pub struct Iterator<I>
-    where <I as IntoIterator>::Item: Serialize,
-          I: IntoIterator
-{
-    data: RefCell<Option<I>>,
-}
-
-/// Create a wrapper type that can be passed to any function expecting a
-/// `Serialize` and will serialize the given iterator as a sequence.
-#[cfg(feature = "unstable")]
-pub fn iterator<I>(iter: I) -> Iterator<I>
-    where <I as IntoIterator>::Item: Serialize,
-          I: IntoIterator
-{
-    Iterator {
-        data: RefCell::new(Some(iter)),
-    }
 }
 
 fn iterator_len_hint<I: Iterator>(iter: &I) -> Option<usize> {
