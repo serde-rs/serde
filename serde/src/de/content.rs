@@ -570,7 +570,8 @@ impl<E> Deserializer for ContentDeserializer<E>
 }
 
 impl<E> ContentDeserializer<E> {
-    fn new(content: Content) -> Self {
+    /// private API, don't use
+    pub fn new(content: Content) -> Self {
         ContentDeserializer {
             content: content,
             err: PhantomData,
@@ -655,7 +656,8 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
 }
 
 impl<'a, E> ContentRefDeserializer<'a, E> {
-    fn new(content: &'a Content) -> Self {
+    /// private API, don't use
+    pub fn new(content: &'a Content) -> Self {
         ContentRefDeserializer {
             content: content,
             err: PhantomData,
