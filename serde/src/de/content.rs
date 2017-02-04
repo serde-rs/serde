@@ -18,8 +18,6 @@ use de::{
     EnumVisitor,
 };
 
-use de::value::ValueDeserializer;
-
 /// Used from generated code to buffer the contents of the Deserializer when
 /// deserializing untagged enums and internally tagged enums.
 ///
@@ -527,17 +525,17 @@ impl<E> Deserializer for ContentDeserializer<E>
             Content::String(v) => visitor.visit_string(v),
             Content::Unit => visitor.visit_unit(),
             Content::None => visitor.visit_none(),
-            Content::Some(v) => visitor.visit_some(v.into_deserializer()),
-            Content::Newtype(v) => visitor.visit_newtype_struct(v.into_deserializer()),
+            Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
+            Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
             Content::Seq(v) => {
-                let seq = v.into_iter();
+                let seq = v.into_iter().map(ContentDeserializer::new);
                 let mut seq_visitor = de::value::SeqDeserializer::new(seq);
                 let value = try!(visitor.visit_seq(&mut seq_visitor));
                 try!(seq_visitor.end());
                 Ok(value)
             },
             Content::Map(v) => {
-                let map = v.into_iter();
+                let map = v.into_iter().map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
                 let mut map_visitor = de::value::MapDeserializer::new(map);
                 let value = try!(visitor.visit_map(&mut map_visitor));
                 try!(map_visitor.end());
@@ -552,7 +550,7 @@ impl<E> Deserializer for ContentDeserializer<E>
     {
         match self.content {
             Content::None => visitor.visit_none(),
-            Content::Some(v) => visitor.visit_some(v.into_deserializer()),
+            Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
             Content::Unit => visitor.visit_unit(),
             _ => visitor.visit_some(self)
         }
@@ -571,14 +569,10 @@ impl<E> Deserializer for ContentDeserializer<E>
     }
 }
 
-impl<E> de::value::ValueDeserializer<E> for Content
-    where E: de::Error
-{
-    type Deserializer = ContentDeserializer<E>;
-
-    fn into_deserializer(self) -> Self::Deserializer {
+impl<E> ContentDeserializer<E> {
+    fn new(content: Content) -> Self {
         ContentDeserializer {
-            content: self,
+            content: content,
             err: PhantomData,
         }
     }
@@ -616,17 +610,17 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
             Content::String(ref v) => visitor.visit_str(v),
             Content::Unit => visitor.visit_unit(),
             Content::None => visitor.visit_none(),
-            Content::Some(ref v) => visitor.visit_some((&**v).into_deserializer()),
-            Content::Newtype(ref v) => visitor.visit_newtype_struct((&**v).into_deserializer()),
+            Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
+            Content::Newtype(ref v) => visitor.visit_newtype_struct(ContentRefDeserializer::new(v)),
             Content::Seq(ref v) => {
-                let seq = v.into_iter();
+                let seq = v.into_iter().map(ContentRefDeserializer::new);
                 let mut seq_visitor = de::value::SeqDeserializer::new(seq);
                 let value = try!(visitor.visit_seq(&mut seq_visitor));
                 try!(seq_visitor.end());
                 Ok(value)
             },
             Content::Map(ref v) => {
-                let map = v.into_iter().map(|&(ref k, ref v)| (k, v));
+                let map = v.into_iter().map(|&(ref k, ref v)| (ContentRefDeserializer::new(k), ContentRefDeserializer::new(v)));
                 let mut map_visitor = de::value::MapDeserializer::new(map);
                 let value = try!(visitor.visit_map(&mut map_visitor));
                 try!(map_visitor.end());
@@ -641,7 +635,7 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
     {
         match *self.content {
             Content::None => visitor.visit_none(),
-            Content::Some(ref v) => visitor.visit_some((&**v).into_deserializer()),
+            Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
             Content::Unit => visitor.visit_unit(),
             _ => visitor.visit_some(self)
         }
@@ -660,16 +654,32 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
     }
 }
 
-impl<'a, E> de::value::ValueDeserializer<E> for &'a Content
-    where E: de::Error
-{
-    type Deserializer = ContentRefDeserializer<'a, E>;
-
-    fn into_deserializer(self) -> Self::Deserializer {
+impl<'a, E> ContentRefDeserializer<'a, E> {
+    fn new(content: &'a Content) -> Self {
         ContentRefDeserializer {
-            content: self,
+            content: content,
             err: PhantomData,
         }
+    }
+}
+
+impl<E> de::value::ValueDeserializer<E> for ContentDeserializer<E>
+    where E: de::Error
+{
+    type Deserializer = Self;
+
+    fn into_deserializer(self) -> Self {
+        self
+    }
+}
+
+impl<'a, E> de::value::ValueDeserializer<E> for ContentRefDeserializer<'a, E>
+    where E: de::Error
+{
+    type Deserializer = Self;
+
+    fn into_deserializer(self) -> Self {
+        self
     }
 }
 
