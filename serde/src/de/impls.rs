@@ -462,7 +462,7 @@ pub fn deserialize_seq<D, F, G, R, V, V2>(deserializer: D, with_capacity: F, con
             Ok(values)
         }
     }
-    deserializer.deserialize_map(SeqVisitor_ {
+    deserializer.deserialize_seq(SeqVisitor_ {
         convert: convert,
         with_capacity: with_capacity,
         marker: PhantomData,
