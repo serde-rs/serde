@@ -144,24 +144,6 @@ impl<T> Serialize for PhantomData<T> {
     }
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-
-impl<T> Serialize for [T]
-    where T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer,
-    {
-        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self {
-            try!(seq.serialize_element(e));
-        }
-        seq.end()
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! array_impls {
@@ -230,6 +212,12 @@ macro_rules! serialize_seq {
             seq.end()
         }
     }
+}
+
+impl<T> Serialize for [T]
+    where T: Serialize,
+{
+    serialize_seq!();
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
