@@ -8,7 +8,7 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde/"
 readme = "../README.md"
-keywords = ["serde", "serialization"]
+keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
