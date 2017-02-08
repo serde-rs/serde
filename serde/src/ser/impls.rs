@@ -63,7 +63,7 @@ use super::{
     SerializeTuple,
     Serializer,
 };
-#[cfg(any(feature = "std", feature = "unstable"))]
+#[cfg(feature = "std")]
 use super::Error;
 
 ///////////////////////////////////////////////////////////////////////////////
