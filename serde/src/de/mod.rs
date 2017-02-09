@@ -859,7 +859,7 @@ pub trait Deserializer: Sized {
     /// benefit from taking ownership of buffered data owned by the
     /// `Deserializer`.
     ///
-    /// If the `Visitor would benefit from taking ownership of `Vec<u8>` data,
+    /// If the `Visitor` would benefit from taking ownership of `Vec<u8>` data,
     /// indicate this to the `Deserializer` by using `deserialize_byte_buf`
     /// instead.
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
