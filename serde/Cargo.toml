@@ -24,5 +24,11 @@ alloc = ["unstable"]
 collections = ["alloc"]
 unstable-testing = ["unstable", "std"]
 
+# to get serde_derive picked up by play.integer32.com
+playground = ["serde_derive"]
+
+[dependencies]
+serde_derive = { version = "0.9", optional = true }
+
 [dev-dependencies]
 serde_derive = "0.9"
