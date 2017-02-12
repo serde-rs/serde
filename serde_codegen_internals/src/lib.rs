@@ -1,4 +1,6 @@
 extern crate syn;
+#[macro_use]
+extern crate prom_attire;
 
 pub mod ast;
 pub mod attr;
