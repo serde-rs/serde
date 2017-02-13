@@ -8,14 +8,14 @@ use token::Token;
 use std::fmt::Debug;
 
 pub fn assert_tokens<T>(value: &T, tokens: &[Token<'static>])
-    where T: Serialize + Deserialize + PartialEq + Debug,
+    where T: Serialize + Deserialize + PartialEq + Debug
 {
     assert_ser_tokens(value, tokens);
     assert_de_tokens(value, tokens);
 }
 
 pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
-    where T: Serialize,
+    where T: Serialize
 {
     let mut ser = Serializer::new(tokens.iter());
     assert_eq!(Serialize::serialize(value, &mut ser), Ok(()));
@@ -24,7 +24,7 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 
 /// Expect an error serializing `T`.
 pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
-    where T: Serialize + PartialEq + Debug,
+    where T: Serialize + PartialEq + Debug
 {
     let mut ser = Serializer::new(tokens.iter());
     let v: Result<(), Error> = Serialize::serialize(value, &mut ser);
@@ -33,7 +33,7 @@ pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
 }
 
 pub fn assert_de_tokens<T>(value: &T, tokens: &[Token<'static>])
-    where T: Deserialize + PartialEq + Debug,
+    where T: Deserialize + PartialEq + Debug
 {
     let mut de = Deserializer::new(tokens.to_vec().into_iter());
     let v: Result<T, Error> = Deserialize::deserialize(&mut de);
@@ -43,7 +43,7 @@ pub fn assert_de_tokens<T>(value: &T, tokens: &[Token<'static>])
 
 /// Expect an error deserializing tokens into a `T`.
 pub fn assert_de_tokens_error<T>(tokens: &[Token<'static>], error: Error)
-    where T: Deserialize + PartialEq + Debug,
+    where T: Deserialize + PartialEq + Debug
 {
     let mut de = Deserializer::new(tokens.to_vec().into_iter());
     let v: Result<T, Error> = Deserialize::deserialize(&mut de);

@@ -157,7 +157,8 @@ impl Item {
 
                     // Parse `#[serde(bound="D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
-                        if let Ok(where_predicates) = parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
+                        if let Ok(where_predicates) =
+                            parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_bound.set(where_predicates.clone());
                             de_bound.set(where_predicates);
                         }
@@ -217,10 +218,12 @@ impl Item {
                 if let syn::Body::Enum(ref variants) = item.body {
                     for variant in variants {
                         match variant.data {
-                            syn::VariantData::Struct(_) | syn::VariantData::Unit => {}
+                            syn::VariantData::Struct(_) |
+                            syn::VariantData::Unit => {}
                             syn::VariantData::Tuple(ref fields) => {
                                 if fields.len() != 1 {
-                                    cx.error("#[serde(tag = \"...\")] cannot be used with tuple variants");
+                                    cx.error("#[serde(tag = \"...\")] cannot be used with tuple \
+                                              variants");
                                     break;
                                 }
                             }
@@ -311,8 +314,7 @@ impl Variant {
                     }
 
                     MetaItem(ref meta_item) => {
-                        cx.error(format!("unknown serde variant attribute `{}`",
-                                         meta_item.name()));
+                        cx.error(format!("unknown serde variant attribute `{}`", meta_item.name()));
                     }
 
                     Literal(_) => {
@@ -372,9 +374,7 @@ pub enum FieldDefault {
 
 impl Field {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_ast(cx: &Ctxt,
-                    index: usize,
-                    field: &syn::Field) -> Self {
+    pub fn from_ast(cx: &Ctxt, index: usize, field: &syn::Field) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
@@ -455,7 +455,8 @@ impl Field {
 
                     // Parse `#[serde(bound="D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
-                        if let Ok(where_predicates) = parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
+                        if let Ok(where_predicates) =
+                            parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_bound.set(where_predicates.clone());
                             de_bound.set(where_predicates);
                         }
@@ -470,8 +471,7 @@ impl Field {
                     }
 
                     MetaItem(ref meta_item) => {
-                        cx.error(format!("unknown serde field attribute `{}`",
-                                         meta_item.name()));
+                        cx.error(format!("unknown serde field attribute `{}`", meta_item.name()));
                     }
 
                     Literal(_) => {
@@ -542,13 +542,12 @@ impl Field {
 
 type SerAndDe<T> = (Option<T>, Option<T>);
 
-fn get_ser_and_de<T, F>(
-    cx: &Ctxt,
-    attr_name: &'static str,
-    items: &[syn::NestedMetaItem],
-    f: F
-) -> Result<SerAndDe<T>, ()>
-    where F: Fn(&Ctxt, &str, &str, &syn::Lit) -> Result<T, ()>,
+fn get_ser_and_de<T, F>(cx: &Ctxt,
+                        attr_name: &'static str,
+                        items: &[syn::NestedMetaItem],
+                        f: F)
+                        -> Result<SerAndDe<T>, ()>
+    where F: Fn(&Ctxt, &str, &str, &syn::Lit) -> Result<T, ()>
 {
     let mut ser_item = Attr::none(cx, attr_name);
     let mut de_item = Attr::none(cx, attr_name);
@@ -568,7 +567,8 @@ fn get_ser_and_de<T, F>(
             }
 
             _ => {
-                cx.error(format!("malformed {0} attribute, expected `{0}(serialize = ..., deserialize = ...)`",
+                cx.error(format!("malformed {0} attribute, expected `{0}(serialize = ..., \
+                                  deserialize = ...)`",
                                  attr_name));
                 return Err(());
             }
@@ -578,35 +578,34 @@ fn get_ser_and_de<T, F>(
     Ok((ser_item.get(), de_item.get()))
 }
 
-fn get_renames(
-    cx: &Ctxt,
-    items: &[syn::NestedMetaItem],
-) -> Result<SerAndDe<String>, ()> {
+fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<String>, ()> {
     get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
 
-fn get_where_predicates(
-    cx: &Ctxt,
-    items: &[syn::NestedMetaItem],
-) -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
+fn get_where_predicates(cx: &Ctxt,
+                        items: &[syn::NestedMetaItem])
+                        -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
     get_ser_and_de(cx, "bound", items, parse_lit_into_where)
 }
 
 pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMetaItem>> {
     match attr.value {
-        List(ref name, ref items) if name == "serde" => {
-            Some(items.iter().cloned().collect())
-        }
-        _ => None
+        List(ref name, ref items) if name == "serde" => Some(items.iter().cloned().collect()),
+        _ => None,
     }
 }
 
-fn get_string_from_lit(cx: &Ctxt, attr_name: &str, meta_item_name: &str, lit: &syn::Lit) -> Result<String, ()> {
+fn get_string_from_lit(cx: &Ctxt,
+                       attr_name: &str,
+                       meta_item_name: &str,
+                       lit: &syn::Lit)
+                       -> Result<String, ()> {
     if let syn::Lit::Str(ref s, _) = *lit {
         Ok(s.clone())
     } else {
         cx.error(format!("expected serde {} attribute to be a string: `{} = \"...\"`",
-                         attr_name, meta_item_name));
+                         attr_name,
+                         meta_item_name));
         Err(())
     }
 }
@@ -616,7 +615,11 @@ fn parse_lit_into_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn
     syn::parse_path(&string).map_err(|err| cx.error(err))
 }
 
-fn parse_lit_into_where(cx: &Ctxt, attr_name: &str, meta_item_name: &str, lit: &syn::Lit) -> Result<Vec<syn::WherePredicate>, ()> {
+fn parse_lit_into_where(cx: &Ctxt,
+                        attr_name: &str,
+                        meta_item_name: &str,
+                        lit: &syn::Lit)
+                        -> Result<Vec<syn::WherePredicate>, ()> {
     let string = try!(get_string_from_lit(cx, attr_name, meta_item_name, lit));
     if string.is_empty() {
         return Ok(Vec::new());

@@ -19,16 +19,8 @@ use collections::{String, Vec};
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 
-use de::{
-    self,
-    Deserialize,
-    DeserializeSeed,
-    Deserializer,
-    Visitor,
-    SeqVisitor,
-    MapVisitor,
-    EnumVisitor,
-};
+use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, MapVisitor,
+         EnumVisitor};
 
 /// Used from generated code to buffer the contents of the Deserializer when
 /// deserializing untagged enums and internally tagged enums.
@@ -243,9 +235,7 @@ struct TagOrContentVisitor {
 
 impl TagOrContentVisitor {
     fn new(name: &'static str) -> Self {
-        TagOrContentVisitor {
-            name: name,
-        }
+        TagOrContentVisitor { name: name }
     }
 }
 
@@ -491,9 +481,7 @@ impl<T> Visitor for TaggedContentVisitor<T>
             }
         }
         match tag {
-            None => {
-                Err(de::Error::missing_field(self.tag_name))
-            }
+            None => Err(de::Error::missing_field(self.tag_name)),
             Some(tag) => {
                 Ok(TaggedContent {
                     tag: tag,
@@ -544,14 +532,15 @@ impl<E> Deserializer for ContentDeserializer<E>
                 let value = try!(visitor.visit_seq(&mut seq_visitor));
                 try!(seq_visitor.end());
                 Ok(value)
-            },
+            }
             Content::Map(v) => {
-                let map = v.into_iter().map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
+                let map = v.into_iter()
+                    .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
                 let mut map_visitor = de::value::MapDeserializer::new(map);
                 let value = try!(visitor.visit_map(&mut map_visitor));
                 try!(map_visitor.end());
                 Ok(value)
-            },
+            }
             Content::Bytes(v) => visitor.visit_byte_buf(v),
         }
     }
@@ -563,7 +552,7 @@ impl<E> Deserializer for ContentDeserializer<E>
             Content::None => visitor.visit_none(),
             Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
             Content::Unit => visitor.visit_unit(),
-            _ => visitor.visit_some(self)
+            _ => visitor.visit_some(self),
         }
     }
 
@@ -630,14 +619,16 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
                 let value = try!(visitor.visit_seq(&mut seq_visitor));
                 try!(seq_visitor.end());
                 Ok(value)
-            },
+            }
             Content::Map(ref v) => {
-                let map = v.into_iter().map(|&(ref k, ref v)| (ContentRefDeserializer::new(k), ContentRefDeserializer::new(v)));
+                let map = v.into_iter().map(|&(ref k, ref v)| {
+                    (ContentRefDeserializer::new(k), ContentRefDeserializer::new(v))
+                });
                 let mut map_visitor = de::value::MapDeserializer::new(map);
                 let value = try!(visitor.visit_map(&mut map_visitor));
                 try!(map_visitor.end());
                 Ok(value)
-            },
+            }
             Content::Bytes(ref v) => visitor.visit_bytes(v),
         }
     }
@@ -649,7 +640,7 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
             Content::None => visitor.visit_none(),
             Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
             Content::Unit => visitor.visit_unit(),
-            _ => visitor.visit_some(self)
+            _ => visitor.visit_some(self),
         }
     }
 
