@@ -60,9 +60,7 @@ pub struct Bytes<'a> {
 impl<'a> Bytes<'a> {
     /// Wrap an existing `&[u8]`.
     pub fn new(bytes: &'a [u8]) -> Self {
-        Bytes {
-            bytes: bytes,
-        }
+        Bytes { bytes: bytes }
     }
 }
 
@@ -98,7 +96,9 @@ impl<'a> Into<&'a [u8]> for Bytes<'a> {
 impl<'a> ops::Deref for Bytes<'a> {
     type Target = [u8];
 
-    fn deref(&self) -> &[u8] { self.bytes }
+    fn deref(&self) -> &[u8] {
+        self.bytes
+    }
 }
 
 impl<'a> ser::Serialize for Bytes<'a> {
@@ -161,9 +161,7 @@ mod bytebuf {
 
         /// Wrap existing bytes in a `ByteBuf`.
         pub fn from<T: Into<Vec<u8>>>(bytes: T) -> Self {
-            ByteBuf {
-                bytes: bytes.into(),
-            }
+            ByteBuf { bytes: bytes.into() }
         }
     }
 
@@ -216,11 +214,15 @@ mod bytebuf {
     impl ops::Deref for ByteBuf {
         type Target = [u8];
 
-        fn deref(&self) -> &[u8] { &self.bytes[..] }
+        fn deref(&self) -> &[u8] {
+            &self.bytes[..]
+        }
     }
 
     impl ops::DerefMut for ByteBuf {
-        fn deref_mut(&mut self) -> &mut [u8] { &mut self.bytes[..] }
+        fn deref_mut(&mut self) -> &mut [u8] {
+            &mut self.bytes[..]
+        }
     }
 
     impl ser::Serialize for ByteBuf {
@@ -243,14 +245,14 @@ mod bytebuf {
 
         #[inline]
         fn visit_unit<E>(self) -> Result<ByteBuf, E>
-            where E: de::Error,
+            where E: de::Error
         {
             Ok(ByteBuf::new())
         }
 
         #[inline]
         fn visit_seq<V>(self, mut visitor: V) -> Result<ByteBuf, V::Error>
-            where V: de::SeqVisitor,
+            where V: de::SeqVisitor
         {
             let (len, _) = visitor.size_hint();
             let mut values = Vec::with_capacity(len);
@@ -264,26 +266,26 @@ mod bytebuf {
 
         #[inline]
         fn visit_bytes<E>(self, v: &[u8]) -> Result<ByteBuf, E>
-            where E: de::Error,
+            where E: de::Error
         {
             Ok(ByteBuf::from(v))
         }
 
         #[inline]
         fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<ByteBuf, E>
-            where E: de::Error,
+            where E: de::Error
         {
             Ok(ByteBuf::from(v))
         }
 
         fn visit_str<E>(self, v: &str) -> Result<ByteBuf, E>
-            where E: de::Error,
+            where E: de::Error
         {
             Ok(ByteBuf::from(v))
         }
 
         fn visit_string<E>(self, v: String) -> Result<ByteBuf, E>
-            where E: de::Error,
+            where E: de::Error
         {
             Ok(ByteBuf::from(v))
         }
@@ -302,7 +304,9 @@ mod bytebuf {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[inline]
-fn escape_bytestring<'a>(bytes: &'a [u8]) -> iter::FlatMap<slice::Iter<'a, u8>, char::EscapeDefault, fn(&u8) -> char::EscapeDefault> {
+fn escape_bytestring<'a>
+    (bytes: &'a [u8])
+     -> iter::FlatMap<slice::Iter<'a, u8>, char::EscapeDefault, fn(&u8) -> char::EscapeDefault> {
     fn f(b: &u8) -> char::EscapeDefault {
         char::from_u32(*b as u32).unwrap().escape_default()
     }

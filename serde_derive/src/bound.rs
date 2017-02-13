@@ -10,36 +10,33 @@ use internals::attr;
 // allowed here".
 pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
     syn::Generics {
-        ty_params: generics.ty_params.iter().map(|ty_param| {
-            syn::TyParam {
-                default: None,
-                .. ty_param.clone()
-            }}).collect(),
-        .. generics.clone()
+        ty_params: generics.ty_params
+            .iter()
+            .map(|ty_param| syn::TyParam { default: None, ..ty_param.clone() })
+            .collect(),
+        ..generics.clone()
     }
 }
 
-pub fn with_where_predicates(
-    generics: &syn::Generics,
-    predicates: &[syn::WherePredicate],
-) -> syn::Generics {
+pub fn with_where_predicates(generics: &syn::Generics,
+                             predicates: &[syn::WherePredicate])
+                             -> syn::Generics {
     aster::from_generics(generics.clone())
         .with_predicates(predicates.to_vec())
         .build()
 }
 
-pub fn with_where_predicates_from_fields<F>(
-    item: &Item,
-    generics: &syn::Generics,
-    from_field: F,
-) -> syn::Generics
-    where F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
+pub fn with_where_predicates_from_fields<F>(item: &Item,
+                                            generics: &syn::Generics,
+                                            from_field: F)
+                                            -> syn::Generics
+    where F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>
 {
     aster::from_generics(generics.clone())
-        .with_predicates(
-            item.body.all_fields()
-                .flat_map(|field| from_field(&field.attrs))
-                .flat_map(|predicates| predicates.to_vec()))
+        .with_predicates(item.body
+            .all_fields()
+            .flat_map(|field| from_field(&field.attrs))
+            .flat_map(|predicates| predicates.to_vec()))
         .build()
 }
 
@@ -54,13 +51,12 @@ pub fn with_where_predicates_from_fields<F>(
 //         #[serde(skip_serializing)]
 //         c: C,
 //     }
-pub fn with_bound<F>(
-    item: &Item,
-    generics: &syn::Generics,
-    filter: F,
-    bound: &syn::Path,
-) -> syn::Generics
-    where F: Fn(&attr::Field) -> bool,
+pub fn with_bound<F>(item: &Item,
+                     generics: &syn::Generics,
+                     filter: F,
+                     bound: &syn::Path)
+                     -> syn::Generics
+    where F: Fn(&attr::Field) -> bool
 {
     struct FindTyParams {
         // Set of all generic type parameters on the current struct (A, B, C in
@@ -90,11 +86,13 @@ pub fn with_bound<F>(
         }
     }
 
-    let all_ty_params: HashSet<_> = generics.ty_params.iter()
+    let all_ty_params: HashSet<_> = generics.ty_params
+        .iter()
         .map(|ty_param| ty_param.ident.clone())
         .collect();
 
-    let relevant_tys = item.body.all_fields()
+    let relevant_tys = item.body
+        .all_fields()
         .filter(|&field| filter(&field.attrs))
         .map(|field| &field.ty);
 
@@ -107,15 +105,17 @@ pub fn with_bound<F>(
     }
 
     aster::from_generics(generics.clone())
-        .with_predicates(
-            generics.ty_params.iter()
-                .map(|ty_param| ty_param.ident.clone())
-                .filter(|id| visitor.relevant_ty_params.contains(id))
-                .map(|id| aster::where_predicate()
+        .with_predicates(generics.ty_params
+            .iter()
+            .map(|ty_param| ty_param.ident.clone())
+            .filter(|id| visitor.relevant_ty_params.contains(id))
+            .map(|id| {
+                aster::where_predicate()
                     // the type parameter that is being bounded e.g. T
                     .bound().build(aster::ty().id(id))
                     // the bound e.g. Serialize
                     .bound().trait_(bound.clone()).build()
-                    .build()))
+                    .build()
+            }))
         .build()
 }

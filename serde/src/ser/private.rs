@@ -3,14 +3,13 @@ use core::fmt::{self, Display};
 use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct};
 
 /// Not public API.
-pub fn serialize_tagged_newtype<S, T>(
-    serializer: S,
-    type_ident: &'static str,
-    variant_ident: &'static str,
-    tag: &'static str,
-    variant_name: &'static str,
-    value: T,
-) -> Result<S::Ok, S::Error>
+pub fn serialize_tagged_newtype<S, T>(serializer: S,
+                                      type_ident: &'static str,
+                                      variant_ident: &'static str,
+                                      tag: &'static str,
+                                      variant_name: &'static str,
+                                      value: T)
+                                      -> Result<S::Ok, S::Error>
     where S: Serializer,
           T: Serialize
 {
@@ -181,17 +180,29 @@ impl<S> Serializer for TaggedSerializer<S>
         Err(self.bad_type(Unsupported::UnitStruct))
     }
 
-    fn serialize_unit_variant(self, _: &'static str, _: usize, _: &'static str) -> Result<Self::Ok, Self::Error> {
+    fn serialize_unit_variant(self,
+                              _: &'static str,
+                              _: usize,
+                              _: &'static str)
+                              -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Enum))
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(self, _: &'static str, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_newtype_struct<T: ?Sized>(self,
+                                           _: &'static str,
+                                           value: &T)
+                                           -> Result<Self::Ok, Self::Error>
         where T: Serialize
     {
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(self, _: &'static str, _: usize, _: &'static str, _: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_newtype_variant<T: ?Sized>(self,
+                                            _: &'static str,
+                                            _: usize,
+                                            _: &'static str,
+                                            _: &T)
+                                            -> Result<Self::Ok, Self::Error>
         where T: Serialize
     {
         Err(self.bad_type(Unsupported::Enum))
@@ -209,11 +220,19 @@ impl<S> Serializer for TaggedSerializer<S>
         Err(self.bad_type(Unsupported::Tuple))
     }
 
-    fn serialize_tuple_struct(self, _: &'static str, _: usize) -> Result<Self::SerializeTupleStruct, Self::Error> {
+    fn serialize_tuple_struct(self,
+                              _: &'static str,
+                              _: usize)
+                              -> Result<Self::SerializeTupleStruct, Self::Error> {
         Err(self.bad_type(Unsupported::TupleStruct))
     }
 
-    fn serialize_tuple_variant(self, _: &'static str, _: usize, _: &'static str, _: usize) -> Result<Self::SerializeTupleVariant, Self::Error> {
+    fn serialize_tuple_variant(self,
+                               _: &'static str,
+                               _: usize,
+                               _: &'static str,
+                               _: usize)
+                               -> Result<Self::SerializeTupleVariant, Self::Error> {
         Err(self.bad_type(Unsupported::Enum))
     }
 
@@ -223,13 +242,21 @@ impl<S> Serializer for TaggedSerializer<S>
         Ok(map)
     }
 
-    fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn serialize_struct(self,
+                        name: &'static str,
+                        len: usize)
+                        -> Result<Self::SerializeStruct, Self::Error> {
         let mut state = try!(self.delegate.serialize_struct(name, len + 1));
         try!(state.serialize_field(self.tag, self.variant_name));
         Ok(state)
     }
 
-    fn serialize_struct_variant(self, _: &'static str, _: usize, _: &'static str, _: usize) -> Result<Self::SerializeStructVariant, Self::Error> {
+    fn serialize_struct_variant(self,
+                                _: &'static str,
+                                _: usize,
+                                _: &'static str,
+                                _: usize)
+                                -> Result<Self::SerializeStructVariant, Self::Error> {
         Err(self.bad_type(Unsupported::Enum))
     }
 }
