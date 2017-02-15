@@ -31,6 +31,14 @@ fn test_gen() {
     assert::<With<i32>>();
 
     #[derive(Serialize, Deserialize)]
+    struct WithTogether<T> {
+        t: T,
+        #[serde(with="both_x")]
+        x: X,
+    }
+    assert::<WithTogether<i32>>();
+
+    #[derive(Serialize, Deserialize)]
     struct WithRef<'a, T: 'a> {
         #[serde(skip_deserializing)]
         t: Option<&'a T>,
@@ -307,14 +315,18 @@ trait DeserializeWith: Sized {
 }
 
 // Implements neither Serialize nor Deserialize
-struct X;
+pub struct X;
 
-fn ser_x<S: Serializer>(_: &X, _: S) -> StdResult<S::Ok, S::Error> {
+pub fn ser_x<S: Serializer>(_: &X, _: S) -> StdResult<S::Ok, S::Error> {
     unimplemented!()
 }
 
-fn de_x<D: Deserializer>(_: D) -> StdResult<X, D::Error> {
+pub fn de_x<D: Deserializer>(_: D) -> StdResult<X, D::Error> {
     unimplemented!()
+}
+
+mod both_x {
+    pub use super::{ser_x as serialize, de_x as deserialize};
 }
 
 impl SerializeWith for X {

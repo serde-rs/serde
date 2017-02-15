@@ -453,6 +453,18 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(with="...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            let mut ser_path = path.clone();
+                            ser_path.segments.push("serialize".into());
+                            serialize_with.set(ser_path);
+                            let mut de_path = path;
+                            de_path.segments.push("deserialize".into());
+                            deserialize_with.set(de_path);
+                        }
+                    }
+
                     // Parse `#[serde(bound="D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
                         if let Ok(where_predicates) =
