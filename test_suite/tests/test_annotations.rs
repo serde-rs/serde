@@ -11,6 +11,8 @@ use self::serde_test::{
     assert_de_tokens_error
 };
 
+use std::collections::BTreeMap;
+
 trait MyDefault: Sized {
     fn my_default() -> Self;
 }
@@ -972,5 +974,101 @@ fn test_invalid_length_enum() {
             Token::EnumSeqEnd,
         ],
         Error::Message("invalid length 1, expected tuple of 2 elements".to_owned()),
+    );
+}
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
+struct NoDeserialization<T>(T);
+
+#[derive(Deserialize, PartialEq, Debug)]
+struct CustomKeyValueMap {
+    #[serde(deserialize_with="deserialize_custom_map")]
+    map: BTreeMap<NoDeserialization<String>, NoDeserialization<i32>>,
+}
+
+fn deserialize_custom_map<D, K, V>(deserializer: D) -> Result<BTreeMap<NoDeserialization<K>, NoDeserialization<V>>, D::Error>
+    where D: Deserializer,
+          K: Deserialize + Ord,
+          V: Deserialize,
+{
+    serde::de::deserialize_map(
+        deserializer,
+        |_, _| BTreeMap::new(),
+        |k, v| (NoDeserialization(k), NoDeserialization(v)))
+}
+
+#[test]
+fn test_deserialize_with_custom_key_value_map() {
+    assert_de_tokens(
+        &CustomKeyValueMap {
+            map: vec![(NoDeserialization("a".to_string()), NoDeserialization(0)),
+                      (NoDeserialization("b".to_string()), NoDeserialization(1))]
+                .into_iter()
+                .collect()
+        },
+        &[
+            Token::StructStart("CustomKeyValueMap", 1),
+
+            Token::StructSep,
+            Token::Str("map"),
+            Token::MapStart(Some(2)),
+
+            Token::MapSep,
+            Token::Str("a"),
+            Token::I32(0),
+
+            Token::MapSep,
+            Token::Str("b"),
+            Token::I32(1),
+
+            Token::MapEnd,
+
+            Token::StructEnd,
+        ]
+    );
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+struct CustomValueSequence {
+    #[serde(deserialize_with="deserialize_custom_seq")]
+    seq: Vec<NoDeserialization<i32>>,
+}
+
+fn deserialize_custom_seq<D, V>(deserializer: D) -> Result<Vec<NoDeserialization<V>>, D::Error>
+    where D: Deserializer,
+          V: Deserialize,
+{
+    serde::de::deserialize_seq(
+        deserializer,
+        |min, _| Vec::with_capacity(min),
+        NoDeserialization)
+}
+
+#[test]
+fn test_deserialize_with_custom_value_seq() {
+    assert_de_tokens(
+        &CustomValueSequence {
+            seq: vec![NoDeserialization(0), NoDeserialization(1), NoDeserialization(2)]
+        },
+        &[
+            Token::StructStart("CustomValueSequence", 1),
+
+            Token::StructSep,
+            Token::Str("seq"),
+            Token::SeqStart(Some(2)),
+
+            Token::SeqSep,
+            Token::I32(0),
+
+            Token::SeqSep,
+            Token::I32(1),
+
+            Token::SeqSep,
+            Token::I32(2),
+
+            Token::SeqEnd,
+
+            Token::StructEnd,
+        ]
     );
 }
