@@ -11,7 +11,7 @@ keywords = ["serde", "serialization"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
-syn = "0.11"
+syn = { version = "0.11", default-features = false, features = ["parsing"] }
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
