@@ -927,8 +927,6 @@ fn deserialize_field_visitor(fields: Vec<(String, Ident)>,
 
     let bytes_to_str = if is_variant || item_attrs.deny_unknown_fields() {
         Some(quote! {
-            // TODO https://github.com/serde-rs/serde/issues/666
-            // update this to use str::from_utf8(value).unwrap_or("���") on no_std
             let value = &_serde::export::from_utf8_lossy(value);
         })
     } else {
