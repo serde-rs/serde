@@ -881,3 +881,146 @@ fn test_internally_tagged_enum() {
         Error::Message("unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`".to_owned()),
     );
 }
+
+#[test]
+fn test_adjacently_tagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize)] // , Deserialize
+    #[serde(tag = "type", content = "content")]
+    enum AdjacentlyTagged {
+        A(u8),
+        B(u8, u16, u32),
+        C,
+        D(BTreeMap<String, String>),
+        E(Newtype),
+        F(Struct),
+    }
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::A(1),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("A"),
+
+            Token::StructSep,
+            Token::Str("content"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::B(1, 300, 70000),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("B"),
+
+            Token::StructSep,
+            Token::Str("content"),
+
+            Token::TupleStart(3),
+
+            Token::TupleSep,
+            Token::U8(1),
+
+            Token::TupleSep,
+            Token::U16(300),
+
+            Token::TupleSep,
+            Token::U32(70000),
+
+            Token::TupleEnd,
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::C,
+        &[
+            Token::StructStart("AdjacentlyTagged", 1),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("C"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::D(BTreeMap::new()),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("D"),
+
+            Token::StructSep,
+            Token::Str("content"),
+            Token::MapStart(Some(0)),
+            Token::MapEnd,
+
+            Token::StructEnd,
+        ]
+    );
+
+    // FIXME: Nested newtype is broken
+
+    // assert_ser_tokens(
+    //     &AdjacentlyTagged::E(Newtype(BTreeMap::new())),
+    //     &[
+    //         Token::StructStart("AdjacentlyTagged", 2),
+
+    //         Token::StructSep,
+    //         Token::Str("type"),
+    //         Token::Str("E"),
+
+    //         Token::StructSep,
+    //         Token::Str("content"),
+    //         Token::MapStart(Some(0)),
+    //         Token::MapEnd,
+
+    //         Token::StructEnd,
+    //     ]
+    // );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::F(Struct { f: 6 }),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("type"),
+            Token::Str("F"),
+
+            Token::StructSep,
+            Token::Str("content"),
+
+            Token::StructStart("Struct", 1),
+
+            Token::StructSep,
+            Token::Str("f"),
+            Token::U8(6),
+
+            Token::StructEnd,
+
+            Token::StructEnd,
+        ]
+    );
+}

@@ -112,6 +112,13 @@ pub enum EnumTag {
     /// ```
     Internal(String),
 
+    /// `#[serde(tag = "type", content = "name")]`
+    ///
+    /// ```json
+    /// {"type": "variant1", "name": {"key1": "value1", "key2": "value2"}}
+    /// ```
+    Adjacent(String, String),
+
     /// `#[serde(untagged)]`
     ///
     /// ```json
@@ -130,6 +137,7 @@ impl Item {
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
         let mut internal_tag = Attr::none(cx, "tag");
+        let mut internal_content = Attr::none(cx, "content");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -198,6 +206,20 @@ impl Item {
                         }
                     }
 
+                    // Parse `#[serde(content = "name")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "content" => {
+                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
+                            match item.body {
+                                syn::Body::Enum(_) => {
+                                    internal_content.set(s);
+                                }
+                                syn::Body::Struct(_) => {
+                                    cx.error("#[serde(tag = \"...\")] can only be used on enums")
+                                }
+                            }
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -210,10 +232,10 @@ impl Item {
             }
         }
 
-        let tag = match (untagged.get(), internal_tag.get()) {
-            (false, None) => EnumTag::External,
-            (true, None) => EnumTag::None,
-            (false, Some(tag)) => {
+        let tag = match (untagged.get(), internal_tag.get(), internal_content.get()) {
+            (false, None, None) => EnumTag::External,
+            (true, None, None) => EnumTag::None,
+            (false, Some(tag), None) => {
                 // Check that there are no tuple variants.
                 if let syn::Body::Enum(ref variants) = item.body {
                     for variant in variants {
@@ -232,8 +254,31 @@ impl Item {
                 }
                 EnumTag::Internal(tag)
             }
-            (true, Some(_)) => {
+            (false, Some(tag), Some(content)) => {
+                // Check that there are no struct variants.
+                if let syn::Body::Enum(ref variants) = item.body {
+                    for variant in variants {
+                        match variant.data {
+                            syn::VariantData::Tuple(_) |
+                            syn::VariantData::Unit => {}
+                            syn::VariantData::Struct(ref fields) => {
+                                if fields.len() != 1 {
+                                    cx.error("#[serde(tag = \"...\", content = \"...\")] cannot \
+                                              be used with struct variants");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                EnumTag::Adjacent(tag, content)
+            }
+            (true, Some(_), _) => {
                 cx.error("enum cannot be both untagged and internally tagged");
+                EnumTag::External // doesn't matter, will error
+            }
+            (_, None, Some(_)) => {
+                cx.error("#[serde(content = \"...\")] cannot be used without #[serde(tag = \"...\")]");
                 EnumTag::External // doesn't matter, will error
             }
         };

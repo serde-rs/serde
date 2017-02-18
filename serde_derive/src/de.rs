@@ -502,6 +502,9 @@ fn deserialize_item_enum(type_ident: &syn::Ident,
                                                item_attrs,
                                                tag)
         }
+        attr::EnumTag::Adjacent(ref tag, ref content) => {
+            panic!("FIXME: unimplemented")
+        }
         attr::EnumTag::None => {
             deserialize_untagged_enum(type_ident, impl_generics, ty, variants, item_attrs)
         }
