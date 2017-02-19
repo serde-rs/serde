@@ -10,6 +10,7 @@
 
 #![doc(hidden)]
 
+use core::cmp;
 use core::fmt;
 use core::marker::PhantomData;
 
@@ -215,7 +216,7 @@ impl<E> Visitor for ContentVisitor<E> {
     fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
         where V: SeqVisitor
     {
-        let mut vec = Vec::with_capacity(visitor.size_hint().0);
+        let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
         while let Some(e) = try!(visitor.visit()) {
             vec.push(e);
         }
@@ -225,7 +226,7 @@ impl<E> Visitor for ContentVisitor<E> {
     fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
         where V: MapVisitor
     {
-        let mut vec = Vec::with_capacity(visitor.size_hint().0);
+        let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
         while let Some(kv) = try!(visitor.visit()) {
             vec.push(kv);
         }
@@ -489,7 +490,7 @@ impl<T, E> Visitor for TaggedContentVisitor<T, E>
         where V: MapVisitor
     {
         let mut tag = None;
-        let mut vec = Vec::with_capacity(visitor.size_hint().0);
+        let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
         while let Some(k) = try!(visitor.visit_key_seed(TagOrContentVisitor::new(self.tag_name))) {
             match k {
                 TagOrContent::Tag => {
