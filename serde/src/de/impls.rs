@@ -14,6 +14,8 @@ use std::collections::{HashMap, HashSet, BinaryHeap, BTreeMap, BTreeSet, LinkedL
 #[cfg(feature = "collections")]
 use collections::borrow::ToOwned;
 
+#[cfg(any(feature = "std", feature = "collections"))]
+use core::cmp;
 use core::fmt;
 #[cfg(feature = "std")]
 use core::hash::{Hash, BuildHasher};
@@ -442,7 +444,7 @@ seq_impl!(
     BinaryHeapVisitor<T: Deserialize + Ord>,
     visitor,
     BinaryHeap::new(),
-    BinaryHeap::with_capacity(visitor.size_hint().0),
+    BinaryHeap::with_capacity(cmp::min(visitor.size_hint().0, 4096)),
     BinaryHeap::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -470,7 +472,7 @@ seq_impl!(
                    S: BuildHasher + Default>,
     visitor,
     HashSet::with_hasher(S::default()),
-    HashSet::with_capacity_and_hasher(visitor.size_hint().0, S::default()),
+    HashSet::with_capacity_and_hasher(cmp::min(visitor.size_hint().0, 4096), S::default()),
     HashSet::insert);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -479,7 +481,7 @@ seq_impl!(
     VecVisitor<T: Deserialize>,
     visitor,
     Vec::new(),
-    Vec::with_capacity(visitor.size_hint().0),
+    Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096)),
     Vec::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -488,7 +490,7 @@ seq_impl!(
     VecDequeVisitor<T: Deserialize>,
     visitor,
     VecDeque::new(),
-    VecDeque::with_capacity(visitor.size_hint().0),
+    VecDeque::with_capacity(cmp::min(visitor.size_hint().0, 4096)),
     VecDeque::push_back);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -766,7 +768,7 @@ map_impl!(
                    S: BuildHasher + Default>,
     visitor,
     HashMap::with_hasher(S::default()),
-    HashMap::with_capacity_and_hasher(visitor.size_hint().0, S::default()));
+    HashMap::with_capacity_and_hasher(cmp::min(visitor.size_hint().0, 4096), S::default()));
 
 ///////////////////////////////////////////////////////////////////////////////
 

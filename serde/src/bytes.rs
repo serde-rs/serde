@@ -114,6 +114,7 @@ impl<'a> ser::Serialize for Bytes<'a> {
 
 #[cfg(any(feature = "std", feature = "collections"))]
 mod bytebuf {
+    use core::cmp;
     use core::ops;
     use core::fmt;
     use core::fmt::Write;
@@ -254,7 +255,7 @@ mod bytebuf {
         fn visit_seq<V>(self, mut visitor: V) -> Result<ByteBuf, V::Error>
             where V: de::SeqVisitor
         {
-            let (len, _) = visitor.size_hint();
+            let len = cmp::min(visitor.size_hint().0, 4096);
             let mut values = Vec::with_capacity(len);
 
             while let Some(value) = try!(visitor.visit()) {
