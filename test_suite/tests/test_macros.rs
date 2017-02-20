@@ -884,17 +884,18 @@ fn test_internally_tagged_enum() {
 
 #[test]
 fn test_adjacently_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize)]
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t", content = "c")]
-    enum AdjacentlyTagged {
+    enum AdjacentlyTagged<T> {
         Unit,
-        Newtype(u8),
+        Newtype(T),
         Tuple(u8, u8),
         Struct { f: u8 },
     }
 
-    assert_ser_tokens(
-        &AdjacentlyTagged::Unit,
+    // unit with no content
+    assert_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
         &[
             Token::StructStart("AdjacentlyTagged", 1),
 
@@ -906,8 +907,45 @@ fn test_adjacently_tagged_enum() {
         ]
     );
 
-    assert_ser_tokens(
-        &AdjacentlyTagged::Newtype(1),
+    // unit with tag first
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::StructStart("AdjacentlyTagged", 1),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::Unit,
+
+            Token::StructEnd,
+        ]
+    );
+
+    // unit with content first
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::StructStart("AdjacentlyTagged", 1),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::Unit,
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    // newtype with tag first
+    assert_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
@@ -923,8 +961,27 @@ fn test_adjacently_tagged_enum() {
         ]
     );
 
-    assert_ser_tokens(
-        &AdjacentlyTagged::Tuple(1, 1),
+    // newtype with content first
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::U8(1),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Newtype"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    // tuple with tag first
+    assert_tokens(
+        &AdjacentlyTagged::Tuple::<u8>(1, 1),
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
@@ -945,8 +1002,32 @@ fn test_adjacently_tagged_enum() {
         ]
     );
 
-    assert_ser_tokens(
-        &AdjacentlyTagged::Struct { f: 1 },
+    // tuple with content first
+    assert_de_tokens(
+        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::TupleStart(2),
+            Token::TupleSep,
+            Token::U8(1),
+            Token::TupleSep,
+            Token::U8(1),
+            Token::TupleEnd,
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Tuple"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    // struct with tag first
+    assert_tokens(
+        &AdjacentlyTagged::Struct::<u8> { f: 1 },
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
@@ -961,6 +1042,28 @@ fn test_adjacently_tagged_enum() {
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
+
+            Token::StructEnd,
+        ]
+    );
+
+    // struct with content first
+    assert_de_tokens(
+        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::StructStart("Struct", 1),
+            Token::StructSep,
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Struct"),
 
             Token::StructEnd,
         ]

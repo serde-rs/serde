@@ -21,7 +21,7 @@ use collections::{String, Vec};
 use alloc::boxed::Box;
 
 use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, MapVisitor,
-         EnumVisitor};
+         EnumVisitor, Unexpected};
 
 /// Used from generated code to buffer the contents of the Deserializer when
 /// deserializing untagged enums and internally tagged enums.
@@ -489,6 +489,50 @@ impl<T> Visitor for TaggedContentVisitor<T>
                     content: Content::Map(vec),
                 })
             }
+        }
+    }
+}
+
+/// Used by generated code to deserialize an adjacently tagged enum.
+///
+/// Not public API.
+pub enum TagOrContentField {
+    Tag,
+    Content,
+}
+
+/// Not public API.
+pub struct TagOrContentFieldVisitor {
+    pub tag: &'static str,
+    pub content: &'static str,
+}
+
+impl DeserializeSeed for TagOrContentFieldVisitor {
+    type Value = TagOrContentField;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where D: Deserializer
+    {
+        deserializer.deserialize_str(self)
+    }
+}
+
+impl Visitor for TagOrContentFieldVisitor {
+    type Value = TagOrContentField;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "{:?} or {:?}", self.tag, self.content)
+    }
+
+    fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
+        where E: de::Error
+    {
+        if field == self.tag {
+            Ok(TagOrContentField::Tag)
+        } else if field == self.content {
+            Ok(TagOrContentField::Content)
+        } else {
+            Err(de::Error::invalid_value(Unexpected::Str(field), &self))
         }
     }
 }
