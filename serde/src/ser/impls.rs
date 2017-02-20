@@ -623,7 +623,10 @@ impl Serialize for net::IpAddr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_string().serialize(serializer)
+        match *self {
+            net::IpAddr::V4(ref a) => a.serialize(serializer),
+            net::IpAddr::V6(ref a) => a.serialize(serializer),
+        }
     }
 }
 
@@ -632,7 +635,9 @@ impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_string().serialize(serializer)
+        /// "101.102.103.104".len()
+        const MAX_LEN: usize = 15;
+        serialize_display_bounded_length!(self, MAX_LEN, serializer)
     }
 }
 
@@ -641,7 +646,9 @@ impl Serialize for net::Ipv6Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_string().serialize(serializer)
+        /// "1000:1002:1003:1004:1005:1006:1007:1008".len()
+        const MAX_LEN: usize = 39;
+        serialize_display_bounded_length!(self, MAX_LEN, serializer)
     }
 }
 
@@ -664,7 +671,9 @@ impl Serialize for net::SocketAddrV4 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_string().serialize(serializer)
+        /// "101.102.103.104:65000".len()
+        const MAX_LEN: usize = 21;
+        serialize_display_bounded_length!(self, MAX_LEN, serializer)
     }
 }
 
@@ -673,7 +682,9 @@ impl Serialize for net::SocketAddrV6 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_string().serialize(serializer)
+        /// "[1000:1002:1003:1004:1005:1006:1007:1008]:65000".len()
+        const MAX_LEN: usize = 47;
+        serialize_display_bounded_length!(self, MAX_LEN, serializer)
     }
 }
 
