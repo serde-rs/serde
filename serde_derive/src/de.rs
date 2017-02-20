@@ -5,8 +5,6 @@ use bound;
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
-use std::iter;
-
 pub fn expand_derive_deserialize(item: &syn::DeriveInput) -> Result<Tokens, String> {
     let item = {
         let ctxt = internals::Ctxt::new();
@@ -16,28 +14,19 @@ pub fn expand_derive_deserialize(item: &syn::DeriveInput) -> Result<Tokens, Stri
         item
     };
 
-    let impl_generics = build_impl_generics(&item);
-
-    let ty = aster::ty()
-        .path()
-        .segment(item.ident.clone())
-        .with_generics(impl_generics.clone())
-        .build()
-        .build();
-
-    let body = deserialize_body(&item, &impl_generics, ty.clone());
-
-    let where_clause = &impl_generics.where_clause;
-
-    let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", item.ident));
+    let ident = &item.ident;
+    let generics = build_generics(&item);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
+    let body = deserialize_body(&item, &generics);
 
     Ok(quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             extern crate serde as _serde;
             #[automatically_derived]
-            impl #impl_generics _serde::Deserialize for #ty #where_clause {
-                fn deserialize<__D>(deserializer: __D) -> _serde::export::Result<#ty, __D::Error>
+            impl #impl_generics _serde::Deserialize for #ident #ty_generics #where_clause {
+                fn deserialize<__D>(deserializer: __D) -> _serde::export::Result<Self, __D::Error>
                     where __D: _serde::Deserializer
                 #body
             }
@@ -48,7 +37,7 @@ pub fn expand_derive_deserialize(item: &syn::DeriveInput) -> Result<Tokens, Stri
 // All the generics in the input, plus a bound `T: Deserialize` for each generic
 // field type that will be deserialized by us, plus a bound `T: Default` for
 // each generic field type that will be set to a default value.
-fn build_impl_generics(item: &Item) -> syn::Generics {
+fn build_generics(item: &Item) -> syn::Generics {
     let generics = bound::without_defaults(item.generics);
 
     let generics =
@@ -84,10 +73,10 @@ fn requires_default(attrs: &attr::Field) -> bool {
     attrs.default() == &attr::FieldDefault::Default
 }
 
-fn deserialize_body(item: &Item, impl_generics: &syn::Generics, ty: syn::Ty) -> Tokens {
+fn deserialize_body(item: &Item, generics: &syn::Generics) -> Tokens {
     match item.body {
         Body::Enum(ref variants) => {
-            deserialize_item_enum(&item.ident, impl_generics, ty, variants, &item.attrs)
+            deserialize_item_enum(&item.ident, generics, variants, &item.attrs)
         }
         Body::Struct(Style::Struct, ref fields) => {
             if fields.iter().any(|field| field.ident.is_none()) {
@@ -96,8 +85,7 @@ fn deserialize_body(item: &Item, impl_generics: &syn::Generics, ty: syn::Ty) -> 
 
             deserialize_struct(&item.ident,
                                None,
-                               impl_generics,
-                               ty,
+                               generics,
                                fields,
                                &item.attrs,
                                None)
@@ -110,8 +98,7 @@ fn deserialize_body(item: &Item, impl_generics: &syn::Generics, ty: syn::Ty) -> 
 
             deserialize_tuple(&item.ident,
                               None,
-                              impl_generics,
-                              ty,
+                              generics,
                               fields,
                               &item.attrs,
                               None)
@@ -120,95 +107,33 @@ fn deserialize_body(item: &Item, impl_generics: &syn::Generics, ty: syn::Ty) -> 
     }
 }
 
-// Build `__Visitor<A, B, ...>(PhantomData<A>, PhantomData<B>, ...)`
-//
-// Returns:
-//
-//     1. the struct declaration
-//     2. the visitor type, including generics
-//     3. the expression for instantiating the visitor
-fn deserialize_visitor(generics: &syn::Generics) -> (Tokens, Tokens, Tokens) {
-    if generics.lifetimes.is_empty() && generics.ty_params.is_empty() {
-        (quote! {
-                struct __Visitor;
-            },
-         quote!(__Visitor),
-         quote!(__Visitor))
-    } else {
-        let where_clause = &generics.where_clause;
-
-        let num_phantoms = generics.lifetimes.len() + generics.ty_params.len();
-
-        let phantom_types = generics.lifetimes
-            .iter()
-            .map(|lifetime_def| {
-                let lifetime = &lifetime_def.lifetime;
-                quote!(_serde::export::PhantomData<& #lifetime ()>)
-            })
-            .chain(generics.ty_params
-                .iter()
-                .map(|ty_param| {
-                    let ident = &ty_param.ident;
-                    quote!(_serde::export::PhantomData<#ident>)
-                }));
-
-        let all_params = generics.lifetimes
-            .iter()
-            .map(|lifetime_def| {
-                let lifetime = &lifetime_def.lifetime;
-                quote!(#lifetime)
-            })
-            .chain(generics.ty_params
-                .iter()
-                .map(|ty_param| {
-                    let ident = &ty_param.ident;
-                    quote!(#ident)
-                }));
-
-        let ty_param_idents = if generics.ty_params.is_empty() {
-            None
-        } else {
-            let ty_param_idents = generics.ty_params.iter().map(|t| &t.ident);
-            Some(quote!(::<#(#ty_param_idents),*>))
-        };
-
-        let phantom_exprs = iter::repeat(quote!(_serde::export::PhantomData)).take(num_phantoms);
-
-        (quote! {
-                struct __Visitor #generics ( #(#phantom_types),* ) #where_clause;
-            },
-         quote!(__Visitor <#(#all_params),*> ),
-         quote!(__Visitor #ty_param_idents ( #(#phantom_exprs),* )))
-    }
-}
-
-fn deserialize_unit_struct(type_ident: &syn::Ident, item_attrs: &attr::Item) -> Tokens {
+fn deserialize_unit_struct(ident: &syn::Ident, item_attrs: &attr::Item) -> Tokens {
     let type_name = item_attrs.name().deserialize_name();
 
-    let expecting = format!("unit struct {}", type_ident);
+    let expecting = format!("unit struct {}", ident);
 
     quote!({
         struct __Visitor;
 
         impl _serde::de::Visitor for __Visitor {
-            type Value = #type_ident;
+            type Value = #ident;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 _serde::export::fmt::Formatter::write_str(formatter, #expecting)
             }
 
             #[inline]
-            fn visit_unit<__E>(self) -> _serde::export::Result<#type_ident, __E>
+            fn visit_unit<__E>(self) -> _serde::export::Result<#ident, __E>
                 where __E: _serde::de::Error,
             {
-                _serde::export::Ok(#type_ident)
+                _serde::export::Ok(#ident)
             }
 
             #[inline]
-            fn visit_seq<__V>(self, _: __V) -> _serde::export::Result<#type_ident, __V::Error>
+            fn visit_seq<__V>(self, _: __V) -> _serde::export::Result<#ident, __V::Error>
                 where __V: _serde::de::SeqVisitor,
             {
-                _serde::export::Ok(#type_ident)
+                _serde::export::Ok(#ident)
             }
         }
 
@@ -216,38 +141,38 @@ fn deserialize_unit_struct(type_ident: &syn::Ident, item_attrs: &attr::Item) -> 
     })
 }
 
-fn deserialize_tuple(type_ident: &syn::Ident,
+fn deserialize_tuple(ident: &syn::Ident,
                      variant_ident: Option<&syn::Ident>,
-                     impl_generics: &syn::Generics,
-                     ty: syn::Ty,
+                     generics: &syn::Generics,
                      fields: &[Field],
                      item_attrs: &attr::Item,
                      deserializer: Option<Tokens>)
                      -> Tokens {
-    let where_clause = &impl_generics.where_clause;
-
-    let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(impl_generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let is_enum = variant_ident.is_some();
     let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#type_ident::#variant_ident),
-        None => quote!(#type_ident),
+        Some(variant_ident) => quote!(#ident::#variant_ident),
+        None => quote!(#ident),
     };
     let expecting = match variant_ident {
-        Some(variant_ident) => format!("tuple variant {}::{}", type_ident, variant_ident),
-        None => format!("tuple struct {}", type_ident),
+        Some(variant_ident) => format!("tuple variant {}::{}", ident, variant_ident),
+        None => format!("tuple struct {}", ident),
     };
 
     let nfields = fields.len();
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_newtype_struct(type_ident, &type_path, impl_generics, &fields[0]))
+        Some(deserialize_newtype_struct(ident, &type_path, generics, &fields[0]))
     } else {
         None
     };
 
-    let visit_seq = deserialize_seq(type_ident, &type_path, impl_generics, fields, false);
+    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, false);
 
+    let visitor_expr = quote! {
+        __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> }
+    };
     let dispatch = if let Some(deserializer) = deserializer {
         quote!(_serde::Deserializer::deserialize(#deserializer, #visitor_expr))
     } else if is_enum {
@@ -268,10 +193,12 @@ fn deserialize_tuple(type_ident: &syn::Ident,
     };
 
     quote!({
-        #visitor_item
+        struct __Visitor #impl_generics #where_clause {
+            marker: _serde::export::PhantomData<#ident #ty_generics>,
+        }
 
-        impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
-            type Value = #ty;
+        impl #impl_generics _serde::de::Visitor for __Visitor #ty_generics #where_clause {
+            type Value = #ident #ty_generics;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 _serde::export::fmt::Formatter::write_str(formatter, #expecting)
@@ -280,7 +207,7 @@ fn deserialize_tuple(type_ident: &syn::Ident,
             #visit_newtype_struct
 
             #[inline]
-            fn visit_seq<__V>(self, #visitor_var: __V) -> _serde::export::Result<#ty, __V::Error>
+            fn visit_seq<__V>(self, #visitor_var: __V) -> _serde::export::Result<Self::Value, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
@@ -291,9 +218,9 @@ fn deserialize_tuple(type_ident: &syn::Ident,
     })
 }
 
-fn deserialize_seq(type_ident: &syn::Ident,
+fn deserialize_seq(ident: &syn::Ident,
                    type_path: &Tokens,
-                   impl_generics: &syn::Generics,
+                   generics: &syn::Generics,
                    fields: &[Field],
                    is_struct: bool)
                    -> Tokens {
@@ -319,11 +246,10 @@ fn deserialize_seq(type_ident: &syn::Ident,
                         quote!(try!(_serde::de::SeqVisitor::visit::<#field_ty>(&mut visitor)))
                     }
                     Some(path) => {
-                        let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
-                            type_ident, impl_generics, field.ty, path);
+                        let (wrapper, wrapper_ty) = wrap_deserialize_with(
+                            ident, generics, field.ty, path);
                         quote!({
                             #wrapper
-                            #wrapper_impl
                             try!(_serde::de::SeqVisitor::visit::<#wrapper_ty>(&mut visitor))
                                 .map(|wrap| wrap.value)
                         })
@@ -359,9 +285,9 @@ fn deserialize_seq(type_ident: &syn::Ident,
     }
 }
 
-fn deserialize_newtype_struct(type_ident: &syn::Ident,
+fn deserialize_newtype_struct(ident: &syn::Ident,
                               type_path: &Tokens,
-                              impl_generics: &syn::Generics,
+                              generics: &syn::Generics,
                               field: &Field)
                               -> Tokens {
     let value = match field.attrs.deserialize_with() {
@@ -372,11 +298,10 @@ fn deserialize_newtype_struct(type_ident: &syn::Ident,
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_impl, wrapper_ty) =
-                wrap_deserialize_with(type_ident, impl_generics, field.ty, path);
+            let (wrapper, wrapper_ty) =
+                wrap_deserialize_with(ident, generics, field.ty, path);
             quote!({
                 #wrapper
-                #wrapper_impl
                 try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
             })
         }
@@ -391,10 +316,9 @@ fn deserialize_newtype_struct(type_ident: &syn::Ident,
     }
 }
 
-fn deserialize_struct(type_ident: &syn::Ident,
+fn deserialize_struct(ident: &syn::Ident,
                       variant_ident: Option<&syn::Ident>,
-                      impl_generics: &syn::Generics,
-                      ty: syn::Ty,
+                      generics: &syn::Generics,
                       fields: &[Field],
                       item_attrs: &attr::Item,
                       deserializer: Option<Tokens>)
@@ -402,24 +326,25 @@ fn deserialize_struct(type_ident: &syn::Ident,
     let is_enum = variant_ident.is_some();
     let is_untagged = deserializer.is_some();
 
-    let where_clause = &impl_generics.where_clause;
-
-    let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(impl_generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#type_ident::#variant_ident),
-        None => quote!(#type_ident),
+        Some(variant_ident) => quote!(#ident::#variant_ident),
+        None => quote!(#ident),
     };
     let expecting = match variant_ident {
-        Some(variant_ident) => format!("struct variant {}::{}", type_ident, variant_ident),
-        None => format!("struct {}", type_ident),
+        Some(variant_ident) => format!("struct variant {}::{}", ident, variant_ident),
+        None => format!("struct {}", ident),
     };
 
-    let visit_seq = deserialize_seq(type_ident, &type_path, impl_generics, fields, true);
+    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, true);
 
     let (field_visitor, fields_stmt, visit_map) =
-        deserialize_struct_visitor(type_ident, type_path, impl_generics, fields, item_attrs);
+        deserialize_struct_visitor(ident, type_path, generics, fields, item_attrs);
 
+    let visitor_expr = quote! {
+        __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> }
+    };
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
             _serde::Deserializer::deserialize(#deserializer, #visitor_expr)
@@ -448,7 +373,7 @@ fn deserialize_struct(type_ident: &syn::Ident,
     } else {
         Some(quote! {
             #[inline]
-            fn visit_seq<__V>(self, #visitor_var: __V) -> _serde::export::Result<#ty, __V::Error>
+            fn visit_seq<__V>(self, #visitor_var: __V) -> _serde::export::Result<Self::Value, __V::Error>
                 where __V: _serde::de::SeqVisitor
             {
                 #visit_seq
@@ -459,10 +384,12 @@ fn deserialize_struct(type_ident: &syn::Ident,
     quote!({
         #field_visitor
 
-        #visitor_item
+        struct __Visitor #impl_generics #where_clause {
+            marker: _serde::export::PhantomData<#ident #ty_generics>,
+        }
 
-        impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
-            type Value = #ty;
+        impl #generics _serde::de::Visitor for __Visitor #ty_generics #where_clause {
+            type Value = #ident #ty_generics;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 _serde::export::fmt::Formatter::write_str(formatter, #expecting)
@@ -471,7 +398,7 @@ fn deserialize_struct(type_ident: &syn::Ident,
             #visit_seq
 
             #[inline]
-            fn visit_map<__V>(self, mut visitor: __V) -> _serde::export::Result<#ty, __V::Error>
+            fn visit_map<__V>(self, mut visitor: __V) -> _serde::export::Result<Self::Value, __V::Error>
                 where __V: _serde::de::MapVisitor
             {
                 #visit_map
@@ -484,42 +411,39 @@ fn deserialize_struct(type_ident: &syn::Ident,
     })
 }
 
-fn deserialize_item_enum(type_ident: &syn::Ident,
-                         impl_generics: &syn::Generics,
-                         ty: syn::Ty,
+fn deserialize_item_enum(ident: &syn::Ident,
+                         generics: &syn::Generics,
                          variants: &[Variant],
                          item_attrs: &attr::Item)
                          -> Tokens {
     match *item_attrs.tag() {
         attr::EnumTag::External => {
-            deserialize_externally_tagged_enum(type_ident, impl_generics, ty, variants, item_attrs)
+            deserialize_externally_tagged_enum(ident, generics, variants, item_attrs)
         }
         attr::EnumTag::Internal { ref tag } => {
-            deserialize_internally_tagged_enum(type_ident,
-                                               impl_generics,
-                                               ty,
+            deserialize_internally_tagged_enum(ident,
+                                               generics,
                                                variants,
                                                item_attrs,
                                                tag)
         }
         attr::EnumTag::Adjacent { .. } => unimplemented!(),
         attr::EnumTag::None => {
-            deserialize_untagged_enum(type_ident, impl_generics, ty, variants, item_attrs)
+            deserialize_untagged_enum(ident, generics, variants, item_attrs)
         }
     }
 }
 
-fn deserialize_externally_tagged_enum(type_ident: &syn::Ident,
-                                      impl_generics: &syn::Generics,
-                                      ty: syn::Ty,
+fn deserialize_externally_tagged_enum(ident: &syn::Ident,
+                                      generics: &syn::Generics,
                                       variants: &[Variant],
                                       item_attrs: &attr::Item)
                                       -> Tokens {
-    let where_clause = &impl_generics.where_clause;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let type_name = item_attrs.name().deserialize_name();
 
-    let expecting = format!("enum {}", type_ident);
+    let expecting = format!("enum {}", ident);
 
     let variant_names_idents: Vec<_> = variants.iter()
         .enumerate()
@@ -543,9 +467,8 @@ fn deserialize_externally_tagged_enum(type_ident: &syn::Ident,
         .map(|(i, variant)| {
             let variant_name = field_i(i);
 
-            let block = deserialize_externally_tagged_variant(type_ident,
-                                                              impl_generics,
-                                                              ty.clone(),
+            let block = deserialize_externally_tagged_variant(ident,
+                                                              generics,
                                                               variant,
                                                               item_attrs);
 
@@ -573,21 +496,21 @@ fn deserialize_externally_tagged_enum(type_ident: &syn::Ident,
         }
     };
 
-    let (visitor_item, visitor_ty, visitor_expr) = deserialize_visitor(impl_generics);
-
     quote!({
         #variant_visitor
 
-        #visitor_item
+        struct __Visitor #impl_generics #where_clause {
+            marker: _serde::export::PhantomData<#ident #ty_generics>,
+        }
 
-        impl #impl_generics _serde::de::Visitor for #visitor_ty #where_clause {
-            type Value = #ty;
+        impl #generics _serde::de::Visitor for __Visitor #ty_generics #where_clause {
+            type Value = #ident #ty_generics;
 
             fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
                 _serde::export::fmt::Formatter::write_str(formatter, #expecting)
             }
 
-            fn visit_enum<__V>(self, visitor: __V) -> _serde::export::Result<#ty, __V::Error>
+            fn visit_enum<__V>(self, visitor: __V) -> _serde::export::Result<Self::Value, __V::Error>
                 where __V: _serde::de::EnumVisitor,
             {
                 #match_variant
@@ -596,13 +519,15 @@ fn deserialize_externally_tagged_enum(type_ident: &syn::Ident,
 
         #variants_stmt
 
-        _serde::Deserializer::deserialize_enum(deserializer, #type_name, VARIANTS, #visitor_expr)
+        _serde::Deserializer::deserialize_enum(deserializer, #type_name, VARIANTS,
+                                               __Visitor {
+                                                   marker: _serde::export::PhantomData::<#ident #ty_generics>,
+                                               })
     })
 }
 
-fn deserialize_internally_tagged_enum(type_ident: &syn::Ident,
-                                      impl_generics: &syn::Generics,
-                                      ty: syn::Ty,
+fn deserialize_internally_tagged_enum(ident: &syn::Ident,
+                                      generics: &syn::Generics,
                                       variants: &[Variant],
                                       item_attrs: &attr::Item,
                                       tag: &str)
@@ -630,9 +555,8 @@ fn deserialize_internally_tagged_enum(type_ident: &syn::Ident,
             let variant_name = field_i(i);
 
             let block = deserialize_internally_tagged_variant(
-                type_ident,
-                impl_generics,
-                ty.clone(),
+                ident,
+                generics,
                 variant,
                 item_attrs,
                 quote!(_serde::de::private::ContentDeserializer::<__D::Error>::new(_tagged.content)),
@@ -658,9 +582,8 @@ fn deserialize_internally_tagged_enum(type_ident: &syn::Ident,
     })
 }
 
-fn deserialize_untagged_enum(type_ident: &syn::Ident,
-                             impl_generics: &syn::Generics,
-                             ty: syn::Ty,
+fn deserialize_untagged_enum(ident: &syn::Ident,
+                             generics: &syn::Generics,
                              variants: &[Variant],
                              item_attrs: &attr::Item)
                              -> Tokens {
@@ -668,9 +591,8 @@ fn deserialize_untagged_enum(type_ident: &syn::Ident,
         .filter(|variant| !variant.attrs.skip_deserializing())
         .map(|variant| {
             deserialize_untagged_variant(
-                type_ident,
-                impl_generics,
-                ty.clone(),
+                ident,
+                generics,
                 variant,
                 item_attrs,
                 quote!(_serde::de::private::ContentRefDeserializer::<__D::Error>::new(&_content)),
@@ -683,7 +605,7 @@ fn deserialize_untagged_enum(type_ident: &syn::Ident,
     // largest number of fields. I'm not sure I like that. Maybe it would be
     // better to save all the errors and combine them into one message that
     // explains why none of the variants matched.
-    let fallthrough_msg = format!("data did not match any variant of untagged enum {}", type_ident);
+    let fallthrough_msg = format!("data did not match any variant of untagged enum {}", ident);
 
     quote!({
         let _content = try!(<_serde::de::private::Content as _serde::Deserialize>::deserialize(deserializer));
@@ -698,9 +620,8 @@ fn deserialize_untagged_enum(type_ident: &syn::Ident,
     })
 }
 
-fn deserialize_externally_tagged_variant(type_ident: &syn::Ident,
+fn deserialize_externally_tagged_variant(ident: &syn::Ident,
                                          generics: &syn::Generics,
-                                         ty: syn::Ty,
                                          variant: &Variant,
                                          item_attrs: &attr::Item)
                                          -> Tokens {
@@ -710,29 +631,27 @@ fn deserialize_externally_tagged_variant(type_ident: &syn::Ident,
         Style::Unit => {
             quote!({
                 try!(_serde::de::VariantVisitor::visit_unit(visitor));
-                _serde::export::Ok(#type_ident::#variant_ident)
+                _serde::export::Ok(#ident::#variant_ident)
             })
         }
         Style::Newtype => {
-            deserialize_externally_tagged_newtype_variant(type_ident,
+            deserialize_externally_tagged_newtype_variant(ident,
                                                           variant_ident,
                                                           generics,
                                                           &variant.fields[0])
         }
         Style::Tuple => {
-            deserialize_tuple(type_ident,
+            deserialize_tuple(ident,
                               Some(variant_ident),
                               generics,
-                              ty,
                               &variant.fields,
                               item_attrs,
                               None)
         }
         Style::Struct => {
-            deserialize_struct(type_ident,
+            deserialize_struct(ident,
                                Some(variant_ident),
                                generics,
-                               ty,
                                &variant.fields,
                                item_attrs,
                                None)
@@ -740,9 +659,8 @@ fn deserialize_externally_tagged_variant(type_ident: &syn::Ident,
     }
 }
 
-fn deserialize_internally_tagged_variant(type_ident: &syn::Ident,
+fn deserialize_internally_tagged_variant(ident: &syn::Ident,
                                          generics: &syn::Generics,
-                                         ty: syn::Ty,
                                          variant: &Variant,
                                          item_attrs: &attr::Item,
                                          deserializer: Tokens)
@@ -751,17 +669,16 @@ fn deserialize_internally_tagged_variant(type_ident: &syn::Ident,
 
     match variant.style {
         Style::Unit => {
-            let type_name = type_ident.as_ref();
+            let type_name = ident.as_ref();
             let variant_name = variant.ident.as_ref();
             quote!({
                 try!(_serde::Deserializer::deserialize(#deserializer, _serde::de::private::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
-                _serde::export::Ok(#type_ident::#variant_ident)
+                _serde::export::Ok(#ident::#variant_ident)
             })
         }
         Style::Newtype | Style::Struct => {
-            deserialize_untagged_variant(type_ident,
+            deserialize_untagged_variant(ident,
                                          generics,
-                                         ty,
                                          variant,
                                          item_attrs,
                                          deserializer)
@@ -770,9 +687,8 @@ fn deserialize_internally_tagged_variant(type_ident: &syn::Ident,
     }
 }
 
-fn deserialize_untagged_variant(type_ident: &syn::Ident,
+fn deserialize_untagged_variant(ident: &syn::Ident,
                                 generics: &syn::Generics,
-                                ty: syn::Ty,
                                 variant: &Variant,
                                 item_attrs: &attr::Item,
                                 deserializer: Tokens)
@@ -781,7 +697,7 @@ fn deserialize_untagged_variant(type_ident: &syn::Ident,
 
     match variant.style {
         Style::Unit => {
-            let type_name = type_ident.as_ref();
+            let type_name = ident.as_ref();
             let variant_name = variant.ident.as_ref();
             quote! {
                 _serde::export::Result::map(
@@ -789,30 +705,28 @@ fn deserialize_untagged_variant(type_ident: &syn::Ident,
                         #deserializer,
                         _serde::de::private::UntaggedUnitVisitor::new(#type_name, #variant_name)
                     ),
-                    |()| #type_ident::#variant_ident)
+                    |()| #ident::#variant_ident)
             }
         }
         Style::Newtype => {
-            deserialize_untagged_newtype_variant(type_ident,
+            deserialize_untagged_newtype_variant(ident,
                                                  variant_ident,
                                                  generics,
                                                  &variant.fields[0],
                                                  deserializer)
         }
         Style::Tuple => {
-            deserialize_tuple(type_ident,
+            deserialize_tuple(ident,
                               Some(variant_ident),
                               generics,
-                              ty,
                               &variant.fields,
                               item_attrs,
                               Some(deserializer))
         }
         Style::Struct => {
-            deserialize_struct(type_ident,
+            deserialize_struct(ident,
                                Some(variant_ident),
                                generics,
-                               ty,
                                &variant.fields,
                                item_attrs,
                                Some(deserializer))
@@ -820,9 +734,9 @@ fn deserialize_untagged_variant(type_ident: &syn::Ident,
     }
 }
 
-fn deserialize_externally_tagged_newtype_variant(type_ident: &syn::Ident,
+fn deserialize_externally_tagged_newtype_variant(ident: &syn::Ident,
                                                  variant_ident: &syn::Ident,
-                                                 impl_generics: &syn::Generics,
+                                                 generics: &syn::Generics,
                                                  field: &Field)
                                                  -> Tokens {
     match field.attrs.deserialize_with() {
@@ -831,26 +745,25 @@ fn deserialize_externally_tagged_newtype_variant(type_ident: &syn::Ident,
             quote! {
                 _serde::export::Result::map(
                     _serde::de::VariantVisitor::visit_newtype::<#field_ty>(visitor),
-                    #type_ident::#variant_ident),
+                    #ident::#variant_ident),
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_impl, wrapper_ty) =
-                wrap_deserialize_with(type_ident, impl_generics, field.ty, path);
+            let (wrapper, wrapper_ty) =
+                wrap_deserialize_with(ident, generics, field.ty, path);
             quote!({
                 #wrapper
-                #wrapper_impl
                 _serde::export::Result::map(
                     _serde::de::VariantVisitor::visit_newtype::<#wrapper_ty>(visitor),
-                    |_wrapper| #type_ident::#variant_ident(_wrapper.value))
+                    |_wrapper| #ident::#variant_ident(_wrapper.value))
             })
         }
     }
 }
 
-fn deserialize_untagged_newtype_variant(type_ident: &syn::Ident,
+fn deserialize_untagged_newtype_variant(ident: &syn::Ident,
                                         variant_ident: &syn::Ident,
-                                        impl_generics: &syn::Generics,
+                                        generics: &syn::Generics,
                                         field: &Field,
                                         deserializer: Tokens)
                                         -> Tokens {
@@ -860,18 +773,17 @@ fn deserialize_untagged_newtype_variant(type_ident: &syn::Ident,
             quote!({
                 _serde::export::Result::map(
                     <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
-                    #type_ident::#variant_ident)
+                    #ident::#variant_ident)
             })
         }
         Some(path) => {
-            let (wrapper, wrapper_impl, wrapper_ty) =
-                wrap_deserialize_with(type_ident, impl_generics, field.ty, path);
+            let (wrapper, wrapper_ty) =
+                wrap_deserialize_with(ident, generics, field.ty, path);
             quote!({
                 #wrapper
-                #wrapper_impl
                 _serde::export::Result::map(
                     <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer),
-                    |_wrapper| #type_ident::#variant_ident(_wrapper.value))
+                    |_wrapper| #ident::#variant_ident(_wrapper.value))
             })
         }
     }
@@ -989,9 +901,9 @@ fn deserialize_field_visitor(fields: Vec<(String, Ident)>,
     }
 }
 
-fn deserialize_struct_visitor(type_ident: &syn::Ident,
+fn deserialize_struct_visitor(ident: &syn::Ident,
                               struct_path: Tokens,
-                              impl_generics: &syn::Generics,
+                              generics: &syn::Generics,
                               fields: &[Field],
                               item_attrs: &attr::Item)
                               -> (Tokens, Tokens, Tokens) {
@@ -1010,14 +922,14 @@ fn deserialize_struct_visitor(type_ident: &syn::Ident,
 
     let field_visitor = deserialize_field_visitor(field_names_idents, item_attrs, false);
 
-    let visit_map = deserialize_map(type_ident, struct_path, impl_generics, fields, item_attrs);
+    let visit_map = deserialize_map(ident, struct_path, generics, fields, item_attrs);
 
     (field_visitor, fields_stmt, visit_map)
 }
 
-fn deserialize_map(type_ident: &syn::Ident,
+fn deserialize_map(ident: &syn::Ident,
                    struct_path: Tokens,
-                   impl_generics: &syn::Generics,
+                   generics: &syn::Generics,
                    fields: &[Field],
                    item_attrs: &attr::Item)
                    -> Tokens {
@@ -1051,11 +963,10 @@ fn deserialize_map(type_ident: &syn::Ident,
                     }
                 }
                 Some(path) => {
-                    let (wrapper, wrapper_impl, wrapper_ty) = wrap_deserialize_with(
-                        type_ident, impl_generics, field.ty, path);
+                    let (wrapper, wrapper_ty) = wrap_deserialize_with(
+                        ident, generics, field.ty, path);
                     quote!({
                         #wrapper
-                        #wrapper_impl
                         try!(_serde::de::MapVisitor::visit_value::<#wrapper_ty>(&mut visitor)).value
                     })
                 }
@@ -1139,49 +1050,35 @@ fn field_i(i: usize) -> Ident {
 
 /// This function wraps the expression in `#[serde(deserialize_with="...")]` in
 /// a trait to prevent it from accessing the internal `Deserialize` state.
-fn wrap_deserialize_with(type_ident: &syn::Ident,
-                         impl_generics: &syn::Generics,
+fn wrap_deserialize_with(ident: &syn::Ident,
+                         generics: &syn::Generics,
                          field_ty: &syn::Ty,
                          deserialize_with: &syn::Path)
-                         -> (Tokens, Tokens, syn::Path) {
-    // Quasi-quoting doesn't do a great job of expanding generics into paths,
-    // so manually build it.
-    let wrapper_ty = aster::path()
-        .segment("__SerdeDeserializeWithStruct")
-        .with_generics(impl_generics.clone())
-        .build()
-        .build();
+                         -> (Tokens, Tokens) {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let where_clause = &impl_generics.where_clause;
+    let wrapper = quote! {
+        struct __DeserializeWith #impl_generics #where_clause {
+            value: #field_ty,
+            phantom: _serde::export::PhantomData<#ident #ty_generics>,
+        }
 
-    let phantom_ty = aster::path()
-        .segment(type_ident)
-        .with_generics(aster::from_generics(impl_generics.clone())
-            .strip_ty_params()
-            .build())
-        .build()
-        .build();
-
-    (quote! {
-            struct __SerdeDeserializeWithStruct #impl_generics #where_clause {
-                value: #field_ty,
-                phantom: _serde::export::PhantomData<#phantom_ty>,
+        impl #impl_generics _serde::Deserialize for __DeserializeWith #ty_generics #where_clause {
+            fn deserialize<__D>(__d: __D) -> _serde::export::Result<Self, __D::Error>
+                where __D: _serde::Deserializer
+            {
+                let value = try!(#deserialize_with(__d));
+                _serde::export::Ok(__DeserializeWith {
+                    value: value,
+                    phantom: _serde::export::PhantomData,
+                })
             }
-        },
-     quote! {
-            impl #impl_generics _serde::Deserialize for #wrapper_ty #where_clause {
-                fn deserialize<__D>(__d: __D) -> _serde::export::Result<Self, __D::Error>
-                    where __D: _serde::Deserializer
-                {
-                    let value = try!(#deserialize_with(__d));
-                    _serde::export::Ok(__SerdeDeserializeWithStruct {
-                        value: value,
-                        phantom: _serde::export::PhantomData,
-                    })
-                }
-            }
-        },
-     wrapper_ty)
+        }
+    };
+
+    let wrapper_ty = quote!(__DeserializeWith #ty_generics);
+
+    (wrapper, wrapper_ty)
 }
 
 fn expr_is_missing(attrs: &attr::Field) -> Tokens {
