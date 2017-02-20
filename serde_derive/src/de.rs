@@ -2,6 +2,7 @@ use syn::{self, Ident};
 use quote::{self, Tokens};
 
 use bound;
+use fragment::{Fragment, Expr, Stmts, Match};
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
@@ -18,7 +19,7 @@ pub fn expand_derive_deserialize(item: &syn::DeriveInput) -> Result<Tokens, Stri
     let generics = build_generics(&item);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
-    let body = deserialize_body(&item, &generics);
+    let body = Stmts(deserialize_body(&item, &generics));
 
     Ok(quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -28,7 +29,9 @@ pub fn expand_derive_deserialize(item: &syn::DeriveInput) -> Result<Tokens, Stri
             impl #impl_generics _serde::Deserialize for #ident #ty_generics #where_clause {
                 fn deserialize<__D>(deserializer: __D) -> _serde::export::Result<Self, __D::Error>
                     where __D: _serde::Deserializer
-                #body
+                {
+                    #body
+                }
             }
         };
     })
@@ -81,7 +84,7 @@ fn requires_default(attrs: &attr::Field) -> bool {
     attrs.default() == &attr::Default::Default
 }
 
-fn deserialize_body(item: &Item, generics: &syn::Generics) -> Tokens {
+fn deserialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
     match item.body {
         Body::Enum(ref variants) => {
             deserialize_item_enum(&item.ident, generics, variants, &item.attrs)
@@ -115,12 +118,12 @@ fn deserialize_body(item: &Item, generics: &syn::Generics) -> Tokens {
     }
 }
 
-fn deserialize_unit_struct(ident: &syn::Ident, item_attrs: &attr::Item) -> Tokens {
+fn deserialize_unit_struct(ident: &syn::Ident, item_attrs: &attr::Item) -> Fragment {
     let type_name = item_attrs.name().deserialize_name();
 
     let expecting = format!("unit struct {}", ident);
 
-    quote!({
+    quote_block! {
         struct __Visitor;
 
         impl _serde::de::Visitor for __Visitor {
@@ -146,7 +149,7 @@ fn deserialize_unit_struct(ident: &syn::Ident, item_attrs: &attr::Item) -> Token
         }
 
         deserializer.deserialize_unit_struct(#type_name, __Visitor)
-    })
+    }
 }
 
 fn deserialize_tuple(ident: &syn::Ident,
@@ -155,7 +158,7 @@ fn deserialize_tuple(ident: &syn::Ident,
                      fields: &[Field],
                      item_attrs: &attr::Item,
                      deserializer: Option<Tokens>)
-                     -> Tokens {
+                     -> Fragment {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let is_enum = variant_ident.is_some();
@@ -176,7 +179,7 @@ fn deserialize_tuple(ident: &syn::Ident,
         None
     };
 
-    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, false, item_attrs);
+    let visit_seq = Stmts(deserialize_seq(ident, &type_path, generics, fields, false, item_attrs));
 
     let visitor_expr = quote! {
         __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> }
@@ -200,7 +203,7 @@ fn deserialize_tuple(ident: &syn::Ident,
         quote!(mut visitor)
     };
 
-    quote!({
+    quote_block! {
         struct __Visitor #impl_generics #where_clause {
             marker: _serde::export::PhantomData<#ident #ty_generics>,
         }
@@ -223,7 +226,7 @@ fn deserialize_tuple(ident: &syn::Ident,
         }
 
         #dispatch
-    })
+    }
 }
 
 fn deserialize_seq(ident: &syn::Ident,
@@ -232,7 +235,7 @@ fn deserialize_seq(ident: &syn::Ident,
                    fields: &[Field],
                    is_struct: bool,
                    item_attrs: &attr::Item)
-                   -> Tokens {
+                   -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
     let deserialized_count = fields.iter()
@@ -244,7 +247,7 @@ fn deserialize_seq(ident: &syn::Ident,
     let let_values = vars.clone().zip(fields)
         .map(|(var, field)| {
             if field.attrs.skip_deserializing() {
-                let default = expr_is_missing(&field, item_attrs);
+                let default = Expr(expr_is_missing(&field, item_attrs));
                 quote! {
                     let #var = #default;
                 }
@@ -288,7 +291,7 @@ fn deserialize_seq(ident: &syn::Ident,
         }
     };
 
-    quote! {
+    quote_block! {
         #(#let_values)*
         _serde::export::Ok(#result)
     }
@@ -331,7 +334,7 @@ fn deserialize_struct(ident: &syn::Ident,
                       fields: &[Field],
                       item_attrs: &attr::Item,
                       deserializer: Option<Tokens>)
-                      -> Tokens {
+                      -> Fragment {
     let is_enum = variant_ident.is_some();
     let is_untagged = deserializer.is_some();
 
@@ -346,10 +349,13 @@ fn deserialize_struct(ident: &syn::Ident,
         None => format!("struct {}", ident),
     };
 
-    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, true, item_attrs);
+    let visit_seq = Stmts(deserialize_seq(ident, &type_path, generics, fields, true, item_attrs));
 
     let (field_visitor, fields_stmt, visit_map) =
         deserialize_struct_visitor(ident, type_path, generics, fields, item_attrs);
+    let field_visitor = Stmts(field_visitor);
+    let fields_stmt = Stmts(fields_stmt);
+    let visit_map = Stmts(visit_map);
 
     let visitor_expr = quote! {
         __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> }
@@ -390,7 +396,7 @@ fn deserialize_struct(ident: &syn::Ident,
         })
     };
 
-    quote!({
+    quote_block! {
         #field_visitor
 
         struct __Visitor #impl_generics #where_clause {
@@ -417,14 +423,14 @@ fn deserialize_struct(ident: &syn::Ident,
         #fields_stmt
 
         #dispatch
-    })
+    }
 }
 
 fn deserialize_item_enum(ident: &syn::Ident,
                          generics: &syn::Generics,
                          variants: &[Variant],
                          item_attrs: &attr::Item)
-                         -> Tokens {
+                         -> Fragment {
     match *item_attrs.tag() {
         attr::EnumTag::External => {
             deserialize_externally_tagged_enum(ident, generics, variants, item_attrs)
@@ -447,7 +453,7 @@ fn deserialize_externally_tagged_enum(ident: &syn::Ident,
                                       generics: &syn::Generics,
                                       variants: &[Variant],
                                       item_attrs: &attr::Item)
-                                      -> Tokens {
+                                      -> Fragment {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let type_name = item_attrs.name().deserialize_name();
@@ -467,7 +473,7 @@ fn deserialize_externally_tagged_enum(ident: &syn::Ident,
         }
     };
 
-    let variant_visitor = deserialize_field_visitor(variant_names_idents, item_attrs, true);
+    let variant_visitor = Stmts(deserialize_field_visitor(variant_names_idents, item_attrs, true));
 
     // Match arms to extract a variant from a string
     let variant_arms = variants.iter()
@@ -476,10 +482,10 @@ fn deserialize_externally_tagged_enum(ident: &syn::Ident,
         .map(|(i, variant)| {
             let variant_name = field_i(i);
 
-            let block = deserialize_externally_tagged_variant(ident,
-                                                              generics,
-                                                              variant,
-                                                              item_attrs);
+            let block = Match(deserialize_externally_tagged_variant(ident,
+                                                                    generics,
+                                                                    variant,
+                                                                    item_attrs));
 
             quote! {
                 (__Field::#variant_name, visitor) => #block
@@ -505,7 +511,7 @@ fn deserialize_externally_tagged_enum(ident: &syn::Ident,
         }
     };
 
-    quote!({
+    quote_block! {
         #variant_visitor
 
         struct __Visitor #impl_generics #where_clause {
@@ -532,7 +538,7 @@ fn deserialize_externally_tagged_enum(ident: &syn::Ident,
                                                __Visitor {
                                                    marker: _serde::export::PhantomData::<#ident #ty_generics>,
                                                })
-    })
+    }
 }
 
 fn deserialize_internally_tagged_enum(ident: &syn::Ident,
@@ -540,7 +546,7 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
                                       variants: &[Variant],
                                       item_attrs: &attr::Item,
                                       tag: &str)
-                                      -> Tokens {
+                                      -> Fragment {
     let variant_names_idents: Vec<_> = variants.iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
@@ -554,7 +560,7 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
         }
     };
 
-    let variant_visitor = deserialize_field_visitor(variant_names_idents, item_attrs, true);
+    let variant_visitor = Stmts(deserialize_field_visitor(variant_names_idents, item_attrs, true));
 
     // Match arms to extract a variant from a string
     let variant_arms = variants.iter()
@@ -563,20 +569,20 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
         .map(|(i, variant)| {
             let variant_name = field_i(i);
 
-            let block = deserialize_internally_tagged_variant(
+            let block = Match(deserialize_internally_tagged_variant(
                 ident,
                 generics,
                 variant,
                 item_attrs,
                 quote!(_serde::de::private::ContentDeserializer::<__D::Error>::new(_tagged.content)),
-            );
+            ));
 
             quote! {
                 __Field::#variant_name => #block
             }
         });
 
-    quote!({
+    quote_block! {
         #variant_visitor
 
         #variants_stmt
@@ -588,24 +594,24 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
         match _tagged.tag {
             #(#variant_arms)*
         }
-    })
+    }
 }
 
 fn deserialize_untagged_enum(ident: &syn::Ident,
                              generics: &syn::Generics,
                              variants: &[Variant],
                              item_attrs: &attr::Item)
-                             -> Tokens {
+                             -> Fragment {
     let attempts = variants.iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
         .map(|variant| {
-            deserialize_untagged_variant(
+            Expr(deserialize_untagged_variant(
                 ident,
                 generics,
                 variant,
                 item_attrs,
                 quote!(_serde::de::private::ContentRefDeserializer::<__D::Error>::new(&_content)),
-            )
+            ))
         });
 
     // TODO this message could be better by saving the errors from the failed
@@ -616,7 +622,7 @@ fn deserialize_untagged_enum(ident: &syn::Ident,
     // explains why none of the variants matched.
     let fallthrough_msg = format!("data did not match any variant of untagged enum {}", ident);
 
-    quote!({
+    quote_block! {
         let _content = try!(<_serde::de::private::Content as _serde::Deserialize>::deserialize(deserializer));
 
         #(
@@ -626,22 +632,22 @@ fn deserialize_untagged_enum(ident: &syn::Ident,
         )*
 
         _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
-    })
+    }
 }
 
 fn deserialize_externally_tagged_variant(ident: &syn::Ident,
                                          generics: &syn::Generics,
                                          variant: &Variant,
                                          item_attrs: &attr::Item)
-                                         -> Tokens {
+                                         -> Fragment {
     let variant_ident = &variant.ident;
 
     match variant.style {
         Style::Unit => {
-            quote!({
+            quote_block! {
                 try!(_serde::de::VariantVisitor::visit_unit(visitor));
                 _serde::export::Ok(#ident::#variant_ident)
-            })
+            }
         }
         Style::Newtype => {
             deserialize_externally_tagged_newtype_variant(ident,
@@ -673,17 +679,17 @@ fn deserialize_internally_tagged_variant(ident: &syn::Ident,
                                          variant: &Variant,
                                          item_attrs: &attr::Item,
                                          deserializer: Tokens)
-                                         -> Tokens {
+                                         -> Fragment {
     let variant_ident = &variant.ident;
 
     match variant.style {
         Style::Unit => {
             let type_name = ident.as_ref();
             let variant_name = variant.ident.as_ref();
-            quote!({
+            quote_block! {
                 try!(_serde::Deserializer::deserialize(#deserializer, _serde::de::private::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
                 _serde::export::Ok(#ident::#variant_ident)
-            })
+            }
         }
         Style::Newtype | Style::Struct => {
             deserialize_untagged_variant(ident,
@@ -701,14 +707,14 @@ fn deserialize_untagged_variant(ident: &syn::Ident,
                                 variant: &Variant,
                                 item_attrs: &attr::Item,
                                 deserializer: Tokens)
-                                -> Tokens {
+                                -> Fragment {
     let variant_ident = &variant.ident;
 
     match variant.style {
         Style::Unit => {
             let type_name = ident.as_ref();
             let variant_name = variant.ident.as_ref();
-            quote! {
+            quote_expr! {
                 _serde::export::Result::map(
                     _serde::Deserializer::deserialize(
                         #deserializer,
@@ -747,25 +753,25 @@ fn deserialize_externally_tagged_newtype_variant(ident: &syn::Ident,
                                                  variant_ident: &syn::Ident,
                                                  generics: &syn::Generics,
                                                  field: &Field)
-                                                 -> Tokens {
+                                                 -> Fragment {
     match field.attrs.deserialize_with() {
         None => {
             let field_ty = &field.ty;
-            quote! {
+            quote_expr! {
                 _serde::export::Result::map(
                     _serde::de::VariantVisitor::visit_newtype::<#field_ty>(visitor),
-                    #ident::#variant_ident),
+                    #ident::#variant_ident)
             }
         }
         Some(path) => {
             let (wrapper, wrapper_ty) =
                 wrap_deserialize_with(ident, generics, field.ty, path);
-            quote!({
+            quote_block! {
                 #wrapper
                 _serde::export::Result::map(
                     _serde::de::VariantVisitor::visit_newtype::<#wrapper_ty>(visitor),
                     |_wrapper| #ident::#variant_ident(_wrapper.value))
-            })
+            }
         }
     }
 }
@@ -775,25 +781,25 @@ fn deserialize_untagged_newtype_variant(ident: &syn::Ident,
                                         generics: &syn::Generics,
                                         field: &Field,
                                         deserializer: Tokens)
-                                        -> Tokens {
+                                        -> Fragment {
     match field.attrs.deserialize_with() {
         None => {
             let field_ty = &field.ty;
-            quote!({
+            quote_expr! {
                 _serde::export::Result::map(
                     <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
                     #ident::#variant_ident)
-            })
+            }
         }
         Some(path) => {
             let (wrapper, wrapper_ty) =
                 wrap_deserialize_with(ident, generics, field.ty, path);
-            quote!({
+            quote_block! {
                 #wrapper
                 _serde::export::Result::map(
                     <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer),
                     |_wrapper| #ident::#variant_ident(_wrapper.value))
-            })
+            }
         }
     }
 }
@@ -801,7 +807,7 @@ fn deserialize_untagged_newtype_variant(ident: &syn::Ident,
 fn deserialize_field_visitor(fields: Vec<(String, Ident)>,
                              item_attrs: &attr::Item,
                              is_variant: bool)
-                             -> Tokens {
+                             -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
     let field_bytes = fields.iter().map(|&(ref name, _)| quote::ByteStr(name));
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
@@ -855,7 +861,7 @@ fn deserialize_field_visitor(fields: Vec<(String, Ident)>,
         None
     };
 
-    quote! {
+    quote_block! {
         #[allow(non_camel_case_types)]
         enum __Field {
             #(#field_idents,)*
@@ -915,7 +921,7 @@ fn deserialize_struct_visitor(ident: &syn::Ident,
                               generics: &syn::Generics,
                               fields: &[Field],
                               item_attrs: &attr::Item)
-                              -> (Tokens, Tokens, Tokens) {
+                              -> (Fragment, Fragment, Fragment) {
     let field_names_idents: Vec<_> = fields.iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
@@ -924,7 +930,7 @@ fn deserialize_struct_visitor(ident: &syn::Ident,
 
     let fields_stmt = {
         let field_names = field_names_idents.iter().map(|&(ref name, _)| name);
-        quote! {
+        quote_block! {
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
     };
@@ -941,7 +947,7 @@ fn deserialize_map(ident: &syn::Ident,
                    generics: &syn::Generics,
                    fields: &[Field],
                    item_attrs: &attr::Item)
-                   -> Tokens {
+                   -> Fragment {
     // Create the field names for the fields.
     let fields_names: Vec<_> = fields.iter()
         .enumerate()
@@ -1021,7 +1027,7 @@ fn deserialize_map(ident: &syn::Ident,
     let extract_values = fields_names.iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
-            let missing_expr = expr_is_missing(&field, item_attrs);
+            let missing_expr = Match(expr_is_missing(&field, item_attrs));
 
             quote! {
                 let #name = match #name {
@@ -1034,12 +1040,12 @@ fn deserialize_map(ident: &syn::Ident,
     let result = fields_names.iter()
         .map(|&(field, ref name)| {
             let ident = field.ident.clone().expect("struct contains unnamed fields");
-            let value = if field.attrs.skip_deserializing() {
-                expr_is_missing(&field, item_attrs)
+            if field.attrs.skip_deserializing() {
+                let value = Expr(expr_is_missing(&field, item_attrs));
+                quote!(#ident: #value)
             } else {
-                quote!(#name)
-            };
-            quote!(#ident: #value)
+                quote!(#ident: #name)
+            }
         });
 
     let let_default = match *item_attrs.default() {
@@ -1060,7 +1066,7 @@ fn deserialize_map(ident: &syn::Ident,
         }
     };
 
-    quote! {
+    quote_block! {
         #(#let_values)*
 
         #match_keys
@@ -1110,13 +1116,13 @@ fn wrap_deserialize_with(ident: &syn::Ident,
     (wrapper, wrapper_ty)
 }
 
-fn expr_is_missing(field: &Field, item_attrs: &attr::Item) -> Tokens {
+fn expr_is_missing(field: &Field, item_attrs: &attr::Item) -> Fragment {
     match *field.attrs.default() {
         attr::Default::Default => {
-            return quote!(_serde::export::Default::default());
+            return quote_expr!(_serde::export::Default::default());
         }
         attr::Default::Path(ref path) => {
-            return quote!(#path());
+            return quote_expr!(#path());
         }
         attr::Default::None => { /* below */ }
     }
@@ -1124,7 +1130,7 @@ fn expr_is_missing(field: &Field, item_attrs: &attr::Item) -> Tokens {
     match *item_attrs.default() {
         attr::Default::Default | attr::Default::Path(_) => {
             let ident = &field.ident;
-            return quote!(__default.#ident);
+            return quote_expr!(__default.#ident);
         }
         attr::Default::None => { /* below */ }
     }
@@ -1132,12 +1138,12 @@ fn expr_is_missing(field: &Field, item_attrs: &attr::Item) -> Tokens {
     let name = field.attrs.name().deserialize_name();
     match field.attrs.deserialize_with() {
         None => {
-            quote! {
+            quote_expr! {
                 try!(_serde::de::private::missing_field(#name))
             }
         }
         Some(_) => {
-            quote! {
+            quote_expr! {
                 return _serde::export::Err(<__V::Error as _serde::de::Error>::missing_field(#name))
             }
         }

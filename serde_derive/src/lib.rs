@@ -15,8 +15,11 @@ use proc_macro::TokenStream;
 
 #[macro_use]
 mod bound;
-mod de;
+#[macro_use]
+mod fragment;
+
 mod ser;
+mod de;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {

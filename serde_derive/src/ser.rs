@@ -2,6 +2,7 @@ use syn::{self, Ident};
 use quote::Tokens;
 
 use bound;
+use fragment::{Fragment, Stmts, Match};
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
@@ -14,7 +15,7 @@ pub fn expand_derive_serialize(item: &syn::DeriveInput) -> Result<Tokens, String
     let generics = build_generics(&item);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let dummy_const = Ident::new(format!("_IMPL_SERIALIZE_FOR_{}", ident));
-    let body = serialize_body(&item, &generics);
+    let body = Stmts(serialize_body(&item, &generics));
 
     Ok(quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -59,7 +60,7 @@ fn needs_serialize_bound(attrs: &attr::Field) -> bool {
     !attrs.skip_serializing() && attrs.serialize_with().is_none() && attrs.ser_bound().is_none()
 }
 
-fn serialize_body(item: &Item, generics: &syn::Generics) -> Tokens {
+fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
     match item.body {
         Body::Enum(ref variants) => {
             serialize_item_enum(&item.ident, generics, variants, &item.attrs)
@@ -85,10 +86,10 @@ fn serialize_body(item: &Item, generics: &syn::Generics) -> Tokens {
     }
 }
 
-fn serialize_unit_struct(item_attrs: &attr::Item) -> Tokens {
+fn serialize_unit_struct(item_attrs: &attr::Item) -> Fragment {
     let type_name = item_attrs.name().serialize_name();
 
-    quote! {
+    quote_expr! {
         _serde::Serializer::serialize_unit_struct(_serializer, #type_name)
     }
 }
@@ -97,7 +98,7 @@ fn serialize_newtype_struct(ident: &syn::Ident,
                             generics: &syn::Generics,
                             field: &Field,
                             item_attrs: &attr::Item)
-                            -> Tokens {
+                            -> Fragment {
     let type_name = item_attrs.name().serialize_name();
 
     let mut field_expr = quote!(&self.0);
@@ -105,7 +106,7 @@ fn serialize_newtype_struct(ident: &syn::Ident,
         field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
     }
 
-    quote! {
+    quote_expr! {
         _serde::Serializer::serialize_newtype_struct(_serializer, #type_name, #field_expr)
     }
 }
@@ -114,7 +115,7 @@ fn serialize_tuple_struct(ident: &syn::Ident,
                           generics: &syn::Generics,
                           fields: &[Field],
                           item_attrs: &attr::Item)
-                          -> Tokens {
+                          -> Fragment {
     let serialize_stmts =
         serialize_tuple_struct_visitor(ident,
                                        fields,
@@ -126,7 +127,7 @@ fn serialize_tuple_struct(ident: &syn::Ident,
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
 
-    quote! {
+    quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(_serializer, #type_name, #len));
         #(#serialize_stmts)*
         _serde::ser::SerializeTupleStruct::end(__serde_state)
@@ -137,7 +138,7 @@ fn serialize_struct(ident: &syn::Ident,
                     generics: &syn::Generics,
                     fields: &[Field],
                     item_attrs: &attr::Item)
-                    -> Tokens {
+                    -> Fragment {
     let serialize_fields =
         serialize_struct_visitor(ident,
                                  fields,
@@ -164,7 +165,7 @@ fn serialize_struct(ident: &syn::Ident,
         })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
-    quote! {
+    quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(_serializer, #type_name, #len));
         #(#serialize_fields)*
         _serde::ser::SerializeStruct::end(__serde_state)
@@ -175,7 +176,7 @@ fn serialize_item_enum(ident: &syn::Ident,
                        generics: &syn::Generics,
                        variants: &[Variant],
                        item_attrs: &attr::Item)
-                       -> Tokens {
+                       -> Fragment {
     let arms: Vec<_> = variants.iter()
         .enumerate()
         .map(|(variant_index, variant)| {
@@ -187,7 +188,7 @@ fn serialize_item_enum(ident: &syn::Ident,
         })
         .collect();
 
-    quote! {
+    quote_expr! {
         match *self {
             #(#arms)*
         }
@@ -246,7 +247,7 @@ fn serialize_variant(ident: &syn::Ident,
             }
         };
 
-        let body = match *item_attrs.tag() {
+        let body = Match(match *item_attrs.tag() {
             attr::EnumTag::External => {
                 serialize_externally_tagged_variant(ident,
                                                     generics,
@@ -270,7 +271,7 @@ fn serialize_variant(ident: &syn::Ident,
                                                     content)
             }
             attr::EnumTag::None => serialize_untagged_variant(ident, generics, variant, item_attrs),
-        };
+        });
 
         quote! {
             #case => #body
@@ -283,19 +284,19 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
                                        variant: &Variant,
                                        variant_index: usize,
                                        item_attrs: &attr::Item)
-                                       -> Tokens {
+                                       -> Fragment {
     let type_name = item_attrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
 
     match variant.style {
         Style::Unit => {
-            quote! {
+            quote_expr! {
                 _serde::Serializer::serialize_unit_variant(
                     _serializer,
                     #type_name,
                     #variant_index,
                     #variant_name,
-                ),
+                )
             }
         }
         Style::Newtype => {
@@ -305,43 +306,35 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
 
-            quote! {
+            quote_expr! {
                 _serde::Serializer::serialize_newtype_variant(
                     _serializer,
                     #type_name,
                     #variant_index,
                     #variant_name,
                     #field_expr,
-                ),
+                )
             }
         }
         Style::Tuple => {
-            let block = serialize_tuple_variant(TupleVariant::ExternallyTagged {
-                                                    type_name: type_name,
-                                                    variant_index: variant_index,
-                                                    variant_name: variant_name,
-                                                },
-                                                ident,
-                                                generics,
-                                                &variant.fields);
-
-            quote! {
-                { #block }
-            }
+            serialize_tuple_variant(TupleVariant::ExternallyTagged {
+                                        type_name: type_name,
+                                        variant_index: variant_index,
+                                        variant_name: variant_name,
+                                    },
+                                    ident,
+                                    generics,
+                                    &variant.fields)
         }
         Style::Struct => {
-            let block = serialize_struct_variant(StructVariant::ExternallyTagged {
-                                                     variant_index: variant_index,
-                                                     variant_name: variant_name,
-                                                 },
-                                                 ident,
-                                                 generics,
-                                                 &variant.fields,
-                                                 &type_name);
-
-            quote! {
-                { #block }
-            }
+            serialize_struct_variant(StructVariant::ExternallyTagged {
+                                         variant_index: variant_index,
+                                         variant_name: variant_name,
+                                     },
+                                     ident,
+                                     generics,
+                                     &variant.fields,
+                                     &type_name)
         }
     }
 }
@@ -351,7 +344,7 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
                                        variant: &Variant,
                                        item_attrs: &attr::Item,
                                        tag: &str)
-                                       -> Tokens {
+                                       -> Fragment {
     let type_name = item_attrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
 
@@ -360,13 +353,13 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
 
     match variant.style {
         Style::Unit => {
-            quote!({
+            quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     _serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __struct, #tag, #variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
-            })
+            }
         }
         Style::Newtype => {
             let field = &variant.fields[0];
@@ -375,7 +368,7 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
 
-            quote! {
+            quote_expr! {
                 _serde::ser::private::serialize_tagged_newtype(
                     _serializer,
                     #enum_ident_str,
@@ -383,22 +376,18 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
                     #tag,
                     #variant_name,
                     #field_expr,
-                ),
+                )
             }
         }
         Style::Struct => {
-            let block = serialize_struct_variant(StructVariant::InternallyTagged {
-                                                     tag: tag,
-                                                     variant_name: variant_name,
-                                                 },
-                                                 ident,
-                                                 generics,
-                                                 &variant.fields,
-                                                 &type_name);
-
-            quote! {
-                { #block }
-            }
+            serialize_struct_variant(StructVariant::InternallyTagged {
+                                         tag: tag,
+                                         variant_name: variant_name,
+                                     },
+                                     ident,
+                                     generics,
+                                     &variant.fields,
+                                     &type_name)
         }
         Style::Tuple => unreachable!("checked in serde_codegen_internals"),
     }
@@ -410,19 +399,19 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
                                        item_attrs: &attr::Item,
                                        tag: &str,
                                        content: &str)
-                                       -> Tokens {
+                                       -> Fragment {
     let type_name = item_attrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
 
-    let inner = match variant.style {
+    let inner = Stmts(match variant.style {
         Style::Unit => {
-            return quote!({
+            return quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     _serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __struct, #tag, #variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
-            });
+            };
         }
         Style::Newtype => {
             let field = &variant.fields[0];
@@ -431,7 +420,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
 
-            quote! {
+            quote_expr! {
                 _serde::Serialize::serialize(#field_expr, _serializer)
             }
         }
@@ -448,7 +437,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
                                      &variant.fields,
                                      &variant_name)
         }
-    };
+    });
 
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
     let ref fields_ident: Vec<_> = match variant.style {
@@ -472,7 +461,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
     let wrapper_generics = bound::with_lifetime_bound(generics, "'__a");
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
-    quote!({
+    quote_block! {
         struct __AdjacentlyTagged #wrapper_generics #where_clause {
             data: (#(&'__a #fields_ty,)*),
             phantom: _serde::export::PhantomData<#ident #ty_generics>,
@@ -497,18 +486,18 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
                 phantom: _serde::export::PhantomData::<#ident #ty_generics>,
             }));
         _serde::ser::SerializeStruct::end(__struct)
-    })
+    }
 }
 
 fn serialize_untagged_variant(ident: &syn::Ident,
                               generics: &syn::Generics,
                               variant: &Variant,
                               item_attrs: &attr::Item)
-                              -> Tokens {
+                              -> Fragment {
     match variant.style {
         Style::Unit => {
-            quote! {
-                _serde::Serializer::serialize_unit(_serializer),
+            quote_expr! {
+                _serde::Serializer::serialize_unit(_serializer)
             }
         }
         Style::Newtype => {
@@ -518,29 +507,20 @@ fn serialize_untagged_variant(ident: &syn::Ident,
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
 
-            quote! {
-                _serde::Serialize::serialize(#field_expr, _serializer),
+            quote_expr! {
+                _serde::Serialize::serialize(#field_expr, _serializer)
             }
         }
         Style::Tuple => {
-            let block =
-                serialize_tuple_variant(TupleVariant::Untagged, ident, generics, &variant.fields);
-
-            quote! {
-                { #block }
-            }
+            serialize_tuple_variant(TupleVariant::Untagged, ident, generics, &variant.fields)
         }
         Style::Struct => {
             let type_name = item_attrs.name().serialize_name();
-            let block = serialize_struct_variant(StructVariant::Untagged,
-                                                 ident,
-                                                 generics,
-                                                 &variant.fields,
-                                                 &type_name);
-
-            quote! {
-                { #block }
-            }
+            serialize_struct_variant(StructVariant::Untagged,
+                                     ident,
+                                     generics,
+                                     &variant.fields,
+                                     &type_name)
         }
     }
 }
@@ -558,7 +538,7 @@ fn serialize_tuple_variant(context: TupleVariant,
                            ident: &syn::Ident,
                            generics: &syn::Generics,
                            fields: &[Field])
-                           -> Tokens {
+                           -> Fragment {
     let method = match context {
         TupleVariant::ExternallyTagged { .. } => {
             quote!(_serde::ser::SerializeTupleVariant::serialize_field)
@@ -574,7 +554,7 @@ fn serialize_tuple_variant(context: TupleVariant,
 
     match context {
         TupleVariant::ExternallyTagged { type_name, variant_index, variant_name } => {
-            quote! {
+            quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_variant(
                     _serializer,
                     #type_name,
@@ -586,7 +566,7 @@ fn serialize_tuple_variant(context: TupleVariant,
             }
         }
         TupleVariant::Untagged => {
-            quote! {
+            quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple(
                     _serializer,
                     #len));
@@ -611,7 +591,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
                                 generics: &syn::Generics,
                                 fields: &[Field],
                                 name: &str)
-                                -> Tokens {
+                                -> Fragment {
     let method = match context {
         StructVariant::ExternallyTagged { .. } => {
             quote!(_serde::ser::SerializeStructVariant::serialize_field)
@@ -640,7 +620,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
 
     match context {
         StructVariant::ExternallyTagged { variant_index, variant_name } => {
-            quote! {
+            quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct_variant(
                     _serializer,
                     #name,
@@ -653,7 +633,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
             }
         }
         StructVariant::InternallyTagged { tag, variant_name } => {
-            quote! {
+            quote_block! {
                 let mut __serde_state = try!(_serde::Serializer::serialize_struct(
                     _serializer,
                     #name,
@@ -669,7 +649,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
             }
         }
         StructVariant::Untagged => {
-            quote! {
+            quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(
                     _serializer,
                     #name,
