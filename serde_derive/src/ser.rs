@@ -226,7 +226,7 @@ fn serialize_variant(ident: &syn::Ident,
             }
             Style::Newtype => {
                 quote! {
-                    #ident::#variant_ident(ref __simple_value)
+                    #ident::#variant_ident(ref __field0)
                 }
             }
             Style::Tuple => {
@@ -300,7 +300,7 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
         }
         Style::Newtype => {
             let field = &variant.fields[0];
-            let mut field_expr = quote!(__simple_value);
+            let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
@@ -370,7 +370,7 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
         }
         Style::Newtype => {
             let field = &variant.fields[0];
-            let mut field_expr = quote!(__simple_value);
+            let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
@@ -426,7 +426,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
         }
         Style::Newtype => {
             let field = &variant.fields[0];
-            let mut field_expr = quote!(__simple_value);
+            let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
@@ -453,7 +453,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
     let ref fields_ident: Vec<_> = match variant.style {
         Style::Unit => unreachable!(),
-        Style::Newtype => vec![Ident::new("__simple_value")],
+        Style::Newtype => vec![Ident::new("__field0")],
         Style::Tuple => {
             (0..variant.fields.len())
                 .map(|i| Ident::new(format!("__field{}", i)))
@@ -513,7 +513,7 @@ fn serialize_untagged_variant(ident: &syn::Ident,
         }
         Style::Newtype => {
             let field = &variant.fields[0];
-            let mut field_expr = quote!(__simple_value);
+            let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
