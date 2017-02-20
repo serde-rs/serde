@@ -884,36 +884,39 @@ fn test_internally_tagged_enum() {
 
 #[test]
 fn test_adjacently_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Newtype(BTreeMap<String, String>);
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Struct {
-        f: u8,
-    }
-
-    #[derive(Debug, PartialEq, Serialize)] // , Deserialize
-    #[serde(tag = "type", content = "content")]
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(tag = "t", content = "c")]
     enum AdjacentlyTagged {
-        A(u8),
-        B(u8, u16, u32),
-        C,
-        D(BTreeMap<String, String>),
-        E(Newtype),
-        F(Struct),
+        Unit,
+        Newtype(u8),
+        Tuple(u8, u8),
+        Struct { f: u8 },
     }
 
     assert_ser_tokens(
-        &AdjacentlyTagged::A(1),
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::StructStart("AdjacentlyTagged", 1),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::Newtype(1),
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
             Token::StructSep,
-            Token::Str("type"),
-            Token::Str("A"),
+            Token::Str("t"),
+            Token::Str("Newtype"),
 
             Token::StructSep,
-            Token::Str("content"),
+            Token::Str("c"),
             Token::U8(1),
 
             Token::StructEnd,
@@ -921,28 +924,21 @@ fn test_adjacently_tagged_enum() {
     );
 
     assert_ser_tokens(
-        &AdjacentlyTagged::B(1, 300, 70000),
+        &AdjacentlyTagged::Tuple(1, 1),
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
             Token::StructSep,
-            Token::Str("type"),
-            Token::Str("B"),
+            Token::Str("t"),
+            Token::Str("Tuple"),
 
             Token::StructSep,
-            Token::Str("content"),
-
-            Token::TupleStart(3),
-
+            Token::Str("c"),
+            Token::TupleStart(2),
             Token::TupleSep,
             Token::U8(1),
-
             Token::TupleSep,
-            Token::U16(300),
-
-            Token::TupleSep,
-            Token::U32(70000),
-
+            Token::U8(1),
             Token::TupleEnd,
 
             Token::StructEnd,
@@ -950,74 +946,20 @@ fn test_adjacently_tagged_enum() {
     );
 
     assert_ser_tokens(
-        &AdjacentlyTagged::C,
-        &[
-            Token::StructStart("AdjacentlyTagged", 1),
-
-            Token::StructSep,
-            Token::Str("type"),
-            Token::Str("C"),
-
-            Token::StructEnd,
-        ]
-    );
-
-    assert_ser_tokens(
-        &AdjacentlyTagged::D(BTreeMap::new()),
+        &AdjacentlyTagged::Struct { f: 1 },
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
             Token::StructSep,
-            Token::Str("type"),
-            Token::Str("D"),
+            Token::Str("t"),
+            Token::Str("Struct"),
 
             Token::StructSep,
-            Token::Str("content"),
-            Token::MapStart(Some(0)),
-            Token::MapEnd,
-
-            Token::StructEnd,
-        ]
-    );
-
-    // FIXME: Nested newtype is broken
-
-    // assert_ser_tokens(
-    //     &AdjacentlyTagged::E(Newtype(BTreeMap::new())),
-    //     &[
-    //         Token::StructStart("AdjacentlyTagged", 2),
-
-    //         Token::StructSep,
-    //         Token::Str("type"),
-    //         Token::Str("E"),
-
-    //         Token::StructSep,
-    //         Token::Str("content"),
-    //         Token::MapStart(Some(0)),
-    //         Token::MapEnd,
-
-    //         Token::StructEnd,
-    //     ]
-    // );
-
-    assert_ser_tokens(
-        &AdjacentlyTagged::F(Struct { f: 6 }),
-        &[
-            Token::StructStart("AdjacentlyTagged", 2),
-
-            Token::StructSep,
-            Token::Str("type"),
-            Token::Str("F"),
-
-            Token::StructSep,
-            Token::Str("content"),
-
+            Token::Str("c"),
             Token::StructStart("Struct", 1),
-
             Token::StructSep,
             Token::Str("f"),
-            Token::U8(6),
-
+            Token::U8(1),
             Token::StructEnd,
 
             Token::StructEnd,

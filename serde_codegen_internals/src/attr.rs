@@ -110,14 +110,14 @@ pub enum EnumTag {
     /// ```json
     /// {"type": "variant1", "key1": "value1", "key2": "value2"}
     /// ```
-    Internal(String),
+    Internal { tag: String },
 
-    /// `#[serde(tag = "type", content = "name")]`
+    /// `#[serde(tag = "t", content = "c")]`
     ///
     /// ```json
-    /// {"type": "variant1", "name": {"key1": "value1", "key2": "value2"}}
+    /// {"t": "variant1", "c": {"key1": "value1", "key2": "value2"}}
     /// ```
-    Adjacent(String, String),
+    Adjacent { tag: String, content: String },
 
     /// `#[serde(untagged)]`
     ///
@@ -137,7 +137,7 @@ impl Item {
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
         let mut internal_tag = Attr::none(cx, "tag");
-        let mut internal_content = Attr::none(cx, "content");
+        let mut content = Attr::none(cx, "content");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -206,15 +206,15 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(content = "name")]`
+                    // Parse `#[serde(content = "c")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "content" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             match item.body {
                                 syn::Body::Enum(_) => {
-                                    internal_content.set(s);
+                                    content.set(s);
                                 }
                                 syn::Body::Struct(_) => {
-                                    cx.error("#[serde(tag = \"...\")] can only be used on enums")
+                                    cx.error("#[serde(content = \"...\")] can only be used on enums")
                                 }
                             }
                         }
@@ -232,7 +232,7 @@ impl Item {
             }
         }
 
-        let tag = match (untagged.get(), internal_tag.get(), internal_content.get()) {
+        let tag = match (untagged.get(), internal_tag.get(), content.get()) {
             (false, None, None) => EnumTag::External,
             (true, None, None) => EnumTag::None,
             (false, Some(tag), None) => {
@@ -252,34 +252,26 @@ impl Item {
                         }
                     }
                 }
-                EnumTag::Internal(tag)
+                EnumTag::Internal { tag: tag }
             }
-            (false, Some(tag), Some(content)) => {
-                // Check that there are no struct variants.
-                if let syn::Body::Enum(ref variants) = item.body {
-                    for variant in variants {
-                        match variant.data {
-                            syn::VariantData::Tuple(_) |
-                            syn::VariantData::Unit => {}
-                            syn::VariantData::Struct(ref fields) => {
-                                if fields.len() != 1 {
-                                    cx.error("#[serde(tag = \"...\", content = \"...\")] cannot \
-                                              be used with struct variants");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                EnumTag::Adjacent(tag, content)
-            }
-            (true, Some(_), _) => {
+            (true, Some(_), None) => {
                 cx.error("enum cannot be both untagged and internally tagged");
                 EnumTag::External // doesn't matter, will error
             }
-            (_, None, Some(_)) => {
-                cx.error("#[serde(content = \"...\")] cannot be used without #[serde(tag = \"...\")]");
-                EnumTag::External // doesn't matter, will error
+            (false, None, Some(_)) => {
+                cx.error("#[serde(tag = \"...\", content = \"...\")] must be used together");
+                EnumTag::External
+            }
+            (true, None, Some(_)) => {
+                cx.error("untagged enum cannot have #[serde(content = \"...\")]");
+                EnumTag::External
+            }
+            (false, Some(tag), Some(content)) => {
+                EnumTag::Adjacent { tag: tag, content: content }
+            }
+            (true, Some(_), Some(_)) => {
+                cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
+                EnumTag::External
             }
         };
 
