@@ -167,7 +167,14 @@ impl Item {
 
                     // Parse `#[serde(default)]`
                     MetaItem(Word(ref name)) if name == "default" => {
-                        default.set_true();
+                        match item.body {
+                            syn::Body::Struct(_) => {
+                                default.set_true();
+                            }
+                            _ => {
+                                cx.error("#[serde(default)] can only be used on structs")
+                            }
+                        }
                     }
 
                     // Parse `#[serde(bound="D: Serialize")]`
