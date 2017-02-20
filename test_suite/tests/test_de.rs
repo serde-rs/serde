@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::default::Default;
 
 use serde::Deserialize;
 
@@ -38,6 +39,22 @@ struct StructDenyUnknown {
     a: i32,
     #[serde(skip_deserializing)]
     b: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructDefault {
+    a: i32,
+    b: String,
+}
+
+impl Default for StructDefault {
+    fn default() -> StructDefault {
+        StructDefault{
+            a: 100,
+            b: "default".to_string(),
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -725,6 +742,23 @@ declare_tests! {
     test_struct_skip_all_deny_unknown {
         StructSkipAllDenyUnknown { a: 0 } => &[
             Token::StructStart("StructSkipAllDenyUnknown", 0),
+            Token::StructEnd,
+        ],
+    }
+    test_struct_default {
+        StructDefault{ a: 50, b: "overwritten".to_string() } => &[
+            Token::StructStart("StructDefault", 1),
+                Token::StructSep,
+                Token::Str("a"),
+                Token::I32(50),
+
+                Token::StructSep,
+                Token::Str("b"),
+                Token::String("overwritten".to_string()),
+            Token::StructEnd,
+        ],
+        StructDefault{ a: 100, b: "default".to_string() } => &[
+            Token::StructStart("StructDefault", 0),
             Token::StructEnd,
         ],
     }

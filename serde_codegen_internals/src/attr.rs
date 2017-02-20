@@ -90,6 +90,7 @@ impl Name {
 pub struct Item {
     name: Name,
     deny_unknown_fields: bool,
+    default: bool,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
@@ -133,6 +134,7 @@ impl Item {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
+        let mut default = BoolAttr::none(cx, "default");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
@@ -161,6 +163,11 @@ impl Item {
                     // Parse `#[serde(deny_unknown_fields)]`
                     MetaItem(Word(ref name)) if name == "deny_unknown_fields" => {
                         deny_unknown_fields.set_true();
+                    }
+
+                    // Parse `#[serde(default)]`
+                    MetaItem(Word(ref name)) if name == "default" => {
+                        default.set_true();
                     }
 
                     // Parse `#[serde(bound="D: Serialize")]`
@@ -281,6 +288,7 @@ impl Item {
                 deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
             },
             deny_unknown_fields: deny_unknown_fields.get(),
+            default: default.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: tag,
@@ -293,6 +301,10 @@ impl Item {
 
     pub fn deny_unknown_fields(&self) -> bool {
         self.deny_unknown_fields
+    }
+
+    pub fn default(&self) -> bool {
+        self.default
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
