@@ -1,4 +1,4 @@
-use syn::{self, aster, Ident};
+use syn::{self, Ident};
 use quote::{self, Tokens};
 
 use bound;
@@ -41,7 +41,7 @@ fn build_generics(item: &Item) -> syn::Generics {
     let generics = bound::without_defaults(item.generics);
 
     let generics =
-        bound::with_where_predicates_from_fields(item, &generics, |attrs| attrs.de_bound());
+        bound::with_where_predicates_from_fields(item, &generics, attr::Field::de_bound);
 
     match item.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
@@ -50,11 +50,11 @@ fn build_generics(item: &Item) -> syn::Generics {
                 bound::with_bound(item,
                                   &generics,
                                   needs_deserialize_bound,
-                                  &aster::path().ids(&["_serde", "Deserialize"]).build());
+                                  &path!(_serde::Deserialize));
             bound::with_bound(item,
                               &generics,
                               requires_default,
-                              &aster::path().global().ids(&["std", "default", "Default"]).build())
+                              &path!(_serde::export::Default))
         }
     }
 }

@@ -1,4 +1,4 @@
-use syn::{self, aster, Ident};
+use syn::{self, Ident};
 use quote::Tokens;
 
 use bound;
@@ -38,7 +38,7 @@ fn build_generics(item: &Item) -> syn::Generics {
     let generics = bound::without_defaults(item.generics);
 
     let generics =
-        bound::with_where_predicates_from_fields(item, &generics, |attrs| attrs.ser_bound());
+        bound::with_where_predicates_from_fields(item, &generics, attr::Field::ser_bound);
 
     match item.attrs.ser_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
@@ -46,7 +46,7 @@ fn build_generics(item: &Item) -> syn::Generics {
             bound::with_bound(item,
                               &generics,
                               needs_serialize_bound,
-                              &aster::path().ids(&["_serde", "Serialize"]).build())
+                              &path!(_serde::Serialize))
         }
     }
 }
@@ -469,11 +469,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
 
     let (_, ty_generics, where_clause) = generics.split_for_impl();
 
-    let wrapper_generics = aster::from_generics(generics.clone())
-        .add_lifetime_bound("'__a")
-        .lifetime_name("'__a")
-        .build();
-
+    let wrapper_generics = bound::with_lifetime_bound(generics, "'__a");
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
     quote!({
@@ -771,11 +767,7 @@ fn wrap_serialize_with(ident: &syn::Ident,
                        -> Tokens {
     let (_, ty_generics, where_clause) = generics.split_for_impl();
 
-    let wrapper_generics = aster::from_generics(generics.clone())
-        .add_lifetime_bound("'__a")
-        .lifetime_name("'__a")
-        .build();
-
+    let wrapper_generics = bound::with_lifetime_bound(generics, "'__a");
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
     quote!({

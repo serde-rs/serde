@@ -13,6 +13,7 @@ extern crate serde_codegen_internals as internals;
 extern crate proc_macro;
 use proc_macro::TokenStream;
 
+#[macro_use]
 mod bound;
 mod de;
 mod ser;

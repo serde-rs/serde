@@ -1,9 +1,35 @@
 use std::collections::HashSet;
 
-use syn::{self, aster, visit};
+use syn::{self, visit};
 
 use internals::ast::Item;
 use internals::attr;
+
+macro_rules! path {
+    ($first:ident $(:: $rest:ident)*) => {
+        syn::Path {
+            global: false,
+            segments: vec![
+                stringify!($first).into(),
+                $(
+                    stringify!($rest).into(),
+                )*
+            ],
+        }
+    };
+
+    (::$first:ident $(:: $rest:ident)*) => {
+        syn::Path {
+            global: true,
+            segments: vec![
+                stringify!($first).into(),
+                $(
+                    stringify!($rest).into(),
+                )*
+            ],
+        }
+    };
+}
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
@@ -21,9 +47,9 @@ pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
 pub fn with_where_predicates(generics: &syn::Generics,
                              predicates: &[syn::WherePredicate])
                              -> syn::Generics {
-    aster::from_generics(generics.clone())
-        .with_predicates(predicates.to_vec())
-        .build()
+    let mut generics = generics.clone();
+    generics.where_clause.predicates.extend_from_slice(predicates);
+    generics
 }
 
 pub fn with_where_predicates_from_fields<F>(item: &Item,
@@ -32,12 +58,14 @@ pub fn with_where_predicates_from_fields<F>(item: &Item,
                                             -> syn::Generics
     where F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>
 {
-    aster::from_generics(generics.clone())
-        .with_predicates(item.body
-            .all_fields()
-            .flat_map(|field| from_field(&field.attrs))
-            .flat_map(|predicates| predicates.to_vec()))
-        .build()
+    let predicates = item.body
+        .all_fields()
+        .flat_map(|field| from_field(&field.attrs))
+        .flat_map(|predicates| predicates.to_vec());
+
+    let mut generics = generics.clone();
+    generics.where_clause.predicates.extend(predicates);
+    generics
 }
 
 // Puts the given bound on any generic type parameters that are used in fields
@@ -104,18 +132,50 @@ pub fn with_bound<F>(item: &Item,
         visit::walk_ty(&mut visitor, ty);
     }
 
-    aster::from_generics(generics.clone())
-        .with_predicates(generics.ty_params
-            .iter()
-            .map(|ty_param| ty_param.ident.clone())
-            .filter(|id| visitor.relevant_ty_params.contains(id))
-            .map(|id| {
-                aster::where_predicate()
-                    // the type parameter that is being bounded e.g. T
-                    .bound().build(aster::ty().id(id))
-                    // the bound e.g. Serialize
-                    .bound().trait_(bound.clone()).build()
-                    .build()
-            }))
-        .build()
+    let new_predicates = generics.ty_params
+        .iter()
+        .map(|ty_param| ty_param.ident.clone())
+        .filter(|id| visitor.relevant_ty_params.contains(id))
+        .map(|id| {
+            syn::WherePredicate::BoundPredicate(syn::WhereBoundPredicate {
+                bound_lifetimes: Vec::new(),
+                // the type parameter that is being bounded e.g. T
+                bounded_ty: syn::Ty::Path(None, id.into()),
+                // the bound e.g. Serialize
+                bounds: vec![syn::TyParamBound::Trait(
+                    syn::PolyTraitRef {
+                        bound_lifetimes: Vec::new(),
+                        trait_ref: bound.clone(),
+                    },
+                    syn::TraitBoundModifier::None
+                )],
+            })
+        });
+
+    let mut generics = generics.clone();
+    generics.where_clause.predicates.extend(new_predicates);
+    generics
 }
+
+pub fn with_lifetime_bound(generics: &syn::Generics,
+                           lifetime: &str)
+                           -> syn::Generics {
+    let mut generics = generics.clone();
+
+    for lifetime_def in &mut generics.lifetimes {
+        lifetime_def.bounds.push(syn::Lifetime::new(lifetime));
+    }
+
+    for ty_param in &mut generics.ty_params {
+        ty_param.bounds.push(syn::TyParamBound::Region(syn::Lifetime::new(lifetime)));
+    }
+
+    generics.lifetimes.push(syn::LifetimeDef {
+        attrs: Vec::new(),
+        lifetime: syn::Lifetime::new(lifetime),
+        bounds: Vec::new(),
+    });
+
+    generics
+}
+

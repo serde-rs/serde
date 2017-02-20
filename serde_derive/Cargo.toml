@@ -23,4 +23,4 @@ proc-macro = true
 [dependencies]
 quote = "0.3.8"
 serde_codegen_internals = { version = "=0.13.0", default-features = false, path = "../serde_codegen_internals" }
-syn = { version = "0.11", features = ["aster", "visit"] }
+syn = { version = "0.11", features = ["visit"] }
