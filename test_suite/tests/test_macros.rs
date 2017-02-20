@@ -881,3 +881,88 @@ fn test_internally_tagged_enum() {
         Error::Message("unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`".to_owned()),
     );
 }
+
+#[test]
+fn test_adjacently_tagged_enum() {
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(tag = "t", content = "c")]
+    enum AdjacentlyTagged {
+        Unit,
+        Newtype(u8),
+        Tuple(u8, u8),
+        Struct { f: u8 },
+    }
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::StructStart("AdjacentlyTagged", 1),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::Newtype(1),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Newtype"),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::Tuple(1, 1),
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Tuple"),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::TupleStart(2),
+            Token::TupleSep,
+            Token::U8(1),
+            Token::TupleSep,
+            Token::U8(1),
+            Token::TupleEnd,
+
+            Token::StructEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentlyTagged::Struct { f: 1 },
+        &[
+            Token::StructStart("AdjacentlyTagged", 2),
+
+            Token::StructSep,
+            Token::Str("t"),
+            Token::Str("Struct"),
+
+            Token::StructSep,
+            Token::Str("c"),
+            Token::StructStart("Struct", 1),
+            Token::StructSep,
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+
+            Token::StructEnd,
+        ]
+    );
+}
