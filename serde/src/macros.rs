@@ -188,3 +188,35 @@ macro_rules! forward_to_deserialize {
         $(forward_to_deserialize_helper!{$func})*
     };
 }
+
+/// Seralize the `$value` that implements Display as a string,
+/// when that string is statically known to never have more than
+/// a constant `$MAX_LEN` bytes.
+///
+/// Panics if the Display impl tries to write more than `$MAX_LEN` bytes.
+#[cfg(feature = "std")]
+// Not exported
+macro_rules! serialize_display_bounded_length {
+    ($value: expr, $MAX_LEN: expr, $serializer: expr) => {
+        {
+            use std::io::Write;
+            let mut buffer: [u8; $MAX_LEN] = unsafe { ::std::mem::uninitialized() };
+            let remaining_len;
+            {
+                let mut remaining = &mut buffer[..];
+                write!(remaining, "{}", $value).unwrap();
+                remaining_len = remaining.len()
+            }
+            let written_len = buffer.len() - remaining_len;
+            let written = &buffer[..written_len];
+
+            // write! only provides std::fmt::Formatter to Display implementations,
+            // which has methods write_str and write_char but no method to write arbitrary bytes.
+            // Therefore, `written` is well-formed in UTF-8.
+            let written_str = unsafe {
+                ::std::str::from_utf8_unchecked(written)
+            };
+            $serializer.serialize_str(written_str)
+        }
+    }
+}
