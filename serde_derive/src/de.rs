@@ -185,7 +185,7 @@ fn deserialize_tuple(ident: &syn::Ident,
         __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> }
     };
     let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize(#deserializer, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
         quote!(_serde::de::VariantVisitor::visit_tuple(visitor, #nfields, #visitor_expr))
     } else if nfields == 1 {
@@ -442,7 +442,14 @@ fn deserialize_item_enum(ident: &syn::Ident,
                                                item_attrs,
                                                tag)
         }
-        attr::EnumTag::Adjacent { .. } => unimplemented!(),
+        attr::EnumTag::Adjacent { ref tag, ref content } => {
+            deserialize_adjacently_tagged_enum(ident,
+                                               generics,
+                                               variants,
+                                               item_attrs,
+                                               tag,
+                                               content)
+        }
         attr::EnumTag::None => {
             deserialize_untagged_enum(ident, generics, variants, item_attrs)
         }
@@ -594,6 +601,230 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
         match _tagged.tag {
             #(#variant_arms)*
         }
+    }
+}
+
+fn deserialize_adjacently_tagged_enum(ident: &syn::Ident,
+                                      generics: &syn::Generics,
+                                      variants: &[Variant],
+                                      item_attrs: &attr::Item,
+                                      tag: &str,
+                                      content: &str)
+                                      -> Fragment {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let variant_names_idents: Vec<_> = variants.iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)))
+        .collect();
+
+    let variants_stmt = {
+        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name);
+        quote! {
+            const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
+        }
+    };
+
+    let variant_visitor = Stmts(deserialize_field_visitor(variant_names_idents, item_attrs, true));
+
+    let ref variant_arms: Vec<_> = variants.iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(|(i, variant)| {
+            let variant_index = field_i(i);
+
+            let block = Match(deserialize_untagged_variant(
+                ident,
+                generics,
+                variant,
+                item_attrs,
+                quote!(_deserializer),
+            ));
+
+            quote! {
+                __Field::#variant_index => #block
+            }
+        })
+        .collect();
+
+    let expecting = format!("adjacently tagged enum {}", ident);
+    let type_name = item_attrs.name().deserialize_name();
+
+    let tag_or_content = quote! {
+        _serde::de::private::TagOrContentFieldVisitor {
+            tag: #tag,
+            content: #content,
+        }
+    };
+
+    fn is_unit(variant: &Variant) -> bool {
+        match variant.style {
+            Style::Unit => true,
+            Style::Struct | Style::Tuple | Style::Newtype => false,
+        }
+    }
+
+    let mut missing_content = quote! {
+        _serde::export::Err(<__V::Error as _serde::de::Error>::missing_field(#content))
+    };
+    if variants.iter().any(is_unit) {
+        let fallthrough = if variants.iter().all(is_unit) {
+            None
+        } else {
+            Some(quote! {
+                _ => #missing_content
+            })
+        };
+        let arms = variants.iter()
+            .enumerate()
+            .filter(|&(_, variant)| !variant.attrs.skip_deserializing() && is_unit(variant))
+            .map(|(i, variant)| {
+                let variant_index = field_i(i);
+                let variant_ident = &variant.ident;
+                quote! {
+                    __Field::#variant_index => _serde::export::Ok(#ident::#variant_ident),
+                }
+            });
+        missing_content = quote! {
+            match __field {
+                #(#arms)*
+                #fallthrough
+            }
+        };
+    }
+
+    let visit_third_key = quote! {
+        // Visit the third key in the map, hopefully there isn't one.
+        match try!(_serde::de::MapVisitor::visit_key_seed(&mut visitor, #tag_or_content)) {
+            _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+                _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#tag))
+            }
+            _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#content))
+            }
+            _serde::export::None => _serde::export::Ok(__ret),
+        }
+    };
+
+    quote_block! {
+        #variant_visitor
+
+        #variants_stmt
+
+        struct __Seed #impl_generics #where_clause {
+            field: __Field,
+            marker: _serde::export::PhantomData<#ident #ty_generics>,
+        }
+
+        impl #impl_generics _serde::de::DeserializeSeed for __Seed #ty_generics #where_clause {
+            type Value = #ident #ty_generics;
+
+            fn deserialize<__D>(self, _deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+                where __D: _serde::Deserializer
+            {
+                match self.field {
+                    #(#variant_arms)*
+                }
+            }
+        }
+
+        struct __Visitor #impl_generics #where_clause {
+            marker: _serde::export::PhantomData<#ident #ty_generics>,
+        }
+
+        impl #impl_generics _serde::de::Visitor for __Visitor #ty_generics #where_clause {
+            type Value = #ident #ty_generics;
+
+            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
+            }
+
+            fn visit_map<__V>(self, mut visitor: __V) -> _serde::export::Result<Self::Value, __V::Error>
+                where __V: _serde::de::MapVisitor
+            {
+                // Visit the first key.
+                match try!(_serde::de::MapVisitor::visit_key_seed(&mut visitor, #tag_or_content)) {
+                    // First key is the tag.
+                    _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+                        // Parse the tag.
+                        let __field = try!(_serde::de::MapVisitor::visit_value(&mut visitor));
+                        // Visit the second key.
+                        match try!(_serde::de::MapVisitor::visit_key_seed(&mut visitor, #tag_or_content)) {
+                            // Second key is a duplicate of the tag.
+                            _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+                                _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#tag))
+                            }
+                            // Second key is the content.
+                            _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                                let __ret = try!(_serde::de::MapVisitor::visit_value_seed(&mut visitor, __Seed { field: __field, marker: _serde::export::PhantomData }));
+                                // Visit the third key, hopefully there isn't one.
+                                #visit_third_key
+                            }
+                            // There is no second key; might be okay if the we have a unit variant.
+                            _serde::export::None => #missing_content
+                        }
+                    }
+                    // First key is the content.
+                    _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                        // Buffer up the content.
+                        let __content = try!(_serde::de::MapVisitor::visit_value::<_serde::de::private::Content>(&mut visitor));
+                        // Visit the second key.
+                        match try!(_serde::de::MapVisitor::visit_key_seed(&mut visitor, #tag_or_content)) {
+                            // Second key is the tag.
+                            _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+                                let _deserializer = _serde::de::private::ContentDeserializer::<__V::Error>::new(__content);
+                                // Parse the tag.
+                                let __ret = try!(match try!(_serde::de::MapVisitor::visit_value(&mut visitor)) {
+                                    // Deserialize the buffered content now that we know the variant.
+                                    #(#variant_arms)*
+                                });
+                                // Visit the third key, hopefully there isn't one.
+                                #visit_third_key
+                            }
+                            // Second key is a duplicate of the content.
+                            _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                                _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#content))
+                            }
+                            // There is no second key.
+                            _serde::export::None => {
+                                _serde::export::Err(<__V::Error as _serde::de::Error>::missing_field(#tag))
+                            }
+                        }
+                    }
+                    // There is no first key.
+                    _serde::export::None => {
+                        _serde::export::Err(<__V::Error as _serde::de::Error>::missing_field(#tag))
+                    }
+                }
+            }
+
+            fn visit_seq<__V>(self, mut visitor: __V) -> _serde::export::Result<Self::Value, __V::Error>
+                where __V: _serde::de::SeqVisitor
+            {
+                // Visit the first element - the tag.
+                match try!(_serde::de::SeqVisitor::visit(&mut visitor)) {
+                    _serde::export::Some(__field) => {
+                        // Visit the second element - the content.
+                        match try!(_serde::de::SeqVisitor::visit_seed(&mut visitor, __Seed { field: __field, marker: _serde::export::PhantomData })) {
+                            _serde::export::Some(__ret) => _serde::export::Ok(__ret),
+                            // There is no second element.
+                            _serde::export::None => {
+                                _serde::export::Err(_serde::de::Error::invalid_length(1, &self))
+                            }
+                        }
+                    }
+                    // There is no first element.
+                    _serde::export::None => {
+                        _serde::export::Err(_serde::de::Error::invalid_length(0, &self))
+                    }
+                }
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &[#tag, #content];
+        _serde::Deserializer::deserialize_struct(deserializer, #type_name, FIELDS,
+            __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> })
     }
 }
 
