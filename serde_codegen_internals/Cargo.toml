@@ -8,7 +8,8 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde_codegen_internals/"
 keywords = ["serde", "serialization"]
-include = ["Cargo.toml", "src/**/*.rs"]
+readme = "../README.md"
+include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 syn = { version = "0.11", default-features = false, features = ["parsing"] }

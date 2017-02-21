@@ -7,9 +7,9 @@ description = "Token De/Serializer for testing De/Serialize implementations"
 homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde_test/"
-readme = "../README.md"
 keywords = ["serde", "serialization"]
-include = ["Cargo.toml", "src/**/*.rs"]
+readme = "../README.md"
+include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 serde = { version = "0.9", path = "../serde" }
