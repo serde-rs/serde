@@ -90,7 +90,7 @@ impl Name {
 pub struct Item {
     name: Name,
     deny_unknown_fields: bool,
-    default: bool,
+    default: Default,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
@@ -134,7 +134,7 @@ impl Item {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
-        let mut default = BoolAttr::none(cx, "default");
+        let mut default = Attr::none(cx, "default");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
@@ -168,11 +168,27 @@ impl Item {
                     // Parse `#[serde(default)]`
                     MetaItem(Word(ref name)) if name == "default" => {
                         match item.body {
-                            syn::Body::Struct(_) => {
-                                default.set_true();
+                            syn::Body::Struct(syn::VariantData::Struct(_)) => {
+                                default.set(Default::Default);
                             }
                             _ => {
-                                cx.error("#[serde(default)] can only be used on structs")
+                                cx.error("#[serde(default)] can only be used on structs \
+                                          with named fields")
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(default="...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            match item.body {
+                                syn::Body::Struct(syn::VariantData::Struct(_)) => {
+                                    default.set(Default::Path(path));
+                                }
+                                _ => {
+                                    cx.error("#[serde(default = \"...\")] can only be used \
+                                              on structs with named fields")
+                                }
                             }
                         }
                     }
@@ -295,7 +311,7 @@ impl Item {
                 deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
             },
             deny_unknown_fields: deny_unknown_fields.get(),
-            default: default.get(),
+            default: default.get().unwrap_or(Default::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: tag,
@@ -310,8 +326,8 @@ impl Item {
         self.deny_unknown_fields
     }
 
-    pub fn default(&self) -> bool {
-        self.default
+    pub fn default(&self) -> &Default {
+        &self.default
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
@@ -410,7 +426,7 @@ pub struct Field {
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::Path>,
-    default: FieldDefault,
+    default: Default,
     serialize_with: Option<syn::Path>,
     deserialize_with: Option<syn::Path>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
@@ -419,7 +435,7 @@ pub struct Field {
 
 /// Represents the default to use for a field when deserializing.
 #[derive(Debug, PartialEq)]
-pub enum FieldDefault {
+pub enum Default {
     /// Field must always be specified because it does not have a default.
     None,
     /// The default is given by `std::default::Default::default()`.
@@ -468,13 +484,13 @@ impl Field {
 
                     // Parse `#[serde(default)]`
                     MetaItem(Word(ref name)) if name == "default" => {
-                        default.set(FieldDefault::Default);
+                        default.set(Default::Default);
                     }
 
                     // Parse `#[serde(default="...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            default.set(FieldDefault::Path(path));
+                            default.set(Default::Path(path));
                         }
                     }
 
@@ -552,7 +568,7 @@ impl Field {
         // Is skip_deserializing, initialize the field to Default::default()
         // unless a different default is specified by `#[serde(default="...")]`
         if skip_deserializing.0.value.is_some() {
-            default.set_if_none(FieldDefault::Default);
+            default.set_if_none(Default::Default);
         }
 
         Field {
@@ -563,7 +579,7 @@ impl Field {
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
-            default: default.get().unwrap_or(FieldDefault::None),
+            default: default.get().unwrap_or(Default::None),
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
             ser_bound: ser_bound.get(),
@@ -587,7 +603,7 @@ impl Field {
         self.skip_serializing_if.as_ref()
     }
 
-    pub fn default(&self) -> &FieldDefault {
+    pub fn default(&self) -> &Default {
         &self.default
     }
 

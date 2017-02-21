@@ -43,14 +43,14 @@ struct StructDenyUnknown {
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(default)]
-struct StructDefault {
+struct StructDefault<T> {
     a: i32,
-    b: String,
+    b: T,
 }
 
-impl Default for StructDefault {
-    fn default() -> StructDefault {
-        StructDefault{
+impl Default for StructDefault<String> {
+    fn default() -> Self {
+        StructDefault {
             a: 100,
             b: "default".to_string(),
         }
@@ -746,7 +746,7 @@ declare_tests! {
         ],
     }
     test_struct_default {
-        StructDefault{ a: 50, b: "overwritten".to_string() } => &[
+        StructDefault { a: 50, b: "overwritten".to_string() } => &[
             Token::StructStart("StructDefault", 1),
                 Token::StructSep,
                 Token::Str("a"),
@@ -757,7 +757,7 @@ declare_tests! {
                 Token::String("overwritten".to_string()),
             Token::StructEnd,
         ],
-        StructDefault{ a: 100, b: "default".to_string() } => &[
+        StructDefault { a: 100, b: "default".to_string() } => &[
             Token::StructStart("StructDefault", 0),
             Token::StructEnd,
         ],

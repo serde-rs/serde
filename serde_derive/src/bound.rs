@@ -157,6 +157,30 @@ pub fn with_bound<F>(item: &Item,
     generics
 }
 
+pub fn with_self_bound(item: &Item,
+                       generics: &syn::Generics,
+                       bound: &syn::Path)
+                       -> syn::Generics
+{
+    let mut generics = generics.clone();
+    generics.where_clause.predicates.push(
+        syn::WherePredicate::BoundPredicate(syn::WhereBoundPredicate {
+            bound_lifetimes: Vec::new(),
+            // the type that is being bounded e.g. MyStruct<'a, T>
+            bounded_ty: type_of_item(item),
+            // the bound e.g. Default
+            bounds: vec![syn::TyParamBound::Trait(
+                syn::PolyTraitRef {
+                    bound_lifetimes: Vec::new(),
+                    trait_ref: bound.clone(),
+                },
+                syn::TraitBoundModifier::None
+            )],
+        })
+    );
+    generics
+}
+
 pub fn with_lifetime_bound(generics: &syn::Generics,
                            lifetime: &str)
                            -> syn::Generics {
@@ -179,3 +203,26 @@ pub fn with_lifetime_bound(generics: &syn::Generics,
     generics
 }
 
+fn type_of_item(item: &Item) -> syn::Ty {
+    syn::Ty::Path(None, syn::Path {
+        global: false,
+        segments: vec![
+            syn::PathSegment {
+                ident: item.ident.clone(),
+                parameters: syn::PathParameters::AngleBracketed(syn::AngleBracketedParameterData {
+                    lifetimes: item.generics
+                                    .lifetimes
+                                    .iter()
+                                    .map(|def| def.lifetime.clone())
+                                    .collect(),
+                    types: item.generics
+                                .ty_params
+                                .iter()
+                                .map(|param| syn::Ty::Path(None, param.ident.clone().into()))
+                                .collect(),
+                    bindings: Vec::new(),
+                }),
+            }
+        ]
+    })
+}

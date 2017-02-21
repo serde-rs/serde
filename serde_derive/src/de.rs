@@ -46,11 +46,19 @@ fn build_generics(item: &Item) -> syn::Generics {
     match item.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => {
+            let generics = match *item.attrs.default() {
+                attr::Default::Default => {
+                    bound::with_self_bound(item, &generics, &path!(_serde::export::Default))
+                }
+                attr::Default::None | attr::Default::Path(_) => generics,
+            };
+
             let generics =
                 bound::with_bound(item,
                                   &generics,
                                   needs_deserialize_bound,
                                   &path!(_serde::Deserialize));
+
             bound::with_bound(item,
                               &generics,
                               requires_default,
@@ -70,7 +78,7 @@ fn needs_deserialize_bound(attrs: &attr::Field) -> bool {
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
 fn requires_default(attrs: &attr::Field) -> bool {
-    attrs.default() == &attr::FieldDefault::Default
+    attrs.default() == &attr::Default::Default
 }
 
 fn deserialize_body(item: &Item, generics: &syn::Generics) -> Tokens {
@@ -168,7 +176,7 @@ fn deserialize_tuple(ident: &syn::Ident,
         None
     };
 
-    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, false);
+    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, false, item_attrs);
 
     let visitor_expr = quote! {
         __Visitor { marker: _serde::export::PhantomData::<#ident #ty_generics> }
@@ -222,7 +230,8 @@ fn deserialize_seq(ident: &syn::Ident,
                    type_path: &Tokens,
                    generics: &syn::Generics,
                    fields: &[Field],
-                   is_struct: bool)
+                   is_struct: bool,
+                   item_attrs: &attr::Item)
                    -> Tokens {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -235,7 +244,7 @@ fn deserialize_seq(ident: &syn::Ident,
     let let_values = vars.clone().zip(fields)
         .map(|(var, field)| {
             if field.attrs.skip_deserializing() {
-                let default = expr_is_missing(&field.attrs, false, "");
+                let default = expr_is_missing(&field, item_attrs);
                 quote! {
                     let #var = #default;
                 }
@@ -337,7 +346,7 @@ fn deserialize_struct(ident: &syn::Ident,
         None => format!("struct {}", ident),
     };
 
-    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, true);
+    let visit_seq = deserialize_seq(ident, &type_path, generics, fields, true, item_attrs);
 
     let (field_visitor, fields_stmt, visit_map) =
         deserialize_struct_visitor(ident, type_path, generics, fields, item_attrs);
@@ -1012,11 +1021,7 @@ fn deserialize_map(ident: &syn::Ident,
     let extract_values = fields_names.iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
-            // Use the ident as field name, since the user can rename the field
-            // in the attributes using `#[serde(rename = "name")]`, but we need
-            // the original (in code) name of the field.
-            let ident = field.ident.clone().expect("struct contains unnamed fields");
-            let missing_expr = expr_is_missing(&field.attrs, item_attrs.default(), ident.as_ref());
+            let missing_expr = expr_is_missing(&field, item_attrs);
 
             quote! {
                 let #name = match #name {
@@ -1030,21 +1035,29 @@ fn deserialize_map(ident: &syn::Ident,
         .map(|&(field, ref name)| {
             let ident = field.ident.clone().expect("struct contains unnamed fields");
             let value = if field.attrs.skip_deserializing() {
-                expr_is_missing(&field.attrs, item_attrs.default(), ident.as_ref())
+                expr_is_missing(&field, item_attrs)
             } else {
                 quote!(#name)
             };
             quote!(#ident: #value)
         });
 
-    let default = if item_attrs.default() {
-        quote!(
-            let default: #struct_path = _serde::export::Default::default();
-        )
-    } else {
-        // We don't need the default value, to prevent an unused variable warning
-        // we'll leave the line empty.
-        quote!()
+    let let_default = match *item_attrs.default() {
+        attr::Default::Default => {
+            Some(quote!(
+                let __default: Self::Value = _serde::export::Default::default();
+            ))
+        }
+        attr::Default::Path(ref path) => {
+            Some(quote!(
+                let __default: Self::Value = #path();
+            ))
+        }
+        attr::Default::None => {
+            // We don't need the default value, to prevent an unused variable warning
+            // we'll leave the line empty.
+            None
+        }
     };
 
     quote! {
@@ -1052,7 +1065,7 @@ fn deserialize_map(ident: &syn::Ident,
 
         #match_keys
 
-        #default
+        #let_default
 
         #(#extract_values)*
 
@@ -1097,27 +1110,27 @@ fn wrap_deserialize_with(ident: &syn::Ident,
     (wrapper, wrapper_ty)
 }
 
-fn expr_is_missing(attrs: &attr::Field, use_default: bool, field_name: &str) -> Tokens {
-    match *attrs.default() {
-        attr::FieldDefault::Default => {
+fn expr_is_missing(field: &Field, item_attrs: &attr::Item) -> Tokens {
+    match *field.attrs.default() {
+        attr::Default::Default => {
             return quote!(_serde::export::Default::default());
         }
-        attr::FieldDefault::Path(ref path) => {
+        attr::Default::Path(ref path) => {
             return quote!(#path());
         }
-        attr::FieldDefault::None => { /* below */ }
+        attr::Default::None => { /* below */ }
     }
 
-    if use_default {
-        // Field name without the qoutes.
-        let field_name = quote::Ident::new(field_name);
-        return quote!(
-            default.#field_name
-        )
+    match *item_attrs.default() {
+        attr::Default::Default | attr::Default::Path(_) => {
+            let ident = &field.ident;
+            return quote!(__default.#ident);
+        }
+        attr::Default::None => { /* below */ }
     }
 
-    let name = attrs.name().deserialize_name();
-    match attrs.deserialize_with() {
+    let name = field.attrs.name().deserialize_name();
+    match field.attrs.deserialize_with() {
         None => {
             quote! {
                 try!(_serde::de::private::missing_field(#name))
