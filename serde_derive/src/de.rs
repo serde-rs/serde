@@ -235,7 +235,7 @@ fn deserialize_seq(ident: &syn::Ident,
     let let_values = vars.clone().zip(fields)
         .map(|(var, field)| {
             if field.attrs.skip_deserializing() {
-                let default = expr_is_missing(&field.attrs);
+                let default = expr_is_missing(&field.attrs, false, "");
                 quote! {
                     let #var = #default;
                 }
@@ -1012,7 +1012,11 @@ fn deserialize_map(ident: &syn::Ident,
     let extract_values = fields_names.iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
-            let missing_expr = expr_is_missing(&field.attrs);
+            // Use the ident as field name, since the user can rename the field
+            // in the attributes using `#[serde(rename = "name")]`, but we need
+            // the original (in code) name of the field.
+            let ident = field.ident.clone().expect("struct contains unnamed fields");
+            let missing_expr = expr_is_missing(&field.attrs, item_attrs.default(), ident.as_ref());
 
             quote! {
                 let #name = match #name {
@@ -1026,17 +1030,29 @@ fn deserialize_map(ident: &syn::Ident,
         .map(|&(field, ref name)| {
             let ident = field.ident.clone().expect("struct contains unnamed fields");
             let value = if field.attrs.skip_deserializing() {
-                expr_is_missing(&field.attrs)
+                expr_is_missing(&field.attrs, item_attrs.default(), ident.as_ref())
             } else {
                 quote!(#name)
             };
             quote!(#ident: #value)
         });
 
+    let default = if item_attrs.default() {
+        quote!(
+            let default: #struct_path = _serde::export::Default::default();
+        )
+    } else {
+        // We don't need the default value, to prevent an unused variable warning
+        // we'll leave the line empty.
+        quote!()
+    };
+
     quote! {
         #(#let_values)*
 
         #match_keys
+
+        #default
 
         #(#extract_values)*
 
@@ -1081,7 +1097,7 @@ fn wrap_deserialize_with(ident: &syn::Ident,
     (wrapper, wrapper_ty)
 }
 
-fn expr_is_missing(attrs: &attr::Field) -> Tokens {
+fn expr_is_missing(attrs: &attr::Field, use_default: bool, field_name: &str) -> Tokens {
     match *attrs.default() {
         attr::FieldDefault::Default => {
             return quote!(_serde::export::Default::default());
@@ -1090,6 +1106,14 @@ fn expr_is_missing(attrs: &attr::Field) -> Tokens {
             return quote!(#path());
         }
         attr::FieldDefault::None => { /* below */ }
+    }
+
+    if use_default {
+        // Field name without the qoutes.
+        let field_name = quote::Ident::new(field_name);
+        return quote!(
+            default.#field_name
+        )
     }
 
     let name = attrs.name().deserialize_name();
