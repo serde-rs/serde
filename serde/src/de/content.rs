@@ -14,8 +14,6 @@ use core::cmp;
 use core::fmt;
 use core::marker::PhantomData;
 
-use std::collections::BTreeMap;
-
 #[cfg(all(not(feature = "std"), feature = "collections"))]
 use collections::{String, Vec};
 
@@ -24,6 +22,7 @@ use alloc::boxed::Box;
 
 use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, MapVisitor,
          EnumVisitor, Unexpected};
+use de::value::ValueDeserializer;
 
 /// Used from generated code to buffer the contents of the Deserializer when
 /// deserializing untagged enums and internally tagged enums.
@@ -58,6 +57,34 @@ pub enum Content {
     Newtype(Box<Content>),
     Seq(Vec<Content>),
     Map(Vec<(Content, Content)>),
+}
+
+impl Content {
+    fn unexpected(&self) -> Unexpected {
+        match *self {
+            Content::Bool(b) => Unexpected::Bool(b),
+            Content::U8(n) => Unexpected::Unsigned(n as u64),
+            Content::U16(n) => Unexpected::Unsigned(n as u64),
+            Content::U32(n) => Unexpected::Unsigned(n as u64),
+            Content::U64(n) => Unexpected::Unsigned(n),
+            Content::I8(n) => Unexpected::Signed(n as i64),
+            Content::I16(n) => Unexpected::Signed(n as i64),
+            Content::I32(n) => Unexpected::Signed(n as i64),
+            Content::I64(n) => Unexpected::Signed(n),
+            Content::F32(f) => Unexpected::Float(f as f64),
+            Content::F64(f) => Unexpected::Float(f),
+            Content::Char(c) => Unexpected::Char(c),
+            Content::String(ref s) => Unexpected::Str(s),
+            Content::Bytes(ref b) => Unexpected::Bytes(b),
+            // @TODO: Are these mappings correct?
+            Content::None => Unexpected::Option,
+            Content::Some(_) => Unexpected::Option,
+            Content::Unit => Unexpected::Unit,
+            Content::Newtype(_) => Unexpected::NewtypeStruct,
+            Content::Seq(_) => Unexpected::Seq,
+            Content::Map(_) => Unexpected::Map,
+        }
+    }
 }
 
 impl Deserialize for Content {
@@ -612,7 +639,7 @@ impl<E> Deserializer for ContentDeserializer<E>
     fn deserialize_enum<V>(self, _name: &str, _variants: &'static [&'static str], visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor,
     {
-        let (variant, value) = match self {
+        let (variant, value) = match self.content {
             Content::Map(value) => {
                 let mut iter = value.into_iter();
                 let (variant, value) = match iter.next() {
@@ -627,7 +654,7 @@ impl<E> Deserializer for ContentDeserializer<E>
                 }
                 (variant, Some(value))
             }
-            Content::String(variant) => (variant, None),
+            Content::String(variant) => (Content::String(variant), None),
             other => {
                 return Err(de::Error::invalid_type(other.unexpected(), &"string or map"));
             }
@@ -636,6 +663,7 @@ impl<E> Deserializer for ContentDeserializer<E>
         visitor.visit_enum(EnumDeserializer {
             variant: variant,
             value: value,
+            err: PhantomData,
         })
     }
 
@@ -664,49 +692,50 @@ struct EnumDeserializer<E> where E: de::Error {
 
 impl<E> de::EnumVisitor for EnumDeserializer<E> where E: de::Error {
     type Error = E;
-    type Variant = VariantDeserializer;
+    type Variant = VariantDeserializer<Self::Error>;
 
-    fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, VariantDeserializer), Self::Error>
+    fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, VariantDeserializer<E>), Self::Error>
         where V: de::DeserializeSeed
     {
         let variant = self.variant.into_deserializer();
-        let visitor = VariantDeserializer { value: self.value };
+        let visitor = VariantDeserializer { value: self.value, err: PhantomData, };
         seed.deserialize(variant).map(|v| (v, visitor))
     }
 }
 
-struct VariantDeserializer {
+struct VariantDeserializer<E> where E: de::Error {
     value: Option<Content>,
+    err: PhantomData<E>,
 }
 
-impl de::VariantVisitor for VariantDeserializer {
-    type Error = de::Error;
+impl<E> de::VariantVisitor for VariantDeserializer<E> where E: de::Error {
+    type Error = E;
 
-    fn visit_unit(self) -> Result<(), de::Error> {
+    fn visit_unit(self) -> Result<(), E> {
         match self.value {
-            Some(value) => de::Deserialize::deserialize(value),
+            Some(value) => de::Deserialize::deserialize(ContentDeserializer::new(value)),
             None => Ok(()),
         }
     }
 
-    fn visit_newtype_seed<T, E>(self, seed: T) -> Result<T::Value, E>
-        where T: de::DeserializeSeed, E: de::Error
+    fn visit_newtype_seed<T>(self, seed: T) -> Result<T::Value, E>
+        where T: de::DeserializeSeed
     {
         match self.value {
-            Some(value) => seed.deserialize(value),
+            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
             None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"newtype variant")),
         }
     }
 
-    fn visit_tuple<V, E>(
+    fn visit_tuple<V>(
         self,
         _len: usize,
         visitor: V
-    ) -> Result<V::Value, E>
-        where V: de::Visitor, E: de::Error
+    ) -> Result<V::Value, Self::Error>
+        where V: de::Visitor
     {
         match self.value {
-            Some(Content::Array(v)) => {
+            Some(Content::Seq(v)) => {
                 de::Deserializer::deserialize(SeqDeserializer::new(v), visitor)
             }
             Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant")),
@@ -714,12 +743,12 @@ impl de::VariantVisitor for VariantDeserializer {
         }
     }
 
-    fn visit_struct<V, E>(
+    fn visit_struct<V>(
         self,
         _fields: &'static [&'static str],
         visitor: V
-    ) -> Result<V::Value, E>
-        where V: de::Visitor, E: de::Error
+    ) -> Result<V::Value, Self::Error>
+        where V: de::Visitor
     {
         match self.value {
             Some(Content::Map(v)) => {
@@ -731,24 +760,26 @@ impl de::VariantVisitor for VariantDeserializer {
     }
 }
 
-struct SeqDeserializer {
+struct SeqDeserializer<E> where E: de::Error {
     iter: ::std::vec::IntoIter<Content>,
+    err: PhantomData<E>,
 }
 
-impl SeqDeserializer {
+impl<E> SeqDeserializer<E> where E: de::Error {
     fn new(vec: Vec<Content>) -> Self {
         SeqDeserializer {
             iter: vec.into_iter(),
+            err: PhantomData,
         }
     }
 }
 
-impl de::Deserializer for SeqDeserializer {
-    type Error = de::Error;
+impl<E> de::Deserializer for SeqDeserializer<E> where E: de::Error {
+    type Error = E;
 
     #[inline]
-    fn deserialize<V, E>(mut self, visitor: V) -> Result<V::Value, E>
-        where V: de::Visitor, E: de::Error,
+    fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
     {
         let len = self.iter.len();
         if len == 0 {
@@ -771,14 +802,14 @@ impl de::Deserializer for SeqDeserializer {
     }
 }
 
-impl de::SeqVisitor for SeqDeserializer {
-    type Error = de::Error;
+impl<E> de::SeqVisitor for SeqDeserializer<E> where E: de::Error {
+    type Error = E;
 
-    fn visit_seed<T, E>(&mut self, seed: T) -> Result<Option<T::Value>, E>
-        where T: de::DeserializeSeed, E: de::Error,
+    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where T: de::DeserializeSeed,
     {
         match self.iter.next() {
-            Some(value) => seed.deserialize(value).map(Some),
+            Some(value) => seed.deserialize(ContentDeserializer::new(value)).map(Some),
             None => Ok(None),
         }
     }
@@ -788,40 +819,42 @@ impl de::SeqVisitor for SeqDeserializer {
     }
 }
 
-struct MapDeserializer {
-    iter: <BTreeMap<String, Content> as IntoIterator>::IntoIter,
+struct MapDeserializer<E> where E: de::Error {
+    iter: <Vec<(String, Content)> as IntoIterator>::IntoIter,
     value: Option<Content>,
+    err: PhantomData<E>,
 }
 
-impl MapDeserializer {
-    fn new(map: BTreeMap<String, Content>) -> Self {
+impl<E> MapDeserializer<E> where E: de::Error {
+    fn new(map: Vec<(String, Content)>) -> Self {
         MapDeserializer {
             iter: map.into_iter(),
             value: None,
+            err: PhantomData,
         }
     }
 }
 
-impl de::MapVisitor for MapDeserializer {
-    type Error = de::Error;
+impl<E> de::MapVisitor for MapDeserializer<E> where E: de::Error {
+    type Error = E;
 
-    fn visit_key_seed<T, E>(&mut self, seed: T) -> Result<Option<T::Value>, E>
-        where T: de::DeserializeSeed, E: de::Error,
+    fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where T: de::DeserializeSeed,
     {
         match self.iter.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(Content::String(key)).map(Some)
+                seed.deserialize(ContentDeserializer::new(Content::String(key))).map(Some)
             }
             None => Ok(None),
         }
     }
 
-    fn visit_value_seed<T, E>(&mut self, seed: T) -> Result<T::Value, E>
-        where T: de::DeserializeSeed, E: de::Error,
+    fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+        where T: de::DeserializeSeed,
     {
         match self.value.take() {
-            Some(value) => seed.deserialize(value),
+            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
             None => Err(de::Error::custom("value is missing")),
         }
     }
@@ -831,12 +864,12 @@ impl de::MapVisitor for MapDeserializer {
     }
 }
 
-impl de::Deserializer for MapDeserializer {
-    type Error = de::Error;
+impl<E> de::Deserializer for MapDeserializer<E> where E: de::Error {
+    type Error = E;
 
     #[inline]
-    fn deserialize<V, E>(self, visitor: V) -> Result<V::Value, E>
-        where V: de::Visitor, E: de::Error,
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
     {
         visitor.visit_map(self)
     }
