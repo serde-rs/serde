@@ -14,6 +14,8 @@ use core::cmp;
 use core::fmt;
 use core::marker::PhantomData;
 
+use std::collections::BTreeMap;
+
 #[cfg(all(not(feature = "std"), feature = "collections"))]
 use collections::{String, Vec};
 
@@ -607,10 +609,40 @@ impl<E> Deserializer for ContentDeserializer<E>
         visitor.visit_newtype_struct(self)
     }
 
+    fn deserialize_enum<V>(self, _name: &str, _variants: &'static [&'static str], visitor: V) -> Result<V::Value, Self::Error>
+        where V: Visitor,
+    {
+        let (variant, value) = match self {
+            Content::Map(value) => {
+                let mut iter = value.into_iter();
+                let (variant, value) = match iter.next() {
+                    Some(v) => v,
+                    None => {
+                        return Err(de::Error::invalid_value(de::Unexpected::Map, &"map with a single key"));
+                    }
+                };
+                // enums are encoded in json as maps with a single key:value pair
+                if iter.next().is_some() {
+                    return Err(de::Error::invalid_value(de::Unexpected::Map, &"map with a single key"));
+                }
+                (variant, Some(value))
+            }
+            Content::String(variant) => (variant, None),
+            other => {
+                return Err(de::Error::invalid_type(other.unexpected(), &"string or map"));
+            }
+        };
+
+        visitor.visit_enum(EnumDeserializer {
+            variant: variant,
+            value: value,
+        })
+    }
+
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
         seq_fixed_size bytes byte_buf map unit_struct tuple_struct struct
-        struct_field tuple enum ignored_any
+        struct_field tuple ignored_any
     }
 }
 
@@ -623,6 +655,199 @@ impl<E> ContentDeserializer<E> {
         }
     }
 }
+
+struct EnumDeserializer<E> where E: de::Error {
+    variant: String,
+    value: Option<Content>,
+    err: PhantomData<E>,
+}
+
+impl<E> de::EnumVisitor for EnumDeserializer<E> where E: de::Error {
+    type Error = E;
+    type Variant = VariantDeserializer;
+
+    fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, VariantDeserializer), Self::Error>
+        where V: de::DeserializeSeed
+    {
+        let variant = self.variant.into_deserializer();
+        let visitor = VariantDeserializer { value: self.value };
+        seed.deserialize(variant).map(|v| (v, visitor))
+    }
+}
+
+struct VariantDeserializer {
+    value: Option<Content>,
+}
+
+impl de::VariantVisitor for VariantDeserializer {
+    type Error = de::Error;
+
+    fn visit_unit(self) -> Result<(), de::Error> {
+        match self.value {
+            Some(value) => de::Deserialize::deserialize(value),
+            None => Ok(()),
+        }
+    }
+
+    fn visit_newtype_seed<T, E>(self, seed: T) -> Result<T::Value, E>
+        where T: de::DeserializeSeed, E: de::Error
+    {
+        match self.value {
+            Some(value) => seed.deserialize(value),
+            None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"newtype variant")),
+        }
+    }
+
+    fn visit_tuple<V, E>(
+        self,
+        _len: usize,
+        visitor: V
+    ) -> Result<V::Value, E>
+        where V: de::Visitor, E: de::Error
+    {
+        match self.value {
+            Some(Content::Array(v)) => {
+                de::Deserializer::deserialize(SeqDeserializer::new(v), visitor)
+            }
+            Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant")),
+            None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant"))
+        }
+    }
+
+    fn visit_struct<V, E>(
+        self,
+        _fields: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, E>
+        where V: de::Visitor, E: de::Error
+    {
+        match self.value {
+            Some(Content::Map(v)) => {
+                de::Deserializer::deserialize(MapDeserializer::new(v), visitor)
+            }
+            Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant")),
+            _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant"))
+        }
+    }
+}
+
+struct SeqDeserializer {
+    iter: ::std::vec::IntoIter<Content>,
+}
+
+impl SeqDeserializer {
+    fn new(vec: Vec<Content>) -> Self {
+        SeqDeserializer {
+            iter: vec.into_iter(),
+        }
+    }
+}
+
+impl de::Deserializer for SeqDeserializer {
+    type Error = de::Error;
+
+    #[inline]
+    fn deserialize<V, E>(mut self, visitor: V) -> Result<V::Value, E>
+        where V: de::Visitor, E: de::Error,
+    {
+        let len = self.iter.len();
+        if len == 0 {
+            visitor.visit_unit()
+        } else {
+            let ret = try!(visitor.visit_seq(&mut self));
+            let remaining = self.iter.len();
+            if remaining == 0 {
+                Ok(ret)
+            } else {
+                Err(de::Error::invalid_length(len, &"fewer elements in array"))
+            }
+        }
+    }
+
+    forward_to_deserialize! {
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
+        tuple_struct struct struct_field tuple enum ignored_any
+    }
+}
+
+impl de::SeqVisitor for SeqDeserializer {
+    type Error = de::Error;
+
+    fn visit_seed<T, E>(&mut self, seed: T) -> Result<Option<T::Value>, E>
+        where T: de::DeserializeSeed, E: de::Error,
+    {
+        match self.iter.next() {
+            Some(value) => seed.deserialize(value).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+struct MapDeserializer {
+    iter: <BTreeMap<String, Content> as IntoIterator>::IntoIter,
+    value: Option<Content>,
+}
+
+impl MapDeserializer {
+    fn new(map: BTreeMap<String, Content>) -> Self {
+        MapDeserializer {
+            iter: map.into_iter(),
+            value: None,
+        }
+    }
+}
+
+impl de::MapVisitor for MapDeserializer {
+    type Error = de::Error;
+
+    fn visit_key_seed<T, E>(&mut self, seed: T) -> Result<Option<T::Value>, E>
+        where T: de::DeserializeSeed, E: de::Error,
+    {
+        match self.iter.next() {
+            Some((key, value)) => {
+                self.value = Some(value);
+                seed.deserialize(Content::String(key)).map(Some)
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn visit_value_seed<T, E>(&mut self, seed: T) -> Result<T::Value, E>
+        where T: de::DeserializeSeed, E: de::Error,
+    {
+        match self.value.take() {
+            Some(value) => seed.deserialize(value),
+            None => Err(de::Error::custom("value is missing")),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+impl de::Deserializer for MapDeserializer {
+    type Error = de::Error;
+
+    #[inline]
+    fn deserialize<V, E>(self, visitor: V) -> Result<V::Value, E>
+        where V: de::Visitor, E: de::Error,
+    {
+        visitor.visit_map(self)
+    }
+
+    forward_to_deserialize! {
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
+        tuple_struct struct struct_field tuple enum ignored_any
+    }
+}
+
 
 /// Not public API.
 pub struct ContentRefDeserializer<'a, E> {
@@ -637,7 +862,7 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
 {
     type Error = E;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, E>
         where V: Visitor
     {
         match *self.content {
@@ -678,7 +903,7 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
         }
     }
 
-    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
         where V: Visitor
     {
         match *self.content {
@@ -689,7 +914,7 @@ impl<'a, E> Deserializer for ContentRefDeserializer<'a, E>
         }
     }
 
-    fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, E>
         where V: Visitor
     {
         visitor.visit_newtype_struct(self)
