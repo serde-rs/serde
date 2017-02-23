@@ -759,7 +759,7 @@ impl<E> de::VariantVisitor for VariantDeserializer<E> where E: de::Error {
 }
 
 struct SeqDeserializer<E> where E: de::Error {
-    iter: ::std::vec::IntoIter<Content>,
+    iter: <Vec<Content> as IntoIterator>::IntoIter,
     err: PhantomData<E>,
 }
 
