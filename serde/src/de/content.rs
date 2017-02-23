@@ -75,9 +75,7 @@ impl Content {
             Content::Char(c) => Unexpected::Char(c),
             Content::String(ref s) => Unexpected::Str(s),
             Content::Bytes(ref b) => Unexpected::Bytes(b),
-            // @TODO: Are these mappings correct?
-            Content::None => Unexpected::Option,
-            Content::Some(_) => Unexpected::Option,
+            Content::None | Content::Some(_) => Unexpected::Option,
             Content::Unit => Unexpected::Unit,
             Content::Newtype(_) => Unexpected::NewtypeStruct,
             Content::Seq(_) => Unexpected::Seq,
