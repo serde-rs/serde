@@ -54,7 +54,7 @@ impl<'a> Item<'a> {
                         field.attrs.rename_by_rule(variant.attrs.rename_all());
                     }
                 }
-            },
+            }
             Body::Struct(_, ref mut fields) => {
                 for field in fields {
                     field.attrs.rename_by_rule(attrs.rename_all());

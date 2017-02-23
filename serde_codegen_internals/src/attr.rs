@@ -3,6 +3,7 @@ use syn;
 use syn::MetaItem::{List, NameValue, Word};
 use syn::NestedMetaItem::{Literal, MetaItem};
 use inflector::Inflector;
+use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Item::from_ast`, `attr::Variant::from_ast`, and
@@ -87,29 +88,45 @@ impl Name {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum RenameAll {
+pub enum RenameRule {
+    /// Don't apply a default rename rule.
     None,
-    /// Rename fields to "PascalCase" style. By Rust coding standards this is the default.
+    /// Rename direct children to "PascalCase" style, as typically used for enum variants.
     PascalCase,
-    /// Rename fields to "snake_case" style.
-    LowerSnakeCase,
-    /// Rename fields to "SNAKE_CASE" style.
-    UpperSnakeCase,
-    /// Rename fields to "kebab-case" style.
-    KebabCase,
-    /// Rename fields to "kebabCase" style.
+    /// Rename direct children to "kebabCase" style.
     CamelCase,
+    /// Rename direct children to "snake_case" style, as commonly used for fields.
+    SnakeCase,
+    /// Rename direct children to "SNAKE_CASE" style, as commonly used for constants.
+    ScreamingSnakeCase,
+    /// Rename direct children to "kebab-case" style.
+    KebabCase,
 }
 
-impl RenameAll {
+impl RenameRule {
     pub fn apply(&self, name: String) -> String {
         match *self {
-            RenameAll::None => name,
-            RenameAll::PascalCase => name.to_pascal_case(),
-            RenameAll::LowerSnakeCase => name.to_snake_case(),
-            RenameAll::UpperSnakeCase => name.to_screaming_snake_case(),
-            RenameAll::KebabCase => name.to_kebab_case(),
-            RenameAll::CamelCase => name.to_camel_case(),
+            RenameRule::None => name,
+            RenameRule::PascalCase => name.to_pascal_case(),
+            RenameRule::CamelCase => name.to_camel_case(),
+            RenameRule::SnakeCase => name.to_snake_case(),
+            RenameRule::ScreamingSnakeCase => name.to_screaming_snake_case(),
+            RenameRule::KebabCase => name.to_kebab_case(),
+        }
+    }
+}
+
+impl FromStr for RenameRule {
+    type Err = String;
+
+    fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
+        match rename_all_str {
+            "PascalCase" => Ok(RenameRule::PascalCase),
+            "camelCase" => Ok(RenameRule::CamelCase),
+            "snake_case" => Ok(RenameRule::SnakeCase),
+            "SCREAMING_SNAKE_CASE" => Ok(RenameRule::ScreamingSnakeCase),
+            "kebab-case" => Ok(RenameRule::KebabCase),
+            other => Err(other.to_string()),
         }
     }
 }
@@ -120,7 +137,7 @@ pub struct Item {
     name: Name,
     deny_unknown_fields: bool,
     default: Default,
-    rename_all: RenameAll,
+    rename_all: RenameRule,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
@@ -194,15 +211,12 @@ impl Item {
                     // Parse `#[serde(rename_all="foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            // The path possibility defies a simple IntoString implementation.
-                            match s.as_str() {
-                                "snake_case" => rename_all.set(RenameAll::LowerSnakeCase),
-                                "SNAKE_CASE" => rename_all.set(RenameAll::UpperSnakeCase),
-                                "kebab-case" => rename_all.set(RenameAll::KebabCase),
-                                "camelCase" => rename_all.set(RenameAll::CamelCase),
-                                "PascalCase" => rename_all.set(RenameAll::PascalCase),
-                                _ => {
-                                    cx.error(format!("unknown rename rule for #[serde(rename_all = \"{:?}\")]", s))
+                            match RenameRule::from_str(s.as_str()) {
+                                Ok(rename_rule) => rename_all.set(rename_rule),
+                                Err(other) => {
+                                    cx.error(format!("unknown rename rule for #[serde(rename_all \
+                                                      = {:?})]",
+                                                     other))
                                 }
                             }
                         }
@@ -292,7 +306,8 @@ impl Item {
                                     content.set(s);
                                 }
                                 syn::Body::Struct(_) => {
-                                    cx.error("#[serde(content = \"...\")] can only be used on enums")
+                                    cx.error("#[serde(content = \"...\")] can only be used on \
+                                              enums")
                                 }
                             }
                         }
@@ -345,7 +360,10 @@ impl Item {
                 EnumTag::External
             }
             (false, Some(tag), Some(content)) => {
-                EnumTag::Adjacent { tag: tag, content: content }
+                EnumTag::Adjacent {
+                    tag: tag,
+                    content: content,
+                }
             }
             (true, Some(_), Some(_)) => {
                 cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
@@ -360,7 +378,7 @@ impl Item {
             },
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
-            rename_all: rename_all.get().unwrap_or(RenameAll::None),
+            rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: tag,
@@ -371,7 +389,7 @@ impl Item {
         &self.name
     }
 
-    pub fn rename_all(&self) -> &RenameAll {
+    pub fn rename_all(&self) -> &RenameRule {
         &self.rename_all
     }
 
@@ -402,7 +420,7 @@ pub struct Variant {
     name: Name,
     ser_renamed: bool,
     de_renamed: bool,
-    rename_all: RenameAll,
+    rename_all: RenameRule,
     skip_deserializing: bool,
     skip_serializing: bool,
 }
@@ -437,15 +455,12 @@ impl Variant {
                     // Parse `#[serde(rename_all="foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            // The path possibility defies a simple IntoString implementation.
-                            match s.as_str() {
-                                "snake_case" => rename_all.set(RenameAll::LowerSnakeCase),
-                                "SNAKE_CASE" => rename_all.set(RenameAll::UpperSnakeCase),
-                                "kebab-case" => rename_all.set(RenameAll::KebabCase),
-                                "camelCase" => rename_all.set(RenameAll::CamelCase),
-                                "PascalCase" => rename_all.set(RenameAll::PascalCase),
-                                _ => {
-                                    cx.error(format!("unknown rename rule for #[serde(rename_all = \"{:?}\")]", s))
+                            match RenameRule::from_str(s.as_str()) {
+                                Ok(rename_rule) => rename_all.set(rename_rule),
+                                Err(other) => {
+                                    cx.error(format!("unknown rename rule for #[serde(rename_all \
+                                                      = {:?})]",
+                                                     other))
                                 }
                             }
                         }
@@ -482,7 +497,7 @@ impl Variant {
             },
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
-            rename_all: rename_all.get().unwrap_or(RenameAll::None),
+            rename_all: rename_all.get().unwrap_or(RenameRule::None),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
         }
@@ -492,7 +507,7 @@ impl Variant {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rename_rule: &RenameAll) {
+    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) {
         if !self.ser_renamed {
             self.name.serialize = rename_rule.apply(self.name.serialize.clone());
         }
@@ -501,7 +516,7 @@ impl Variant {
         }
     }
 
-    pub fn rename_all(&self) -> &RenameAll {
+    pub fn rename_all(&self) -> &RenameRule {
         &self.rename_all
     }
 
@@ -694,7 +709,7 @@ impl Field {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rename_rule: &RenameAll) {
+    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) {
         if !self.ser_renamed {
             self.name.serialize = rename_rule.apply(self.name.serialize.clone());
         }
