@@ -22,7 +22,6 @@ use alloc::boxed::Box;
 
 use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, MapVisitor,
          EnumVisitor, Unexpected};
-use de::value::ValueDeserializer;
 
 /// Used from generated code to buffer the contents of the Deserializer when
 /// deserializing untagged enums and internally tagged enums.
@@ -685,7 +684,7 @@ impl<E> ContentDeserializer<E> {
 }
 
 struct EnumDeserializer<E> where E: de::Error {
-    variant: String,
+    variant: Content,
     value: Option<Content>,
     err: PhantomData<E>,
 }
@@ -695,11 +694,10 @@ impl<E> de::EnumVisitor for EnumDeserializer<E> where E: de::Error {
     type Variant = VariantDeserializer<Self::Error>;
 
     fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, VariantDeserializer<E>), Self::Error>
-        where V: de::DeserializeSeed
+        where V: de::DeserializeSeed,
     {
-        let variant = self.variant.into_deserializer();
         let visitor = VariantDeserializer { value: self.value, err: PhantomData, };
-        seed.deserialize(variant).map(|v| (v, visitor))
+        seed.deserialize(ContentDeserializer::new(self.variant)).map(|v| (v, visitor))
     }
 }
 
@@ -820,13 +818,13 @@ impl<E> de::SeqVisitor for SeqDeserializer<E> where E: de::Error {
 }
 
 struct MapDeserializer<E> where E: de::Error {
-    iter: <Vec<(String, Content)> as IntoIterator>::IntoIter,
+    iter: <Vec<(Content, Content)> as IntoIterator>::IntoIter,
     value: Option<Content>,
     err: PhantomData<E>,
 }
 
 impl<E> MapDeserializer<E> where E: de::Error {
-    fn new(map: Vec<(String, Content)>) -> Self {
+    fn new(map: Vec<(Content, Content)>) -> Self {
         MapDeserializer {
             iter: map.into_iter(),
             value: None,
@@ -844,7 +842,7 @@ impl<E> de::MapVisitor for MapDeserializer<E> where E: de::Error {
         match self.iter.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(ContentDeserializer::new(Content::String(key))).map(Some)
+                seed.deserialize(ContentDeserializer::new(key)).map(Some)
             }
             None => Ok(None),
         }
