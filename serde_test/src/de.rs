@@ -2,7 +2,7 @@ use std::iter;
 
 use serde::de::{self, Deserialize, DeserializeSeed, EnumVisitor, MapVisitor, SeqVisitor,
                 VariantVisitor, Visitor};
-use serde::de::value::ValueDeserializer;
+use serde::de::value::{ValueDeserializer, MapVisitorDeserializer, SeqVisitorDeserializer};
 
 use error::Error;
 use token::Token;
@@ -128,6 +128,13 @@ impl<'a, I> de::Deserializer for &'a mut Deserializer<I>
             }
             Some(Token::StructStart(_, len)) => {
                 self.visit_map(Some(len), Token::StructSep, Token::StructEnd, visitor)
+            }
+            Some(Token::EnumUnit(_, variant)) => visitor.visit_str(variant),
+            Some(Token::EnumStart(variant)) |
+            Some(Token::EnumNewType(_, variant)) |
+            Some(Token::EnumSeqStart(_, variant, _)) |
+            Some(Token::EnumMapStart(_, variant, _)) => {
+                visitor.visit_map(EnumMapVisitor::new(self, variant))
             }
             Some(token) => Err(Error::UnexpectedToken(token)),
             None => Err(Error::EndOfTokens),
@@ -538,6 +545,75 @@ impl<'a, I> VariantVisitor for DeserializerEnumVisitor<'a, I>
             }
             Some(_) => de::Deserializer::deserialize(self.de, visitor),
             None => Err(Error::EndOfTokens),
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+struct EnumMapVisitor<'a, I: 'a>
+    where I: Iterator<Item = Token<'static>>
+{
+    de: &'a mut Deserializer<I>,
+    variant: Option<&'a str>,
+}
+
+impl<'a, I: 'a> EnumMapVisitor<'a, I>
+    where I: Iterator<Item = Token<'static>>
+{
+    fn new(de: &'a mut Deserializer<I>, variant: &'a str) -> Self {
+        EnumMapVisitor {
+            de: de,
+            variant: Some(variant),
+        }
+    }
+}
+
+impl<'a, I: 'a> MapVisitor for EnumMapVisitor<'a, I>
+    where I: Iterator<Item = Token<'static>>
+{
+    type Error = Error;
+
+    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Error>
+        where K: DeserializeSeed
+    {
+        match self.variant.take() {
+            Some(variant) => seed.deserialize(variant.into_deserializer()).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Error>
+        where V: DeserializeSeed
+    {
+        match self.de.tokens.peek() {
+            Some(&Token::EnumSeqSep) => {
+                let value = {
+                    let visitor = DeserializerSeqVisitor {
+                        de: self.de,
+                        len: None,
+                        sep: Token::EnumSeqSep,
+                        end: Token::EnumSeqEnd,
+                    };
+                    try!(seed.deserialize(SeqVisitorDeserializer::new(visitor)))
+                };
+                try!(self.de.expect_token(Token::EnumSeqEnd));
+                Ok(value)
+            }
+            Some(&Token::EnumMapSep) => {
+                let value = {
+                    let visitor = DeserializerMapVisitor {
+                        de: self.de,
+                        len: None,
+                        sep: Token::EnumMapSep,
+                        end: Token::EnumMapEnd,
+                    };
+                    try!(seed.deserialize(MapVisitorDeserializer::new(visitor)))
+                };
+                try!(self.de.expect_token(Token::EnumMapEnd));
+                Ok(value)
+            }
+            _ => seed.deserialize(&mut *self.de),
         }
     }
 }
