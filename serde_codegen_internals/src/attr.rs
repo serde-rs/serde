@@ -93,11 +93,11 @@ pub enum RenameRule {
     None,
     /// Rename direct children to "PascalCase" style, as typically used for enum variants.
     PascalCase,
-    /// Rename direct children to "kebabCase" style.
+    /// Rename direct children to "camelCase" style.
     CamelCase,
     /// Rename direct children to "snake_case" style, as commonly used for fields.
     SnakeCase,
-    /// Rename direct children to "SNAKE_CASE" style, as commonly used for constants.
+    /// Rename direct children to "SCREAMING_SNAKE_CASE" style, as commonly used for constants.
     ScreamingSnakeCase,
     /// Rename direct children to "kebab-case" style.
     KebabCase,
@@ -370,7 +370,7 @@ impl Item {
                 EnumTag::External
             }
         };
-        // @DEBUG
+
         Item {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
