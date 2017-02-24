@@ -107,6 +107,8 @@ mod impossible;
 // Helpers used by generated code. Not public API.
 #[doc(hidden)]
 pub mod private;
+#[cfg(any(feature = "std", feature = "collections"))]
+mod content;
 
 pub use self::impossible::Impossible;
 

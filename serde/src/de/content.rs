@@ -29,7 +29,6 @@ use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, 
 /// Not public API. Use serde-value instead.
 #[derive(Debug)]
 pub enum Content {
-    // Don't mind the PhantomData, just need to use E somewhere.
     Bool(bool),
 
     U8(u8),

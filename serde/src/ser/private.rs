@@ -1,6 +1,9 @@
 use core::fmt::{self, Display};
 
-use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct};
+use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct, Impossible};
+
+#[cfg(any(feature = "std", feature = "collections"))]
+use ser::content::{SerializeTupleVariantAsMapValue, SerializeStructVariantAsMapValue};
 
 /// Not public API.
 pub fn serialize_tagged_newtype<S, T>(serializer: S,
@@ -43,6 +46,7 @@ enum Unsupported {
     Sequence,
     Tuple,
     TupleStruct,
+    #[cfg(not(any(feature = "std", feature = "collections")))]
     Enum,
 }
 
@@ -61,6 +65,7 @@ impl Display for Unsupported {
             Unsupported::Sequence => formatter.write_str("a sequence"),
             Unsupported::Tuple => formatter.write_str("a tuple"),
             Unsupported::TupleStruct => formatter.write_str("a tuple struct"),
+            #[cfg(not(any(feature = "std", feature = "collections")))]
             Unsupported::Enum => formatter.write_str("an enum"),
         }
     }
@@ -98,13 +103,21 @@ impl<S> Serializer for TaggedSerializer<S>
     type Ok = S::Ok;
     type Error = S::Error;
 
-    type SerializeSeq = S::SerializeSeq;
-    type SerializeTuple = S::SerializeTuple;
-    type SerializeTupleStruct = S::SerializeTupleStruct;
-    type SerializeTupleVariant = S::SerializeTupleVariant;
+    type SerializeSeq = Impossible<S::Ok, S::Error>;
+    type SerializeTuple = Impossible<S::Ok, S::Error>;
+    type SerializeTupleStruct = Impossible<S::Ok, S::Error>;
     type SerializeMap = S::SerializeMap;
     type SerializeStruct = S::SerializeStruct;
-    type SerializeStructVariant = S::SerializeStructVariant;
+
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    type SerializeTupleVariant = Impossible<S::Ok, S::Error>;
+    #[cfg(any(feature = "std", feature = "collections"))]
+    type SerializeTupleVariant = SerializeTupleVariantAsMapValue<S::SerializeMap>;
+
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    type SerializeStructVariant = Impossible<S::Ok, S::Error>;
+    #[cfg(any(feature = "std", feature = "collections"))]
+    type SerializeStructVariant = SerializeStructVariantAsMapValue<S::SerializeMap>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Boolean))
@@ -183,9 +196,12 @@ impl<S> Serializer for TaggedSerializer<S>
     fn serialize_unit_variant(self,
                               _: &'static str,
                               _: usize,
-                              _: &'static str)
+                              inner_variant: &'static str)
                               -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Enum))
+        let mut map = try!(self.delegate.serialize_map(Some(2)));
+        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(inner_variant, &()));
+        map.end()
     }
 
     fn serialize_newtype_struct<T: ?Sized>(self,
@@ -200,12 +216,15 @@ impl<S> Serializer for TaggedSerializer<S>
     fn serialize_newtype_variant<T: ?Sized>(self,
                                             _: &'static str,
                                             _: usize,
-                                            _: &'static str,
-                                            _: &T)
+                                            inner_variant: &'static str,
+                                            inner_value: &T)
                                             -> Result<Self::Ok, Self::Error>
         where T: Serialize
     {
-        Err(self.bad_type(Unsupported::Enum))
+        let mut map = try!(self.delegate.serialize_map(Some(2)));
+        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(inner_variant, inner_value));
+        map.end()
     }
 
     fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
@@ -227,13 +246,29 @@ impl<S> Serializer for TaggedSerializer<S>
         Err(self.bad_type(Unsupported::TupleStruct))
     }
 
+    #[cfg(not(any(feature = "std", feature = "collections")))]
     fn serialize_tuple_variant(self,
                                _: &'static str,
                                _: usize,
                                _: &'static str,
                                _: usize)
                                -> Result<Self::SerializeTupleVariant, Self::Error> {
+        // Lack of push-based serialization means we need to buffer the content
+        // of the tuple variant, so it requires std.
         Err(self.bad_type(Unsupported::Enum))
+    }
+
+    #[cfg(any(feature = "std", feature = "collections"))]
+    fn serialize_tuple_variant(self,
+                               _: &'static str,
+                               _: usize,
+                               inner_variant: &'static str,
+                               len: usize)
+                               -> Result<Self::SerializeTupleVariant, Self::Error> {
+        let mut map = try!(self.delegate.serialize_map(Some(2)));
+        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_key(inner_variant));
+        Ok(SerializeTupleVariantAsMapValue::new(map, inner_variant, len))
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
@@ -251,12 +286,28 @@ impl<S> Serializer for TaggedSerializer<S>
         Ok(state)
     }
 
+    #[cfg(not(any(feature = "std", feature = "collections")))]
     fn serialize_struct_variant(self,
                                 _: &'static str,
                                 _: usize,
                                 _: &'static str,
                                 _: usize)
                                 -> Result<Self::SerializeStructVariant, Self::Error> {
+        // Lack of push-based serialization means we need to buffer the content
+        // of the struct variant, so it requires std.
         Err(self.bad_type(Unsupported::Enum))
+    }
+
+    #[cfg(any(feature = "std", feature = "collections"))]
+    fn serialize_struct_variant(self,
+                                _: &'static str,
+                                _: usize,
+                                inner_variant: &'static str,
+                                len: usize)
+                                -> Result<Self::SerializeStructVariant, Self::Error> {
+        let mut map = try!(self.delegate.serialize_map(Some(2)));
+        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_key(inner_variant));
+        Ok(SerializeStructVariantAsMapValue::new(map, inner_variant, len))
     }
 }
