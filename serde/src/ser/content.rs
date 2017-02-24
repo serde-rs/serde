@@ -196,7 +196,7 @@ impl Serialize for Content {
             Content::Struct(n, ref fields) => {
                 use ser::SerializeStruct;
                 let mut s = try!(serializer.serialize_struct(n, fields.len()));
-                for &(ref k, ref v) in fields {
+                for &(k, ref v) in fields {
                     try!(s.serialize_field(k, v));
                 }
                 s.end()
@@ -204,7 +204,7 @@ impl Serialize for Content {
             Content::StructVariant(n, i, v, ref fields) => {
                 use ser::SerializeStructVariant;
                 let mut sv = try!(serializer.serialize_struct_variant(n, i, v, fields.len()));
-                for &(ref k, ref v) in fields {
+                for &(k, ref v) in fields {
                     try!(sv.serialize_field(k, v));
                 }
                 sv.end()
