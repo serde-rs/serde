@@ -1069,3 +1069,156 @@ fn test_adjacently_tagged_enum() {
         ]
     );
 }
+
+#[test]
+fn test_enum_in_internally_tagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum Outer {
+        Inner(Inner),
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    enum Inner {
+        Unit,
+        Newtype(u8),
+        Tuple(u8, u8),
+        Struct { f: u8 },
+    }
+
+    assert_tokens(
+        &Outer::Inner(Inner::Unit),
+        &[
+            Token::MapStart(Some(2)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("Inner"),
+
+            Token::MapSep,
+            Token::Str("Unit"),
+            Token::Unit,
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &Outer::Inner(Inner::Newtype(1)),
+        &[
+            Token::MapStart(Some(2)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("Inner"),
+
+            Token::MapSep,
+            Token::Str("Newtype"),
+            Token::U8(1),
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &Outer::Inner(Inner::Tuple(1, 1)),
+        &[
+            Token::MapStart(Some(2)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("Inner"),
+
+            Token::MapSep,
+            Token::Str("Tuple"),
+            Token::TupleStructStart("Tuple", 2),
+            Token::TupleStructSep,
+            Token::U8(1),
+            Token::TupleStructSep,
+            Token::U8(1),
+            Token::TupleStructEnd,
+
+            Token::MapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &Outer::Inner(Inner::Struct { f: 1 }),
+        &[
+            Token::MapStart(Some(2)),
+
+            Token::MapSep,
+            Token::Str("type"),
+            Token::Str("Inner"),
+
+            Token::MapSep,
+            Token::Str("Struct"),
+            Token::StructStart("Struct", 1),
+            Token::StructSep,
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
+fn test_enum_in_untagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum Outer {
+        Inner(Inner),
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    enum Inner {
+        Unit,
+        Newtype(u8),
+        Tuple(u8, u8),
+        Struct { f: u8 },
+    }
+
+    assert_tokens(
+        &Outer::Inner(Inner::Unit),
+        &[
+            Token::EnumUnit("Inner", "Unit"),
+        ]
+    );
+
+    assert_tokens(
+        &Outer::Inner(Inner::Newtype(1)),
+        &[
+            Token::EnumNewType("Inner", "Newtype"),
+            Token::U8(1),
+        ]
+    );
+
+    assert_tokens(
+        &Outer::Inner(Inner::Tuple(1, 1)),
+        &[
+            Token::EnumSeqStart("Inner", "Tuple", 2),
+
+            Token::EnumSeqSep,
+            Token::U8(1),
+            Token::EnumSeqSep,
+            Token::U8(1),
+
+            Token::EnumSeqEnd,
+        ]
+    );
+
+    assert_tokens(
+        &Outer::Inner(Inner::Struct { f: 1 }),
+        &[
+            Token::EnumMapStart("Inner", "Struct", 1),
+
+            Token::EnumMapSep,
+            Token::Str("f"),
+            Token::U8(1),
+
+            Token::EnumMapEnd,
+        ]
+    );
+}
