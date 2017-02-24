@@ -1,8 +1,13 @@
+#[macro_use]
+extern crate serde_derive;
+
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::time::Duration;
+
+extern crate serde;
 
 extern crate serde_test;
 use self::serde_test::{
@@ -17,6 +22,9 @@ use self::fnv::FnvHasher;
 
 #[cfg(feature = "unstable")]
 use serde::ser::iterator;
+
+#[macro_use]
+mod macros;
 
 //////////////////////////////////////////////////////////////////////////
 

@@ -2,6 +2,11 @@
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
+#![cfg_attr(feature = "unstable-testing", feature(non_ascii_idents))]
+
+#[macro_use]
+extern crate serde_derive;
+
 extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
 use self::serde::de::{Deserialize, Deserializer};

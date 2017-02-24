@@ -5,10 +5,7 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 publish = false
 
 [features]
-unstable-testing = [
-    "compiletest_rs",
-    "serde/unstable-testing",
-]
+unstable-testing = ["compiletest_rs"]
 
 [dev-dependencies]
 fnv = "1.0"
@@ -19,7 +16,3 @@ serde_test = { path = "../serde_test" }
 
 [dependencies]
 compiletest_rs = { version = "0.2", optional = true }
-
-[[test]]
-name = "test"
-path = "tests/test.rs"

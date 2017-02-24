@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate serde_derive;
+
 extern crate serde_test;
 use self::serde_test::{
     Error,

@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate serde_derive;
+
 extern crate serde;
 use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
 

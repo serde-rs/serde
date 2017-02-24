@@ -1,9 +1,13 @@
+#[macro_use]
+extern crate serde_derive;
+
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::default::Default;
 
+extern crate serde;
 use serde::Deserialize;
 
 extern crate fnv;
@@ -16,6 +20,9 @@ use self::serde_test::{
     assert_de_tokens,
     assert_de_tokens_error,
 };
+
+#[macro_use]
+mod macros;
 
 //////////////////////////////////////////////////////////////////////////
 
