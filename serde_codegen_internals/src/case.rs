@@ -68,7 +68,7 @@ impl RenameRule {
 }
 
 impl FromStr for RenameRule {
-    type Err = String;
+    type Err = ();
 
     fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
         match rename_all_str {
@@ -77,7 +77,7 @@ impl FromStr for RenameRule {
             "snake_case" => Ok(SnakeCase),
             "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
             "kebab-case" => Ok(KebabCase),
-            other => Err(other.to_string()),
+            _ => Err(()),
         }
     }
 }

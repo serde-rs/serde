@@ -168,12 +168,12 @@ impl Item {
                     // Parse `#[serde(rename_all="foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            match RenameRule::from_str(s.as_str()) {
+                            match RenameRule::from_str(&s) {
                                 Ok(rename_rule) => rename_all.set(rename_rule),
-                                Err(other) => {
+                                Err(()) => {
                                     cx.error(format!("unknown rename rule for #[serde(rename_all \
                                                       = {:?})]",
-                                                     other))
+                                                     s))
                                 }
                             }
                         }
@@ -412,12 +412,12 @@ impl Variant {
                     // Parse `#[serde(rename_all="foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            match RenameRule::from_str(s.as_str()) {
+                            match RenameRule::from_str(&s) {
                                 Ok(rename_rule) => rename_all.set(rename_rule),
-                                Err(other) => {
+                                Err(()) => {
                                     cx.error(format!("unknown rename rule for #[serde(rename_all \
                                                       = {:?})]",
-                                                     other))
+                                                     s))
                                 }
                             }
                         }
