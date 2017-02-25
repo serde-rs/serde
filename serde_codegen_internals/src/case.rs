@@ -1,4 +1,7 @@
+use std::ascii::AsciiExt;
 use std::str::FromStr;
+
+use self::RenameRule::*;
 
 #[derive(Debug, PartialEq)]
 pub enum RenameRule {
@@ -17,67 +20,50 @@ pub enum RenameRule {
 }
 
 impl RenameRule {
-    pub fn apply_to_variant(&self, variant_name: String) -> Result<String, String> {
-        if *self == RenameRule::None {
-            return Ok(variant_name);
-        }
-        let mut chars = variant_name.chars();
-        let start = chars.next().unwrap();
-        if start.is_lowercase() {
-            return Err(format!("#[serde(rename_all = \"...\")] expects enum variants to be \
-                                named in `PascalCase`."));
-        }
-        Ok(self.apply_to_words(chars.fold(vec![start.to_lowercase().collect()], |mut words, c| {
-            if c.is_uppercase() {
-                words.push(c.to_lowercase().collect());
-            } else {
-                words.last_mut().unwrap().push(c);
-            }
-            words
-        })))
-    }
-
-    pub fn apply_to_field(&self, field_name: String) -> Result<String, String> {
-        if *self == RenameRule::None {
-            return Ok(field_name);
-        }
-        if field_name != field_name.to_lowercase() {
-            return Err(format!("#[serde(rename_all = \"...\")] expects fields to be named in \
-                                `snake_case`."));
-        }
-        Ok(self.apply_to_words(field_name.split('_').map(|s| s.to_string()).collect()))
-    }
-
-    fn apply_to_words(&self, lowercased_words: Vec<String>) -> String {
+    pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
-                RenameRule::PascalCase => Self::capitalising_join(lowercased_words),
-                RenameRule::CamelCase => {
-                    let mut iter = lowercased_words.into_iter();
-                    let mut first = iter.next().unwrap();
-                    first.push_str(Self::capitalising_join(iter.collect()).as_str());
-                    first
+            None | PascalCase => variant.to_owned(),
+            CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
+            SnakeCase => {
+                let mut snake = String::new();
+                for (i, ch) in variant.char_indices() {
+                    if i > 0 && ch.is_uppercase() {
+                        snake.push('_');
+                    }
+                    snake.push(ch.to_ascii_lowercase());
                 }
-                RenameRule::SnakeCase => Self::delimiting_join(lowercased_words, "_"),
-                RenameRule::ScreamingSnakeCase => Self::delimiting_join(lowercased_words, "_").to_uppercase(),
-                RenameRule::KebabCase => Self::delimiting_join(lowercased_words, "-"),
-                _ => unreachable!(),
+                snake
             }
-            .clone()
+            ScreamingSnakeCase => SnakeCase.apply_to_variant(variant).to_ascii_uppercase(),
+            KebabCase => SnakeCase.apply_to_variant(variant).replace('_', "-"),
+        }
     }
 
-    fn delimiting_join(lowercased_words: Vec<String>, delimiter: &str) -> String {
-        lowercased_words.join(delimiter)
-    }
-
-    fn capitalising_join(lowercased_words: Vec<String>) -> String {
-        lowercased_words.into_iter().map(Self::capitalise).collect()
-    }
-
-    fn capitalise(lowercased_word: String) -> String {
-        let mut iter = lowercased_word.chars();
-        let mut first: String = iter.next().unwrap().to_uppercase().collect();
-        first.push_str(iter.collect::<String>().as_str());
-        first
+    pub fn apply_to_field(&self, field: &str) -> String {
+        match *self {
+            None | SnakeCase => field.to_owned(),
+            PascalCase => {
+                let mut pascal = String::new();
+                let mut capitalize = true;
+                for ch in field.chars() {
+                    if ch == '_' {
+                        capitalize = true;
+                    } else if capitalize {
+                        pascal.push(ch.to_ascii_uppercase());
+                        capitalize = false;
+                    } else {
+                        pascal.push(ch);
+                    }
+                }
+                pascal
+            }
+            CamelCase => {
+                let pascal = PascalCase.apply_to_field(field);
+                pascal[..1].to_ascii_lowercase() + &pascal[1..]
+            }
+            ScreamingSnakeCase => field.to_ascii_uppercase(),
+            KebabCase => field.replace('_', "-"),
+        }
     }
 }
 
@@ -86,33 +72,44 @@ impl FromStr for RenameRule {
 
     fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
         match rename_all_str {
-            "PascalCase" => Ok(RenameRule::PascalCase),
-            "camelCase" => Ok(RenameRule::CamelCase),
-            "snake_case" => Ok(RenameRule::SnakeCase),
-            "SCREAMING_SNAKE_CASE" => Ok(RenameRule::ScreamingSnakeCase),
-            "kebab-case" => Ok(RenameRule::KebabCase),
+            "PascalCase" => Ok(PascalCase),
+            "camelCase" => Ok(CamelCase),
+            "snake_case" => Ok(SnakeCase),
+            "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
+            "kebab-case" => Ok(KebabCase),
             other => Err(other.to_string()),
         }
     }
 }
 
 #[test]
-fn test_rename_rule_variant_strs() {
-    let variants = vec!["Outcome", "VeryTastyVegetables", "A", "Z42", "bad_snake_case"];
-    let variants_renamed_expected = vec![
-        (PascalCase, vec![Ok("Outcome"), Ok("VeryTastyVegetables"), Ok("A"), Ok("Z42"), Err(())]),
-        (CamelCase, vec![Ok("outcome"), Ok("veryTastyVegetables"), Ok("a"), Ok("z42"), Err(())]),
-        (SnakeCase, vec![Ok("outcome"), Ok("very_tasty_vegetables"), Ok("a"), Ok("z42"), Err(())]),
-        (ScreamingSnakeCase, vec![Ok("OUTCOME"), Ok("VERY_TASTY_VEGETABLES"), Ok("A"), Ok("Z42"), Err(())]),
-        (KebabCase, vec![Ok("outcome"), Ok("very-tasty-vegetables"), Ok("a"), Ok("z42"), Err(())]),
-    ];
-
-    for variant in variants.iter() {
-        assert_eq!(RenameRule::None.apply_to_variant(variant.to_string()), Ok(variant.to_string()));
+fn rename_variants() {
+    for &(original, camel, snake, screaming, kebab) in
+        &[("Outcome", "outcome", "outcome", "OUTCOME", "outcome"),
+          ("VeryTasty", "veryTasty", "very_tasty", "VERY_TASTY", "very-tasty"),
+          ("A", "a", "a", "A", "a"),
+          ("Z42", "z42", "z42", "Z42", "z42")] {
+        assert_eq!(None.apply_to_variant(original), original);
+        assert_eq!(PascalCase.apply_to_variant(original), original);
+        assert_eq!(CamelCase.apply_to_variant(original), camel);
+        assert_eq!(SnakeCase.apply_to_variant(original), snake);
+        assert_eq!(ScreamingSnakeCase.apply_to_variant(original), screaming);
+        assert_eq!(KebabCase.apply_to_variant(original), kebab);
     }
-    for (rule, expected) in variants_renamed_expected.into_iter().map(|(rule, expected)| (rule, expected.into_iter().map(|expect| expect.map(|str| str.to_string())))) {
-        for (variant, expected) in variants.iter().zip(expected) {
-            assert_eq!(rule.apply_to_variant(variant.to_string()).map_err(|_| ()), expected);
-        }
+}
+
+#[test]
+fn rename_fields() {
+    for &(original, pascal, camel, screaming, kebab) in
+        &[("outcome", "Outcome", "outcome", "OUTCOME", "outcome"),
+          ("very_tasty", "VeryTasty", "veryTasty", "VERY_TASTY", "very-tasty"),
+          ("a", "A", "a", "A", "a"),
+          ("z42", "Z42", "z42", "Z42", "z42")] {
+        assert_eq!(None.apply_to_field(original), original);
+        assert_eq!(PascalCase.apply_to_field(original), pascal);
+        assert_eq!(CamelCase.apply_to_field(original), camel);
+        assert_eq!(SnakeCase.apply_to_field(original), original);
+        assert_eq!(ScreamingSnakeCase.apply_to_field(original), screaming);
+        assert_eq!(KebabCase.apply_to_field(original), kebab);
     }
 }

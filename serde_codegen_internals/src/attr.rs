@@ -464,14 +464,13 @@ impl Variant {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) -> Result<(), String> {
+    pub fn rename_by_rule(&mut self, rule: &RenameRule) {
         if !self.ser_renamed {
-            self.name.serialize = rename_rule.apply_to_variant(self.name.serialize.clone())?;
+            self.name.serialize = rule.apply_to_variant(&self.name.serialize);
         }
         if !self.de_renamed {
-            self.name.deserialize = rename_rule.apply_to_variant(self.name.deserialize.clone())?;
+            self.name.deserialize = rule.apply_to_variant(&self.name.deserialize);
         }
-        Ok(())
     }
 
     pub fn rename_all(&self) -> &RenameRule {
@@ -667,14 +666,13 @@ impl Field {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) -> Result<(), String> {
+    pub fn rename_by_rule(&mut self, rule: &RenameRule) {
         if !self.ser_renamed {
-            self.name.serialize = rename_rule.apply_to_field(self.name.serialize.clone())?;
+            self.name.serialize = rule.apply_to_field(&self.name.serialize);
         }
         if !self.de_renamed {
-            self.name.deserialize = rename_rule.apply_to_field(self.name.deserialize.clone())?;
+            self.name.deserialize = rule.apply_to_field(&self.name.deserialize);
         }
-        Ok(())
     }
 
     pub fn skip_serializing(&self) -> bool {

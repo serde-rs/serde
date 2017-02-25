@@ -49,15 +49,15 @@ impl<'a> Item<'a> {
         match body {
             Body::Enum(ref mut variants) => {
                 for ref mut variant in variants {
-                    variant.attrs.rename_by_rule(attrs.rename_all()).unwrap_or_else(|err| cx.error(err));
+                    variant.attrs.rename_by_rule(attrs.rename_all());
                     for ref mut field in &mut variant.fields {
-                        field.attrs.rename_by_rule(variant.attrs.rename_all()).unwrap_or_else(|err| cx.error(err));
+                        field.attrs.rename_by_rule(variant.attrs.rename_all());
                     }
                 }
             }
             Body::Struct(_, ref mut fields) => {
                 for field in fields {
-                    field.attrs.rename_by_rule(attrs.rename_all()).unwrap_or_else(|err| cx.error(err));
+                    field.attrs.rename_by_rule(attrs.rename_all());
                 }
             }
         }
