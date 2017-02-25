@@ -1225,3 +1225,89 @@ fn test_enum_in_untagged_enum() {
         ]
     );
 }
+
+#[test]
+fn test_rename_all() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "snake_case")]
+    enum E {
+        #[serde(rename_all = "camelCase")]
+        Serialize {
+            serialize: bool,
+            serialize_seq: bool,
+        },
+        #[serde(rename_all = "kebab-case")]
+        SerializeSeq {
+            serialize: bool,
+            serialize_seq: bool,
+        },
+        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+        SerializeMap {
+            serialize: bool,
+            serialize_seq: bool,
+        },
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "PascalCase")]
+    struct S {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    assert_tokens(
+        &E::Serialize { serialize: true, serialize_seq: true },
+        &[
+            Token::EnumMapStart("E", "serialize", 2),
+            Token::EnumMapSep,
+            Token::Str("serialize"),
+            Token::Bool(true),
+            Token::EnumMapSep,
+            Token::Str("serializeSeq"),
+            Token::Bool(true),
+            Token::EnumMapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &E::SerializeSeq { serialize: true, serialize_seq: true },
+        &[
+            Token::EnumMapStart("E", "serialize_seq", 2),
+            Token::EnumMapSep,
+            Token::Str("serialize"),
+            Token::Bool(true),
+            Token::EnumMapSep,
+            Token::Str("serialize-seq"),
+            Token::Bool(true),
+            Token::EnumMapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &E::SerializeMap { serialize: true, serialize_seq: true },
+        &[
+            Token::EnumMapStart("E", "serialize_map", 2),
+            Token::EnumMapSep,
+            Token::Str("SERIALIZE"),
+            Token::Bool(true),
+            Token::EnumMapSep,
+            Token::Str("SERIALIZE_SEQ"),
+            Token::Bool(true),
+            Token::EnumMapEnd,
+        ]
+    );
+
+    assert_tokens(
+        &S { serialize: true, serialize_seq: true },
+        &[
+            Token::StructStart("S", 2),
+            Token::StructSep,
+            Token::Str("Serialize"),
+            Token::Bool(true),
+            Token::StructSep,
+            Token::Str("SerializeSeq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ]
+    );
+}
