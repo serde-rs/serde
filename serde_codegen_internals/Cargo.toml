@@ -13,7 +13,6 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-
 
 [dependencies]
 syn = { version = "0.11", default-features = false, features = ["parsing"] }
-Inflector = "0.7.0"
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }

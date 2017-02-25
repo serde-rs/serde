@@ -2,7 +2,6 @@ use Ctxt;
 use syn;
 use syn::MetaItem::{List, NameValue, Word};
 use syn::NestedMetaItem::{Literal, MetaItem};
-use inflector::Inflector;
 use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
@@ -104,15 +103,67 @@ pub enum RenameRule {
 }
 
 impl RenameRule {
-    pub fn apply(&self, name: String) -> String {
-        match *self {
-            RenameRule::None => name,
-            RenameRule::PascalCase => name.to_pascal_case(),
-            RenameRule::CamelCase => name.to_camel_case(),
-            RenameRule::SnakeCase => name.to_snake_case(),
-            RenameRule::ScreamingSnakeCase => name.to_screaming_snake_case(),
-            RenameRule::KebabCase => name.to_kebab_case(),
+    pub fn apply_to_variant(&self, variant_name: String) -> Result<String, String> {
+        if *self == RenameRule::None {
+            return Ok(variant_name);
         }
+        let mut chars = variant_name.chars();
+        let start = chars.next().unwrap();
+        if start.is_lowercase() {
+            return Err(format!("#[serde(rename_all = \"...\")] expects enum variants to be \
+                                named in `PascalCase`."));
+        }
+        Ok(self.apply_to_words(chars.fold(vec![start.to_lowercase().collect()], |mut words, c| {
+            if c.is_uppercase() {
+                words.push(c.to_lowercase().collect());
+            } else {
+                words.last_mut().unwrap().push(c);
+            }
+            words
+        })))
+    }
+
+    pub fn apply_to_field(&self, field_name: String) -> Result<String, String> {
+        if *self == RenameRule::None {
+            return Ok(field_name);
+        }
+        if field_name != field_name.to_lowercase() {
+            return Err(format!("#[serde(rename_all = \"...\")] expects fields to be named in \
+                                `snake_case`."));
+        }
+        Ok(self.apply_to_words(field_name.split('_').map(|s| s.to_string()).collect()))
+    }
+
+    fn apply_to_words(&self, lowercased_words: Vec<String>) -> String {
+        match *self {
+                RenameRule::PascalCase => Self::capitalising_join(lowercased_words),
+                RenameRule::CamelCase => {
+                    let mut iter = lowercased_words.into_iter();
+                    let mut first = iter.next().unwrap();
+                    first.push_str(Self::capitalising_join(iter.collect()).as_str());
+                    first
+                }
+                RenameRule::SnakeCase => Self::delimiting_join(lowercased_words, "_"),
+                RenameRule::ScreamingSnakeCase => Self::delimiting_join(lowercased_words, "_").to_uppercase(),
+                RenameRule::KebabCase => Self::delimiting_join(lowercased_words, "-"),
+                _ => unreachable!(),
+            }
+            .clone()
+    }
+
+    fn delimiting_join(lowercased_words: Vec<String>, delimiter: &str) -> String {
+        lowercased_words.join(delimiter)
+    }
+
+    fn capitalising_join(lowercased_words: Vec<String>) -> String {
+        lowercased_words.into_iter().map(Self::capitalise).collect()
+    }
+
+    fn capitalise(lowercased_word: String) -> String {
+        let mut iter = lowercased_word.chars();
+        let mut first: String = iter.next().unwrap().to_uppercase().collect();
+        first.push_str(iter.collect::<String>().as_str());
+        first
     }
 }
 
@@ -507,13 +558,14 @@ impl Variant {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) {
+    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) -> Result<(), String> {
         if !self.ser_renamed {
-            self.name.serialize = rename_rule.apply(self.name.serialize.clone());
+            self.name.serialize = rename_rule.apply_to_variant(self.name.serialize.clone())?;
         }
         if !self.de_renamed {
-            self.name.deserialize = rename_rule.apply(self.name.deserialize.clone());
+            self.name.deserialize = rename_rule.apply_to_variant(self.name.deserialize.clone())?;
         }
+        Ok(())
     }
 
     pub fn rename_all(&self) -> &RenameRule {
@@ -709,13 +761,14 @@ impl Field {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) {
+    pub fn rename_by_rule(&mut self, rename_rule: &RenameRule) -> Result<(), String> {
         if !self.ser_renamed {
-            self.name.serialize = rename_rule.apply(self.name.serialize.clone());
+            self.name.serialize = rename_rule.apply_to_field(self.name.serialize.clone())?;
         }
         if !self.de_renamed {
-            self.name.deserialize = rename_rule.apply(self.name.deserialize.clone());
+            self.name.deserialize = rename_rule.apply_to_field(self.name.deserialize.clone())?;
         }
+        Ok(())
     }
 
     pub fn skip_serializing(&self) -> bool {

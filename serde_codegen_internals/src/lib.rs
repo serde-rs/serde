@@ -1,5 +1,4 @@
 extern crate syn;
-extern crate inflector;
 
 pub mod ast;
 pub mod attr;
