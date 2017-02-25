@@ -2,6 +2,7 @@ use Ctxt;
 use syn;
 use syn::MetaItem::{List, NameValue, Word};
 use syn::NestedMetaItem::{Literal, MetaItem};
+use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Item::from_ast`, `attr::Variant::from_ast`, and
@@ -10,6 +11,8 @@ use syn::NestedMetaItem::{Literal, MetaItem};
 // duplicated attributes result in a span_err but otherwise are ignored. The
 // user will see errors simultaneously for all bad attributes in the crate
 // rather than just the first.
+
+pub use case::RenameRule;
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,
@@ -91,6 +94,7 @@ pub struct Item {
     name: Name,
     deny_unknown_fields: bool,
     default: Default,
+    rename_all: RenameRule,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
@@ -135,6 +139,7 @@ impl Item {
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut default = Attr::none(cx, "default");
+        let mut rename_all = Attr::none(cx, "rename_all");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
@@ -157,6 +162,20 @@ impl Item {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
                             de_name.set_opt(de);
+                        }
+                    }
+
+                    // Parse `#[serde(rename_all="foo")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
+                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
+                            match RenameRule::from_str(&s) {
+                                Ok(rename_rule) => rename_all.set(rename_rule),
+                                Err(()) => {
+                                    cx.error(format!("unknown rename rule for #[serde(rename_all \
+                                                      = {:?})]",
+                                                     s))
+                                }
+                            }
                         }
                     }
 
@@ -244,7 +263,8 @@ impl Item {
                                     content.set(s);
                                 }
                                 syn::Body::Struct(_) => {
-                                    cx.error("#[serde(content = \"...\")] can only be used on enums")
+                                    cx.error("#[serde(content = \"...\")] can only be used on \
+                                              enums")
                                 }
                             }
                         }
@@ -297,7 +317,10 @@ impl Item {
                 EnumTag::External
             }
             (false, Some(tag), Some(content)) => {
-                EnumTag::Adjacent { tag: tag, content: content }
+                EnumTag::Adjacent {
+                    tag: tag,
+                    content: content,
+                }
             }
             (true, Some(_), Some(_)) => {
                 cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
@@ -312,6 +335,7 @@ impl Item {
             },
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
+            rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: tag,
@@ -320,6 +344,10 @@ impl Item {
 
     pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    pub fn rename_all(&self) -> &RenameRule {
+        &self.rename_all
     }
 
     pub fn deny_unknown_fields(&self) -> bool {
@@ -347,6 +375,9 @@ impl Item {
 #[derive(Debug)]
 pub struct Variant {
     name: Name,
+    ser_renamed: bool,
+    de_renamed: bool,
+    rename_all: RenameRule,
     skip_deserializing: bool,
     skip_serializing: bool,
 }
@@ -357,6 +388,7 @@ impl Variant {
         let mut de_name = Attr::none(cx, "rename");
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
+        let mut rename_all = Attr::none(cx, "rename_all");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -376,6 +408,21 @@ impl Variant {
                             de_name.set_opt(de);
                         }
                     }
+
+                    // Parse `#[serde(rename_all="foo")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
+                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
+                            match RenameRule::from_str(&s) {
+                                Ok(rename_rule) => rename_all.set(rename_rule),
+                                Err(()) => {
+                                    cx.error(format!("unknown rename rule for #[serde(rename_all \
+                                                      = {:?})]",
+                                                     s))
+                                }
+                            }
+                        }
+                    }
+
                     // Parse `#[serde(skip_deserializing)]`
                     MetaItem(Word(ref name)) if name == "skip_deserializing" => {
                         skip_deserializing.set_true();
@@ -396,11 +443,18 @@ impl Variant {
             }
         }
 
+        let ser_name = ser_name.get();
+        let ser_renamed = ser_name.is_some();
+        let de_name = de_name.get();
+        let de_renamed = de_name.is_some();
         Variant {
             name: Name {
-                serialize: ser_name.get().unwrap_or_else(|| variant.ident.to_string()),
-                deserialize: de_name.get().unwrap_or_else(|| variant.ident.to_string()),
+                serialize: ser_name.unwrap_or_else(|| variant.ident.to_string()),
+                deserialize: de_name.unwrap_or_else(|| variant.ident.to_string()),
             },
+            ser_renamed: ser_renamed,
+            de_renamed: de_renamed,
+            rename_all: rename_all.get().unwrap_or(RenameRule::None),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
         }
@@ -408,6 +462,19 @@ impl Variant {
 
     pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    pub fn rename_by_rule(&mut self, rule: &RenameRule) {
+        if !self.ser_renamed {
+            self.name.serialize = rule.apply_to_variant(&self.name.serialize);
+        }
+        if !self.de_renamed {
+            self.name.deserialize = rule.apply_to_variant(&self.name.deserialize);
+        }
+    }
+
+    pub fn rename_all(&self) -> &RenameRule {
+        &self.rename_all
     }
 
     pub fn skip_deserializing(&self) -> bool {
@@ -423,6 +490,8 @@ impl Variant {
 #[derive(Debug)]
 pub struct Field {
     name: Name,
+    ser_renamed: bool,
+    de_renamed: bool,
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::Path>,
@@ -571,11 +640,17 @@ impl Field {
             default.set_if_none(Default::Default);
         }
 
+        let ser_name = ser_name.get();
+        let ser_renamed = ser_name.is_some();
+        let de_name = de_name.get();
+        let de_renamed = de_name.is_some();
         Field {
             name: Name {
-                serialize: ser_name.get().unwrap_or_else(|| ident.clone()),
-                deserialize: de_name.get().unwrap_or(ident),
+                serialize: ser_name.unwrap_or_else(|| ident.clone()),
+                deserialize: de_name.unwrap_or(ident),
             },
+            ser_renamed: ser_renamed,
+            de_renamed: de_renamed,
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -589,6 +664,15 @@ impl Field {
 
     pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    pub fn rename_by_rule(&mut self, rule: &RenameRule) {
+        if !self.ser_renamed {
+            self.name.serialize = rule.apply_to_field(&self.name.serialize);
+        }
+        if !self.de_renamed {
+            self.name.deserialize = rule.apply_to_field(&self.name.deserialize);
+        }
     }
 
     pub fn skip_serializing(&self) -> bool {

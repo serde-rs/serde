@@ -38,13 +38,29 @@ impl<'a> Item<'a> {
     pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Item<'a> {
         let attrs = attr::Item::from_ast(cx, item);
 
-        let body = match item.body {
+        let mut body = match item.body {
             syn::Body::Enum(ref variants) => Body::Enum(enum_from_ast(cx, variants)),
             syn::Body::Struct(ref variant_data) => {
                 let (style, fields) = struct_from_ast(cx, variant_data);
                 Body::Struct(style, fields)
             }
         };
+
+        match body {
+            Body::Enum(ref mut variants) => {
+                for ref mut variant in variants {
+                    variant.attrs.rename_by_rule(attrs.rename_all());
+                    for ref mut field in &mut variant.fields {
+                        field.attrs.rename_by_rule(variant.attrs.rename_all());
+                    }
+                }
+            }
+            Body::Struct(_, ref mut fields) => {
+                for field in fields {
+                    field.attrs.rename_by_rule(attrs.rename_all());
+                }
+            }
+        }
 
         Item {
             ident: item.ident.clone(),
