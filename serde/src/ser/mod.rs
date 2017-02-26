@@ -98,7 +98,11 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::string::String;
 use core::fmt::Display;
+#[cfg(any(feature = "std", feature = "collections"))]
+use core::fmt::Write;
 use core::iter::IntoIterator;
 
 mod impls;
@@ -615,6 +619,29 @@ pub trait Serializer: Sized {
             try!(serializer.serialize_entry(&key, &value));
         }
         serializer.end()
+    }
+
+    /// Collect a `Display` value as a string.
+    ///
+    /// The default implementation serializes the given value as a string with
+    /// `ToString::to_string`.
+    #[cfg(any(feature = "std", feature = "collections"))]
+    fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+        where T: Display,
+    {
+        let mut string = String::new();
+        write!(string, "{}", value).unwrap();
+        self.serialize_str(&string)
+    }
+
+    /// Collect a `Display` value as a string.
+    ///
+    /// The default implementation returns an error unconditionally.
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    fn collect_str<T>(self, _value: &T) -> Result<Self::Ok, Self::Error>
+        where T: Display,
+    {
+        Err(Error::custom("Default impl of collect_str errors out for no_std builds"))
     }
 }
 
