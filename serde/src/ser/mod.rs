@@ -466,13 +466,13 @@ pub trait Serializer: Sized {
     fn serialize_seq_fixed_size(self, size: usize) -> Result<Self::SerializeSeq, Self::Error>;
 
     /// Begin to serialize a tuple. This call must be followed by zero or more
-    /// calls to `serialize_field`, then a call to `end`.
+    /// calls to `serialize_element`, then a call to `end`.
     ///
     /// ```rust,ignore
     /// let mut tup = serializer.serialize_tuple(3)?;
-    /// tup.serialize_field(&self.0)?;
-    /// tup.serialize_field(&self.1)?;
-    /// tup.serialize_field(&self.2)?;
+    /// tup.serialize_element(&self.0)?;
+    /// tup.serialize_element(&self.1)?;
+    /// tup.serialize_element(&self.2)?;
     /// tup.end()
     /// ```
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error>;
@@ -646,9 +646,9 @@ pub trait SerializeSeq {
 ///
 /// ```rust,ignore
 /// let mut tup = serializer.serialize_tuple(3)?;
-/// tup.serialize_field(&self.0)?;
-/// tup.serialize_field(&self.1)?;
-/// tup.serialize_field(&self.2)?;
+/// tup.serialize_element(&self.0)?;
+/// tup.serialize_element(&self.1)?;
+/// tup.serialize_element(&self.2)?;
 /// tup.end()
 /// ```
 pub trait SerializeTuple {
