@@ -11,7 +11,7 @@ pub fn serialize_tagged_newtype<S, T>(serializer: S,
                                       variant_ident: &'static str,
                                       tag: &'static str,
                                       variant_name: &'static str,
-                                      value: T)
+                                      value: &T)
                                       -> Result<S::Ok, S::Error>
     where S: Serializer,
           T: Serialize
