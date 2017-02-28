@@ -5,11 +5,19 @@ use serde::{ser, de};
 
 use token::Token;
 
+/// Error returned by the test `Serializer` and `Deserializer`.
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
+    /// A custom error.
     Message(String),
+
+    /// `Deserialize` was expecting a struct of one name, and another was found.
     InvalidName(&'static str),
+
+    /// `Serialize` generated a token that didn't match the test.
     UnexpectedToken(Token<'static>),
+
+    /// The expected token list was too short.
     EndOfTokens,
 }
 

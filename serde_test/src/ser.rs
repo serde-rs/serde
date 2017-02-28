@@ -5,6 +5,7 @@ use serde::{ser, Serialize};
 use error::Error;
 use token::Token;
 
+/// A `Serializer` that ensures that a value serializes to a given list of tokens.
 pub struct Serializer<'a, I>
     where I: Iterator<Item = &'a Token<'a>>
 {
@@ -15,6 +16,7 @@ pub struct Serializer<'a, I>
 impl<'a, I> Serializer<'a, I>
     where I: Iterator<Item = &'a Token<'a>>
 {
+    /// Creates the serializer.
     pub fn new(tokens: I) -> Serializer<'a, I> {
         Serializer {
             tokens: tokens,
@@ -22,6 +24,7 @@ impl<'a, I> Serializer<'a, I>
         }
     }
 
+    /// Pulls the next token off of the serializer, ignoring it.
     pub fn next_token(&mut self) -> Option<&'a Token<'a>> {
         self.tokens.next()
     }

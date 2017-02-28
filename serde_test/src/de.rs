@@ -7,6 +7,7 @@ use serde::de::value::{ValueDeserializer, MapVisitorDeserializer, SeqVisitorDese
 use error::Error;
 use token::Token;
 
+/// A `Deserializer` that reads from a list of tokens.
 pub struct Deserializer<I>
     where I: Iterator<Item = Token<'static>>
 {
@@ -16,14 +17,17 @@ pub struct Deserializer<I>
 impl<I> Deserializer<I>
     where I: Iterator<Item = Token<'static>>
 {
+    /// Creates the deserializer.
     pub fn new(tokens: I) -> Deserializer<I> {
         Deserializer { tokens: tokens.peekable() }
     }
 
+    /// Pulls the next token off of the deserializer, ignoring it.
     pub fn next_token(&mut self) -> Option<Token<'static>> {
         self.tokens.next()
     }
 
+    /// Pulls the next token off of the deserializer and checks if it matches an expected token.
     pub fn expect_token(&mut self, expected: Token) -> Result<(), Error> {
         match self.tokens.next() {
             Some(token) => {
