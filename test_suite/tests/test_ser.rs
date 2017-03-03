@@ -6,6 +6,7 @@ use std::net;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::time::Duration;
+use std::ffi::CString;
 
 extern crate serde;
 
@@ -387,6 +388,16 @@ declare_tests! {
     test_path_buf {
         PathBuf::from("/usr/local/lib") => &[
             Token::Str("/usr/local/lib"),
+        ],
+    }
+    test_cstring {
+        CString::new("abc").unwrap() => &[
+            Token::Bytes(b"abc"),
+        ],
+    }
+    test_cstr {
+        (&*CString::new("abc").unwrap()) => &[
+            Token::Bytes(b"abc"),
         ],
     }
 }

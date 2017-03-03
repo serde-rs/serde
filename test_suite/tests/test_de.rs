@@ -6,6 +6,7 @@ use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::default::Default;
+use std::ffi::CString;
 
 extern crate serde;
 use serde::Deserialize;
@@ -878,6 +879,11 @@ declare_tests! {
             Token::String("/usr/local/lib".to_owned()),
         ],
     }
+    test_cstring {
+        CString::new("abc").unwrap() => &[
+            Token::Bytes(b"abc"),
+        ],
+    }
 }
 
 #[cfg(feature = "unstable")]
@@ -994,5 +1000,17 @@ declare_error_tests! {
             Token::SeqEnd,
         ],
         Error::Message("invalid length 1, expected an array of length 3".into()),
+    }
+    test_cstring_internal_null<CString> {
+        &[
+            Token::Bytes(b"a\0c"),
+        ],
+        Error::Message("unexpected NULL at byte 1".into()),
+    }
+    test_cstring_internal_null_end<CString> {
+        &[
+            Token::Bytes(b"ac\0"),
+        ],
+        Error::Message("unexpected NULL at byte 2".into()),
     }
 }
