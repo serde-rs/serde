@@ -22,6 +22,8 @@ use core::ops;
 #[cfg(feature = "std")]
 use std::path;
 #[cfg(feature = "std")]
+use std::ffi::{CString, CStr};
+#[cfg(feature = "std")]
 use std::rc::Rc;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::rc::Rc;
@@ -93,6 +95,28 @@ impl Serialize for String {
         where S: Serializer
     {
         (&self[..]).serialize(serializer)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "std")]
+impl Serialize for CStr {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        (self.to_bytes_with_nul()).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "std")]
+impl Serialize for CString {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        (self.to_bytes_with_nul()).serialize(serializer)
     }
 }
 

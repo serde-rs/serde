@@ -25,6 +25,8 @@ use std::net;
 #[cfg(feature = "std")]
 use std::path;
 use core::str;
+#[cfg(feature = "std")]
+use std::ffi::{CStr, CString};
 
 #[cfg(feature = "std")]
 use std::rc::Rc;
@@ -290,6 +292,33 @@ impl Deserialize for String {
         where D: Deserializer
     {
         deserializer.deserialize_string(StringVisitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "std")]
+impl Deserialize for Box<CStr> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer
+    {
+        use std::mem;
+        let s = try!(CString::deserialize(deserializer));
+        let slice = s.into_bytes_with_nul().into_boxed_slice();
+        Ok(unsafe { mem::transmute::<Box<[u8]>, Box<CStr>>(slice) })
+    }
+}
+
+
+#[cfg(feature = "std")]
+impl Deserialize for CString {
+    fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
+        where D: Deserializer
+    {
+        let mut v: Vec<u8> = try!(Deserialize::deserialize(deserializer));
+        v.pop(); // cut trailing NULL, because CString::new adds it
+        CString::new(v)
+            .map_err(|e| Error::custom(format!("unexpected NULL at byte {}", e.nul_position())))
     }
 }
 
