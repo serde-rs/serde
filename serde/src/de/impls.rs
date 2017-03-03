@@ -26,7 +26,7 @@ use std::net;
 use std::path;
 use core::str;
 #[cfg(feature = "std")]
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 
 #[cfg(feature = "std")]
 use std::rc::Rc;
@@ -54,6 +54,8 @@ use core::num::Zero;
 use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, Unexpected,
          VariantVisitor, Visitor};
 use de::from_primitive::FromPrimitive;
+
+use super::super::bytes::ByteBuf;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -302,7 +304,7 @@ impl Deserialize for CString {
     fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
         where D: Deserializer
     {
-        let v: Vec<u8> = try!(Deserialize::deserialize(deserializer));
+        let v: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         CString::new(v)
             .map_err(|e| Error::custom(format!("unexpected NULL at byte {}", e.nul_position())))
     }
