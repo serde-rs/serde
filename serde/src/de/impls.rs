@@ -298,19 +298,6 @@ impl Deserialize for String {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl Deserialize for Box<CStr> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer
-    {
-        use std::mem;
-        let s = try!(CString::deserialize(deserializer));
-        let slice = s.into_bytes_with_nul().into_boxed_slice();
-        Ok(unsafe { mem::transmute::<Box<[u8]>, Box<CStr>>(slice) })
-    }
-}
-
-
-#[cfg(feature = "std")]
 impl Deserialize for CString {
     fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
         where D: Deserializer
