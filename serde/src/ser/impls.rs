@@ -106,7 +106,7 @@ impl Serialize for CStr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_bytes().serialize(serializer)
+        serializer.serialize_bytes(self.to_bytes())
     }
 }
 
@@ -116,7 +116,7 @@ impl Serialize for CString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        self.to_bytes().serialize(serializer)
+        serializer.serialize_bytes(self.to_bytes())
     }
 }
 
