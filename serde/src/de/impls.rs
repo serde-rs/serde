@@ -315,8 +315,7 @@ impl Deserialize for CString {
     fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
         where D: Deserializer
     {
-        let mut v: Vec<u8> = try!(Deserialize::deserialize(deserializer));
-        v.pop(); // cut trailing NULL, because CString::new adds it
+        let v: Vec<u8> = try!(Deserialize::deserialize(deserializer));
         CString::new(v)
             .map_err(|e| Error::custom(format!("unexpected NULL at byte {}", e.nul_position())))
     }
