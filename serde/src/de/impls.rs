@@ -55,7 +55,7 @@ use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, 
          VariantVisitor, Visitor};
 use de::from_primitive::FromPrimitive;
 
-use super::super::bytes::ByteBuf;
+use bytes::ByteBuf;
 
 ///////////////////////////////////////////////////////////////////////////////
 
