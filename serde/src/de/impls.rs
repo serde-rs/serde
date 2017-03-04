@@ -55,6 +55,7 @@ use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, 
          VariantVisitor, Visitor};
 use de::from_primitive::FromPrimitive;
 
+#[cfg(feature = "std")]
 use bytes::ByteBuf;
 
 ///////////////////////////////////////////////////////////////////////////////
