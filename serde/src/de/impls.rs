@@ -305,9 +305,8 @@ impl Deserialize for CString {
     fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
         where D: Deserializer
     {
-        let v: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
-        CString::new(v)
-            .map_err(|e| Error::custom(format!("unexpected NULL at byte {}", e.nul_position())))
+        let bytes = try!(ByteBuf::deserialize(deserializer));
+        CString::new(bytes).map_err(Error::custom)
     }
 }
 

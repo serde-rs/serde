@@ -1005,12 +1005,12 @@ declare_error_tests! {
         &[
             Token::Bytes(b"a\0c"),
         ],
-        Error::Message("unexpected NULL at byte 1".into()),
+        Error::Message("nul byte found in provided data at position: 1".into()),
     }
     test_cstring_internal_null_end<CString> {
         &[
             Token::Bytes(b"ac\0"),
         ],
-        Error::Message("unexpected NULL at byte 2".into()),
+        Error::Message("nul byte found in provided data at position: 2".into()),
     }
 }
