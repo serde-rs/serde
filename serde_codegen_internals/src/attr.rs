@@ -98,6 +98,10 @@ pub struct Item {
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
+    from_type: Option<syn::Ty>,
+    into_type: Option<syn::Ty>,
+    from_as_type: Option<syn::Ty>,
+    into_as_type: Option<syn::Ty>,
 }
 
 /// Styles of representing an enum.
@@ -145,6 +149,10 @@ impl Item {
         let mut untagged = BoolAttr::none(cx, "untagged");
         let mut internal_tag = Attr::none(cx, "tag");
         let mut content = Attr::none(cx, "content");
+        let mut from_type = Attr::none(cx, "from");
+        let mut into_type = Attr::none(cx, "into");
+        let mut from_as_type = Attr::none(cx, "from_as");
+        let mut into_as_type = Attr::none(cx, "into_as");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -270,6 +278,17 @@ impl Item {
                         }
                     }
 
+                    // Parse `#[serde(types(from = "type", into = "type", as = "type"))]
+                    MetaItem(List(ref name, ref meta_items)) if name == "types" => {
+                        if let Ok((from_ty, into_ty, from_as_ty, into_as_ty)) =
+                                get_from_into_as(cx, name.as_ref(), meta_items) {
+                            from_type.set_opt(from_ty);
+                            into_type.set_opt(into_ty);
+                            from_as_type.set_opt(from_as_ty);
+                            into_as_type.set_opt(into_as_ty);
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -339,6 +358,10 @@ impl Item {
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: tag,
+            from_type: from_type.get(),
+            into_type: into_type.get(),
+            from_as_type: from_as_type.get(),
+            into_as_type: into_as_type.get(),
         }
     }
 
@@ -368,6 +391,22 @@ impl Item {
 
     pub fn tag(&self) -> &EnumTag {
         &self.tag
+    }
+
+    pub fn from_type(&self) -> Option<&syn::Ty> {
+        self.from_type.as_ref()
+    }
+
+    pub fn into_type(&self) -> Option<&syn::Ty> {
+        self.into_type.as_ref()
+    }
+
+    pub fn from_as_type(&self) -> Option<&syn::Ty> {
+        self.from_as_type.as_ref()
+    }
+
+    pub fn into_as_type(&self) -> Option<&syn::Ty> {
+        self.into_as_type.as_ref()
     }
 }
 
@@ -746,6 +785,64 @@ fn get_ser_and_de<T, F>(cx: &Ctxt,
     Ok((ser_item.get(), de_item.get()))
 }
 
+type TypeConversions<T> = (Option<T>, Option<T>, Option<T>, Option<T>);
+
+fn get_from_into_as(cx: &Ctxt,
+                    attr_name: &str,
+                    items: &[syn::NestedMetaItem])
+                    -> Result<TypeConversions<syn::Ty>, ()> {
+    let mut from_type = None;
+    let mut into_type = None;
+    let mut from_as_type = None;
+    let mut into_as_type = None;
+
+    for item in items {
+        match *item {
+            MetaItem(NameValue(ref ident, ref lit)) if ident == "from" => {
+                if let Ok(ty) = parse_lit_into_ty(cx, attr_name, ident.as_ref(), &lit) {
+                    from_type = Some(ty);
+                } else {
+                    cx.error(format!("error parsing type for nested attribute {}", ident));
+                    return Err(());
+                }
+            }
+            MetaItem(NameValue(ref ident, ref lit)) if ident == "into" => {
+                if let Ok(ty) = parse_lit_into_ty(cx, attr_name, ident.as_ref(), &lit) {
+                    into_type = Some(ty);
+                } else {
+                    cx.error(format!("error parsing type for nested attribute {}", ident));
+                    return Err(());
+                }
+            }
+            MetaItem(NameValue(ref ident, ref lit)) if ident == "from_as" => {
+                if let Ok(ty) = parse_lit_into_ty(cx, attr_name, ident.as_ref(), &lit) {
+                    from_as_type = Some(ty);
+                } else {
+                    cx.error(format!("error parsing type for nested attribute {}", ident));
+                    return Err(());
+                }
+            }
+            MetaItem(NameValue(ref ident, ref lit)) if ident == "into_as" => {
+                if let Ok(ty) = parse_lit_into_ty(cx, attr_name, ident.as_ref(), &lit) {
+                    into_as_type = Some(ty);
+                } else {
+                    cx.error(format!("error parsing type for nested attribute {}", ident));
+                    return Err(());
+                }
+            }
+            MetaItem(NameValue(ref ident, _)) => {
+                cx.error(format!("error parsing nested attribute {}", ident));
+                return Err(());
+            }
+            _ => {
+                cx.error(format!("invalid input for type conversions"));
+                return Err(());
+            }
+        }
+    }
+    Ok((from_type, into_type, from_as_type, into_as_type))
+}
+
 fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<String>, ()> {
     get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
@@ -796,4 +893,21 @@ fn parse_lit_into_where(cx: &Ctxt,
     let where_string = format!("where {}", string);
 
     syn::parse_where_clause(&where_string).map(|wh| wh.predicates).map_err(|err| cx.error(err))
+}
+
+fn parse_lit_into_ty(cx: &Ctxt,
+                     attr_name: &str,
+                     meta_item_name: &str,
+                     lit: &syn::Lit)
+                     -> Result<syn::Ty, ()> {
+    let string = try!(get_string_from_lit(cx, attr_name, meta_item_name, lit));
+    if string.is_empty() {
+        return Ok(syn::Ty::Tup(Vec::new()));
+    }
+
+    if let Ok(ty) = syn::parse_type(&string) {
+        Ok(ty)
+    } else {
+        Err(())
+    }
 }
