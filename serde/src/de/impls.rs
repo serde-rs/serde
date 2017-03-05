@@ -25,6 +25,8 @@ use std::net;
 #[cfg(feature = "std")]
 use std::path;
 use core::str;
+#[cfg(feature = "std")]
+use std::ffi::CString;
 
 #[cfg(feature = "std")]
 use std::rc::Rc;
@@ -52,6 +54,9 @@ use core::num::Zero;
 use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, Unexpected,
          VariantVisitor, Visitor};
 use de::from_primitive::FromPrimitive;
+
+#[cfg(feature = "std")]
+use bytes::ByteBuf;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -290,6 +295,19 @@ impl Deserialize for String {
         where D: Deserializer
     {
         deserializer.deserialize_string(StringVisitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "std")]
+impl Deserialize for CString {
+    fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
+        where D: Deserializer
+    {
+        let v: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
+        CString::new(v)
+            .map_err(|e| Error::custom(format!("unexpected NULL at byte {}", e.nul_position())))
     }
 }
 
