@@ -638,7 +638,7 @@ pub trait Serializer: Sized {
     ///
     /// The default implementation returns an error unconditionally.
     #[cfg(not(any(feature = "std", feature = "collections")))]
-    fn collect_str<T>(self, _value: &T) -> Result<Self::Ok, Self::Error>
+    fn collect_str<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display,
     {
         Err(Error::custom("Default impl of collect_str errors out for no_std builds"))
