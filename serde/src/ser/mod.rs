@@ -638,11 +638,12 @@ pub trait Serializer: Sized {
     ///
     /// The default implementation returns an error unconditionally.
     #[cfg(not(any(feature = "std", feature = "collections")))]
-    fn collect_str<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error>
+    fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display,
     {
         // TODO https://github.com/serde-rs/serde/issues/805
         // Remove this impl and force no_std formats to implement collect_str.
+        let _ = value;
         Err(Error::custom("this no_std format does not support serializing strings with collect_str"))
     }
 }
