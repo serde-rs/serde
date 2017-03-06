@@ -98,7 +98,11 @@ use std::error;
 #[cfg(not(feature = "std"))]
 use error;
 
+#[cfg(all(feature = "collections", not(feature = "std")))]
+use collections::string::String;
 use core::fmt::Display;
+#[cfg(any(feature = "std", feature = "collections"))]
+use core::fmt::Write;
 use core::iter::IntoIterator;
 
 mod impls;
@@ -615,6 +619,70 @@ pub trait Serializer: Sized {
             try!(serializer.serialize_entry(&key, &value));
         }
         serializer.end()
+    }
+
+    /// Serialize a string produced by an implementation of `Display`.
+    ///
+    /// The default implementation builds a heap-allocated `String` and
+    /// delegates to `serialize_str`. Serializers are encouraged to provide a
+    /// more efficient implementation if possible.
+    ///
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// # struct DateTime;
+    /// # impl DateTime {
+    /// #     fn naive_local(&self) -> () { () }
+    /// #     fn offset(&self) -> () { () }
+    /// # }
+    /// impl Serialize for DateTime {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.collect_str(&format_args!("{:?}{:?}",
+    ///                                              self.naive_local(),
+    ///                                              self.offset()))
+    ///     }
+    /// }
+    /// ```
+    #[cfg(any(feature = "std", feature = "collections"))]
+    fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+        where T: Display,
+    {
+        let mut string = String::new();
+        write!(string, "{}", value).unwrap();
+        self.serialize_str(&string)
+    }
+
+    /// Serialize a string produced by an implementation of `Display`.
+    ///
+    /// The default implementation returns an error unconditionally when
+    /// compiled with `no_std`.
+    ///
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// # struct DateTime;
+    /// # impl DateTime {
+    /// #     fn naive_local(&self) -> () { () }
+    /// #     fn offset(&self) -> () { () }
+    /// # }
+    /// impl Serialize for DateTime {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.collect_str(&format_args!("{:?}{:?}",
+    ///                                              self.naive_local(),
+    ///                                              self.offset()))
+    ///     }
+    /// }
+    /// ```
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+        where T: Display,
+    {
+        // TODO https://github.com/serde-rs/serde/issues/805
+        // Remove this impl and force no_std formats to implement collect_str.
+        let _ = value;
+        Err(Error::custom("this no_std format does not support serializing strings with collect_str"))
     }
 }
 
