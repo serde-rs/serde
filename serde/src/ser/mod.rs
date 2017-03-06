@@ -641,6 +641,8 @@ pub trait Serializer: Sized {
     fn collect_str<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display,
     {
+        // TODO https://github.com/serde-rs/serde/issues/805
+        // Remove this impl and force no_std formats to implement collect_str.
         Err(Error::custom("Default impl of collect_str errors out for no_std builds"))
     }
 }
