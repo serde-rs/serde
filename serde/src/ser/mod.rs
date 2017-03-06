@@ -621,10 +621,29 @@ pub trait Serializer: Sized {
         serializer.end()
     }
 
-    /// Collect a `Display` value as a string.
+    /// Serialize a string produced by an implementation of `Display`.
     ///
-    /// The default implementation serializes the given value as a string with
-    /// `ToString::to_string`.
+    /// The default implementation builds a heap-allocated `String` and
+    /// delegates to `serialize_str`. Serializers are encouraged to provide a
+    /// more efficient implementation if possible.
+    ///
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// # struct DateTime;
+    /// # impl DateTime {
+    /// #     fn naive_local(&self) -> () { () }
+    /// #     fn offset(&self) -> () { () }
+    /// # }
+    /// impl Serialize for DateTime {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.collect_str(&format_args!("{:?}{:?}",
+    ///                                              self.naive_local(),
+    ///                                              self.offset()))
+    ///     }
+    /// }
+    /// ```
     #[cfg(any(feature = "std", feature = "collections"))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display,
@@ -634,9 +653,28 @@ pub trait Serializer: Sized {
         self.serialize_str(&string)
     }
 
-    /// Collect a `Display` value as a string.
+    /// Serialize a string produced by an implementation of `Display`.
     ///
-    /// The default implementation returns an error unconditionally.
+    /// The default implementation returns an error unconditionally when
+    /// compiled with `no_std`.
+    ///
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// # struct DateTime;
+    /// # impl DateTime {
+    /// #     fn naive_local(&self) -> () { () }
+    /// #     fn offset(&self) -> () { () }
+    /// # }
+    /// impl Serialize for DateTime {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.collect_str(&format_args!("{:?}{:?}",
+    ///                                              self.naive_local(),
+    ///                                              self.offset()))
+    ///     }
+    /// }
+    /// ```
     #[cfg(not(any(feature = "std", feature = "collections")))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display,
