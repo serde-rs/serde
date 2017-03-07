@@ -183,12 +183,71 @@ primitive_deserializer!(i64, I64Deserializer, visit_i64);
 primitive_deserializer!(isize, IsizeDeserializer, visit_i64 as i64);
 primitive_deserializer!(u8, U8Deserializer, visit_u8);
 primitive_deserializer!(u16, U16Deserializer, visit_u16);
-primitive_deserializer!(u32, U32Deserializer, visit_u32);
 primitive_deserializer!(u64, U64Deserializer, visit_u64);
 primitive_deserializer!(usize, UsizeDeserializer, visit_u64 as u64);
 primitive_deserializer!(f32, F32Deserializer, visit_f32);
 primitive_deserializer!(f64, F64Deserializer, visit_f64);
 primitive_deserializer!(char, CharDeserializer, visit_char);
+
+/// A helper deserializer that deserializes a number.
+pub struct U32Deserializer<E> {
+    value: u32,
+    marker: PhantomData<E>
+}
+
+impl<E> ValueDeserializer<E> for u32
+    where E: de::Error,
+{
+    type Deserializer = U32Deserializer<E>;
+
+    fn into_deserializer(self) -> U32Deserializer<E> {
+        U32Deserializer {
+            value: self,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<E> de::Deserializer for U32Deserializer<E>
+    where E: de::Error,
+{
+    type Error = E;
+
+    forward_to_deserialize! {
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple ignored_any byte_buf
+    }
+
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor,
+    {
+        visitor.visit_u32(self.value)
+    }
+
+    fn deserialize_enum<V>(self,
+                           _name: &str,
+                           _variants: &'static [&'static str],
+                           visitor: V)
+                           -> Result<V::Value, Self::Error>
+        where V: de::Visitor
+    {
+        visitor.visit_enum(self)
+    }
+}
+
+impl<E> de::EnumVisitor for U32Deserializer<E>
+    where E: de::Error
+{
+    type Error = E;
+    type Variant = private::UnitOnly<E>;
+
+    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+        where T: de::DeserializeSeed
+    {
+        seed.deserialize(self).map(private::unit_only)
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
