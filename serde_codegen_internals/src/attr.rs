@@ -85,9 +85,8 @@ impl Item {
             #[attire(split_attribute_of = "rename", attribute = "deserialize")]
             rename_deserialize: Option<String>,
             deny_unknown_fields: bool,
-            default: Option<Path>,
-            #[attire(attribute = "default")]
-            defaulted: bool,
+            #[attire(default, flag_value = "Default::Default")]
+            default: Default,
             rename_all: Option<RenameRuleInternal>,
             #[attire(split_attribute_of = "bound", attribute = "serialize")]
             bound_serialize: Option<WherePredicates>,
@@ -123,7 +122,7 @@ impl Item {
 
         if let syn::Body::Struct(syn::VariantData::Struct(_)) = item.body {
         } else {
-            if attrs.default.is_some() || attrs.defaulted {
+            if attrs.default != Default::None  {
                 cx.error("#[serde(default)] can only be used on structs with named fields");
             }
         }
@@ -180,13 +179,7 @@ impl Item {
                 deserialize: attrs.rename_deserialize.unwrap_or_else(|| item.ident.to_string()),
             },
             deny_unknown_fields: attrs.deny_unknown_fields,
-            default: if let Some(default) = attrs.default {
-                Default::Path(default.0)
-            } else if attrs.defaulted {
-                Default::Default
-            } else {
-                Default::None
-            },
+            default: attrs.default,
             rename_all: attrs.rename_all.map(|a| a.0).unwrap_or(RenameRule::None),
             ser_bound: attrs.bound_serialize.map(|a| a.0),
             de_bound: attrs.bound_deserialize.map(|a| a.0),
@@ -340,9 +333,8 @@ impl Field {
             skip_deserializing: bool,
             skip_serializing: bool,
             skip_serializing_if: Option<Path>,
-            default: Option<Path>,
-            #[attire(attribute = "default")]
-            defaulted: bool,
+            #[attire(default, flag_value = "Default::Default")]
+            default: Default,
             with: Option<Path>,
             serialize_with: Option<Path>,
             deserialize_with: Option<Path>,
@@ -370,8 +362,8 @@ impl Field {
         // If skip_deserializing, initialize the field to Default::default()
         // unless a different default is specified by `#[serde(default="...")]`
         if attrs.skip_deserializing {
-            if !attrs.default.is_some() {
-                attrs.defaulted = true;
+            if attrs.default == Default::None {
+                attrs.default = Default::Default;
             }
         }
 
@@ -386,13 +378,7 @@ impl Field {
             skip_serializing: attrs.skip_serializing,
             skip_deserializing: attrs.skip_deserializing,
             skip_serializing_if: attrs.skip_serializing_if.map(|a| a.0),
-            default: if let Some(default) = attrs.default {
-                Default::Path(default.0)
-            } else if attrs.defaulted {
-                Default::Default
-            } else {
-                Default::None
-            },
+            default: attrs.default,
             serialize_with: attrs.serialize_with
                 .map(|a| a.0)
                 .or_else(|| with.as_ref().map(|path| {
@@ -487,7 +473,7 @@ impl FromStr for Path {
 }
 
 #[derive(Debug)]
-struct SynError(String);
+pub struct SynError(String);
 
 impl ::std::fmt::Display for SynError {
     fn fmt(&self, mut w: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -526,5 +512,21 @@ impl ::std::fmt::Display for RenameRuleError {
 impl ::std::error::Error for RenameRuleError {
     fn description(&self) -> &str {
         "unknown rename rule"
+    }
+}
+
+impl ::std::default::Default for Default {
+    fn default() -> Default {
+        Default::None
+    }
+}
+
+impl FromStr for Default {
+    type Err = SynError;
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        Ok(match string {
+            "Default::Default" => Default::Default,
+            _ => Default::Path(Path::from_str(string)?.0),
+        })
     }
 }
