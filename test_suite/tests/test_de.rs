@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "unstable", feature(into_boxed_c_str))]
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -900,7 +902,7 @@ fn test_cstr() {
 #[test]
 fn test_net_ipaddr() {
     assert_de_tokens(
-        "1.2.3.4".parse::<net::IpAddr>().unwrap(),
+        &"1.2.3.4".parse::<net::IpAddr>().unwrap(),
         &[Token::Str("1.2.3.4")],
     );
 }
