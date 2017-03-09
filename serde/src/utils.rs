@@ -59,8 +59,8 @@ const Pattern_White_Space_table: &'static [(char, char)] = &[('\u{9}', '\u{d}'),
 fn bsearch_range_table(c: char, r: &'static [(char, char)]) -> bool {
     use core::cmp::Ordering::{Equal, Less, Greater};
     r.binary_search_by(|&(lo, hi)| if c < lo {
-            Greater
-        } else if hi < c {
+                              Greater
+                          } else if hi < c {
             Less
         } else {
             Equal

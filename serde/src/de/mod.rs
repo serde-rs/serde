@@ -182,9 +182,9 @@ pub trait Error: Sized + error::Error {
             }
         }
         Error::custom(InvalidType {
-            unexp: unexp,
-            exp: exp,
-        })
+                          unexp: unexp,
+                          exp: exp,
+                      })
     }
 
     /// Raised when a `Deserialize` receives a value of the right type but that
@@ -211,9 +211,9 @@ pub trait Error: Sized + error::Error {
             }
         }
         Error::custom(InvalidValue {
-            unexp: unexp,
-            exp: exp,
-        })
+                          unexp: unexp,
+                          exp: exp,
+                      })
     }
 
     /// Raised when deserializing a sequence or map and the input data contains
@@ -236,9 +236,9 @@ pub trait Error: Sized + error::Error {
             }
         }
         Error::custom(InvalidLength {
-            len: len,
-            exp: exp,
-        })
+                          len: len,
+                          exp: exp,
+                      })
     }
 
     /// Raised when a `Deserialize` enum type received a variant with an
@@ -263,9 +263,9 @@ pub trait Error: Sized + error::Error {
             }
         }
         Error::custom(UnknownVariant {
-            variant: variant,
-            expected: expected,
-        })
+                          variant: variant,
+                          expected: expected,
+                      })
     }
 
     /// Raised when a `Deserialize` struct type received a field with an
@@ -290,9 +290,9 @@ pub trait Error: Sized + error::Error {
             }
         }
         Error::custom(UnknownField {
-            field: field,
-            expected: expected,
-        })
+                          field: field,
+                          expected: expected,
+                      })
     }
 
     /// Raised when a `Deserialize` struct type expected to receive a required

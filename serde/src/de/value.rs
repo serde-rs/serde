@@ -192,11 +192,11 @@ primitive_deserializer!(char, CharDeserializer, visit_char);
 /// A helper deserializer that deserializes a number.
 pub struct U32Deserializer<E> {
     value: u32,
-    marker: PhantomData<E>
+    marker: PhantomData<E>,
 }
 
 impl<E> ValueDeserializer<E> for u32
-    where E: de::Error,
+    where E: de::Error
 {
     type Deserializer = U32Deserializer<E>;
 
@@ -209,7 +209,7 @@ impl<E> ValueDeserializer<E> for u32
 }
 
 impl<E> de::Deserializer for U32Deserializer<E>
-    where E: de::Error,
+    where E: de::Error
 {
     type Error = E;
 
@@ -220,7 +220,7 @@ impl<E> de::Deserializer for U32Deserializer<E>
     }
 
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: de::Visitor,
+        where V: de::Visitor
     {
         visitor.visit_u32(self.value)
     }

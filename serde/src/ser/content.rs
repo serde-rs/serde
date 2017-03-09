@@ -33,10 +33,7 @@ impl<M> ser::SerializeTupleVariant for SerializeTupleVariantAsMapValue<M>
     type Ok = M::Ok;
     type Error = M::Error;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              value: &T)
-                                              -> Result<(), M::Error>
-    {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), M::Error> {
         let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
         self.fields.push(value);
         Ok(())
@@ -73,8 +70,7 @@ impl<M> ser::SerializeStructVariant for SerializeStructVariantAsMapValue<M>
     fn serialize_field<T: ?Sized + Serialize>(&mut self,
                                               key: &'static str,
                                               value: &T)
-                                              -> Result<(), M::Error>
-    {
+                                              -> Result<(), M::Error> {
         let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
         self.fields.push((key, value));
         Ok(())
@@ -151,7 +147,9 @@ impl Serialize for Content {
             Content::UnitStruct(n) => serializer.serialize_unit_struct(n),
             Content::UnitVariant(n, i, v) => serializer.serialize_unit_variant(n, i, v),
             Content::NewtypeStruct(n, ref c) => serializer.serialize_newtype_struct(n, &**c),
-            Content::NewtypeVariant(n, i, v, ref c) => serializer.serialize_newtype_variant(n, i, v, &**c),
+            Content::NewtypeVariant(n, i, v, ref c) => {
+                serializer.serialize_newtype_variant(n, i, v, &**c)
+            }
             Content::Seq(ref elements) => elements.serialize(serializer),
             Content::SeqFixedSize(ref elements) => {
                 use ser::SerializeSeq;
@@ -219,9 +217,7 @@ struct ContentSerializer<E> {
 
 impl<E> ContentSerializer<E> {
     fn new() -> Self {
-        ContentSerializer {
-            error: PhantomData,
-        }
+        ContentSerializer { error: PhantomData }
     }
 }
 
@@ -299,9 +295,7 @@ impl<E> Serializer for ContentSerializer<E>
         Ok(Content::None)
     }
 
-    fn serialize_some<T: ?Sized + Serialize>(self,
-                                             value: &T)
-                                             -> Result<Content, E> {
+    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<Content, E> {
         Ok(Content::Some(Box::new(try!(value.serialize(self)))))
     }
 
@@ -309,9 +303,7 @@ impl<E> Serializer for ContentSerializer<E>
         Ok(Content::Unit)
     }
 
-    fn serialize_unit_struct(self,
-                             name: &'static str)
-                             -> Result<Content, E> {
+    fn serialize_unit_struct(self, name: &'static str) -> Result<Content, E> {
         Ok(Content::UnitStruct(name))
     }
 
@@ -336,36 +328,33 @@ impl<E> Serializer for ContentSerializer<E>
                                                         variant: &'static str,
                                                         value: &T)
                                                         -> Result<Content, E> {
-        Ok(Content::NewtypeVariant(name, variant_index, variant, Box::new(try!(value.serialize(self)))))
+        Ok(Content::NewtypeVariant(name,
+                                   variant_index,
+                                   variant,
+                                   Box::new(try!(value.serialize(self)))))
     }
 
-    fn serialize_seq(self,
-                     len: Option<usize>)
-                     -> Result<Self::SerializeSeq, E> {
+    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, E> {
         Ok(SerializeSeq {
-            fixed_size: false,
-            elements: Vec::with_capacity(len.unwrap_or(0)),
-            error: PhantomData,
-        })
+               fixed_size: false,
+               elements: Vec::with_capacity(len.unwrap_or(0)),
+               error: PhantomData,
+           })
     }
 
-    fn serialize_seq_fixed_size(self,
-                                size: usize)
-                                -> Result<Self::SerializeSeq, E> {
+    fn serialize_seq_fixed_size(self, size: usize) -> Result<Self::SerializeSeq, E> {
         Ok(SerializeSeq {
-            fixed_size: true,
-            elements: Vec::with_capacity(size),
-            error: PhantomData,
-        })
+               fixed_size: true,
+               elements: Vec::with_capacity(size),
+               error: PhantomData,
+           })
     }
 
-    fn serialize_tuple(self,
-                       len: usize)
-                       -> Result<Self::SerializeTuple, E> {
+    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, E> {
         Ok(SerializeTuple {
-            elements: Vec::with_capacity(len),
-            error: PhantomData,
-        })
+               elements: Vec::with_capacity(len),
+               error: PhantomData,
+           })
     }
 
     fn serialize_tuple_struct(self,
@@ -373,10 +362,10 @@ impl<E> Serializer for ContentSerializer<E>
                               len: usize)
                               -> Result<Self::SerializeTupleStruct, E> {
         Ok(SerializeTupleStruct {
-            name: name,
-            fields: Vec::with_capacity(len),
-            error: PhantomData,
-        })
+               name: name,
+               fields: Vec::with_capacity(len),
+               error: PhantomData,
+           })
     }
 
     fn serialize_tuple_variant(self,
@@ -386,33 +375,28 @@ impl<E> Serializer for ContentSerializer<E>
                                len: usize)
                                -> Result<Self::SerializeTupleVariant, E> {
         Ok(SerializeTupleVariant {
-            name: name,
-            variant_index: variant_index,
-            variant: variant,
-            fields: Vec::with_capacity(len),
-            error: PhantomData,
-        })
+               name: name,
+               variant_index: variant_index,
+               variant: variant,
+               fields: Vec::with_capacity(len),
+               error: PhantomData,
+           })
     }
 
-    fn serialize_map(self,
-                     len: Option<usize>)
-                     -> Result<Self::SerializeMap, E> {
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, E> {
         Ok(SerializeMap {
-            entries: Vec::with_capacity(len.unwrap_or(0)),
-            key: None,
-            error: PhantomData,
-        })
+               entries: Vec::with_capacity(len.unwrap_or(0)),
+               key: None,
+               error: PhantomData,
+           })
     }
 
-    fn serialize_struct(self,
-                        name: &'static str,
-                        len: usize)
-                        -> Result<Self::SerializeStruct, E> {
+    fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self::SerializeStruct, E> {
         Ok(SerializeStruct {
-            name: name,
-            fields: Vec::with_capacity(len),
-            error: PhantomData,
-        })
+               name: name,
+               fields: Vec::with_capacity(len),
+               error: PhantomData,
+           })
     }
 
     fn serialize_struct_variant(self,
@@ -422,12 +406,12 @@ impl<E> Serializer for ContentSerializer<E>
                                 len: usize)
                                 -> Result<Self::SerializeStructVariant, E> {
         Ok(SerializeStructVariant {
-            name: name,
-            variant_index: variant_index,
-            variant: variant,
-            fields: Vec::with_capacity(len),
-            error: PhantomData,
-        })
+               name: name,
+               variant_index: variant_index,
+               variant: variant,
+               fields: Vec::with_capacity(len),
+               error: PhantomData,
+           })
     }
 }
 
@@ -443,9 +427,7 @@ impl<E> ser::SerializeSeq for SerializeSeq<E>
     type Ok = Content;
     type Error = E;
 
-    fn serialize_element<T: ?Sized + Serialize>(&mut self,
-                                                value: &T)
-                                                -> Result<(), E> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), E> {
         let value = try!(value.serialize(ContentSerializer::<E>::new()));
         self.elements.push(value);
         Ok(())
@@ -453,10 +435,10 @@ impl<E> ser::SerializeSeq for SerializeSeq<E>
 
     fn end(self) -> Result<Content, E> {
         Ok(if self.fixed_size {
-            Content::SeqFixedSize(self.elements)
-        } else {
-            Content::Seq(self.elements)
-        })
+               Content::SeqFixedSize(self.elements)
+           } else {
+               Content::Seq(self.elements)
+           })
     }
 }
 
@@ -471,9 +453,7 @@ impl<E> ser::SerializeTuple for SerializeTuple<E>
     type Ok = Content;
     type Error = E;
 
-    fn serialize_element<T: ?Sized + Serialize>(&mut self,
-                                                value: &T)
-                                                -> Result<(), E> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), E> {
         let value = try!(value.serialize(ContentSerializer::<E>::new()));
         self.elements.push(value);
         Ok(())
@@ -496,9 +476,7 @@ impl<E> ser::SerializeTupleStruct for SerializeTupleStruct<E>
     type Ok = Content;
     type Error = E;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              value: &T)
-                                              -> Result<(), E> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), E> {
         let value = try!(value.serialize(ContentSerializer::<E>::new()));
         self.fields.push(value);
         Ok(())
@@ -523,9 +501,7 @@ impl<E> ser::SerializeTupleVariant for SerializeTupleVariant<E>
     type Ok = Content;
     type Error = E;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              value: &T)
-                                              -> Result<(), E> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), E> {
         let value = try!(value.serialize(ContentSerializer::<E>::new()));
         self.fields.push(value);
         Ok(())
@@ -548,17 +524,13 @@ impl<E> ser::SerializeMap for SerializeMap<E>
     type Ok = Content;
     type Error = E;
 
-    fn serialize_key<T: ?Sized + Serialize>(&mut self,
-                                            key: &T)
-                                            -> Result<(), E> {
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), E> {
         let key = try!(key.serialize(ContentSerializer::<E>::new()));
         self.key = Some(key);
         Ok(())
     }
 
-    fn serialize_value<T: ?Sized + Serialize>(&mut self,
-                                              value: &T)
-                                              -> Result<(), E> {
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), E> {
         let key = self.key.take().expect("serialize_value called before serialize_key");
         let value = try!(value.serialize(ContentSerializer::<E>::new()));
         self.entries.push((key, value));

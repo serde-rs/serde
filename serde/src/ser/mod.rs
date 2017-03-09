@@ -646,7 +646,7 @@ pub trait Serializer: Sized {
     /// ```
     #[cfg(any(feature = "std", feature = "collections"))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
-        where T: Display,
+        where T: Display
     {
         let mut string = String::new();
         write!(string, "{}", value).unwrap();
@@ -677,7 +677,7 @@ pub trait Serializer: Sized {
     /// ```
     #[cfg(not(any(feature = "std", feature = "collections")))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
-        where T: Display,
+        where T: Display
     {
         // TODO https://github.com/serde-rs/serde/issues/805
         // Remove this impl and force no_std formats to implement collect_str.

@@ -17,12 +17,12 @@ pub fn serialize_tagged_newtype<S, T>(serializer: S,
           T: Serialize
 {
     value.serialize(TaggedSerializer {
-        type_ident: type_ident,
-        variant_ident: variant_ident,
-        tag: tag,
-        variant_name: variant_name,
-        delegate: serializer,
-    })
+                        type_ident: type_ident,
+                        variant_ident: variant_ident,
+                        tag: tag,
+                        variant_name: variant_name,
+                        delegate: serializer,
+                    })
 }
 
 struct TaggedSerializer<S> {
@@ -81,7 +81,9 @@ impl Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(formatter,
                "cannot serialize tagged newtype variant {}::{} containing {}",
-               self.type_ident, self.variant_ident, self.ty)
+               self.type_ident,
+               self.variant_ident,
+               self.ty)
     }
 }
 
@@ -90,10 +92,10 @@ impl<S> TaggedSerializer<S>
 {
     fn bad_type(self, what: Unsupported) -> S::Error {
         ser::Error::custom(Error {
-            type_ident: self.type_ident,
-            variant_ident: self.variant_ident,
-            ty: what,
-        })
+                               type_ident: self.type_ident,
+                               variant_ident: self.variant_ident,
+                               ty: what,
+                           })
     }
 }
 
