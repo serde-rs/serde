@@ -17,7 +17,7 @@ use core::hash::{Hash, BuildHasher};
 use core::iter;
 #[cfg(feature = "std")]
 use std::net;
-#[cfg(feature = "unstable")]
+#[cfg(any(feature = "std", feature = "unstable"))]
 use core::ops;
 #[cfg(feature = "std")]
 use std::path;
