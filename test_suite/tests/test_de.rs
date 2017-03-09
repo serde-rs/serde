@@ -8,6 +8,9 @@ use std::time::Duration;
 use std::default::Default;
 use std::ffi::CString;
 
+#[cfg(feature = "unstable")]
+use std::ffi::CStr;
+
 extern crate serde;
 use serde::Deserialize;
 
@@ -888,10 +891,39 @@ declare_tests! {
 
 #[cfg(feature = "unstable")]
 #[test]
+fn test_cstr() {
+    assert_de_tokens::<Box<CStr>>(&CString::new("abc").unwrap().into_boxed_c_str(),
+                                  &[Token::Bytes(b"abc")]);
+}
+
+#[cfg(feature = "unstable")]
+#[test]
 fn test_net_ipaddr() {
     assert_de_tokens(
         "1.2.3.4".parse::<net::IpAddr>().unwrap(),
         &[Token::Str("1.2.3.4")],
+    );
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+fn test_cstr_internal_null() {
+    assert_de_tokens_error::<Box<CStr>>(
+        &[
+            Token::Bytes(b"a\0c"),
+        ],
+        Error::Message("nul byte found in provided data at position: 1".into())
+    );
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+fn test_cstr_internal_null_end() {
+    assert_de_tokens_error::<Box<CStr>>(
+        &[
+            Token::Bytes(b"ac\0"),
+        ],
+        Error::Message("nul byte found in provided data at position: 2".into())
     );
 }
 
