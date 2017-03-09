@@ -29,8 +29,6 @@ use std::rc::Rc;
 use alloc::rc::Rc;
 #[cfg(feature = "std")]
 use std::time::Duration;
-#[cfg(feature = "std")]
-use std;
 
 #[cfg(feature = "std")]
 use std::sync::Arc;
@@ -267,7 +265,7 @@ impl<T> Serialize for VecDeque<T>
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl<Idx: Serialize> Serialize for std::ops::Range<Idx> {
+impl<Idx: Serialize> Serialize for ops::Range<Idx> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
@@ -280,23 +278,6 @@ impl<Idx: Serialize> Serialize for std::ops::Range<Idx> {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-#[cfg(feature = "unstable")]
-impl<A> Serialize for ops::Range<A>
-    where ops::Range<A>: ExactSizeIterator + iter::Iterator<Item = A> + Clone,
-          A: Serialize
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.clone() {
-            try!(seq.serialize_element(&e));
-        }
-        seq.end()
-    }
-}
 
 #[cfg(feature = "unstable")]
 impl<A> Serialize for ops::RangeInclusive<A>
