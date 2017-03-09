@@ -27,6 +27,8 @@ use std::path;
 use core::str;
 #[cfg(feature = "std")]
 use std::ffi::CString;
+#[cfg(all(feature = "std", feature="unstable"))]
+use std::ffi::CStr;
 
 #[cfg(feature = "std")]
 use std::rc::Rc;
@@ -299,6 +301,16 @@ impl Deserialize for String {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(all(feature = "std", feature="unstable"))]
+impl Deserialize for Box<CStr> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer
+    {
+        let s = try!(CString::deserialize(deserializer));
+        Ok(s.into_boxed_c_str())
+    }
+}
 
 #[cfg(feature = "std")]
 impl Deserialize for CString {

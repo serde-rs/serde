@@ -30,7 +30,7 @@ if [ -n "${CLIPPY}" ]; then
     cargo clippy --features unstable-testing -- -Dclippy
 
     cd "$DIR/test_suite"
-    cargo clippy --features unstable-testing -- -Dclippy
+    cargo clippy --features unstable -- -Dclippy
 
     cd "$DIR/test_suite/no_std"
     cargo clippy -- -Dclippy
@@ -46,7 +46,7 @@ else
     cd "$DIR/test_suite/deps"
     channel build
     cd "$DIR/test_suite"
-    channel test --features unstable-testing
+    channel test --features unstable
     cd "$DIR/test_suite/no_std"
     channel build
 

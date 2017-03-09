@@ -2,7 +2,7 @@
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
-#![cfg_attr(feature = "unstable-testing", feature(non_ascii_idents))]
+#![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
 #[macro_use]
 extern crate serde_derive;
@@ -220,8 +220,8 @@ fn test_gen() {
     }
     assert::<EmptyEnumVariant>();
 
-    #[cfg(feature = "unstable-testing")]
-    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[cfg(feature = "unstable")]
+    #[derive(Serialize, Deserialize)]
     struct NonAsciiIdents {
         σ: f64
     }
@@ -246,12 +246,12 @@ fn test_gen() {
         f: u8,
     }
 
-    #[cfg(feature = "unstable-testing")]
-    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[cfg(feature = "unstable")]
+    #[derive(Serialize, Deserialize)]
     struct EmptyTuple();
 
-    #[cfg(feature = "unstable-testing")]
-    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[cfg(feature = "unstable")]
+    #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     struct EmptyTupleDenyUnknown();
 
@@ -276,8 +276,8 @@ fn test_gen() {
         Variant,
     }
 
-    #[cfg(feature = "unstable-testing")]
-    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[cfg(feature = "unstable")]
+    #[derive(Serialize, Deserialize)]
     enum EmptyVariants {
         Braced {},
         Tuple(),
@@ -288,8 +288,8 @@ fn test_gen() {
         TupleSkip(#[serde(skip_deserializing)] u8),
     }
 
-    #[cfg(feature = "unstable-testing")]
-    #[cfg_attr(feature = "unstable-testing", derive(Serialize, Deserialize))]
+    #[cfg(feature = "unstable")]
+    #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     enum EmptyVariantsDenyUnknown {
         Braced {},
