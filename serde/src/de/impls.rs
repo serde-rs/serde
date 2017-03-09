@@ -46,6 +46,9 @@ use alloc::boxed::Box;
 #[cfg(feature = "std")]
 use std::time::Duration;
 
+#[cfg(feature = "std")]
+use std;
+
 #[cfg(feature = "unstable")]
 use core::nonzero::{NonZero, Zeroable};
 
@@ -1107,6 +1110,137 @@ impl Deserialize for Duration {
         deserializer.deserialize_struct("Duration", FIELDS, DurationVisitor)
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Similar to:
+//
+//     #[derive(Deserialize)]
+//     #[serde(deny_unknown_fields)]
+//     struct Range {
+//         start: u64,
+//         end: u32,
+//     }
+#[cfg(feature = "std")]
+impl<Idx: Deserialize> Deserialize for std::ops::Range<Idx> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer
+    {
+        enum Field {
+            Start,
+            End,
+        };
+
+        impl Deserialize for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+                where D: Deserializer
+            {
+                struct FieldVisitor;
+
+                impl Visitor for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`start` or `end`")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                        where E: Error
+                    {
+                        match value {
+                            "start" => Ok(Field::Start),
+                            "end" => Ok(Field::End),
+                            _ => Err(Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
+                        where E: Error
+                    {
+                        match value {
+                            b"start" => Ok(Field::Start),
+                            b"end" => Ok(Field::End),
+                            _ => {
+                                let value = String::from_utf8_lossy(value);
+                                Err(Error::unknown_field(&value, FIELDS))
+                            }
+                        }
+                    }
+                }
+
+                deserializer.deserialize_struct_field(FieldVisitor)
+            }
+        }
+
+        struct RangeVisitor<Idx> {
+            phantom: PhantomData<Idx>,
+        }
+
+        impl<Idx: Deserialize> Visitor for RangeVisitor<Idx> {
+            type Value = std::ops::Range<Idx>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Range")
+            }
+
+            fn visit_seq<V>(self, mut visitor: V) -> Result<std::ops::Range<Idx>, V::Error>
+                where V: SeqVisitor
+            {
+                let start: Idx = match try!(visitor.visit()) {
+                    Some(value) => value,
+                    None => {
+                        return Err(Error::invalid_length(0, &self));
+                    }
+                };
+                let end: Idx = match try!(visitor.visit()) {
+                    Some(value) => value,
+                    None => {
+                        return Err(Error::invalid_length(1, &self));
+                    }
+                };
+                Ok(start..end)
+            }
+
+            fn visit_map<V>(self, mut visitor: V) -> Result<std::ops::Range<Idx>, V::Error>
+                where V: MapVisitor
+            {
+                let mut start: Option<Idx> = None;
+                let mut end: Option<Idx> = None;
+                while let Some(key) = try!(visitor.visit_key::<Field>()) {
+                    match key {
+                        Field::Start => {
+                            if start.is_some() {
+                                return Err(<V::Error as Error>::duplicate_field("start"));
+                            }
+                            start = Some(try!(visitor.visit_value()));
+                        }
+                        Field::End => {
+                            if end.is_some() {
+                                return Err(<V::Error as Error>::duplicate_field("end"));
+                            }
+                            end = Some(try!(visitor.visit_value()));
+                        }
+                    }
+                }
+                let start = match start {
+                    Some(start) => start,
+                    None => return Err(<V::Error as Error>::missing_field("start")),
+                };
+                let end = match end {
+                    Some(end) => end,
+                    None => return Err(<V::Error as Error>::missing_field("end")),
+                };
+                Ok(start..end)
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &["start", "end"];
+        deserializer.deserialize_struct("Range", FIELDS, RangeVisitor { phantom: PhantomData })
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 
 ///////////////////////////////////////////////////////////////////////////////
 

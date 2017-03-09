@@ -29,6 +29,8 @@ use std::rc::Rc;
 use alloc::rc::Rc;
 #[cfg(feature = "std")]
 use std::time::Duration;
+#[cfg(feature = "std")]
+use std;
 
 #[cfg(feature = "std")]
 use std::sync::Arc;
@@ -261,6 +263,23 @@ impl<T> Serialize for VecDeque<T>
 {
     serialize_seq!();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "std")]
+impl<Idx: Serialize> Serialize for std::ops::Range<Idx> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        use super::SerializeStruct;
+        let mut state = try!(serializer.serialize_struct("Range", 2));
+        try!(state.serialize_field("start", &self.start));
+        try!(state.serialize_field("end", &self.end));
+        state.end()
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
 impl<A> Serialize for ops::Range<A>

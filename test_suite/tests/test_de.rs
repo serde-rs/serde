@@ -868,6 +868,28 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_range {
+        1u32..2u32 => &[
+            Token::StructStart("Range", 2),
+                Token::StructSep,
+                Token::Str("start"),
+                Token::U32(1),
+
+                Token::StructSep,
+                Token::Str("end"),
+                Token::U32(2),
+            Token::StructEnd,
+        ],
+        1u32..2u32 => &[
+            Token::SeqStart(Some(2)),
+                Token::SeqSep,
+                Token::U64(1),
+
+                Token::SeqSep,
+                Token::U64(2),
+            Token::SeqEnd,
+        ],
+    }
     test_net_ipv4addr {
         "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
     }
