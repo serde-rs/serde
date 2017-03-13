@@ -71,12 +71,11 @@
 //!    - VecDeque\<T\>
 //!    - Vec\<T\>
 //!    - EnumSet\<T\> (unstable)
-//!    - Range\<T\> (unstable)
-//!    - RangeInclusive\<T\> (unstable)
 //!  - **Miscellaneous standard library types**:
 //!    - Duration
 //!    - Path
 //!    - PathBuf
+//!    - Range\<T\>
 //!    - NonZero\<T\> (unstable)
 //!  - **Net types**:
 //!    - IpAddr

@@ -13,8 +13,6 @@ use collections::borrow::ToOwned;
 
 #[cfg(feature = "std")]
 use core::hash::{Hash, BuildHasher};
-#[cfg(feature = "unstable")]
-use core::iter;
 #[cfg(feature = "std")]
 use std::net;
 #[cfg(any(feature = "std", feature = "unstable"))]
@@ -274,25 +272,6 @@ impl<Idx: Serialize> Serialize for ops::Range<Idx> {
         try!(state.serialize_field("start", &self.start));
         try!(state.serialize_field("end", &self.end));
         state.end()
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-#[cfg(feature = "unstable")]
-impl<A> Serialize for ops::RangeInclusive<A>
-    where ops::RangeInclusive<A>: ExactSizeIterator + iter::Iterator<Item = A> + Clone,
-          A: Serialize
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        let mut seq = try!(serializer.serialize_seq(Some(self.len())));
-        for e in self.clone() {
-            try!(seq.serialize_element(&e));
-        }
-        seq.end()
     }
 }
 

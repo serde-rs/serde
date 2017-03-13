@@ -61,7 +61,7 @@
 
 #![doc(html_root_url="https://docs.serde.rs")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "unstable", feature(inclusive_range, nonzero, specialization, zero_one, into_boxed_c_str))]
+#![cfg_attr(feature = "unstable", feature(nonzero, specialization, zero_one, into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections))]
 #![cfg_attr(feature = "cargo-clippy", allow(linkedlist, type_complexity, doc_markdown))]
