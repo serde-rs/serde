@@ -13,6 +13,7 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-
 
 [dependencies]
 syn = { version = "0.11", default-features = false, features = ["parsing"] }
+prom-attire = { git = "https://github.com/Nemo157/prom-attire-rs" }
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }

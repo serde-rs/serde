@@ -1,8 +1,6 @@
+use std::str::FromStr;
 use Ctxt;
 use syn;
-use syn::MetaItem::{List, NameValue, Word};
-use syn::NestedMetaItem::{Literal, MetaItem};
-use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Item::from_ast`, `attr::Variant::from_ast`, and
@@ -13,62 +11,6 @@ use std::str::FromStr;
 // rather than just the first.
 
 pub use case::RenameRule;
-
-struct Attr<'c, T> {
-    cx: &'c Ctxt,
-    name: &'static str,
-    value: Option<T>,
-}
-
-impl<'c, T> Attr<'c, T> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
-        Attr {
-            cx: cx,
-            name: name,
-            value: None,
-        }
-    }
-
-    fn set(&mut self, value: T) {
-        if self.value.is_some() {
-            self.cx.error(format!("duplicate serde attribute `{}`", self.name));
-        } else {
-            self.value = Some(value);
-        }
-    }
-
-    fn set_opt(&mut self, value: Option<T>) {
-        if let Some(value) = value {
-            self.set(value);
-        }
-    }
-
-    fn set_if_none(&mut self, value: T) {
-        if self.value.is_none() {
-            self.value = Some(value);
-        }
-    }
-
-    fn get(self) -> Option<T> {
-        self.value
-    }
-}
-
-struct BoolAttr<'c>(Attr<'c, ()>);
-
-impl<'c> BoolAttr<'c> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
-        BoolAttr(Attr::none(cx, name))
-    }
-
-    fn set_true(&mut self) {
-        self.0.set(());
-    }
-
-    fn get(&self) -> bool {
-        self.0.value.is_some()
-    }
-}
 
 #[derive(Debug)]
 pub struct Name {
@@ -135,154 +77,57 @@ pub enum EnumTag {
 impl Item {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::MacroInput) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
-        let mut default = Attr::none(cx, "default");
-        let mut rename_all = Attr::none(cx, "rename_all");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut untagged = BoolAttr::none(cx, "untagged");
-        let mut internal_tag = Attr::none(cx, "tag");
-        let mut content = Attr::none(cx, "content");
+        #[derive(Debug, PromAttire, Default)]
+        #[attire(scope = "serde")]
+        pub struct ItemAttrs {
+            #[attire(split_attribute_of = "rename", attribute = "serialize")]
+            rename_serialize: Option<String>,
+            #[attire(split_attribute_of = "rename", attribute = "deserialize")]
+            rename_deserialize: Option<String>,
+            deny_unknown_fields: bool,
+            #[attire(default, flag_value = "Default::Default")]
+            default: Default,
+            rename_all: Option<RenameRuleInternal>,
+            #[attire(split_attribute_of = "bound", attribute = "serialize")]
+            bound_serialize: Option<WherePredicates>,
+            #[attire(split_attribute_of = "bound", attribute = "deserialize")]
+            bound_deserialize: Option<WherePredicates>,
+            untagged: bool,
+            tag: Option<String>,
+            content: Option<String>,
+        }
 
-        for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
-            for meta_item in meta_items {
-                match meta_item {
-                    // Parse `#[serde(rename="foo")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            ser_name.set(s.clone());
-                            de_name.set(s);
-                        }
-                    }
-
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
-                    MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
-                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
-                            ser_name.set_opt(ser);
-                            de_name.set_opt(de);
-                        }
-                    }
-
-                    // Parse `#[serde(rename_all="foo")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            match RenameRule::from_str(&s) {
-                                Ok(rename_rule) => rename_all.set(rename_rule),
-                                Err(()) => {
-                                    cx.error(format!("unknown rename rule for #[serde(rename_all \
-                                                      = {:?})]",
-                                                     s))
-                                }
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(deny_unknown_fields)]`
-                    MetaItem(Word(ref name)) if name == "deny_unknown_fields" => {
-                        deny_unknown_fields.set_true();
-                    }
-
-                    // Parse `#[serde(default)]`
-                    MetaItem(Word(ref name)) if name == "default" => {
-                        match item.body {
-                            syn::Body::Struct(syn::VariantData::Struct(_)) => {
-                                default.set(Default::Default);
-                            }
-                            _ => {
-                                cx.error("#[serde(default)] can only be used on structs \
-                                          with named fields")
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(default="...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
-                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            match item.body {
-                                syn::Body::Struct(syn::VariantData::Struct(_)) => {
-                                    default.set(Default::Path(path));
-                                }
-                                _ => {
-                                    cx.error("#[serde(default = \"...\")] can only be used \
-                                              on structs with named fields")
-                                }
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(bound="D: Serialize")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
-                            ser_bound.set(where_predicates.clone());
-                            de_bound.set(where_predicates);
-                        }
-                    }
-
-                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
-                    MetaItem(List(ref name, ref meta_items)) if name == "bound" => {
-                        if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
-                            ser_bound.set_opt(ser);
-                            de_bound.set_opt(de);
-                        }
-                    }
-
-                    // Parse `#[serde(untagged)]`
-                    MetaItem(Word(ref name)) if name == "untagged" => {
-                        match item.body {
-                            syn::Body::Enum(_) => {
-                                untagged.set_true();
-                            }
-                            syn::Body::Struct(_) => {
-                                cx.error("#[serde(untagged)] can only be used on enums")
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(tag = "type")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "tag" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            match item.body {
-                                syn::Body::Enum(_) => {
-                                    internal_tag.set(s);
-                                }
-                                syn::Body::Struct(_) => {
-                                    cx.error("#[serde(tag = \"...\")] can only be used on enums")
-                                }
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(content = "c")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "content" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            match item.body {
-                                syn::Body::Enum(_) => {
-                                    content.set(s);
-                                }
-                                syn::Body::Struct(_) => {
-                                    cx.error("#[serde(content = \"...\")] can only be used on \
-                                              enums")
-                                }
-                            }
-                        }
-                    }
-
-                    MetaItem(ref meta_item) => {
-                        cx.error(format!("unknown serde container attribute `{}`",
-                                         meta_item.name()));
-                    }
-
-                    Literal(_) => {
-                        cx.error("unexpected literal in serde container attribute");
-                    }
+        let attrs = match ItemAttrs::try_from(item.attrs.as_slice()) {
+            Ok(attrs) => attrs,
+            Err(errs) => {
+                for err in errs {
+                    cx.error(err.to_string());
                 }
+                ItemAttrs::default()
+            }
+        };
+
+        if let syn::Body::Enum(_) = item.body {
+        } else {
+            if attrs.untagged {
+                cx.error("#[serde(untagged)] can only be used on enums");
+            }
+            if attrs.tag.is_some() {
+                cx.error("#[serde(tag = \"...\")] can only be used on enums");
+            }
+            if attrs.content.is_some() {
+                cx.error("#[serde(content = \"...\")] can only be used on enums");
             }
         }
 
-        let tag = match (untagged.get(), internal_tag.get(), content.get()) {
+        if let syn::Body::Struct(syn::VariantData::Struct(_)) = item.body {
+        } else {
+            if attrs.default != Default::None  {
+                cx.error("#[serde(default)] can only be used on structs with named fields");
+            }
+        }
+
+        let tag = match (attrs.untagged, attrs.tag, attrs.content) {
             (false, None, None) => EnumTag::External,
             (true, None, None) => EnumTag::None,
             (false, Some(tag), None) => {
@@ -330,14 +175,14 @@ impl Item {
 
         Item {
             name: Name {
-                serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
-                deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
+                serialize: attrs.rename_serialize.unwrap_or_else(|| item.ident.to_string()),
+                deserialize: attrs.rename_deserialize.unwrap_or_else(|| item.ident.to_string()),
             },
-            deny_unknown_fields: deny_unknown_fields.get(),
-            default: default.get().unwrap_or(Default::None),
-            rename_all: rename_all.get().unwrap_or(RenameRule::None),
-            ser_bound: ser_bound.get(),
-            de_bound: de_bound.get(),
+            deny_unknown_fields: attrs.deny_unknown_fields,
+            default: attrs.default,
+            rename_all: attrs.rename_all.map(|a| a.0).unwrap_or(RenameRule::None),
+            ser_bound: attrs.bound_serialize.map(|a| a.0),
+            de_bound: attrs.bound_deserialize.map(|a| a.0),
             tag: tag,
         }
     }
@@ -384,79 +229,38 @@ pub struct Variant {
 
 impl Variant {
     pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
-        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut rename_all = Attr::none(cx, "rename_all");
-
-        for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
-            for meta_item in meta_items {
-                match meta_item {
-                    // Parse `#[serde(rename="foo")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            ser_name.set(s.clone());
-                            de_name.set(s);
-                        }
-                    }
-
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
-                    MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
-                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
-                            ser_name.set_opt(ser);
-                            de_name.set_opt(de);
-                        }
-                    }
-
-                    // Parse `#[serde(rename_all="foo")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            match RenameRule::from_str(&s) {
-                                Ok(rename_rule) => rename_all.set(rename_rule),
-                                Err(()) => {
-                                    cx.error(format!("unknown rename rule for #[serde(rename_all \
-                                                      = {:?})]",
-                                                     s))
-                                }
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(skip_deserializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_deserializing" => {
-                        skip_deserializing.set_true();
-                    }
-                    // Parse `#[serde(skip_serializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_serializing" => {
-                        skip_serializing.set_true();
-                    }
-
-                    MetaItem(ref meta_item) => {
-                        cx.error(format!("unknown serde variant attribute `{}`", meta_item.name()));
-                    }
-
-                    Literal(_) => {
-                        cx.error("unexpected literal in serde variant attribute");
-                    }
-                }
-            }
+        #[derive(Debug, PromAttire, Default)]
+        #[attire(scope = "serde")]
+        pub struct VariantAttrs {
+            #[attire(split_attribute_of = "rename", attribute = "serialize")]
+            rename_serialize: Option<String>,
+            #[attire(split_attribute_of = "rename", attribute = "deserialize")]
+            rename_deserialize: Option<String>,
+            rename_all: Option<RenameRuleInternal>,
+            skip_deserializing: bool,
+            skip_serializing: bool,
         }
 
-        let ser_name = ser_name.get();
-        let ser_renamed = ser_name.is_some();
-        let de_name = de_name.get();
-        let de_renamed = de_name.is_some();
+        let attrs = match VariantAttrs::try_from(variant.attrs.as_slice()) {
+            Ok(attrs) => attrs,
+            Err(errs) => {
+                for err in errs {
+                    cx.error(err.to_string());
+                }
+                VariantAttrs::default()
+            }
+        };
+
         Variant {
+            ser_renamed: attrs.rename_serialize.is_some(),
+            de_renamed: attrs.rename_deserialize.is_some(),
             name: Name {
-                serialize: ser_name.unwrap_or_else(|| variant.ident.to_string()),
-                deserialize: de_name.unwrap_or_else(|| variant.ident.to_string()),
+                serialize: attrs.rename_serialize.unwrap_or_else(|| variant.ident.to_string()),
+                deserialize: attrs.rename_deserialize.unwrap_or_else(|| variant.ident.to_string()),
             },
-            ser_renamed: ser_renamed,
-            de_renamed: de_renamed,
-            rename_all: rename_all.get().unwrap_or(RenameRule::None),
-            skip_deserializing: skip_deserializing.get(),
-            skip_serializing: skip_serializing.get(),
+            rename_all: attrs.rename_all.map(|a| a.0).unwrap_or(RenameRule::None),
+            skip_deserializing: attrs.skip_deserializing,
+            skip_serializing: attrs.skip_serializing,
         }
     }
 
@@ -515,150 +319,82 @@ pub enum Default {
 
 impl Field {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_ast(cx: &Ctxt, index: usize, field: &syn::Field) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
-        let mut skip_serializing_if = Attr::none(cx, "skip_serializing_if");
-        let mut default = Attr::none(cx, "default");
-        let mut serialize_with = Attr::none(cx, "serialize_with");
-        let mut deserialize_with = Attr::none(cx, "deserialize_with");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
+    pub fn from_ast(cx: &Ctxt,
+                    index: usize,
+                    field: &syn::Field) -> Self {
+
+        #[derive(Debug, PromAttire, Default)]
+        #[attire(scope = "serde")]
+        pub struct FieldAttrs {
+            #[attire(split_attribute_of = "rename", attribute = "serialize")]
+            rename_serialize: Option<String>,
+            #[attire(split_attribute_of = "rename", attribute = "deserialize")]
+            rename_deserialize: Option<String>,
+            skip_deserializing: bool,
+            skip_serializing: bool,
+            skip_serializing_if: Option<Path>,
+            #[attire(default, flag_value = "Default::Default")]
+            default: Default,
+            with: Option<Path>,
+            serialize_with: Option<Path>,
+            deserialize_with: Option<Path>,
+            #[attire(split_attribute_of = "bound", attribute = "serialize")]
+            bound_serialize: Option<WherePredicates>,
+            #[attire(split_attribute_of = "bound", attribute = "deserialize")]
+            bound_deserialize: Option<WherePredicates>,
+        }
+
+        let mut attrs = match FieldAttrs::try_from(field.attrs.as_slice()) {
+            Ok(attrs) => attrs,
+            Err(errs) => {
+                for err in errs {
+                    cx.error(err.to_string());
+                }
+                FieldAttrs::default()
+            }
+        };
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
             None => index.to_string(),
         };
 
-        for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
-            for meta_item in meta_items {
-                match meta_item {
-                    // Parse `#[serde(rename="foo")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
-                            ser_name.set(s.clone());
-                            de_name.set(s);
-                        }
-                    }
-
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
-                    MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
-                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
-                            ser_name.set_opt(ser);
-                            de_name.set_opt(de);
-                        }
-                    }
-
-                    // Parse `#[serde(default)]`
-                    MetaItem(Word(ref name)) if name == "default" => {
-                        default.set(Default::Default);
-                    }
-
-                    // Parse `#[serde(default="...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
-                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            default.set(Default::Path(path));
-                        }
-                    }
-
-                    // Parse `#[serde(skip_serializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_serializing" => {
-                        skip_serializing.set_true();
-                    }
-
-                    // Parse `#[serde(skip_deserializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_deserializing" => {
-                        skip_deserializing.set_true();
-                    }
-
-                    // Parse `#[serde(skip_serializing_if="...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "skip_serializing_if" => {
-                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            skip_serializing_if.set(path);
-                        }
-                    }
-
-                    // Parse `#[serde(serialize_with="...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            serialize_with.set(path);
-                        }
-                    }
-
-                    // Parse `#[serde(deserialize_with="...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            deserialize_with.set(path);
-                        }
-                    }
-
-                    // Parse `#[serde(with="...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            let mut ser_path = path.clone();
-                            ser_path.segments.push("serialize".into());
-                            serialize_with.set(ser_path);
-                            let mut de_path = path;
-                            de_path.segments.push("deserialize".into());
-                            deserialize_with.set(de_path);
-                        }
-                    }
-
-                    // Parse `#[serde(bound="D: Serialize")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
-                            ser_bound.set(where_predicates.clone());
-                            de_bound.set(where_predicates);
-                        }
-                    }
-
-                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
-                    MetaItem(List(ref name, ref meta_items)) if name == "bound" => {
-                        if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
-                            ser_bound.set_opt(ser);
-                            de_bound.set_opt(de);
-                        }
-                    }
-
-                    MetaItem(ref meta_item) => {
-                        cx.error(format!("unknown serde field attribute `{}`", meta_item.name()));
-                    }
-
-                    Literal(_) => {
-                        cx.error("unexpected literal in serde field attribute");
-                    }
-                }
+        // If skip_deserializing, initialize the field to Default::default()
+        // unless a different default is specified by `#[serde(default="...")]`
+        if attrs.skip_deserializing {
+            if attrs.default == Default::None {
+                attrs.default = Default::Default;
             }
         }
 
-        // Is skip_deserializing, initialize the field to Default::default()
-        // unless a different default is specified by `#[serde(default="...")]`
-        if skip_deserializing.0.value.is_some() {
-            default.set_if_none(Default::Default);
-        }
-
-        let ser_name = ser_name.get();
-        let ser_renamed = ser_name.is_some();
-        let de_name = de_name.get();
-        let de_renamed = de_name.is_some();
+        let with = attrs.with;
         Field {
+            ser_renamed: attrs.rename_serialize.is_some(),
+            de_renamed: attrs.rename_deserialize.is_some(),
             name: Name {
-                serialize: ser_name.unwrap_or_else(|| ident.clone()),
-                deserialize: de_name.unwrap_or(ident),
+                serialize: attrs.rename_serialize.unwrap_or_else(|| ident.clone()),
+                deserialize: attrs.rename_deserialize.unwrap_or(ident),
             },
-            ser_renamed: ser_renamed,
-            de_renamed: de_renamed,
-            skip_serializing: skip_serializing.get(),
-            skip_deserializing: skip_deserializing.get(),
-            skip_serializing_if: skip_serializing_if.get(),
-            default: default.get().unwrap_or(Default::None),
-            serialize_with: serialize_with.get(),
-            deserialize_with: deserialize_with.get(),
-            ser_bound: ser_bound.get(),
-            de_bound: de_bound.get(),
+            skip_serializing: attrs.skip_serializing,
+            skip_deserializing: attrs.skip_deserializing,
+            skip_serializing_if: attrs.skip_serializing_if.map(|a| a.0),
+            default: attrs.default,
+            serialize_with: attrs.serialize_with
+                .map(|a| a.0)
+                .or_else(|| with.as_ref().map(|path| {
+                    let mut path = path.0.clone();
+                    path.segments.push("serialize".into());
+                    path
+                })),
+            deserialize_with: attrs.deserialize_with
+                .map(|a| a.0)
+                .or_else(|| with.map(|path| {
+                    let mut path = path.0;
+                    path.segments.push("deserialize".into());
+                    path
+                })),
+            ser_bound: attrs.bound_serialize.map(|a| a.0),
+            de_bound: attrs.bound_deserialize.map(|a| a.0),
         }
     }
 
@@ -708,92 +444,89 @@ impl Field {
     }
 }
 
-type SerAndDe<T> = (Option<T>, Option<T>);
+#[derive(Debug, Default, Clone)]
+struct WherePredicates(Vec<syn::WherePredicate>);
 
-fn get_ser_and_de<T, F>(cx: &Ctxt,
-                        attr_name: &'static str,
-                        items: &[syn::NestedMetaItem],
-                        f: F)
-                        -> Result<SerAndDe<T>, ()>
-    where F: Fn(&Ctxt, &str, &str, &syn::Lit) -> Result<T, ()>
-{
-    let mut ser_item = Attr::none(cx, attr_name);
-    let mut de_item = Attr::none(cx, attr_name);
+impl FromStr for WherePredicates {
+    type Err = SynError;
 
-    for item in items {
-        match *item {
-            MetaItem(NameValue(ref name, ref lit)) if name == "serialize" => {
-                if let Ok(v) = f(cx, attr_name, name.as_ref(), lit) {
-                    ser_item.set(v);
-                }
-            }
-
-            MetaItem(NameValue(ref name, ref lit)) if name == "deserialize" => {
-                if let Ok(v) = f(cx, attr_name, name.as_ref(), lit) {
-                    de_item.set(v);
-                }
-            }
-
-            _ => {
-                cx.error(format!("malformed {0} attribute, expected `{0}(serialize = ..., \
-                                  deserialize = ...)`",
-                                 attr_name));
-                return Err(());
-            }
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if string.is_empty() {
+            return Ok(WherePredicates(Vec::new()));
         }
-    }
 
-    Ok((ser_item.get(), de_item.get()))
-}
-
-fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<String>, ()> {
-    get_ser_and_de(cx, "rename", items, get_string_from_lit)
-}
-
-fn get_where_predicates(cx: &Ctxt,
-                        items: &[syn::NestedMetaItem])
-                        -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
-    get_ser_and_de(cx, "bound", items, parse_lit_into_where)
-}
-
-pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMetaItem>> {
-    match attr.value {
-        List(ref name, ref items) if name == "serde" => Some(items.iter().cloned().collect()),
-        _ => None,
+        syn::parse_where_clause(&format!("where {}", string))
+            .map(|wh| WherePredicates(wh.predicates))
+            .map_err(SynError)
     }
 }
 
-fn get_string_from_lit(cx: &Ctxt,
-                       attr_name: &str,
-                       meta_item_name: &str,
-                       lit: &syn::Lit)
-                       -> Result<String, ()> {
-    if let syn::Lit::Str(ref s, _) = *lit {
-        Ok(s.clone())
-    } else {
-        cx.error(format!("expected serde {} attribute to be a string: `{} = \"...\"`",
-                         attr_name,
-                         meta_item_name));
-        Err(())
+#[derive(Debug)]
+struct Path(syn::Path);
+
+impl FromStr for Path {
+    type Err = SynError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        syn::parse_path(string).map(Path).map_err(SynError)
     }
 }
 
-fn parse_lit_into_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Path, ()> {
-    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
-    syn::parse_path(&string).map_err(|err| cx.error(err))
+#[derive(Debug)]
+pub struct SynError(String);
+
+impl ::std::fmt::Display for SynError {
+    fn fmt(&self, mut w: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(w, "{}", self.0)
+    }
 }
 
-fn parse_lit_into_where(cx: &Ctxt,
-                        attr_name: &str,
-                        meta_item_name: &str,
-                        lit: &syn::Lit)
-                        -> Result<Vec<syn::WherePredicate>, ()> {
-    let string = try!(get_string_from_lit(cx, attr_name, meta_item_name, lit));
-    if string.is_empty() {
-        return Ok(Vec::new());
+impl ::std::error::Error for SynError {
+    fn description(&self) -> &str {
+        &self.0
     }
+}
 
-    let where_string = format!("where {}", string);
+#[derive(Debug)]
+struct RenameRuleInternal(RenameRule);
 
-    syn::parse_where_clause(&where_string).map(|wh| wh.predicates).map_err(|err| cx.error(err))
+#[derive(Debug)]
+struct RenameRuleError(String);
+
+impl FromStr for RenameRuleInternal {
+    type Err = RenameRuleError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        RenameRule::from_str(string)
+            .map(RenameRuleInternal)
+            .map_err(|_| RenameRuleError(string.to_owned()))
+    }
+}
+
+impl ::std::fmt::Display for RenameRuleError {
+    fn fmt(&self, mut w: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(w, "unknown rename rule '{}'", self.0)
+    }
+}
+
+impl ::std::error::Error for RenameRuleError {
+    fn description(&self) -> &str {
+        "unknown rename rule"
+    }
+}
+
+impl ::std::default::Default for Default {
+    fn default() -> Default {
+        Default::None
+    }
+}
+
+impl FromStr for Default {
+    type Err = SynError;
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        Ok(match string {
+            "Default::Default" => Default::Default,
+            _ => Default::Path(Path::from_str(string)?.0),
+        })
+    }
 }
