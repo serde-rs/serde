@@ -1017,11 +1017,11 @@ impl From<EnumToU32> for StructFromEnum {
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
-#[serde(types(into="EnumToU32", from="EnumToU32"))]
+#[serde(into="EnumToU32", from="EnumToU32")]
 struct StructFromEnum(Option<u32>);
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
-#[serde(types(into="Option<u32>", from="Option<u32>"))]
+#[serde(into="Option<u32>", from="Option<u32>")]
 enum EnumToU32 {
     One,
     Two,

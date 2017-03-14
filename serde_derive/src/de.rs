@@ -86,11 +86,7 @@ fn requires_default(attrs: &attr::Field) -> bool {
 
 fn deserialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
     if let Some(fr_ty) = item.attrs.from_type() {
-        if let Some(fr_as_ty) = item.attrs.from_as_type() {
-            deserialize_from_as(fr_ty, fr_as_ty)
-        } else {
-            deserialize_from(fr_ty)
-        }
+        deserialize_from(fr_ty)
     } else {
         match item.body {
             Body::Enum(ref variants) => {
@@ -125,23 +121,13 @@ fn deserialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
 }
 
 fn deserialize_from(from_type: &syn::Ty) -> Fragment {
-    quote_block!({
+    quote_block! {
         let de_val = <#from_type as _serde::Deserialize>::deserialize(deserializer);
         match de_val {
-            Ok(from_in) => Ok(_serde::export::convert::From::from(from_in)),
-            Err(e) => Err(e)
+            _serde::export::Result::Ok(from_in) => _serde::export::Result::Ok(_serde::export::convert::From::from(from_in)),
+            _serde::export::Result::Err(e) => _serde::export::Result::Err(e)
         }
-    })
-}
-
-fn deserialize_from_as(from_type: &syn::Ty, from_as_type: &syn::Ty) -> Fragment {
-    quote_block!({
-        let de_val = <#from_type as _serde::Deserialize>::deserialize(deserializer);
-        match de_val {
-            Ok(from_in) => Ok(_serde::export::convert::From::from(from_in as #from_as_type)),
-            Err(e) => Err(e)
-        }
-    })
+    }
 }
 
 fn deserialize_unit_struct(ident: &syn::Ident, item_attrs: &attr::Item) -> Fragment {

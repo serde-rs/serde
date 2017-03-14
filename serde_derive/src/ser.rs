@@ -62,11 +62,7 @@ fn needs_serialize_bound(attrs: &attr::Field) -> bool {
 
 fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
     if let Some(in_ty) = item.attrs.into_type() {
-        if let Some(in_as_ty) = item.attrs.into_as_type() {
-            serialize_into_as(in_ty, in_as_ty)
-        } else {
-            serialize_into(in_ty)
-        }
+        serialize_into(in_ty)
     } else {
         match item.body {
             Body::Enum(ref variants) => {
@@ -94,16 +90,8 @@ fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
 
 fn serialize_into(into_type: &syn::Ty) -> Fragment {
     quote_block! {
-        let cloned_val: #into_type = _serde::export::clone::Clone::clone(self).into();
-        cloned_val.serialize(_serializer)
-    }
-}
-
-fn serialize_into_as(into_type: &syn::Ty, into_as_type: &syn::Ty) -> Fragment {
-    quote_block! {
-        let cloned_val: #into_type = _serde::export::clone::Clone::clone(self).into();
-        let cloned_val_as = cloned_val as #into_as_type;
-        cloned_val_as.serialize(_serializer)
+        let cloned_val: #into_type = _serde::export::convert::Into::into(_serde::export::clone::Clone::clone(self));
+        _serde::Serialize::serialize(&cloned_val, _serializer)
     }
 }
 
