@@ -149,7 +149,6 @@ impl Item {
         let mut content = Attr::none(cx, "content");
         let mut from_type = Attr::none(cx, "from");
         let mut into_type = Attr::none(cx, "into");
-        let mut as_type = Attr::none(cx, "into_as");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -275,7 +274,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(types(from = "type", into = "type", as = "type"))]
+                    // Parse `#[serde(from = "type", into = "type")]
                     MetaItem(NameValue(ref name, ref lit)) if name == "from" => {
                         if let Ok(from_ty) = get_type(cx, name.as_ref(), lit) {
                             from_type.set_opt(Some(from_ty));
@@ -284,11 +283,6 @@ impl Item {
                     MetaItem(NameValue(ref name, ref lit)) if name == "into" => {
                         if let Ok(into_ty) = get_type(cx, name.as_ref(), lit) {
                             into_type.set_opt(Some(into_ty));
-                        }
-                    }
-                    MetaItem(NameValue(ref name, ref lit)) if name == "as" => {
-                        if let Ok(as_ty) = get_type(cx, name.as_ref(), lit) {
-                            as_type.set_opt(Some(as_ty));
                         }
                     }
 

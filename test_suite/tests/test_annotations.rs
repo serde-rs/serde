@@ -978,6 +978,34 @@ fn test_invalid_length_enum() {
     );
 }
 
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(into="EnumToU32", from="EnumToU32")]
+struct StructFromEnum(Option<u32>);
+
+impl Into<EnumToU32> for StructFromEnum {
+    fn into(self) -> EnumToU32 {
+        match self {
+            StructFromEnum(v) => v.into()
+        }
+    }
+}
+
+impl From<EnumToU32> for StructFromEnum {
+    fn from(v: EnumToU32) -> Self {
+        StructFromEnum(v.into())
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(into="Option<u32>", from="Option<u32>")]
+enum EnumToU32 {
+    One,
+    Two,
+    Three,
+    Four,
+    Nothing
+}
+
 impl Into<Option<u32>> for EnumToU32 {
     fn into(self) -> Option<u32> {
         match self {
@@ -1000,34 +1028,6 @@ impl From<Option<u32>> for EnumToU32 {
             _ => EnumToU32::Nothing
         }
     }
-}
-
-impl Into<EnumToU32> for StructFromEnum {
-    fn into(self) -> EnumToU32 {
-        match self {
-            StructFromEnum(v) => v.into()
-        }
-    }
-}
-
-impl From<EnumToU32> for StructFromEnum {
-    fn from(v: EnumToU32) -> Self {
-        StructFromEnum(v.into())
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
-#[serde(into="EnumToU32", from="EnumToU32")]
-struct StructFromEnum(Option<u32>);
-
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
-#[serde(into="Option<u32>", from="Option<u32>")]
-enum EnumToU32 {
-    One,
-    Two,
-    Three,
-    Four,
-    Nothing
 }
 
 #[test]
