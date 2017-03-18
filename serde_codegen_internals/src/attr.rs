@@ -274,14 +274,16 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(from = "type", into = "type")]
+                    // Parse `#[serde(from = "Type")]
                     MetaItem(NameValue(ref name, ref lit)) if name == "from" => {
-                        if let Ok(from_ty) = get_type(cx, name.as_ref(), lit) {
+                        if let Ok(from_ty) = parse_lit_into_ty(cx, name.as_ref(), lit) {
                             from_type.set_opt(Some(from_ty));
                         }
                     }
+
+                    // Parse `#[serde(into = "Type")]
                     MetaItem(NameValue(ref name, ref lit)) if name == "into" => {
-                        if let Ok(into_ty) = get_type(cx, name.as_ref(), lit) {
+                        if let Ok(into_ty) = parse_lit_into_ty(cx, name.as_ref(), lit) {
                             into_type.set_opt(Some(into_ty));
                         }
                     }
@@ -772,18 +774,6 @@ fn get_ser_and_de<T, F>(cx: &Ctxt,
     Ok((ser_item.get(), de_item.get()))
 }
 
-fn get_type(cx: &Ctxt,
-            attr_name: &str,
-            lit: &syn::Lit)
-            -> Result<syn::Ty, ()> {
-    if let Ok(ty) = parse_lit_into_ty(cx, attr_name, &lit) {
-        Ok(ty)
-    } else {
-        cx.error(format!("error parsing type for attribute {}", attr_name));
-        return Err(());
-    }
-}
-
 fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<String>, ()> {
     get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
@@ -842,9 +832,7 @@ fn parse_lit_into_ty(cx: &Ctxt,
                      -> Result<syn::Ty, ()> {
     let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
 
-    if let Ok(ty) = syn::parse_type(&string) {
-        Ok(ty)
-    } else {
-        Err(())
-    }
+    syn::parse_type(&string).map_err(|_| {
+        cx.error(format!("failed to parse type: {} = {:?}", attr_name, string))
+    })
 }
