@@ -272,8 +272,9 @@ fn deserialize_seq(ident: &syn::Ident,
                             ident, generics, field.ty, path);
                         quote!({
                             #wrapper
-                            try!(_serde::de::SeqVisitor::visit::<#wrapper_ty>(&mut __visitor))
-                                .map(|__wrap| __wrap.value)
+                            _serde::export::Option::map(
+                                try!(_serde::de::SeqVisitor::visit::<#wrapper_ty>(&mut __visitor)),
+                                |__wrap| __wrap.value)
                         })
                     }
                 };
@@ -515,10 +516,11 @@ fn deserialize_externally_tagged_enum(ident: &syn::Ident,
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::export::Err(err) = _serde::de::EnumVisitor::visit_variant::<__Field>(__visitor);
-            // _serde::export::Err(err)
-            _serde::de::EnumVisitor::visit_variant::<__Field>(__visitor)
-                .map(|(impossible, _)| match impossible {})
+            // let _serde::export::Err(__err) = _serde::de::EnumVisitor::visit_variant::<__Field>(__visitor);
+            // _serde::export::Err(__err)
+            _serde::export::Result::map(
+                _serde::de::EnumVisitor::visit_variant::<__Field>(__visitor),
+                |(__impossible, _)| match __impossible {})
         }
     } else {
         quote! {
@@ -1251,8 +1253,9 @@ fn deserialize_map(ident: &syn::Ident,
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
             // let _serde::export::None::<__Field> = try!(_serde::de::MapVisitor::visit_key(&mut __visitor));
-            try!(_serde::de::MapVisitor::visit_key::<__Field>(&mut __visitor))
-                .map(|impossible| match impossible {});
+            _serde::export::Option::map(
+                try!(_serde::de::MapVisitor::visit_key::<__Field>(&mut __visitor)),
+                |__impossible| match __impossible {});
         }
     } else {
         quote! {
