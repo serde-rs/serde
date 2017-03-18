@@ -6,8 +6,10 @@ use std::borrow::Cow;
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::borrow::Cow;
 
+pub use core::clone::Clone;
+pub use core::convert::{From, Into};
 pub use core::default::Default;
-pub use core::{fmt, clone, convert};
+pub use core::fmt;
 pub use core::marker::PhantomData;
 pub use core::option::Option::{self, None, Some};
 pub use core::result::Result::{self, Ok, Err};

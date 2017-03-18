@@ -23,7 +23,7 @@ pub fn expand_derive_serialize(item: &syn::DeriveInput) -> Result<Tokens, String
             extern crate serde as _serde;
             #[automatically_derived]
             impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
-                fn serialize<__S>(&self, _serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body
@@ -61,8 +61,8 @@ fn needs_serialize_bound(attrs: &attr::Field) -> bool {
 }
 
 fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
-    if let Some(in_ty) = item.attrs.into_type() {
-        serialize_into(in_ty)
+    if let Some(into_type) = item.attrs.into_type() {
+        serialize_into(into_type)
     } else {
         match item.body {
             Body::Enum(ref variants) => {
@@ -90,8 +90,9 @@ fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
 
 fn serialize_into(into_type: &syn::Ty) -> Fragment {
     quote_block! {
-        let cloned_val: #into_type = _serde::export::convert::Into::into(_serde::export::clone::Clone::clone(self));
-        _serde::Serialize::serialize(&cloned_val, _serializer)
+        _serde::Serialize::serialize(
+            &<Self as _serde::export::Into<#into_type>>::into(_serde::export::Clone::clone(self)),
+            __serializer)
     }
 }
 
@@ -99,7 +100,7 @@ fn serialize_unit_struct(item_attrs: &attr::Item) -> Fragment {
     let type_name = item_attrs.name().serialize_name();
 
     quote_expr! {
-        _serde::Serializer::serialize_unit_struct(_serializer, #type_name)
+        _serde::Serializer::serialize_unit_struct(__serializer, #type_name)
     }
 }
 
@@ -116,7 +117,7 @@ fn serialize_newtype_struct(ident: &syn::Ident,
     }
 
     quote_expr! {
-        _serde::Serializer::serialize_newtype_struct(_serializer, #type_name, #field_expr)
+        _serde::Serializer::serialize_newtype_struct(__serializer, #type_name, #field_expr)
     }
 }
 
@@ -137,7 +138,7 @@ fn serialize_tuple_struct(ident: &syn::Ident,
     let let_mut = mut_if(len > 0);
 
     quote_block! {
-        let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(_serializer, #type_name, #len));
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(__serializer, #type_name, #len));
         #(#serialize_stmts)*
         _serde::ser::SerializeTupleStruct::end(__serde_state)
     }
@@ -175,7 +176,7 @@ fn serialize_struct(ident: &syn::Ident,
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote_block! {
-        let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(_serializer, #type_name, #len));
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
         #(#serialize_fields)*
         _serde::ser::SerializeStruct::end(__serde_state)
     }
@@ -301,7 +302,7 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
         Style::Unit => {
             quote_expr! {
                 _serde::Serializer::serialize_unit_variant(
-                    _serializer,
+                    __serializer,
                     #type_name,
                     #variant_index,
                     #variant_name,
@@ -317,7 +318,7 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
 
             quote_expr! {
                 _serde::Serializer::serialize_newtype_variant(
-                    _serializer,
+                    __serializer,
                     #type_name,
                     #variant_index,
                     #variant_name,
@@ -364,7 +365,7 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
         Style::Unit => {
             quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
-                    _serializer, #type_name, 1));
+                    __serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __struct, #tag, #variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
@@ -379,7 +380,7 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
 
             quote_expr! {
                 _serde::ser::private::serialize_tagged_newtype(
-                    _serializer,
+                    __serializer,
                     #enum_ident_str,
                     #variant_ident_str,
                     #tag,
@@ -416,7 +417,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
         Style::Unit => {
             return quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
-                    _serializer, #type_name, 1));
+                    __serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __struct, #tag, #variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
@@ -430,7 +431,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
             }
 
             quote_expr! {
-                _serde::Serialize::serialize(#field_expr, _serializer)
+                _serde::Serialize::serialize(#field_expr, __serializer)
             }
         }
         Style::Tuple => {
@@ -477,7 +478,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
         }
 
         impl #wrapper_impl_generics _serde::Serialize for __AdjacentlyTagged #wrapper_ty_generics #where_clause {
-            fn serialize<__S>(&self, _serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+            fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                 where __S: _serde::Serializer
             {
                 let (#(#fields_ident,)*) = self.data;
@@ -486,7 +487,7 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
         }
 
         let mut __struct = try!(_serde::Serializer::serialize_struct(
-            _serializer, #type_name, 2));
+            __serializer, #type_name, 2));
         try!(_serde::ser::SerializeStruct::serialize_field(
             &mut __struct, #tag, #variant_name));
         try!(_serde::ser::SerializeStruct::serialize_field(
@@ -506,7 +507,7 @@ fn serialize_untagged_variant(ident: &syn::Ident,
     match variant.style {
         Style::Unit => {
             quote_expr! {
-                _serde::Serializer::serialize_unit(_serializer)
+                _serde::Serializer::serialize_unit(__serializer)
             }
         }
         Style::Newtype => {
@@ -517,7 +518,7 @@ fn serialize_untagged_variant(ident: &syn::Ident,
             }
 
             quote_expr! {
-                _serde::Serialize::serialize(#field_expr, _serializer)
+                _serde::Serialize::serialize(#field_expr, __serializer)
             }
         }
         Style::Tuple => {
@@ -565,7 +566,7 @@ fn serialize_tuple_variant(context: TupleVariant,
         TupleVariant::ExternallyTagged { type_name, variant_index, variant_name } => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_variant(
-                    _serializer,
+                    __serializer,
                     #type_name,
                     #variant_index,
                     #variant_name,
@@ -577,7 +578,7 @@ fn serialize_tuple_variant(context: TupleVariant,
         TupleVariant::Untagged => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple(
-                    _serializer,
+                    __serializer,
                     #len));
                 #(#serialize_stmts)*
                 _serde::ser::SerializeTuple::end(__serde_state)
@@ -631,7 +632,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
         StructVariant::ExternallyTagged { variant_index, variant_name } => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct_variant(
-                    _serializer,
+                    __serializer,
                     #name,
                     #variant_index,
                     #variant_name,
@@ -644,7 +645,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
         StructVariant::InternallyTagged { tag, variant_name } => {
             quote_block! {
                 let mut __serde_state = try!(_serde::Serializer::serialize_struct(
-                    _serializer,
+                    __serializer,
                     #name,
                     #len + 1,
                 ));
@@ -660,7 +661,7 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
         StructVariant::Untagged => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(
-                    _serializer,
+                    __serializer,
                     #name,
                     #len,
                 ));
