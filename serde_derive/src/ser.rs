@@ -61,28 +61,37 @@ fn needs_serialize_bound(attrs: &attr::Field) -> bool {
 }
 
 fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
-    match item.body {
-        Body::Enum(ref variants) => {
-            serialize_item_enum(&item.ident, generics, variants, &item.attrs)
-        }
-        Body::Struct(Style::Struct, ref fields) => {
-            if fields.iter().any(|field| field.ident.is_none()) {
-                panic!("struct has unnamed fields");
+    if let Some(in_ty) = item.attrs.into_type() {
+        serialize_into(in_ty)
+    } else {
+        match item.body {
+            Body::Enum(ref variants) => {
+                serialize_item_enum(&item.ident, generics, variants, &item.attrs)
             }
-
-            serialize_struct(&item.ident, generics, fields, &item.attrs)
-        }
-        Body::Struct(Style::Tuple, ref fields) => {
-            if fields.iter().any(|field| field.ident.is_some()) {
-                panic!("tuple struct has named fields");
+            Body::Struct(Style::Struct, ref fields) => {
+                if fields.iter().any(|field| field.ident.is_none()) {
+                    panic!("struct has unnamed fields");
+                }
+                serialize_struct(&item.ident, generics, fields, &item.attrs)
             }
+            Body::Struct(Style::Tuple, ref fields) => {
+                if fields.iter().any(|field| field.ident.is_some()) {
+                    panic!("tuple struct has named fields");
+                }
+                serialize_tuple_struct(&item.ident, generics, fields, &item.attrs)
+            }
+            Body::Struct(Style::Newtype, ref fields) => {
+                serialize_newtype_struct(&item.ident, generics, &fields[0], &item.attrs)
+            }
+            Body::Struct(Style::Unit, _) => serialize_unit_struct(&item.attrs),
+        }
+    }
+}
 
-            serialize_tuple_struct(&item.ident, generics, fields, &item.attrs)
-        }
-        Body::Struct(Style::Newtype, ref fields) => {
-            serialize_newtype_struct(&item.ident, generics, &fields[0], &item.attrs)
-        }
-        Body::Struct(Style::Unit, _) => serialize_unit_struct(&item.attrs),
+fn serialize_into(into_type: &syn::Ty) -> Fragment {
+    quote_block! {
+        let cloned_val: #into_type = _serde::export::convert::Into::into(_serde::export::clone::Clone::clone(self));
+        _serde::Serialize::serialize(&cloned_val, _serializer)
     }
 }
 

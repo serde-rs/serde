@@ -98,6 +98,8 @@ pub struct Item {
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
+    from_type: Option<syn::Ty>,
+    into_type: Option<syn::Ty>,
 }
 
 /// Styles of representing an enum.
@@ -145,6 +147,8 @@ impl Item {
         let mut untagged = BoolAttr::none(cx, "untagged");
         let mut internal_tag = Attr::none(cx, "tag");
         let mut content = Attr::none(cx, "content");
+        let mut from_type = Attr::none(cx, "from");
+        let mut into_type = Attr::none(cx, "into");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -270,6 +274,18 @@ impl Item {
                         }
                     }
 
+                    // Parse `#[serde(from = "type", into = "type")]
+                    MetaItem(NameValue(ref name, ref lit)) if name == "from" => {
+                        if let Ok(from_ty) = get_type(cx, name.as_ref(), lit) {
+                            from_type.set_opt(Some(from_ty));
+                        }
+                    }
+                    MetaItem(NameValue(ref name, ref lit)) if name == "into" => {
+                        if let Ok(into_ty) = get_type(cx, name.as_ref(), lit) {
+                            into_type.set_opt(Some(into_ty));
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -339,6 +355,8 @@ impl Item {
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: tag,
+            from_type: from_type.get(),
+            into_type: into_type.get(),
         }
     }
 
@@ -368,6 +386,14 @@ impl Item {
 
     pub fn tag(&self) -> &EnumTag {
         &self.tag
+    }
+
+    pub fn from_type(&self) -> Option<&syn::Ty> {
+        self.from_type.as_ref()
+    }
+
+    pub fn into_type(&self) -> Option<&syn::Ty> {
+        self.into_type.as_ref()
     }
 }
 
@@ -746,6 +772,18 @@ fn get_ser_and_de<T, F>(cx: &Ctxt,
     Ok((ser_item.get(), de_item.get()))
 }
 
+fn get_type(cx: &Ctxt,
+            attr_name: &str,
+            lit: &syn::Lit)
+            -> Result<syn::Ty, ()> {
+    if let Ok(ty) = parse_lit_into_ty(cx, attr_name, &lit) {
+        Ok(ty)
+    } else {
+        cx.error(format!("error parsing type for attribute {}", attr_name));
+        return Err(());
+    }
+}
+
 fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<String>, ()> {
     get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
@@ -796,4 +834,17 @@ fn parse_lit_into_where(cx: &Ctxt,
     let where_string = format!("where {}", string);
 
     syn::parse_where_clause(&where_string).map(|wh| wh.predicates).map_err(|err| cx.error(err))
+}
+
+fn parse_lit_into_ty(cx: &Ctxt,
+                     attr_name: &str,
+                     lit: &syn::Lit)
+                     -> Result<syn::Ty, ()> {
+    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
+
+    if let Ok(ty) = syn::parse_type(&string) {
+        Ok(ty)
+    } else {
+        Err(())
+    }
 }

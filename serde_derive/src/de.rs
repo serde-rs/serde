@@ -85,36 +85,48 @@ fn requires_default(attrs: &attr::Field) -> bool {
 }
 
 fn deserialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
-    match item.body {
-        Body::Enum(ref variants) => {
-            deserialize_item_enum(&item.ident, generics, variants, &item.attrs)
-        }
-        Body::Struct(Style::Struct, ref fields) => {
-            if fields.iter().any(|field| field.ident.is_none()) {
-                panic!("struct has unnamed fields");
+    if let Some(fr_ty) = item.attrs.from_type() {
+        deserialize_from(fr_ty)
+    } else {
+        match item.body {
+            Body::Enum(ref variants) => {
+                deserialize_item_enum(&item.ident, generics, variants, &item.attrs)
             }
-
-            deserialize_struct(&item.ident,
-                               None,
-                               generics,
-                               fields,
-                               &item.attrs,
-                               None)
-        }
-        Body::Struct(Style::Tuple, ref fields) |
-        Body::Struct(Style::Newtype, ref fields) => {
-            if fields.iter().any(|field| field.ident.is_some()) {
-                panic!("tuple struct has named fields");
+            Body::Struct(Style::Struct, ref fields) => {
+                if fields.iter().any(|field| field.ident.is_none()) {
+                    panic!("struct has unnamed fields");
+                }
+                deserialize_struct(&item.ident,
+                                   None,
+                                   generics,
+                                   fields,
+                                   &item.attrs,
+                                   None)
             }
-
-            deserialize_tuple(&item.ident,
-                              None,
-                              generics,
-                              fields,
-                              &item.attrs,
-                              None)
+            Body::Struct(Style::Tuple, ref fields) |
+            Body::Struct(Style::Newtype, ref fields) => {
+                if fields.iter().any(|field| field.ident.is_some()) {
+                    panic!("tuple struct has named fields");
+                }
+                deserialize_tuple(&item.ident,
+                                  None,
+                                  generics,
+                                  fields,
+                                  &item.attrs,
+                                  None)
+            }
+            Body::Struct(Style::Unit, _) => deserialize_unit_struct(&item.ident, &item.attrs),
         }
-        Body::Struct(Style::Unit, _) => deserialize_unit_struct(&item.ident, &item.attrs),
+    }
+}
+
+fn deserialize_from(from_type: &syn::Ty) -> Fragment {
+    quote_block! {
+        let de_val = <#from_type as _serde::Deserialize>::deserialize(deserializer);
+        match de_val {
+            _serde::export::Result::Ok(from_in) => _serde::export::Result::Ok(_serde::export::convert::From::from(from_in)),
+            _serde::export::Result::Err(e) => _serde::export::Result::Err(e)
+        }
     }
 }
 

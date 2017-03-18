@@ -977,3 +977,83 @@ fn test_invalid_length_enum() {
         Error::Message("invalid length 1, expected tuple of 2 elements".to_owned()),
     );
 }
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(into="EnumToU32", from="EnumToU32")]
+struct StructFromEnum(Option<u32>);
+
+impl Into<EnumToU32> for StructFromEnum {
+    fn into(self) -> EnumToU32 {
+        match self {
+            StructFromEnum(v) => v.into()
+        }
+    }
+}
+
+impl From<EnumToU32> for StructFromEnum {
+    fn from(v: EnumToU32) -> Self {
+        StructFromEnum(v.into())
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(into="Option<u32>", from="Option<u32>")]
+enum EnumToU32 {
+    One,
+    Two,
+    Three,
+    Four,
+    Nothing
+}
+
+impl Into<Option<u32>> for EnumToU32 {
+    fn into(self) -> Option<u32> {
+        match self {
+            EnumToU32::One => Some(1),
+            EnumToU32::Two => Some(2),
+            EnumToU32::Three => Some(3),
+            EnumToU32::Four => Some(4),
+            EnumToU32::Nothing => None
+        }
+    }
+}
+
+impl From<Option<u32>> for EnumToU32 {
+    fn from(v: Option<u32>) -> Self {
+        match v {
+            Some(1) => EnumToU32::One,
+            Some(2) => EnumToU32::Two,
+            Some(3) => EnumToU32::Three,
+            Some(4) => EnumToU32::Four,
+            _ => EnumToU32::Nothing
+        }
+    }
+}
+
+#[test]
+fn test_from_into_traits() {
+    assert_ser_tokens::<EnumToU32>(&EnumToU32::One,
+        &[Token::Option(true),
+          Token::U32(1)
+        ] 
+    );
+    assert_ser_tokens::<EnumToU32>(&EnumToU32::Nothing,
+        &[Token::Option(false)] 
+    );
+    assert_de_tokens::<EnumToU32>(&EnumToU32::Two,
+        &[Token::Option(true),
+          Token::U32(2)
+        ]
+    );
+    assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)),
+        &[Token::Option(false)]
+    );
+    assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None),
+        &[Token::Option(false)]
+    );
+    assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)),
+        &[Token::Option(true),
+          Token::U32(2)
+        ]
+    );
+}
