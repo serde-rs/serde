@@ -172,19 +172,7 @@ pub trait Error: Sized + error::Error {
     /// containing an integer, the unexpected type is the integer and the
     /// expected type is the string.
     fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
-        struct InvalidType<'a> {
-            unexp: Unexpected<'a>,
-            exp: &'a Expected,
-        }
-        impl<'a> Display for InvalidType<'a> {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(formatter, "invalid type: {}, expected {}", self.unexp, self.exp)
-            }
-        }
-        Error::custom(InvalidType {
-                          unexp: unexp,
-                          exp: exp,
-                      })
+        Error::custom(format_args!("invalid type: {}, expected {}", unexp, exp))
     }
 
     /// Raised when a `Deserialize` receives a value of the right type but that
@@ -201,19 +189,7 @@ pub trait Error: Sized + error::Error {
     /// that is not valid UTF-8, the unexpected value is the bytes and the
     /// expected value is a string.
     fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
-        struct InvalidValue<'a> {
-            unexp: Unexpected<'a>,
-            exp: &'a Expected,
-        }
-        impl<'a> Display for InvalidValue<'a> {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(formatter, "invalid value: {}, expected {}", self.unexp, self.exp)
-            }
-        }
-        Error::custom(InvalidValue {
-                          unexp: unexp,
-                          exp: exp,
-                      })
+        Error::custom(format_args!("invalid value: {}, expected {}", unexp, exp))
     }
 
     /// Raised when deserializing a sequence or map and the input data contains
@@ -226,102 +202,46 @@ pub trait Error: Sized + error::Error {
     /// expected. For example `exp` might say that a tuple of size 6 was
     /// expected.
     fn invalid_length(len: usize, exp: &Expected) -> Self {
-        struct InvalidLength<'a> {
-            len: usize,
-            exp: &'a Expected,
-        }
-        impl<'a> Display for InvalidLength<'a> {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(formatter, "invalid length {}, expected {}", self.len, self.exp)
-            }
-        }
-        Error::custom(InvalidLength {
-                          len: len,
-                          exp: exp,
-                      })
+        Error::custom(format_args!("invalid length {}, expected {}", len, exp))
     }
 
     /// Raised when a `Deserialize` enum type received a variant with an
     /// unrecognized name.
     fn unknown_variant(variant: &str, expected: &'static [&'static str]) -> Self {
-        struct UnknownVariant<'a> {
-            variant: &'a str,
-            expected: &'static [&'static str],
+        if expected.is_empty() {
+            Error::custom(format_args!("unknown variant `{}`, there are no variants",
+                                       variant))
+        } else {
+            Error::custom(format_args!("unknown variant `{}`, expected {}",
+                                       variant,
+                                       OneOf { names: expected }))
         }
-        impl<'a> Display for UnknownVariant<'a> {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                if self.expected.is_empty() {
-                    write!(formatter,
-                           "unknown variant `{}`, there are no variants",
-                           self.variant)
-                } else {
-                    write!(formatter,
-                           "unknown variant `{}`, expected {}",
-                           self.variant,
-                           OneOf { names: self.expected })
-                }
-            }
-        }
-        Error::custom(UnknownVariant {
-                          variant: variant,
-                          expected: expected,
-                      })
     }
 
     /// Raised when a `Deserialize` struct type received a field with an
     /// unrecognized name.
     fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
-        struct UnknownField<'a> {
-            field: &'a str,
-            expected: &'static [&'static str],
+        if expected.is_empty() {
+            Error::custom(format_args!("unknown field `{}`, there are no fields",
+                                       field))
+        } else {
+            Error::custom(format_args!("unknown field `{}`, expected {}",
+                                       field,
+                                       OneOf { names: expected }))
         }
-        impl<'a> Display for UnknownField<'a> {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                if self.expected.is_empty() {
-                    write!(formatter,
-                           "unknown field `{}`, there are no fields",
-                           self.field)
-                } else {
-                    write!(formatter,
-                           "unknown field `{}`, expected {}",
-                           self.field,
-                           OneOf { names: self.expected })
-                }
-            }
-        }
-        Error::custom(UnknownField {
-                          field: field,
-                          expected: expected,
-                      })
     }
 
     /// Raised when a `Deserialize` struct type expected to receive a required
     /// field with a particular name but that field was not present in the
     /// input.
     fn missing_field(field: &'static str) -> Self {
-        struct MissingField {
-            field: &'static str,
-        }
-        impl Display for MissingField {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(formatter, "missing field `{}`", self.field)
-            }
-        }
-        Error::custom(MissingField { field: field })
+        Error::custom(format_args!("missing field `{}`", field))
     }
 
     /// Raised when a `Deserialize` struct type received more than one of the
     /// same field.
     fn duplicate_field(field: &'static str) -> Self {
-        struct DuplicateField {
-            field: &'static str,
-        }
-        impl Display for DuplicateField {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(formatter, "duplicate field `{}`", self.field)
-            }
-        }
-        Error::custom(DuplicateField { field: field })
+        Error::custom(format_args!("duplicate field `{}`", field))
     }
 }
 
