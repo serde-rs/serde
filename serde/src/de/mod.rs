@@ -107,6 +107,8 @@ use core::marker::PhantomData;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+pub mod borrow;
+
 #[doc(hidden)]
 pub mod impls;
 pub mod value;
