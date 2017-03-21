@@ -17,6 +17,7 @@ travis-ci = { repository = "serde-rs/serde" }
 
 [features]
 default = ["std"]
+derive = ["serde_derive"]
 
 std = []
 unstable = []
