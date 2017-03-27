@@ -10,6 +10,11 @@ channel() {
             pwd
             (set -x; cargo "$@")
         fi
+    elif [ -n "${APPVEYOR}" ]; then
+        if [ "${APPVEYOR_RUST_CHANNEL}" = "${CHANNEL}" ]; then
+            pwd
+            (set -x; cargo "$@")
+        fi
     else
         pwd
         (set -x; cargo "+${CHANNEL}" "$@")

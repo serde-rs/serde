@@ -1,7 +1,8 @@
-#![feature(lang_items, start, libc)]
+#![feature(lang_items, start, libc, compiler_builtins_lib)]
 #![no_std]
 
 extern crate libc;
+extern crate compiler_builtins;
 
 #[start]
 fn start(_argc: isize, _argv: *const *const u8) -> isize {
