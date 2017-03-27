@@ -6,28 +6,8 @@ use internals::ast::Item;
 use internals::attr;
 
 macro_rules! path {
-    ($first:ident $(:: $rest:ident)*) => {
-        syn::Path {
-            global: false,
-            segments: vec![
-                stringify!($first).into(),
-                $(
-                    stringify!($rest).into(),
-                )*
-            ],
-        }
-    };
-
-    (::$first:ident $(:: $rest:ident)*) => {
-        syn::Path {
-            global: true,
-            segments: vec![
-                stringify!($first).into(),
-                $(
-                    stringify!($rest).into(),
-                )*
-            ],
-        }
+    ($($path:tt)+) => {
+        syn::parse_path(stringify!($($path)+)).unwrap()
     };
 }
 

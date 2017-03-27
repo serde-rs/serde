@@ -5,7 +5,7 @@ macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
         fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor
+            where __V: $crate::de::Visitor<'de>
         {
             self.deserialize(visitor)
         }
@@ -19,7 +19,7 @@ macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
         fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::core::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor
+            where __V: $crate::de::Visitor<'de>
         {
             self.deserialize(visitor)
         }
