@@ -1,6 +1,6 @@
 [package]
 name = "serde_test"
-version = "0.9.11"
+version = "0.9.12"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"
