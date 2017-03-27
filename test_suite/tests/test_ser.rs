@@ -422,6 +422,7 @@ fn test_net_ipaddr() {
 }
 
 #[test]
+#[cfg(unix)]
 fn test_cannot_serialize_paths() {
     let path = unsafe {
         str::from_utf8_unchecked(b"Hello \xF0\x90\x80World")

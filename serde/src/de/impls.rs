@@ -26,7 +26,7 @@ use std::net;
 use std::path;
 use core::str;
 #[cfg(feature = "std")]
-use std::ffi::CString;
+use std::ffi::{CString, OsString};
 #[cfg(all(feature = "std", feature="unstable"))]
 use std::ffi::CStr;
 
@@ -910,12 +910,117 @@ impl Visitor for PathBufVisitor {
     }
 }
 
+
 #[cfg(feature = "std")]
 impl Deserialize for path::PathBuf {
     fn deserialize<D>(deserializer: D) -> Result<path::PathBuf, D::Error>
         where D: Deserializer
     {
         deserializer.deserialize_string(PathBufVisitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+enum OsStringKind {
+    Unix,
+    Windows,
+}
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+static OSSTR_VARIANTS: &'static [&'static str] = &["Unix", "Windows"];
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+impl Deserialize for OsStringKind {
+    fn deserialize<D>(deserializer: D) -> Result<OsStringKind, D::Error>
+        where D: Deserializer
+    {
+        struct KindVisitor;
+
+        impl Visitor for KindVisitor {
+            type Value = OsStringKind;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("`Unix` or `Windows`")
+            }
+
+            fn visit_u32<E>(self, value: u32) -> Result<OsStringKind, E>
+                where E: Error,
+            {
+                match value {
+                    0 => Ok(OsStringKind::Unix),
+                    1 => Ok(OsStringKind::Windows),
+                    _ => Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self))
+                }
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<OsStringKind, E>
+                where E: Error,
+            {
+                match value {
+                    "Unix" => Ok(OsStringKind::Unix),
+                    "Windows" => Ok(OsStringKind::Windows),
+                    _ => Err(Error::unknown_variant(value, OSSTR_VARIANTS)),
+                }
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> Result<OsStringKind, E>
+                where E: Error,
+            {
+                match value {
+                    b"Unix" => Ok(OsStringKind::Unix),
+                    b"Windows" => Ok(OsStringKind::Windows),
+                    _ => {
+                        match str::from_utf8(value) {
+                            Ok(value) => Err(Error::unknown_variant(value, OSSTR_VARIANTS)),
+                            Err(_) => {
+                                Err(Error::invalid_value(Unexpected::Bytes(value), &self))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        deserializer.deserialize(KindVisitor)
+    }
+}
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+struct OsStringVisitor;
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+impl Visitor for OsStringVisitor {
+    type Value = OsString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("os string")
+    }
+
+    #[cfg(unix)]
+    fn visit_enum<V>(self, visitor: V) -> Result<OsString, V::Error>
+        where V: EnumVisitor,
+    {
+        use std::os::unix::ffi::OsStringExt;
+
+        match try!(visitor.visit_variant()) {
+            (OsStringKind::Unix, variant) => {
+                variant.visit_newtype().map(OsString::from_vec)
+            }
+            (OsStringKind::Windows, _) => {
+                Err(Error::custom("cannot deserialize windows os string on unix"))
+            }
+        }
+    }
+}
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+impl Deserialize for OsString {
+    fn deserialize<D>(deserializer: D) -> Result<OsString, D::Error>
+        where D: Deserializer
+    {
+        deserializer.deserialize_enum("OsString", OSSTR_VARIANTS, OsStringVisitor)
     }
 }
 

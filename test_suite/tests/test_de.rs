@@ -8,7 +8,7 @@ use std::net;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::default::Default;
-use std::ffi::CString;
+use std::ffi::{CString, OsString};
 
 #[cfg(feature = "unstable")]
 use std::ffi::CStr;
@@ -911,6 +911,56 @@ declare_tests! {
             Token::Bytes(b"abc"),
         ],
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn test_osstring() {
+    use std::os::unix::ffi::OsStringExt;
+
+    let value = OsString::from_vec(vec![1, 2, 3]);
+    let tokens = [
+        Token::EnumStart("OsString"),
+        Token::Str("Unix"),
+        Token::SeqStart(Some(2)),
+            Token::SeqSep,
+            Token::U8(1),
+
+            Token::SeqSep,
+            Token::U8(2),
+
+            Token::SeqSep,
+            Token::U8(3),
+        Token::SeqEnd,
+    ];
+
+    assert_de_tokens(&value, &tokens);
+    assert_de_tokens_ignore(&tokens);
+}
+
+#[cfg(windows)]
+#[test]
+fn test_osstring() {
+    use std::os::windows::ffi::OsStringExt;
+
+    let value = OsString::from_wide(&[1, 2, 3]);
+    let tokens = [
+        Token::EnumStart("OsString"),
+        Token::Str("Windows"),
+        Token::SeqStart(Some(2)),
+            Token::SeqSep,
+            Token::U16(1),
+
+            Token::SeqSep,
+            Token::U16(2),
+
+            Token::SeqSep,
+            Token::U16(3),
+        Token::SeqEnd,
+    ];
+
+    assert_de_tokens(&value, &tokens);
+    assert_de_tokens_ignore(&tokens);
 }
 
 #[cfg(feature = "unstable")]

@@ -1,0 +1,17 @@
+environment:
+  matrix:
+    - APPVEYOR_RUST_CHANNEL: stable
+    - APPVEYOR_RUST_CHANNEL: nightly
+
+install:
+  # Install rust, x86_64-pc-windows-msvc host
+  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain %APPVEYOR_RUST_CHANNEL%
+  - set PATH=C:\msys64\usr\bin;%PATH%;C:\Users\appveyor\.cargo\bin
+  - rustc -vV
+  - cargo -vV
+
+build: false
+
+test_script:
+  - sh -c 'PATH=`rustc --print sysroot`/bin:$PATH ./travis.sh'

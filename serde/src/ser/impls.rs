@@ -20,7 +20,7 @@ use core::ops;
 #[cfg(feature = "std")]
 use std::path;
 #[cfg(feature = "std")]
-use std::ffi::{CString, CStr};
+use std::ffi::{CString, CStr, OsString, OsStr};
 #[cfg(feature = "std")]
 use std::rc::Rc;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
@@ -711,6 +711,41 @@ impl Serialize for path::PathBuf {
         where S: Serializer
     {
         self.as_path().serialize(serializer)
+    }
+}
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+impl Serialize for OsStr {
+    #[cfg(unix)]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        use std::os::unix::ffi::OsStrExt;
+        serializer.serialize_newtype_variant("OsString",
+                                             0,
+                                             "Unix",
+                                             self.as_bytes())
+    }
+    #[cfg(windows)]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        use std::os::windows::ffi::OsStrExt;
+        let val = self.encode_wide().collect::<Vec<_>>();
+        serializer.serialize_newtype_variant("OsString",
+                                             1,
+                                             "Windows",
+                                             &val)
+    }
+}
+
+#[cfg(all(feature = "std", any(unix, windows)))]
+#[cfg(feature = "std")]
+impl Serialize for OsString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        self.as_os_str().serialize(serializer)
     }
 }
 
