@@ -237,7 +237,7 @@ mod bytebuf {
     /// This type implements the `serde::de::Visitor` trait for a `ByteBuf`.
     pub struct ByteBufVisitor;
 
-    impl de::Visitor for ByteBufVisitor {
+    impl<'de> de::Visitor<'de> for ByteBufVisitor {
         type Value = ByteBuf;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -253,7 +253,7 @@ mod bytebuf {
 
         #[inline]
         fn visit_seq<V>(self, mut visitor: V) -> Result<ByteBuf, V::Error>
-            where V: de::SeqVisitor
+            where V: de::SeqVisitor<'de>
         {
             let len = cmp::min(visitor.size_hint().0, 4096);
             let mut values = Vec::with_capacity(len);
@@ -292,10 +292,10 @@ mod bytebuf {
         }
     }
 
-    impl de::Deserialize for ByteBuf {
+    impl<'de> de::Deserialize<'de> for ByteBuf {
         #[inline]
         fn deserialize<D>(deserializer: D) -> Result<ByteBuf, D::Error>
-            where D: de::Deserializer
+            where D: de::Deserializer<'de>
         {
             deserializer.deserialize_byte_buf(ByteBufVisitor)
         }

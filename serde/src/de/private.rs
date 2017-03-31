@@ -9,25 +9,25 @@ pub use de::content::{Content, ContentRefDeserializer, ContentDeserializer, Tagg
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
-pub fn missing_field<V, E>(field: &'static str) -> Result<V, E>
-    where V: Deserialize,
+pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
+    where V: Deserialize<'de>,
           E: Error
 {
     struct MissingFieldDeserializer<E>(&'static str, PhantomData<E>);
 
-    impl<E> Deserializer for MissingFieldDeserializer<E>
+    impl<'de, E> Deserializer<'de> for MissingFieldDeserializer<E>
         where E: Error
     {
         type Error = E;
 
         fn deserialize<V>(self, _visitor: V) -> Result<V::Value, E>
-            where V: Visitor
+            where V: Visitor<'de>
         {
             Err(Error::missing_field(self.0))
         }
 
         fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
-            where V: Visitor
+            where V: Visitor<'de>
         {
             visitor.visit_none()
         }

@@ -9,7 +9,7 @@ extern crate serde_derive;
 
 extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
-use self::serde::de::{Deserialize, Deserializer};
+use self::serde::de::{DeserializeOwned, Deserializer};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -63,15 +63,6 @@ fn test_gen() {
         t: PhantomData<T>,
     }
     assert::<PhantomT<X>>();
-
-    #[derive(Serialize, Deserialize)]
-    struct Bounds<T: Serialize + Deserialize> {
-        t: T,
-        option: Option<T>,
-        boxed: Box<T>,
-        option_boxed: Option<Box<T>>,
-    }
-    assert::<Bounds<i32>>();
 
     #[derive(Serialize, Deserialize)]
     struct NoBounds<T> {
@@ -206,7 +197,7 @@ fn test_gen() {
     assert::<CowStr>();
 
     #[derive(Serialize, Deserialize)]
-    #[serde(bound(deserialize = "T::Owned: Deserialize"))]
+    #[serde(bound(deserialize = "T::Owned: DeserializeOwned"))]
     struct CowT<'a, T: ?Sized + 'a + ToOwned>(Cow<'a, T>);
     assert::<CowT<str>>();
 
@@ -308,7 +299,7 @@ fn test_gen() {
 
 //////////////////////////////////////////////////////////////////////////
 
-fn assert<T: Serialize + Deserialize>() {}
+fn assert<T: Serialize + DeserializeOwned>() {}
 fn assert_ser<T: Serialize>() {}
 
 trait SerializeWith {
@@ -316,7 +307,7 @@ trait SerializeWith {
 }
 
 trait DeserializeWith: Sized {
-    fn deserialize_with<D: Deserializer>(_: D) -> StdResult<Self, D::Error>;
+    fn deserialize_with<'de, D: Deserializer<'de>>(_: D) -> StdResult<Self, D::Error>;
 }
 
 // Implements neither Serialize nor Deserialize
@@ -326,7 +317,7 @@ pub fn ser_x<S: Serializer>(_: &X, _: S) -> StdResult<S::Ok, S::Error> {
     unimplemented!()
 }
 
-pub fn de_x<D: Deserializer>(_: D) -> StdResult<X, D::Error> {
+pub fn de_x<'de, D: Deserializer<'de>>(_: D) -> StdResult<X, D::Error> {
     unimplemented!()
 }
 
@@ -341,7 +332,7 @@ impl SerializeWith for X {
 }
 
 impl DeserializeWith for X {
-    fn deserialize_with<D: Deserializer>(_: D) -> StdResult<Self, D::Error> {
+    fn deserialize_with<'de, D: Deserializer<'de>>(_: D) -> StdResult<Self, D::Error> {
         unimplemented!()
     }
 }

@@ -5,7 +5,7 @@ macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
         fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor
+            where __V: $crate::de::Visitor<'de>
         {
             self.deserialize(visitor)
         }
@@ -19,7 +19,7 @@ macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
         fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::core::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor
+            where __V: $crate::de::Visitor<'de>
         {
             self.deserialize(visitor)
         }
@@ -135,15 +135,15 @@ macro_rules! forward_to_deserialize_helper {
 /// # #[macro_use] extern crate serde;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// # pub struct MyDeserializer;
-/// # impl Deserializer for MyDeserializer {
+/// # impl<'de> Deserializer<'de> for MyDeserializer {
 /// #     type Error = value::Error;
 /// #     fn deserialize<V>(self, _: V) -> Result<V::Value, Self::Error>
-/// #         where V: Visitor
+/// #         where V: Visitor<'de>
 /// #     { unimplemented!() }
 /// #
 /// #[inline]
 /// fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-///     where V: Visitor
+///     where V: Visitor<'de>
 /// {
 ///     self.deserialize(visitor)
 /// }
@@ -164,10 +164,10 @@ macro_rules! forward_to_deserialize_helper {
 /// # #[macro_use] extern crate serde;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// # pub struct MyDeserializer;
-/// impl Deserializer for MyDeserializer {
+/// impl<'de> Deserializer<'de> for MyDeserializer {
 /// #   type Error = value::Error;
 ///     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-///         where V: Visitor
+///         where V: Visitor<'de>
 ///     {
 ///         /* ... */
 /// #       let _ = visitor;
@@ -182,6 +182,10 @@ macro_rules! forward_to_deserialize_helper {
 /// }
 /// # fn main() {}
 /// ```
+///
+/// The macro assumes the convention that your `Deserializer` lifetime parameter
+/// is called `'de`. It will not work if the `Deserializer` lifetime parameter
+/// is called something different.
 #[macro_export]
 macro_rules! forward_to_deserialize {
     ($($func:ident)*) => {
