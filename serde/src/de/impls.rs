@@ -305,6 +305,71 @@ impl<'de> Deserialize<'de> for String {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+struct StrVisitor;
+
+impl<'a> Visitor<'a> for StrVisitor {
+    type Value = &'a str;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a borrowed string")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+        where E: Error
+    {
+        Ok(v) // so easy
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+        where E: Error
+    {
+        str::from_utf8(v)
+            .map_err(|_| Error::invalid_value(Unexpected::Bytes(v), &self))
+    }
+}
+
+impl<'a> Deserialize<'a> for &'a str {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'a>
+    {
+        deserializer.deserialize_str(StrVisitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+struct BytesVisitor;
+
+impl<'a> Visitor<'a> for BytesVisitor {
+    type Value = &'a [u8];
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a borrowed byte array")
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+        where E: Error
+    {
+        Ok(v)
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+        where E: Error
+    {
+        Ok(v.as_bytes())
+    }
+}
+
+impl<'a> Deserialize<'a> for &'a [u8] {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'a>
+    {
+        deserializer.deserialize_bytes(BytesVisitor)
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 #[cfg(all(feature = "std", feature="unstable"))]
 impl<'de> Deserialize<'de> for Box<CStr> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
