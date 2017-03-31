@@ -135,15 +135,15 @@ macro_rules! forward_to_deserialize_helper {
 /// # #[macro_use] extern crate serde;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// # pub struct MyDeserializer;
-/// # impl Deserializer for MyDeserializer {
+/// # impl<'de> Deserializer<'de> for MyDeserializer {
 /// #     type Error = value::Error;
 /// #     fn deserialize<V>(self, _: V) -> Result<V::Value, Self::Error>
-/// #         where V: Visitor
+/// #         where V: Visitor<'de>
 /// #     { unimplemented!() }
 /// #
 /// #[inline]
 /// fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-///     where V: Visitor
+///     where V: Visitor<'de>
 /// {
 ///     self.deserialize(visitor)
 /// }
@@ -164,10 +164,10 @@ macro_rules! forward_to_deserialize_helper {
 /// # #[macro_use] extern crate serde;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// # pub struct MyDeserializer;
-/// impl Deserializer for MyDeserializer {
+/// impl<'de> Deserializer<'de> for MyDeserializer {
 /// #   type Error = value::Error;
 ///     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-///         where V: Visitor
+///         where V: Visitor<'de>
 ///     {
 ///         /* ... */
 /// #       let _ = visitor;

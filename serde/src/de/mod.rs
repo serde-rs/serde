@@ -147,9 +147,9 @@ pub trait Error: Sized + error::Error {
     /// #     type Err = String;
     /// #     fn from_str(_: &str) -> Result<Self, String> { unimplemented!() }
     /// # }
-    /// impl Deserialize for IpAddr {
+    /// impl<'de> Deserialize<'de> for IpAddr {
     ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    ///         where D: Deserializer
+    ///         where D: Deserializer<'de>
     ///     {
     ///         let s = try!(String::deserialize(deserializer));
     ///         s.parse().map_err(Error::custom)
@@ -256,7 +256,7 @@ pub trait Error: Sized + error::Error {
 /// # use std::fmt;
 /// # #[allow(dead_code)]
 /// # struct Example;
-/// # impl Visitor for Example {
+/// # impl<'de> Visitor<'de> for Example {
 /// # type Value = ();
 /// fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
 ///     where E: Error
@@ -376,7 +376,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// # use std::fmt;
 /// # #[allow(dead_code)]
 /// # struct Example;
-/// # impl Visitor for Example {
+/// # impl<'de> Visitor<'de> for Example {
 /// # type Value = ();
 /// fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
 ///     where E: Error
@@ -499,7 +499,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// # #[allow(dead_code)]
 /// # enum Error {}
 /// # #[allow(dead_code)]
-/// fn func<T: Deserialize>() -> Result<T, Error>
+/// fn func<'de, T: Deserialize<'de>>() -> Result<T, Error>
 /// # { unimplemented!() }
 /// ```
 ///
@@ -511,7 +511,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// # #[allow(dead_code)]
 /// # enum Error {}
 /// # #[allow(dead_code)]
-/// fn func_seed<T: DeserializeSeed>(seed: T) -> Result<T::Value, Error>
+/// fn func_seed<'de, T: DeserializeSeed<'de>>(seed: T) -> Result<T::Value, Error>
 /// # {
 /// #     let _ = seed;
 /// #     unimplemented!()
@@ -543,8 +543,8 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// // appending each integer into the existing Vec.
 /// struct ExtendVec<'a, T: 'a>(&'a mut Vec<T>);
 ///
-/// impl<'a, T> DeserializeSeed for ExtendVec<'a, T>
-///     where T: Deserialize
+/// impl<'de, 'a, T> DeserializeSeed<'de> for ExtendVec<'a, T>
+///     where T: Deserialize<'de>
 /// {
 ///     // The return type of the `deserialize` method. This implementation
 ///     // appends onto an existing vector but does not create any new data
@@ -552,19 +552,19 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///     type Value = ();
 ///
 ///     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-///         where D: Deserializer
+///         where D: Deserializer<'de>
 ///     {
 ///         // Visitor implementation that will walk an inner array of the JSON
 ///         // input.
 ///         struct ExtendVecVisitor<'a, T: 'a>(&'a mut Vec<T>);
 ///
-///         impl<'a, T> Visitor for ExtendVecVisitor<'a, T>
-///             where T: Deserialize
+///         impl<'de, 'a, T> Visitor<'de> for ExtendVecVisitor<'a, T>
+///             where T: Deserialize<'de>
 ///         {
 ///             type Value = ();
 ///
 ///             fn visit_seq<V>(self, mut visitor: V) -> Result<(), V::Error>
-///                 where V: SeqVisitor
+///                 where V: SeqVisitor<'de>
 ///             {
 ///                 // Visit each element in the inner array and push it onto
 ///                 // the existing vector.
@@ -586,15 +586,15 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// // Visitor implementation that will walk the outer array of the JSON input.
 /// struct FlattenedVecVisitor<T>(PhantomData<T>);
 ///
-/// impl<T> Visitor for FlattenedVecVisitor<T>
-///     where T: Deserialize
+/// impl<'de, T> Visitor<'de> for FlattenedVecVisitor<T>
+///     where T: Deserialize<'de>
 /// {
 ///     // This Visitor constructs a single Vec<T> to hold the flattened
 ///     // contents of the inner arrays.
 ///     type Value = Vec<T>;
 ///
 ///     fn visit_seq<V>(self, mut visitor: V) -> Result<Vec<T>, V::Error>
-///         where V: SeqVisitor
+///         where V: SeqVisitor<'de>
 ///     {
 ///         // Create a single Vec to hold the flattened contents.
 ///         let mut vec = Vec::new();
@@ -614,7 +614,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// }
 ///
 /// # #[allow(dead_code)]
-/// # fn example<D: Deserializer>(deserializer: D) -> Result<(), D::Error> {
+/// # fn example<'de, D: Deserializer<'de>>(deserializer: D) -> Result<(), D::Error> {
 /// let visitor = FlattenedVecVisitor(PhantomData);
 /// let flattened: Vec<u64> = deserializer.deserialize_seq(visitor)?;
 /// # let _ = flattened;
@@ -913,7 +913,7 @@ pub trait Deserializer<'de>: Sized {
 ///     min: usize,
 /// }
 ///
-/// impl Visitor for LongString {
+/// impl<'de> Visitor<'de> for LongString {
 ///     type Value = String;
 ///
 ///     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -946,7 +946,7 @@ pub trait Visitor<'de>: Sized {
     /// # use std::fmt;
     /// # #[allow(dead_code)]
     /// # struct S { max: usize }
-    /// # impl serde::de::Visitor for S {
+    /// # impl<'de> serde::de::Visitor<'de> for S {
     /// # type Value = ();
     /// fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
     ///     write!(formatter, "an integer between 0 and {}", self.max)
