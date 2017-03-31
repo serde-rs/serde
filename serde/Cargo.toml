@@ -29,7 +29,7 @@ unstable-testing = ["unstable", "std"]
 playground = ["serde_derive"]
 
 [dependencies]
-serde_derive = { version = "0.9", optional = true }
+serde_derive = { version = "0.9", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
-serde_derive = "0.9"
+serde_derive = { version = "0.9", path = "../serde_derive" }
