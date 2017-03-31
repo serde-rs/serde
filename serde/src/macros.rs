@@ -182,6 +182,10 @@ macro_rules! forward_to_deserialize_helper {
 /// }
 /// # fn main() {}
 /// ```
+///
+/// The macro assumes the convention that your `Deserializer` lifetime parameter
+/// is called `'de`. It will not work if the `Deserializer` lifetime parameter
+/// is called something different.
 #[macro_export]
 macro_rules! forward_to_deserialize {
     ($($func:ident)*) => {
