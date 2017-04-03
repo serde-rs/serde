@@ -328,9 +328,9 @@ impl<'a> Visitor<'a> for StrVisitor {
     }
 }
 
-impl<'a> Deserialize<'a> for &'a str {
+impl<'de: 'a, 'a> Deserialize<'de> for &'a str {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'a>
+        where D: Deserializer<'de>
     {
         deserializer.deserialize_str(StrVisitor)
     }
@@ -360,9 +360,9 @@ impl<'a> Visitor<'a> for BytesVisitor {
     }
 }
 
-impl<'a> Deserialize<'a> for &'a [u8] {
+impl<'de: 'a, 'a> Deserialize<'de> for &'a [u8] {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'a>
+        where D: Deserializer<'de>
     {
         deserializer.deserialize_bytes(BytesVisitor)
     }

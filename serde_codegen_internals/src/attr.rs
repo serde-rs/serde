@@ -2,6 +2,8 @@ use Ctxt;
 use syn;
 use syn::MetaItem::{List, NameValue, Word};
 use syn::NestedMetaItem::{Literal, MetaItem};
+use synom::IResult;
+use std::collections::BTreeSet;
 use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
@@ -528,6 +530,7 @@ pub struct Field {
     deserialize_with: Option<syn::Path>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
+    borrowed_lifetimes: BTreeSet<syn::Lifetime>,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -554,6 +557,7 @@ impl Field {
         let mut deserialize_with = Attr::none(cx, "deserialize_with");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
+        let mut borrowed_lifetimes = Attr::none(cx, "borrow");
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
@@ -651,6 +655,27 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(borrow)]`
+                    MetaItem(Word(ref name)) if name == "borrow" => {
+                        if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
+                            borrowed_lifetimes.set(borrowable);
+                        }
+                    }
+
+                    // Parse `#[serde(borrow = "'a + 'b")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "borrow" => {
+                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, name.as_ref(), lit) {
+                            if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
+                                for lifetime in &lifetimes {
+                                    if !borrowable.contains(lifetime) {
+                                        cx.error(format!("field `{}` does not have lifetime {}", ident, lifetime.ident));
+                                    }
+                                }
+                                borrowed_lifetimes.set(lifetimes);
+                            }
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde field attribute `{}`", meta_item.name()));
                     }
@@ -666,6 +691,30 @@ impl Field {
         // unless a different default is specified by `#[serde(default="...")]`
         if skip_deserializing.0.value.is_some() {
             default.set_if_none(Default::Default);
+        }
+
+        let mut borrowed_lifetimes = borrowed_lifetimes.get().unwrap_or_default();
+        if !borrowed_lifetimes.is_empty() {
+            // Cow<str> and Cow<[u8]> never borrow by default:
+            //
+            //     impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
+            //
+            // A #[serde(borrow)] attribute enables borrowing that corresponds
+            // roughly to these impls:
+            //
+            //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
+            //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
+            if is_cow(&field.ty, "str") {
+                let path = syn::parse_path("_serde::de::private::borrow_cow_str").unwrap();
+                deserialize_with.set_if_none(path);
+            } else if is_cow(&field.ty, "[u8]") {
+                let path = syn::parse_path("_serde::de::private::borrow_cow_bytes").unwrap();
+                deserialize_with.set_if_none(path);
+            }
+        } else if is_rptr(&field.ty, "str") || is_rptr(&field.ty, "[u8]") {
+            // Types &str and &[u8] are always implicitly borrowed. No need for
+            // a #[serde(borrow)].
+            borrowed_lifetimes = borrowable_lifetimes(cx, &ident, &field.ty).unwrap();
         }
 
         let ser_name = ser_name.get();
@@ -687,6 +736,7 @@ impl Field {
             deserialize_with: deserialize_with.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
+            borrowed_lifetimes: borrowed_lifetimes,
         }
     }
 
@@ -733,6 +783,10 @@ impl Field {
 
     pub fn de_bound(&self) -> Option<&[syn::WherePredicate]> {
         self.de_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn borrowed_lifetimes(&self) -> &BTreeSet<syn::Lifetime> {
+        &self.borrowed_lifetimes
     }
 }
 
@@ -835,4 +889,175 @@ fn parse_lit_into_ty(cx: &Ctxt,
     syn::parse_type(&string).map_err(|_| {
         cx.error(format!("failed to parse type: {} = {:?}", attr_name, string))
     })
+}
+
+// Parses a string literal like "'a + 'b + 'c" containing a nonempty list of
+// lifetimes separated by `+`.
+fn parse_lit_into_lifetimes(cx: &Ctxt,
+                            attr_name: &str,
+                            lit: &syn::Lit)
+                            -> Result<BTreeSet<syn::Lifetime>, ()> {
+    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
+    if string.is_empty() {
+        cx.error("at least one lifetime must be borrowed");
+        return Err(());
+    }
+
+    named!(lifetimes -> Vec<syn::Lifetime>,
+        separated_nonempty_list!(punct!("+"), syn::parse::lifetime)
+    );
+
+    if let IResult::Done(rest, o) = lifetimes(&string) {
+        if rest.trim().is_empty() {
+            let mut set = BTreeSet::new();
+            for lifetime in o {
+                if !set.insert(lifetime.clone()) {
+                    cx.error(format!("duplicate borrowed lifetime `{}`", lifetime.ident));
+                }
+            }
+            return Ok(set);
+        }
+    }
+    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string)))
+}
+
+// Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
+// This can have false negatives and false positives.
+//
+// False negative:
+//
+//     use std::borrow::Cow as Pig;
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         #[serde(borrow)]
+//         pig: Pig<'a, str>,
+//     }
+//
+// False positive:
+//
+//     type str = [i16];
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         #[serde(borrow)]
+//         cow: Cow<'a, str>,
+//     }
+fn is_cow(ty: &syn::Ty, elem: &str) -> bool {
+    let path = match *ty {
+        syn::Ty::Path(None, ref path) => path,
+        _ => {
+            return false;
+        }
+    };
+    let seg = match path.segments.last() {
+        Some(seg) => seg,
+        None => {
+            return false;
+        }
+    };
+    let params = match seg.parameters {
+        syn::PathParameters::AngleBracketed(ref params) => params,
+        _ => {
+            return false;
+        }
+    };
+    seg.ident == "Cow"
+        && params.lifetimes.len() == 1
+        && params.types == vec![syn::parse_type(elem).unwrap()]
+        && params.bindings.is_empty()
+}
+
+// Whether the type looks like it might be `&T` where elem="T". This can have
+// false negatives and false positives.
+//
+// False negative:
+//
+//     type Yarn = str;
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         r: &'a Yarn,
+//     }
+//
+// False positive:
+//
+//     type str = [i16];
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         r: &'a str,
+//     }
+fn is_rptr(ty: &syn::Ty, elem: &str) -> bool {
+    match *ty {
+        syn::Ty::Rptr(Some(_), ref mut_ty) => {
+            mut_ty.mutability == syn::Mutability::Immutable
+                && mut_ty.ty == syn::parse_type(elem).unwrap()
+        }
+        _ => false,
+    }
+}
+
+// All lifetimes that this type could borrow from a Deserializer.
+//
+// For example a type `S<'a, 'b>` could borrow `'a` and `'b`. On the other hand
+// a type `for<'a> fn(&'a str)` could not borrow `'a` from the Deserializer.
+//
+// This is used when there is an explicit or implicit `#[serde(borrow)]`
+// attribute on the field so there must be at least one borrowable lifetime.
+fn borrowable_lifetimes(cx: &Ctxt,
+                        name: &str,
+                        ty: &syn::Ty)
+                        -> Result<BTreeSet<syn::Lifetime>, ()> {
+    let mut lifetimes = BTreeSet::new();
+    collect_lifetimes(ty, &mut lifetimes);
+    if lifetimes.is_empty() {
+        Err(cx.error(format!("field `{}` has no lifetimes to borrow", name)))
+    } else {
+        Ok(lifetimes)
+    }
+}
+
+fn collect_lifetimes(ty: &syn::Ty, out: &mut BTreeSet<syn::Lifetime>) {
+    match *ty {
+        syn::Ty::Slice(ref elem) |
+        syn::Ty::Array(ref elem, _) |
+        syn::Ty::Paren(ref elem) => {
+            collect_lifetimes(elem, out);
+        }
+        syn::Ty::Ptr(ref elem) => {
+            collect_lifetimes(&elem.ty, out);
+        }
+        syn::Ty::Rptr(ref lifetime, ref elem) => {
+            out.extend(lifetime.iter().cloned());
+            collect_lifetimes(&elem.ty, out);
+        }
+        syn::Ty::Tup(ref elems) => {
+            for elem in elems {
+                collect_lifetimes(elem, out);
+            }
+        }
+        syn::Ty::Path(ref qself, ref path) => {
+            if let Some(ref qself) = *qself {
+                collect_lifetimes(&qself.ty, out);
+            }
+            for seg in &path.segments {
+                if let syn::PathParameters::AngleBracketed(ref params) = seg.parameters {
+                    out.extend(params.lifetimes.iter().cloned());
+                    for ty in &params.types {
+                        collect_lifetimes(ty, out);
+                    }
+                    for binding in &params.bindings {
+                        collect_lifetimes(&binding.ty, out);
+                    }
+                }
+            }
+        }
+        syn::Ty::BareFn(_) |
+        syn::Ty::Never |
+        syn::Ty::TraitObject(_) |
+        syn::Ty::ImplTrait(_) |
+        syn::Ty::Infer |
+        syn::Ty::Mac(_) => {}
+    }
 }
