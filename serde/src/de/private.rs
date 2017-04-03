@@ -61,7 +61,7 @@ pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-pub fn borrow_cow_str<'de, D>(deserializer: D) -> Result<Cow<'de, str>, D::Error>
+pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D::Error>
     where D: Deserializer<'de>
 {
     struct CowStrVisitor;
@@ -123,7 +123,7 @@ pub fn borrow_cow_str<'de, D>(deserializer: D) -> Result<Cow<'de, str>, D::Error
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-pub fn borrow_cow_bytes<'de, D>(deserializer: D) -> Result<Cow<'de, [u8]>, D::Error>
+pub fn borrow_cow_bytes<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, [u8]>, D::Error>
     where D: Deserializer<'de>
 {
     struct CowBytesVisitor;
