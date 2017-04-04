@@ -1009,7 +1009,23 @@ impl Visitor for OsStringVisitor {
                 variant.visit_newtype().map(OsString::from_vec)
             }
             (OsStringKind::Windows, _) => {
-                Err(Error::custom("cannot deserialize windows os string on unix"))
+                Err(Error::custom("cannot deserialize Windows OS string on Unix"))
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    fn visit_enum<V>(self, visitor: V) -> Result<OsString, V::Error>
+        where V: EnumVisitor,
+    {
+        use std::os::windows::ffi::OsStringExt;
+
+        match try!(visitor.visit_variant()) {
+            (OsStringKind::Windows, variant) => {
+                variant.visit_newtype::<Vec<u16>>().map(|vec| OsString::from_wide(&vec))
+            }
+            (OsStringKind::Unix, _) => {
+                Err(Error::custom("cannot deserialize Unix OS string on Windows"))
             }
         }
     }
