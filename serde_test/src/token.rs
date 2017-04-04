@@ -39,11 +39,17 @@ pub enum Token<'a> {
     /// A serialized `str`.
     Str(&'a str),
 
+    /// A borrowed `str`.
+    BorrowedStr(&'a str),
+
     /// A serialized `String`.
     String(String),
 
     /// A serialized `[u8]`
     Bytes(&'a [u8]),
+
+    /// A borrowed `[u8]`.
+    BorrowedBytes(&'a [u8]),
 
     /// A serialized `ByteBuf`
     ByteBuf(Vec<u8>),
