@@ -14,11 +14,7 @@ use collections::borrow::ToOwned;
 #[cfg(feature = "std")]
 use core::hash::{Hash, BuildHasher};
 #[cfg(feature = "std")]
-use std::net;
-#[cfg(any(feature = "std", feature = "unstable"))]
-use core::ops;
-#[cfg(feature = "std")]
-use std::path;
+use std::{net, ops, path};
 #[cfg(feature = "std")]
 use std::ffi::{CString, CStr, OsString, OsStr};
 #[cfg(feature = "std")]

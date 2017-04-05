@@ -65,7 +65,7 @@
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections))]
 #![cfg_attr(feature = "cargo-clippy", allow(linkedlist, type_complexity, doc_markdown))]
-#![deny(missing_docs)]
+#![deny(missing_docs, unused_imports)]
 
 #[cfg(feature = "collections")]
 extern crate collections;
