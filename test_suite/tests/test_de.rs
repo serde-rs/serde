@@ -36,6 +36,9 @@ mod macros;
 struct UnitStruct;
 
 #[derive(PartialEq, Debug, Deserialize)]
+struct NewtypeStruct(i32);
+
+#[derive(PartialEq, Debug, Deserialize)]
 struct TupleStruct(i32, i32, i32);
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -166,13 +169,6 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let v: Result<IgnoreBase, Error> = Deserialize::deserialize(&mut de);
 
-    // We run this test on every token stream for convenience, but
-    // some token streams don't make sense embedded as a map value,
-    // so we ignore those. SyntaxError is the real sign of trouble.
-    if let Err(Error::UnexpectedToken(_)) = v {
-        return;
-    }
-
     assert_eq!(v.as_ref(), Ok(&expected));
     assert_eq!(de.next_token(), None);
 }
@@ -225,7 +221,6 @@ declare_tests! {
     test_option {
         None::<i32> => &[Token::Unit],
         None::<i32> => &[Token::Option(false)],
-        Some(1) => &[Token::I32(1)],
         Some(1) => &[
             Token::Option(true),
             Token::I32(1),
@@ -258,6 +253,12 @@ declare_tests! {
         UnitStruct => &[
             Token::SeqStart(None),
             Token::SeqEnd,
+        ],
+    }
+    test_newtype_struct {
+        NewtypeStruct(1) => &[
+            Token::StructNewType("NewtypeStruct"),
+            Token::I32(1),
         ],
     }
     test_tuple_struct {

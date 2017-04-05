@@ -53,17 +53,17 @@ impl<'de> Deserialize<'de> for IgnoredAny {
             }
 
             #[inline]
-            fn visit_some<D>(self, _: D) -> Result<IgnoredAny, D::Error>
+            fn visit_some<D>(self, deserializer: D) -> Result<IgnoredAny, D::Error>
                 where D: Deserializer<'de>
             {
-                Ok(IgnoredAny)
+                IgnoredAny::deserialize(deserializer)
             }
 
             #[inline]
-            fn visit_newtype_struct<D>(self, _: D) -> Result<IgnoredAny, D::Error>
+            fn visit_newtype_struct<D>(self, deserializer: D) -> Result<IgnoredAny, D::Error>
                 where D: Deserializer<'de>
             {
-                Ok(IgnoredAny)
+                IgnoredAny::deserialize(deserializer)
             }
 
             #[inline]

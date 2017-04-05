@@ -111,6 +111,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),
             Some(Token::UnitStruct(_name)) => visitor.visit_unit(),
+            Some(Token::StructNewType(_name)) => visitor.visit_newtype_struct(self),
             Some(Token::SeqStart(len)) => {
                 self.visit_seq(len, Token::SeqSep, Token::SeqEnd, visitor)
             }
@@ -182,7 +183,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.next_token();
                 visitor.visit_some(self)
             }
-            Some(_) => visitor.visit_some(self),
+            Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
