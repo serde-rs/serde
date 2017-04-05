@@ -21,8 +21,6 @@ use collections::string::ToString;
 use core::hash::Hash;
 #[cfg(feature = "std")]
 use std::error;
-#[cfg(not(feature = "std"))]
-use error;
 
 use core::fmt::{self, Display};
 use core::iter::{self, Iterator};
@@ -67,15 +65,10 @@ impl Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for Error {
-    #[cfg(any(feature = "std", feature = "collections"))]
     fn description(&self) -> &str {
         &self.err
-    }
-
-    #[cfg(not(any(feature = "std", feature = "collections")))]
-    fn description(&self) -> &str {
-        "Serde deserialization error"
     }
 }
 

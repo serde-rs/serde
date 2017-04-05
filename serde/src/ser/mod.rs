@@ -94,8 +94,6 @@
 
 #[cfg(feature = "std")]
 use std::error;
-#[cfg(not(feature = "std"))]
-use error;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::string::String;
@@ -117,34 +115,46 @@ pub use self::impossible::Impossible;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Trait used by `Serialize` implementations to generically construct errors
-/// belonging to the `Serializer` against which they are currently running.
-pub trait Error: Sized + error::Error {
-    /// Raised when a `Serialize` implementation encounters a general error
-    /// while serializing a type.
-    ///
-    /// The message should not be capitalized and should not end with a period.
-    ///
-    /// For example, a filesystem `Path` may refuse to serialize itself if it
-    /// contains invalid UTF-8 data.
-    ///
-    /// ```rust
-    /// # use serde::ser::{Serialize, Serializer, Error};
-    /// # struct Path;
-    /// # impl Path { fn to_str(&self) -> Option<&str> { unimplemented!() } }
-    /// impl Serialize for Path {
-    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    ///         where S: Serializer
-    ///     {
-    ///         match self.to_str() {
-    ///             Some(s) => s.serialize(serializer),
-    ///             None => Err(Error::custom("path contains invalid UTF-8 characters")),
-    ///         }
-    ///     }
-    /// }
-    /// ```
-    fn custom<T: Display>(msg: T) -> Self;
+macro_rules! declare_error_trait {
+    (Error: Sized $(+ $supertrait:path)*) => {
+        /// Trait used by `Serialize` implementations to generically construct
+        /// errors belonging to the `Serializer` against which they are
+        /// currently running.
+        pub trait Error: Sized $(+ $supertrait)* {
+            /// Raised when a `Serialize` implementation encounters a general
+            /// error while serializing a type.
+            ///
+            /// The message should not be capitalized and should not end with a
+            /// period.
+            ///
+            /// For example, a filesystem `Path` may refuse to serialize itself
+            /// if it contains invalid UTF-8 data.
+            ///
+            /// ```rust
+            /// # use serde::ser::{Serialize, Serializer, Error};
+            /// # struct Path;
+            /// # impl Path { fn to_str(&self) -> Option<&str> { unimplemented!() } }
+            /// impl Serialize for Path {
+            ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            ///         where S: Serializer
+            ///     {
+            ///         match self.to_str() {
+            ///             Some(s) => s.serialize(serializer),
+            ///             None => Err(Error::custom("path contains invalid UTF-8 characters")),
+            ///         }
+            ///     }
+            /// }
+            /// ```
+            fn custom<T: Display>(msg: T) -> Self;
+        }
+    }
 }
+
+#[cfg(feature = "std")]
+declare_error_trait!(Error: Sized + error::Error);
+
+#[cfg(not(feature = "std"))]
+declare_error_trait!(Error: Sized);
 
 ///////////////////////////////////////////////////////////////////////////////
 
