@@ -115,16 +115,27 @@ impl<'de> Deserialize<'de> for bool {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-macro_rules! impl_deserialize_num_method {
-    ($ty:ident, $src_ty:ident, $method:ident, $from_method:ident, $group:ident, $group_ty:ident) => {
+macro_rules! visit_integer_method {
+    ($src_ty:ident, $method:ident, $from_method:ident, $group:ident, $group_ty:ident) => {
         #[inline]
-        fn $method<E>(self, v: $src_ty) -> Result<$ty, E>
-            where E: Error,
+        fn $method<E>(self, v: $src_ty) -> Result<Self::Value, E>
+            where E: Error
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
                 None => Err(Error::invalid_value(Unexpected::$group(v as $group_ty), &self)),
             }
+        }
+    }
+}
+
+macro_rules! visit_float_method {
+    ($src_ty:ident, $method:ident) => {
+        #[inline]
+        fn $method<E>(self, v: $src_ty) -> Result<Self::Value, E>
+            where E: Error
+        {
+            Ok(v as Self::Value)
         }
     }
 }
@@ -155,18 +166,18 @@ macro_rules! impl_deserialize_num {
         }
     };
     (integer $ty:ident) => {
-        impl_deserialize_num_method!($ty, i8, visit_i8, from_i8, Signed, i64);
-        impl_deserialize_num_method!($ty, i16, visit_i16, from_i16, Signed, i64);
-        impl_deserialize_num_method!($ty, i32, visit_i32, from_i32, Signed, i64);
-        impl_deserialize_num_method!($ty, i64, visit_i64, from_i64, Signed, i64);
-        impl_deserialize_num_method!($ty, u8, visit_u8, from_u8, Unsigned, u64);
-        impl_deserialize_num_method!($ty, u16, visit_u16, from_u16, Unsigned, u64);
-        impl_deserialize_num_method!($ty, u32, visit_u32, from_u32, Unsigned, u64);
-        impl_deserialize_num_method!($ty, u64, visit_u64, from_u64, Unsigned, u64);
+        visit_integer_method!(i8, visit_i8, from_i8, Signed, i64);
+        visit_integer_method!(i16, visit_i16, from_i16, Signed, i64);
+        visit_integer_method!(i32, visit_i32, from_i32, Signed, i64);
+        visit_integer_method!(i64, visit_i64, from_i64, Signed, i64);
+        visit_integer_method!(u8, visit_u8, from_u8, Unsigned, u64);
+        visit_integer_method!(u16, visit_u16, from_u16, Unsigned, u64);
+        visit_integer_method!(u32, visit_u32, from_u32, Unsigned, u64);
+        visit_integer_method!(u64, visit_u64, from_u64, Unsigned, u64);
     };
     (float $ty:ident) => {
-        impl_deserialize_num_method!($ty, f32, visit_f32, from_f32, Float, f64);
-        impl_deserialize_num_method!($ty, f64, visit_f64, from_f64, Float, f64);
+        visit_float_method!(f32, visit_f32);
+        visit_float_method!(f64, visit_f64);
     };
 }
 
