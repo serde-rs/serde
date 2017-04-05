@@ -122,7 +122,7 @@ pub use self::ignored_any::IgnoredAny;
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_error_trait {
-    (Error: Sized $(+ $supertrait:path)*) => {
+    (Error: Sized $(+ $($supertrait:ident)::*)*) => {
         /// The `Error` trait allows `Deserialize` implementations to create descriptive
         /// error messages belonging to the `Deserializer` against which they are
         /// currently running.
@@ -136,7 +136,7 @@ macro_rules! declare_error_trait {
         ///
         /// Most deserializers should only need to provide the `Error::custom` method
         /// and inherit the default behavior for the other methods.
-        pub trait Error: Sized $(+ $supertrait)* {
+        pub trait Error: Sized $(+ $($supertrait)::*)* {
             /// Raised when there is general error when deserializing a type.
             ///
             /// The message should not be capitalized and should not end with a period.
