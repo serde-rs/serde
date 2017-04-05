@@ -10,6 +10,7 @@ documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization", "no_std"]
 readme = "../README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+publish = false # this branch contains breaking changes
 
 [features]
 unstable = []

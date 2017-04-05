@@ -10,6 +10,7 @@ documentation = "https://docs.serde.rs/serde_test/"
 keywords = ["serde", "serialization"]
 readme = "../README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+publish = false # this branch contains breaking changes
 
 [dependencies]
 serde = { version = "0.9", path = "../serde" }
