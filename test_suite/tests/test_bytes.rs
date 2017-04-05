@@ -37,21 +37,15 @@ fn test_byte_buf() {
     assert_de_tokens(&buf, &[Token::String("ABC")]);
     assert_de_tokens(&buf, &[
         Token::SeqStart(None),
-        Token::SeqSep,
         Token::U8(65),
-        Token::SeqSep,
         Token::U8(66),
-        Token::SeqSep,
         Token::U8(67),
         Token::SeqEnd,
     ]);
     assert_de_tokens(&buf, &[
         Token::SeqStart(Some(3)),
-        Token::SeqSep,
         Token::U8(65),
-        Token::SeqSep,
         Token::U8(66),
-        Token::SeqSep,
         Token::U8(67),
         Token::SeqEnd,
     ]);

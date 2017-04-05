@@ -90,13 +90,8 @@ fn test_tuple() {
         &("str", &b"bytes"[..]),
         &[
             Token::TupleStart(2),
-
-            Token::TupleSep,
             Token::BorrowedStr("str"),
-
-            Token::TupleSep,
             Token::BorrowedBytes(b"bytes"),
-
             Token::TupleEnd,
         ]
     );
@@ -115,11 +110,9 @@ fn test_struct() {
         &[
             Token::StructStart("Borrowing", 2),
 
-            Token::StructSep,
             Token::BorrowedStr("bs"),
             Token::BorrowedStr("str"),
 
-            Token::StructSep,
             Token::BorrowedStr("bb"),
             Token::BorrowedBytes(b"bytes"),
 
@@ -141,11 +134,9 @@ fn test_cow() {
     let tokens = &[
         Token::StructStart("Cows", 2),
 
-        Token::StructSep,
         Token::Str("copied"),
         Token::BorrowedStr("copied"),
 
-        Token::StructSep,
         Token::Str("borrowed"),
         Token::BorrowedStr("borrowed"),
 

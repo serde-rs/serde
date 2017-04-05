@@ -105,28 +105,17 @@ pub enum Token {
     /// header is a list of elements, followed by `SeqEnd`.
     SeqArrayStart(usize),
 
-    /// A separator, which occurs *before* every element in a sequence.
-    ///
-    /// Elements in sequences are represented by a `SeqSep`, followed by the value of the element.
-    SeqSep,
-
     /// An indicator of the end of a sequence.
     SeqEnd,
 
     /// The header to a tuple of the given length, similar to `SeqArrayStart`.
     TupleStart(usize),
 
-    /// A separator, similar to `SeqSep`.
-    TupleSep,
-
     /// An indicator of the end of a tuple, similar to `SeqEnd`.
     TupleEnd,
 
     /// The header to a tuple struct of the given name and length.
     TupleStructStart(&'static str, usize),
-
-    /// A separator, similar to `TupleSep`.
-    TupleStructSep,
 
     /// An indicator of the end of a tuple struct, similar to `TupleEnd`.
     TupleStructEnd,
@@ -137,20 +126,11 @@ pub enum Token {
     /// is a list of key-value pairs, followed by `MapEnd`.
     MapStart(Option<usize>),
 
-    /// A separator, which occurs *before* every key-value pair in a map.
-    ///
-    /// Elements in maps are represented by a `MapSep`, followed by a serialized key, followed
-    /// by a serialized value.
-    MapSep,
-
     /// An indicator of the end of a map.
     MapEnd,
 
     /// The header of a struct of the given name and length, similar to `MapStart`.
     StructStart(&'static str, usize),
-
-    /// A separator, similar to `MapSep`.
-    StructSep,
 
     /// An indicator of the end of a struct, similar to `MapEnd`.
     StructEnd,
@@ -158,18 +138,12 @@ pub enum Token {
     /// The header to a tuple variant of an enum of the given name, of the given name and length.
     EnumSeqStart(&'static str, &'static str, usize),
 
-    /// A separator, similar to `TupleSep`.
-    EnumSeqSep,
-
     /// An indicator of the end of a tuple variant, similar to `TupleEnd`.
     EnumSeqEnd,
 
     /// The header of a struct variant of an enum of the given name, of the given name and length,
     /// similar to `StructStart`.
     EnumMapStart(&'static str, &'static str, usize),
-
-    /// A separator, similar to `StructSep`.
-    EnumMapSep,
 
     /// An indicator of the end of a struct, similar to `StructEnd`.
     EnumMapEnd,
