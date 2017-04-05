@@ -149,7 +149,13 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
                               _variant_index: usize,
                               variant: &'static str)
                               -> Result<(), Error> {
-        assert_next_token!(self, EnumUnit(name, variant));
+        if self.tokens.first() == Some(&Token::EnumStart(name)) {
+            self.next_token();
+            assert_next_token!(self, Str(variant));
+            assert_next_token!(self, Unit);
+        } else {
+            assert_next_token!(self, EnumUnit(name, variant));
+        }
         Ok(())
     }
 
@@ -168,7 +174,12 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
                                             -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, EnumNewType(name, variant));
+        if self.tokens.first() == Some(&Token::EnumStart(name)) {
+            self.next_token();
+            assert_next_token!(self, Str(variant));
+        } else {
+            assert_next_token!(self, EnumNewType(name, variant));
+        }
         value.serialize(self)
     }
 
