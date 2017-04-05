@@ -54,8 +54,10 @@ use core::nonzero::{NonZero, Zeroable};
 #[allow(deprecated)] // required for impl Deserialize for NonZero<T>
 use core::num::Zero;
 
-use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, Unexpected,
+use de::{Deserialize, Deserializer, EnumVisitor, Error, SeqVisitor, Unexpected,
          VariantVisitor, Visitor};
+#[cfg(any(feature = "std", feature = "collections"))]
+use de::MapVisitor;
 use de::from_primitive::FromPrimitive;
 
 ///////////////////////////////////////////////////////////////////////////////
