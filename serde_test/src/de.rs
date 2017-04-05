@@ -84,51 +84,52 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Error>
         where V: Visitor<'de>
     {
-        match self.next_token() {
-            Some(Token::Bool(v)) => visitor.visit_bool(v),
-            Some(Token::I8(v)) => visitor.visit_i8(v),
-            Some(Token::I16(v)) => visitor.visit_i16(v),
-            Some(Token::I32(v)) => visitor.visit_i32(v),
-            Some(Token::I64(v)) => visitor.visit_i64(v),
-            Some(Token::U8(v)) => visitor.visit_u8(v),
-            Some(Token::U16(v)) => visitor.visit_u16(v),
-            Some(Token::U32(v)) => visitor.visit_u32(v),
-            Some(Token::U64(v)) => visitor.visit_u64(v),
-            Some(Token::F32(v)) => visitor.visit_f32(v),
-            Some(Token::F64(v)) => visitor.visit_f64(v),
-            Some(Token::Char(v)) => visitor.visit_char(v),
-            Some(Token::Str(v)) => visitor.visit_str(v),
-            Some(Token::BorrowedStr(v)) => visitor.visit_borrowed_str(v),
-            Some(Token::String(v)) => visitor.visit_string(v.to_owned()),
-            Some(Token::Bytes(v)) => visitor.visit_bytes(v),
-            Some(Token::BorrowedBytes(v)) => visitor.visit_borrowed_bytes(v),
-            Some(Token::ByteBuf(v)) => visitor.visit_byte_buf(v.to_vec()),
-            Some(Token::Option(false)) => visitor.visit_none(),
-            Some(Token::Option(true)) => visitor.visit_some(self),
-            Some(Token::Unit) => visitor.visit_unit(),
-            Some(Token::UnitStruct(_name)) => visitor.visit_unit(),
-            Some(Token::StructNewType(_name)) => visitor.visit_newtype_struct(self),
-            Some(Token::SeqStart(len)) => {
+        let token = self.next_token().ok_or(Error::EndOfTokens)?;
+        match token {
+            Token::Bool(v) => visitor.visit_bool(v),
+            Token::I8(v) => visitor.visit_i8(v),
+            Token::I16(v) => visitor.visit_i16(v),
+            Token::I32(v) => visitor.visit_i32(v),
+            Token::I64(v) => visitor.visit_i64(v),
+            Token::U8(v) => visitor.visit_u8(v),
+            Token::U16(v) => visitor.visit_u16(v),
+            Token::U32(v) => visitor.visit_u32(v),
+            Token::U64(v) => visitor.visit_u64(v),
+            Token::F32(v) => visitor.visit_f32(v),
+            Token::F64(v) => visitor.visit_f64(v),
+            Token::Char(v) => visitor.visit_char(v),
+            Token::Str(v) => visitor.visit_str(v),
+            Token::BorrowedStr(v) => visitor.visit_borrowed_str(v),
+            Token::String(v) => visitor.visit_string(v.to_owned()),
+            Token::Bytes(v) => visitor.visit_bytes(v),
+            Token::BorrowedBytes(v) => visitor.visit_borrowed_bytes(v),
+            Token::ByteBuf(v) => visitor.visit_byte_buf(v.to_vec()),
+            Token::Option(false) => visitor.visit_none(),
+            Token::Option(true) => visitor.visit_some(self),
+            Token::Unit => visitor.visit_unit(),
+            Token::UnitStruct(_name) => visitor.visit_unit(),
+            Token::StructNewType(_name) => visitor.visit_newtype_struct(self),
+            Token::SeqStart(len) => {
                 self.visit_seq(len, Token::SeqEnd, visitor)
             }
-            Some(Token::SeqArrayStart(len)) => {
+            Token::SeqArrayStart(len) => {
                 self.visit_seq(Some(len), Token::SeqEnd, visitor)
             }
-            Some(Token::TupleStart(len)) => {
+            Token::TupleStart(len) => {
                 self.visit_seq(Some(len), Token::TupleEnd, visitor)
             }
-            Some(Token::TupleStructStart(_, len)) => {
+            Token::TupleStructStart(_, len) => {
                 self.visit_seq(Some(len),
                                Token::TupleStructEnd,
                                visitor)
             }
-            Some(Token::MapStart(len)) => {
+            Token::MapStart(len) => {
                 self.visit_map(len, Token::MapEnd, visitor)
             }
-            Some(Token::StructStart(_, len)) => {
+            Token::StructStart(_, len) => {
                 self.visit_map(Some(len), Token::StructEnd, visitor)
             }
-            Some(Token::EnumStart(_)) => {
+            Token::EnumStart(_) => {
                 let variant = self.next_token().ok_or(Error::EndOfTokens)?;
                 let next = *self.tokens.first().ok_or(Error::EndOfTokens)?;
                 match (variant, next) {
@@ -152,18 +153,23 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                     }
                 }
             }
-            Some(Token::EnumUnit(_, variant)) => visitor.visit_str(variant),
-            Some(Token::EnumNewType(_, variant)) => {
+            Token::EnumUnit(_, variant) => visitor.visit_str(variant),
+            Token::EnumNewType(_, variant) => {
                 visitor.visit_map(EnumMapVisitor::new(self, Token::Str(variant), EnumFormat::Any))
             }
-            Some(Token::EnumSeqStart(_, variant, _)) => {
+            Token::EnumSeqStart(_, variant, _) => {
                 visitor.visit_map(EnumMapVisitor::new(self, Token::Str(variant), EnumFormat::Seq))
             }
-            Some(Token::EnumMapStart(_, variant, _)) => {
+            Token::EnumMapStart(_, variant, _) => {
                 visitor.visit_map(EnumMapVisitor::new(self, Token::Str(variant), EnumFormat::Map))
             }
-            Some(token) => Err(Error::UnexpectedToken(token)),
-            None => Err(Error::EndOfTokens),
+            Token::SeqEnd |
+            Token::TupleEnd |
+            Token::TupleStructEnd |
+            Token::MapEnd |
+            Token::StructEnd |
+            Token::EnumSeqEnd |
+            Token::EnumMapEnd => Err(Error::UnexpectedToken(token)),
         }
     }
 
