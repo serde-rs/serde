@@ -1085,7 +1085,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
 
     #[cfg(windows)]
     fn visit_enum<V>(self, visitor: V) -> Result<OsString, V::Error>
-        where V: EnumVisitor,
+        where V: EnumVisitor<'de>,
     {
         use std::os::windows::ffi::OsStringExt;
 
