@@ -1,24 +1,9 @@
-#[cfg(feature = "std")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! forward_to_deserialize_method {
     ($func:ident($($arg:ty),*)) => {
         #[inline]
-        fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::std::result::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor<'de>
-        {
-            self.deserialize(visitor)
-        }
-    };
-}
-
-#[cfg(not(feature = "std"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! forward_to_deserialize_method {
-    ($func:ident($($arg:ty),*)) => {
-        #[inline]
-        fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> ::core::result::Result<__V::Value, Self::Error>
+        fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> $crate::export::Result<__V::Value, Self::Error>
             where __V: $crate::de::Visitor<'de>
         {
             self.deserialize(visitor)
