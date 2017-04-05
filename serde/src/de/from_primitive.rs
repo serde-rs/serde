@@ -8,71 +8,36 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-// Extracted from https://github.com/rust-num/num.
-
-// Rust 1.5 is unhappy that this private module is undocumented.
-#![allow(missing_docs)]
-
 use core::{usize, u8, u16, u32, u64};
 use core::{isize, i8, i16, i32, i64};
 use core::{f32, f64};
-use core::mem::size_of;
 
 macro_rules! int_to_int {
-    ($SrcT:ty, $DstT:ty, $slf:expr) => (
-        {
-            if size_of::<$SrcT>() <= size_of::<$DstT>() {
-                Some($slf as $DstT)
-            } else {
-                let n = $slf as i64;
-                if <$DstT>::min_value() as i64 <= n && n <= <$DstT>::max_value() as i64 {
-                    Some($slf as $DstT)
-                } else {
-                    None
-                }
-            }
+    ($dst:ident, $n:ident) => (
+        if $dst::MIN as i64 <= $n as i64 && $n as i64 <= $dst::MAX as i64 {
+            Some($n as $dst)
+        } else {
+            None
         }
     )
 }
 
 macro_rules! int_to_uint {
-    ($SrcT:ty, $DstT:ty, $slf:expr) => (
-        {
-            let zero: $SrcT = 0;
-            if zero <= $slf && $slf as u64 <= <$DstT>::max_value() as u64 {
-                Some($slf as $DstT)
-            } else {
-                None
-            }
+    ($dst:ident, $n:ident) => (
+        if 0 <= $n && $n as u64 <= $dst::MAX as u64 {
+            Some($n as $dst)
+        } else {
+            None
         }
     )
 }
 
-macro_rules! uint_to_int {
-    ($DstT:ty, $slf:expr) => (
-        {
-            if $slf as u64 <= <$DstT>::max_value() as u64 {
-                Some($slf as $DstT)
-            } else {
-                None
-            }
-        }
-    )
-}
-
-macro_rules! uint_to_uint {
-    ($SrcT:ty, $DstT:ty, $slf:expr) => (
-        {
-            if size_of::<$SrcT>() <= size_of::<$DstT>() {
-                Some($slf as $DstT)
-            } else {
-                let zero: $SrcT = 0;
-                if zero <= $slf && $slf as u64 <= <$DstT>::max_value() as u64 {
-                    Some($slf as $DstT)
-                } else {
-                    None
-                }
-            }
+macro_rules! uint_to {
+    ($dst:ident, $n:ident) => (
+        if $n as u64 <= $dst::MAX as u64 {
+            Some($n as $dst)
+        } else {
+            None
         }
     )
 }
@@ -91,42 +56,42 @@ pub trait FromPrimitive: Sized {
 }
 
 macro_rules! impl_from_primitive_for_int {
-    ($T:ty) => (
-        impl FromPrimitive for $T {
-            #[inline] fn from_isize(n: isize) -> Option<Self> { int_to_int!(isize, $T, n) }
-            #[inline] fn from_i8(n: i8) -> Option<Self> { int_to_int!(i8, $T, n) }
-            #[inline] fn from_i16(n: i16) -> Option<Self> { int_to_int!(i16, $T, n) }
-            #[inline] fn from_i32(n: i32) -> Option<Self> { int_to_int!(i32, $T, n) }
-            #[inline] fn from_i64(n: i64) -> Option<Self> { int_to_int!(i64, $T, n) }
-            #[inline] fn from_usize(n: usize) -> Option<Self> { uint_to_int!($T, n) }
-            #[inline] fn from_u8(n: u8) -> Option<Self> { uint_to_int!($T, n) }
-            #[inline] fn from_u16(n: u16) -> Option<Self> { uint_to_int!($T, n) }
-            #[inline] fn from_u32(n: u32) -> Option<Self> { uint_to_int!($T, n) }
-            #[inline] fn from_u64(n: u64) -> Option<Self> { uint_to_int!($T, n) }
+    ($t:ident) => (
+        impl FromPrimitive for $t {
+            #[inline] fn from_isize(n: isize) -> Option<Self> { int_to_int!($t, n) }
+            #[inline] fn from_i8(n: i8) -> Option<Self> { int_to_int!($t, n) }
+            #[inline] fn from_i16(n: i16) -> Option<Self> { int_to_int!($t, n) }
+            #[inline] fn from_i32(n: i32) -> Option<Self> { int_to_int!($t, n) }
+            #[inline] fn from_i64(n: i64) -> Option<Self> { int_to_int!($t, n) }
+            #[inline] fn from_usize(n: usize) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u8(n: u8) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u16(n: u16) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u32(n: u32) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u64(n: u64) -> Option<Self> { uint_to!($t, n) }
         }
     )
 }
 
 macro_rules! impl_from_primitive_for_uint {
-    ($T:ty) => (
-        impl FromPrimitive for $T {
-            #[inline] fn from_isize(n: isize) -> Option<Self> { int_to_uint!(isize, $T, n) }
-            #[inline] fn from_i8(n: i8) -> Option<Self> { int_to_uint!(i8, $T, n) }
-            #[inline] fn from_i16(n: i16) -> Option<Self> { int_to_uint!(i16, $T, n) }
-            #[inline] fn from_i32(n: i32) -> Option<Self> { int_to_uint!(i32, $T, n) }
-            #[inline] fn from_i64(n: i64) -> Option<Self> { int_to_uint!(i64, $T, n) }
-            #[inline] fn from_usize(n: usize) -> Option<Self> { uint_to_uint!(usize, $T, n) }
-            #[inline] fn from_u8(n: u8) -> Option<Self> { uint_to_uint!(u8, $T, n) }
-            #[inline] fn from_u16(n: u16) -> Option<Self> { uint_to_uint!(u16, $T, n) }
-            #[inline] fn from_u32(n: u32) -> Option<Self> { uint_to_uint!(u32, $T, n) }
-            #[inline] fn from_u64(n: u64) -> Option<Self> { uint_to_uint!(u64, $T, n) }
+    ($t:ident) => (
+        impl FromPrimitive for $t {
+            #[inline] fn from_isize(n: isize) -> Option<Self> { int_to_uint!($t, n) }
+            #[inline] fn from_i8(n: i8) -> Option<Self> { int_to_uint!($t, n) }
+            #[inline] fn from_i16(n: i16) -> Option<Self> { int_to_uint!($t, n) }
+            #[inline] fn from_i32(n: i32) -> Option<Self> { int_to_uint!($t, n) }
+            #[inline] fn from_i64(n: i64) -> Option<Self> { int_to_uint!($t, n) }
+            #[inline] fn from_usize(n: usize) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u8(n: u8) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u16(n: u16) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u32(n: u32) -> Option<Self> { uint_to!($t, n) }
+            #[inline] fn from_u64(n: u64) -> Option<Self> { uint_to!($t, n) }
         }
     )
 }
 
 macro_rules! impl_from_primitive_for_float {
-    ($T:ty) => (
-        impl FromPrimitive for $T {
+    ($t:ident) => (
+        impl FromPrimitive for $t {
             #[inline] fn from_isize(n: isize) -> Option<Self> { Some(n as Self) }
             #[inline] fn from_i8(n: i8) -> Option<Self> { Some(n as Self) }
             #[inline] fn from_i16(n: i16) -> Option<Self> { Some(n as Self) }
