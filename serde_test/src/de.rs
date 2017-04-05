@@ -111,6 +111,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),
             Some(Token::UnitStruct(_name)) => visitor.visit_unit(),
+            Some(Token::StructNewType(_name)) => visitor.visit_newtype_struct(self),
             Some(Token::SeqStart(len)) => {
                 self.visit_seq(len, Token::SeqSep, Token::SeqEnd, visitor)
             }
@@ -132,12 +133,35 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             Some(Token::StructStart(_, len)) => {
                 self.visit_map(Some(len), Token::StructSep, Token::StructEnd, visitor)
             }
+            Some(Token::EnumStart(_)) => {
+                let variant = self.next_token().ok_or(Error::EndOfTokens)?;
+                let next = *self.tokens.first().ok_or(Error::EndOfTokens)?;
+                match (variant, next) {
+                    (Token::Str(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_str(variant)
+                    }
+                    (Token::Bytes(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_bytes(variant)
+                    }
+                    (Token::U32(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_u32(variant)
+                    }
+                    (variant, Token::Unit) => {
+                        Err(Error::UnexpectedToken(variant))
+                    }
+                    (variant, _) => {
+                        visitor.visit_map(EnumMapVisitor::new(self, variant))
+                    }
+                }
+            }
             Some(Token::EnumUnit(_, variant)) => visitor.visit_str(variant),
-            Some(Token::EnumStart(variant)) |
             Some(Token::EnumNewType(_, variant)) |
             Some(Token::EnumSeqStart(_, variant, _)) |
             Some(Token::EnumMapStart(_, variant, _)) => {
-                visitor.visit_map(EnumMapVisitor::new(self, variant))
+                visitor.visit_map(EnumMapVisitor::new(self, Token::Str(variant)))
             }
             Some(token) => Err(Error::UnexpectedToken(token)),
             None => Err(Error::EndOfTokens),
@@ -159,7 +183,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.next_token();
                 visitor.visit_some(self)
             }
-            Some(_) => visitor.visit_some(self),
+            Some(_) => self.deserialize(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -542,11 +566,11 @@ impl<'de, 'a> VariantVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
 
 struct EnumMapVisitor<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
-    variant: Option<&'a str>,
+    variant: Option<Token>,
 }
 
 impl<'a, 'de> EnumMapVisitor<'a, 'de> {
-    fn new(de: &'a mut Deserializer<'de>, variant: &'a str) -> Self {
+    fn new(de: &'a mut Deserializer<'de>, variant: Token) -> Self {
         EnumMapVisitor {
             de: de,
             variant: Some(variant),
@@ -561,7 +585,18 @@ impl<'de, 'a> MapVisitor<'de> for EnumMapVisitor<'a, 'de> {
         where K: DeserializeSeed<'de>
     {
         match self.variant.take() {
-            Some(variant) => seed.deserialize(variant.into_deserializer()).map(Some),
+            Some(Token::Str(variant)) => {
+                seed.deserialize(variant.into_deserializer()).map(Some)
+            }
+            Some(Token::Bytes(variant)) => {
+                seed.deserialize(BytesDeserializer { value: variant }).map(Some)
+            }
+            Some(Token::U32(variant)) => {
+                seed.deserialize(variant.into_deserializer()).map(Some)
+            }
+            Some(other) => {
+                Err(Error::UnexpectedToken(other))
+            }
             None => Ok(None),
         }
     }
@@ -598,5 +633,25 @@ impl<'de, 'a> MapVisitor<'de> for EnumMapVisitor<'a, 'de> {
             }
             _ => seed.deserialize(&mut *self.de),
         }
+    }
+}
+
+struct BytesDeserializer {
+    value: &'static [u8],
+}
+
+impl<'de> de::Deserializer<'de> for BytesDeserializer {
+    type Error = Error;
+
+    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where V: de::Visitor<'de>
+    {
+        visitor.visit_bytes(self.value)
+    }
+
+    forward_to_deserialize! {
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
+        struct struct_field tuple enum ignored_any byte_buf
     }
 }
