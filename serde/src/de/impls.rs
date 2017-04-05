@@ -1,5 +1,3 @@
-//! This module contains `Deserialize` and `Visitor` implementations.
-
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 #[cfg(all(feature = "collections", not(feature = "std")))]
@@ -65,8 +63,7 @@ use bytes::ByteBuf;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// A visitor that produces a `()`.
-pub struct UnitVisitor;
+struct UnitVisitor;
 
 impl<'de> Visitor<'de> for UnitVisitor {
     type Value = ();
@@ -98,8 +95,7 @@ impl<'de> Deserialize<'de> for () {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// A visitor that produces a `bool`.
-pub struct BoolVisitor;
+struct BoolVisitor;
 
 impl<'de> Visitor<'de> for BoolVisitor {
     type Value = bool;
@@ -439,8 +435,7 @@ impl<'de, T> Deserialize<'de> for Option<T>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// A visitor that produces a `PhantomData`.
-pub struct PhantomDataVisitor<T> {
+struct PhantomDataVisitor<T> {
     marker: PhantomData<T>,
 }
 
@@ -479,14 +474,12 @@ macro_rules! seq_impl {
         $with_capacity:expr,
         $insert:expr
     ) => {
-        /// A visitor that produces a sequence.
-        pub struct $visitor_ty<T $(, $typaram)*> {
+        struct $visitor_ty<T $(, $typaram)*> {
             marker: PhantomData<$ty<T $(, $typaram)*>>,
         }
 
         impl<T $(, $typaram),*> $visitor_ty<T $(, $typaram)*> {
-            /// Construct a new sequence visitor.
-            pub fn new() -> Self {
+            fn new() -> Self {
                 $visitor_ty {
                     marker: PhantomData,
                 }
@@ -599,7 +592,7 @@ struct ArrayVisitor<A> {
 }
 
 impl<A> ArrayVisitor<A> {
-    pub fn new() -> Self {
+    fn new() -> Self {
         ArrayVisitor { marker: PhantomData }
     }
 }
@@ -718,14 +711,12 @@ array_impls! {
 macro_rules! tuple_impls {
     ($($len:expr => $visitor:ident => ($($n:tt $name:ident)+))+) => {
         $(
-            /// Construct a tuple visitor.
-            pub struct $visitor<$($name,)+> {
+            struct $visitor<$($name,)+> {
                 marker: PhantomData<($($name,)+)>,
             }
 
             impl<$($name,)+> $visitor<$($name,)+> {
-                /// Construct a `TupleVisitor*<T>`.
-                pub fn new() -> Self {
+                fn new() -> Self {
                     $visitor { marker: PhantomData }
                 }
             }
@@ -794,14 +785,12 @@ macro_rules! map_impl {
         $ctor:expr,
         $with_capacity:expr
     ) => {
-        /// A visitor that produces a map.
-        pub struct $visitor_ty<K, V $(, $typaram)*> {
+        struct $visitor_ty<K, V $(, $typaram)*> {
             marker: PhantomData<$ty<K, V $(, $typaram)*>>,
         }
 
         impl<K, V $(, $typaram)*> $visitor_ty<K, V $(, $typaram)*> {
-            /// Construct a `MapVisitor*<T>`.
-            pub fn new() -> Self {
+            fn new() -> Self {
                 $visitor_ty {
                     marker: PhantomData,
                 }
@@ -1548,109 +1537,5 @@ impl<'de, T, E> Deserialize<'de> for Result<T, E>
         const VARIANTS: &'static [&'static str] = &["Ok", "Err"];
 
         deserializer.deserialize_enum("Result", VARIANTS, ResultVisitor(PhantomData))
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-/// A target for deserializers that want to ignore data. Implements
-/// Deserialize and silently eats data given to it.
-pub struct IgnoredAny;
-
-impl<'de> Deserialize<'de> for IgnoredAny {
-    #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<IgnoredAny, D::Error>
-        where D: Deserializer<'de>
-    {
-        struct IgnoredAnyVisitor;
-
-        impl<'de> Visitor<'de> for IgnoredAnyVisitor {
-            type Value = IgnoredAny;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("anything at all")
-            }
-
-            #[inline]
-            fn visit_bool<E>(self, _: bool) -> Result<IgnoredAny, E> {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_i64<E>(self, _: i64) -> Result<IgnoredAny, E> {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_u64<E>(self, _: u64) -> Result<IgnoredAny, E> {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_f64<E>(self, _: f64) -> Result<IgnoredAny, E> {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_str<E>(self, _: &str) -> Result<IgnoredAny, E>
-                where E: Error
-            {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_none<E>(self) -> Result<IgnoredAny, E> {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_some<D>(self, _: D) -> Result<IgnoredAny, D::Error>
-                where D: Deserializer<'de>
-            {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_newtype_struct<D>(self, _: D) -> Result<IgnoredAny, D::Error>
-                where D: Deserializer<'de>
-            {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_unit<E>(self) -> Result<IgnoredAny, E> {
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_seq<V>(self, mut visitor: V) -> Result<IgnoredAny, V::Error>
-                where V: SeqVisitor<'de>
-            {
-                while let Some(_) = try!(visitor.visit::<IgnoredAny>()) {
-                    // Gobble
-                }
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_map<V>(self, mut visitor: V) -> Result<IgnoredAny, V::Error>
-                where V: MapVisitor<'de>
-            {
-                while let Some((_, _)) = try!(visitor.visit::<IgnoredAny, IgnoredAny>()) {
-                    // Gobble
-                }
-                Ok(IgnoredAny)
-            }
-
-            #[inline]
-            fn visit_bytes<E>(self, _: &[u8]) -> Result<IgnoredAny, E>
-                where E: Error
-            {
-                Ok(IgnoredAny)
-            }
-        }
-
-        // TODO maybe not necessary with impl specialization
-        deserializer.deserialize_ignored_any(IgnoredAnyVisitor)
     }
 }

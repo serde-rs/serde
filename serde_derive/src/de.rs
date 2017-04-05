@@ -1288,7 +1288,7 @@ fn deserialize_map(ident: &syn::Ident,
         None
     } else {
         Some(quote! {
-            _ => { let _ = try!(_serde::de::MapVisitor::visit_value::<_serde::de::impls::IgnoredAny>(&mut __visitor)); }
+            _ => { let _ = try!(_serde::de::MapVisitor::visit_value::<_serde::de::IgnoredAny>(&mut __visitor)); }
         })
     };
 
