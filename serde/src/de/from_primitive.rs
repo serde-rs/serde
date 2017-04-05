@@ -18,39 +18,6 @@ use core::{isize, i8, i16, i32, i64};
 use core::{f32, f64};
 use core::mem::size_of;
 
-/// Numbers which have upper and lower bounds
-pub trait Bounded {
-    // FIXME (#5527): These should be associated constants
-    /// returns the smallest finite number this type can represent
-    fn min_value() -> Self;
-    /// returns the largest finite number this type can represent
-    fn max_value() -> Self;
-}
-
-macro_rules! bounded_impl {
-    ($t:ty, $min:expr, $max:expr) => {
-        impl Bounded for $t {
-            #[inline]
-            fn min_value() -> $t { $min }
-
-            #[inline]
-            fn max_value() -> $t { $max }
-        }
-    }
-}
-
-bounded_impl!(usize, usize::MIN, usize::MAX);
-bounded_impl!(u8, u8::MIN, u8::MAX);
-bounded_impl!(u16, u16::MIN, u16::MAX);
-bounded_impl!(u32, u32::MIN, u32::MAX);
-bounded_impl!(u64, u64::MIN, u64::MAX);
-
-bounded_impl!(isize, isize::MIN, isize::MAX);
-bounded_impl!(i8, i8::MIN, i8::MAX);
-bounded_impl!(i16, i16::MIN, i16::MAX);
-bounded_impl!(i32, i32::MIN, i32::MAX);
-bounded_impl!(i64, i64::MIN, i64::MAX);
-
 macro_rules! int_to_int {
     ($SrcT:ty, $DstT:ty, $slf:expr) => (
         {
@@ -58,9 +25,7 @@ macro_rules! int_to_int {
                 Some($slf as $DstT)
             } else {
                 let n = $slf as i64;
-                let min_value: $DstT = Bounded::min_value();
-                let max_value: $DstT = Bounded::max_value();
-                if min_value as i64 <= n && n <= max_value as i64 {
+                if <$DstT>::min_value() as i64 <= n && n <= <$DstT>::max_value() as i64 {
                     Some($slf as $DstT)
                 } else {
                     None
@@ -74,8 +39,7 @@ macro_rules! int_to_uint {
     ($SrcT:ty, $DstT:ty, $slf:expr) => (
         {
             let zero: $SrcT = 0;
-            let max_value: $DstT = Bounded::max_value();
-            if zero <= $slf && $slf as u64 <= max_value as u64 {
+            if zero <= $slf && $slf as u64 <= <$DstT>::max_value() as u64 {
                 Some($slf as $DstT)
             } else {
                 None
@@ -87,8 +51,7 @@ macro_rules! int_to_uint {
 macro_rules! uint_to_int {
     ($DstT:ty, $slf:expr) => (
         {
-            let max_value: $DstT = Bounded::max_value();
-            if $slf as u64 <= max_value as u64 {
+            if $slf as u64 <= <$DstT>::max_value() as u64 {
                 Some($slf as $DstT)
             } else {
                 None
@@ -104,8 +67,7 @@ macro_rules! uint_to_uint {
                 Some($slf as $DstT)
             } else {
                 let zero: $SrcT = 0;
-                let max_value: $DstT = Bounded::max_value();
-                if zero <= $slf && $slf as u64 <= max_value as u64 {
+                if zero <= $slf && $slf as u64 <= <$DstT>::max_value() as u64 {
                     Some($slf as $DstT)
                 } else {
                     None
