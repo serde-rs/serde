@@ -149,12 +149,12 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
                               _variant_index: usize,
                               variant: &'static str)
                               -> Result<(), Error> {
-        if self.tokens.first() == Some(&Token::EnumStart(name)) {
+        if self.tokens.first() == Some(&Token::Enum(name)) {
             self.next_token();
             assert_next_token!(self, Str(variant));
             assert_next_token!(self, Unit);
         } else {
-            assert_next_token!(self, EnumUnit(name, variant));
+            assert_next_token!(self, UnitVariant(name, variant));
         }
         Ok(())
     }
@@ -162,7 +162,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
     fn serialize_newtype_struct<T: ?Sized>(self, name: &'static str, value: &T) -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, StructNewType(name));
+        assert_next_token!(self, NewtypeStruct(name));
         value.serialize(self)
     }
 
@@ -174,44 +174,44 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
                                             -> Result<(), Error>
         where T: Serialize
     {
-        if self.tokens.first() == Some(&Token::EnumStart(name)) {
+        if self.tokens.first() == Some(&Token::Enum(name)) {
             self.next_token();
             assert_next_token!(self, Str(variant));
         } else {
-            assert_next_token!(self, EnumNewType(name, variant));
+            assert_next_token!(self, NewtypeVariant(name, variant));
         }
         value.serialize(self)
     }
 
     fn serialize_none(self) -> Result<(), Error> {
-        assert_next_token!(self, Option(false));
+        assert_next_token!(self, None);
         Ok(())
     }
 
     fn serialize_some<T: ?Sized>(self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, Option(true));
+        assert_next_token!(self, Some);
         value.serialize(self)
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self, Error> {
-        assert_next_token!(self, SeqStart(len));
+        assert_next_token!(self, Seq(len));
         Ok(self)
     }
 
     fn serialize_seq_fixed_size(self, len: usize) -> Result<Self, Error> {
-        assert_next_token!(self, SeqArrayStart(len));
+        assert_next_token!(self, SeqFixedSize(len));
         Ok(self)
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self, Error> {
-        assert_next_token!(self, TupleStart(len));
+        assert_next_token!(self, Tuple(len));
         Ok(self)
     }
 
     fn serialize_tuple_struct(self, name: &'static str, len: usize) -> Result<Self, Error> {
-        assert_next_token!(self, TupleStructStart(name, len));
+        assert_next_token!(self, TupleStruct(name, len));
         Ok(self)
     }
 
@@ -221,17 +221,17 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
                                variant: &'static str,
                                len: usize)
                                -> Result<Self, Error> {
-        assert_next_token!(self, EnumSeqStart(name, variant, len));
+        assert_next_token!(self, TupleVariant(name, variant, len));
         Ok(self)
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self, Error> {
-        assert_next_token!(self, MapStart(len));
+        assert_next_token!(self, Map(len));
         Ok(self)
     }
 
     fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self, Error> {
-        assert_next_token!(self, StructStart(name, len));
+        assert_next_token!(self, Struct(name, len));
         Ok(self)
     }
 
@@ -241,7 +241,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
                                 variant: &'static str,
                                 len: usize)
                                 -> Result<Self, Error> {
-        assert_next_token!(self, EnumMapStart(name, variant, len));
+        assert_next_token!(self, StructVariant(name, variant, len));
         Ok(self)
     }
 }
@@ -305,7 +305,7 @@ impl<'s, 'a> ser::SerializeTupleVariant for &'s mut Serializer<'a> {
     }
 
     fn end(self) -> Result<(), Error> {
-        assert_next_token!(self, EnumSeqEnd);
+        assert_next_token!(self, TupleVariantEnd);
         Ok(())
     }
 }
@@ -367,7 +367,7 @@ impl<'s, 'a> ser::SerializeStructVariant for &'s mut Serializer<'a> {
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        assert_next_token!(self, EnumMapEnd);
+        assert_next_token!(self, StructVariantEnd);
         Ok(())
     }
 }

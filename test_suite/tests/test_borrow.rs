@@ -89,7 +89,7 @@ fn test_tuple() {
     assert_de_tokens(
         &("str", &b"bytes"[..]),
         &[
-            Token::TupleStart(2),
+            Token::Tuple(2),
             Token::BorrowedStr("str"),
             Token::BorrowedBytes(b"bytes"),
             Token::TupleEnd,
@@ -108,7 +108,7 @@ fn test_struct() {
     assert_de_tokens(
         &Borrowing { bs: "str", bb: b"bytes" },
         &[
-            Token::StructStart("Borrowing", 2),
+            Token::Struct("Borrowing", 2),
 
             Token::BorrowedStr("bs"),
             Token::BorrowedStr("str"),
@@ -132,7 +132,7 @@ fn test_cow() {
     }
 
     let tokens = &[
-        Token::StructStart("Cows", 2),
+        Token::Struct("Cows", 2),
 
         Token::Str("copied"),
         Token::BorrowedStr("copied"),
