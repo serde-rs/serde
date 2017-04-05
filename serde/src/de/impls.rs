@@ -58,9 +58,6 @@ use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, 
          VariantVisitor, Visitor};
 use de::from_primitive::FromPrimitive;
 
-#[cfg(feature = "std")]
-use bytes::ByteBuf;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 struct UnitVisitor;
@@ -354,13 +351,52 @@ impl<'de: 'a, 'a> Deserialize<'de> for &'a [u8] {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "std", feature="unstable"))]
-impl<'de> Deserialize<'de> for Box<CStr> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+#[cfg(feature = "std")]
+struct CStringVisitor;
+
+#[cfg(feature = "std")]
+impl<'de> Visitor<'de> for CStringVisitor {
+    type Value = CString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("byte array")
+    }
+
+    fn visit_seq<V>(self, mut visitor: V) -> Result<CString, V::Error>
+        where V: SeqVisitor<'de>
     {
-        let s = try!(CString::deserialize(deserializer));
-        Ok(s.into_boxed_c_str())
+        let len = cmp::min(visitor.size_hint().0, 4096);
+        let mut values = Vec::with_capacity(len);
+
+        while let Some(value) = try!(visitor.visit()) {
+            values.push(value);
+        }
+
+        CString::new(values).map_err(Error::custom)
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<CString, E>
+        where E: Error
+    {
+        CString::new(v).map_err(Error::custom)
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<CString, E>
+        where E: Error
+    {
+        CString::new(v).map_err(Error::custom)
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<CString, E>
+        where E: Error
+    {
+        CString::new(v).map_err(Error::custom)
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<CString, E>
+        where E: Error
+    {
+        CString::new(v).map_err(Error::custom)
     }
 }
 
@@ -369,8 +405,17 @@ impl<'de> Deserialize<'de> for CString {
     fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
         where D: Deserializer<'de>
     {
-        let bytes = try!(ByteBuf::deserialize(deserializer));
-        CString::new(bytes).map_err(Error::custom)
+        deserializer.deserialize_byte_buf(CStringVisitor)
+    }
+}
+
+#[cfg(all(feature = "std", feature="unstable"))]
+impl<'de> Deserialize<'de> for Box<CStr> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let s = try!(CString::deserialize(deserializer));
+        Ok(s.into_boxed_c_str())
     }
 }
 
