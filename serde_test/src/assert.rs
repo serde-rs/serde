@@ -19,7 +19,7 @@ pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
 pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
     where T: Serialize
 {
-    let mut ser = Serializer::new(tokens.iter());
+    let mut ser = Serializer::new(tokens);
     assert_eq!(Serialize::serialize(value, &mut ser), Ok(()));
     assert_eq!(ser.next_token(), None);
 }
@@ -28,7 +28,7 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
     where T: Serialize + PartialEq + Debug
 {
-    let mut ser = Serializer::new(tokens.iter());
+    let mut ser = Serializer::new(tokens);
     let v: Result<(), Error> = Serialize::serialize(value, &mut ser);
     assert_eq!(v.as_ref(), Err(&error));
     assert_eq!(ser.next_token(), None);
