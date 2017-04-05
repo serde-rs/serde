@@ -163,7 +163,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         ].into_iter())
         .collect();
 
-    let mut de = serde_test::Deserializer::new(concated_tokens.into_iter());
+    let mut de = serde_test::Deserializer::new(&concated_tokens);
     let v: Result<IgnoreBase, Error> = Deserialize::deserialize(&mut de);
 
     // We run this test on every token stream for convenience, but

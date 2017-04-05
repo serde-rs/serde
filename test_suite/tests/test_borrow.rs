@@ -138,7 +138,7 @@ fn test_cow() {
         borrowed: Cow<'b, str>,
     }
 
-    let tokens = vec![
+    let tokens = &[
         Token::StructStart("Cows", 2),
 
         Token::StructSep,
@@ -152,7 +152,7 @@ fn test_cow() {
         Token::StructEnd,
     ];
 
-    let mut de = serde_test::Deserializer::new(tokens.into_iter());
+    let mut de = serde_test::Deserializer::new(tokens);
     let cows = Cows::deserialize(&mut de).unwrap();
     assert_eq!(de.next_token(), None);
 

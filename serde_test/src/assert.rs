@@ -8,7 +8,7 @@ use token::Token;
 use std::fmt::Debug;
 
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
-pub fn assert_tokens<'de, T>(value: &T, tokens: &[Token])
+pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
     where T: Serialize + Deserialize<'de> + PartialEq + Debug
 {
     assert_ser_tokens(value, tokens);
@@ -35,20 +35,20 @@ pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
 }
 
 /// Asserts that the given `tokens` deserialize into `value`.
-pub fn assert_de_tokens<'de, T>(value: &T, tokens: &[Token])
+pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
     where T: Deserialize<'de> + PartialEq + Debug
 {
-    let mut de = Deserializer::new(tokens.to_vec().into_iter());
+    let mut de = Deserializer::new(tokens);
     let v: Result<T, Error> = Deserialize::deserialize(&mut de);
     assert_eq!(v.as_ref(), Ok(value));
     assert_eq!(de.next_token(), None);
 }
 
 /// Asserts that the given `tokens` yield `error` when deserializing.
-pub fn assert_de_tokens_error<'de, T>(tokens: &[Token], error: Error)
+pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: Error)
     where T: Deserialize<'de> + PartialEq + Debug
 {
-    let mut de = Deserializer::new(tokens.to_vec().into_iter());
+    let mut de = Deserializer::new(tokens);
     let v: Result<T, Error> = Deserialize::deserialize(&mut de);
     assert_eq!(v, Err(error));
     // There may be one token left if a peek caused the error
