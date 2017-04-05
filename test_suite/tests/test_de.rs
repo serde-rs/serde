@@ -1068,4 +1068,115 @@ declare_error_tests! {
         ],
         Error::Message("nul byte found in provided data at position: 2".into()),
     }
+    test_unit_from_empty_seq<()> {
+        &[
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit".into()),
+    }
+    test_unit_from_empty_seq_without_len<()> {
+        &[
+            Token::SeqStart(None),
+            Token::SeqEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit".into()),
+    }
+    test_unit_from_tuple_struct<()> {
+        &[
+            Token::TupleStructStart("Anything", 0),
+            Token::TupleStructEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit".into()),
+    }
+    test_string_from_unit<String> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a string".into()),
+    }
+    test_btreeset_from_unit<BTreeSet<isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_btreeset_from_unit_struct<BTreeSet<isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_hashset_from_unit<HashSet<isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_hashset_from_unit_struct<HashSet<isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_vec_from_unit<Vec<isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_vec_from_unit_struct<Vec<isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_zero_array_from_unit<[isize; 0]> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected an empty array".into()),
+    }
+    test_zero_array_from_unit_struct<[isize; 0]> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected an empty array".into()),
+    }
+    test_btreemap_from_unit<BTreeMap<isize, isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_btreemap_from_unit_struct<BTreeMap<isize, isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_hashmap_from_unit<HashMap<isize, isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_hashmap_from_unit_struct<HashMap<isize, isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_bool_from_string<bool> {
+        &[
+            Token::Str("false"),
+        ],
+        Error::Message("invalid type: string \"false\", expected a boolean".into()),
+    }
+    test_number_from_string<isize> {
+        &[
+            Token::Str("1"),
+        ],
+        Error::Message("invalid type: string \"1\", expected isize".into()),
+    }
 }
