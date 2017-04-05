@@ -48,27 +48,3 @@ impl EncodeUtf8 {
         ::core::str::from_utf8(&self.buf[self.pos..]).unwrap()
     }
 }
-
-#[allow(non_upper_case_globals)]
-const Pattern_White_Space_table: &'static [(char, char)] = &[('\u{9}', '\u{d}'),
-                                                             ('\u{20}', '\u{20}'),
-                                                             ('\u{85}', '\u{85}'),
-                                                             ('\u{200e}', '\u{200f}'),
-                                                             ('\u{2028}', '\u{2029}')];
-
-fn bsearch_range_table(c: char, r: &'static [(char, char)]) -> bool {
-    use core::cmp::Ordering::{Equal, Less, Greater};
-    r.binary_search_by(|&(lo, hi)| if c < lo {
-                              Greater
-                          } else if hi < c {
-            Less
-        } else {
-            Equal
-        })
-        .is_ok()
-}
-
-#[allow(non_snake_case)]
-pub fn Pattern_White_Space(c: char) -> bool {
-    bsearch_range_table(c, Pattern_White_Space_table)
-}

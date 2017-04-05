@@ -80,12 +80,6 @@ impl<'de> Visitor<'de> for UnitVisitor {
     {
         Ok(())
     }
-
-    fn visit_seq<V>(self, _: V) -> Result<(), V::Error>
-        where V: SeqVisitor<'de>
-    {
-        Ok(())
-    }
 }
 
 impl<'de> Deserialize<'de> for () {
@@ -112,16 +106,6 @@ impl<'de> Visitor<'de> for BoolVisitor {
         where E: Error
     {
         Ok(v)
-    }
-
-    fn visit_str<E>(self, s: &str) -> Result<bool, E>
-        where E: Error
-    {
-        match s.trim_matches(::utils::Pattern_White_Space) {
-            "true" => Ok(true),
-            "false" => Ok(false),
-            _ => Err(Error::invalid_type(Unexpected::Str(s), &self)),
-        }
     }
 }
 
@@ -175,15 +159,6 @@ macro_rules! impl_deserialize_num {
                     impl_deserialize_num_method!($ty, u64, visit_u64, from_u64, Unsigned, u64);
                     impl_deserialize_num_method!($ty, f32, visit_f32, from_f32, Float, f64);
                     impl_deserialize_num_method!($ty, f64, visit_f64, from_f64, Float, f64);
-
-                    #[inline]
-                    fn visit_str<E>(self, s: &str) -> Result<$ty, E>
-                        where E: Error,
-                    {
-                        str::FromStr::from_str(s.trim_matches(::utils::Pattern_White_Space)).or_else(|_| {
-                            Err(Error::invalid_type(Unexpected::Str(s), &self))
-                        })
-                    }
                 }
 
                 deserializer.$method(PrimitiveVisitor)
@@ -267,12 +242,6 @@ impl<'de> Visitor<'de> for StringVisitor {
         where E: Error
     {
         Ok(v)
-    }
-
-    fn visit_unit<E>(self) -> Result<String, E>
-        where E: Error
-    {
-        Ok(String::new())
     }
 
     fn visit_bytes<E>(self, v: &[u8]) -> Result<String, E>
@@ -504,13 +473,6 @@ macro_rules! seq_impl {
             }
 
             #[inline]
-            fn visit_unit<E>(self) -> Result<Self::Value, E>
-                where E: Error,
-            {
-                Ok($ctor)
-            }
-
-            #[inline]
             fn visit_seq<V>(self, mut $visitor: V) -> Result<Self::Value, V::Error>
                 where V: SeqVisitor<'de>,
             {
@@ -611,13 +573,6 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]>
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("an empty array")
-    }
-
-    #[inline]
-    fn visit_unit<E>(self) -> Result<[T; 0], E>
-        where E: Error
-    {
-        Ok([])
     }
 
     #[inline]
@@ -817,13 +772,6 @@ macro_rules! map_impl {
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a map")
-            }
-
-            #[inline]
-            fn visit_unit<E>(self) -> Result<Self::Value, E>
-                where E: Error,
-            {
-                Ok($ctor)
             }
 
             #[inline]

@@ -245,18 +245,6 @@ declare_tests! {
     }
     test_unit {
         () => &[Token::Unit],
-        () => &[
-            Token::SeqStart(Some(0)),
-            Token::SeqEnd,
-        ],
-        () => &[
-            Token::SeqStart(None),
-            Token::SeqEnd,
-        ],
-        () => &[
-            Token::TupleStructStart("Anything", 0),
-            Token::TupleStructEnd,
-        ],
     }
     test_unit_struct {
         UnitStruct => &[Token::Unit],
@@ -271,9 +259,6 @@ declare_tests! {
             Token::SeqStart(None),
             Token::SeqEnd,
         ],
-    }
-    test_unit_string {
-        String::new() => &[Token::Unit],
     }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
@@ -327,9 +312,6 @@ declare_tests! {
     }
     test_btreeset {
         BTreeSet::<isize>::new() => &[
-            Token::Unit,
-        ],
-        BTreeSet::<isize>::new() => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
         ],
@@ -356,17 +338,11 @@ declare_tests! {
             Token::SeqEnd,
         ],
         BTreeSet::<isize>::new() => &[
-            Token::UnitStruct("Anything"),
-        ],
-        BTreeSet::<isize>::new() => &[
             Token::TupleStructStart("Anything", 0),
             Token::TupleStructEnd,
         ],
     }
     test_hashset {
-        HashSet::<isize>::new() => &[
-            Token::Unit,
-        ],
         HashSet::<isize>::new() => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
@@ -382,9 +358,6 @@ declare_tests! {
                 Token::SeqSep,
                 Token::I32(3),
             Token::SeqEnd,
-        ],
-        HashSet::<isize>::new() => &[
-            Token::UnitStruct("Anything"),
         ],
         HashSet::<isize>::new() => &[
             Token::TupleStructStart("Anything", 0),
@@ -404,9 +377,6 @@ declare_tests! {
         ],
     }
     test_vec {
-        Vec::<isize>::new() => &[
-            Token::Unit,
-        ],
         Vec::<isize>::new() => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
@@ -434,17 +404,11 @@ declare_tests! {
             Token::SeqEnd,
         ],
         Vec::<isize>::new() => &[
-            Token::UnitStruct("Anything"),
-        ],
-        Vec::<isize>::new() => &[
             Token::TupleStructStart("Anything", 0),
             Token::TupleStructEnd,
         ],
     }
     test_array {
-        [0; 0] => &[
-            Token::Unit,
-        ],
         [0; 0] => &[
             Token::SeqStart(Some(0)),
             Token::SeqEnd,
@@ -498,9 +462,6 @@ declare_tests! {
             Token::SeqEnd,
         ],
         [0; 0] => &[
-            Token::UnitStruct("Anything"),
-        ],
-        [0; 0] => &[
             Token::TupleStructStart("Anything", 0),
             Token::TupleStructEnd,
         ],
@@ -545,9 +506,6 @@ declare_tests! {
     }
     test_btreemap {
         BTreeMap::<isize, isize>::new() => &[
-            Token::Unit,
-        ],
-        BTreeMap::<isize, isize>::new() => &[
             Token::MapStart(Some(0)),
             Token::MapEnd,
         ],
@@ -590,17 +548,11 @@ declare_tests! {
             Token::MapEnd,
         ],
         BTreeMap::<isize, isize>::new() => &[
-            Token::UnitStruct("Anything"),
-        ],
-        BTreeMap::<isize, isize>::new() => &[
             Token::StructStart("Anything", 0),
             Token::StructEnd,
         ],
     }
     test_hashmap {
-        HashMap::<isize, isize>::new() => &[
-            Token::Unit,
-        ],
         HashMap::<isize, isize>::new() => &[
             Token::MapStart(Some(0)),
             Token::MapEnd,
@@ -642,9 +594,6 @@ declare_tests! {
                     Token::I32(6),
                 Token::MapEnd,
             Token::MapEnd,
-        ],
-        HashMap::<isize, isize>::new() => &[
-            Token::UnitStruct("Anything"),
         ],
         HashMap::<isize, isize>::new() => &[
             Token::StructStart("Anything", 0),
@@ -1118,5 +1067,116 @@ declare_error_tests! {
             Token::Bytes(b"ac\0"),
         ],
         Error::Message("nul byte found in provided data at position: 2".into()),
+    }
+    test_unit_from_empty_seq<()> {
+        &[
+            Token::SeqStart(Some(0)),
+            Token::SeqEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit".into()),
+    }
+    test_unit_from_empty_seq_without_len<()> {
+        &[
+            Token::SeqStart(None),
+            Token::SeqEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit".into()),
+    }
+    test_unit_from_tuple_struct<()> {
+        &[
+            Token::TupleStructStart("Anything", 0),
+            Token::TupleStructEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit".into()),
+    }
+    test_string_from_unit<String> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a string".into()),
+    }
+    test_btreeset_from_unit<BTreeSet<isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_btreeset_from_unit_struct<BTreeSet<isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_hashset_from_unit<HashSet<isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_hashset_from_unit_struct<HashSet<isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_vec_from_unit<Vec<isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_vec_from_unit_struct<Vec<isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a sequence".into()),
+    }
+    test_zero_array_from_unit<[isize; 0]> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected an empty array".into()),
+    }
+    test_zero_array_from_unit_struct<[isize; 0]> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected an empty array".into()),
+    }
+    test_btreemap_from_unit<BTreeMap<isize, isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_btreemap_from_unit_struct<BTreeMap<isize, isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_hashmap_from_unit<HashMap<isize, isize>> {
+        &[
+            Token::Unit,
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_hashmap_from_unit_struct<HashMap<isize, isize>> {
+        &[
+            Token::UnitStruct("Anything"),
+        ],
+        Error::Message("invalid type: unit value, expected a map".into()),
+    }
+    test_bool_from_string<bool> {
+        &[
+            Token::Str("false"),
+        ],
+        Error::Message("invalid type: string \"false\", expected a boolean".into()),
+    }
+    test_number_from_string<isize> {
+        &[
+            Token::Str("1"),
+        ],
+        Error::Message("invalid type: string \"1\", expected isize".into()),
     }
 }
