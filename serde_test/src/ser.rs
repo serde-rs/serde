@@ -7,14 +7,14 @@ use token::Token;
 
 /// A `Serializer` that ensures that a value serializes to a given list of tokens.
 pub struct Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     tokens: I,
-    phantom: PhantomData<&'a Token<'a>>,
+    phantom: PhantomData<&'a Token>,
 }
 
 impl<'a, I> Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     /// Creates the serializer.
     pub fn new(tokens: I) -> Serializer<'a, I> {
@@ -25,13 +25,27 @@ impl<'a, I> Serializer<'a, I>
     }
 
     /// Pulls the next token off of the serializer, ignoring it.
-    pub fn next_token(&mut self) -> Option<&'a Token<'a>> {
+    pub fn next_token(&mut self) -> Option<&'a Token> {
         self.tokens.next()
     }
 }
 
+macro_rules! assert_next_token {
+    ($self:ident, $expected:ident($arg:expr)) => {
+        match $self.tokens.next() {
+            Some(&Token::$expected(v)) if v == $arg => {}
+            Some(other) => {
+                panic!("expected {}({:?}) but serialized as {:?}", stringify!($expected), $arg, other);
+            }
+            None => {
+                panic!("expected {}({:?}) after end of serialized tokens", stringify!($expected), $arg);
+            }
+        }
+    }
+}
+
 impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -105,12 +119,12 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
     }
 
     fn serialize_str(self, v: &str) -> Result<(), Error> {
-        assert_eq!(self.tokens.next(), Some(&Token::Str(v)));
+        assert_next_token!(self, Str(v));
         Ok(())
     }
 
     fn serialize_bytes(self, value: &[u8]) -> Result<(), Self::Error> {
-        assert_eq!(self.tokens.next(), Some(&Token::Bytes(value)));
+        assert_next_token!(self, Bytes(value));
         Ok(())
     }
 
@@ -119,15 +133,15 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(())
     }
 
-    fn serialize_unit_struct(self, name: &str) -> Result<(), Error> {
+    fn serialize_unit_struct(self, name: &'static str) -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::UnitStruct(name)));
         Ok(())
     }
 
     fn serialize_unit_variant(self,
-                              name: &str,
+                              name: &'static str,
                               _variant_index: usize,
-                              variant: &str)
+                              variant: &'static str)
                               -> Result<(), Error> {
         assert_eq!(self.tokens.next(), Some(&Token::EnumUnit(name, variant)));
         Ok(())
@@ -141,9 +155,9 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
     }
 
     fn serialize_newtype_variant<T: ?Sized>(self,
-                                            name: &str,
+                                            name: &'static str,
                                             _variant_index: usize,
-                                            variant: &str,
+                                            variant: &'static str,
                                             value: &T)
                                             -> Result<(), Error>
         where T: Serialize
@@ -186,9 +200,9 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
     }
 
     fn serialize_tuple_variant(self,
-                               name: &str,
+                               name: &'static str,
                                _variant_index: usize,
-                               variant: &str,
+                               variant: &'static str,
                                len: usize)
                                -> Result<Self, Error> {
         assert_eq!(self.tokens.next(),
@@ -201,15 +215,15 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
         Ok(self)
     }
 
-    fn serialize_struct(self, name: &str, len: usize) -> Result<Self, Error> {
+    fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self, Error> {
         assert_eq!(self.tokens.next(), Some(&Token::StructStart(name, len)));
         Ok(self)
     }
 
     fn serialize_struct_variant(self,
-                                name: &str,
+                                name: &'static str,
                                 _variant_index: usize,
-                                variant: &str,
+                                variant: &'static str,
                                 len: usize)
                                 -> Result<Self, Error> {
         assert_eq!(self.tokens.next(),
@@ -219,7 +233,7 @@ impl<'s, 'a, I> ser::Serializer for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeSeq for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -238,7 +252,7 @@ impl<'s, 'a, I> ser::SerializeSeq for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeTuple for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -257,7 +271,7 @@ impl<'s, 'a, I> ser::SerializeTuple for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeTupleStruct for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -276,7 +290,7 @@ impl<'s, 'a, I> ser::SerializeTupleStruct for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeTupleVariant for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -295,7 +309,7 @@ impl<'s, 'a, I> ser::SerializeTupleVariant for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeMap for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -320,7 +334,7 @@ impl<'s, 'a, I> ser::SerializeMap for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeStruct for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;
@@ -343,7 +357,7 @@ impl<'s, 'a, I> ser::SerializeStruct for &'s mut Serializer<'a, I>
 }
 
 impl<'s, 'a, I> ser::SerializeStructVariant for &'s mut Serializer<'a, I>
-    where I: Iterator<Item = &'a Token<'a>>
+    where I: Iterator<Item = &'a Token>
 {
     type Ok = ();
     type Error = Error;

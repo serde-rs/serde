@@ -28,7 +28,7 @@ fn test_borrowed_str() {
 fn test_borrowed_str_from_string() {
     assert_de_tokens_error::<&str>(
         &[
-            Token::String("borrowed".to_owned()),
+            Token::String("borrowed"),
         ],
         Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned()),
     );
@@ -68,7 +68,7 @@ fn test_borrowed_bytes() {
 fn test_borrowed_bytes_from_bytebuf() {
     assert_de_tokens_error::<&[u8]>(
         &[
-            Token::ByteBuf(b"borrowed".to_vec()),
+            Token::ByteBuf(b"borrowed"),
         ],
         Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned()),
     );

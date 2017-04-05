@@ -1,5 +1,5 @@
-#[derive(Clone, PartialEq, Debug)]
-pub enum Token<'a> {
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Token {
     /// A serialized `bool`.
     Bool(bool),
 
@@ -37,22 +37,22 @@ pub enum Token<'a> {
     Char(char),
 
     /// A serialized `str`.
-    Str(&'a str),
+    Str(&'static str),
 
     /// A borrowed `str`.
-    BorrowedStr(&'a str),
+    BorrowedStr(&'static str),
 
     /// A serialized `String`.
-    String(String),
+    String(&'static str),
 
     /// A serialized `[u8]`
-    Bytes(&'a [u8]),
+    Bytes(&'static [u8]),
 
     /// A borrowed `[u8]`.
-    BorrowedBytes(&'a [u8]),
+    BorrowedBytes(&'static [u8]),
 
     /// A serialized `ByteBuf`
-    ByteBuf(Vec<u8>),
+    ByteBuf(&'static [u8]),
 
     /// The header to a serialized `Option<T>`.
     ///
@@ -64,13 +64,13 @@ pub enum Token<'a> {
     Unit,
 
     /// A serialized unit struct of the given name.
-    UnitStruct(&'a str),
+    UnitStruct(&'static str),
 
     /// The header to a serialized newtype struct of the given name.
     ///
     /// Newtype structs are serialized with this header, followed by the value contained in the
     /// newtype struct.
-    StructNewType(&'a str),
+    StructNewType(&'static str),
 
     /// The header to an enum of the given name.
     ///
@@ -79,19 +79,19 @@ pub enum Token<'a> {
     /// `assert_tokens` will fail if this token is used.
     ///
     /// TODO: Trash this.
-    EnumStart(&'a str),
+    EnumStart(&'static str),
 
     /// A unit variant of an enum of the given name, of the given name.
     ///
     /// The first string represents the name of the enum, and the second represents the name of the
     /// variant.
-    EnumUnit(&'a str, &'a str),
+    EnumUnit(&'static str, &'static str),
 
     /// The header to a newtype variant of an enum of the given name, of the given name.
     ///
     /// The first string represents the name of the enum, and the second represents the name of the
     /// variant. The value contained within this enum works the same as `StructNewType`.
-    EnumNewType(&'a str, &'a str),
+    EnumNewType(&'static str, &'static str),
 
     /// The header to a sequence of the given length.
     ///
@@ -123,7 +123,7 @@ pub enum Token<'a> {
     TupleEnd,
 
     /// The header to a tuple struct of the given name and length.
-    TupleStructStart(&'a str, usize),
+    TupleStructStart(&'static str, usize),
 
     /// A separator, similar to `TupleSep`.
     TupleStructSep,
@@ -147,7 +147,7 @@ pub enum Token<'a> {
     MapEnd,
 
     /// The header of a struct of the given name and length, similar to `MapStart`.
-    StructStart(&'a str, usize),
+    StructStart(&'static str, usize),
 
     /// A separator, similar to `MapSep`.
     StructSep,
@@ -156,7 +156,7 @@ pub enum Token<'a> {
     StructEnd,
 
     /// The header to a tuple variant of an enum of the given name, of the given name and length.
-    EnumSeqStart(&'a str, &'a str, usize),
+    EnumSeqStart(&'static str, &'static str, usize),
 
     /// A separator, similar to `TupleSep`.
     EnumSeqSep,
@@ -166,7 +166,7 @@ pub enum Token<'a> {
 
     /// The header of a struct variant of an enum of the given name, of the given name and length,
     /// similar to `StructStart`.
-    EnumMapStart(&'a str, &'a str, usize),
+    EnumMapStart(&'static str, &'static str, usize),
 
     /// A separator, similar to `StructSep`.
     EnumMapSep,

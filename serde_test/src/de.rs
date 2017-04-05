@@ -9,13 +9,13 @@ use token::Token;
 
 /// A `Deserializer` that reads from a list of tokens.
 pub struct Deserializer<I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     tokens: iter::Peekable<I>,
 }
 
 impl<I> Deserializer<I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     /// Creates the deserializer.
     pub fn new(tokens: I) -> Deserializer<I> {
@@ -23,7 +23,7 @@ impl<I> Deserializer<I>
     }
 
     /// Pulls the next token off of the deserializer, ignoring it.
-    pub fn next_token(&mut self) -> Option<Token<'static>> {
+    pub fn next_token(&mut self) -> Option<Token> {
         self.tokens.next()
     }
 
@@ -43,8 +43,8 @@ impl<I> Deserializer<I>
 
     fn visit_seq<'de, V>(&mut self,
                     len: Option<usize>,
-                    sep: Token<'static>,
-                    end: Token<'static>,
+                    sep: Token,
+                    end: Token,
                     visitor: V)
                     -> Result<V::Value, Error>
         where V: Visitor<'de>
@@ -61,8 +61,8 @@ impl<I> Deserializer<I>
 
     fn visit_map<'de, V>(&mut self,
                     len: Option<usize>,
-                    sep: Token<'static>,
-                    end: Token<'static>,
+                    sep: Token,
+                    end: Token,
                     visitor: V)
                     -> Result<V::Value, Error>
         where V: Visitor<'de>
@@ -79,7 +79,7 @@ impl<I> Deserializer<I>
 }
 
 impl<'de, 'a, I> de::Deserializer<'de> for &'a mut Deserializer<I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     type Error = Error;
 
@@ -106,10 +106,10 @@ impl<'de, 'a, I> de::Deserializer<'de> for &'a mut Deserializer<I>
             Some(Token::Char(v)) => visitor.visit_char(v),
             Some(Token::Str(v)) => visitor.visit_str(v),
             Some(Token::BorrowedStr(v)) => visitor.visit_borrowed_str(v),
-            Some(Token::String(v)) => visitor.visit_string(v),
+            Some(Token::String(v)) => visitor.visit_string(v.to_owned()),
             Some(Token::Bytes(v)) => visitor.visit_bytes(v),
             Some(Token::BorrowedBytes(v)) => visitor.visit_borrowed_bytes(v),
-            Some(Token::ByteBuf(v)) => visitor.visit_byte_buf(v),
+            Some(Token::ByteBuf(v)) => visitor.visit_byte_buf(v.to_vec()),
             Some(Token::Option(false)) => visitor.visit_none(),
             Some(Token::Option(true)) => visitor.visit_some(self),
             Some(Token::Unit) => visitor.visit_unit(),
@@ -354,16 +354,16 @@ impl<'de, 'a, I> de::Deserializer<'de> for &'a mut Deserializer<I>
 //////////////////////////////////////////////////////////////////////////
 
 struct DeserializerSeqVisitor<'a, I: 'a>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     de: &'a mut Deserializer<I>,
     len: Option<usize>,
-    sep: Token<'static>,
-    end: Token<'static>,
+    sep: Token,
+    end: Token,
 }
 
 impl<'de, 'a, I> SeqVisitor<'de> for DeserializerSeqVisitor<'a, I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     type Error = Error;
 
@@ -392,16 +392,16 @@ impl<'de, 'a, I> SeqVisitor<'de> for DeserializerSeqVisitor<'a, I>
 //////////////////////////////////////////////////////////////////////////
 
 struct DeserializerMapVisitor<'a, I: 'a>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     de: &'a mut Deserializer<I>,
     len: Option<usize>,
-    sep: Token<'static>,
-    end: Token<'static>,
+    sep: Token,
+    end: Token,
 }
 
 impl<'de, 'a, I> MapVisitor<'de> for DeserializerMapVisitor<'a, I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     type Error = Error;
 
@@ -436,13 +436,13 @@ impl<'de, 'a, I> MapVisitor<'de> for DeserializerMapVisitor<'a, I>
 //////////////////////////////////////////////////////////////////////////
 
 struct DeserializerEnumVisitor<'a, I: 'a>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     de: &'a mut Deserializer<I>,
 }
 
 impl<'de, 'a, I> EnumVisitor<'de> for DeserializerEnumVisitor<'a, I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     type Error = Error;
     type Variant = Self;
@@ -469,7 +469,7 @@ impl<'de, 'a, I> EnumVisitor<'de> for DeserializerEnumVisitor<'a, I>
 }
 
 impl<'de, 'a, I> VariantVisitor<'de> for DeserializerEnumVisitor<'a, I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     type Error = Error;
 
@@ -558,14 +558,14 @@ impl<'de, 'a, I> VariantVisitor<'de> for DeserializerEnumVisitor<'a, I>
 //////////////////////////////////////////////////////////////////////////
 
 struct EnumMapVisitor<'a, I: 'a>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     de: &'a mut Deserializer<I>,
     variant: Option<&'a str>,
 }
 
 impl<'a, I: 'a> EnumMapVisitor<'a, I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     fn new(de: &'a mut Deserializer<I>, variant: &'a str) -> Self {
         EnumMapVisitor {
@@ -576,7 +576,7 @@ impl<'a, I: 'a> EnumMapVisitor<'a, I>
 }
 
 impl<'de, 'a, I: 'a> MapVisitor<'de> for EnumMapVisitor<'a, I>
-    where I: Iterator<Item = Token<'static>>
+    where I: Iterator<Item = Token>
 {
     type Error = Error;
 

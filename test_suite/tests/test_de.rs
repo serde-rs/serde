@@ -137,7 +137,7 @@ macro_rules! declare_error_tests {
     }
 }
 
-fn assert_de_tokens_ignore(ignorable_tokens: &[Token<'static>]) {
+fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     #[derive(PartialEq, Debug, Deserialize)]
     struct IgnoreBase {
         a: i32,
@@ -147,7 +147,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token<'static>]) {
 
     // Embed the tokens to be ignored in the normal token
     // stream for an IgnoreBase type
-    let concated_tokens : Vec<Token<'static>> = vec![
+    let concated_tokens : Vec<Token> = vec![
             Token::MapStart(Some(2)),
                 Token::MapSep,
                 Token::Str("a"),
@@ -215,11 +215,11 @@ declare_tests! {
     test_char {
         'a' => &[Token::Char('a')],
         'a' => &[Token::Str("a")],
-        'a' => &[Token::String("a".to_owned())],
+        'a' => &[Token::String("a")],
     }
     test_string {
         "abc".to_owned() => &[Token::Str("abc")],
-        "abc".to_owned() => &[Token::String("abc".to_owned())],
+        "abc".to_owned() => &[Token::String("abc")],
         "a".to_owned() => &[Token::Char('a')],
     }
     test_option {
@@ -767,7 +767,7 @@ declare_tests! {
 
                 Token::StructSep,
                 Token::Str("b"),
-                Token::String("overwritten".to_string()),
+                Token::String("overwritten"),
             Token::StructEnd,
         ],
         StructDefault { a: 100, b: "default".to_string() } => &[
@@ -903,7 +903,7 @@ declare_tests! {
     }
     test_path_buf {
         PathBuf::from("/usr/local/lib") => &[
-            Token::String("/usr/local/lib".to_owned()),
+            Token::String("/usr/local/lib"),
         ],
     }
     test_cstring {

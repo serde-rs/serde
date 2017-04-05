@@ -15,7 +15,7 @@ pub enum Error {
     InvalidName(&'static str),
 
     /// `Serialize` generated a token that didn't match the test.
-    UnexpectedToken(Token<'static>),
+    UnexpectedToken(Token),
 
     /// The expected token list was too short.
     EndOfTokens,
