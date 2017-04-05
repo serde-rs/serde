@@ -253,7 +253,6 @@ impl<'s, 'a> ser::SerializeSeq for &'s mut Serializer<'a> {
     fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, SeqSep);
         value.serialize(&mut **self)
     }
 
@@ -270,7 +269,6 @@ impl<'s, 'a> ser::SerializeTuple for &'s mut Serializer<'a> {
     fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, TupleSep);
         value.serialize(&mut **self)
     }
 
@@ -287,7 +285,6 @@ impl<'s, 'a> ser::SerializeTupleStruct for &'s mut Serializer<'a> {
     fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, TupleStructSep);
         value.serialize(&mut **self)
     }
 
@@ -304,7 +301,6 @@ impl<'s, 'a> ser::SerializeTupleVariant for &'s mut Serializer<'a> {
     fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
         where T: Serialize
     {
-        assert_next_token!(self, EnumSeqSep);
         value.serialize(&mut **self)
     }
 
@@ -321,7 +317,6 @@ impl<'s, 'a> ser::SerializeMap for &'s mut Serializer<'a> {
     fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
         where T: Serialize
     {
-        assert_next_token!(self, MapSep);
         key.serialize(&mut **self)
     }
 
@@ -347,7 +342,6 @@ impl<'s, 'a> ser::SerializeStruct for &'s mut Serializer<'a> {
                                   -> Result<(), Self::Error>
         where T: Serialize
     {
-        assert_next_token!(self, StructSep);
         try!(key.serialize(&mut **self));
         value.serialize(&mut **self)
     }
@@ -368,7 +362,6 @@ impl<'s, 'a> ser::SerializeStructVariant for &'s mut Serializer<'a> {
                                   -> Result<(), Self::Error>
         where T: Serialize
     {
-        assert_next_token!(self, EnumMapSep);
         try!(key.serialize(&mut **self));
         value.serialize(&mut **self)
     }

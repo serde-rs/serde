@@ -165,15 +165,9 @@ fn test_ser_named_tuple() {
         &SerNamedTuple(&a, &mut b, c),
         &[
             Token::TupleStructStart("SerNamedTuple", 3),
-            Token::TupleStructSep,
             Token::I32(5),
-
-            Token::TupleStructSep,
             Token::I32(6),
-
-            Token::TupleStructSep,
             Token::I32(7),
-
             Token::TupleStructEnd,
         ],
     );
@@ -185,15 +179,9 @@ fn test_de_named_tuple() {
         &DeNamedTuple(5, 6, 7),
         &[
             Token::SeqStart(Some(3)),
-            Token::SeqSep,
             Token::I32(5),
-
-            Token::SeqSep,
             Token::I32(6),
-
-            Token::SeqSep,
             Token::I32(7),
-
             Token::SeqEnd,
         ]
     );
@@ -202,15 +190,9 @@ fn test_de_named_tuple() {
         &DeNamedTuple(5, 6, 7),
         &[
             Token::TupleStructStart("DeNamedTuple", 3),
-            Token::TupleStructSep,
             Token::I32(5),
-
-            Token::TupleStructSep,
             Token::I32(6),
-
-            Token::TupleStructSep,
             Token::I32(7),
-
             Token::TupleStructEnd,
         ]
     );
@@ -231,15 +213,12 @@ fn test_ser_named_map() {
         &[
             Token::StructStart("SerNamedMap", 3),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I32(5),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::I32(6),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::I32(7),
 
@@ -259,15 +238,12 @@ fn test_de_named_map() {
         &[
             Token::StructStart("DeNamedMap", 3),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I32(5),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::I32(6),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::I32(7),
 
@@ -302,19 +278,10 @@ fn test_ser_enum_seq() {
         ),
         &[
             Token::EnumSeqStart("SerEnum", "Seq", 4),
-
-            Token::EnumSeqSep,
             Token::I8(1),
-
-            Token::EnumSeqSep,
             Token::I32(2),
-
-            Token::EnumSeqSep,
             Token::I32(3),
-
-            Token::EnumSeqSep,
             Token::I32(4),
-
             Token::EnumSeqEnd,
         ],
     );
@@ -337,19 +304,15 @@ fn test_ser_enum_map() {
         &[
             Token::EnumMapStart("SerEnum", "Map", 4),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::I32(2),
 
-            Token::EnumMapSep,
             Token::Str("c"),
             Token::I32(3),
 
-            Token::EnumMapSep,
             Token::Str("d"),
             Token::I32(4),
 
@@ -384,19 +347,10 @@ fn test_de_enum_seq() {
         ),
         &[
             Token::EnumSeqStart("DeEnum", "Seq", 4),
-
-            Token::EnumSeqSep,
             Token::I8(1),
-
-            Token::EnumSeqSep,
             Token::I32(2),
-
-            Token::EnumSeqSep,
             Token::I32(3),
-
-            Token::EnumSeqSep,
             Token::I32(4),
-
             Token::EnumSeqEnd,
         ],
     );
@@ -419,19 +373,15 @@ fn test_de_enum_map() {
         &[
             Token::EnumMapStart("DeEnum", "Map", 4),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::I32(2),
 
-            Token::EnumMapSep,
             Token::Str("c"),
             Token::I32(3),
 
-            Token::EnumMapSep,
             Token::Str("d"),
             Token::I32(4),
 
@@ -465,7 +415,6 @@ fn test_lifetimes() {
         &[
             Token::EnumMapStart("Lifetimes", "LifetimeMap", 1),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I32(5),
 
@@ -478,7 +427,6 @@ fn test_lifetimes() {
         &[
             Token::EnumMapStart("Lifetimes", "NoLifetimeMap", 1),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I32(5),
 
@@ -494,7 +442,6 @@ fn test_generic_struct() {
         &[
             Token::StructStart("GenericStruct", 1),
 
-            Token::StructSep,
             Token::Str("x"),
             Token::U32(5),
 
@@ -520,13 +467,8 @@ fn test_generic_tuple_struct() {
         &GenericTupleStruct(5u32, 6u32),
         &[
             Token::TupleStructStart("GenericTupleStruct", 2),
-
-            Token::TupleStructSep,
             Token::U32(5),
-
-            Token::TupleStructSep,
             Token::U32(6),
-
             Token::TupleStructEnd,
         ]
     );
@@ -559,13 +501,8 @@ fn test_generic_enum_seq() {
         &GenericEnum::Seq::<u32, u32>(5, 6),
         &[
             Token::EnumSeqStart("GenericEnum", "Seq", 2),
-
-            Token::EnumSeqSep,
             Token::U32(5),
-
-            Token::EnumSeqSep,
             Token::U32(6),
-
             Token::EnumSeqEnd,
         ]
     );
@@ -578,11 +515,9 @@ fn test_generic_enum_map() {
         &[
             Token::EnumMapStart("GenericEnum", "Map", 2),
 
-            Token::EnumMapSep,
             Token::Str("x"),
             Token::U32(5),
 
-            Token::EnumMapSep,
             Token::Str("y"),
             Token::U32(6),
 
@@ -598,7 +533,6 @@ fn test_default_ty_param() {
         &[
             Token::StructStart("DefaultTyParam", 1),
 
-            Token::StructSep,
             Token::Str("phantom"),
             Token::UnitStruct("PhantomData"),
 
@@ -619,11 +553,9 @@ fn test_enum_state_field() {
         &[
             Token::EnumMapStart("SomeEnum", "Key", 2),
 
-            Token::EnumMapSep,
             Token::Str("key"),
             Token::Char('a'),
 
-            Token::EnumMapSep,
             Token::Str("state"),
             Token::Bool(true),
 
@@ -654,7 +586,6 @@ fn test_untagged_enum() {
         &[
             Token::StructStart("Untagged", 1),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::U8(1),
 
@@ -667,7 +598,6 @@ fn test_untagged_enum() {
         &[
             Token::StructStart("Untagged", 1),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::U8(2),
 
@@ -699,13 +629,8 @@ fn test_untagged_enum() {
         &Untagged::F(1, 2),
         &[
             Token::TupleStart(2),
-
-            Token::TupleSep,
             Token::U8(1),
-
-            Token::TupleSep,
             Token::U8(2),
-
             Token::TupleEnd,
         ]
     );
@@ -720,10 +645,7 @@ fn test_untagged_enum() {
     assert_de_tokens_error::<Untagged>(
         &[
             Token::TupleStart(1),
-
-            Token::TupleSep,
             Token::U8(1),
-
             Token::TupleEnd,
         ],
         Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
@@ -732,16 +654,9 @@ fn test_untagged_enum() {
     assert_de_tokens_error::<Untagged>(
         &[
             Token::TupleStart(3),
-
-            Token::TupleSep,
             Token::U8(1),
-
-            Token::TupleSep,
             Token::U8(2),
-
-            Token::TupleSep,
             Token::U8(3),
-
             Token::TupleEnd,
         ],
         Error::Message("data did not match any variant of untagged enum Untagged".to_owned()),
@@ -778,11 +693,9 @@ fn test_internally_tagged_enum() {
         &[
             Token::StructStart("InternallyTagged", 2),
 
-            Token::StructSep,
             Token::Str("type"),
             Token::Str("A"),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::U8(1),
 
@@ -795,11 +708,9 @@ fn test_internally_tagged_enum() {
         &[
             Token::StructStart("InternallyTagged", 2),
 
-            Token::StructSep,
             Token::Str("type"),
             Token::Str("B"),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::U8(2),
 
@@ -812,7 +723,6 @@ fn test_internally_tagged_enum() {
         &[
             Token::StructStart("InternallyTagged", 1),
 
-            Token::StructSep,
             Token::Str("type"),
             Token::Str("C"),
 
@@ -825,7 +735,6 @@ fn test_internally_tagged_enum() {
         &[
             Token::MapStart(Some(1)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("D"),
 
@@ -838,7 +747,6 @@ fn test_internally_tagged_enum() {
         &[
             Token::MapStart(Some(1)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("E"),
 
@@ -851,11 +759,9 @@ fn test_internally_tagged_enum() {
         &[
             Token::StructStart("Struct", 2),
 
-            Token::StructSep,
             Token::Str("type"),
             Token::Str("F"),
 
-            Token::StructSep,
             Token::Str("f"),
             Token::U8(6),
 
@@ -875,7 +781,6 @@ fn test_internally_tagged_enum() {
         &[
             Token::MapStart(Some(1)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("Z"),
 
@@ -902,7 +807,6 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 1),
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Unit"),
 
@@ -916,11 +820,9 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 1),
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Unit"),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::Unit,
 
@@ -934,11 +836,9 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 1),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::Unit,
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Unit"),
 
@@ -952,11 +852,9 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Newtype"),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::U8(1),
 
@@ -970,11 +868,9 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::U8(1),
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Newtype"),
 
@@ -988,16 +884,12 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Tuple"),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::TupleStart(2),
-            Token::TupleSep,
             Token::U8(1),
-            Token::TupleSep,
             Token::U8(1),
             Token::TupleEnd,
 
@@ -1011,16 +903,12 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::TupleStart(2),
-            Token::TupleSep,
             Token::U8(1),
-            Token::TupleSep,
             Token::U8(1),
             Token::TupleEnd,
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Tuple"),
 
@@ -1034,14 +922,11 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Struct"),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::StructStart("Struct", 1),
-            Token::StructSep,
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
@@ -1056,15 +941,12 @@ fn test_adjacently_tagged_enum() {
         &[
             Token::StructStart("AdjacentlyTagged", 2),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::StructStart("Struct", 1),
-            Token::StructSep,
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
 
-            Token::StructSep,
             Token::Str("t"),
             Token::Str("Struct"),
 
@@ -1094,11 +976,9 @@ fn test_enum_in_internally_tagged_enum() {
         &[
             Token::MapStart(Some(2)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("Inner"),
 
-            Token::MapSep,
             Token::Str("Unit"),
             Token::Unit,
 
@@ -1111,11 +991,9 @@ fn test_enum_in_internally_tagged_enum() {
         &[
             Token::MapStart(Some(2)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("Inner"),
 
-            Token::MapSep,
             Token::Str("Newtype"),
             Token::U8(1),
 
@@ -1128,16 +1006,12 @@ fn test_enum_in_internally_tagged_enum() {
         &[
             Token::MapStart(Some(2)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("Inner"),
 
-            Token::MapSep,
             Token::Str("Tuple"),
             Token::TupleStructStart("Tuple", 2),
-            Token::TupleStructSep,
             Token::U8(1),
-            Token::TupleStructSep,
             Token::U8(1),
             Token::TupleStructEnd,
 
@@ -1150,14 +1024,11 @@ fn test_enum_in_internally_tagged_enum() {
         &[
             Token::MapStart(Some(2)),
 
-            Token::MapSep,
             Token::Str("type"),
             Token::Str("Inner"),
 
-            Token::MapSep,
             Token::Str("Struct"),
             Token::StructStart("Struct", 1),
-            Token::StructSep,
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
@@ -1202,12 +1073,8 @@ fn test_enum_in_untagged_enum() {
         &Outer::Inner(Inner::Tuple(1, 1)),
         &[
             Token::EnumSeqStart("Inner", "Tuple", 2),
-
-            Token::EnumSeqSep,
             Token::U8(1),
-            Token::EnumSeqSep,
             Token::U8(1),
-
             Token::EnumSeqEnd,
         ]
     );
@@ -1217,7 +1084,6 @@ fn test_enum_in_untagged_enum() {
         &[
             Token::EnumMapStart("Inner", "Struct", 1),
 
-            Token::EnumMapSep,
             Token::Str("f"),
             Token::U8(1),
 
@@ -1259,10 +1125,8 @@ fn test_rename_all() {
         &E::Serialize { serialize: true, serialize_seq: true },
         &[
             Token::EnumMapStart("E", "serialize", 2),
-            Token::EnumMapSep,
             Token::Str("serialize"),
             Token::Bool(true),
-            Token::EnumMapSep,
             Token::Str("serializeSeq"),
             Token::Bool(true),
             Token::EnumMapEnd,
@@ -1273,10 +1137,8 @@ fn test_rename_all() {
         &E::SerializeSeq { serialize: true, serialize_seq: true },
         &[
             Token::EnumMapStart("E", "serialize_seq", 2),
-            Token::EnumMapSep,
             Token::Str("serialize"),
             Token::Bool(true),
-            Token::EnumMapSep,
             Token::Str("serialize-seq"),
             Token::Bool(true),
             Token::EnumMapEnd,
@@ -1287,10 +1149,8 @@ fn test_rename_all() {
         &E::SerializeMap { serialize: true, serialize_seq: true },
         &[
             Token::EnumMapStart("E", "serialize_map", 2),
-            Token::EnumMapSep,
             Token::Str("SERIALIZE"),
             Token::Bool(true),
-            Token::EnumMapSep,
             Token::Str("SERIALIZE_SEQ"),
             Token::Bool(true),
             Token::EnumMapEnd,
@@ -1301,10 +1161,8 @@ fn test_rename_all() {
         &S { serialize: true, serialize_seq: true },
         &[
             Token::StructStart("S", 2),
-            Token::StructSep,
             Token::Str("Serialize"),
             Token::Bool(true),
-            Token::StructSep,
             Token::Str("SerializeSeq"),
             Token::Bool(true),
             Token::StructEnd,

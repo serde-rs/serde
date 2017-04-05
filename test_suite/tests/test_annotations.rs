@@ -87,23 +87,18 @@ fn test_default_struct() {
         &[
             Token::StructStart("DefaultStruct", 3),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::StructSep,
             Token::Str("a2"),
             Token::I32(2),
 
-            Token::StructSep,
             Token::Str("a3"),
             Token::I32(3),
 
-            Token::StructSep,
             Token::Str("a4"),
             Token::I32(4),
 
-            Token::StructSep,
             Token::Str("a5"),
             Token::I32(5),
 
@@ -116,7 +111,6 @@ fn test_default_struct() {
         &[
             Token::StructStart("DefaultStruct", 1),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
@@ -150,23 +144,18 @@ fn test_default_enum() {
         &[
             Token::EnumMapStart("DefaultEnum", "Struct", 3),
 
-            Token::EnumMapSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::EnumMapSep,
             Token::Str("a2"),
             Token::I32(2),
 
-            Token::EnumMapSep,
             Token::Str("a3"),
             Token::I32(3),
 
-            Token::EnumMapSep,
             Token::Str("a4"),
             Token::I32(4),
 
-            Token::EnumMapSep,
             Token::Str("a5"),
             Token::I32(5),
 
@@ -179,7 +168,6 @@ fn test_default_enum() {
         &[
             Token::EnumMapStart("DefaultEnum", "Struct", 3),
 
-            Token::EnumMapSep,
             Token::Str("a1"),
             Token::I32(1),
 
@@ -221,7 +209,6 @@ fn test_no_std_default() {
         &[
             Token::StructStart("ContainsNoStdDefault", 1),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::StructNewType("NoStdDefault"),
             Token::I8(8),
@@ -304,30 +291,23 @@ fn test_ignore_unknown() {
         &[
             Token::StructStart("DefaultStruct", 5),
 
-            Token::StructSep,
             Token::Str("whoops1"),
             Token::I32(2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::StructSep,
             Token::Str("whoops2"),
             Token::SeqStart(Some(1)),
-            Token::SeqSep,
             Token::I32(2),
             Token::SeqEnd,
 
-            Token::StructSep,
             Token::Str("a2"),
             Token::I32(2),
 
-            Token::StructSep,
             Token::Str("whoops3"),
             Token::I32(2),
 
-            Token::StructSep,
             Token::Str("a3"),
             Token::I32(3),
 
@@ -339,11 +319,9 @@ fn test_ignore_unknown() {
         &[
             Token::StructStart("DenyUnknown", 2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::StructSep,
             Token::Str("whoops"),
         ],
         Error::Message("unknown field `whoops`, expected `a1`".to_owned())
@@ -373,11 +351,9 @@ fn test_rename_struct() {
         &[
             Token::StructStart("Superhero", 2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::StructSep,
             Token::Str("a3"),
             Token::I32(2),
 
@@ -390,11 +366,9 @@ fn test_rename_struct() {
         &[
             Token::StructStart("SuperheroSer", 2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::StructSep,
             Token::Str("a4"),
             Token::I32(2),
 
@@ -407,11 +381,9 @@ fn test_rename_struct() {
         &[
             Token::StructStart("SuperheroDe", 2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
-            Token::StructSep,
             Token::Str("a5"),
             Token::I32(2),
 
@@ -469,13 +441,8 @@ fn test_rename_enum() {
         &RenameEnum::WonderWoman(0, 1),
         &[
             Token::EnumSeqStart("Superhero", "diana_prince", 2),
-
-            Token::EnumSeqSep,
             Token::I8(0),
-
-            Token::EnumSeqSep,
             Token::I8(1),
-
             Token::EnumSeqEnd,
         ]
     );
@@ -485,7 +452,6 @@ fn test_rename_enum() {
         &[
             Token::EnumMapStart("Superhero", "barry_allan", 1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::I32(1),
 
@@ -501,11 +467,9 @@ fn test_rename_enum() {
         &[
             Token::EnumMapStart("SuperheroSer", "dick_grayson", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(0),
 
-            Token::EnumMapSep,
             Token::Str("c"),
             Token::Str(""),
 
@@ -521,11 +485,9 @@ fn test_rename_enum() {
         &[
             Token::EnumMapStart("SuperheroDe", "jason_todd", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(0),
 
-            Token::EnumMapSep,
             Token::Str("d"),
             Token::Str(""),
 
@@ -555,11 +517,9 @@ fn test_skip_serializing_struct() {
         &[
             Token::StructStart("SkipSerializingStruct", 2),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::StructSep,
             Token::Str("c"),
             Token::I32(3),
 
@@ -576,7 +536,6 @@ fn test_skip_serializing_struct() {
         &[
             Token::StructStart("SkipSerializingStruct", 1),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
@@ -608,11 +567,9 @@ fn test_skip_serializing_enum() {
         &[
             Token::EnumMapStart("SkipSerializingEnum", "Struct", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("c"),
             Token::I32(3),
 
@@ -629,7 +586,6 @@ fn test_skip_serializing_enum() {
         &[
             Token::EnumMapStart("SkipSerializingEnum", "Struct", 1),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
@@ -676,12 +632,10 @@ fn test_elt_not_serialize() {
         &[
             Token::StructStart("ContainsNotSerialize", 2),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::Option(true),
             Token::I8(1),
 
-            Token::StructSep,
             Token::Str("d"),
             Token::Str("trouble"),
 
@@ -708,11 +662,9 @@ fn test_serialize_with_struct() {
         &[
             Token::StructStart("SerializeWithStruct", 2),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::Bool(false),
 
@@ -728,11 +680,9 @@ fn test_serialize_with_struct() {
         &[
             Token::StructStart("SerializeWithStruct", 2),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::Bool(true),
 
@@ -761,11 +711,9 @@ fn test_serialize_with_enum() {
         &[
             Token::EnumMapStart("SerializeWithEnum", "Struct", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::Bool(false),
 
@@ -781,11 +729,9 @@ fn test_serialize_with_enum() {
         &[
             Token::EnumMapStart("SerializeWithEnum", "Struct", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::Bool(true),
 
@@ -811,11 +757,9 @@ fn test_deserialize_with_struct() {
         &[
             Token::StructStart("DeserializeWithStruct", 2),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::Bool(false),
 
@@ -831,11 +775,9 @@ fn test_deserialize_with_struct() {
         &[
             Token::StructStart("DeserializeWithStruct", 2),
 
-            Token::StructSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::StructSep,
             Token::Str("b"),
             Token::Bool(true),
 
@@ -863,11 +805,9 @@ fn test_deserialize_with_enum() {
         &[
             Token::EnumMapStart("DeserializeWithEnum", "Struct", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::Bool(false),
 
@@ -883,11 +823,9 @@ fn test_deserialize_with_enum() {
         &[
             Token::EnumMapStart("DeserializeWithEnum", "Struct", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(1),
 
-            Token::EnumMapSep,
             Token::Str("b"),
             Token::Bool(true),
 
@@ -902,7 +840,6 @@ fn test_missing_renamed_field_struct() {
         &[
             Token::StructStart("Superhero", 2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
@@ -915,7 +852,6 @@ fn test_missing_renamed_field_struct() {
         &[
             Token::StructStart("SuperheroDe", 2),
 
-            Token::StructSep,
             Token::Str("a1"),
             Token::I32(1),
 
@@ -940,7 +876,6 @@ fn test_missing_renamed_field_enum() {
         &[
             Token::EnumMapStart("SuperheroDe", "jason_todd", 2),
 
-            Token::EnumMapSep,
             Token::Str("a"),
             Token::I8(0),
 
@@ -961,8 +896,7 @@ fn test_invalid_length_enum() {
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
             Token::EnumSeqStart("InvalidLengthEnum", "A", 3),
-                Token::EnumSeqSep,
-                Token::I32(1),
+            Token::I32(1),
             Token::EnumSeqEnd,
         ],
         Error::Message("invalid length 1, expected tuple of 3 elements".to_owned()),
@@ -970,8 +904,7 @@ fn test_invalid_length_enum() {
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
             Token::EnumSeqStart("InvalidLengthEnum", "B", 3),
-                Token::EnumSeqSep,
-                Token::I32(1),
+            Token::I32(1),
             Token::EnumSeqEnd,
         ],
         Error::Message("invalid length 1, expected tuple of 2 elements".to_owned()),
