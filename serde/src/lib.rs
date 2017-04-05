@@ -93,7 +93,6 @@ pub use de::{Deserialize, Deserializer};
 #[macro_use]
 mod macros;
 
-pub mod bytes;
 pub mod de;
 #[cfg(feature = "std")]
 #[doc(hidden)]

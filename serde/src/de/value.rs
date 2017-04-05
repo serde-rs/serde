@@ -29,7 +29,6 @@ use core::iter::{self, Iterator};
 use core::marker::PhantomData;
 
 use de::{self, Expected, SeqVisitor};
-use bytes;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -948,87 +947,6 @@ impl<'de, V_> de::Deserializer<'de> for MapVisitorDeserializer<V_>
         where V: de::Visitor<'de>
     {
         visitor.visit_map(self.visitor)
-    }
-
-    forward_to_deserialize! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple enum ignored_any byte_buf
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-impl<'de, 'a, E> ValueDeserializer<'de, E> for bytes::Bytes<'a>
-    where E: de::Error
-{
-    type Deserializer = BytesDeserializer<'a, E>;
-
-    fn into_deserializer(self) -> BytesDeserializer<'a, E> {
-        BytesDeserializer {
-            value: self.into(),
-            marker: PhantomData,
-        }
-    }
-}
-
-/// A helper deserializer that deserializes a `&[u8]`.
-pub struct BytesDeserializer<'a, E> {
-    value: &'a [u8],
-    marker: PhantomData<E>,
-}
-
-impl<'de, 'a, E> de::Deserializer<'de> for BytesDeserializer<'a, E>
-    where E: de::Error
-{
-    type Error = E;
-
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: de::Visitor<'de>
-    {
-        visitor.visit_bytes(self.value)
-    }
-
-    forward_to_deserialize! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple enum ignored_any byte_buf
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-#[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, E> ValueDeserializer<'de, E> for bytes::ByteBuf
-    where E: de::Error
-{
-    type Deserializer = ByteBufDeserializer<E>;
-
-    fn into_deserializer(self) -> Self::Deserializer {
-        ByteBufDeserializer {
-            value: self.into(),
-            marker: PhantomData,
-        }
-    }
-}
-
-/// A helper deserializer that deserializes a `Vec<u8>`.
-#[cfg(any(feature = "std", feature = "collections"))]
-pub struct ByteBufDeserializer<E> {
-    value: Vec<u8>,
-    marker: PhantomData<E>,
-}
-
-#[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, E> de::Deserializer<'de> for ByteBufDeserializer<E>
-    where E: de::Error
-{
-    type Error = E;
-
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where V: de::Visitor<'de>
-    {
-        visitor.visit_byte_buf(self.value)
     }
 
     forward_to_deserialize! {
