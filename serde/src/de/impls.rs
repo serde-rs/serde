@@ -130,7 +130,7 @@ macro_rules! impl_deserialize_num_method {
 }
 
 macro_rules! impl_deserialize_num {
-    ($ty:ident, $method:ident) => {
+    ($ty:ident, $method:ident, $($visit:ident),*) => {
         impl<'de> Deserialize<'de> for $ty {
             #[inline]
             fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
@@ -145,36 +145,44 @@ macro_rules! impl_deserialize_num {
                         formatter.write_str(stringify!($ty))
                     }
 
-                    impl_deserialize_num_method!($ty, i8, visit_i8, from_i8, Signed, i64);
-                    impl_deserialize_num_method!($ty, i16, visit_i16, from_i16, Signed, i64);
-                    impl_deserialize_num_method!($ty, i32, visit_i32, from_i32, Signed, i64);
-                    impl_deserialize_num_method!($ty, i64, visit_i64, from_i64, Signed, i64);
-                    impl_deserialize_num_method!($ty, u8, visit_u8, from_u8, Unsigned, u64);
-                    impl_deserialize_num_method!($ty, u16, visit_u16, from_u16, Unsigned, u64);
-                    impl_deserialize_num_method!($ty, u32, visit_u32, from_u32, Unsigned, u64);
-                    impl_deserialize_num_method!($ty, u64, visit_u64, from_u64, Unsigned, u64);
-                    impl_deserialize_num_method!($ty, f32, visit_f32, from_f32, Float, f64);
-                    impl_deserialize_num_method!($ty, f64, visit_f64, from_f64, Float, f64);
+                    $(
+                        impl_deserialize_num!($visit $ty);
+                    )*
                 }
 
                 deserializer.$method(PrimitiveVisitor)
             }
         }
-    }
+    };
+    (integer $ty:ident) => {
+        impl_deserialize_num_method!($ty, i8, visit_i8, from_i8, Signed, i64);
+        impl_deserialize_num_method!($ty, i16, visit_i16, from_i16, Signed, i64);
+        impl_deserialize_num_method!($ty, i32, visit_i32, from_i32, Signed, i64);
+        impl_deserialize_num_method!($ty, i64, visit_i64, from_i64, Signed, i64);
+        impl_deserialize_num_method!($ty, u8, visit_u8, from_u8, Unsigned, u64);
+        impl_deserialize_num_method!($ty, u16, visit_u16, from_u16, Unsigned, u64);
+        impl_deserialize_num_method!($ty, u32, visit_u32, from_u32, Unsigned, u64);
+        impl_deserialize_num_method!($ty, u64, visit_u64, from_u64, Unsigned, u64);
+    };
+    (float $ty:ident) => {
+        impl_deserialize_num_method!($ty, f32, visit_f32, from_f32, Float, f64);
+        impl_deserialize_num_method!($ty, f64, visit_f64, from_f64, Float, f64);
+    };
 }
 
-impl_deserialize_num!(isize, deserialize_i64);
-impl_deserialize_num!(i8, deserialize_i8);
-impl_deserialize_num!(i16, deserialize_i16);
-impl_deserialize_num!(i32, deserialize_i32);
-impl_deserialize_num!(i64, deserialize_i64);
-impl_deserialize_num!(usize, deserialize_u64);
-impl_deserialize_num!(u8, deserialize_u8);
-impl_deserialize_num!(u16, deserialize_u16);
-impl_deserialize_num!(u32, deserialize_u32);
-impl_deserialize_num!(u64, deserialize_u64);
-impl_deserialize_num!(f32, deserialize_f32);
-impl_deserialize_num!(f64, deserialize_f64);
+impl_deserialize_num!(isize, deserialize_i64, integer);
+impl_deserialize_num!(i8, deserialize_i8, integer);
+impl_deserialize_num!(i16, deserialize_i16, integer);
+impl_deserialize_num!(i32, deserialize_i32, integer);
+impl_deserialize_num!(i64, deserialize_i64, integer);
+impl_deserialize_num!(usize, deserialize_u64, integer);
+impl_deserialize_num!(u8, deserialize_u8, integer);
+impl_deserialize_num!(u16, deserialize_u16, integer);
+impl_deserialize_num!(u32, deserialize_u32, integer);
+impl_deserialize_num!(u64, deserialize_u64, integer);
+
+impl_deserialize_num!(f32, deserialize_f32, integer, float);
+impl_deserialize_num!(f64, deserialize_f64, integer, float);
 
 ///////////////////////////////////////////////////////////////////////////////
 

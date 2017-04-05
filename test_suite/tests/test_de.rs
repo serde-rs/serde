@@ -187,8 +187,6 @@ declare_tests! {
         0isize => &[Token::U16(0)],
         0isize => &[Token::U32(0)],
         0isize => &[Token::U64(0)],
-        0isize => &[Token::F32(0.)],
-        0isize => &[Token::F64(0.)],
     }
     test_ints {
         0i8 => &[Token::I8(0)],
@@ -1031,5 +1029,11 @@ declare_error_tests! {
             Token::Str("1"),
         ],
         Error::Message("invalid type: string \"1\", expected isize".into()),
+    }
+    test_integer_from_float<isize> {
+        &[
+            Token::F32(0.0),
+        ],
+        Error::Message("invalid type: floating point `0`, expected isize".into()),
     }
 }
