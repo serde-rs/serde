@@ -312,4 +312,11 @@ impl<S> Serializer for TaggedSerializer<S>
         try!(map.serialize_key(inner_variant));
         Ok(SerializeStructVariantAsMapValue::new(map, inner_variant, len))
     }
+
+    #[cfg(not(any(feature = "std", feature = "collections")))]
+    fn collect_str<T: ?Sized>(self, _: &T) -> Result<Self::Ok, Self::Error>
+        where T: Display
+    {
+        Err(self.bad_type(Unsupported::String))
+    }
 }

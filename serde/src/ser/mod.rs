@@ -654,8 +654,9 @@ pub trait Serializer: Sized {
 
     /// Serialize a string produced by an implementation of `Display`.
     ///
-    /// The default implementation returns an error unconditionally when
-    /// compiled with `no_std`.
+    /// Serializers that use `no_std` are required to provide an implementation
+    /// of this method. If no more sensible behavior is possible, the
+    /// implementation is expected to return an error.
     ///
     /// ```rust
     /// # use serde::{Serialize, Serializer};
@@ -676,13 +677,7 @@ pub trait Serializer: Sized {
     /// ```
     #[cfg(not(any(feature = "std", feature = "collections")))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
-        where T: Display
-    {
-        // TODO https://github.com/serde-rs/serde/issues/805
-        // Remove this impl and force no_std formats to implement collect_str.
-        let _ = value;
-        Err(Error::custom("this no_std format does not support serializing strings with collect_str"))
-    }
+        where T: Display;
 }
 
 /// Returned from `Serializer::serialize_seq` and
