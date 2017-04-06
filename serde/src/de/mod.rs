@@ -1564,16 +1564,36 @@ pub trait VariantVisitor<'de>: Sized {
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantVisitor, Unexpected};
+    /// #
+    /// # struct X;
+    /// #
+    /// # impl<'de> VariantVisitor<'de> for X {
+    /// #     type Error = value::Error;
+    /// #
+    /// #     fn visit_unit(self) -> Result<(), Self::Error> {
+    /// #         unimplemented!()
+    /// #     }
+    /// #
+    /// #     fn visit_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #         where T: DeserializeSeed<'de>
+    /// #     { unimplemented!() }
+    /// #
     /// fn visit_tuple<V>(self,
     ///                   _len: usize,
     ///                   _visitor: V) -> Result<V::Value, Self::Error>
-    ///     where V: Visitor
+    ///     where V: Visitor<'de>
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
     ///     let unexp = Unexpected::UnitVariant;
-    ///     Err(Error::invalid_type(unexp, &"tuple variant"))
+    ///     Err(de::Error::invalid_type(unexp, &"tuple variant"))
     /// }
+    /// #
+    /// #     fn visit_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #         where V: Visitor<'de>
+    /// #     { unimplemented!() }
+    /// # }
     /// ```
     fn visit_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where V: Visitor<'de>;
