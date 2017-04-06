@@ -95,9 +95,6 @@ pub use de::{Deserialize, Deserializer};
 mod macros;
 
 pub mod de;
-#[cfg(feature = "std")]
-#[doc(hidden)]
-pub mod iter;
 pub mod ser;
 mod utils;
 
