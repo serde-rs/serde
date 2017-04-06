@@ -143,6 +143,16 @@ impl<T> Serialize for PhantomData<T> {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Does not require T: Serialize.
+impl<T> Serialize for [T; 0] {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        try!(serializer.serialize_seq_fixed_size(0)).end()
+    }
+}
+
 macro_rules! array_impls {
     ($len:expr) => {
         impl<T> Serialize for [T; $len] where T: Serialize {
@@ -160,7 +170,6 @@ macro_rules! array_impls {
     }
 }
 
-array_impls!(0);
 array_impls!(1);
 array_impls!(2);
 array_impls!(3);

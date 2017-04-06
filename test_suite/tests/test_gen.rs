@@ -295,6 +295,11 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     struct UnitDenyUnknown;
+
+    #[derive(Serialize, Deserialize)]
+    struct EmptyArray {
+        empty: [X; 0],
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
