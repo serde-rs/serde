@@ -625,9 +625,7 @@ impl<A> ArrayVisitor<A> {
     }
 }
 
-impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]>
-    where T: Deserialize<'de>
-{
+impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
     type Value = [T; 0];
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -642,9 +640,8 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]>
     }
 }
 
-impl<'de, T> Deserialize<'de> for [T; 0]
-    where T: Deserialize<'de>
-{
+// Does not require T: Deserialize<'de>.
+impl<'de, T> Deserialize<'de> for [T; 0] {
     fn deserialize<D>(deserializer: D) -> Result<[T; 0], D::Error>
         where D: Deserializer<'de>
     {
