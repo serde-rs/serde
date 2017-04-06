@@ -481,13 +481,18 @@ pub trait Deserialize<'de>: Sized {
 /// from the input string, but a `from_reader` function may only deserialize
 /// owned data.
 ///
-/// ```rust,ignore
-/// pub fn from_str<'a, T>(s: &'a str) -> Result<T>
+/// ```rust
+/// # use serde::de::{Deserialize, DeserializeOwned};
+/// # use std::io::{Read, Result};
+/// #
+/// # trait Ignore {
+/// fn from_str<'a, T>(s: &'a str) -> Result<T>
 ///     where T: Deserialize<'a>;
 ///
-/// pub fn from_reader<R, T>(rdr: R) -> Result<T>
+/// fn from_reader<R, T>(rdr: R) -> Result<T>
 ///     where R: Read,
 ///           T: DeserializeOwned;
+/// # }
 /// ```
 pub trait DeserializeOwned: for<'de> Deserialize<'de> {}
 impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
