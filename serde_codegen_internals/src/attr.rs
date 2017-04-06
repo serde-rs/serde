@@ -155,7 +155,7 @@ impl Item {
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
-                    // Parse `#[serde(rename="foo")]`
+                    // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_name.set(s.clone());
@@ -163,7 +163,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
@@ -171,7 +171,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(rename_all="foo")]`
+                    // Parse `#[serde(rename_all = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             match RenameRule::from_str(&s) {
@@ -203,7 +203,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(default="...")]`
+                    // Parse `#[serde(default = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             match item.body {
@@ -218,7 +218,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(bound="D: Serialize")]`
+                    // Parse `#[serde(bound = "D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
@@ -227,7 +227,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
                             ser_bound.set_opt(ser);
@@ -423,7 +423,7 @@ impl Variant {
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
-                    // Parse `#[serde(rename="foo")]`
+                    // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_name.set(s.clone());
@@ -431,7 +431,7 @@ impl Variant {
                         }
                     }
 
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
@@ -439,7 +439,7 @@ impl Variant {
                         }
                     }
 
-                    // Parse `#[serde(rename_all="foo")]`
+                    // Parse `#[serde(rename_all = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             match RenameRule::from_str(&s) {
@@ -567,7 +567,7 @@ impl Field {
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
-                    // Parse `#[serde(rename="foo")]`
+                    // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_name.set(s.clone());
@@ -575,7 +575,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
@@ -588,7 +588,7 @@ impl Field {
                         default.set(Default::Default);
                     }
 
-                    // Parse `#[serde(default="...")]`
+                    // Parse `#[serde(default = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             default.set(Default::Path(path));
@@ -605,28 +605,28 @@ impl Field {
                         skip_deserializing.set_true();
                     }
 
-                    // Parse `#[serde(skip_serializing_if="...")]`
+                    // Parse `#[serde(skip_serializing_if = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "skip_serializing_if" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             skip_serializing_if.set(path);
                         }
                     }
 
-                    // Parse `#[serde(serialize_with="...")]`
+                    // Parse `#[serde(serialize_with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "serialize_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             serialize_with.set(path);
                         }
                     }
 
-                    // Parse `#[serde(deserialize_with="...")]`
+                    // Parse `#[serde(deserialize_with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             deserialize_with.set(path);
                         }
                     }
 
-                    // Parse `#[serde(with="...")]`
+                    // Parse `#[serde(with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             let mut ser_path = path.clone();
@@ -638,7 +638,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(bound="D: Serialize")]`
+                    // Parse `#[serde(bound = "D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
@@ -647,7 +647,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
                             ser_bound.set_opt(ser);
@@ -688,7 +688,7 @@ impl Field {
         }
 
         // Is skip_deserializing, initialize the field to Default::default()
-        // unless a different default is specified by `#[serde(default="...")]`
+        // unless a different default is specified by `#[serde(default = "...")]`
         if skip_deserializing.0.value.is_some() {
             default.set_if_none(Default::Default);
         }

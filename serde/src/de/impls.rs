@@ -25,7 +25,7 @@ use std::path;
 use core::str;
 #[cfg(feature = "std")]
 use std::ffi::{CString, OsString};
-#[cfg(all(feature = "std", feature="unstable"))]
+#[cfg(all(feature = "std", feature = "unstable"))]
 use std::ffi::CStr;
 
 #[cfg(feature = "std")]
@@ -411,7 +411,7 @@ impl<'de> Deserialize<'de> for CString {
     }
 }
 
-#[cfg(all(feature = "std", feature="unstable"))]
+#[cfg(all(feature = "std", feature = "unstable"))]
 impl<'de> Deserialize<'de> for Box<CStr> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>

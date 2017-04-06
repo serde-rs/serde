@@ -1371,8 +1371,8 @@ fn field_i(i: usize) -> Ident {
     Ident::new(format!("__field{}", i))
 }
 
-/// This function wraps the expression in `#[serde(deserialize_with="...")]` in
-/// a trait to prevent it from accessing the internal `Deserialize` state.
+/// This function wraps the expression in `#[serde(deserialize_with = "...")]`
+/// in a trait to prevent it from accessing the internal `Deserialize` state.
 fn wrap_deserialize_with(ident: &syn::Ident,
                          params: &Parameters,
                          field_ty: &syn::Ty,
