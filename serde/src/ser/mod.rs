@@ -452,8 +452,18 @@ pub trait Serializer: Sized {
     /// wrappers around the data they contain. A reasonable implementation would
     /// be to forward to `value.serialize(self)`.
     ///
-    /// ```rust,ignore
-    /// serializer.serialize_newtype_struct("Millimeters", &self.0)
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// #
+    /// struct Millimeters(u8);
+    ///
+    /// impl Serialize for Millimeters {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_newtype_struct("Millimeters", &self.0)
+    ///     }
+    /// }
     /// ```
     fn serialize_newtype_struct<T: ?Sized + Serialize>(self,
                                                        name: &'static str,
