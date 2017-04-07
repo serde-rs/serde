@@ -614,12 +614,23 @@ pub trait Serializer: Sized {
     /// The `name` is the name of the tuple struct and the `len` is the number
     /// of data fields that will be serialized.
     ///
-    /// ```rust,ignore
-    /// let mut ts = serializer.serialize_tuple_struct("Rgb", 3)?;
-    /// ts.serialize_field(&self.0)?;
-    /// ts.serialize_field(&self.1)?;
-    /// ts.serialize_field(&self.2)?;
-    /// ts.end()
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeTupleStruct;
+    ///
+    /// struct Rgb(u8, u8, u8);
+    ///
+    /// impl Serialize for Rgb {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         let mut ts = serializer.serialize_tuple_struct("Rgb", 3)?;
+    ///         ts.serialize_field(&self.0)?;
+    ///         ts.serialize_field(&self.1)?;
+    ///         ts.serialize_field(&self.2)?;
+    ///         ts.end()
+    ///     }
+    /// }
     /// ```
     fn serialize_tuple_struct(self,
                               name: &'static str,
