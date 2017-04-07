@@ -93,14 +93,18 @@ pub use de::{Deserialize, Deserializer};
 
 #[macro_use]
 mod macros;
+mod utils;
 
 pub mod de;
 pub mod ser;
-mod utils;
 
 // Generated code uses these to support no_std. Not public API.
 #[doc(hidden)]
 pub mod export;
+
+// Helpers used by generated code and doc tests. Not public API.
+#[doc(hidden)]
+pub mod private;
 
 // Re-export #[derive(Serialize, Deserialize)].
 //

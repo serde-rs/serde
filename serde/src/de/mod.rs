@@ -113,12 +113,6 @@ mod from_primitive;
 mod ignored_any;
 mod impls;
 
-// Helpers used by generated code. Not public API.
-#[doc(hidden)]
-pub mod private;
-#[cfg(any(feature = "std", feature = "collections"))]
-mod content;
-
 pub use self::ignored_any::IgnoredAny;
 
 ///////////////////////////////////////////////////////////////////////////////

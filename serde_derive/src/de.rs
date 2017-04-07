@@ -622,7 +622,7 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
                 params,
                 variant,
                 item_attrs,
-                quote!(_serde::de::private::ContentDeserializer::<__D::Error>::new(__tagged.content)),
+                quote!(_serde::private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)),
             ));
 
             quote! {
@@ -637,7 +637,7 @@ fn deserialize_internally_tagged_enum(ident: &syn::Ident,
 
         let __tagged = try!(_serde::Deserializer::deserialize(
             __deserializer,
-            _serde::de::private::TaggedContentVisitor::<__Field>::new(#tag)));
+            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag)));
 
         match __tagged.tag {
             #(#variant_arms)*
@@ -693,7 +693,7 @@ fn deserialize_adjacently_tagged_enum(ident: &syn::Ident,
     let type_name = item_attrs.name().deserialize_name();
 
     let tag_or_content = quote! {
-        _serde::de::private::TagOrContentFieldVisitor {
+        _serde::private::de::TagOrContentFieldVisitor {
             tag: #tag,
             content: #content,
         }
@@ -738,10 +738,10 @@ fn deserialize_adjacently_tagged_enum(ident: &syn::Ident,
     let visit_third_key = quote! {
         // Visit the third key in the map, hopefully there isn't one.
         match try!(_serde::de::MapVisitor::visit_key_seed(&mut __visitor, #tag_or_content)) {
-            _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                 _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#tag))
             }
-            _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
                 _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#content))
             }
             _serde::export::None => _serde::export::Ok(__ret),
@@ -789,17 +789,17 @@ fn deserialize_adjacently_tagged_enum(ident: &syn::Ident,
                 // Visit the first key.
                 match try!(_serde::de::MapVisitor::visit_key_seed(&mut __visitor, #tag_or_content)) {
                     // First key is the tag.
-                    _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+                    _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                         // Parse the tag.
                         let __field = try!(_serde::de::MapVisitor::visit_value(&mut __visitor));
                         // Visit the second key.
                         match try!(_serde::de::MapVisitor::visit_key_seed(&mut __visitor, #tag_or_content)) {
                             // Second key is a duplicate of the tag.
-                            _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
+                            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                                 _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#tag))
                             }
                             // Second key is the content.
-                            _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
                                 let __ret = try!(_serde::de::MapVisitor::visit_value_seed(&mut __visitor,
                                     __Seed {
                                         field: __field,
@@ -814,14 +814,14 @@ fn deserialize_adjacently_tagged_enum(ident: &syn::Ident,
                         }
                     }
                     // First key is the content.
-                    _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                    _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
                         // Buffer up the content.
-                        let __content = try!(_serde::de::MapVisitor::visit_value::<_serde::de::private::Content>(&mut __visitor));
+                        let __content = try!(_serde::de::MapVisitor::visit_value::<_serde::private::de::Content>(&mut __visitor));
                         // Visit the second key.
                         match try!(_serde::de::MapVisitor::visit_key_seed(&mut __visitor, #tag_or_content)) {
                             // Second key is the tag.
-                            _serde::export::Some(_serde::de::private::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::de::private::ContentDeserializer::<__V::Error>::new(__content);
+                            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
+                                let __deserializer = _serde::private::de::ContentDeserializer::<__V::Error>::new(__content);
                                 // Parse the tag.
                                 let __ret = try!(match try!(_serde::de::MapVisitor::visit_value(&mut __visitor)) {
                                     // Deserialize the buffered content now that we know the variant.
@@ -831,7 +831,7 @@ fn deserialize_adjacently_tagged_enum(ident: &syn::Ident,
                                 #visit_third_key
                             }
                             // Second key is a duplicate of the content.
-                            _serde::export::Some(_serde::de::private::TagOrContentField::Content) => {
+                            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
                                 _serde::export::Err(<__V::Error as _serde::de::Error>::duplicate_field(#content))
                             }
                             // There is no second key.
@@ -897,7 +897,7 @@ fn deserialize_untagged_enum(ident: &syn::Ident,
                 params,
                 variant,
                 item_attrs,
-                quote!(_serde::de::private::ContentRefDeserializer::<__D::Error>::new(&__content)),
+                quote!(_serde::private::de::ContentRefDeserializer::<__D::Error>::new(&__content)),
             ))
         });
 
@@ -910,7 +910,7 @@ fn deserialize_untagged_enum(ident: &syn::Ident,
     let fallthrough_msg = format!("data did not match any variant of untagged enum {}", ident);
 
     quote_block! {
-        let __content = try!(<_serde::de::private::Content as _serde::Deserialize>::deserialize(__deserializer));
+        let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
 
         #(
             if let _serde::export::Ok(__ok) = #attempts {
@@ -974,7 +974,7 @@ fn deserialize_internally_tagged_variant(ident: &syn::Ident,
             let type_name = ident.as_ref();
             let variant_name = variant.ident.as_ref();
             quote_block! {
-                try!(_serde::Deserializer::deserialize(#deserializer, _serde::de::private::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
+                try!(_serde::Deserializer::deserialize(#deserializer, _serde::private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
                 _serde::export::Ok(#ident::#variant_ident)
             }
         }
@@ -1005,7 +1005,7 @@ fn deserialize_untagged_variant(ident: &syn::Ident,
                 _serde::export::Result::map(
                     _serde::Deserializer::deserialize(
                         #deserializer,
-                        _serde::de::private::UntaggedUnitVisitor::new(#type_name, #variant_name)
+                        _serde::private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
                     ),
                     |()| #ident::#variant_ident)
             }
@@ -1428,7 +1428,7 @@ fn expr_is_missing(field: &Field, item_attrs: &attr::Item) -> Fragment {
     match field.attrs.deserialize_with() {
         None => {
             quote_expr! {
-                try!(_serde::de::private::missing_field(#name))
+                try!(_serde::private::de::missing_field(#name))
             }
         }
         Some(_) => {

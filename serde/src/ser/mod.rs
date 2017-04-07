@@ -107,12 +107,6 @@ use core::iter::IntoIterator;
 mod impls;
 mod impossible;
 
-// Helpers used by generated code. Not public API.
-#[doc(hidden)]
-pub mod private;
-#[cfg(any(feature = "std", feature = "collections"))]
-mod content;
-
 pub use self::impossible::Impossible;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -379,7 +373,7 @@ pub trait Serializer: Sized {
     /// # extern crate serde;
     /// #
     /// # use serde::ser::{Serializer, SerializeSeq};
-    /// # use serde::ser::private::Error;
+    /// # use serde::private::ser::Error;
     /// #
     /// # struct MySerializer;
     /// #

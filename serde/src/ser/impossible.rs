@@ -18,7 +18,7 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 /// # extern crate serde;
 /// #
 /// # use serde::ser::{Serializer, Impossible};
-/// # use serde::ser::private::Error;
+/// # use serde::private::ser::Error;
 /// #
 /// # struct MySerializer;
 /// #

@@ -705,10 +705,10 @@ impl Field {
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
             if is_cow(&field.ty, "str") {
-                let path = syn::parse_path("_serde::de::private::borrow_cow_str").unwrap();
+                let path = syn::parse_path("_serde::private::de::borrow_cow_str").unwrap();
                 deserialize_with.set_if_none(path);
             } else if is_cow(&field.ty, "[u8]") {
-                let path = syn::parse_path("_serde::de::private::borrow_cow_bytes").unwrap();
+                let path = syn::parse_path("_serde::private::de::borrow_cow_bytes").unwrap();
                 deserialize_with.set_if_none(path);
             }
         } else if is_rptr(&field.ty, "str") || is_rptr(&field.ty, "[u8]") {

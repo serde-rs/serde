@@ -379,7 +379,7 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
             }
 
             quote_expr! {
-                _serde::ser::private::serialize_tagged_newtype(
+                _serde::private::ser::serialize_tagged_newtype(
                     __serializer,
                     #enum_ident_str,
                     #variant_ident_str,
