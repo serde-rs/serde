@@ -13,7 +13,15 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 /// `SerializeTuple`, `SerializeTupleStruct`, `SerializeTupleVariant`,
 /// `SerializeMap`, `SerializeStruct`, and `SerializeStructVariant`.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use]
+/// # extern crate serde;
+/// #
+/// # use serde::ser::{Serializer, Impossible};
+/// # use serde::ser::private::Error;
+/// #
+/// # struct MySerializer;
+/// #
 /// impl Serializer for MySerializer {
 ///     type Ok = ();
 ///     type Error = Error;
@@ -27,11 +35,22 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 ///                      -> Result<Self::SerializeSeq, Error> {
 ///         // Given Impossible cannot be instantiated, the only
 ///         // thing we can do here is to return an error.
+/// #         macro_rules! ellipses { () => {
 ///         Err(...)
+/// #         } }
+/// #         unimplemented!()
 ///     }
 ///
 ///     /* other Serializer methods */
+/// #     __serialize_unimplemented! {
+/// #         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str bytes none some
+/// #         unit unit_struct unit_variant newtype_struct newtype_variant
+/// #         seq_fixed_size tuple tuple_struct tuple_variant map struct
+/// #         struct_variant
+/// #     }
 /// }
+/// #
+/// # fn main() {}
 /// ```
 pub struct Impossible<Ok, E> {
     void: Void,

@@ -5,6 +5,9 @@ use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct, Impossible
 #[cfg(any(feature = "std", feature = "collections"))]
 use ser::content::{SerializeTupleVariantAsMapValue, SerializeStructVariantAsMapValue};
 
+#[cfg(feature = "std")]
+use std::error;
+
 /// Not public API.
 pub fn serialize_tagged_newtype<S, T>(serializer: S,
                                       type_ident: &'static str,
@@ -71,31 +74,15 @@ impl Display for Unsupported {
     }
 }
 
-struct Error {
-    type_ident: &'static str,
-    variant_ident: &'static str,
-    ty: Unsupported,
-}
-
-impl Display for Error {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter,
-               "cannot serialize tagged newtype variant {}::{} containing {}",
-               self.type_ident,
-               self.variant_ident,
-               self.ty)
-    }
-}
-
 impl<S> TaggedSerializer<S>
     where S: Serializer
 {
     fn bad_type(self, what: Unsupported) -> S::Error {
-        ser::Error::custom(Error {
-                               type_ident: self.type_ident,
-                               variant_ident: self.variant_ident,
-                               ty: what,
-                           })
+        ser::Error::custom(format_args!(
+            "cannot serialize tagged newtype variant {}::{} containing {}",
+            self.type_ident,
+            self.variant_ident,
+            what))
     }
 }
 
@@ -318,5 +305,29 @@ impl<S> Serializer for TaggedSerializer<S>
         where T: Display
     {
         Err(self.bad_type(Unsupported::String))
+    }
+}
+
+/// Used only by Serde doc tests. Not public API.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct Error;
+
+impl ser::Error for Error {
+    fn custom<T: Display>(_: T) -> Self {
+        unimplemented!()
+    }
+}
+
+#[cfg(feature = "std")]
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        unimplemented!()
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!()
     }
 }
