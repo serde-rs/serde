@@ -645,13 +645,34 @@ pub trait Serializer: Sized {
     /// this variant within the enum, the `variant` is the name of the variant,
     /// and the `len` is the number of data fields that will be serialized.
     ///
-    /// ```rust,ignore
-    /// match *self {
-    ///     E::T(ref a, ref b) => {
-    ///         let mut tv = serializer.serialize_tuple_variant("E", 0, "T", 2)?;
-    ///         tv.serialize_field(a)?;
-    ///         tv.serialize_field(b)?;
-    ///         tv.end()
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeTupleVariant;
+    ///
+    /// enum E {
+    ///     T(u8, u8),
+    ///     U(String, u32, u32),
+    /// }
+    ///
+    /// impl Serialize for E {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         match *self {
+    ///             E::T(ref a, ref b) => {
+    ///                 let mut tv = serializer.serialize_tuple_variant("E", 0, "T", 2)?;
+    ///                 tv.serialize_field(a)?;
+    ///                 tv.serialize_field(b)?;
+    ///                 tv.end()
+    ///             }
+    ///             E::U(ref a, ref b, ref c) => {
+    ///                 let mut tv = serializer.serialize_tuple_variant("E", 1, "U", 3)?;
+    ///                 tv.serialize_field(a)?;
+    ///                 tv.serialize_field(b)?;
+    ///                 tv.serialize_field(c)?;
+    ///                 tv.end()
+    ///             }
+    ///         }
     ///     }
     /// }
     /// ```
