@@ -736,12 +736,27 @@ pub trait Serializer: Sized {
     /// The `name` is the name of the struct and the `len` is the number of
     /// data fields that will be serialized.
     ///
-    /// ```rust,ignore
-    /// let mut struc = serializer.serialize_struct("Rgb", 3)?;
-    /// struc.serialize_field("r", &self.r)?;
-    /// struc.serialize_field("g", &self.g)?;
-    /// struc.serialize_field("b", &self.b)?;
-    /// struc.end()
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeStruct;
+    ///
+    /// struct Rgb {
+    ///     r: u8,
+    ///     g: u8,
+    ///     b: u8,
+    /// }
+    ///
+    /// impl Serialize for Rgb {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         let mut rgb = serializer.serialize_struct("Rgb", 3)?;
+    ///         rgb.serialize_field("r", &self.r)?;
+    ///         rgb.serialize_field("g", &self.g)?;
+    ///         rgb.serialize_field("b", &self.b)?;
+    ///         rgb.end()
+    ///     }
+    /// }
     /// ```
     fn serialize_struct(self,
                         name: &'static str,
