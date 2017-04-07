@@ -510,12 +510,41 @@ pub trait Serializer: Sized {
     /// not be computable before the sequence is iterated. Some serializers only
     /// support sequences whose length is known up front.
     ///
-    /// ```rust,ignore
-    /// let mut seq = serializer.serialize_seq(Some(self.len()))?;
-    /// for element in self {
-    ///     seq.serialize_element(element)?;
+    /// ```rust
+    /// # use std::marker::PhantomData;
+    /// #
+    /// # struct Vec<T>(PhantomData<T>);
+    /// #
+    /// # impl<T> Vec<T> {
+    /// #     fn len(&self) -> usize {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// # impl<'a, T> IntoIterator for &'a Vec<T> {
+    /// #     type Item = &'a T;
+    /// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+    /// #     fn into_iter(self) -> Self::IntoIter {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// # use serde::{Serialize, Serializer};
+    /// # use serde::ser::SerializeSeq;
+    /// #
+    /// impl<T> Serialize for Vec<T>
+    ///     where T: Serialize
+    /// {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         let mut seq = serializer.serialize_seq(Some(self.len()))?;
+    ///         for element in self {
+    ///             seq.serialize_element(element)?;
+    ///         }
+    ///         seq.end()
+    ///     }
     /// }
-    /// seq.end()
     /// ```
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error>;
 
