@@ -117,14 +117,21 @@ macro_rules! forward_to_deserialize_helper {
 /// methods.
 ///
 /// ```rust
-/// # #[macro_use] extern crate serde;
+/// # #[macro_use]
+/// # extern crate serde;
+/// #
 /// # use serde::de::{value, Deserializer, Visitor};
-/// # pub struct MyDeserializer;
+/// #
+/// # struct MyDeserializer;
+/// #
 /// # impl<'de> Deserializer<'de> for MyDeserializer {
 /// #     type Error = value::Error;
+/// #
 /// #     fn deserialize<V>(self, _: V) -> Result<V::Value, Self::Error>
 /// #         where V: Visitor<'de>
-/// #     { unimplemented!() }
+/// #     {
+/// #         unimplemented!()
+/// #     }
 /// #
 /// #[inline]
 /// fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -132,12 +139,14 @@ macro_rules! forward_to_deserialize_helper {
 /// {
 ///     self.deserialize(visitor)
 /// }
+/// #
 /// #     forward_to_deserialize! {
 /// #         u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
 /// #         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
 /// #         tuple_struct struct struct_field tuple enum ignored_any
 /// #     }
 /// # }
+/// #
 /// # fn main() {}
 /// ```
 ///
@@ -146,11 +155,16 @@ macro_rules! forward_to_deserialize_helper {
 /// can choose which methods to forward.
 ///
 /// ```rust
-/// # #[macro_use] extern crate serde;
+/// # #[macro_use]
+/// # extern crate serde;
+/// #
 /// # use serde::de::{value, Deserializer, Visitor};
-/// # pub struct MyDeserializer;
+/// #
+/// # struct MyDeserializer;
+/// #
 /// impl<'de> Deserializer<'de> for MyDeserializer {
 /// #   type Error = value::Error;
+/// #
 ///     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
 ///         where V: Visitor<'de>
 ///     {
@@ -165,6 +179,7 @@ macro_rules! forward_to_deserialize_helper {
 ///         tuple_struct struct struct_field tuple enum ignored_any
 ///     }
 /// }
+/// #
 /// # fn main() {}
 /// ```
 ///

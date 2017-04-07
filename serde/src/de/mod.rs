@@ -139,20 +139,26 @@ macro_rules! declare_error_trait {
             /// The message should not be capitalized and should not end with a period.
             ///
             /// ```rust
-            /// # use serde::de::{Deserialize, Deserializer, Error};
             /// # use std::str::FromStr;
-            /// # #[allow(dead_code)]
+            /// #
             /// # struct IpAddr;
+            /// #
             /// # impl FromStr for IpAddr {
             /// #     type Err = String;
-            /// #     fn from_str(_: &str) -> Result<Self, String> { unimplemented!() }
+            /// #
+            /// #     fn from_str(_: &str) -> Result<Self, String> {
+            /// #         unimplemented!()
+            /// #     }
             /// # }
+            /// #
+            /// use serde::de::{self, Deserialize, Deserializer};
+            ///
             /// impl<'de> Deserialize<'de> for IpAddr {
             ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             ///         where D: Deserializer<'de>
             ///     {
             ///         let s = try!(String::deserialize(deserializer));
-            ///         s.parse().map_err(Error::custom)
+            ///         s.parse().map_err(de::Error::custom)
             ///     }
             /// }
             /// ```
@@ -260,20 +266,24 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// `invalid_length` methods of the `Error` trait to build error messages.
 ///
 /// ```rust
-/// # use serde::de::{Error, Unexpected, Visitor};
 /// # use std::fmt;
-/// # #[allow(dead_code)]
+/// #
+/// # use serde::de::{self, Unexpected, Visitor};
+/// #
 /// # struct Example;
+/// #
 /// # impl<'de> Visitor<'de> for Example {
-/// # type Value = ();
+/// #     type Value = ();
+/// #
+/// #     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+/// #         write!(formatter, "definitely not a boolean")
+/// #     }
+/// #
 /// fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-///     where E: Error
+///     where E: de::Error
 /// {
-///     Err(Error::invalid_type(Unexpected::Bool(v), &self))
+///     Err(de::Error::invalid_type(Unexpected::Bool(v), &self))
 /// }
-/// # fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-/// #     write!(formatter, "definitely not a boolean")
-/// # }
 /// # }
 /// ```
 #[derive(Clone, PartialEq, Debug)]
@@ -380,31 +390,37 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// (`&self`) is an implementation of this trait.
 ///
 /// ```rust
-/// # use serde::de::{Error, Unexpected, Visitor};
 /// # use std::fmt;
-/// # #[allow(dead_code)]
+/// #
+/// # use serde::de::{self, Unexpected, Visitor};
+/// #
 /// # struct Example;
+/// #
 /// # impl<'de> Visitor<'de> for Example {
-/// # type Value = ();
+/// #     type Value = ();
+/// #
+/// #     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+/// #         write!(formatter, "definitely not a boolean")
+/// #     }
+/// #
 /// fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-///     where E: Error
+///     where E: de::Error
 /// {
-///     Err(Error::invalid_type(Unexpected::Bool(v), &self))
+///     Err(de::Error::invalid_type(Unexpected::Bool(v), &self))
 /// }
-/// # fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-/// #     write!(formatter, "definitely not a boolean")
-/// # }
 /// # }
 /// ```
 ///
 /// Outside of a `Visitor`, `&"..."` can be used.
 ///
 /// ```rust
-/// # use serde::de::{Error, Unexpected};
-/// # #[allow(dead_code)]
-/// # fn example<E: Error>() -> Result<(), E> {
-/// # let v = true;
-/// return Err(Error::invalid_type(Unexpected::Bool(v), &"a negative integer"));
+/// # use serde::de::{self, Unexpected};
+/// #
+/// # fn example<E>() -> Result<(), E>
+/// #     where E: de::Error
+/// # {
+/// #     let v = true;
+/// return Err(de::Error::invalid_type(Unexpected::Bool(v), &"a negative integer"));
 /// # }
 /// ```
 pub trait Expected {
@@ -509,11 +525,13 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///
 /// ```rust
 /// # use serde::Deserialize;
-/// # #[allow(dead_code)]
+/// #
 /// # enum Error {}
-/// # #[allow(dead_code)]
+/// #
 /// fn func<'de, T: Deserialize<'de>>() -> Result<T, Error>
-/// # { unimplemented!() }
+/// # {
+/// #     unimplemented!()
+/// # }
 /// ```
 ///
 /// Adjusting an API like this to support stateful deserialization is a matter
@@ -521,9 +539,9 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///
 /// ```rust
 /// # use serde::de::DeserializeSeed;
-/// # #[allow(dead_code)]
+/// #
 /// # enum Error {}
-/// # #[allow(dead_code)]
+/// #
 /// fn func_seed<'de, T: DeserializeSeed<'de>>(seed: T) -> Result<T::Value, Error>
 /// # {
 /// #     let _ = seed;
@@ -545,10 +563,11 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// trait.
 ///
 /// ```rust
-/// # use serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor};
-/// # use std::fmt;
-/// # use std::marker::PhantomData;
-/// #
+/// use std::fmt;
+/// use std::marker::PhantomData;
+///
+/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor};
+///
 /// // A DeserializeSeed implementation that uses stateful deserialization to
 /// // append array elements onto the end of an existing vector. The preexisting
 /// // state ("seed") in this case is the Vec<T>. The `deserialize` method of
@@ -576,6 +595,10 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///         {
 ///             type Value = ();
 ///
+///             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+///                 write!(formatter, "an array of integers")
+///             }
+///
 ///             fn visit_seq<V>(self, mut visitor: V) -> Result<(), V::Error>
 ///                 where V: SeqVisitor<'de>
 ///             {
@@ -586,10 +609,6 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///                 }
 ///                 Ok(())
 ///             }
-/// #
-/// #           fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-/// #               write!(formatter, "an array of integers")
-/// #           }
 ///         }
 ///
 ///         deserializer.deserialize_seq(ExtendVecVisitor(self.0))
@@ -606,6 +625,10 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///     // contents of the inner arrays.
 ///     type Value = Vec<T>;
 ///
+///     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+///         write!(formatter, "an array of arrays")
+///     }
+///
 ///     fn visit_seq<V>(self, mut visitor: V) -> Result<Vec<T>, V::Error>
 ///         where V: SeqVisitor<'de>
 ///     {
@@ -620,18 +643,15 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///         // Return the finished vec.
 ///         Ok(vec)
 ///     }
-/// #
-/// #   fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-/// #       write!(formatter, "an array of arrays")
-/// #   }
 /// }
 ///
-/// # #[allow(dead_code)]
-/// # fn example<'de, D: Deserializer<'de>>(deserializer: D) -> Result<(), D::Error> {
+/// # fn example<'de, D>(deserializer: D) -> Result<(), D::Error>
+/// #     where D: Deserializer<'de>
+/// # {
 /// let visitor = FlattenedVecVisitor(PhantomData);
 /// let flattened: Vec<u64> = deserializer.deserialize_seq(visitor)?;
-/// # let _ = flattened;
-/// # Ok(()) }
+/// #     Ok(())
+/// # }
 /// ```
 pub trait DeserializeSeed<'de>: Sized {
     /// The type produced by using this seed.
@@ -917,11 +937,12 @@ pub trait Deserializer<'de>: Sized {
 /// This trait represents a visitor that walks through a deserializer.
 ///
 /// ```rust
-/// # use serde::de::{Error, Unexpected, Visitor};
 /// # use std::fmt;
+/// #
+/// # use serde::de::{self, Unexpected, Visitor};
+/// #
 /// /// A visitor that deserializes a long string - a string containing at least
 /// /// some minimum number of bytes.
-/// # #[allow(dead_code)]
 /// struct LongString {
 ///     min: usize,
 /// }
@@ -934,12 +955,12 @@ pub trait Deserializer<'de>: Sized {
 ///     }
 ///
 ///     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-///         where E: Error
+///         where E: de::Error
 ///     {
 ///         if s.len() >= self.min {
 ///             Ok(s.to_owned())
 ///         } else {
-///             Err(Error::invalid_value(Unexpected::Str(s), &self))
+///             Err(de::Error::invalid_value(Unexpected::Str(s), &self))
 ///         }
 ///     }
 /// }
@@ -957,10 +978,14 @@ pub trait Visitor<'de>: Sized {
     ///
     /// ```rust
     /// # use std::fmt;
-    /// # #[allow(dead_code)]
-    /// # struct S { max: usize }
+    /// #
+    /// # struct S {
+    /// #     max: usize,
+    /// # }
+    /// #
     /// # impl<'de> serde::de::Visitor<'de> for S {
-    /// # type Value = ();
+    /// #     type Value = ();
+    /// #
     /// fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
     ///     write!(formatter, "an integer between 0 and {}", self.max)
     /// }

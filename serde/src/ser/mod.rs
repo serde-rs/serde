@@ -127,16 +127,23 @@ macro_rules! declare_error_trait {
             /// if it contains invalid UTF-8 data.
             ///
             /// ```rust
-            /// # use serde::ser::{Serialize, Serializer, Error};
             /// # struct Path;
-            /// # impl Path { fn to_str(&self) -> Option<&str> { unimplemented!() } }
+            /// #
+            /// # impl Path {
+            /// #     fn to_str(&self) -> Option<&str> {
+            /// #         unimplemented!()
+            /// #     }
+            /// # }
+            /// #
+            /// use serde::ser::{self, Serialize, Serializer};
+            ///
             /// impl Serialize for Path {
             ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             ///         where S: Serializer
             ///     {
             ///         match self.to_str() {
             ///             Some(s) => s.serialize(serializer),
-            ///             None => Err(Error::custom("path contains invalid UTF-8 characters")),
+            ///             None => Err(ser::Error::custom("path contains invalid UTF-8 characters")),
             ///         }
             ///     }
             /// }
@@ -524,6 +531,7 @@ pub trait Serializer: Sized {
     /// # impl<'a, T> IntoIterator for &'a Vec<T> {
     /// #     type Item = &'a T;
     /// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+    /// #
     /// #     fn into_iter(self) -> Self::IntoIter {
     /// #         unimplemented!()
     /// #     }
@@ -704,6 +712,7 @@ pub trait Serializer: Sized {
     /// # impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     /// #     type Item = (&'a K, &'a V);
     /// #     type IntoIter = Box<Iterator<Item = (&'a K, &'a V)>>;
+    /// #
     /// #     fn into_iter(self) -> Self::IntoIter {
     /// #         unimplemented!()
     /// #     }
@@ -844,12 +853,15 @@ pub trait Serializer: Sized {
     /// more efficient implementation if possible.
     ///
     /// ```rust
-    /// # use serde::{Serialize, Serializer};
     /// # struct DateTime;
+    /// #
     /// # impl DateTime {
     /// #     fn naive_local(&self) -> () { () }
     /// #     fn offset(&self) -> () { () }
     /// # }
+    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
     /// impl Serialize for DateTime {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     ///         where S: Serializer
@@ -876,12 +888,15 @@ pub trait Serializer: Sized {
     /// implementation is expected to return an error.
     ///
     /// ```rust
-    /// # use serde::{Serialize, Serializer};
     /// # struct DateTime;
+    /// #
     /// # impl DateTime {
     /// #     fn naive_local(&self) -> () { () }
     /// #     fn offset(&self) -> () { () }
     /// # }
+    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
     /// impl Serialize for DateTime {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     ///         where S: Serializer
@@ -1118,6 +1133,7 @@ pub trait SerializeTupleVariant {
 /// # impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
 /// #     type Item = (&'a K, &'a V);
 /// #     type IntoIter = Box<Iterator<Item = (&'a K, &'a V)>>;
+/// #
 /// #     fn into_iter(self) -> Self::IntoIter {
 /// #         unimplemented!()
 /// #     }
