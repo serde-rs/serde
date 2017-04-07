@@ -553,12 +553,24 @@ pub trait Serializer: Sized {
     /// This call must be followed by zero or more calls to `serialize_element`,
     /// then a call to `end`.
     ///
-    /// ```rust,ignore
-    /// let mut seq = serializer.serialize_seq_fixed_size(self.len())?;
-    /// for element in self {
-    ///     seq.serialize_element(element)?;
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeSeq;
+    ///
+    /// const VRAM_SIZE: usize = 386;
+    /// struct Vram([u16; VRAM_SIZE]);
+    ///
+    /// impl Serialize for Vram {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         let mut seq = serializer.serialize_seq_fixed_size(VRAM_SIZE)?;
+    ///         for element in &self.0[..] {
+    ///             seq.serialize_element(element)?;
+    ///         }
+    ///         seq.end()
+    ///     }
     /// }
-    /// seq.end()
     /// ```
     fn serialize_seq_fixed_size(self, size: usize) -> Result<Self::SerializeSeq, Self::Error>;
 
