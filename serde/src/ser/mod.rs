@@ -422,8 +422,8 @@ pub trait Serializer: Sized {
     /// variant.
     ///
     /// ```rust
-    /// # use serde::{Serialize, Serializer};
-    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
     /// enum E {
     ///     A,
     ///     B,
@@ -453,8 +453,8 @@ pub trait Serializer: Sized {
     /// be to forward to `value.serialize(self)`.
     ///
     /// ```rust
-    /// # use serde::{Serialize, Serializer};
-    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
     /// struct Millimeters(u8);
     ///
     /// impl Serialize for Millimeters {
@@ -477,8 +477,8 @@ pub trait Serializer: Sized {
     /// variant. The `value` is the data contained within this newtype variant.
     ///
     /// ```rust
-    /// # use serde::{Serialize, Serializer};
-    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
     /// enum E {
     ///     M(String),
     ///     N(u8),
@@ -529,9 +529,9 @@ pub trait Serializer: Sized {
     /// #     }
     /// # }
     /// #
-    /// # use serde::{Serialize, Serializer};
-    /// # use serde::ser::SerializeSeq;
-    /// #
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeSeq;
+    ///
     /// impl<T> Serialize for Vec<T>
     ///     where T: Serialize
     /// {
