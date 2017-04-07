@@ -1,5 +1,3 @@
-//! Private utility functions
-
 const TAG_CONT: u8 = 0b1000_0000;
 const TAG_TWO_B: u8 = 0b1100_0000;
 const TAG_THREE_B: u8 = 0b1110_0000;
@@ -9,7 +7,7 @@ const MAX_TWO_B: u32 = 0x800;
 const MAX_THREE_B: u32 = 0x10000;
 
 #[inline]
-pub fn encode_utf8(c: char) -> EncodeUtf8 {
+pub fn encode(c: char) -> Encode {
     let code = c as u32;
     let mut buf = [0; 4];
     let pos = if code < MAX_ONE_B {
@@ -31,18 +29,18 @@ pub fn encode_utf8(c: char) -> EncodeUtf8 {
         buf[3] = (code & 0x3F) as u8 | TAG_CONT;
         0
     };
-    EncodeUtf8 {
+    Encode {
         buf: buf,
         pos: pos,
     }
 }
 
-pub struct EncodeUtf8 {
+pub struct Encode {
     buf: [u8; 4],
     pos: usize,
 }
 
-impl EncodeUtf8 {
+impl Encode {
     // FIXME: use this from_utf8_unchecked, since we know it can never fail
     pub fn as_str(&self) -> &str {
         ::core::str::from_utf8(&self.buf[self.pos..]).unwrap()

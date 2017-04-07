@@ -93,7 +93,6 @@ pub use de::{Deserialize, Deserializer};
 
 #[macro_use]
 mod macros;
-mod utils;
 
 pub mod de;
 pub mod ser;

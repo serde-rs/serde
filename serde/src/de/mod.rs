@@ -112,6 +112,7 @@ pub mod value;
 mod from_primitive;
 mod ignored_any;
 mod impls;
+mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
 
@@ -1049,7 +1050,7 @@ pub trait Visitor<'de>: Sized {
     fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
         where E: Error
     {
-        self.visit_str(::utils::encode_utf8(v).as_str())
+        self.visit_str(utf8::encode(v).as_str())
     }
 
     /// Deserialize a `&str` into a `Value`.
