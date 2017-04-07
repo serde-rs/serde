@@ -97,6 +97,8 @@ use std::error;
 
 #[cfg(all(feature = "collections", not(feature = "std")))]
 use collections::string::String;
+#[cfg(not(feature = "std"))]
+use core::fmt::Debug;
 use core::fmt::Display;
 #[cfg(any(feature = "std", feature = "collections"))]
 use core::fmt::Write;
@@ -116,11 +118,11 @@ pub use self::impossible::Impossible;
 ///////////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_error_trait {
-    (Error: Sized $(+ $($supertrait:ident)::*)*) => {
+    (Error: Sized $(+ $($supertrait:ident)::+)*) => {
         /// Trait used by `Serialize` implementations to generically construct
         /// errors belonging to the `Serializer` against which they are
         /// currently running.
-        pub trait Error: Sized $(+ $($supertrait)::*)* {
+        pub trait Error: Sized $(+ $($supertrait)::+)* {
             /// Raised when a `Serialize` implementation encounters a general
             /// error while serializing a type.
             ///
@@ -154,7 +156,7 @@ macro_rules! declare_error_trait {
 declare_error_trait!(Error: Sized + error::Error);
 
 #[cfg(not(feature = "std"))]
-declare_error_trait!(Error: Sized);
+declare_error_trait!(Error: Sized + Debug + Display);
 
 ///////////////////////////////////////////////////////////////////////////////
 
