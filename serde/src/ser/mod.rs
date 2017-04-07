@@ -476,9 +476,23 @@ pub trait Serializer: Sized {
     /// this variant within the enum, and the `variant` is the name of the
     /// variant. The `value` is the data contained within this newtype variant.
     ///
-    /// ```rust,ignore
-    /// match *self {
-    ///     E::N(ref n) => serializer.serialize_newtype_variant("E", 0, "N", n),
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// #
+    /// enum E {
+    ///     M(String),
+    ///     N(u8),
+    /// }
+    ///
+    /// impl Serialize for E {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         match *self {
+    ///             E::M(ref s) => serializer.serialize_newtype_variant("E", 0, "M", s),
+    ///             E::N(n) => serializer.serialize_newtype_variant("E", 1, "N", &n),
+    ///         }
+    ///     }
     /// }
     /// ```
     fn serialize_newtype_variant<T: ?Sized + Serialize>(self,
