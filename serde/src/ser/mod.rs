@@ -979,12 +979,33 @@ pub trait SerializeSeq {
 
 /// Returned from `Serializer::serialize_tuple`.
 ///
-/// ```rust,ignore
-/// let mut tup = serializer.serialize_tuple(3)?;
-/// tup.serialize_element(&self.0)?;
-/// tup.serialize_element(&self.1)?;
-/// tup.serialize_element(&self.2)?;
-/// tup.end()
+/// ```rust
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeTuple;
+///
+/// # mod fool {
+/// #     trait Serialize {}
+/// impl<A, B, C> Serialize for (A, B, C)
+/// #     {}
+/// # }
+/// #
+/// # struct Tuple3<A, B, C>(A, B, C);
+/// #
+/// # impl<A, B, C> Serialize for Tuple3<A, B, C>
+///     where A: Serialize,
+///           B: Serialize,
+///           C: Serialize
+/// {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut tup = serializer.serialize_tuple(3)?;
+///         tup.serialize_element(&self.0)?;
+///         tup.serialize_element(&self.1)?;
+///         tup.serialize_element(&self.2)?;
+///         tup.end()
+///     }
+/// }
 /// ```
 pub trait SerializeTuple {
     /// Must match the `Ok` type of our `Serializer`.
@@ -1002,12 +1023,23 @@ pub trait SerializeTuple {
 
 /// Returned from `Serializer::serialize_tuple_struct`.
 ///
-/// ```rust,ignore
-/// let mut ts = serializer.serialize_tuple_struct("Rgb", 3)?;
-/// ts.serialize_field(&self.0)?;
-/// ts.serialize_field(&self.1)?;
-/// ts.serialize_field(&self.2)?;
-/// ts.end()
+/// ```rust
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeTupleStruct;
+///
+/// struct Rgb(u8, u8, u8);
+///
+/// impl Serialize for Rgb {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut ts = serializer.serialize_tuple_struct("Rgb", 3)?;
+///         ts.serialize_field(&self.0)?;
+///         ts.serialize_field(&self.1)?;
+///         ts.serialize_field(&self.2)?;
+///         ts.end()
+///     }
+/// }
 /// ```
 pub trait SerializeTupleStruct {
     /// Must match the `Ok` type of our `Serializer`.
@@ -1025,13 +1057,34 @@ pub trait SerializeTupleStruct {
 
 /// Returned from `Serializer::serialize_tuple_variant`.
 ///
-/// ```rust,ignore
-/// match *self {
-///     E::T(ref a, ref b) => {
-///         let mut tv = serializer.serialize_tuple_variant("E", 0, "T", 2)?;
-///         tv.serialize_field(a)?;
-///         tv.serialize_field(b)?;
-///         tv.end()
+/// ```rust
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeTupleVariant;
+///
+/// enum E {
+///     T(u8, u8),
+///     U(String, u32, u32),
+/// }
+///
+/// impl Serialize for E {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         match *self {
+///             E::T(ref a, ref b) => {
+///                 let mut tv = serializer.serialize_tuple_variant("E", 0, "T", 2)?;
+///                 tv.serialize_field(a)?;
+///                 tv.serialize_field(b)?;
+///                 tv.end()
+///             }
+///             E::U(ref a, ref b, ref c) => {
+///                 let mut tv = serializer.serialize_tuple_variant("E", 1, "U", 3)?;
+///                 tv.serialize_field(a)?;
+///                 tv.serialize_field(b)?;
+///                 tv.serialize_field(c)?;
+///                 tv.end()
+///             }
+///         }
 ///     }
 /// }
 /// ```
@@ -1051,12 +1104,42 @@ pub trait SerializeTupleVariant {
 
 /// Returned from `Serializer::serialize_map`.
 ///
-/// ```rust,ignore
-/// let mut map = serializer.serialize_map(Some(self.len()))?;
-/// for (k, v) in self {
-///     map.serialize_entry(k, v)?;
+/// ```rust
+/// # use std::marker::PhantomData;
+/// #
+/// # struct HashMap<K, V>(PhantomData<K>, PhantomData<V>);
+/// #
+/// # impl<K, V> HashMap<K, V> {
+/// #     fn len(&self) -> usize {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// # impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
+/// #     type Item = (&'a K, &'a V);
+/// #     type IntoIter = Box<Iterator<Item = (&'a K, &'a V)>>;
+/// #     fn into_iter(self) -> Self::IntoIter {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeMap;
+///
+/// impl<K, V> Serialize for HashMap<K, V>
+///     where K: Serialize,
+///           V: Serialize
+/// {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut map = serializer.serialize_map(Some(self.len()))?;
+///         for (k, v) in self {
+///             map.serialize_entry(k, v)?;
+///         }
+///         map.end()
+///     }
 /// }
-/// map.end()
 /// ```
 pub trait SerializeMap {
     /// Must match the `Ok` type of our `Serializer`.
@@ -1098,12 +1181,27 @@ pub trait SerializeMap {
 
 /// Returned from `Serializer::serialize_struct`.
 ///
-/// ```rust,ignore
-/// let mut struc = serializer.serialize_struct("Rgb", 3)?;
-/// struc.serialize_field("r", &self.r)?;
-/// struc.serialize_field("g", &self.g)?;
-/// struc.serialize_field("b", &self.b)?;
-/// struc.end()
+/// ```rust
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeStruct;
+///
+/// struct Rgb {
+///     r: u8,
+///     g: u8,
+///     b: u8,
+/// }
+///
+/// impl Serialize for Rgb {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut rgb = serializer.serialize_struct("Rgb", 3)?;
+///         rgb.serialize_field("r", &self.r)?;
+///         rgb.serialize_field("g", &self.g)?;
+///         rgb.serialize_field("b", &self.b)?;
+///         rgb.end()
+///     }
+/// }
 /// ```
 pub trait SerializeStruct {
     /// Must match the `Ok` type of our `Serializer`.
@@ -1124,14 +1222,27 @@ pub trait SerializeStruct {
 
 /// Returned from `Serializer::serialize_struct_variant`.
 ///
-/// ```rust,ignore
-/// match *self {
-///     E::S { ref r, ref g, ref b } => {
-///         let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
-///         sv.serialize_field("r", r)?;
-///         sv.serialize_field("g", g)?;
-///         sv.serialize_field("b", b)?;
-///         sv.end()
+/// ```rust
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeStructVariant;
+///
+/// enum E {
+///     S { r: u8, g: u8, b: u8 }
+/// }
+///
+/// impl Serialize for E {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         match *self {
+///             E::S { ref r, ref g, ref b } => {
+///                 let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
+///                 sv.serialize_field("r", r)?;
+///                 sv.serialize_field("g", g)?;
+///                 sv.serialize_field("b", b)?;
+///                 sv.end()
+///             }
+///         }
 ///     }
 /// }
 /// ```
