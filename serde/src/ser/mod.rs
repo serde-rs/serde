@@ -771,14 +771,27 @@ pub trait Serializer: Sized {
     /// this variant within the enum, the `variant` is the name of the variant,
     /// and the `len` is the number of data fields that will be serialized.
     ///
-    /// ```rust,ignore
-    /// match *self {
-    ///     E::S { ref r, ref g, ref b } => {
-    ///         let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
-    ///         sv.serialize_field("r", r)?;
-    ///         sv.serialize_field("g", g)?;
-    ///         sv.serialize_field("b", b)?;
-    ///         sv.end()
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeStructVariant;
+    ///
+    /// enum E {
+    ///     S { r: u8, g: u8, b: u8 }
+    /// }
+    ///
+    /// impl Serialize for E {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         match *self {
+    ///             E::S { ref r, ref g, ref b } => {
+    ///                 let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
+    ///                 sv.serialize_field("r", r)?;
+    ///                 sv.serialize_field("g", g)?;
+    ///                 sv.serialize_field("b", b)?;
+    ///                 sv.end()
+    ///             }
+    ///         }
     ///     }
     /// }
     /// ```
