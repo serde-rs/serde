@@ -577,12 +577,33 @@ pub trait Serializer: Sized {
     /// Begin to serialize a tuple. This call must be followed by zero or more
     /// calls to `serialize_element`, then a call to `end`.
     ///
-    /// ```rust,ignore
-    /// let mut tup = serializer.serialize_tuple(3)?;
-    /// tup.serialize_element(&self.0)?;
-    /// tup.serialize_element(&self.1)?;
-    /// tup.serialize_element(&self.2)?;
-    /// tup.end()
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    /// use serde::ser::SerializeTuple;
+    ///
+    /// # mod fool {
+    /// #     trait Serialize {}
+    /// impl<A, B, C> Serialize for (A, B, C)
+    /// #     {}
+    /// # }
+    /// #
+    /// # struct Tuple3<A, B, C>(A, B, C);
+    /// #
+    /// # impl<A, B, C> Serialize for Tuple3<A, B, C>
+    ///     where A: Serialize,
+    ///           B: Serialize,
+    ///           C: Serialize
+    /// {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         let mut tup = serializer.serialize_tuple(3)?;
+    ///         tup.serialize_element(&self.0)?;
+    ///         tup.serialize_element(&self.1)?;
+    ///         tup.serialize_element(&self.2)?;
+    ///         tup.end()
+    ///     }
+    /// }
     /// ```
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error>;
 
