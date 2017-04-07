@@ -329,3 +329,10 @@ macro_rules! __serialize_unimplemented {
         )*
     };
 }
+
+/// Used only by Serde doc tests. Not public API.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __serde_ignore_tokens {
+    ($($tt:tt)+) => {}
+}
