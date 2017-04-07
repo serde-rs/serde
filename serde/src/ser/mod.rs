@@ -421,12 +421,23 @@ pub trait Serializer: Sized {
     /// this variant within the enum, and the `variant` is the name of the
     /// variant.
     ///
-    /// A reasonable implementation would be to forward to `serialize_unit`.
+    /// ```rust
+    /// # use serde::{Serialize, Serializer};
+    /// #
+    /// enum E {
+    ///     A,
+    ///     B,
+    /// }
     ///
-    /// ```rust,ignore
-    /// match *self {
-    ///     E::A => serializer.serialize_unit_variant("E", 0, "A"),
-    ///     E::B => serializer.serialize_unit_variant("E", 1, "B"),
+    /// impl Serialize for E {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         match *self {
+    ///             E::A => serializer.serialize_unit_variant("E", 0, "A"),
+    ///             E::B => serializer.serialize_unit_variant("E", 1, "B"),
+    ///         }
+    ///     }
     /// }
     /// ```
     fn serialize_unit_variant(self,
