@@ -374,12 +374,36 @@ pub trait Serializer: Sized {
     /// `serialize_seq`. If forwarded, the implementation looks usually just
     /// like this:
     ///
-    /// ```rust,ignore
-    /// let mut seq = self.serialize_seq(Some(value.len()))?;
-    /// for b in value {
-    ///     seq.serialize_element(b)?;
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::ser::{Serializer, SerializeSeq};
+    /// # use serde::ser::private::Error;
+    /// #
+    /// # struct MySerializer;
+    /// #
+    /// # impl Serializer for MySerializer {
+    /// #     type Ok = ();
+    /// #     type Error = Error;
+    /// #
+    /// fn serialize_bytes(self, value: &[u8]) -> Result<Self::Ok, Self::Error> {
+    ///     let mut seq = self.serialize_seq(Some(value.len()))?;
+    ///     for b in value {
+    ///         seq.serialize_element(b)?;
+    ///     }
+    ///     seq.end()
     /// }
-    /// seq.end()
+    /// #
+    /// #     __serialize_unimplemented! {
+    /// #         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str none some
+    /// #         unit unit_struct unit_variant newtype_struct newtype_variant
+    /// #         seq seq_fixed_size tuple tuple_struct tuple_variant map struct
+    /// #         struct_variant
+    /// #     }
+    /// # }
+    /// #
+    /// # fn main() {}
     /// ```
     fn serialize_bytes(self, value: &[u8]) -> Result<Self::Ok, Self::Error>;
 
