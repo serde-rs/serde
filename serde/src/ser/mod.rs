@@ -900,12 +900,68 @@ pub trait Serializer: Sized {
 /// Returned from `Serializer::serialize_seq` and
 /// `Serializer::serialize_seq_fixed_size`.
 ///
-/// ```rust,ignore
-/// let mut seq = serializer.serialize_seq(Some(self.len()))?;
-/// for element in self {
-///     seq.serialize_element(element)?;
+/// ```rust
+/// # use std::marker::PhantomData;
+/// #
+/// # macro_rules! unimplemented_vec {
+/// #     ($name:ident) => {
+/// #         struct $name<T>(PhantomData<T>);
+/// #
+/// #         impl<T> $name<T> {
+/// #             fn len(&self) -> usize {
+/// #                 unimplemented!()
+/// #             }
+/// #         }
+/// #
+/// #         impl<'a, T> IntoIterator for &'a $name<T> {
+/// #             type Item = &'a T;
+/// #             type IntoIter = Box<Iterator<Item = &'a T>>;
+/// #             fn into_iter(self) -> Self::IntoIter {
+/// #                 unimplemented!()
+/// #             }
+/// #         }
+/// #     }
+/// # }
+/// #
+/// # unimplemented_vec!(Vec);
+/// # unimplemented_vec!(Array);
+/// #
+/// use serde::{Serialize, Serializer};
+/// use serde::ser::SerializeSeq;
+///
+/// impl<T> Serialize for Vec<T>
+///     where T: Serialize
+/// {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut seq = serializer.serialize_seq(Some(self.len()))?;
+///         for element in self {
+///             seq.serialize_element(element)?;
+///         }
+///         seq.end()
+///     }
 /// }
-/// seq.end()
+///
+/// # mod fool {
+/// #     trait Serialize {}
+/// impl<T> Serialize for [T; 16]
+/// #     {}
+/// # }
+/// #
+/// # impl<T> Serialize for Array<T>
+///     where T: Serialize
+/// {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut seq = serializer.serialize_seq_fixed_size(16)?;
+///         for element in self {
+///             seq.serialize_element(element)?;
+///         }
+///         seq.end()
+///     }
+/// }
 /// ```
 pub trait SerializeSeq {
     /// Must match the `Ok` type of our `Serializer`.
