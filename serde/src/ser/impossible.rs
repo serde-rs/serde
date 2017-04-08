@@ -35,9 +35,9 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 ///                      -> Result<Self::SerializeSeq, Error> {
 ///         // Given Impossible cannot be instantiated, the only
 ///         // thing we can do here is to return an error.
-/// #         __serde_ignore_tokens! {
+/// #         stringify! {
 ///         Err(...)
-/// #         }
+/// #         };
 /// #         unimplemented!()
 ///     }
 ///
