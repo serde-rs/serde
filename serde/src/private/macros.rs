@@ -66,13 +66,13 @@ macro_rules! __serialize_unimplemented_helper {
         __serialize_unimplemented_method!(serialize_unit_struct(&str) -> Ok);
     };
     (unit_variant) => {
-        __serialize_unimplemented_method!(serialize_unit_variant(&str, usize, &str) -> Ok);
+        __serialize_unimplemented_method!(serialize_unit_variant(&str, u32, &str) -> Ok);
     };
     (newtype_struct) => {
         __serialize_unimplemented_method!(serialize_newtype_struct<T>(&str, &T) -> Ok);
     };
     (newtype_variant) => {
-        __serialize_unimplemented_method!(serialize_newtype_variant<T>(&str, usize, &str, &T) -> Ok);
+        __serialize_unimplemented_method!(serialize_newtype_variant<T>(&str, u32, &str, &T) -> Ok);
     };
     (seq) => {
         type SerializeSeq = $crate::ser::Impossible<Self::Ok, Self::Error>;
@@ -91,7 +91,7 @@ macro_rules! __serialize_unimplemented_helper {
     };
     (tuple_variant) => {
         type SerializeTupleVariant = $crate::ser::Impossible<Self::Ok, Self::Error>;
-        __serialize_unimplemented_method!(serialize_tuple_variant(&str, usize, &str, usize) -> SerializeTupleVariant);
+        __serialize_unimplemented_method!(serialize_tuple_variant(&str, u32, &str, usize) -> SerializeTupleVariant);
     };
     (map) => {
         type SerializeMap = $crate::ser::Impossible<Self::Ok, Self::Error>;
@@ -103,7 +103,7 @@ macro_rules! __serialize_unimplemented_helper {
     };
     (struct_variant) => {
         type SerializeStructVariant = $crate::ser::Impossible<Self::Ok, Self::Error>;
-        __serialize_unimplemented_method!(serialize_struct_variant(&str, usize, &str, usize) -> SerializeStructVariant);
+        __serialize_unimplemented_method!(serialize_struct_variant(&str, u32, &str, usize) -> SerializeStructVariant);
     };
 }
 

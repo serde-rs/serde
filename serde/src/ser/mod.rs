@@ -449,7 +449,7 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_unit_variant(self,
                               name: &'static str,
-                              variant_index: usize,
+                              variant_index: u32,
                               variant: &'static str)
                               -> Result<Self::Ok, Self::Error>;
 
@@ -504,7 +504,7 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_newtype_variant<T: ?Sized + Serialize>(self,
                                                         name: &'static str,
-                                                        variant_index: usize,
+                                                        variant_index: u32,
                                                         variant: &'static str,
                                                         value: &T)
                                                         -> Result<Self::Ok, Self::Error>;
@@ -686,7 +686,7 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_tuple_variant(self,
                                name: &'static str,
-                               variant_index: usize,
+                               variant_index: u32,
                                variant: &'static str,
                                len: usize)
                                -> Result<Self::SerializeTupleVariant, Self::Error>;
@@ -806,7 +806,7 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_struct_variant(self,
                                 name: &'static str,
-                                variant_index: usize,
+                                variant_index: u32,
                                 variant: &'static str,
                                 len: usize)
                                 -> Result<Self::SerializeStructVariant, Self::Error>;

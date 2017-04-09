@@ -184,7 +184,7 @@ impl<S> Serializer for TaggedSerializer<S>
 
     fn serialize_unit_variant(self,
                               _: &'static str,
-                              _: usize,
+                              _: u32,
                               inner_variant: &'static str)
                               -> Result<Self::Ok, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
@@ -204,7 +204,7 @@ impl<S> Serializer for TaggedSerializer<S>
 
     fn serialize_newtype_variant<T: ?Sized>(self,
                                             _: &'static str,
-                                            _: usize,
+                                            _: u32,
                                             inner_variant: &'static str,
                                             inner_value: &T)
                                             -> Result<Self::Ok, Self::Error>
@@ -238,7 +238,7 @@ impl<S> Serializer for TaggedSerializer<S>
     #[cfg(not(any(feature = "std", feature = "collections")))]
     fn serialize_tuple_variant(self,
                                _: &'static str,
-                               _: usize,
+                               _: u32,
                                _: &'static str,
                                _: usize)
                                -> Result<Self::SerializeTupleVariant, Self::Error> {
@@ -250,7 +250,7 @@ impl<S> Serializer for TaggedSerializer<S>
     #[cfg(any(feature = "std", feature = "collections"))]
     fn serialize_tuple_variant(self,
                                _: &'static str,
-                               _: usize,
+                               _: u32,
                                inner_variant: &'static str,
                                len: usize)
                                -> Result<Self::SerializeTupleVariant, Self::Error> {
@@ -278,7 +278,7 @@ impl<S> Serializer for TaggedSerializer<S>
     #[cfg(not(any(feature = "std", feature = "collections")))]
     fn serialize_struct_variant(self,
                                 _: &'static str,
-                                _: usize,
+                                _: u32,
                                 _: &'static str,
                                 _: usize)
                                 -> Result<Self::SerializeStructVariant, Self::Error> {
@@ -290,7 +290,7 @@ impl<S> Serializer for TaggedSerializer<S>
     #[cfg(any(feature = "std", feature = "collections"))]
     fn serialize_struct_variant(self,
                                 _: &'static str,
-                                _: usize,
+                                _: u32,
                                 inner_variant: &'static str,
                                 len: usize)
                                 -> Result<Self::SerializeStructVariant, Self::Error> {
@@ -444,18 +444,18 @@ mod content {
 
         Unit,
         UnitStruct(&'static str),
-        UnitVariant(&'static str, usize, &'static str),
+        UnitVariant(&'static str, u32, &'static str),
         NewtypeStruct(&'static str, Box<Content>),
-        NewtypeVariant(&'static str, usize, &'static str, Box<Content>),
+        NewtypeVariant(&'static str, u32, &'static str, Box<Content>),
 
         Seq(Vec<Content>),
         SeqFixedSize(Vec<Content>),
         Tuple(Vec<Content>),
         TupleStruct(&'static str, Vec<Content>),
-        TupleVariant(&'static str, usize, &'static str, Vec<Content>),
+        TupleVariant(&'static str, u32, &'static str, Vec<Content>),
         Map(Vec<(Content, Content)>),
         Struct(&'static str, Vec<(&'static str, Content)>),
-        StructVariant(&'static str, usize, &'static str, Vec<(&'static str, Content)>),
+        StructVariant(&'static str, u32, &'static str, Vec<(&'static str, Content)>),
     }
 
     impl Serialize for Content {
@@ -645,7 +645,7 @@ mod content {
 
         fn serialize_unit_variant(self,
                                 name: &'static str,
-                                variant_index: usize,
+                                variant_index: u32,
                                 variant: &'static str)
                                 -> Result<Content, E> {
             Ok(Content::UnitVariant(name, variant_index, variant))
@@ -660,7 +660,7 @@ mod content {
 
         fn serialize_newtype_variant<T: ?Sized + Serialize>(self,
                                                             name: &'static str,
-                                                            variant_index: usize,
+                                                            variant_index: u32,
                                                             variant: &'static str,
                                                             value: &T)
                                                             -> Result<Content, E> {
@@ -706,7 +706,7 @@ mod content {
 
         fn serialize_tuple_variant(self,
                                 name: &'static str,
-                                variant_index: usize,
+                                variant_index: u32,
                                 variant: &'static str,
                                 len: usize)
                                 -> Result<Self::SerializeTupleVariant, E> {
@@ -737,7 +737,7 @@ mod content {
 
         fn serialize_struct_variant(self,
                                     name: &'static str,
-                                    variant_index: usize,
+                                    variant_index: u32,
                                     variant: &'static str,
                                     len: usize)
                                     -> Result<Self::SerializeStructVariant, E> {
@@ -825,7 +825,7 @@ mod content {
 
     struct SerializeTupleVariant<E> {
         name: &'static str,
-        variant_index: usize,
+        variant_index: u32,
         variant: &'static str,
         fields: Vec<Content>,
         error: PhantomData<E>,
@@ -916,7 +916,7 @@ mod content {
 
     struct SerializeStructVariant<E> {
         name: &'static str,
-        variant_index: usize,
+        variant_index: u32,
         variant: &'static str,
         fields: Vec<(&'static str, Content)>,
         error: PhantomData<E>,
