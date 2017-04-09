@@ -234,13 +234,6 @@ fn deserialize_unit_struct(params: &Parameters, item_attrs: &attr::Item) -> Frag
             {
                 _serde::export::Ok(#this)
             }
-
-            #[inline]
-            fn visit_seq<__V>(self, _: __V) -> _serde::export::Result<Self::Value, __V::Error>
-                where __V: _serde::de::SeqVisitor<'de>
-            {
-                _serde::export::Ok(#this)
-            }
         }
 
         _serde::Deserializer::deserialize_unit_struct(__deserializer, #type_name, __Visitor)
