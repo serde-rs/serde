@@ -1190,7 +1190,7 @@ fn deserialize_field_visitor(fields: Vec<(String, Ident)>,
                     }
                 }
 
-                _serde::Deserializer::deserialize_struct_field(__deserializer, __FieldVisitor)
+                _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
             }
         }
     }

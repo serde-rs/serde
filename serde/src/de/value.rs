@@ -108,7 +108,7 @@ impl<'de, E> de::Deserializer<'de> for UnitDeserializer<E>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
         seq_fixed_size bytes map unit_struct newtype_struct tuple_struct struct
-        struct_field tuple enum ignored_any byte_buf
+        identifier tuple enum ignored_any byte_buf
     }
 
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -155,7 +155,7 @@ macro_rules! primitive_deserializer {
             forward_to_deserialize! {
                 bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit
                 option seq seq_fixed_size bytes map unit_struct newtype_struct
-                tuple_struct struct struct_field tuple enum ignored_any byte_buf
+                tuple_struct struct identifier tuple enum ignored_any byte_buf
             }
 
             fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -208,7 +208,7 @@ impl<'de, E> de::Deserializer<'de> for U32Deserializer<E>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple ignored_any byte_buf
+        struct identifier tuple ignored_any byte_buf
     }
 
     fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -286,7 +286,7 @@ impl<'de, 'a, E> de::Deserializer<'de> for StrDeserializer<'a, E>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple ignored_any byte_buf
+        struct identifier tuple ignored_any byte_buf
     }
 }
 
@@ -351,7 +351,7 @@ impl<'de, E> de::Deserializer<'de> for StringDeserializer<E>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple ignored_any byte_buf
+        struct identifier tuple ignored_any byte_buf
     }
 }
 
@@ -420,7 +420,7 @@ impl<'de, 'a, E> de::Deserializer<'de> for CowStrDeserializer<'a, E>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple ignored_any byte_buf
+        struct identifier tuple ignored_any byte_buf
     }
 }
 
@@ -495,7 +495,7 @@ impl<'de, I, T, E> de::Deserializer<'de> for SeqDeserializer<I, E>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple enum ignored_any byte_buf
+        struct identifier tuple enum ignored_any byte_buf
     }
 }
 
@@ -603,7 +603,7 @@ impl<'de, V_> de::Deserializer<'de> for SeqVisitorDeserializer<V_>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple enum ignored_any byte_buf
+        struct identifier tuple enum ignored_any byte_buf
     }
 }
 
@@ -707,7 +707,7 @@ impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
 
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        bytes map unit_struct newtype_struct tuple_struct struct struct_field
+        bytes map unit_struct newtype_struct tuple_struct struct identifier
         tuple enum ignored_any byte_buf
     }
 }
@@ -804,7 +804,7 @@ impl<'de, A, B, E> de::Deserializer<'de> for PairDeserializer<A, B, E>
 
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        bytes map unit_struct newtype_struct tuple_struct struct struct_field
+        bytes map unit_struct newtype_struct tuple_struct struct identifier
         tuple enum ignored_any byte_buf
     }
 
@@ -945,7 +945,7 @@ impl<'de, V_> de::Deserializer<'de> for MapVisitorDeserializer<V_>
     forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct struct_field tuple enum ignored_any byte_buf
+        struct identifier tuple enum ignored_any byte_buf
     }
 }
 
