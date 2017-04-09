@@ -839,6 +839,9 @@ fn get_field<I>(params: &Parameters, field: &Field, ident: I) -> Tokens
             let ident = ident.into();
             quote!(&#self_var.#ident)
         }
-        Some(getter) => quote!(&#getter(#self_var)),
+        Some(getter) => {
+            let ty = field.ty;
+            quote!(_serde::private::ser::constrain::<#ty>(&#getter(#self_var)))
+        }
     }
 }
