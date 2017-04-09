@@ -9,3 +9,4 @@ mod ctxt;
 pub use ctxt::Ctxt;
 
 mod case;
+mod check;

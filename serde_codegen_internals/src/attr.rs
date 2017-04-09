@@ -102,6 +102,7 @@ pub struct Item {
     tag: EnumTag,
     from_type: Option<syn::Ty>,
     into_type: Option<syn::Ty>,
+    remote: Option<syn::Path>,
 }
 
 /// Styles of representing an enum.
@@ -151,6 +152,7 @@ impl Item {
         let mut content = Attr::none(cx, "content");
         let mut from_type = Attr::none(cx, "from");
         let mut into_type = Attr::none(cx, "into");
+        let mut remote = Attr::none(cx, "remote");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -290,6 +292,13 @@ impl Item {
                         }
                     }
 
+                    // Parse `#[serde(remote = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "remote" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            remote.set(path);
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -361,6 +370,7 @@ impl Item {
             tag: tag,
             from_type: from_type.get(),
             into_type: into_type.get(),
+            remote: remote.get(),
         }
     }
 
@@ -398,6 +408,10 @@ impl Item {
 
     pub fn into_type(&self) -> Option<&syn::Ty> {
         self.into_type.as_ref()
+    }
+
+    pub fn remote(&self) -> Option<&syn::Path> {
+        self.remote.as_ref()
     }
 }
 
@@ -531,6 +545,7 @@ pub struct Field {
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
+    getter: Option<syn::Path>,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -558,6 +573,7 @@ impl Field {
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut borrowed_lifetimes = Attr::none(cx, "borrow");
+        let mut getter = Attr::none(cx, "getter");
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
@@ -676,6 +692,13 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(getter = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "getter" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            getter.set(path);
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde field attribute `{}`", meta_item.name()));
                     }
@@ -737,6 +760,7 @@ impl Field {
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
+            getter: getter.get(),
         }
     }
 
@@ -787,6 +811,10 @@ impl Field {
 
     pub fn borrowed_lifetimes(&self) -> &BTreeSet<syn::Lifetime> {
         &self.borrowed_lifetimes
+    }
+
+    pub fn getter(&self) -> Option<&syn::Path> {
+        self.getter.as_ref()
     }
 }
 
