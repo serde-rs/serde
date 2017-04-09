@@ -192,13 +192,24 @@ macro_rules! forward_to_deserialize_helper {
 /// specified explicitly if necessary.
 ///
 /// ```rust
-/// # #[macro_use] extern crate serde;
+/// # #[macro_use]
+/// # extern crate serde;
+/// #
+/// # use std::marker::PhantomData;
+/// #
 /// # use serde::de::{value, Deserializer, Visitor};
-/// # pub struct MyDeserializer;
-/// # impl<'q> Deserializer<'q> for MyDeserializer {
-/// #   type Error = value::Error;
-/// #    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-/// #        where V: Visitor<'q> { unimplemented!() }
+/// #
+/// # struct MyDeserializer<V>(PhantomData<V>);
+/// #
+/// # impl<'q, V> Deserializer<'q> for MyDeserializer<V> {
+/// #     type Error = value::Error;
+/// #
+/// #     fn deserialize<W>(self, visitor: W) -> Result<W::Value, Self::Error>
+/// #         where W: Visitor<'q>
+/// #     {
+/// #         unimplemented!()
+/// #     }
+/// #
 /// forward_to_deserialize! {
 ///     <W: Visitor<'q>>
 ///     bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
@@ -206,6 +217,7 @@ macro_rules! forward_to_deserialize_helper {
 ///     tuple_struct struct struct_field tuple enum ignored_any
 /// }
 /// # }
+/// #
 /// # fn main() {}
 /// ```
 #[macro_export]
