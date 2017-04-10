@@ -4,9 +4,11 @@ extern crate serde_derive;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
-use std::str;
 use std::time::Duration;
 use std::ffi::CString;
+
+#[cfg(unix)]
+use std::str;
 
 extern crate serde;
 

@@ -8,6 +8,12 @@ use self::content::{SerializeTupleVariantAsMapValue, SerializeStructVariantAsMap
 #[cfg(feature = "std")]
 use std::error;
 
+/// Used to check that serde(getter) attributes return the expected type.
+/// Not public API.
+pub fn constrain<T: ?Sized>(t: &T) -> &T {
+    t
+}
+
 /// Not public API.
 pub fn serialize_tagged_newtype<S, T>(serializer: S,
                                       type_ident: &'static str,
