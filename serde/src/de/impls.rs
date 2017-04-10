@@ -1232,7 +1232,7 @@ impl<'de> Deserialize<'de> for Duration {
                     }
                 }
 
-                deserializer.deserialize_struct_field(FieldVisitor)
+                deserializer.deserialize_identifier(FieldVisitor)
             }
         }
 
@@ -1358,7 +1358,7 @@ impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for std::ops::Range<Idx> {
                     }
                 }
 
-                deserializer.deserialize_struct_field(FieldVisitor)
+                deserializer.deserialize_identifier(FieldVisitor)
             }
         }
 

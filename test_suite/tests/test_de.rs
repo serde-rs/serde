@@ -242,14 +242,6 @@ declare_tests! {
         UnitStruct => &[
             Token::UnitStruct("UnitStruct"),
         ],
-        UnitStruct => &[
-            Token::Seq(Some(0)),
-            Token::SeqEnd,
-        ],
-        UnitStruct => &[
-            Token::Seq(None),
-            Token::SeqEnd,
-        ],
     }
     test_newtype_struct {
         NewtypeStruct(1) => &[
@@ -1035,5 +1027,12 @@ declare_error_tests! {
             Token::F32(0.0),
         ],
         Error::Message("invalid type: floating point `0`, expected isize".into()),
+    }
+    test_unit_struct_from_seq<UnitStruct> {
+        &[
+            Token::Seq(Some(0)),
+            Token::SeqEnd,
+        ],
+        Error::Message("invalid type: sequence, expected unit struct UnitStruct".into()),
     }
 }
