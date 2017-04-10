@@ -6,6 +6,8 @@ use fragment::{Fragment, Stmts, Match};
 use internals::ast::{Body, Field, Item, Style, Variant};
 use internals::{self, attr};
 
+use std::u32;
+
 pub fn expand_derive_serialize(item: &syn::DeriveInput) -> Result<Tokens, String> {
     let ctxt = internals::Ctxt::new();
     let item = Item::from_ast(&ctxt, item);
@@ -210,6 +212,8 @@ fn serialize_struct(params: &Parameters,
                     fields: &[Field],
                     item_attrs: &attr::Item)
                     -> Fragment {
+    assert!(fields.len() as u64 <= u32::MAX as u64);
+
     let serialize_fields =
         serialize_struct_visitor(fields,
                                  params,
@@ -247,6 +251,8 @@ fn serialize_item_enum(params: &Parameters,
                        variants: &[Variant],
                        item_attrs: &attr::Item)
                        -> Fragment {
+    assert!(variants.len() as u64 <= u32::MAX as u64);
+
     let self_var = &params.self_var;
 
     let arms: Vec<_> = variants.iter()
@@ -254,7 +260,7 @@ fn serialize_item_enum(params: &Parameters,
         .map(|(variant_index, variant)| {
             serialize_variant(params,
                               variant,
-                              variant_index,
+                              variant_index as u32,
                               item_attrs)
         })
         .collect();
@@ -268,7 +274,7 @@ fn serialize_item_enum(params: &Parameters,
 
 fn serialize_variant(params: &Parameters,
                      variant: &Variant,
-                     variant_index: usize,
+                     variant_index: u32,
                      item_attrs: &attr::Item)
                      -> Tokens {
     let this = &params.this;
@@ -349,7 +355,7 @@ fn serialize_variant(params: &Parameters,
 
 fn serialize_externally_tagged_variant(params: &Parameters,
                                        variant: &Variant,
-                                       variant_index: usize,
+                                       variant_index: u32,
                                        item_attrs: &attr::Item)
                                        -> Fragment {
     let type_name = item_attrs.name().serialize_name();
@@ -587,7 +593,7 @@ fn serialize_untagged_variant(params: &Parameters,
 enum TupleVariant {
     ExternallyTagged {
         type_name: String,
-        variant_index: usize,
+        variant_index: u32,
         variant_name: String,
     },
     Untagged,
@@ -637,7 +643,7 @@ fn serialize_tuple_variant(context: TupleVariant,
 
 enum StructVariant<'a> {
     ExternallyTagged {
-        variant_index: usize,
+        variant_index: u32,
         variant_name: String,
     },
     InternallyTagged { tag: &'a str, variant_name: String },

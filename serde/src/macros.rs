@@ -89,8 +89,8 @@ macro_rules! forward_to_deserialize_helper {
     (struct) => {
         forward_to_deserialize_method!{deserialize_struct(&'static str, &'static [&'static str])}
     };
-    (struct_field) => {
-        forward_to_deserialize_method!{deserialize_struct_field()}
+    (identifier) => {
+        forward_to_deserialize_method!{deserialize_identifier()}
     };
     (tuple) => {
         forward_to_deserialize_method!{deserialize_tuple(usize)}
@@ -143,7 +143,7 @@ macro_rules! forward_to_deserialize_helper {
 /// #     forward_to_deserialize! {
 /// #         u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
 /// #         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
-/// #         tuple_struct struct struct_field tuple enum ignored_any
+/// #         tuple_struct struct identifier tuple enum ignored_any
 /// #     }
 /// # }
 /// #
@@ -176,7 +176,7 @@ macro_rules! forward_to_deserialize_helper {
 ///     forward_to_deserialize! {
 ///         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
 ///         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
-///         tuple_struct struct struct_field tuple enum ignored_any
+///         tuple_struct struct identifier tuple enum ignored_any
 ///     }
 /// }
 /// #

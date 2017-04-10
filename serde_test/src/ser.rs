@@ -146,7 +146,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
 
     fn serialize_unit_variant(self,
                               name: &'static str,
-                              _variant_index: usize,
+                              _variant_index: u32,
                               variant: &'static str)
                               -> Result<(), Error> {
         if self.tokens.first() == Some(&Token::Enum(name)) {
@@ -168,7 +168,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
 
     fn serialize_newtype_variant<T: ?Sized>(self,
                                             name: &'static str,
-                                            _variant_index: usize,
+                                            _variant_index: u32,
                                             variant: &'static str,
                                             value: &T)
                                             -> Result<(), Error>
@@ -217,7 +217,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
 
     fn serialize_tuple_variant(self,
                                name: &'static str,
-                               _variant_index: usize,
+                               _variant_index: u32,
                                variant: &'static str,
                                len: usize)
                                -> Result<Self, Error> {
@@ -237,7 +237,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
 
     fn serialize_struct_variant(self,
                                 name: &'static str,
-                                _variant_index: usize,
+                                _variant_index: u32,
                                 variant: &'static str,
                                 len: usize)
                                 -> Result<Self, Error> {
