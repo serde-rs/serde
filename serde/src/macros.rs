@@ -1,11 +1,14 @@
 #[doc(hidden)]
 #[macro_export]
 macro_rules! forward_to_deserialize_method {
-    ($func:ident($($arg:ty),*)) => {
+    ($func:ident<$l:tt, $v:ident>($($arg:ident : $ty:ty),*)) => {
         #[inline]
-        fn $func<__V>(self, $(_: $arg,)* visitor: __V) -> $crate::export::Result<__V::Value, Self::Error>
-            where __V: $crate::de::Visitor<'de>
+        fn $func<$v>(self, $($arg: $ty,)* visitor: $v) -> $crate::export::Result<$v::Value, Self::Error>
+            where $v: $crate::de::Visitor<$l>
         {
+            $(
+                let _ = $arg;
+            )*
             self.deserialize(visitor)
         }
     };
@@ -14,92 +17,92 @@ macro_rules! forward_to_deserialize_method {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! forward_to_deserialize_helper {
-    (bool) => {
-        forward_to_deserialize_method!{deserialize_bool()}
+    (bool<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_bool<$l, $v>()}
     };
-    (u8) => {
-        forward_to_deserialize_method!{deserialize_u8()}
+    (u8<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_u8<$l, $v>()}
     };
-    (u16) => {
-        forward_to_deserialize_method!{deserialize_u16()}
+    (u16<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_u16<$l, $v>()}
     };
-    (u32) => {
-        forward_to_deserialize_method!{deserialize_u32()}
+    (u32<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_u32<$l, $v>()}
     };
-    (u64) => {
-        forward_to_deserialize_method!{deserialize_u64()}
+    (u64<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_u64<$l, $v>()}
     };
-    (i8) => {
-        forward_to_deserialize_method!{deserialize_i8()}
+    (i8<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_i8<$l, $v>()}
     };
-    (i16) => {
-        forward_to_deserialize_method!{deserialize_i16()}
+    (i16<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_i16<$l, $v>()}
     };
-    (i32) => {
-        forward_to_deserialize_method!{deserialize_i32()}
+    (i32<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_i32<$l, $v>()}
     };
-    (i64) => {
-        forward_to_deserialize_method!{deserialize_i64()}
+    (i64<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_i64<$l, $v>()}
     };
-    (f32) => {
-        forward_to_deserialize_method!{deserialize_f32()}
+    (f32<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_f32<$l, $v>()}
     };
-    (f64) => {
-        forward_to_deserialize_method!{deserialize_f64()}
+    (f64<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_f64<$l, $v>()}
     };
-    (char) => {
-        forward_to_deserialize_method!{deserialize_char()}
+    (char<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_char<$l, $v>()}
     };
-    (str) => {
-        forward_to_deserialize_method!{deserialize_str()}
+    (str<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_str<$l, $v>()}
     };
-    (string) => {
-        forward_to_deserialize_method!{deserialize_string()}
+    (string<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_string<$l, $v>()}
     };
-    (unit) => {
-        forward_to_deserialize_method!{deserialize_unit()}
+    (unit<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_unit<$l, $v>()}
     };
-    (option) => {
-        forward_to_deserialize_method!{deserialize_option()}
+    (option<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_option<$l, $v>()}
     };
-    (seq) => {
-        forward_to_deserialize_method!{deserialize_seq()}
+    (seq<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_seq<$l, $v>()}
     };
-    (seq_fixed_size) => {
-        forward_to_deserialize_method!{deserialize_seq_fixed_size(usize)}
+    (seq_fixed_size<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_seq_fixed_size<$l, $v>(len: usize)}
     };
-    (bytes) => {
-        forward_to_deserialize_method!{deserialize_bytes()}
+    (bytes<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_bytes<$l, $v>()}
     };
-    (byte_buf) => {
-        forward_to_deserialize_method!{deserialize_byte_buf()}
+    (byte_buf<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_byte_buf<$l, $v>()}
     };
-    (map) => {
-        forward_to_deserialize_method!{deserialize_map()}
+    (map<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_map<$l, $v>()}
     };
-    (unit_struct) => {
-        forward_to_deserialize_method!{deserialize_unit_struct(&'static str)}
+    (unit_struct<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_unit_struct<$l, $v>(name: &'static str)}
     };
-    (newtype_struct) => {
-        forward_to_deserialize_method!{deserialize_newtype_struct(&'static str)}
+    (newtype_struct<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_newtype_struct<$l, $v>(name: &'static str)}
     };
-    (tuple_struct) => {
-        forward_to_deserialize_method!{deserialize_tuple_struct(&'static str, usize)}
+    (tuple_struct<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_tuple_struct<$l, $v>(name: &'static str, len: usize)}
     };
-    (struct) => {
-        forward_to_deserialize_method!{deserialize_struct(&'static str, &'static [&'static str])}
+    (struct<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_struct<$l, $v>(name: &'static str, fields: &'static [&'static str])}
     };
-    (identifier) => {
-        forward_to_deserialize_method!{deserialize_identifier()}
+    (identifier<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_identifier<$l, $v>()}
     };
-    (tuple) => {
-        forward_to_deserialize_method!{deserialize_tuple(usize)}
+    (tuple<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_tuple<$l, $v>(len: usize)}
     };
-    (enum) => {
-        forward_to_deserialize_method!{deserialize_enum(&'static str, &'static [&'static str])}
+    (enum<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_enum<$l, $v>(name: &'static str, variants: &'static [&'static str])}
     };
-    (ignored_any) => {
-        forward_to_deserialize_method!{deserialize_ignored_any()}
+    (ignored_any<$l:tt, $v:ident>) => {
+        forward_to_deserialize_method!{deserialize_ignored_any<$l, $v>()}
     };
 }
 
@@ -184,11 +187,45 @@ macro_rules! forward_to_deserialize_helper {
 /// ```
 ///
 /// The macro assumes the convention that your `Deserializer` lifetime parameter
-/// is called `'de`. It will not work if the `Deserializer` lifetime parameter
-/// is called something different.
+/// is called `'de` and that the `Visitor` type parameters on each method are
+/// called `V`. A different type parameter and a different lifetime can be
+/// specified explicitly if necessary.
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate serde;
+/// #
+/// # use std::marker::PhantomData;
+/// #
+/// # use serde::de::{value, Deserializer, Visitor};
+/// #
+/// # struct MyDeserializer<V>(PhantomData<V>);
+/// #
+/// # impl<'q, V> Deserializer<'q> for MyDeserializer<V> {
+/// #     type Error = value::Error;
+/// #
+/// #     fn deserialize<W>(self, visitor: W) -> Result<W::Value, Self::Error>
+/// #         where W: Visitor<'q>
+/// #     {
+/// #         unimplemented!()
+/// #     }
+/// #
+/// forward_to_deserialize! {
+///     <W: Visitor<'q>>
+///     bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
+///     seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
+///     tuple_struct struct identifier tuple enum ignored_any
+/// }
+/// # }
+/// #
+/// # fn main() {}
+/// ```
 #[macro_export]
 macro_rules! forward_to_deserialize {
+    (<$visitor:ident: Visitor<$lifetime:tt>> $($func:ident)*) => {
+        $(forward_to_deserialize_helper!{$func<$lifetime, $visitor>})*
+    };
     ($($func:ident)*) => {
-        $(forward_to_deserialize_helper!{$func})*
+        $(forward_to_deserialize_helper!{$func<'de, V>})*
     };
 }
