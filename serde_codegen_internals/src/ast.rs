@@ -1,5 +1,6 @@
 use syn;
 use attr;
+use check;
 use Ctxt;
 
 pub struct Item<'a> {
@@ -62,12 +63,14 @@ impl<'a> Item<'a> {
             }
         }
 
-        Item {
+        let item = Item {
             ident: item.ident.clone(),
             attrs: attrs,
             body: body,
             generics: &item.generics,
-        }
+        };
+        check::check(cx, &item);
+        item
     }
 }
 
@@ -80,6 +83,10 @@ impl<'a> Body<'a> {
             }
             Body::Struct(_, ref fields) => Box::new(fields.iter()),
         }
+    }
+
+    pub fn has_getter(&self) -> bool {
+        self.all_fields().any(|f| f.attrs.getter().is_some())
     }
 }
 
