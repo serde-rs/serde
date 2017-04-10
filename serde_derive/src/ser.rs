@@ -61,11 +61,15 @@ struct Parameters {
 
     /// Generics including any explicit and inferred bounds for the impl.
     generics: syn::Generics,
+
+    /// Type has a `serde(remote = "...")` attribute.
+    is_remote: bool,
 }
 
 impl Parameters {
     fn new(item: &Item) -> Self {
-        let self_var = if item.attrs.remote().is_some() {
+        let is_remote = item.attrs.remote().is_some();
+        let self_var = if is_remote {
             Ident::new("__self")
         } else {
             Ident::new("self")
@@ -82,6 +86,7 @@ impl Parameters {
             self_var: self_var,
             this: this,
             generics: generics,
+            is_remote: is_remote,
         }
     }
 
@@ -834,14 +839,22 @@ fn get_field<I>(params: &Parameters, field: &Field, ident: I) -> Tokens
     where I: Into<Ident>
 {
     let self_var = &params.self_var;
-    match field.attrs.getter() {
-        None => {
+    match (params.is_remote, field.attrs.getter()) {
+        (false, None) => {
             let ident = ident.into();
             quote!(&#self_var.#ident)
         }
-        Some(getter) => {
+        (true, None) => {
+            let ty = field.ty;
+            let ident = ident.into();
+            quote!(_serde::private::ser::constrain::<#ty>(&#self_var.#ident))
+        }
+        (true, Some(getter)) => {
             let ty = field.ty;
             quote!(_serde::private::ser::constrain::<#ty>(&#getter(#self_var)))
+        }
+        (false, Some(_)) => {
+            unreachable!("getter is only allowed for remote impls");
         }
     }
 }
