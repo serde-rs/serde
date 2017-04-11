@@ -17,16 +17,16 @@ use core::hash::{Hash, BuildHasher};
 use std::{net, ops, path};
 #[cfg(feature = "std")]
 use std::ffi::{CString, CStr, OsString, OsStr};
-#[cfg(feature = "std")]
+#[cfg(all(feature = "rc", feature = "std"))]
 use std::rc::Rc;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
 use alloc::rc::Rc;
 #[cfg(feature = "std")]
 use std::time::Duration;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "rc", feature = "std"))]
 use std::sync::Arc;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
 use alloc::arc::Arc;
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
@@ -555,7 +555,7 @@ impl<T: ?Sized> Serialize for Box<T>
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 impl<T> Serialize for Rc<T>
     where T: Serialize
 {
@@ -567,7 +567,7 @@ impl<T> Serialize for Rc<T>
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 impl<T> Serialize for Arc<T>
     where T: Serialize
 {

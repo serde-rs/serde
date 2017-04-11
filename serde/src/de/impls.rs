@@ -28,14 +28,14 @@ use std::ffi::{CString, OsString};
 #[cfg(all(feature = "std", feature = "unstable"))]
 use std::ffi::CStr;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "rc", feature = "std"))]
 use std::rc::Rc;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
 use alloc::rc::Rc;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "rc", feature = "std"))]
 use std::sync::Arc;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
 use alloc::arc::Arc;
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
@@ -1141,7 +1141,7 @@ impl<'de> Deserialize<'de> for Box<str> {
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
     fn deserialize<D>(deserializer: D) -> Result<Arc<T>, D::Error>
         where D: Deserializer<'de>
@@ -1151,7 +1151,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Rc<T> {
     fn deserialize<D>(deserializer: D) -> Result<Rc<T>, D::Error>
         where D: Deserializer<'de>
