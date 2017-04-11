@@ -1,45 +1,9 @@
-#[cfg(feature = "std")]
-use std::borrow::Cow;
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::borrow::Cow;
+use lib::*;
+
+use ser::{Serialize, SerializeSeq, SerializeTuple, Serializer};
 
 #[cfg(feature = "std")]
-use std::collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, HashMap, HashSet, VecDeque};
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque, String, Vec};
-
-#[cfg(feature = "collections")]
-use collections::borrow::ToOwned;
-
-#[cfg(feature = "std")]
-use core::hash::{Hash, BuildHasher};
-#[cfg(feature = "std")]
-use std::{net, ops, path};
-#[cfg(feature = "std")]
-use std::ffi::{CString, CStr, OsString, OsStr};
-#[cfg(all(feature = "rc", feature = "std"))]
-use std::rc::Rc;
-#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-use alloc::rc::Rc;
-#[cfg(feature = "std")]
-use std::time::Duration;
-
-#[cfg(all(feature = "rc", feature = "std"))]
-use std::sync::Arc;
-#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-use alloc::arc::Arc;
-
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::boxed::Box;
-
-use core::marker::PhantomData;
-
-#[cfg(feature = "unstable")]
-use core::nonzero::{NonZero, Zeroable};
-
-use super::{Serialize, SerializeSeq, SerializeTuple, Serializer};
-#[cfg(feature = "std")]
-use super::Error;
+use ser::Error;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -635,8 +599,7 @@ impl Serialize for Duration {
 macro_rules! serialize_display_bounded_length {
     ($value: expr, $MAX_LEN: expr, $serializer: expr) => {
         {
-            use std::io::Write;
-            let mut buffer: [u8; $MAX_LEN] = unsafe { ::std::mem::uninitialized() };
+            let mut buffer: [u8; $MAX_LEN] = unsafe { mem::uninitialized() };
             let remaining_len;
             {
                 let mut remaining = &mut buffer[..];
@@ -646,11 +609,11 @@ macro_rules! serialize_display_bounded_length {
             let written_len = buffer.len() - remaining_len;
             let written = &buffer[..written_len];
 
-            // write! only provides std::fmt::Formatter to Display implementations,
+            // write! only provides fmt::Formatter to Display implementations,
             // which has methods write_str and write_char but no method to write arbitrary bytes.
             // Therefore, `written` is well-formed in UTF-8.
             let written_str = unsafe {
-                ::std::str::from_utf8_unchecked(written)
+                str::from_utf8_unchecked(written)
             };
             $serializer.serialize_str(written_str)
         }

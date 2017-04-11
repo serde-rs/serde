@@ -1,6 +1,6 @@
 //! This module contains `Impossible` serializer and its implementations.
 
-use core::marker::PhantomData;
+use lib::*;
 
 use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
           SerializeTupleVariant, SerializeMap, SerializeStruct, SerializeStructVariant};

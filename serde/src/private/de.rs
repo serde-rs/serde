@@ -1,18 +1,4 @@
-#[cfg(any(feature = "std", feature = "collections"))]
-use core::{fmt, str};
-
-use core::marker::PhantomData;
-
-#[cfg(feature = "collections")]
-use collections::borrow::ToOwned;
-
-#[cfg(feature = "std")]
-use std::borrow::Cow;
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::borrow::Cow;
-
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::{String, Vec};
+use lib::*;
 
 use de::{Deserialize, Deserializer, Error, Visitor};
 
@@ -187,17 +173,7 @@ mod content {
     // This issue is tracking making some of this stuff public:
     // https://github.com/serde-rs/serde/issues/741
 
-    #![doc(hidden)]
-
-    use core::cmp;
-    use core::fmt;
-    use core::marker::PhantomData;
-
-    #[cfg(all(not(feature = "std"), feature = "collections"))]
-    use collections::{String, Vec};
-
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
-    use alloc::boxed::Box;
+    use lib::*;
 
     use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, MapVisitor,
             EnumVisitor, Unexpected};

@@ -1,63 +1,11 @@
-#[cfg(feature = "std")]
-use std::borrow::Cow;
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::borrow::Cow;
-
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque, Vec, String};
-
-#[cfg(feature = "std")]
-use std::collections::{HashMap, HashSet, BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
-
-#[cfg(feature = "collections")]
-use collections::borrow::ToOwned;
-
-#[cfg(any(feature = "std", feature = "collections"))]
-use core::cmp;
-use core::fmt;
-#[cfg(feature = "std")]
-use core::hash::{Hash, BuildHasher};
-use core::marker::PhantomData;
-#[cfg(feature = "std")]
-use std::net;
-#[cfg(feature = "std")]
-use std::path;
-use core::str;
-#[cfg(feature = "std")]
-use std::ffi::{CString, OsString};
-#[cfg(all(feature = "std", feature = "unstable"))]
-use std::ffi::CStr;
-
-#[cfg(all(feature = "rc", feature = "std"))]
-use std::rc::Rc;
-#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-use alloc::rc::Rc;
-
-#[cfg(all(feature = "rc", feature = "std"))]
-use std::sync::Arc;
-#[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-use alloc::arc::Arc;
-
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::boxed::Box;
-
-#[cfg(feature = "std")]
-use std::time::Duration;
-
-#[cfg(feature = "std")]
-use std;
-
-#[cfg(feature = "unstable")]
-use core::nonzero::{NonZero, Zeroable};
-
-#[cfg(feature = "unstable")]
-#[allow(deprecated)] // required for impl Deserialize for NonZero<T>
-use core::num::Zero;
+use lib::*;
 
 use de::{Deserialize, Deserializer, EnumVisitor, Error, SeqVisitor, Unexpected,
          VariantVisitor, Visitor};
+
 #[cfg(any(feature = "std", feature = "collections"))]
 use de::MapVisitor;
+
 use de::from_primitive::FromPrimitive;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1312,7 +1260,7 @@ impl<'de> Deserialize<'de> for Duration {
 //         end: u32,
 //     }
 #[cfg(feature = "std")]
-impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for std::ops::Range<Idx> {
+impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for ops::Range<Idx> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
@@ -1367,13 +1315,13 @@ impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for std::ops::Range<Idx> {
         }
 
         impl<'de, Idx: Deserialize<'de>> Visitor<'de> for RangeVisitor<Idx> {
-            type Value = std::ops::Range<Idx>;
+            type Value = ops::Range<Idx>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("struct Range")
             }
 
-            fn visit_seq<V>(self, mut visitor: V) -> Result<std::ops::Range<Idx>, V::Error>
+            fn visit_seq<V>(self, mut visitor: V) -> Result<ops::Range<Idx>, V::Error>
                 where V: SeqVisitor<'de>
             {
                 let start: Idx = match try!(visitor.visit()) {
@@ -1391,7 +1339,7 @@ impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for std::ops::Range<Idx> {
                 Ok(start..end)
             }
 
-            fn visit_map<V>(self, mut visitor: V) -> Result<std::ops::Range<Idx>, V::Error>
+            fn visit_map<V>(self, mut visitor: V) -> Result<ops::Range<Idx>, V::Error>
                 where V: MapVisitor<'de>
             {
                 let mut start: Option<Idx> = None;
