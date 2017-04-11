@@ -29,7 +29,7 @@ if [ -n "${CLIPPY}" ]; then
     fi
 
     cd "$DIR/serde"
-    cargo clippy --features unstable -- -Dclippy
+    cargo clippy --features 'rc unstable' -- -Dclippy
 
     cd "$DIR/serde_derive"
     cargo clippy --features unstable -- -Dclippy
@@ -47,7 +47,7 @@ else
     channel build --no-default-features
     channel build --no-default-features --features alloc
     channel build --no-default-features --features collections
-    channel test --features unstable
+    channel test --features 'rc unstable'
     cd "$DIR/test_suite/deps"
     channel build
     cd "$DIR/test_suite"
@@ -58,19 +58,19 @@ else
     CHANNEL=beta
     cargo clean
     cd "$DIR/serde"
-    channel build
+    channel build --features rc
     cd "$DIR/test_suite"
     channel test
 
     CHANNEL=stable
     cargo clean
     cd "$DIR/serde"
-    channel build
+    channel build --features rc
     channel build --no-default-features
 
     CHANNEL=1.13.0
     cargo clean
     cd "$DIR/serde"
-    channel build
+    channel build --features rc
     channel build --no-default-features
 fi
