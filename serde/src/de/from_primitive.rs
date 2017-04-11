@@ -8,9 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use core::{usize, u8, u16, u32, u64};
-use core::{isize, i8, i16, i32, i64};
-use core::{f32, f64};
+use lib::*;
 
 macro_rules! int_to_int {
     ($dst:ident, $n:ident) => (

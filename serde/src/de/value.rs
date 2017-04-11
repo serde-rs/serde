@@ -1,30 +1,6 @@
 //! This module supports deserializing from primitives with the `ValueDeserializer` trait.
 
-#[cfg(feature = "std")]
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, btree_map, btree_set, hash_map,
-                       hash_set};
-#[cfg(feature = "std")]
-use std::borrow::Cow;
-#[cfg(feature = "std")]
-use std::vec;
-
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::{BTreeMap, BTreeSet, Vec, String, btree_map, btree_set, vec};
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::borrow::Cow;
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::boxed::Box;
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::string::ToString;
-
-#[cfg(feature = "std")]
-use core::hash::Hash;
-#[cfg(feature = "std")]
-use std::error;
-
-use core::fmt::{self, Display};
-use core::iter::{self, Iterator};
-use core::marker::PhantomData;
+use lib::*;
 
 use de::{self, Expected, SeqVisitor};
 
@@ -542,7 +518,7 @@ impl<'de, T, E> ValueDeserializer<'de, E> for Vec<T>
     where T: ValueDeserializer<'de, E>,
           E: de::Error
 {
-    type Deserializer = SeqDeserializer<vec::IntoIter<T>, E>;
+    type Deserializer = SeqDeserializer<<Vec<T> as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -554,7 +530,7 @@ impl<'de, T, E> ValueDeserializer<'de, E> for BTreeSet<T>
     where T: ValueDeserializer<'de, E> + Eq + Ord,
           E: de::Error
 {
-    type Deserializer = SeqDeserializer<btree_set::IntoIter<T>, E>;
+    type Deserializer = SeqDeserializer<<BTreeSet<T> as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -566,7 +542,7 @@ impl<'de, T, E> ValueDeserializer<'de, E> for HashSet<T>
     where T: ValueDeserializer<'de, E> + Eq + Hash,
           E: de::Error
 {
-    type Deserializer = SeqDeserializer<hash_set::IntoIter<T>, E>;
+    type Deserializer = SeqDeserializer<<HashSet<T> as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -895,7 +871,7 @@ impl<'de, K, V, E> ValueDeserializer<'de, E> for BTreeMap<K, V>
           V: ValueDeserializer<'de, E>,
           E: de::Error
 {
-    type Deserializer = MapDeserializer<'de, btree_map::IntoIter<K, V>, E>;
+    type Deserializer = MapDeserializer<'de, <BTreeMap<K, V> as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         MapDeserializer::new(self.into_iter())
@@ -908,7 +884,7 @@ impl<'de, K, V, E> ValueDeserializer<'de, E> for HashMap<K, V>
           V: ValueDeserializer<'de, E>,
           E: de::Error
 {
-    type Deserializer = MapDeserializer<'de, hash_map::IntoIter<K, V>, E>;
+    type Deserializer = MapDeserializer<'de, <HashMap<K, V> as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         MapDeserializer::new(self.into_iter())
@@ -952,8 +928,9 @@ impl<'de, V_> de::Deserializer<'de> for MapVisitorDeserializer<V_>
 ///////////////////////////////////////////////////////////////////////////////
 
 mod private {
+    use lib::*;
+
     use de::{self, Unexpected};
-    use core::marker::PhantomData;
 
     pub struct UnitOnly<E> {
         marker: PhantomData<E>,

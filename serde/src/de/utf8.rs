@@ -1,3 +1,5 @@
+use lib::*;
+
 const TAG_CONT: u8 = 0b1000_0000;
 const TAG_TWO_B: u8 = 0b1100_0000;
 const TAG_THREE_B: u8 = 0b1110_0000;
@@ -43,6 +45,6 @@ pub struct Encode {
 impl Encode {
     // FIXME: use this from_utf8_unchecked, since we know it can never fail
     pub fn as_str(&self) -> &str {
-        ::core::str::from_utf8(&self.buf[self.pos..]).unwrap()
+        str::from_utf8(&self.buf[self.pos..]).unwrap()
     }
 }

@@ -94,16 +94,7 @@
 //! [bincode]: https://github.com/TyOverby/bincode
 //! [data-formats]: https://serde.rs/#data-formats
 
-#[cfg(feature = "std")]
-use std::error;
-
-#[cfg(all(not(feature = "std"), feature = "collections"))]
-use collections::{String, Vec};
-
-use core::fmt::{self, Display};
-#[cfg(not(feature = "std"))]
-use core::fmt::Debug;
-use core::marker::PhantomData;
+use lib::*;
 
 ///////////////////////////////////////////////////////////////////////////////
 

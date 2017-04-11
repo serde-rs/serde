@@ -74,16 +74,85 @@ extern crate collections;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(feature = "unstable")]
-extern crate core as actual_core;
+#[cfg(all(feature = "unstable", feature = "std"))]
+extern crate core;
 
-#[cfg(feature = "std")]
-mod core {
-    pub use std::{ops, hash, fmt, cmp, marker, mem, i8, i16, i32, i64, u8, u16, u32, u64, isize,
-                  usize, f32, f64, char, str, num, slice, iter, cell, default, result, option,
-                  clone, convert};
+/// A facade around all the types we need from the `std`, `core`, `alloc`, and
+/// `collections` crates. This avoids elaborate import wrangling having to
+/// happen in every module.
+mod lib {
+    #[cfg(feature = "std")]
+    use std as core;
+    #[cfg(not(feature = "std"))]
+    use core;
+
+    pub use self::core::{cmp, iter, mem, ops, str};
+    pub use self::core::{i8, i16, i32, i64, isize};
+    pub use self::core::{u8, u16, u32, u64, usize};
+    pub use self::core::{f32, f64};
+
+    pub use self::core::clone::{self, Clone};
+    pub use self::core::convert::{self, From, Into};
+    pub use self::core::default::{self, Default};
+    pub use self::core::fmt::{self, Debug, Display};
+    pub use self::core::marker::{self, PhantomData};
+    pub use self::core::option::{self, Option};
+    pub use self::core::result::{self, Result};
+
+    #[cfg(feature = "std")]
+    pub use std::borrow::{Cow, ToOwned};
+    #[cfg(all(feature = "collections", not(feature = "std")))]
+    pub use collections::borrow::{Cow, ToOwned};
+
+    #[cfg(feature = "std")]
+    pub use std::string::String;
+    #[cfg(all(feature = "collections", not(feature = "std")))]
+    pub use collections::string::{String, ToString};
+    
+    #[cfg(feature = "std")]
+    pub use std::vec::Vec;
+    #[cfg(all(feature = "collections", not(feature = "std")))]
+    pub use collections::vec::Vec;
+
+    #[cfg(feature = "std")]
+    pub use std::boxed::Box;
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::boxed::Box;
+
+    #[cfg(all(feature = "rc", feature = "std"))]
+    pub use std::rc::Rc;
+    #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+    pub use alloc::rc::Rc;
+
+    #[cfg(all(feature = "rc", feature = "std"))]
+    pub use std::sync::Arc;
+    #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+    pub use alloc::arc::Arc;
+
+    #[cfg(feature = "std")]
+    pub use std::collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
+    #[cfg(all(feature = "collections", not(feature = "std")))]
+    pub use collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
+
+    #[cfg(feature = "std")]
+    pub use std::{error, net, path};
+
+    #[cfg(feature = "std")]
+    pub use std::collections::{HashMap, HashSet};
+    #[cfg(feature = "std")]
+    pub use std::ffi::{CString, CStr, OsString, OsStr};
+    #[cfg(feature = "std")]
+    pub use std::hash::{Hash, BuildHasher};
+    #[cfg(feature = "std")]
+    pub use std::io::Write;
+    #[cfg(feature = "std")]
+    pub use std::time::Duration;
+
     #[cfg(feature = "unstable")]
-    pub use actual_core::nonzero;
+    pub use core::nonzero::{NonZero, Zeroable};
+    #[cfg(feature = "unstable")]
+    #[allow(deprecated)] // required for impl Deserialize for NonZero<T>
+    pub use core::num::Zero;
 }
 
 #[doc(inline)]

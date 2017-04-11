@@ -1,4 +1,4 @@
-use core::fmt;
+use lib::*;
 
 use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
 

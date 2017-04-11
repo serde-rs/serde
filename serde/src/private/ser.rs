@@ -1,12 +1,9 @@
-use core::fmt::{self, Display};
+use lib::*;
 
 use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct, Impossible};
 
 #[cfg(any(feature = "std", feature = "collections"))]
 use self::content::{SerializeTupleVariantAsMapValue, SerializeStructVariantAsMapValue};
-
-#[cfg(feature = "std")]
-use std::error;
 
 /// Used to check that serde(getter) attributes return the expected type.
 /// Not public API.
@@ -340,16 +337,7 @@ impl Display for Error {
 
 #[cfg(any(feature = "std", feature = "collections"))]
 mod content {
-    use core::marker::PhantomData;
-
-    #[cfg(all(not(feature = "std"), feature = "collections"))]
-    use collections::{String, Vec};
-
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
-    use alloc::boxed::Box;
-
-    #[cfg(feature = "collections")]
-    use collections::borrow::ToOwned;
+    use lib::*;
 
     use ser::{self, Serialize, Serializer};
 

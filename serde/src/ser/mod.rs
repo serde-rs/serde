@@ -92,17 +92,7 @@
 //! [bincode]: https://github.com/TyOverby/bincode
 //! [data-formats]: https://serde.rs/#data-formats
 
-#[cfg(feature = "std")]
-use std::error;
-
-#[cfg(all(feature = "collections", not(feature = "std")))]
-use collections::string::String;
-#[cfg(not(feature = "std"))]
-use core::fmt::Debug;
-use core::fmt::Display;
-#[cfg(any(feature = "std", feature = "collections"))]
-use core::fmt::Write;
-use core::iter::IntoIterator;
+use lib::*;
 
 mod impls;
 mod impossible;
@@ -876,6 +866,7 @@ pub trait Serializer: Sized {
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display
     {
+        use self::fmt::Write;
         let mut string = String::new();
         write!(string, "{}", value).unwrap();
         self.serialize_str(&string)
