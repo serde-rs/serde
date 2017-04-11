@@ -12,9 +12,6 @@ readme = "../README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 publish = false # this branch contains breaking changes
 
-[features]
-unstable = []
-
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
 

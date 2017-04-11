@@ -32,7 +32,7 @@ if [ -n "${CLIPPY}" ]; then
     cargo clippy --features 'rc unstable' -- -Dclippy
 
     cd "$DIR/serde_derive"
-    cargo clippy --features unstable -- -Dclippy
+    cargo clippy -- -Dclippy
 
     cd "$DIR/test_suite"
     cargo clippy --features unstable -- -Dclippy
