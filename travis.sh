@@ -67,10 +67,14 @@ else
     cd "$DIR/serde"
     channel build --features rc
     channel build --no-default-features
+    cd "$DIR/serde_test"
+    channel build
 
     CHANNEL=1.13.0
     cargo clean
     cd "$DIR/serde"
     channel build --features rc
     channel build --no-default-features
+    cd "$DIR/serde_test"
+    channel build
 fi

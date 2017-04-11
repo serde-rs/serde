@@ -28,17 +28,17 @@ impl<'a> Serializer<'a> {
 }
 
 macro_rules! assert_next_token {
-    ($self:ident, $expected:ident($a:expr)) => {
-        assert_next_token!($self, $expected { a: $a });
+    ($ser:ident, $expected:ident($a:expr)) => {
+        assert_next_token!($ser, $expected { a: $a });
     };
-    ($self:ident, $expected:ident($a:expr, $b:expr)) => {
-        assert_next_token!($self, $expected { a: $a, b: $b });
+    ($ser:ident, $expected:ident($a:expr, $b:expr)) => {
+        assert_next_token!($ser, $expected { a: $a, b: $b });
     };
-    ($self:ident, $expected:ident($a:expr, $b:expr, $c:expr)) => {
-        assert_next_token!($self, $expected { a: $a, b: $b, c: $c });
+    ($ser:ident, $expected:ident($a:expr, $b:expr, $c:expr)) => {
+        assert_next_token!($ser, $expected { a: $a, b: $b, c: $c });
     };
-    ($self:ident, $expected:ident $({ $($n:ident: $v:expr),* })*) => {
-        match $self.next_token() {
+    ($ser:ident, $expected:ident $({ $($n:ident: $v:expr),* })*) => {
+        match $ser.next_token() {
             Some(Token::$expected $(($($n),*))*) $(if $($n == $v)&&*)* => {}
             Some(other) => {
                 panic!("expected Token::{} but serialized as {:?}",
