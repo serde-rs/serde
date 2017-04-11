@@ -81,10 +81,12 @@ extern crate core;
 /// `collections` crates. This avoids elaborate import wrangling having to
 /// happen in every module.
 mod lib {
-    #[cfg(feature = "std")]
-    use std as core;
-    #[cfg(not(feature = "std"))]
-    use core;
+    mod core {
+        #[cfg(feature = "std")]
+        pub use std::*;
+        #[cfg(not(feature = "std"))]
+        pub use core::*;
+    }
 
     pub use self::core::{cmp, iter, mem, ops, str};
     pub use self::core::{i8, i16, i32, i64, isize};

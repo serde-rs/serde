@@ -866,7 +866,7 @@ pub trait Serializer: Sized {
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
         where T: Display
     {
-        use self::fmt::Write;
+        use lib::fmt::Write;
         let mut string = String::new();
         write!(string, "{}", value).unwrap();
         self.serialize_str(&string)
