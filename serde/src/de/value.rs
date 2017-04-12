@@ -2,7 +2,7 @@
 
 use lib::*;
 
-use de::{self, Expected, SeqVisitor};
+use de::{self, IntoDeserializer, Expected, SeqVisitor};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -50,18 +50,7 @@ impl error::Error for Error {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// This trait converts primitive types into a deserializer.
-pub trait ValueDeserializer<'de, E: de::Error = Error> {
-    /// The actual deserializer type.
-    type Deserializer: de::Deserializer<'de, Error = E>;
-
-    /// Convert this value into a deserializer.
-    fn into_deserializer(self) -> Self::Deserializer;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-impl<'de, E> ValueDeserializer<'de, E> for ()
+impl<'de, E> IntoDeserializer<'de, E> for ()
     where E: de::Error
 {
     type Deserializer = UnitDeserializer<E>;
@@ -110,7 +99,7 @@ macro_rules! primitive_deserializer {
             marker: PhantomData<E>
         }
 
-        impl<'de, E> ValueDeserializer<'de, E> for $ty
+        impl<'de, E> IntoDeserializer<'de, E> for $ty
             where E: de::Error,
         {
             type Deserializer = $name<E>;
@@ -163,7 +152,7 @@ pub struct U32Deserializer<E> {
     marker: PhantomData<E>,
 }
 
-impl<'de, E> ValueDeserializer<'de, E> for u32
+impl<'de, E> IntoDeserializer<'de, E> for u32
     where E: de::Error
 {
     type Deserializer = U32Deserializer<E>;
@@ -225,7 +214,7 @@ pub struct StrDeserializer<'a, E> {
     marker: PhantomData<E>,
 }
 
-impl<'de, 'a, E> ValueDeserializer<'de, E> for &'a str
+impl<'de, 'a, E> IntoDeserializer<'de, E> for &'a str
     where E: de::Error
 {
     type Deserializer = StrDeserializer<'a, E>;
@@ -289,7 +278,7 @@ pub struct StringDeserializer<E> {
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, E> ValueDeserializer<'de, E> for String
+impl<'de, E> IntoDeserializer<'de, E> for String
     where E: de::Error
 {
     type Deserializer = StringDeserializer<E>;
@@ -355,7 +344,7 @@ pub struct CowStrDeserializer<'a, E> {
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, 'a, E> ValueDeserializer<'de, E> for Cow<'a, str>
+impl<'de, 'a, E> IntoDeserializer<'de, E> for Cow<'a, str>
     where E: de::Error
 {
     type Deserializer = CowStrDeserializer<'a, E>;
@@ -455,7 +444,7 @@ impl<I, E> SeqDeserializer<I, E>
 
 impl<'de, I, T, E> de::Deserializer<'de> for SeqDeserializer<I, E>
     where I: Iterator<Item = T>,
-          T: ValueDeserializer<'de, E>,
+          T: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -477,7 +466,7 @@ impl<'de, I, T, E> de::Deserializer<'de> for SeqDeserializer<I, E>
 
 impl<'de, I, T, E> de::SeqVisitor<'de> for SeqDeserializer<I, E>
     where I: Iterator<Item = T>,
-          T: ValueDeserializer<'de, E>,
+          T: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -514,8 +503,8 @@ impl Expected for ExpectedInSeq {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, T, E> ValueDeserializer<'de, E> for Vec<T>
-    where T: ValueDeserializer<'de, E>,
+impl<'de, T, E> IntoDeserializer<'de, E> for Vec<T>
+    where T: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Deserializer = SeqDeserializer<<Vec<T> as IntoIterator>::IntoIter, E>;
@@ -526,8 +515,8 @@ impl<'de, T, E> ValueDeserializer<'de, E> for Vec<T>
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, T, E> ValueDeserializer<'de, E> for BTreeSet<T>
-    where T: ValueDeserializer<'de, E> + Eq + Ord,
+impl<'de, T, E> IntoDeserializer<'de, E> for BTreeSet<T>
+    where T: IntoDeserializer<'de, E> + Eq + Ord,
           E: de::Error
 {
     type Deserializer = SeqDeserializer<<BTreeSet<T> as IntoIterator>::IntoIter, E>;
@@ -538,8 +527,8 @@ impl<'de, T, E> ValueDeserializer<'de, E> for BTreeSet<T>
 }
 
 #[cfg(feature = "std")]
-impl<'de, T, E> ValueDeserializer<'de, E> for HashSet<T>
-    where T: ValueDeserializer<'de, E> + Eq + Hash,
+impl<'de, T, E> IntoDeserializer<'de, E> for HashSet<T>
+    where T: IntoDeserializer<'de, E> + Eq + Hash,
           E: de::Error
 {
     type Deserializer = SeqDeserializer<<HashSet<T> as IntoIterator>::IntoIter, E>;
@@ -589,8 +578,8 @@ impl<'de, V_> de::Deserializer<'de> for SeqVisitorDeserializer<V_>
 pub struct MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: ValueDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: ValueDeserializer<'de, E>,
+          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
+          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
           E: de::Error
 {
     iter: iter::Fuse<I>,
@@ -603,8 +592,8 @@ pub struct MapDeserializer<'de, I, E>
 impl<'de, I, E> MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: ValueDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: ValueDeserializer<'de, E>,
+          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
+          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
           E: de::Error
 {
     /// Construct a new `MapDeserializer<I, K, V, E>`.
@@ -650,8 +639,8 @@ impl<'de, I, E> MapDeserializer<'de, I, E>
 impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: ValueDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: ValueDeserializer<'de, E>,
+          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
+          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -691,8 +680,8 @@ impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
 impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: ValueDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: ValueDeserializer<'de, E>,
+          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
+          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -744,8 +733,8 @@ impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
 impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: ValueDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: ValueDeserializer<'de, E>,
+          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
+          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -772,8 +761,8 @@ impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
 struct PairDeserializer<A, B, E>(A, B, PhantomData<E>);
 
 impl<'de, A, B, E> de::Deserializer<'de> for PairDeserializer<A, B, E>
-    where A: ValueDeserializer<'de, E>,
-          B: ValueDeserializer<'de, E>,
+    where A: IntoDeserializer<'de, E>,
+          B: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -821,8 +810,8 @@ impl<'de, A, B, E> de::Deserializer<'de> for PairDeserializer<A, B, E>
 struct PairVisitor<A, B, E>(Option<A>, Option<B>, PhantomData<E>);
 
 impl<'de, A, B, E> de::SeqVisitor<'de> for PairVisitor<A, B, E>
-    where A: ValueDeserializer<'de, E>,
-          B: ValueDeserializer<'de, E>,
+    where A: IntoDeserializer<'de, E>,
+          B: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -866,9 +855,9 @@ impl Expected for ExpectedInMap {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, K, V, E> ValueDeserializer<'de, E> for BTreeMap<K, V>
-    where K: ValueDeserializer<'de, E> + Eq + Ord,
-          V: ValueDeserializer<'de, E>,
+impl<'de, K, V, E> IntoDeserializer<'de, E> for BTreeMap<K, V>
+    where K: IntoDeserializer<'de, E> + Eq + Ord,
+          V: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Deserializer = MapDeserializer<'de, <BTreeMap<K, V> as IntoIterator>::IntoIter, E>;
@@ -879,9 +868,9 @@ impl<'de, K, V, E> ValueDeserializer<'de, E> for BTreeMap<K, V>
 }
 
 #[cfg(feature = "std")]
-impl<'de, K, V, E> ValueDeserializer<'de, E> for HashMap<K, V>
-    where K: ValueDeserializer<'de, E> + Eq + Hash,
-          V: ValueDeserializer<'de, E>,
+impl<'de, K, V, E> IntoDeserializer<'de, E> for HashMap<K, V>
+    where K: IntoDeserializer<'de, E> + Eq + Hash,
+          V: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Deserializer = MapDeserializer<'de, <HashMap<K, V> as IntoIterator>::IntoIter, E>;

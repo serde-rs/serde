@@ -1,6 +1,6 @@
-use serde::de::{self, Deserialize, DeserializeSeed, EnumVisitor, MapVisitor, SeqVisitor,
-                VariantVisitor, Visitor};
-use serde::de::value::{ValueDeserializer, MapVisitorDeserializer, SeqVisitorDeserializer};
+use serde::de::{self, Deserialize, DeserializeSeed, EnumVisitor, IntoDeserializer,
+                MapVisitor, SeqVisitor, VariantVisitor, Visitor};
+use serde::de::value::{MapVisitorDeserializer, SeqVisitorDeserializer};
 
 use error::Error;
 use token::Token;
