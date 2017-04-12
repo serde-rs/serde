@@ -1658,6 +1658,17 @@ pub trait VariantVisitor<'de>: Sized {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// This trait converts primitive types into a deserializer.
+pub trait IntoDeserializer<'de, E: Error = value::Error> {
+    /// The actual deserializer type.
+    type Deserializer: Deserializer<'de, Error = E>;
+
+    /// Convert this value into a deserializer.
+    fn into_deserializer(self) -> Self::Deserializer;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 /// Used in error messages.
 ///
 /// - expected `a`

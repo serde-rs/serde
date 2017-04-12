@@ -1410,7 +1410,7 @@ mod content {
         }
     }
 
-    impl<'de, E> de::value::ValueDeserializer<'de, E> for ContentDeserializer<E>
+    impl<'de, E> de::IntoDeserializer<'de, E> for ContentDeserializer<E>
         where E: de::Error
     {
         type Deserializer = Self;
@@ -1420,7 +1420,7 @@ mod content {
         }
     }
 
-    impl<'de, 'a, E> de::value::ValueDeserializer<'de, E> for ContentRefDeserializer<'a, E>
+    impl<'de, 'a, E> de::IntoDeserializer<'de, E> for ContentRefDeserializer<'a, E>
         where E: de::Error
     {
         type Deserializer = Self;
