@@ -1,3 +1,14 @@
+/// Used only by Serde doc tests. Not public API.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __serialize_unimplemented {
+    ($($func:ident)*) => {
+        $(
+            __serialize_unimplemented_helper!($func);
+        )*
+    };
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __serialize_unimplemented_method {
@@ -104,16 +115,5 @@ macro_rules! __serialize_unimplemented_helper {
     (struct_variant) => {
         type SerializeStructVariant = $crate::ser::Impossible<Self::Ok, Self::Error>;
         __serialize_unimplemented_method!(serialize_struct_variant(&str, u32, &str, usize) -> SerializeStructVariant);
-    };
-}
-
-/// Used only by Serde doc tests. Not public API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __serialize_unimplemented {
-    ($($func:ident)*) => {
-        $(
-            __serialize_unimplemented_helper!($func);
-        )*
     };
 }
