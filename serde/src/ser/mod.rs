@@ -917,6 +917,24 @@ pub trait Serializer: Sized {
     /// using [`serialize_map`]. Implementors should not need to override this
     /// method.
     ///
+    /// ```rust
+    /// use std::collections::BTreeSet;
+    /// use serde::{Serialize, Serializer};
+    ///
+    /// struct MapToUnit {
+    ///     keys: BTreeSet<i32>,
+    /// }
+    ///
+    /// // Serializes as a map in which the values are all unit.
+    /// impl Serialize for MapToUnit {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.collect_map(self.keys.iter().map(|k| (k, ())))
+    ///     }
+    /// }
+    /// ```
+    ///
     /// [`serialize_map`]: #tymethod.serialize_map
     fn collect_map<K, V, I>(self, iter: I) -> Result<Self::Ok, Self::Error>
     where
