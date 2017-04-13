@@ -112,18 +112,21 @@ pub use self::impossible::Impossible;
 
 macro_rules! declare_error_trait {
     (Error: Sized $(+ $($supertrait:ident)::+)*) => {
-        /// Trait used by `Serialize` implementations to generically construct
-        /// errors belonging to the `Serializer` against which they are
+        /// Trait used by [`Serialize`] implementations to generically construct
+        /// errors belonging to the [`Serializer`] against which they are
         /// currently running.
+        ///
+        /// [`Serialize`]: ../trait.Serialize.html
+        /// [`Serializer`]: ../trait.Serializer.html
         pub trait Error: Sized $(+ $($supertrait)::+)* {
-            /// Raised when a `Serialize` implementation encounters a general
-            /// error while serializing a type.
+            /// Used when a [`Serialize`] implementation encounters any error
+            /// while serializing a type.
             ///
             /// The message should not be capitalized and should not end with a
             /// period.
             ///
-            /// For example, a filesystem `Path` may refuse to serialize itself
-            /// if it contains invalid UTF-8 data.
+            /// For example, a filesystem [`Path`] may refuse to serialize
+            /// itself if it contains invalid UTF-8 data.
             ///
             /// ```rust
             /// # struct Path;
@@ -141,12 +144,15 @@ macro_rules! declare_error_trait {
             ///         where S: Serializer
             ///     {
             ///         match self.to_str() {
-            ///             Some(s) => s.serialize(serializer),
+            ///             Some(s) => serializer.serialize_str(s),
             ///             None => Err(ser::Error::custom("path contains invalid UTF-8 characters")),
             ///         }
             ///     }
             /// }
             /// ```
+            ///
+            /// [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
+            /// [`Serialize`]: ../trait.Serialize.html
             fn custom<T>(msg: T) -> Self
             where
                 T: Display;
