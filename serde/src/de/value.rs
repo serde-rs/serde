@@ -61,6 +61,7 @@ impl<'de, E> IntoDeserializer<'de, E> for ()
 }
 
 /// A helper deserializer that deserializes a `()`.
+#[derive(Debug)]
 pub struct UnitDeserializer<E> {
     marker: PhantomData<E>,
 }
@@ -94,6 +95,7 @@ impl<'de, E> de::Deserializer<'de> for UnitDeserializer<E>
 macro_rules! primitive_deserializer {
     ($ty:ty, $name:ident, $method:ident $($cast:tt)*) => {
         /// A helper deserializer that deserializes a number.
+        #[derive(Debug)]
         pub struct $name<E> {
             value: $ty,
             marker: PhantomData<E>
@@ -147,6 +149,7 @@ primitive_deserializer!(f64, F64Deserializer, visit_f64);
 primitive_deserializer!(char, CharDeserializer, visit_char);
 
 /// A helper deserializer that deserializes a number.
+#[derive(Debug)]
 pub struct U32Deserializer<E> {
     value: u32,
     marker: PhantomData<E>,
@@ -209,6 +212,7 @@ impl<'de, E> de::EnumVisitor<'de> for U32Deserializer<E>
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a `&str`.
+#[derive(Debug)]
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
     marker: PhantomData<E>,
@@ -272,6 +276,7 @@ impl<'de, 'a, E> de::EnumVisitor<'de> for StrDeserializer<'a, E>
 
 /// A helper deserializer that deserializes a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
+#[derive(Debug)]
 pub struct StringDeserializer<E> {
     value: String,
     marker: PhantomData<E>,
@@ -338,6 +343,7 @@ impl<'de, 'a, E> de::EnumVisitor<'de> for StringDeserializer<E>
 
 /// A helper deserializer that deserializes a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
+#[derive(Debug)]
 pub struct CowStrDeserializer<'a, E> {
     value: Cow<'a, str>,
     marker: PhantomData<E>,
@@ -406,6 +412,7 @@ impl<'de, 'a, E> de::EnumVisitor<'de> for CowStrDeserializer<'a, E>
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a sequence.
+#[derive(Debug)]
 pub struct SeqDeserializer<I, E> {
     iter: iter::Fuse<I>,
     count: usize,
@@ -541,6 +548,7 @@ impl<'de, T, E> IntoDeserializer<'de, E> for HashSet<T>
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a sequence using a `SeqVisitor`.
+#[derive(Debug)]
 pub struct SeqVisitorDeserializer<V_> {
     visitor: V_,
 }
@@ -756,6 +764,27 @@ impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
     }
 }
 
+// Cannot #[derive(Debug)] because of the bound:
+//
+//    <I::Item as private::Pair>::Second: Debug
+impl<'de, I, E> Debug for MapDeserializer<'de, I, E>
+    where I: Iterator + Debug,
+          I::Item: private::Pair,
+          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
+          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E> + Debug,
+          E: de::Error
+{
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.debug_struct("MapDeserializer")
+            .field("iter", &self.iter)
+            .field("value", &self.value)
+            .field("count", &self.count)
+            .field("lifetime", &self.lifetime)
+            .field("error", &self.error)
+            .finish()
+    }
+}
+
 // Used in the `impl SeqVisitor for MapDeserializer` to visit the map as a
 // sequence of pairs.
 struct PairDeserializer<A, B, E>(A, B, PhantomData<E>);
@@ -883,6 +912,7 @@ impl<'de, K, V, E> IntoDeserializer<'de, E> for HashMap<K, V>
 ///////////////////////////////////////////////////////////////////////////////
 
 /// A helper deserializer that deserializes a map using a `MapVisitor`.
+#[derive(Debug)]
 pub struct MapVisitorDeserializer<V_> {
     visitor: V_,
 }
@@ -921,6 +951,7 @@ mod private {
 
     use de::{self, Unexpected};
 
+    #[derive(Debug)]
     pub struct UnitOnly<E> {
         marker: PhantomData<E>,
     }

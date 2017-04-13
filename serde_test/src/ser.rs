@@ -4,6 +4,7 @@ use error::Error;
 use token::Token;
 
 /// A `Serializer` that ensures that a value serializes to a given list of tokens.
+#[derive(Debug)]
 pub struct Serializer<'a> {
     tokens: &'a [Token],
 }

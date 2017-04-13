@@ -4,6 +4,7 @@ use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
 
 /// A target for deserializers that want to ignore data. Implements Deserialize
 /// and silently eats data given to it.
+#[derive(Debug)]
 pub struct IgnoredAny;
 
 impl<'de> Deserialize<'de> for IgnoredAny {

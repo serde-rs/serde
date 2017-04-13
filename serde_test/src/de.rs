@@ -6,6 +6,7 @@ use error::Error;
 use token::Token;
 
 /// A `Deserializer` that reads from a list of tokens.
+#[derive(Debug)]
 pub struct Deserializer<'de> {
     tokens: &'de [Token],
 }
