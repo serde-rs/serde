@@ -302,87 +302,34 @@ map_impl!(HashMap<K: Eq + Hash, V, H: BuildHasher>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<'a, T: ?Sized> Serialize for &'a T
-where
-    T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        (**self).serialize(serializer)
-    }
+macro_rules! deref_impl {
+    ($($desc:tt)+) => {
+        impl $($desc)+ {
+            #[inline]
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                (**self).serialize(serializer)
+            }
+        }
+    };
 }
 
-impl<'a, T: ?Sized> Serialize for &'a mut T
-where
-    T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        (**self).serialize(serializer)
-    }
-}
+deref_impl!(<'a, T: ?Sized> Serialize for &'a T where T: Serialize);
+deref_impl!(<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<T: ?Sized> Serialize for Box<T>
-where
-    T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        (**self).serialize(serializer)
-    }
-}
+deref_impl!(<T: ?Sized> Serialize for Box<T> where T: Serialize);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-impl<T> Serialize for Rc<T>
-where
-    T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        (**self).serialize(serializer)
-    }
-}
+deref_impl!(<T> Serialize for Rc<T> where T: Serialize);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-impl<T> Serialize for Arc<T>
-where
-    T: Serialize,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        (**self).serialize(serializer)
-    }
-}
+deref_impl!(<T> Serialize for Arc<T> where T: Serialize);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'a, T: ?Sized> Serialize for Cow<'a, T>
-where
-    T: Serialize + ToOwned,
-{
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        (**self).serialize(serializer)
-    }
-}
+deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);
 
 ////////////////////////////////////////////////////////////////////////////////
 
