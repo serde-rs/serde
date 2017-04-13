@@ -165,11 +165,11 @@ where
 }
 
 macro_rules! seq_impl {
-    ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >) => {
+    ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)* >) => {
         impl<T $(, $typaram)*> Serialize for $ty<T $(, $typaram)*>
         where
             T: Serialize $(+ $tbound1 $(+ $tbound2)*)*,
-            $($typaram: $bound1 $(+ $bound2)*)*
+            $($typaram: $bound,)*
         {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -276,35 +276,29 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-macro_rules! serialize_map {
-    () => {
-        #[inline]
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where S: Serializer,
+macro_rules! map_impl {
+    ($ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)* >) => {
+        impl<K, V $(, $typaram)*> Serialize for $ty<K, V $(, $typaram)*>
+        where
+            K: Serialize $(+ $kbound1 $(+ $kbound2)*)*,
+            V: Serialize,
+            $($typaram: $bound,)*
         {
-            serializer.collect_map(self)
+            #[inline]
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where S: Serializer,
+            {
+                serializer.collect_seq(self)
+            }
         }
     }
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<K, V> Serialize for BTreeMap<K, V>
-where
-    K: Serialize + Ord,
-    V: Serialize,
-{
-    serialize_map!();
-}
+map_impl!(BTreeMap<K: Ord, V>);
 
 #[cfg(feature = "std")]
-impl<K, V, H> Serialize for HashMap<K, V, H>
-where
-    K: Serialize + Eq + Hash,
-    V: Serialize,
-    H: BuildHasher,
-{
-    serialize_map!();
-}
+map_impl!(HashMap<K: Eq + Hash, V, H: BuildHasher>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
