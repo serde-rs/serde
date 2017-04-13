@@ -277,7 +277,7 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// }
 /// # }
 /// ```
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Unexpected<'a> {
     /// The input contained a boolean value that was not expected.
     Bool(bool),
