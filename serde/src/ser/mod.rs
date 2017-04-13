@@ -703,10 +703,70 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_bytes(self, value: &[u8]) -> Result<Self::Ok, Self::Error>;
 
-    /// Serialize a `None` value.
+    /// Serialize a [`None`] value.
+    ///
+    /// ```rust
+    /// # extern crate serde;
+    /// #
+    /// # use serde::{Serialize, Serializer};
+    /// #
+    /// # enum Option<T> {
+    /// #     Some(T),
+    /// #     None,
+    /// # }
+    /// #
+    /// # use Option::{Some, None};
+    /// #
+    /// impl<T> Serialize for Option<T>
+    ///     where T: Serialize
+    /// {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         match *self {
+    ///             Some(ref value) => serializer.serialize_some(value),
+    ///             None => serializer.serialize_none(),
+    ///         }
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
+    ///
+    /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
     fn serialize_none(self) -> Result<Self::Ok, Self::Error>;
 
-    /// Serialize a `Some(T)` value.
+    /// Serialize a [`Some(T)`] value.
+    ///
+    /// ```rust
+    /// # extern crate serde;
+    /// #
+    /// # use serde::{Serialize, Serializer};
+    /// #
+    /// # enum Option<T> {
+    /// #     Some(T),
+    /// #     None,
+    /// # }
+    /// #
+    /// # use Option::{Some, None};
+    /// #
+    /// impl<T> Serialize for Option<T>
+    ///     where T: Serialize
+    /// {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         match *self {
+    ///             Some(ref value) => serializer.serialize_some(value),
+    ///             None => serializer.serialize_none(),
+    ///         }
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
+    ///
+    /// [`Some(T)`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.Some
     fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Serialize;
