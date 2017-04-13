@@ -113,11 +113,11 @@ macro_rules! forward_to_deserialize_helper {
 /// Helper macro when implementing the `Deserializer` part of a new data format
 /// for Serde.
 ///
-/// Some `Deserializer` implementations for self-describing formats do not care
-/// what hint the `Visitor` gives them, they just want to blindly call the
-/// `Visitor` method corresponding to the data they can tell is in the input.
-/// This requires repetitive implementations of all the `Deserializer` trait
-/// methods.
+/// Some [`Deserializer`] implementations for self-describing formats do not
+/// care what hint the [`Visitor`] gives them, they just want to blindly call
+/// the [`Visitor`] method corresponding to the data they can tell is in the
+/// input. This requires repetitive implementations of all the [`Deserializer`]
+/// trait methods.
 ///
 /// ```rust
 /// # #[macro_use]
@@ -154,7 +154,7 @@ macro_rules! forward_to_deserialize_helper {
 /// ```
 ///
 /// The `forward_to_deserialize!` macro implements these simple forwarding
-/// methods so that they forward directly to `Deserializer::deserialize`. You
+/// methods so that they forward directly to [`Deserializer::deserialize`]. You
 /// can choose which methods to forward.
 ///
 /// ```rust
@@ -220,6 +220,10 @@ macro_rules! forward_to_deserialize_helper {
 /// #
 /// # fn main() {}
 /// ```
+///
+/// [`Deserializer`]: trait.Deserializer.html
+/// [`Visitor`]: de/trait.Visitor.html
+/// [`Deserializer::deserialize`]: trait.Deserializer.html#tymethod.deserialize
 #[macro_export]
 macro_rules! forward_to_deserialize {
     (<$visitor:ident: Visitor<$lifetime:tt>> $($func:ident)*) => {
