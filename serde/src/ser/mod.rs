@@ -772,6 +772,25 @@ pub trait Serializer: Sized {
         T: Serialize;
 
     /// Serialize a `()` value.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for () {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_unit()
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a unit struct like `struct Unit` or `PhantomData<T>`.
