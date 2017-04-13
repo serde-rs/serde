@@ -948,20 +948,20 @@ struct PathBufVisitor;
 
 #[cfg(feature = "std")]
 impl<'de> Visitor<'de> for PathBufVisitor {
-    type Value = path::PathBuf;
+    type Value = PathBuf;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("path string")
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<path::PathBuf, E>
+    fn visit_str<E>(self, v: &str) -> Result<PathBuf, E>
     where
         E: Error,
     {
         Ok(From::from(v))
     }
 
-    fn visit_string<E>(self, v: String) -> Result<path::PathBuf, E>
+    fn visit_string<E>(self, v: String) -> Result<PathBuf, E>
     where
         E: Error,
     {
@@ -971,8 +971,8 @@ impl<'de> Visitor<'de> for PathBufVisitor {
 
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for path::PathBuf {
-    fn deserialize<D>(deserializer: D) -> Result<path::PathBuf, D::Error>
+impl<'de> Deserialize<'de> for PathBuf {
+    fn deserialize<D>(deserializer: D) -> Result<PathBuf, D::Error>
     where
         D: Deserializer<'de>,
     {

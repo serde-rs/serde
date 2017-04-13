@@ -162,7 +162,7 @@ mod lib {
     pub use collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
-    pub use std::{error, net, path};
+    pub use std::{error, net};
 
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};
@@ -172,6 +172,8 @@ mod lib {
     pub use std::hash::{Hash, BuildHasher};
     #[cfg(feature = "std")]
     pub use std::io::Write;
+    #[cfg(feature = "std")]
+    pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
     pub use std::time::Duration;
 

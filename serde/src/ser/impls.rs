@@ -472,7 +472,7 @@ impl Serialize for net::SocketAddrV6 {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl Serialize for path::Path {
+impl Serialize for Path {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -485,7 +485,7 @@ impl Serialize for path::Path {
 }
 
 #[cfg(feature = "std")]
-impl Serialize for path::PathBuf {
+impl Serialize for PathBuf {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
