@@ -878,8 +878,10 @@ pub trait Serializer: Sized {
     /// Collect an iterator as a sequence.
     ///
     /// The default implementation serializes each item yielded by the iterator
-    /// using `Self::SerializeSeq`. Implementors should not need to override
-    /// this method.
+    /// using [`serialize_seq`]. Implementors should not need to override this
+    /// method.
+    ///
+    /// [`serialize_seq`]: #tymethod.serialize_seq
     fn collect_seq<I>(self, iter: I) -> Result<Self::Ok, Self::Error>
     where
         I: IntoIterator,
@@ -896,8 +898,10 @@ pub trait Serializer: Sized {
     /// Collect an iterator as a map.
     ///
     /// The default implementation serializes each pair yielded by the iterator
-    /// using `Self::SerializeMap`. Implementors should not need to override
-    /// this method.
+    /// using [`serialize_map`]. Implementors should not need to override this
+    /// method.
+    ///
+    /// [`serialize_map`]: #tymethod.serialize_map
     fn collect_map<K, V, I>(self, iter: I) -> Result<Self::Ok, Self::Error>
     where
         K: Serialize,
@@ -914,8 +918,8 @@ pub trait Serializer: Sized {
 
     /// Serialize a string produced by an implementation of `Display`.
     ///
-    /// The default implementation builds a heap-allocated `String` and
-    /// delegates to `serialize_str`. Serializers are encouraged to provide a
+    /// The default implementation builds a heap-allocated [`String`] and
+    /// delegates to [`serialize_str`]. Serializers are encouraged to provide a
     /// more efficient implementation if possible.
     ///
     /// ```rust
@@ -938,6 +942,9 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
+    ///
+    /// [`String`]: https://doc.rust-lang.org/std/string/struct.String.html
+    /// [`serialize_str`]: #tymethod.serialize_str
     #[cfg(any(feature = "std", feature = "collections"))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
