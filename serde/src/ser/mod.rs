@@ -841,8 +841,7 @@ pub trait Serializer: Sized {
     /// #     }
     /// # }
     /// #
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeSeq;
+    /// use serde::ser::{Serialize, Serializer, SerializeSeq};
     ///
     /// impl<T> Serialize for Vec<T>
     ///     where T: Serialize
@@ -866,8 +865,7 @@ pub trait Serializer: Sized {
     /// then a call to `end`.
     ///
     /// ```rust
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeSeq;
+    /// use serde::ser::{Serialize, Serializer, SerializeSeq};
     ///
     /// const VRAM_SIZE: usize = 386;
     /// struct Vram([u16; VRAM_SIZE]);
@@ -890,8 +888,7 @@ pub trait Serializer: Sized {
     /// calls to `serialize_element`, then a call to `end`.
     ///
     /// ```rust
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeTuple;
+    /// use serde::ser::{Serialize, Serializer, SerializeTuple};
     ///
     /// # mod fool {
     /// #     trait Serialize {}
@@ -927,8 +924,7 @@ pub trait Serializer: Sized {
     /// of data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeTupleStruct;
+    /// use serde::ser::{Serialize, Serializer, SerializeTupleStruct};
     ///
     /// struct Rgb(u8, u8, u8);
     ///
@@ -959,8 +955,7 @@ pub trait Serializer: Sized {
     /// and the `len` is the number of data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeTupleVariant;
+    /// use serde::ser::{Serialize, Serializer, SerializeTupleVariant};
     ///
     /// enum E {
     ///     T(u8, u8),
@@ -1024,8 +1019,7 @@ pub trait Serializer: Sized {
     /// #     }
     /// # }
     /// #
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeMap;
+    /// use serde::ser::{Serialize, Serializer, SerializeMap};
     ///
     /// impl<K, V> Serialize for HashMap<K, V>
     ///     where K: Serialize,
@@ -1052,8 +1046,7 @@ pub trait Serializer: Sized {
     /// data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeStruct;
+    /// use serde::ser::{Serialize, Serializer, SerializeStruct};
     ///
     /// struct Rgb {
     ///     r: u8,
@@ -1088,8 +1081,7 @@ pub trait Serializer: Sized {
     /// and the `len` is the number of data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::{Serialize, Serializer};
-    /// use serde::ser::SerializeStructVariant;
+    /// use serde::ser::{Serialize, Serializer, SerializeStructVariant};
     ///
     /// enum E {
     ///     S { r: u8, g: u8, b: u8 }
@@ -1295,8 +1287,7 @@ pub trait Serializer: Sized {
 /// # unimplemented_vec!(Vec);
 /// # unimplemented_vec!(Array);
 /// #
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeSeq;
+/// use serde::ser::{Serialize, Serializer, SerializeSeq};
 ///
 /// impl<T> Serialize for Vec<T>
 ///     where T: Serialize
@@ -1351,8 +1342,7 @@ pub trait SerializeSeq {
 /// Returned from `Serializer::serialize_tuple`.
 ///
 /// ```rust
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeTuple;
+/// use serde::ser::{Serialize, Serializer, SerializeTuple};
 ///
 /// # mod fool {
 /// #     trait Serialize {}
@@ -1397,8 +1387,7 @@ pub trait SerializeTuple {
 /// Returned from `Serializer::serialize_tuple_struct`.
 ///
 /// ```rust
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeTupleStruct;
+/// use serde::ser::{Serialize, Serializer, SerializeTupleStruct};
 ///
 /// struct Rgb(u8, u8, u8);
 ///
@@ -1433,8 +1422,7 @@ pub trait SerializeTupleStruct {
 /// Returned from `Serializer::serialize_tuple_variant`.
 ///
 /// ```rust
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeTupleVariant;
+/// use serde::ser::{Serialize, Serializer, SerializeTupleVariant};
 ///
 /// enum E {
 ///     T(u8, u8),
@@ -1501,8 +1489,7 @@ pub trait SerializeTupleVariant {
 /// #     }
 /// # }
 /// #
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeMap;
+/// use serde::ser::{Serialize, Serializer, SerializeMap};
 ///
 /// impl<K, V> Serialize for HashMap<K, V>
 ///     where K: Serialize,
@@ -1573,8 +1560,7 @@ pub trait SerializeMap {
 /// Returned from `Serializer::serialize_struct`.
 ///
 /// ```rust
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeStruct;
+/// use serde::ser::{Serialize, Serializer, SerializeStruct};
 ///
 /// struct Rgb {
 ///     r: u8,
@@ -1617,8 +1603,7 @@ pub trait SerializeStruct {
 /// Returned from `Serializer::serialize_struct_variant`.
 ///
 /// ```rust
-/// use serde::{Serialize, Serializer};
-/// use serde::ser::SerializeStructVariant;
+/// use serde::ser::{Serialize, Serializer, SerializeStructVariant};
 ///
 /// enum E {
 ///     S { r: u8, g: u8, b: u8 }
