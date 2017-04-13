@@ -715,7 +715,7 @@ where
 ///  - newtype_variant
 ///    - the `E::N` in `enum E { N(u8) }`
 ///  - seq
-///    - a dynamically sized sequence of values, for example `Vec<T>` or
+///    - a variably sized sequence of values, for example `Vec<T>` or
 ///      `HashSet<T>`
 ///  - seq_fixed_size
 ///    - a statically sized sequence of values for which the size will be known

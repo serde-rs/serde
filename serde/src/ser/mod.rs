@@ -264,7 +264,7 @@ pub trait Serialize {
 ///  - newtype_variant
 ///    - the `E::N` in `enum E { N(u8) }`
 ///  - seq
-///    - a dynamically sized sequence of values, for example `Vec<T>` or
+///    - a variably sized sequence of values, for example `Vec<T>` or
 ///      `HashSet<T>`
 ///  - seq_fixed_size
 ///    - a statically sized sequence of values for which the size will be known
@@ -552,7 +552,7 @@ pub trait Serializer: Sized {
     where
         T: Serialize;
 
-    /// Begin to serialize a dynamically sized sequence. This call must be
+    /// Begin to serialize a variably sized sequence. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
     /// `end`.
     ///
