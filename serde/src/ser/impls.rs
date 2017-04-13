@@ -55,7 +55,7 @@ impl Serialize for String {
     where
         S: Serializer,
     {
-        (&self[..]).serialize(serializer)
+        serializer.serialize_str(self)
     }
 }
 
