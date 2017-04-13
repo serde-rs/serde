@@ -9,7 +9,7 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde/"
 keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
-readme = "../README.md"
+readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 publish = false # this branch contains breaking changes
 

@@ -8,7 +8,7 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization", "no_std"]
-readme = "../README.md"
+readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 publish = false # this branch contains breaking changes
 
