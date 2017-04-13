@@ -777,6 +777,20 @@ pub trait Serializer: Sized {
     /// Serialize a unit struct like `struct Unit` or `PhantomData<T>`.
     ///
     /// A reasonable implementation would be to forward to `serialize_unit`.
+    ///
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    ///
+    /// struct Nothing;
+    ///
+    /// impl Serialize for Nothing {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_unit_struct("Nothing")
+    ///     }
+    /// }
+    /// ```
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a unit variant like `E::A` in `enum E { A, B }`.
