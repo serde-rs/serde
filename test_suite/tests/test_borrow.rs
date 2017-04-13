@@ -5,82 +5,54 @@ extern crate serde;
 use serde::{Deserialize, Deserializer};
 
 extern crate serde_test;
-use serde_test::{
-    Error,
-    Token,
-    assert_de_tokens,
-    assert_de_tokens_error,
-};
+use serde_test::{Error, Token, assert_de_tokens, assert_de_tokens_error};
 
 use std::borrow::Cow;
 
 #[test]
 fn test_borrowed_str() {
-    assert_de_tokens(
-        &"borrowed",
-        &[
-            Token::BorrowedStr("borrowed"),
-        ]
-    );
+    assert_de_tokens(&"borrowed", &[Token::BorrowedStr("borrowed")]);
 }
 
 #[test]
 fn test_borrowed_str_from_string() {
     assert_de_tokens_error::<&str>(
-        &[
-            Token::String("borrowed"),
-        ],
-        Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned()),
+        &[Token::String("borrowed")],
+        Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned(),),
     );
 }
 
 #[test]
 fn test_borrowed_str_from_str() {
     assert_de_tokens_error::<&str>(
-        &[
-            Token::Str("borrowed"),
-        ],
-        Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned()),
+        &[Token::Str("borrowed")],
+        Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned(),),
     );
 }
 
 #[test]
 fn test_string_from_borrowed_str() {
-    assert_de_tokens(
-        &"owned".to_owned(),
-        &[
-            Token::BorrowedStr("owned"),
-        ]
-    );
+    assert_de_tokens(&"owned".to_owned(), &[Token::BorrowedStr("owned")]);
 }
 
 #[test]
 fn test_borrowed_bytes() {
-    assert_de_tokens(
-        &&b"borrowed"[..],
-        &[
-            Token::BorrowedBytes(b"borrowed"),
-        ]
-    );
+    assert_de_tokens(&&b"borrowed"[..], &[Token::BorrowedBytes(b"borrowed")]);
 }
 
 #[test]
 fn test_borrowed_bytes_from_bytebuf() {
     assert_de_tokens_error::<&[u8]>(
-        &[
-            Token::ByteBuf(b"borrowed"),
-        ],
-        Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned()),
+        &[Token::ByteBuf(b"borrowed")],
+        Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned(),),
     );
 }
 
 #[test]
 fn test_borrowed_bytes_from_bytes() {
     assert_de_tokens_error::<&[u8]>(
-        &[
-            Token::Bytes(b"borrowed"),
-        ],
-        Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned()),
+        &[Token::Bytes(b"borrowed")],
+        Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned(),),
     );
 }
 
@@ -93,7 +65,7 @@ fn test_tuple() {
             Token::BorrowedStr("str"),
             Token::BorrowedBytes(b"bytes"),
             Token::TupleEnd,
-        ]
+        ],
     );
 }
 
@@ -106,7 +78,10 @@ fn test_struct() {
     }
 
     assert_de_tokens(
-        &Borrowing { bs: "str", bb: b"bytes" },
+        &Borrowing {
+             bs: "str",
+             bb: b"bytes",
+         },
         &[
             Token::Struct("Borrowing", 2),
 
@@ -117,7 +92,7 @@ fn test_struct() {
             Token::BorrowedBytes(b"bytes"),
 
             Token::StructEnd,
-        ]
+        ],
     );
 }
 
@@ -170,7 +145,8 @@ fn test_lifetimes() {
 
     // Tests that `'de: 'a` is not required by the Deserialize impl.
     fn _cows_lifetimes<'de: 'b, 'a, 'b, D>(deserializer: D) -> Cows<'a, 'b>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         Deserialize::deserialize(deserializer).unwrap()
     }
@@ -183,7 +159,8 @@ fn test_lifetimes() {
 
     // Tests that `'de: 'a` is not required by the Deserialize impl.
     fn _wrap_lifetimes<'de: 'b, 'a, 'b, D>(deserializer: D) -> Wrap<'a, 'b>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         Deserialize::deserialize(deserializer).unwrap()
     }

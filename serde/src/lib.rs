@@ -135,7 +135,7 @@ mod lib {
     pub use std::string::String;
     #[cfg(all(feature = "collections", not(feature = "std")))]
     pub use collections::string::{String, ToString};
-    
+
     #[cfg(feature = "std")]
     pub use std::vec::Vec;
     #[cfg(all(feature = "collections", not(feature = "std")))]

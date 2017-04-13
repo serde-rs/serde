@@ -23,7 +23,7 @@ mod remote {
         b: Unit,
     }
 
-    pub struct StructPub  {
+    pub struct StructPub {
         pub a: u8,
         pub b: Unit,
     }
@@ -113,7 +113,10 @@ struct UnitDef;
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::PrimitivePriv")]
-struct PrimitivePrivDef(#[serde(getter = "remote::PrimitivePriv::get")] u8);
+struct PrimitivePrivDef(
+    #[serde(getter = "remote::PrimitivePriv::get")]
+    u8
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::PrimitivePub")]
@@ -121,21 +124,34 @@ struct PrimitivePubDef(u8);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePriv")]
-struct NewtypePrivDef(#[serde(getter = "remote::NewtypePriv::get", with = "UnitDef")] remote::Unit);
+struct NewtypePrivDef(
+    #[serde(getter = "remote::NewtypePriv::get", with = "UnitDef")]
+    remote::Unit
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePub")]
-struct NewtypePubDef(#[serde(with = "UnitDef")] remote::Unit);
+struct NewtypePubDef(
+    #[serde(with = "UnitDef")]
+    remote::Unit
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::TuplePriv")]
 struct TuplePrivDef(
-    #[serde(getter = "remote::TuplePriv::first")] u8,
-    #[serde(getter = "remote::TuplePriv::second", with = "UnitDef")] remote::Unit);
+    #[serde(getter = "remote::TuplePriv::first")]
+    u8,
+    #[serde(getter = "remote::TuplePriv::second", with = "UnitDef")]
+    remote::Unit
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::TuplePub")]
-struct TuplePubDef(u8, #[serde(with = "UnitDef")] remote::Unit);
+struct TuplePubDef(
+    u8,
+    #[serde(with = "UnitDef")]
+    remote::Unit
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructPriv")]

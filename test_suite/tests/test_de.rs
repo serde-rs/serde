@@ -20,12 +20,7 @@ extern crate fnv;
 use self::fnv::FnvHasher;
 
 extern crate serde_test;
-use self::serde_test::{
-    Error,
-    Token,
-    assert_de_tokens,
-    assert_de_tokens_error,
-};
+use self::serde_test::{Error, Token, assert_de_tokens, assert_de_tokens_error};
 
 #[macro_use]
 mod macros;
@@ -146,23 +141,21 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         a: i32,
     }
 
-    let expected = IgnoreBase{a: 1};
+    let expected = IgnoreBase { a: 1 };
 
     // Embed the tokens to be ignored in the normal token
     // stream for an IgnoreBase type
-    let concated_tokens : Vec<Token> = vec![
-            Token::Map(Some(2)),
-                Token::Str("a"),
-                Token::I32(1),
+    let concated_tokens: Vec<Token> = vec![
+        Token::Map(Some(2)),
+        Token::Str("a"),
+        Token::I32(1),
 
-                Token::Str("ignored")
-        ]
-        .into_iter()
-        .chain(ignorable_tokens.to_vec().into_iter())
-        .chain(vec![
-            Token::MapEnd,
-        ].into_iter())
-        .collect();
+        Token::Str("ignored"),
+    ]
+            .into_iter()
+            .chain(ignorable_tokens.to_vec().into_iter())
+            .chain(vec![Token::MapEnd].into_iter())
+            .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let v: Result<IgnoreBase, Error> = Deserialize::deserialize(&mut de);
@@ -735,9 +728,9 @@ fn test_osstring() {
         Token::Enum("OsString"),
         Token::Str("Unix"),
         Token::Seq(Some(2)),
-            Token::U8(1),
-            Token::U8(2),
-            Token::U8(3),
+        Token::U8(1),
+        Token::U8(2),
+        Token::U8(3),
         Token::SeqEnd,
     ];
 
@@ -755,9 +748,9 @@ fn test_osstring() {
         Token::Enum("OsString"),
         Token::Str("Windows"),
         Token::Seq(Some(2)),
-            Token::U16(1),
-            Token::U16(2),
-            Token::U16(3),
+        Token::U16(1),
+        Token::U16(2),
+        Token::U16(3),
         Token::SeqEnd,
     ];
 
@@ -768,8 +761,10 @@ fn test_osstring() {
 #[cfg(feature = "unstable")]
 #[test]
 fn test_cstr() {
-    assert_de_tokens::<Box<CStr>>(&CString::new("abc").unwrap().into_boxed_c_str(),
-                                  &[Token::Bytes(b"abc")]);
+    assert_de_tokens::<Box<CStr>>(
+        &CString::new("abc").unwrap().into_boxed_c_str(),
+        &[Token::Bytes(b"abc")],
+    );
 }
 
 #[cfg(feature = "unstable")]
@@ -785,10 +780,8 @@ fn test_net_ipaddr() {
 #[test]
 fn test_cstr_internal_null() {
     assert_de_tokens_error::<Box<CStr>>(
-        &[
-            Token::Bytes(b"a\0c"),
-        ],
-        Error::Message("nul byte found in provided data at position: 1".into())
+        &[Token::Bytes(b"a\0c")],
+        Error::Message("nul byte found in provided data at position: 1".into()),
     );
 }
 
@@ -796,10 +789,8 @@ fn test_cstr_internal_null() {
 #[test]
 fn test_cstr_internal_null_end() {
     assert_de_tokens_error::<Box<CStr>>(
-        &[
-            Token::Bytes(b"ac\0"),
-        ],
-        Error::Message("nul byte found in provided data at position: 2".into())
+        &[Token::Bytes(b"ac\0")],
+        Error::Message("nul byte found in provided data at position: 2".into()),
     );
 }
 

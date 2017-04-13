@@ -60,7 +60,8 @@ pub struct Impossible<Ok, E> {
 enum Void {}
 
 impl<Ok, E> SerializeSeq for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
@@ -75,7 +76,8 @@ impl<Ok, E> SerializeSeq for Impossible<Ok, E>
 }
 
 impl<Ok, E> SerializeTuple for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
@@ -90,7 +92,8 @@ impl<Ok, E> SerializeTuple for Impossible<Ok, E>
 }
 
 impl<Ok, E> SerializeTupleStruct for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
@@ -105,7 +108,8 @@ impl<Ok, E> SerializeTupleStruct for Impossible<Ok, E>
 }
 
 impl<Ok, E> SerializeTupleVariant for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
@@ -120,7 +124,8 @@ impl<Ok, E> SerializeTupleVariant for Impossible<Ok, E>
 }
 
 impl<Ok, E> SerializeMap for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
@@ -139,15 +144,17 @@ impl<Ok, E> SerializeMap for Impossible<Ok, E>
 }
 
 impl<Ok, E> SerializeStruct for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              _key: &'static str,
-                                              _value: &T)
-                                              -> Result<(), E> {
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        _key: &'static str,
+        _value: &T,
+    ) -> Result<(), E> {
         match self.void {}
     }
 
@@ -157,15 +164,17 @@ impl<Ok, E> SerializeStruct for Impossible<Ok, E>
 }
 
 impl<Ok, E> SerializeStructVariant for Impossible<Ok, E>
-    where E: ser::Error
+where
+    E: ser::Error,
 {
     type Ok = Ok;
     type Error = E;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              _key: &'static str,
-                                              _value: &T)
-                                              -> Result<(), E> {
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        _key: &'static str,
+        _value: &T,
+    ) -> Result<(), E> {
         match self.void {}
     }
 

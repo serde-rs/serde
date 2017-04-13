@@ -6,31 +6,35 @@ use de::{Deserialize, Deserializer, Error, Visitor};
 use de::Unexpected;
 
 #[cfg(any(feature = "std", feature = "collections"))]
-pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer, TaggedContentVisitor,
-                      TagOrContentField, TagOrContentFieldVisitor, InternallyTaggedUnitVisitor,
-                      UntaggedUnitVisitor};
+pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer,
+                        TaggedContentVisitor, TagOrContentField, TagOrContentFieldVisitor,
+                        InternallyTaggedUnitVisitor, UntaggedUnitVisitor};
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
 pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
-    where V: Deserialize<'de>,
-          E: Error
+where
+    V: Deserialize<'de>,
+    E: Error,
 {
     struct MissingFieldDeserializer<E>(&'static str, PhantomData<E>);
 
     impl<'de, E> Deserializer<'de> for MissingFieldDeserializer<E>
-        where E: Error
+    where
+        E: Error,
     {
         type Error = E;
 
         fn deserialize<V>(self, _visitor: V) -> Result<V::Value, E>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             Err(Error::missing_field(self.0))
         }
 
         fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             visitor.visit_none()
         }
@@ -48,7 +52,8 @@ pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
 
 #[cfg(any(feature = "std", feature = "collections"))]
 pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     struct CowStrVisitor;
 
@@ -60,25 +65,29 @@ pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Owned(v.to_owned()))
         }
 
         fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Borrowed(v))
         }
 
         fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Owned(v))
         }
 
         fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             match str::from_utf8(v) {
                 Ok(s) => Ok(Cow::Owned(s.to_owned())),
@@ -87,7 +96,8 @@ pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D
         }
 
         fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             match str::from_utf8(v) {
                 Ok(s) => Ok(Cow::Borrowed(s)),
@@ -96,11 +106,12 @@ pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D
         }
 
         fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             match String::from_utf8(v) {
                 Ok(s) => Ok(Cow::Owned(s)),
-                Err(e) => Err(Error::invalid_value(Unexpected::Bytes(&e.into_bytes()), &self)),
+                Err(e) => Err(Error::invalid_value(Unexpected::Bytes(&e.into_bytes()), &self),),
             }
         }
     }
@@ -110,7 +121,8 @@ pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D
 
 #[cfg(any(feature = "std", feature = "collections"))]
 pub fn borrow_cow_bytes<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, [u8]>, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     struct CowBytesVisitor;
 
@@ -122,37 +134,43 @@ pub fn borrow_cow_bytes<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, [u8]>
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Owned(v.as_bytes().to_vec()))
         }
 
         fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Borrowed(v.as_bytes()))
         }
 
         fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Owned(v.into_bytes()))
         }
 
         fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Owned(v.to_vec()))
         }
 
         fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Borrowed(v))
         }
 
         fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(Cow::Owned(v))
         }
@@ -176,7 +194,7 @@ mod content {
     use lib::*;
 
     use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, MapVisitor,
-            EnumVisitor, Unexpected};
+             EnumVisitor, Unexpected};
 
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.
@@ -240,7 +258,8 @@ mod content {
 
     impl<'de> Deserialize<'de> for Content {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
             // Untagged and internally tagged enums are only supported in
             // self-describing formats.
@@ -258,127 +277,148 @@ mod content {
         }
 
         fn visit_bool<F>(self, value: bool) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::Bool(value))
         }
 
         fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::I8(value))
         }
 
         fn visit_i16<F>(self, value: i16) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::I16(value))
         }
 
         fn visit_i32<F>(self, value: i32) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::I32(value))
         }
 
         fn visit_i64<F>(self, value: i64) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::I64(value))
         }
 
         fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::U8(value))
         }
 
         fn visit_u16<F>(self, value: u16) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::U16(value))
         }
 
         fn visit_u32<F>(self, value: u32) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::U32(value))
         }
 
         fn visit_u64<F>(self, value: u64) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::U64(value))
         }
 
         fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::F32(value))
         }
 
         fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::F64(value))
         }
 
         fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::Char(value))
         }
 
         fn visit_str<F>(self, value: &str) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::String(value.into()))
         }
 
         fn visit_string<F>(self, value: String) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::String(value))
         }
 
         fn visit_bytes<F>(self, value: &[u8]) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::Bytes(value.into()))
         }
 
         fn visit_byte_buf<F>(self, value: Vec<u8>) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::Bytes(value))
         }
 
         fn visit_unit<F>(self) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::Unit)
         }
 
         fn visit_none<F>(self) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             Ok(Content::None)
         }
 
         fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
             Deserialize::deserialize(deserializer).map(|v| Content::Some(Box::new(v)))
         }
 
         fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
             Deserialize::deserialize(deserializer).map(|v| Content::Newtype(Box::new(v)))
         }
 
         fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-            where V: SeqVisitor<'de>
+        where
+            V: SeqVisitor<'de>,
         {
             let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
             while let Some(e) = try!(visitor.visit()) {
@@ -388,7 +428,8 @@ mod content {
         }
 
         fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-            where V: MapVisitor<'de>
+        where
+            V: MapVisitor<'de>,
         {
             let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
             while let Some(kv) = try!(visitor.visit()) {
@@ -398,9 +439,10 @@ mod content {
         }
 
         fn visit_enum<V>(self, _visitor: V) -> Result<Self::Value, V::Error>
-            where V: EnumVisitor<'de>
+        where
+            V: EnumVisitor<'de>,
         {
-            Err(de::Error::custom("untagged and internally tagged enums do not support enum input"))
+            Err(de::Error::custom("untagged and internally tagged enums do not support enum input",),)
         }
     }
 
@@ -426,7 +468,8 @@ mod content {
         type Value = TagOrContent;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
             // Internally tagged enums are only supported in self-describing
             // formats.
@@ -442,157 +485,218 @@ mod content {
         }
 
         fn visit_bool<F>(self, value: bool) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_bool(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_bool(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             ContentVisitor.visit_i8(value).map(TagOrContent::Content)
         }
 
         fn visit_i16<F>(self, value: i16) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_i16(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_i16(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_i32<F>(self, value: i32) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_i32(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_i32(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_i64<F>(self, value: i64) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_i64(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_i64(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             ContentVisitor.visit_u8(value).map(TagOrContent::Content)
         }
 
         fn visit_u16<F>(self, value: u16) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_u16(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_u16(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_u32<F>(self, value: u32) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_u32(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_u32(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_u64<F>(self, value: u64) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_u64(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_u64(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_f32(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_f32(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_f64(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_f64(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
-            ContentVisitor.visit_char(value).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_char(value)
+                .map(TagOrContent::Content)
         }
 
         fn visit_str<F>(self, value: &str) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             if value == self.name {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor.visit_str(value).map(TagOrContent::Content)
+                ContentVisitor
+                    .visit_str(value)
+                    .map(TagOrContent::Content)
             }
         }
 
         fn visit_string<F>(self, value: String) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             if value == self.name {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor.visit_string(value).map(TagOrContent::Content)
+                ContentVisitor
+                    .visit_string(value)
+                    .map(TagOrContent::Content)
             }
         }
 
         fn visit_bytes<F>(self, value: &[u8]) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             if value == self.name.as_bytes() {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor.visit_bytes(value).map(TagOrContent::Content)
+                ContentVisitor
+                    .visit_bytes(value)
+                    .map(TagOrContent::Content)
             }
         }
 
         fn visit_byte_buf<F>(self, value: Vec<u8>) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             if value == self.name.as_bytes() {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor.visit_byte_buf(value).map(TagOrContent::Content)
+                ContentVisitor
+                    .visit_byte_buf(value)
+                    .map(TagOrContent::Content)
             }
         }
 
         fn visit_unit<F>(self) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             ContentVisitor.visit_unit().map(TagOrContent::Content)
         }
 
         fn visit_none<F>(self) -> Result<Self::Value, F>
-            where F: de::Error
+        where
+            F: de::Error,
         {
             ContentVisitor.visit_none().map(TagOrContent::Content)
         }
 
         fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
-            ContentVisitor.visit_some(deserializer).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_some(deserializer)
+                .map(TagOrContent::Content)
         }
 
         fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
-            ContentVisitor.visit_newtype_struct(deserializer).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_newtype_struct(deserializer)
+                .map(TagOrContent::Content)
         }
 
         fn visit_seq<V>(self, visitor: V) -> Result<Self::Value, V::Error>
-            where V: SeqVisitor<'de>
+        where
+            V: SeqVisitor<'de>,
         {
-            ContentVisitor.visit_seq(visitor).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_seq(visitor)
+                .map(TagOrContent::Content)
         }
 
         fn visit_map<V>(self, visitor: V) -> Result<Self::Value, V::Error>
-            where V: MapVisitor<'de>
+        where
+            V: MapVisitor<'de>,
         {
-            ContentVisitor.visit_map(visitor).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_map(visitor)
+                .map(TagOrContent::Content)
         }
 
         fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
-            where V: EnumVisitor<'de>
+        where
+            V: EnumVisitor<'de>,
         {
-            ContentVisitor.visit_enum(visitor).map(TagOrContent::Content)
+            ContentVisitor
+                .visit_enum(visitor)
+                .map(TagOrContent::Content)
         }
     }
 
@@ -622,12 +726,14 @@ mod content {
     }
 
     impl<'de, T> DeserializeSeed<'de> for TaggedContentVisitor<T>
-        where T: Deserialize<'de>
+    where
+        T: Deserialize<'de>,
     {
         type Value = TaggedContent<T>;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
             // Internally tagged enums are only supported in self-describing
             // formats.
@@ -636,7 +742,8 @@ mod content {
     }
 
     impl<'de, T> Visitor<'de> for TaggedContentVisitor<T>
-        where T: Deserialize<'de>
+    where
+        T: Deserialize<'de>,
     {
         type Value = TaggedContent<T>;
 
@@ -645,11 +752,13 @@ mod content {
         }
 
         fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-            where V: MapVisitor<'de>
+        where
+            V: MapVisitor<'de>,
         {
             let mut tag = None;
             let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
-            while let Some(k) = try!(visitor.visit_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+            while let Some(k) =
+                try!(visitor.visit_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 match k {
                     TagOrContent::Tag => {
                         if tag.is_some() {
@@ -666,10 +775,12 @@ mod content {
             match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
                 Some(tag) => {
-                    Ok(TaggedContent {
-                        tag: tag,
-                        content: Content::Map(vec),
-                    })
+                    Ok(
+                        TaggedContent {
+                            tag: tag,
+                            content: Content::Map(vec),
+                        },
+                    )
                 }
             }
         }
@@ -693,7 +804,8 @@ mod content {
         type Value = TagOrContentField;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where D: Deserializer<'de>
+        where
+            D: Deserializer<'de>,
         {
             deserializer.deserialize_str(self)
         }
@@ -707,7 +819,8 @@ mod content {
         }
 
         fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
-            where E: de::Error
+        where
+            E: de::Error,
         {
             if field == self.tag {
                 Ok(TagOrContentField::Tag)
@@ -728,12 +841,14 @@ mod content {
     /// Used when deserializing an internally tagged enum because the content will
     /// be used exactly once.
     impl<'de, E> Deserializer<'de> for ContentDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             match self.content {
                 Content::Bool(v) => visitor.visit_bool(v),
@@ -775,7 +890,8 @@ mod content {
         }
 
         fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             match self.content {
                 Content::None => visitor.visit_none(),
@@ -785,18 +901,25 @@ mod content {
             }
         }
 
-        fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
-            where V: Visitor<'de>
+        fn deserialize_newtype_struct<V>(
+            self,
+            _name: &str,
+            visitor: V,
+        ) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
         {
             visitor.visit_newtype_struct(self)
         }
 
-        fn deserialize_enum<V>(self,
-                            _name: &str,
-                            _variants: &'static [&'static str],
-                            visitor: V)
-                            -> Result<V::Value, Self::Error>
-            where V: Visitor<'de>
+        fn deserialize_enum<V>(
+            self,
+            _name: &str,
+            _variants: &'static [&'static str],
+            visitor: V,
+        ) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
         {
             let (variant, value) = match self.content {
                 Content::Map(value) => {
@@ -804,28 +927,38 @@ mod content {
                     let (variant, value) = match iter.next() {
                         Some(v) => v,
                         None => {
-                            return Err(de::Error::invalid_value(de::Unexpected::Map,
-                                                                &"map with a single key"));
+                            return Err(
+                                de::Error::invalid_value(
+                                    de::Unexpected::Map,
+                                    &"map with a single key",
+                                ),
+                            );
                         }
                     };
                     // enums are encoded in json as maps with a single key:value pair
                     if iter.next().is_some() {
-                        return Err(de::Error::invalid_value(de::Unexpected::Map,
-                                                            &"map with a single key"));
+                        return Err(
+                            de::Error::invalid_value(
+                                de::Unexpected::Map,
+                                &"map with a single key",
+                            ),
+                        );
                     }
                     (variant, Some(value))
                 }
                 Content::String(variant) => (Content::String(variant), None),
                 other => {
-                    return Err(de::Error::invalid_type(other.unexpected(), &"string or map"));
+                    return Err(de::Error::invalid_type(other.unexpected(), &"string or map"),);
                 }
             };
 
-            visitor.visit_enum(EnumDeserializer {
-                                variant: variant,
-                                value: value,
-                                err: PhantomData,
-                            })
+            visitor.visit_enum(
+                EnumDeserializer {
+                    variant: variant,
+                    value: value,
+                    err: PhantomData,
+                },
+            )
         }
 
         forward_to_deserialize! {
@@ -846,7 +979,8 @@ mod content {
     }
 
     struct EnumDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         variant: Content,
         value: Option<Content>,
@@ -854,33 +988,39 @@ mod content {
     }
 
     impl<'de, E> de::EnumVisitor<'de> for EnumDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
         type Variant = VariantDeserializer<Self::Error>;
 
-        fn visit_variant_seed<V>(self,
-                                seed: V)
-                                -> Result<(V::Value, VariantDeserializer<E>), Self::Error>
-            where V: de::DeserializeSeed<'de>
+        fn visit_variant_seed<V>(
+            self,
+            seed: V,
+        ) -> Result<(V::Value, VariantDeserializer<E>), Self::Error>
+        where
+            V: de::DeserializeSeed<'de>,
         {
             let visitor = VariantDeserializer {
                 value: self.value,
                 err: PhantomData,
             };
-            seed.deserialize(ContentDeserializer::new(self.variant)).map(|v| (v, visitor))
+            seed.deserialize(ContentDeserializer::new(self.variant))
+                .map(|v| (v, visitor))
         }
     }
 
     struct VariantDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         value: Option<Content>,
         err: PhantomData<E>,
     }
 
     impl<'de, E> de::VariantVisitor<'de> for VariantDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
@@ -892,51 +1032,59 @@ mod content {
         }
 
         fn visit_newtype_seed<T>(self, seed: T) -> Result<T::Value, E>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.value {
                 Some(value) => seed.deserialize(ContentDeserializer::new(value)),
-                None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"newtype variant")),
+                None => {
+                    Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"newtype variant"),)
+                }
             }
         }
 
         fn visit_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        where
+            V: de::Visitor<'de>,
         {
             match self.value {
                 Some(Content::Seq(v)) => {
                     de::Deserializer::deserialize(SeqDeserializer::new(v), visitor)
                 }
-                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant")),
-                None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant")),
+                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant"),),
+                None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant"),),
             }
         }
 
-        fn visit_struct<V>(self,
-                        _fields: &'static [&'static str],
-                        visitor: V)
-                        -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        fn visit_struct<V>(
+            self,
+            _fields: &'static [&'static str],
+            visitor: V,
+        ) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
         {
             match self.value {
                 Some(Content::Map(v)) => {
                     de::Deserializer::deserialize(MapDeserializer::new(v), visitor)
                 }
-                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant")),
-                _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant")),
+                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant"),),
+                _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant"),),
             }
         }
     }
 
     struct SeqDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         iter: <Vec<Content> as IntoIterator>::IntoIter,
         err: PhantomData<E>,
     }
 
     impl<E> SeqDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         fn new(vec: Vec<Content>) -> Self {
             SeqDeserializer {
@@ -947,13 +1095,15 @@ mod content {
     }
 
     impl<'de, E> de::Deserializer<'de> for SeqDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         #[inline]
         fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        where
+            V: de::Visitor<'de>,
         {
             let len = self.iter.len();
             if len == 0 {
@@ -977,15 +1127,20 @@ mod content {
     }
 
     impl<'de, E> de::SeqVisitor<'de> for SeqDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.iter.next() {
-                Some(value) => seed.deserialize(ContentDeserializer::new(value)).map(Some),
+                Some(value) => {
+                    seed.deserialize(ContentDeserializer::new(value))
+                        .map(Some)
+                }
                 None => Ok(None),
             }
         }
@@ -996,7 +1151,8 @@ mod content {
     }
 
     struct MapDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         iter: <Vec<(Content, Content)> as IntoIterator>::IntoIter,
         value: Option<Content>,
@@ -1004,7 +1160,8 @@ mod content {
     }
 
     impl<E> MapDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         fn new(map: Vec<(Content, Content)>) -> Self {
             MapDeserializer {
@@ -1016,12 +1173,14 @@ mod content {
     }
 
     impl<'de, E> de::MapVisitor<'de> for MapDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.iter.next() {
                 Some((key, value)) => {
@@ -1033,7 +1192,8 @@ mod content {
         }
 
         fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.value.take() {
                 Some(value) => seed.deserialize(ContentDeserializer::new(value)),
@@ -1047,13 +1207,15 @@ mod content {
     }
 
     impl<'de, E> de::Deserializer<'de> for MapDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         #[inline]
         fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        where
+            V: de::Visitor<'de>,
         {
             visitor.visit_map(self)
         }
@@ -1075,12 +1237,14 @@ mod content {
     /// Used when deserializing an untagged enum because the content may need to be
     /// used more than once.
     impl<'de, 'a, E> Deserializer<'de> for ContentRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         fn deserialize<V>(self, visitor: V) -> Result<V::Value, E>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             match *self.content {
                 Content::Bool(v) => visitor.visit_bool(v),
@@ -1099,7 +1263,9 @@ mod content {
                 Content::Unit => visitor.visit_unit(),
                 Content::None => visitor.visit_none(),
                 Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
-                Content::Newtype(ref v) => visitor.visit_newtype_struct(ContentRefDeserializer::new(v)),
+                Content::Newtype(ref v) => {
+                    visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
+                }
                 Content::Seq(ref v) => {
                     let seq = v.into_iter().map(ContentRefDeserializer::new);
                     let mut seq_visitor = de::value::SeqDeserializer::new(seq);
@@ -1108,10 +1274,12 @@ mod content {
                     Ok(value)
                 }
                 Content::Map(ref v) => {
-                    let map = v.into_iter().map(|&(ref k, ref v)| {
-                                                    (ContentRefDeserializer::new(k),
-                                                    ContentRefDeserializer::new(v))
-                                                });
+                    let map = v.into_iter()
+                        .map(
+                            |&(ref k, ref v)| {
+                                (ContentRefDeserializer::new(k), ContentRefDeserializer::new(v))
+                            },
+                        );
                     let mut map_visitor = de::value::MapDeserializer::new(map);
                     let value = try!(visitor.visit_map(&mut map_visitor));
                     try!(map_visitor.end());
@@ -1122,7 +1290,8 @@ mod content {
         }
 
         fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             match *self.content {
                 Content::None => visitor.visit_none(),
@@ -1133,17 +1302,20 @@ mod content {
         }
 
         fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, E>
-            where V: Visitor<'de>
+        where
+            V: Visitor<'de>,
         {
             visitor.visit_newtype_struct(self)
         }
 
-        fn deserialize_enum<V>(self,
-                            _name: &str,
-                            _variants: &'static [&'static str],
-                            visitor: V)
-                            -> Result<V::Value, Self::Error>
-            where V: Visitor<'de>
+        fn deserialize_enum<V>(
+            self,
+            _name: &str,
+            _variants: &'static [&'static str],
+            visitor: V,
+        ) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
         {
             let (variant, value) = match *self.content {
                 Content::Map(ref value) => {
@@ -1151,28 +1323,38 @@ mod content {
                     let &(ref variant, ref value) = match iter.next() {
                         Some(v) => v,
                         None => {
-                            return Err(de::Error::invalid_value(de::Unexpected::Map,
-                                                                &"map with a single key"));
+                            return Err(
+                                de::Error::invalid_value(
+                                    de::Unexpected::Map,
+                                    &"map with a single key",
+                                ),
+                            );
                         }
                     };
                     // enums are encoded in json as maps with a single key:value pair
                     if iter.next().is_some() {
-                        return Err(de::Error::invalid_value(de::Unexpected::Map,
-                                                            &"map with a single key"));
+                        return Err(
+                            de::Error::invalid_value(
+                                de::Unexpected::Map,
+                                &"map with a single key",
+                            ),
+                        );
                     }
                     (variant, Some(value))
                 }
                 ref s @ Content::String(_) => (s, None),
                 ref other => {
-                    return Err(de::Error::invalid_type(other.unexpected(), &"string or map"));
+                    return Err(de::Error::invalid_type(other.unexpected(), &"string or map"),);
                 }
             };
 
-            visitor.visit_enum(EnumRefDeserializer {
-                                variant: variant,
-                                value: value,
-                                err: PhantomData,
-                            })
+            visitor.visit_enum(
+                EnumRefDeserializer {
+                    variant: variant,
+                    value: value,
+                    err: PhantomData,
+                },
+            )
         }
 
         forward_to_deserialize! {
@@ -1193,7 +1375,8 @@ mod content {
     }
 
     struct EnumRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         variant: &'a Content,
         value: Option<&'a Content>,
@@ -1201,31 +1384,36 @@ mod content {
     }
 
     impl<'de, 'a, E> de::EnumVisitor<'de> for EnumRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
         type Variant = VariantRefDeserializer<'a, Self::Error>;
 
         fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
-            where V: de::DeserializeSeed<'de>
+        where
+            V: de::DeserializeSeed<'de>,
         {
             let visitor = VariantRefDeserializer {
                 value: self.value,
                 err: PhantomData,
             };
-            seed.deserialize(ContentRefDeserializer::new(self.variant)).map(|v| (v, visitor))
+            seed.deserialize(ContentRefDeserializer::new(self.variant))
+                .map(|v| (v, visitor))
         }
     }
 
     struct VariantRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         value: Option<&'a Content>,
         err: PhantomData<E>,
     }
 
     impl<'de, 'a, E> de::VariantVisitor<'de> for VariantRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
@@ -1237,51 +1425,59 @@ mod content {
         }
 
         fn visit_newtype_seed<T>(self, seed: T) -> Result<T::Value, E>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.value {
                 Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
-                None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"newtype variant")),
+                None => {
+                    Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"newtype variant"),)
+                }
             }
         }
 
         fn visit_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        where
+            V: de::Visitor<'de>,
         {
             match self.value {
                 Some(&Content::Seq(ref v)) => {
                     de::Deserializer::deserialize(SeqRefDeserializer::new(v), visitor)
                 }
-                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant")),
-                None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant")),
+                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant"),),
+                None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant"),),
             }
         }
 
-        fn visit_struct<V>(self,
-                        _fields: &'static [&'static str],
-                        visitor: V)
-                        -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        fn visit_struct<V>(
+            self,
+            _fields: &'static [&'static str],
+            visitor: V,
+        ) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
         {
             match self.value {
                 Some(&Content::Map(ref v)) => {
                     de::Deserializer::deserialize(MapRefDeserializer::new(v), visitor)
                 }
-                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant")),
-                _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant")),
+                Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant"),),
+                _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant"),),
             }
         }
     }
 
     struct SeqRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         iter: <&'a [Content] as IntoIterator>::IntoIter,
         err: PhantomData<E>,
     }
 
     impl<'a, E> SeqRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         fn new(vec: &'a [Content]) -> Self {
             SeqRefDeserializer {
@@ -1292,13 +1488,15 @@ mod content {
     }
 
     impl<'de, 'a, E> de::Deserializer<'de> for SeqRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         #[inline]
         fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        where
+            V: de::Visitor<'de>,
         {
             let len = self.iter.len();
             if len == 0 {
@@ -1322,15 +1520,20 @@ mod content {
     }
 
     impl<'de, 'a, E> de::SeqVisitor<'de> for SeqRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.iter.next() {
-                Some(value) => seed.deserialize(ContentRefDeserializer::new(value)).map(Some),
+                Some(value) => {
+                    seed.deserialize(ContentRefDeserializer::new(value))
+                        .map(Some)
+                }
                 None => Ok(None),
             }
         }
@@ -1341,7 +1544,8 @@ mod content {
     }
 
     struct MapRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         iter: <&'a [(Content, Content)] as IntoIterator>::IntoIter,
         value: Option<&'a Content>,
@@ -1349,7 +1553,8 @@ mod content {
     }
 
     impl<'a, E> MapRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         fn new(map: &'a [(Content, Content)]) -> Self {
             MapRefDeserializer {
@@ -1361,24 +1566,28 @@ mod content {
     }
 
     impl<'de, 'a, E> de::MapVisitor<'de> for MapRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.iter.next() {
                 Some(&(ref key, ref value)) => {
                     self.value = Some(value);
-                    seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
+                    seed.deserialize(ContentRefDeserializer::new(key))
+                        .map(Some)
                 }
                 None => Ok(None),
             }
         }
 
         fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
-            where T: de::DeserializeSeed<'de>
+        where
+            T: de::DeserializeSeed<'de>,
         {
             match self.value.take() {
                 Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
@@ -1392,13 +1601,15 @@ mod content {
     }
 
     impl<'de, 'a, E> de::Deserializer<'de> for MapRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Error = E;
 
         #[inline]
         fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-            where V: de::Visitor<'de>
+        where
+            V: de::Visitor<'de>,
         {
             visitor.visit_map(self)
         }
@@ -1411,7 +1622,8 @@ mod content {
     }
 
     impl<'de, E> de::IntoDeserializer<'de, E> for ContentDeserializer<E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Deserializer = Self;
 
@@ -1421,7 +1633,8 @@ mod content {
     }
 
     impl<'de, 'a, E> de::IntoDeserializer<'de, E> for ContentRefDeserializer<'a, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         type Deserializer = Self;
 
@@ -1456,7 +1669,8 @@ mod content {
         }
 
         fn visit_map<V>(self, _: V) -> Result<(), V::Error>
-            where V: MapVisitor<'de>
+        where
+            V: MapVisitor<'de>,
         {
             Ok(())
         }
@@ -1488,7 +1702,8 @@ mod content {
         }
 
         fn visit_unit<E>(self) -> Result<(), E>
-            where E: de::Error
+        where
+            E: de::Error,
         {
             Ok(())
         }

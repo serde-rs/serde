@@ -82,20 +82,28 @@ fn test_gen() {
         Unit,
         Newtype(
             #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-            X),
+            X
+        ),
         Tuple(
             T,
             #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-            X),
+            X
+        ),
         Struct {
             t: T,
             #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-            x: X },
+            x: X,
+        },
     }
     assert::<EnumWith<i32>>();
 
     #[derive(Serialize)]
-    struct MultipleRef<'a, 'b, 'c, T> where T: 'c, 'c: 'b, 'b: 'a {
+    struct MultipleRef<'a, 'b, 'c, T>
+    where
+        T: 'c,
+        'c: 'b,
+        'b: 'a,
+    {
         t: T,
         rrrt: &'a &'b &'c T,
     }
@@ -112,7 +120,7 @@ fn test_gen() {
     struct Tuple<T>(
         T,
         #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-        X,
+        X
     );
     assert::<Tuple<i32>>();
 
@@ -122,9 +130,7 @@ fn test_gen() {
             left: Box<TreeNode<D>>,
             right: Box<TreeNode<D>>,
         },
-        Leaf {
-            data: D,
-        },
+        Leaf { data: D },
     }
     assert::<TreeNode<i32>>();
 
@@ -218,7 +224,7 @@ fn test_gen() {
     #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     struct NonAsciiIdents {
-        σ: f64
+        σ: f64,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -251,11 +257,17 @@ fn test_gen() {
     struct EmptyTupleDenyUnknown();
 
     #[derive(Serialize, Deserialize)]
-    struct TupleSkipAll(#[serde(skip_deserializing)] u8);
+    struct TupleSkipAll(
+        #[serde(skip_deserializing)]
+        u8
+    );
 
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct TupleSkipAllDenyUnknown(#[serde(skip_deserializing)] u8);
+    struct TupleSkipAllDenyUnknown(
+        #[serde(skip_deserializing)]
+        u8
+    );
 
     #[derive(Serialize, Deserialize)]
     enum EmptyEnum {}
@@ -280,7 +292,10 @@ fn test_gen() {
             #[serde(skip_deserializing)]
             f: u8,
         },
-        TupleSkip(#[serde(skip_deserializing)] u8),
+        TupleSkip(
+            #[serde(skip_deserializing)]
+            u8
+        ),
     }
 
     #[cfg(feature = "unstable")]
@@ -293,7 +308,10 @@ fn test_gen() {
             #[serde(skip_deserializing)]
             f: u8,
         },
-        TupleSkip(#[serde(skip_deserializing)] u8),
+        TupleSkip(
+            #[serde(skip_deserializing)]
+            u8
+        ),
     }
 
     #[derive(Serialize, Deserialize)]
