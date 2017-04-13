@@ -112,12 +112,9 @@ pub use self::impossible::Impossible;
 
 macro_rules! declare_error_trait {
     (Error: Sized $(+ $($supertrait:ident)::+)*) => {
-        /// Trait used by [`Serialize`] implementations to generically construct
-        /// errors belonging to the [`Serializer`] against which they are
+        /// Trait used by `Serialize` implementations to generically construct
+        /// errors belonging to the `Serializer` against which they are
         /// currently running.
-        ///
-        /// [`Serialize`]: ../trait.Serialize.html
-        /// [`Serializer`]: ../trait.Serializer.html
         pub trait Error: Sized $(+ $($supertrait)::+)* {
             /// Used when a [`Serialize`] implementation encounters any error
             /// while serializing a type.
