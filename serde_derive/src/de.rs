@@ -224,8 +224,8 @@ fn deserialize_unit_struct(params: &Parameters, item_attrs: &attr::Item) -> Frag
         impl<'de> _serde::de::Visitor<'de> for __Visitor {
             type Value = #this;
 
-            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
             #[inline]
@@ -313,8 +313,8 @@ fn deserialize_tuple(variant_ident: Option<&syn::Ident>,
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
             #visit_newtype_struct
@@ -537,8 +537,8 @@ fn deserialize_struct(variant_ident: Option<&syn::Ident>,
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
             #visit_seq
@@ -657,8 +657,8 @@ fn deserialize_externally_tagged_enum(params: &Parameters,
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
             fn visit_enum<__V>(self, __visitor: __V) -> _serde::export::Result<Self::Value, __V::Error>
@@ -865,8 +865,8 @@ fn deserialize_adjacently_tagged_enum(params: &Parameters,
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::fmt::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
             fn visit_map<__V>(self, mut __visitor: __V) -> _serde::export::Result<Self::Value, __V::Error>
@@ -1242,8 +1242,8 @@ fn deserialize_field_visitor(fields: Vec<(String, Ident)>,
                 impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
                     type Value = __Field;
 
-                    fn expecting(&self, formatter: &mut _serde::export::fmt::Formatter) -> _serde::export::fmt::Result {
-                        _serde::export::fmt::Formatter::write_str(formatter, "field name")
+                    fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                        _serde::export::Formatter::write_str(formatter, "field name")
                     }
 
                     #visit_index
