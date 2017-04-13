@@ -127,54 +127,28 @@ impl<T> Serialize for [T; 0] {
 }
 
 macro_rules! array_impls {
-    ($len:expr) => {
-        impl<T> Serialize for [T; $len] where T: Serialize {
-            #[inline]
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where S: Serializer,
-            {
-                let mut seq = try!(serializer.serialize_seq_fixed_size($len));
-                for e in self {
-                    try!(seq.serialize_element(e));
+    ($($len:tt)+) => {
+        $(
+            impl<T> Serialize for [T; $len] where T: Serialize {
+                #[inline]
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                    where S: Serializer,
+                {
+                    let mut seq = try!(serializer.serialize_seq_fixed_size($len));
+                    for e in self {
+                        try!(seq.serialize_element(e));
+                    }
+                    seq.end()
                 }
-                seq.end()
             }
-        }
+        )+
     }
 }
 
-array_impls!(1);
-array_impls!(2);
-array_impls!(3);
-array_impls!(4);
-array_impls!(5);
-array_impls!(6);
-array_impls!(7);
-array_impls!(8);
-array_impls!(9);
-array_impls!(10);
-array_impls!(11);
-array_impls!(12);
-array_impls!(13);
-array_impls!(14);
-array_impls!(15);
-array_impls!(16);
-array_impls!(17);
-array_impls!(18);
-array_impls!(19);
-array_impls!(20);
-array_impls!(21);
-array_impls!(22);
-array_impls!(23);
-array_impls!(24);
-array_impls!(25);
-array_impls!(26);
-array_impls!(27);
-array_impls!(28);
-array_impls!(29);
-array_impls!(30);
-array_impls!(31);
-array_impls!(32);
+array_impls!(01 02 03 04 05 06 07 08 09 10
+             11 12 13 14 15 16 17 18 19 20
+             21 22 23 24 25 26 27 28 29 30
+             31 32);
 
 ////////////////////////////////////////////////////////////////////////////////
 
