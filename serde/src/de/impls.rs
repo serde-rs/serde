@@ -1104,7 +1104,10 @@ impl<'de> Deserialize<'de> for OsString {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Box<T> {
+impl<'de, T> Deserialize<'de> for Box<T>
+where
+    T: Deserialize<'de>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Box<T>, D::Error>
     where
         D: Deserializer<'de>,
@@ -1115,7 +1118,10 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Box<T> {
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Box<[T]> {
+impl<'de, T> Deserialize<'de> for Box<[T]>
+where
+    T: Deserialize<'de>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Box<[T]>, D::Error>
     where
         D: Deserializer<'de>,
@@ -1137,7 +1143,10 @@ impl<'de> Deserialize<'de> for Box<str> {
 }
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
+impl<'de, T> Deserialize<'de> for Arc<T>
+where
+    T: Deserialize<'de>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Arc<T>, D::Error>
     where
         D: Deserializer<'de>,
@@ -1148,7 +1157,10 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
 }
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Rc<T> {
+impl<'de, T> Deserialize<'de> for Rc<T>
+where
+    T: Deserialize<'de>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Rc<T>, D::Error>
     where
         D: Deserializer<'de>,
@@ -1317,7 +1329,10 @@ impl<'de> Deserialize<'de> for Duration {
 //         end: u32,
 //     }
 #[cfg(feature = "std")]
-impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for ops::Range<Idx> {
+impl<'de, Idx> Deserialize<'de> for ops::Range<Idx>
+where
+    Idx: Deserialize<'de>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -1375,7 +1390,10 @@ impl<'de, Idx: Deserialize<'de>> Deserialize<'de> for ops::Range<Idx> {
             phantom: PhantomData<Idx>,
         }
 
-        impl<'de, Idx: Deserialize<'de>> Visitor<'de> for RangeVisitor<Idx> {
+        impl<'de, Idx> Visitor<'de> for RangeVisitor<Idx>
+        where
+            Idx: Deserialize<'de>,
+        {
             type Value = ops::Range<Idx>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

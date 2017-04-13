@@ -19,12 +19,18 @@ type ErrorImpl = ();
 
 impl de::Error for Error {
     #[cfg(any(feature = "std", feature = "collections"))]
-    fn custom<T: Display>(msg: T) -> Self {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
         Error { err: msg.to_string().into_boxed_str() }
     }
 
     #[cfg(not(any(feature = "std", feature = "collections")))]
-    fn custom<T: Display>(_msg: T) -> Self {
+    fn custom<T>(_msg: T) -> Self
+    where
+        T: Display,
+    {
         Error { err: () }
     }
 }

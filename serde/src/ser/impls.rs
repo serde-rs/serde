@@ -247,7 +247,10 @@ where
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl<Idx: Serialize> Serialize for ops::Range<Idx> {
+impl<Idx> Serialize for ops::Range<Idx>
+where
+    Idx: Serialize,
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

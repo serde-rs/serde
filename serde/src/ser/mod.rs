@@ -138,7 +138,9 @@ macro_rules! declare_error_trait {
             ///     }
             /// }
             /// ```
-            fn custom<T: Display>(msg: T) -> Self;
+            fn custom<T>(msg: T) -> Self
+            where
+                T: Display;
         }
     }
 }
@@ -404,7 +406,9 @@ pub trait Serializer: Sized {
     fn serialize_none(self) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `Some(T)` value.
-    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<Self::Ok, Self::Error>;
+    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize;
 
     /// Serialize a `()` value.
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error>;
@@ -465,11 +469,13 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_newtype_struct<T: ?Sized + Serialize>(
+    fn serialize_newtype_struct<T: ?Sized>(
         self,
         name: &'static str,
         value: &T,
-    ) -> Result<Self::Ok, Self::Error>;
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize;
 
     /// Serialize a newtype variant like `E::N` in `enum E { N(u8) }`.
     ///
@@ -496,13 +502,15 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_newtype_variant<T: ?Sized + Serialize>(
+    fn serialize_newtype_variant<T: ?Sized>(
         self,
         name: &'static str,
         variant_index: u32,
         variant: &'static str,
         value: &T,
-    ) -> Result<Self::Ok, Self::Error>;
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize;
 
     /// Begin to serialize a dynamically sized sequence. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
@@ -990,7 +998,9 @@ pub trait SerializeSeq {
     type Error: Error;
 
     /// Serialize a sequence element.
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Finish serializing a sequence.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1034,7 +1044,9 @@ pub trait SerializeTuple {
     type Error: Error;
 
     /// Serialize a tuple element.
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Finish serializing a tuple.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1068,7 +1080,9 @@ pub trait SerializeTupleStruct {
     type Error: Error;
 
     /// Serialize a tuple struct field.
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
+    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Finish serializing a tuple struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1115,7 +1129,9 @@ pub trait SerializeTupleVariant {
     type Error: Error;
 
     /// Serialize a tuple variant field.
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
+    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Finish serializing a tuple variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1169,10 +1185,14 @@ pub trait SerializeMap {
     type Error: Error;
 
     /// Serialize a map key.
-    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Self::Error>;
+    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Serialize a map value.
-    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error>;
+    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Serialize a map entry consisting of a key and a value.
     ///
@@ -1187,11 +1207,15 @@ pub trait SerializeMap {
     /// `serialize_value`. This is appropriate for serializers that do not care
     /// about performance or are not able to optimize `serialize_entry` any
     /// better than this.
-    fn serialize_entry<K: ?Sized + Serialize, V: ?Sized + Serialize>(
+    fn serialize_entry<K: ?Sized, V: ?Sized>(
         &mut self,
         key: &K,
         value: &V,
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), Self::Error>
+    where
+        K: Serialize,
+        V: Serialize,
+    {
         try!(self.serialize_key(key));
         self.serialize_value(value)
     }
@@ -1232,11 +1256,13 @@ pub trait SerializeStruct {
     type Error: Error;
 
     /// Serialize a struct field.
-    fn serialize_field<T: ?Sized + Serialize>(
+    fn serialize_field<T: ?Sized>(
         &mut self,
         key: &'static str,
         value: &T,
-    ) -> Result<(), Self::Error>;
+    ) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Finish serializing a struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1276,11 +1302,13 @@ pub trait SerializeStructVariant {
     type Error: Error;
 
     /// Serialize a struct variant field.
-    fn serialize_field<T: ?Sized + Serialize>(
+    fn serialize_field<T: ?Sized>(
         &mut self,
         key: &'static str,
         value: &T,
-    ) -> Result<(), Self::Error>;
+    ) -> Result<(), Self::Error>
+    where
+        T: Serialize;
 
     /// Finish serializing a struct variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1290,7 +1318,10 @@ trait LenHint: Iterator {
     fn len_hint(&self) -> Option<usize>;
 }
 
-impl<I: Iterator> LenHint for I {
+impl<I> LenHint for I
+where
+    I: Iterator,
+{
     #[cfg(not(feature = "unstable"))]
     fn len_hint(&self) -> Option<usize> {
         iterator_len_hint(self)
@@ -1303,13 +1334,19 @@ impl<I: Iterator> LenHint for I {
 }
 
 #[cfg(feature = "unstable")]
-impl<I: ExactSizeIterator> LenHint for I {
+impl<I> LenHint for I
+where
+    I: ExactSizeIterator,
+{
     fn len_hint(&self) -> Option<usize> {
         Some(self.len())
     }
 }
 
-fn iterator_len_hint<I: Iterator>(iter: &I) -> Option<usize> {
+fn iterator_len_hint<I>(iter: &I) -> Option<usize>
+where
+    I: Iterator,
+{
     match iter.size_hint() {
         (lo, Some(hi)) if lo == hi => Some(lo),
         _ => None,

@@ -153,7 +153,9 @@ macro_rules! declare_error_trait {
             ///     }
             /// }
             /// ```
-            fn custom<T: Display>(msg: T) -> Self;
+            fn custom<T>(msg: T) -> Self
+            where
+                T: Display;
 
             /// Raised when a `Deserialize` receives a type different from what it was
             /// expecting.
