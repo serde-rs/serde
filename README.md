@@ -15,6 +15,10 @@ You may be looking for:
 
 ## Serde in action
 
+<a href="http://play.integer32.com/?gist=9003c5b88c1f4989941925d7190c6eec" target="_blank">
+<img align="right" width="50" src="https://raw.githubusercontent.com/serde-rs/serde-rs.github.io/master/img/run.png">
+</a>
+
 ```rust
 #[macro_use]
 extern crate serde_derive;
