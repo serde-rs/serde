@@ -1291,17 +1291,21 @@ pub trait SerializeMap {
 
     /// Serialize a map entry consisting of a key and a value.
     ///
-    /// Some `Serialize` types are not able to hold a key and value in memory at
-    /// the same time so `SerializeMap` implementations are required to support
-    /// `serialize_key` and `serialize_value` individually. The
+    /// Some [`Serialize`] types are not able to hold a key and value in memory
+    /// at the same time so `SerializeMap` implementations are required to
+    /// support [`serialize_key`] and [`serialize_value`] individually. The
     /// `serialize_entry` method allows serializers to optimize for the case
-    /// where key and value are both available. `Serialize` implementations are
-    /// encouraged to use `serialize_entry` if possible.
+    /// where key and value are both available. [`Serialize`] implementations
+    /// are encouraged to use `serialize_entry` if possible.
     ///
-    /// The default implementation delegates to `serialize_key` and
-    /// `serialize_value`. This is appropriate for serializers that do not care
-    /// about performance or are not able to optimize `serialize_entry` any
+    /// The default implementation delegates to [`serialize_key`] and
+    /// [`serialize_value`]. This is appropriate for serializers that do not
+    /// care about performance or are not able to optimize `serialize_entry` any
     /// better than this.
+    ///
+    /// [`Serialize`]: ../trait.Serialize.html
+    /// [`serialize_key`]: #tymethod.serialize_key
+    /// [`serialize_value`]: #tymethod.serialize_value
     fn serialize_entry<K: ?Sized, V: ?Sized>(
         &mut self,
         key: &K,
