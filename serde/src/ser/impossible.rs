@@ -9,9 +9,9 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 /// serializing one of the compound types.
 ///
 /// This type cannot be instantiated, but implements every one of the traits
-/// corresponding to the `Serializer` compound types: `SerializeSeq`,
-/// `SerializeTuple`, `SerializeTupleStruct`, `SerializeTupleVariant`,
-/// `SerializeMap`, `SerializeStruct`, and `SerializeStructVariant`.
+/// corresponding to the [`Serializer`] compound types: [`SerializeSeq`],
+/// [`SerializeTuple`], [`SerializeTupleStruct`], [`SerializeTupleVariant`],
+/// [`SerializeMap`], [`SerializeStruct`], and [`SerializeStructVariant`].
 ///
 /// ```rust
 /// # #[macro_use]
@@ -52,6 +52,15 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 /// #
 /// # fn main() {}
 /// ```
+///
+/// [`Serializer`]: trait.Serializer.html
+/// [`SerializeSeq`]: trait.SerializeSeq.html
+/// [`SerializeTuple`]: trait.SerializeTuple.html
+/// [`SerializeTupleStruct`]: trait.SerializeTupleStruct.html
+/// [`SerializeTupleVariant`]: trait.SerializeTupleVariant.html
+/// [`SerializeMap`]: trait.SerializeMap.html
+/// [`SerializeStruct`]: trait.SerializeStruct.html
+/// [`SerializeStructVariant`]: trait.SerializeStructVariant.html
 pub struct Impossible<Ok, E> {
     void: Void,
     _marker: PhantomData<(Ok, E)>,
