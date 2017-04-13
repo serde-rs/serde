@@ -152,72 +152,52 @@ array_impls!(01 02 03 04 05 06 07 08 09 10
 
 ////////////////////////////////////////////////////////////////////////////////
 
-macro_rules! serialize_seq {
-    () => {
-        #[inline]
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where S: Serializer,
-        {
-            serializer.collect_seq(self)
-        }
-    }
-}
-
 impl<T> Serialize for [T]
 where
     T: Serialize,
 {
-    serialize_seq!();
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer,
+    {
+        serializer.collect_seq(self)
+    }
+}
+
+macro_rules! seq_impl {
+    ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >) => {
+        impl<T $(, $typaram)*> Serialize for $ty<T $(, $typaram)*>
+        where
+            T: Serialize $(+ $tbound1 $(+ $tbound2)*)*,
+            $($typaram: $bound1 $(+ $bound2)*)*
+        {
+            #[inline]
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where S: Serializer,
+            {
+                serializer.collect_seq(self)
+            }
+        }
+    }
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for BinaryHeap<T>
-where
-    T: Serialize + Ord,
-{
-    serialize_seq!();
-}
+seq_impl!(BinaryHeap<T: Ord>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for BTreeSet<T>
-where
-    T: Serialize + Ord,
-{
-    serialize_seq!();
-}
+seq_impl!(BTreeSet<T: Ord>);
 
 #[cfg(feature = "std")]
-impl<T, H> Serialize for HashSet<T, H>
-where
-    T: Serialize + Eq + Hash,
-    H: BuildHasher,
-{
-    serialize_seq!();
-}
+seq_impl!(HashSet<T: Eq + Hash, H: BuildHasher>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for LinkedList<T>
-where
-    T: Serialize,
-{
-    serialize_seq!();
-}
+seq_impl!(LinkedList<T>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for Vec<T>
-where
-    T: Serialize,
-{
-    serialize_seq!();
-}
+seq_impl!(Vec<T>);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<T> Serialize for VecDeque<T>
-where
-    T: Serialize,
-{
-    serialize_seq!();
-}
+seq_impl!(VecDeque<T>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
