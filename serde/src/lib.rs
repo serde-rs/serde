@@ -68,15 +68,30 @@
 //! [Cargo]: http://doc.crates.io/manifest.html
 //! [redis-rs]: https://crates.io/crates/redis
 
+//////////////////////////////////////////////////////////////////////////////
+
+// Serde types in rustdoc of other crates get linked to here.
 #![doc(html_root_url = "https://docs.rs/serde/0.9.13")]
 
+// Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
+
+// Unstable functionality only if the user asks for it. For tracking and
+// discussion of these features please refer to this issue:
+//
+//    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(nonzero, specialization, zero_one))]
 #![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections))]
+
+// Whitelisted clippy lints.
 #![cfg_attr(feature = "cargo-clippy", allow(linkedlist, type_complexity, doc_markdown))]
+
+// Blacklisted Rust lints.
 #![deny(missing_docs, unused_imports)]
+
+//////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "collections")]
 extern crate collections;
@@ -167,16 +182,18 @@ mod lib {
     pub use core::num::Zero;
 }
 
-#[doc(inline)]
-pub use ser::{Serialize, Serializer};
-#[doc(inline)]
-pub use de::{Deserialize, Deserializer};
+//////////////////////////////////////////////////////////////////////////////
 
 #[macro_use]
 mod macros;
 
-pub mod de;
 pub mod ser;
+pub mod de;
+
+#[doc(inline)]
+pub use ser::{Serialize, Serializer};
+#[doc(inline)]
+pub use de::{Deserialize, Deserializer};
 
 // Generated code uses these to support no_std. Not public API.
 #[doc(hidden)]
