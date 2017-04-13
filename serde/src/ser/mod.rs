@@ -175,30 +175,32 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// standard library types. The complete list is [here][ser]. All of these can
 /// be serialized using Serde out of the box.
 ///
-/// Additionally, Serde provides a procedural macro called `serde_derive` to
+/// Additionally, Serde provides a procedural macro called [`serde_derive`] to
 /// automatically generate `Serialize` implementations for structs and enums in
-/// your program. See the [codegen section of the manual][codegen] for how to
-/// use this.
+/// your program. See the [codegen section of the manual] for how to use this.
 ///
 /// In rare cases it may be necessary to implement `Serialize` manually for some
-/// type in your program. See the [Implementing `Serialize`][impl-serialize]
-/// section of the manual for more about this.
+/// type in your program. See the [Implementing `Serialize`] section of the
+/// manual for more about this.
 ///
 /// Third-party crates may provide `Serialize` implementations for types that
-/// they expose. For example the `linked-hash-map` crate provides a
-/// `LinkedHashMap<K, V>` type that is serializable by Serde because the crate
+/// they expose. For example the [`linked-hash-map`] crate provides a
+/// [`LinkedHashMap<K, V>`] type that is serializable by Serde because the crate
 /// provides an implementation of `Serialize` for it.
 ///
+/// [Implementing `Serialize`]: https://serde.rs/impl-serialize.html
+/// [`LinkedHashMap<K, V>`]: https://docs.rs/linked-hash-map/*/linked_hash_map/struct.LinkedHashMap.html
+/// [`linked-hash-map`]: https://crates.io/crates/linked-hash-map
+/// [`serde_derive`]: https://crates.io/crates/serde_derive
+/// [codegen section of the manual]: https://serde.rs/codegen.html
 /// [ser]: https://docs.serde.rs/serde/ser/index.html
-/// [codegen]: https://serde.rs/codegen.html
-/// [impl-serialize]: https://serde.rs/impl-serialize.html
 pub trait Serialize {
     /// Serialize this value into the given Serde serializer.
     ///
-    /// See the [Implementing `Serialize`][impl-serialize] section of the manual
-    /// for more information about how to implement this method.
+    /// See the [Implementing `Serialize`] section of the manual for more
+    /// information about how to implement this method.
     ///
-    /// [impl-serialize]: https://serde.rs/impl-serialize.html
+    /// [Implementing `Serialize`]: https://serde.rs/impl-serialize.html
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer;
