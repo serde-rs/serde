@@ -40,7 +40,6 @@ pub struct Encode {
 }
 
 impl Encode {
-    // FIXME: use this from_utf8_unchecked, since we know it can never fail
     pub fn as_str(&self) -> &str {
         str::from_utf8(&self.buf[self.pos..]).unwrap()
     }
