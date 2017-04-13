@@ -346,6 +346,25 @@ pub trait Serializer: Sized {
     type SerializeStructVariant: SerializeStructVariant<Ok = Self::Ok, Error = Self::Error>;
 
     /// Serialize a `bool` value.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for bool {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_bool(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an `i8` value.
@@ -353,6 +372,25 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `i8` and `i64`, a
     /// reasonable implementation would be to cast the value to `i64` and
     /// forward to `serialize_i64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for i8 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_i8(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an `i16` value.
@@ -360,6 +398,25 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `i16` and `i64`, a
     /// reasonable implementation would be to cast the value to `i64` and
     /// forward to `serialize_i64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for i16 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_i16(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an `i32` value.
@@ -367,9 +424,47 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `i32` and `i64`, a
     /// reasonable implementation would be to cast the value to `i64` and
     /// forward to `serialize_i64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for i32 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_i32(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an `i64` value.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for i64 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_i64(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `u8` value.
@@ -377,6 +472,25 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `u8` and `u64`, a
     /// reasonable implementation would be to cast the value to `u64` and
     /// forward to `serialize_u64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for u8 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_u8(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `u16` value.
@@ -384,6 +498,25 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `u16` and `u64`, a
     /// reasonable implementation would be to cast the value to `u64` and
     /// forward to `serialize_u64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for u16 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_u16(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `u32` value.
@@ -391,9 +524,47 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `u32` and `u64`, a
     /// reasonable implementation would be to cast the value to `u64` and
     /// forward to `serialize_u64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for u32 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_u32(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `u64` value.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for u64 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_u64(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an `f32` value.
@@ -401,18 +572,94 @@ pub trait Serializer: Sized {
     /// If the format does not differentiate between `f32` and `f64`, a
     /// reasonable implementation would be to cast the value to `f64` and
     /// forward to `serialize_f64`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for f32 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_f32(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an `f64` value.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for f64 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_f64(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a character.
     ///
     /// If the format does not support characters, it is reasonable to serialize
     /// it as a single element `str` or a `u32`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for char {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_char(*self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `&str`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde;
+    /// #
+    /// # use serde::Serializer;
+    /// #
+    /// # __private_serialize!();
+    /// #
+    /// impl Serialize for str {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.serialize_str(self)
+    ///     }
+    /// }
+    /// #
+    /// # fn main() {}
+    /// ```
     fn serialize_str(self, value: &str) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a chunk of raw byte data.

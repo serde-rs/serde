@@ -1,3 +1,27 @@
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __private_serialize {
+    () => {
+        trait Serialize {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: $crate::Serializer;
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __private_deserialize {
+    () => {
+        trait Deserialize<'de>: Sized {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: $crate::Deserializer<'de>;
+        }
+    };
+}
+
 /// Used only by Serde doc tests. Not public API.
 #[doc(hidden)]
 #[macro_export]
