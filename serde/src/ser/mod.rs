@@ -294,41 +294,58 @@ pub trait Serialize {
 pub trait Serializer: Sized {
     /// The output type produced by this `Serializer` during successful
     /// serialization. Most serializers that produce text or binary output
-    /// should set `Ok = ()` and serialize into an `io::Write` or buffer
+    /// should set `Ok = ()` and serialize into an [`io::Write`] or buffer
     /// contained within the `Serializer` instance. Serializers that build
     /// in-memory data structures may be simplified by using `Ok` to propagate
     /// the data structure around.
+    ///
+    /// [`io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
     type Ok;
 
     /// The error type when some error occurs during serialization.
     type Error: Error;
 
-    /// Type returned from `serialize_seq` and `serialize_seq_fixed_size` for
-    /// serializing the content of the sequence.
+    /// Type returned from [`serialize_seq`] and [`serialize_seq_fixed_size`]
+    /// for serializing the content of the sequence.
+    ///
+    /// [`serialize_seq`]: #tymethod.serialize_seq
+    /// [`serialize_seq_fixed_size`]: #tymethod.serialize_seq_fixed_size
     type SerializeSeq: SerializeSeq<Ok = Self::Ok, Error = Self::Error>;
 
-    /// Type returned from `serialize_tuple` for serializing the content of the
-    /// tuple.
+    /// Type returned from [`serialize_tuple`] for serializing the content of
+    /// the tuple.
+    ///
+    /// [`serialize_tuple`]: #tymethod.serialize_tuple
     type SerializeTuple: SerializeTuple<Ok = Self::Ok, Error = Self::Error>;
 
-    /// Type returned from `serialize_tuple_struct` for serializing the content
-    /// of the tuple struct.
+    /// Type returned from [`serialize_tuple_struct`] for serializing the
+    /// content of the tuple struct.
+    ///
+    /// [`serialize_tuple_struct`]: #tymethod.serialize_tuple_struct
     type SerializeTupleStruct: SerializeTupleStruct<Ok = Self::Ok, Error = Self::Error>;
 
-    /// Type returned from `serialize_tuple_variant` for serializing the content
-    /// of the tuple variant.
+    /// Type returned from [`serialize_tuple_variant`] for serializing the
+    /// content of the tuple variant.
+    ///
+    /// [`serialize_tuple_variant`]: #tymethod.serialize_tuple_variant
     type SerializeTupleVariant: SerializeTupleVariant<Ok = Self::Ok, Error = Self::Error>;
 
-    /// Type returned from `serialize_map` for serializing the content of the
+    /// Type returned from [`serialize_map`] for serializing the content of the
     /// map.
+    ///
+    /// [`serialize_map`]: #tymethod.serialize_map
     type SerializeMap: SerializeMap<Ok = Self::Ok, Error = Self::Error>;
 
-    /// Type returned from `serialize_struct` for serializing the content of the
-    /// struct.
+    /// Type returned from [`serialize_struct`] for serializing the content of
+    /// the struct.
+    ///
+    /// [`serialize_struct`]: #tymethod.serialize_struct
     type SerializeStruct: SerializeStruct<Ok = Self::Ok, Error = Self::Error>;
 
-    /// Type returned from `serialize_struct_variant` for serializing the
+    /// Type returned from [`serialize_struct_variant`] for serializing the
     /// content of the struct variant.
+    ///
+    /// [`serialize_struct_variant`]: #tymethod.serialize_struct_variant
     type SerializeStructVariant: SerializeStructVariant<Ok = Self::Ok, Error = Self::Error>;
 
     /// Serialize a `bool` value.
