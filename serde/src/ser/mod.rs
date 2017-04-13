@@ -1,7 +1,7 @@
 //! Generic data structure serialization framework.
 //!
-//! The two most important traits in this module are `Serialize` and
-//! `Serializer`.
+//! The two most important traits in this module are [`Serialize`] and
+//! [`Serializer`].
 //!
 //!  - **A type that implements `Serialize` is a data structure** that can be
 //!    serialized to any data format supported by Serde, and conversely
@@ -10,39 +10,38 @@
 //!
 //! # The Serialize trait
 //!
-//! Serde provides `Serialize` implementations for many Rust primitive and
+//! Serde provides [`Serialize`] implementations for many Rust primitive and
 //! standard library types. The complete list is below. All of these can be
 //! serialized using Serde out of the box.
 //!
-//! Additionally, Serde provides a procedural macro called `serde_derive` to
-//! automatically generate `Serialize` implementations for structs and enums in
-//! your program. See the [codegen section of the manual][codegen] for how to
-//! use this.
+//! Additionally, Serde provides a procedural macro called [`serde_derive`] to
+//! automatically generate [`Serialize`] implementations for structs and enums
+//! in your program. See the [codegen section of the manual] for how to use
+//! this.
 //!
-//! In rare cases it may be necessary to implement `Serialize` manually for some
-//! type in your program. See the [Implementing `Serialize`][impl-serialize]
-//! section of the manual for more about this.
+//! In rare cases it may be necessary to implement [`Serialize`] manually for
+//! some type in your program. See the [Implementing `Serialize`] section of the
+//! manual for more about this.
 //!
-//! Third-party crates may provide `Serialize` implementations for types that
-//! they expose. For example the `linked-hash-map` crate provides a
-//! `LinkedHashMap<K, V>` type that is serializable by Serde because the crate
-//! provides an implementation of `Serialize` for it.
+//! Third-party crates may provide [`Serialize`] implementations for types that
+//! they expose. For example the [`linked-hash-map`] crate provides a
+//! [`LinkedHashMap<K, V>`] type that is serializable by Serde because the crate
+//! provides an implementation of [`Serialize`] for it.
 //!
 //! # The Serializer trait
 //!
-//! `Serializer` implementations are provided by third-party crates, for example
-//! [`serde_json`][serde_json], [`serde_yaml`][serde_yaml] and
-//! [`bincode`][bincode].
+//! [`Serializer`] implementations are provided by third-party crates, for
+//! example [`serde_json`], [`serde_yaml`] and [`bincode`].
 //!
 //! A partial list of well-maintained formats is given on the [Serde
-//! website][data-formats].
+//! website][data formats].
 //!
 //! # Implementations of Serialize provided by Serde
 //!
 //!  - **Primitive types**:
 //!    - bool
-//!    - isize, i8, i16, i32, i64
-//!    - usize, u8, u16, u32, u64
+//!    - i8, i16, i32, i64, isize
+//!    - u8, u16, u32, u64, usize
 //!    - f32, f64
 //!    - char
 //!    - str
@@ -71,6 +70,11 @@
 //!    - VecDeque\<T\>
 //!    - Vec\<T\>
 //!    - EnumSet\<T\> (unstable)
+//!  - **FFI types**:
+//!    - CStr
+//!    - CString
+//!    - OsStr
+//!    - OsString
 //!  - **Miscellaneous standard library types**:
 //!    - Duration
 //!    - Path
@@ -85,12 +89,17 @@
 //!    - SocketAddrV4
 //!    - SocketAddrV6
 //!
-//! [codegen]: https://serde.rs/codegen.html
-//! [impl-serialize]: https://serde.rs/impl-serialize.html
-//! [serde_json]: https://github.com/serde-rs/json
-//! [serde_yaml]: https://github.com/dtolnay/serde-yaml
-//! [bincode]: https://github.com/TyOverby/bincode
-//! [data-formats]: https://serde.rs/#data-formats
+//! [Implementing `Serialize`]: https://serde.rs/impl-serialize.html
+//! [`LinkedHashMap<K, V>`]: https://docs.rs/linked-hash-map/*/linked_hash_map/struct.LinkedHashMap.html
+//! [`Serialize`]: ../trait.Serialize.html
+//! [`Serializer`]: ../trait.Serializer.html
+//! [`bincode`]: https://github.com/TyOverby/bincode
+//! [`linked-hash-map`]: https://crates.io/crates/linked-hash-map
+//! [`serde_derive`]: https://crates.io/crates/serde_derive
+//! [`serde_json`]: https://github.com/serde-rs/json
+//! [`serde_yaml`]: https://github.com/dtolnay/serde-yaml
+//! [codegen section of the manual]: https://serde.rs/codegen.html
+//! [data formats]: https://serde.rs/#data-formats
 
 use lib::*;
 
