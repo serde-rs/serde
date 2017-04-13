@@ -504,6 +504,7 @@ impl Serialize for OsStr {
         use std::os::unix::ffi::OsStrExt;
         serializer.serialize_newtype_variant("OsString", 0, "Unix", self.as_bytes())
     }
+
     #[cfg(windows)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -516,7 +517,6 @@ impl Serialize for OsStr {
 }
 
 #[cfg(all(feature = "std", any(unix, windows)))]
-#[cfg(feature = "std")]
 impl Serialize for OsString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
