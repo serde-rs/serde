@@ -63,7 +63,8 @@ use ser::{self, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
 /// [`SerializeStructVariant`]: trait.SerializeStructVariant.html
 pub struct Impossible<Ok, Error> {
     void: Void,
-    _marker: PhantomData<(Ok, Error)>,
+    ok: PhantomData<Ok>,
+    error: PhantomData<Error>,
 }
 
 enum Void {}
@@ -75,7 +76,8 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, _value: &T) -> Result<(), Error> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        let _ = value;
         match self.void {}
     }
 
@@ -91,7 +93,8 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, _value: &T) -> Result<(), Error> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        let _ = value;
         match self.void {}
     }
 
@@ -107,7 +110,8 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, _value: &T) -> Result<(), Error> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        let _ = value;
         match self.void {}
     }
 
@@ -123,7 +127,8 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, _value: &T) -> Result<(), Error> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        let _ = value;
         match self.void {}
     }
 
@@ -139,11 +144,13 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_key<T: ?Sized + Serialize>(&mut self, _key: &T) -> Result<(), Error> {
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Error> {
+        let _ = key;
         match self.void {}
     }
 
-    fn serialize_value<T: ?Sized + Serialize>(&mut self, _value: &T) -> Result<(), Error> {
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        let _ = value;
         match self.void {}
     }
 
@@ -161,9 +168,11 @@ where
 
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
-        _key: &'static str,
-        _value: &T,
+        key: &'static str,
+        value: &T,
     ) -> Result<(), Error> {
+        let _ = key;
+        let _ = value;
         match self.void {}
     }
 
@@ -181,9 +190,11 @@ where
 
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
-        _key: &'static str,
-        _value: &T,
+        key: &'static str,
+        value: &T,
     ) -> Result<(), Error> {
+        let _ = key;
+        let _ = value;
         match self.void {}
     }
 
