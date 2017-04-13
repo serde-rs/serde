@@ -881,6 +881,22 @@ pub trait Serializer: Sized {
     /// using [`serialize_seq`]. Implementors should not need to override this
     /// method.
     ///
+    /// ```rust
+    /// use serde::{Serialize, Serializer};
+    ///
+    /// struct SecretlyOneHigher {
+    ///     data: Vec<i32>,
+    /// }
+    ///
+    /// impl Serialize for SecretlyOneHigher {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         serializer.collect_seq(self.data.iter().map(|x| x + 1))
+    ///     }
+    /// }
+    /// ```
+    ///
     /// [`serialize_seq`]: #tymethod.serialize_seq
     fn collect_seq<I>(self, iter: I) -> Result<Self::Ok, Self::Error>
     where
