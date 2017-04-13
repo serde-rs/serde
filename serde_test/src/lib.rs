@@ -1,3 +1,5 @@
+#![doc(html_root_url = "https://docs.rs/serde_test/0.9.13")]
+
 #[macro_use]
 extern crate serde;
 
