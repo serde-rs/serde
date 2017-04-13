@@ -7,12 +7,13 @@ use ser::Error;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-macro_rules! impl_visit {
-    ($ty:ty, $method:ident $($cast:tt)*) => {
+macro_rules! primitive_impl {
+    ($ty:ident, $method:ident $($cast:tt)*) => {
         impl Serialize for $ty {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where S: Serializer,
+            where
+                S: Serializer,
             {
                 serializer.$method(*self $($cast)*)
             }
@@ -20,20 +21,20 @@ macro_rules! impl_visit {
     }
 }
 
-impl_visit!(bool, serialize_bool);
-impl_visit!(isize, serialize_i64 as i64);
-impl_visit!(i8, serialize_i8);
-impl_visit!(i16, serialize_i16);
-impl_visit!(i32, serialize_i32);
-impl_visit!(i64, serialize_i64);
-impl_visit!(usize, serialize_u64 as u64);
-impl_visit!(u8, serialize_u8);
-impl_visit!(u16, serialize_u16);
-impl_visit!(u32, serialize_u32);
-impl_visit!(u64, serialize_u64);
-impl_visit!(f32, serialize_f32);
-impl_visit!(f64, serialize_f64);
-impl_visit!(char, serialize_char);
+primitive_impl!(bool, serialize_bool);
+primitive_impl!(isize, serialize_i64 as i64);
+primitive_impl!(i8, serialize_i8);
+primitive_impl!(i16, serialize_i16);
+primitive_impl!(i32, serialize_i32);
+primitive_impl!(i64, serialize_i64);
+primitive_impl!(usize, serialize_u64 as u64);
+primitive_impl!(u8, serialize_u8);
+primitive_impl!(u16, serialize_u16);
+primitive_impl!(u32, serialize_u32);
+primitive_impl!(u64, serialize_u64);
+primitive_impl!(f32, serialize_f32);
+primitive_impl!(f64, serialize_f64);
+primitive_impl!(char, serialize_char);
 
 ////////////////////////////////////////////////////////////////////////////////
 
