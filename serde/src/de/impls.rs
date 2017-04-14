@@ -130,32 +130,36 @@ macro_rules! impl_deserialize_num {
             }
         }
     };
+
     (integer $ty:ident) => {
         visit_integer_method!(i8, visit_i8, from_i8, Signed, i64);
         visit_integer_method!(i16, visit_i16, from_i16, Signed, i64);
         visit_integer_method!(i32, visit_i32, from_i32, Signed, i64);
         visit_integer_method!(i64, visit_i64, from_i64, Signed, i64);
+
         visit_integer_method!(u8, visit_u8, from_u8, Unsigned, u64);
         visit_integer_method!(u16, visit_u16, from_u16, Unsigned, u64);
         visit_integer_method!(u32, visit_u32, from_u32, Unsigned, u64);
         visit_integer_method!(u64, visit_u64, from_u64, Unsigned, u64);
     };
+
     (float $ty:ident) => {
         visit_float_method!(f32, visit_f32);
         visit_float_method!(f64, visit_f64);
     };
 }
 
-impl_deserialize_num!(isize, deserialize_i64, integer);
 impl_deserialize_num!(i8, deserialize_i8, integer);
 impl_deserialize_num!(i16, deserialize_i16, integer);
 impl_deserialize_num!(i32, deserialize_i32, integer);
 impl_deserialize_num!(i64, deserialize_i64, integer);
-impl_deserialize_num!(usize, deserialize_u64, integer);
+impl_deserialize_num!(isize, deserialize_i64, integer);
+
 impl_deserialize_num!(u8, deserialize_u8, integer);
 impl_deserialize_num!(u16, deserialize_u16, integer);
 impl_deserialize_num!(u32, deserialize_u32, integer);
 impl_deserialize_num!(u64, deserialize_u64, integer);
+impl_deserialize_num!(usize, deserialize_u64, integer);
 
 impl_deserialize_num!(f32, deserialize_f32, integer, float);
 impl_deserialize_num!(f64, deserialize_f64, integer, float);

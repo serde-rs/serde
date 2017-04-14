@@ -804,26 +804,6 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
-    /// Hint that the `Deserialize` type is expecting a `u8` value.
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>;
-
-    /// Hint that the `Deserialize` type is expecting a `u16` value.
-    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>;
-
-    /// Hint that the `Deserialize` type is expecting a `u32` value.
-    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>;
-
-    /// Hint that the `Deserialize` type is expecting a `u64` value.
-    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>;
-
     /// Hint that the `Deserialize` type is expecting an `i8` value.
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -841,6 +821,26 @@ pub trait Deserializer<'de>: Sized {
 
     /// Hint that the `Deserialize` type is expecting an `i64` value.
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>;
+
+    /// Hint that the `Deserialize` type is expecting a `u8` value.
+    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>;
+
+    /// Hint that the `Deserialize` type is expecting a `u16` value.
+    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>;
+
+    /// Hint that the `Deserialize` type is expecting a `u32` value.
+    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>;
+
+    /// Hint that the `Deserialize` type is expecting a `u64` value.
+    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
 
@@ -1225,67 +1225,6 @@ pub trait Visitor<'de>: Sized {
         self.visit_str(&v)
     }
 
-    /// Deserialize a `()` into a `Value`.
-    fn visit_unit<E>(self) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Err(Error::invalid_type(Unexpected::Unit, &self))
-    }
-
-    /// Deserialize an absent optional `Value`.
-    fn visit_none<E>(self) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Err(Error::invalid_type(Unexpected::Option, &self))
-    }
-
-    /// Deserialize a present optional `Value`.
-    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let _ = deserializer;
-        Err(Error::invalid_type(Unexpected::Option, &self))
-    }
-
-    /// Deserialize `Value` as a newtype struct.
-    fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let _ = deserializer;
-        Err(Error::invalid_type(Unexpected::NewtypeStruct, &self))
-    }
-
-    /// Deserialize `Value` as a sequence of elements.
-    fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let _ = seq;
-        Err(Error::invalid_type(Unexpected::Seq, &self))
-    }
-
-    /// Deserialize `Value` as a key-value map.
-    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        let _ = map;
-        Err(Error::invalid_type(Unexpected::Map, &self))
-    }
-
-    /// Deserialize `Value` as an enum.
-    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
-    where
-        A: EnumAccess<'de>,
-    {
-        let _ = data;
-        Err(Error::invalid_type(Unexpected::Enum, &self))
-    }
-
     /// Deserialize a `&[u8]` into a `Value`.
     ///
     /// This method allows the `Deserializer` to avoid a copy by retaining
@@ -1340,6 +1279,67 @@ pub trait Visitor<'de>: Sized {
         E: Error,
     {
         self.visit_bytes(&v)
+    }
+
+    /// Deserialize an absent optional `Value`.
+    fn visit_none<E>(self) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Err(Error::invalid_type(Unexpected::Option, &self))
+    }
+
+    /// Deserialize a present optional `Value`.
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let _ = deserializer;
+        Err(Error::invalid_type(Unexpected::Option, &self))
+    }
+
+    /// Deserialize a `()` into a `Value`.
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Err(Error::invalid_type(Unexpected::Unit, &self))
+    }
+
+    /// Deserialize `Value` as a newtype struct.
+    fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let _ = deserializer;
+        Err(Error::invalid_type(Unexpected::NewtypeStruct, &self))
+    }
+
+    /// Deserialize `Value` as a sequence of elements.
+    fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let _ = seq;
+        Err(Error::invalid_type(Unexpected::Seq, &self))
+    }
+
+    /// Deserialize `Value` as a key-value map.
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let _ = map;
+        Err(Error::invalid_type(Unexpected::Map, &self))
+    }
+
+    /// Deserialize `Value` as an enum.
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        let _ = data;
+        Err(Error::invalid_type(Unexpected::Enum, &self))
     }
 }
 

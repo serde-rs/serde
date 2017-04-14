@@ -77,9 +77,9 @@
 ///     }
 ///
 ///     forward_to_deserialize_any! {
-///         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-///         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
-///         tuple_struct struct identifier tuple enum ignored_any
+///         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+///         byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+///         tuple tuple_struct map struct identifier enum ignored_any
 ///     }
 /// }
 /// #
@@ -112,9 +112,9 @@
 /// #
 /// forward_to_deserialize_any! {
 ///     <W: Visitor<'q>>
-///     bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-///     seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
-///     tuple_struct struct identifier tuple enum ignored_any
+///     bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+///     byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+///     tuple tuple_struct map struct identifier enum ignored_any
 /// }
 /// # }
 /// #
@@ -158,18 +158,6 @@ macro_rules! forward_to_deserialize_any_helper {
     (bool<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_bool<$l, $v>()}
     };
-    (u8<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_u8<$l, $v>()}
-    };
-    (u16<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_u16<$l, $v>()}
-    };
-    (u32<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_u32<$l, $v>()}
-    };
-    (u64<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_u64<$l, $v>()}
-    };
     (i8<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_i8<$l, $v>()}
     };
@@ -181,6 +169,18 @@ macro_rules! forward_to_deserialize_any_helper {
     };
     (i64<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_i64<$l, $v>()}
+    };
+    (u8<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_u8<$l, $v>()}
+    };
+    (u16<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_u16<$l, $v>()}
+    };
+    (u32<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_u32<$l, $v>()}
+    };
+    (u64<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_u64<$l, $v>()}
     };
     (f32<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_f32<$l, $v>()}
@@ -197,26 +197,17 @@ macro_rules! forward_to_deserialize_any_helper {
     (string<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_string<$l, $v>()}
     };
-    (unit<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_unit<$l, $v>()}
-    };
-    (option<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_option<$l, $v>()}
-    };
-    (seq<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_seq<$l, $v>()}
-    };
-    (seq_fixed_size<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_seq_fixed_size<$l, $v>(len: usize)}
-    };
     (bytes<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_bytes<$l, $v>()}
     };
     (byte_buf<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_byte_buf<$l, $v>()}
     };
-    (map<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_map<$l, $v>()}
+    (option<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_option<$l, $v>()}
+    };
+    (unit<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_unit<$l, $v>()}
     };
     (unit_struct<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_unit_struct<$l, $v>(name: &'static str)}
@@ -224,17 +215,26 @@ macro_rules! forward_to_deserialize_any_helper {
     (newtype_struct<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_newtype_struct<$l, $v>(name: &'static str)}
     };
+    (seq<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_seq<$l, $v>()}
+    };
+    (seq_fixed_size<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_seq_fixed_size<$l, $v>(len: usize)}
+    };
+    (tuple<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_tuple<$l, $v>(len: usize)}
+    };
     (tuple_struct<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_tuple_struct<$l, $v>(name: &'static str, len: usize)}
+    };
+    (map<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_map<$l, $v>()}
     };
     (struct<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_struct<$l, $v>(name: &'static str, fields: &'static [&'static str])}
     };
     (identifier<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_identifier<$l, $v>()}
-    };
-    (tuple<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_tuple<$l, $v>(len: usize)}
     };
     (enum<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_enum<$l, $v>(name: &'static str, variants: &'static [&'static str])}

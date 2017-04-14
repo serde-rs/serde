@@ -129,9 +129,9 @@ where
     type Error = E;
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
-        seq_fixed_size bytes map unit_struct newtype_struct tuple_struct struct
-        identifier tuple enum ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf unit unit_struct newtype_struct seq seq_fixed_size tuple
+        tuple_struct map struct identifier enum ignored_any
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -182,9 +182,9 @@ macro_rules! primitive_deserializer {
             type Error = E;
 
             forward_to_deserialize_any! {
-                bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit
-                option seq seq_fixed_size bytes map unit_struct newtype_struct
-                tuple_struct struct identifier tuple enum ignored_any byte_buf
+                bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+                byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+                tuple tuple_struct map struct identifier enum ignored_any
             }
 
             fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -239,9 +239,9 @@ where
     type Error = E;
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier ignored_any
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -332,9 +332,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier ignored_any
     }
 }
 
@@ -407,9 +407,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier ignored_any
     }
 }
 
@@ -486,9 +486,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier ignored_any
     }
 }
 
@@ -572,9 +572,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple enum ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier enum ignored_any
     }
 }
 
@@ -686,9 +686,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple enum ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier enum ignored_any
     }
 }
 
@@ -804,9 +804,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        bytes map unit_struct newtype_struct tuple_struct struct identifier
-        tuple enum ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct tuple tuple_struct
+        map struct identifier enum ignored_any
     }
 }
 
@@ -945,9 +945,9 @@ where
     type Error = E;
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        bytes map unit_struct newtype_struct tuple_struct struct identifier
-        tuple enum ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct tuple tuple_struct
+        map struct identifier enum ignored_any
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1092,9 +1092,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-        seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
-        struct identifier tuple enum ignored_any byte_buf
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
+        tuple tuple_struct map struct identifier enum ignored_any
     }
 }
 
