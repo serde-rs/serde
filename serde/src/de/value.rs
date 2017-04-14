@@ -65,10 +65,11 @@ impl de::Error for Error {
     }
 
     #[cfg(not(any(feature = "std", feature = "collections")))]
-    fn custom<T>(_msg: T) -> Self
+    fn custom<T>(msg: T) -> Self
     where
         T: Display,
     {
+        let _ = msg;
         Error { err: () }
     }
 }
@@ -241,13 +242,15 @@ where
 
     fn deserialize_enum<V>(
         self,
-        _name: &str,
-        _variants: &'static [&'static str],
+        name: &str,
+        variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
+        let _ = name;
+        let _ = variants;
         visitor.visit_enum(self)
     }
 }
@@ -305,13 +308,15 @@ where
 
     fn deserialize_enum<V>(
         self,
-        _name: &str,
-        _variants: &'static [&'static str],
+        name: &str,
+        variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
+        let _ = name;
+        let _ = variants;
         visitor.visit_enum(self)
     }
 
@@ -378,13 +383,15 @@ where
 
     fn deserialize_enum<V>(
         self,
-        _name: &str,
-        _variants: &'static [&'static str],
+        name: &str,
+        variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
+        let _ = name;
+        let _ = variants;
         visitor.visit_enum(self)
     }
 
@@ -455,13 +462,15 @@ where
 
     fn deserialize_enum<V>(
         self,
-        _name: &str,
-        _variants: &'static [&'static str],
+        name: &str,
+        variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
+        let _ = name;
+        let _ = variants;
         visitor.visit_enum(self)
     }
 
@@ -761,12 +770,13 @@ where
 
     fn deserialize_seq_fixed_size<V>(
         self,
-        _len: usize,
+        len: usize,
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
+        let _ = len;
         self.deserialize_seq(visitor)
     }
 
