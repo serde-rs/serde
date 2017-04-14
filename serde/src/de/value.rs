@@ -10,7 +10,7 @@
 
 use lib::*;
 
-use de::{self, IntoDeserializer, Expected, SeqVisitor};
+use de::{self, IntoDeserializer, Expected, SeqAccess};
 use self::private::{First, Second};
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -223,14 +223,14 @@ where
     }
 }
 
-impl<'de, E> de::EnumVisitor<'de> for U32Deserializer<E>
+impl<'de, E> de::EnumAccess<'de> for U32Deserializer<E>
 where
     E: de::Error,
 {
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+    fn variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -293,14 +293,14 @@ where
     }
 }
 
-impl<'de, 'a, E> de::EnumVisitor<'de> for StrDeserializer<'a, E>
+impl<'de, 'a, E> de::EnumAccess<'de> for StrDeserializer<'a, E>
 where
     E: de::Error,
 {
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+    fn variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -367,14 +367,14 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, 'a, E> de::EnumVisitor<'de> for StringDeserializer<E>
+impl<'de, 'a, E> de::EnumAccess<'de> for StringDeserializer<E>
 where
     E: de::Error,
 {
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+    fn variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -444,14 +444,14 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
-impl<'de, 'a, E> de::EnumVisitor<'de> for CowStrDeserializer<'a, E>
+impl<'de, 'a, E> de::EnumAccess<'de> for CowStrDeserializer<'a, E>
 where
     E: de::Error,
 {
     type Error = E;
     type Variant = private::UnitOnly<E>;
 
-    fn visit_variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+    fn variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -524,7 +524,7 @@ where
     }
 }
 
-impl<'de, I, T, E> de::SeqVisitor<'de> for SeqDeserializer<I, E>
+impl<'de, I, T, E> de::SeqAccess<'de> for SeqDeserializer<I, E>
 where
     I: Iterator<Item = T>,
     T: IntoDeserializer<'de, E>,
@@ -532,7 +532,7 @@ where
 {
     type Error = E;
 
-    fn visit_seed<V>(&mut self, seed: V) -> Result<Option<V::Value>, Self::Error>
+    fn next_element_seed<V>(&mut self, seed: V) -> Result<Option<V::Value>, Self::Error>
     where
         V: de::DeserializeSeed<'de>,
     {
@@ -605,7 +605,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a sequence using a `SeqVisitor`.
+/// A helper deserializer that deserializes a sequence using a `SeqAccess`.
 #[derive(Clone, Debug)]
 pub struct SeqVisitorDeserializer<V_> {
     visitor: V_,
@@ -620,7 +620,7 @@ impl<V_> SeqVisitorDeserializer<V_> {
 
 impl<'de, V_> de::Deserializer<'de> for SeqVisitorDeserializer<V_>
 where
-    V_: de::SeqVisitor<'de>,
+    V_: de::SeqAccess<'de>,
 {
     type Error = V_::Error;
 
@@ -747,7 +747,7 @@ where
     }
 }
 
-impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
+impl<'de, I, E> de::MapAccess<'de> for MapDeserializer<'de, I, E>
 where
     I: Iterator,
     I::Item: private::Pair,
@@ -757,7 +757,7 @@ where
 {
     type Error = E;
 
-    fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -770,18 +770,18 @@ where
         }
     }
 
-    fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
         let value = self.value.take();
         // Panic because this indicates a bug in the program rather than an
         // expected failure.
-        let value = value.expect("MapVisitor::visit_value called before visit_key");
+        let value = value.expect("MapAccess::visit_value called before visit_key");
         seed.deserialize(value.into_deserializer())
     }
 
-    fn visit_seed<TK, TV>(&mut self,
+    fn next_entry_seed<TK, TV>(&mut self,
                           kseed: TK,
                           vseed: TV)
                           -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
@@ -804,7 +804,7 @@ where
     }
 }
 
-impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
+impl<'de, I, E> de::SeqAccess<'de> for MapDeserializer<'de, I, E>
 where
     I: Iterator,
     I::Item: private::Pair,
@@ -814,7 +814,7 @@ where
 {
     type Error = E;
 
-    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -876,7 +876,7 @@ where
     }
 }
 
-// Used in the `impl SeqVisitor for MapDeserializer` to visit the map as a
+// Used in the `impl SeqAccess for MapDeserializer` to visit the map as a
 // sequence of pairs.
 struct PairDeserializer<A, B, E>(A, B, PhantomData<E>);
 
@@ -933,7 +933,7 @@ where
 
 struct PairVisitor<A, B, E>(Option<A>, Option<B>, PhantomData<E>);
 
-impl<'de, A, B, E> de::SeqVisitor<'de> for PairVisitor<A, B, E>
+impl<'de, A, B, E> de::SeqAccess<'de> for PairVisitor<A, B, E>
 where
     A: IntoDeserializer<'de, E>,
     B: IntoDeserializer<'de, E>,
@@ -941,7 +941,7 @@ where
 {
     type Error = E;
 
-    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: de::DeserializeSeed<'de>,
     {
@@ -1010,7 +1010,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a map using a `MapVisitor`.
+/// A helper deserializer that deserializes a map using a `MapAccess`.
 #[derive(Clone, Debug)]
 pub struct MapVisitorDeserializer<V_> {
     visitor: V_,
@@ -1025,7 +1025,7 @@ impl<V_> MapVisitorDeserializer<V_> {
 
 impl<'de, V_> de::Deserializer<'de> for MapVisitorDeserializer<V_>
 where
-    V_: de::MapVisitor<'de>,
+    V_: de::MapAccess<'de>,
 {
     type Error = V_::Error;
 
@@ -1059,31 +1059,31 @@ mod private {
         (t, UnitOnly { marker: PhantomData })
     }
 
-    impl<'de, E> de::VariantVisitor<'de> for UnitOnly<E>
+    impl<'de, E> de::VariantAccess<'de> for UnitOnly<E>
     where
         E: de::Error,
     {
         type Error = E;
 
-        fn visit_unit(self) -> Result<(), Self::Error> {
+        fn deserialize_unit(self) -> Result<(), Self::Error> {
             Ok(())
         }
 
-        fn visit_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+        fn deserialize_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
         where
             T: de::DeserializeSeed<'de>,
         {
             Err(de::Error::invalid_type(Unexpected::UnitVariant, &"newtype variant"),)
         }
 
-        fn visit_tuple<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
+        fn deserialize_tuple<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
             Err(de::Error::invalid_type(Unexpected::UnitVariant, &"tuple variant"),)
         }
 
-        fn visit_struct<V>(
+        fn deserialize_struct<V>(
             self,
             _fields: &'static [&'static str],
             _visitor: V,
