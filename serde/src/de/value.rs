@@ -759,10 +759,11 @@ where
         Ok(value)
     }
 
-    fn deserialize_seq_fixed_size<V>(self,
-                                     _len: usize,
-                                     visitor: V)
-                                     -> Result<V::Value, Self::Error>
+    fn deserialize_seq_fixed_size<V>(
+        self,
+        _len: usize,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -810,10 +811,11 @@ where
         seed.deserialize(value.into_deserializer())
     }
 
-    fn next_entry_seed<TK, TV>(&mut self,
-                          kseed: TK,
-                          vseed: TV)
-                          -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
+    fn next_entry_seed<TK, TV>(
+        &mut self,
+        kseed: TK,
+        vseed: TV,
+    ) -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
     where
         TK: de::DeserializeSeed<'de>,
         TV: de::DeserializeSeed<'de>,
