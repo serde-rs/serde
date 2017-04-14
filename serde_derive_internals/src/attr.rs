@@ -15,7 +15,7 @@ use std::collections::BTreeSet;
 use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
-// are `attr::Item::from_ast`, `attr::Variant::from_ast`, and
+// are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
 // `attr::Field::from_ast`. Each returns an instance of the corresponding
 // struct. Note that none of them return a Result. Unrecognized, malformed, or
 // duplicated attributes result in a span_err but otherwise are ignored. The
@@ -100,7 +100,7 @@ impl Name {
 
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
-pub struct Item {
+pub struct Container {
     name: Name,
     deny_unknown_fields: bool,
     default: Default,
@@ -145,7 +145,7 @@ pub enum EnumTag {
     None,
 }
 
-impl Item {
+impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::MacroInput) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
@@ -365,7 +365,7 @@ impl Item {
             }
         };
 
-        Item {
+        Container {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
                 deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),

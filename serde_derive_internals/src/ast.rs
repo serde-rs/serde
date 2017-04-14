@@ -11,9 +11,9 @@ use attr;
 use check;
 use Ctxt;
 
-pub struct Item<'a> {
+pub struct Container<'a> {
     pub ident: syn::Ident,
-    pub attrs: attr::Item,
+    pub attrs: attr::Container,
     pub body: Body<'a>,
     pub generics: &'a syn::Generics,
 }
@@ -43,9 +43,9 @@ pub enum Style {
     Unit,
 }
 
-impl<'a> Item<'a> {
-    pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Item<'a> {
-        let attrs = attr::Item::from_ast(cx, item);
+impl<'a> Container<'a> {
+    pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Container<'a> {
+        let attrs = attr::Container::from_ast(cx, item);
 
         let mut body = match item.body {
             syn::Body::Enum(ref variants) => Body::Enum(enum_from_ast(cx, variants)),
@@ -71,7 +71,7 @@ impl<'a> Item<'a> {
             }
         }
 
-        let item = Item {
+        let item = Container {
             ident: item.ident.clone(),
             attrs: attrs,
             body: body,

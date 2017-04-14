@@ -6,12 +6,12 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use ast::{Body, Item};
+use ast::{Body, Container};
 use Ctxt;
 
 /// Cross-cutting checks that require looking at more than a single attrs
 /// object. Simpler checks should happen when parsing and building the attrs.
-pub fn check(cx: &Ctxt, item: &Item) {
+pub fn check(cx: &Ctxt, item: &Container) {
     match item.body {
         Body::Enum(_) => {
             if item.body.has_getter() {

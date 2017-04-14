@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use syn::{self, visit};
 
-use internals::ast::Item;
+use internals::ast::Container;
 use internals::attr;
 
 macro_rules! path {
@@ -53,14 +53,14 @@ pub fn with_where_predicates(
 }
 
 pub fn with_where_predicates_from_fields<F>(
-    item: &Item,
+    cont: &Container,
     generics: &syn::Generics,
     from_field: F,
 ) -> syn::Generics
 where
     F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
 {
-    let predicates = item.body
+    let predicates = cont.body
         .all_fields()
         .flat_map(|field| from_field(&field.attrs))
         .flat_map(|predicates| predicates.to_vec());
@@ -82,7 +82,7 @@ where
 //         c: C,
 //     }
 pub fn with_bound<F>(
-    item: &Item,
+    cont: &Container,
     generics: &syn::Generics,
     filter: F,
     bound: &syn::Path,
@@ -124,7 +124,7 @@ where
         .map(|ty_param| ty_param.ident.clone())
         .collect();
 
-    let relevant_tys = item.body
+    let relevant_tys = cont.body
         .all_fields()
         .filter(|&field| filter(&field.attrs))
         .map(|field| &field.ty);
@@ -169,7 +169,7 @@ where
     generics
 }
 
-pub fn with_self_bound(item: &Item, generics: &syn::Generics, bound: &syn::Path) -> syn::Generics {
+pub fn with_self_bound(cont: &Container, generics: &syn::Generics, bound: &syn::Path) -> syn::Generics {
     let mut generics = generics.clone();
     generics
         .where_clause
@@ -179,7 +179,7 @@ pub fn with_self_bound(item: &Item, generics: &syn::Generics, bound: &syn::Path)
                 syn::WhereBoundPredicate {
                     bound_lifetimes: Vec::new(),
                     // the type that is being bounded e.g. MyStruct<'a, T>
-                    bounded_ty: type_of_item(item),
+                    bounded_ty: type_of_item(cont),
                     // the bound e.g. Default
                     bounds: vec![
                         syn::TyParamBound::Trait(
@@ -222,22 +222,22 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
     generics
 }
 
-fn type_of_item(item: &Item) -> syn::Ty {
+fn type_of_item(cont: &Container) -> syn::Ty {
     syn::Ty::Path(
         None,
         syn::Path {
             global: false,
             segments: vec![
                 syn::PathSegment {
-                    ident: item.ident.clone(),
+                    ident: cont.ident.clone(),
                     parameters: syn::PathParameters::AngleBracketed(
                         syn::AngleBracketedParameterData {
-                            lifetimes: item.generics
+                            lifetimes: cont.generics
                                 .lifetimes
                                 .iter()
                                 .map(|def| def.lifetime.clone())
                                 .collect(),
-                            types: item.generics
+                            types: cont.generics
                                 .ty_params
                                 .iter()
                                 .map(|param| syn::Ty::Path(None, param.ident.clone().into()))
