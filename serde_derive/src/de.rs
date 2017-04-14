@@ -497,7 +497,7 @@ fn deserialize_struct(
     };
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
-            _serde::Deserializer::deserialize(#deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
         }
     } else if is_enum {
         quote! {
@@ -729,7 +729,7 @@ fn deserialize_internally_tagged_enum(
 
         #variants_stmt
 
-        let __tagged = try!(_serde::Deserializer::deserialize(
+        let __tagged = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
             _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag)));
 
@@ -1083,7 +1083,7 @@ fn deserialize_internally_tagged_variant(
             let type_name = params.type_name();
             let variant_name = variant.ident.as_ref();
             quote_block! {
-                try!(_serde::Deserializer::deserialize(#deserializer, _serde::private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
+                try!(_serde::Deserializer::deserialize_any(#deserializer, _serde::private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
                 _serde::export::Ok(#this::#variant_ident)
             }
         }
@@ -1109,7 +1109,7 @@ fn deserialize_untagged_variant(
             let variant_name = variant.ident.as_ref();
             quote_expr! {
                 _serde::export::Result::map(
-                    _serde::Deserializer::deserialize(
+                    _serde::Deserializer::deserialize_any(
                         #deserializer,
                         _serde::private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
                     ),

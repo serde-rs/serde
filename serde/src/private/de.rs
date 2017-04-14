@@ -33,7 +33,7 @@ where
     {
         type Error = E;
 
-        fn deserialize<V>(self, _visitor: V) -> Result<V::Value, E>
+        fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, E>
         where
             V: Visitor<'de>,
         {
@@ -47,7 +47,7 @@ where
             visitor.visit_none()
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
             seq_fixed_size bytes byte_buf map unit_struct newtype_struct
             tuple_struct struct identifier tuple enum ignored_any
@@ -271,7 +271,7 @@ mod content {
         {
             // Untagged and internally tagged enums are only supported in
             // self-describing formats.
-            deserializer.deserialize(ContentVisitor)
+            deserializer.deserialize_any(ContentVisitor)
         }
     }
 
@@ -481,7 +481,7 @@ mod content {
         {
             // Internally tagged enums are only supported in self-describing
             // formats.
-            deserializer.deserialize(self)
+            deserializer.deserialize_any(self)
         }
     }
 
@@ -745,7 +745,7 @@ mod content {
         {
             // Internally tagged enums are only supported in self-describing
             // formats.
-            deserializer.deserialize(self)
+            deserializer.deserialize_any(self)
         }
     }
 
@@ -854,7 +854,7 @@ mod content {
     {
         type Error = E;
 
-        fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
@@ -969,7 +969,7 @@ mod content {
             )
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
             seq_fixed_size bytes byte_buf map unit_struct tuple_struct struct
             identifier tuple ignored_any
@@ -1057,7 +1057,7 @@ mod content {
         {
             match self.value {
                 Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize(SeqDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant"),),
                 None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant"),),
@@ -1074,7 +1074,7 @@ mod content {
         {
             match self.value {
                 Some(Content::Map(v)) => {
-                    de::Deserializer::deserialize(MapDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(MapDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant"),),
                 _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant"),),
@@ -1109,7 +1109,7 @@ mod content {
         type Error = E;
 
         #[inline]
-        fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
@@ -1127,7 +1127,7 @@ mod content {
             }
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
             seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
             tuple_struct struct identifier tuple enum ignored_any
@@ -1221,14 +1221,14 @@ mod content {
         type Error = E;
 
         #[inline]
-        fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
             visitor.visit_map(self)
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
             seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
             tuple_struct struct identifier tuple enum ignored_any
@@ -1250,7 +1250,7 @@ mod content {
     {
         type Error = E;
 
-        fn deserialize<V>(self, visitor: V) -> Result<V::Value, E>
+        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, E>
         where
             V: Visitor<'de>,
         {
@@ -1365,7 +1365,7 @@ mod content {
             )
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
             seq_fixed_size bytes byte_buf map unit_struct tuple_struct struct
             identifier tuple ignored_any
@@ -1450,7 +1450,7 @@ mod content {
         {
             match self.value {
                 Some(&Content::Seq(ref v)) => {
-                    de::Deserializer::deserialize(SeqRefDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"tuple variant"),),
                 None => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"tuple variant"),),
@@ -1467,7 +1467,7 @@ mod content {
         {
             match self.value {
                 Some(&Content::Map(ref v)) => {
-                    de::Deserializer::deserialize(MapRefDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant"),),
                 _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant"),),
@@ -1502,7 +1502,7 @@ mod content {
         type Error = E;
 
         #[inline]
-        fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
@@ -1520,7 +1520,7 @@ mod content {
             }
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
             seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
             tuple_struct struct identifier tuple enum ignored_any
@@ -1615,14 +1615,14 @@ mod content {
         type Error = E;
 
         #[inline]
-        fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
             visitor.visit_map(self)
         }
 
-        forward_to_deserialize! {
+        forward_to_deserialize_any! {
             bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
             seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
             tuple_struct struct identifier tuple enum ignored_any

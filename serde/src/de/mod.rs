@@ -763,22 +763,22 @@ where
 ///    to look at the serialized data and tell what it represents. For example
 ///    the JSON deserializer may see an opening curly brace (`{`) and know that
 ///    it is seeing a map. If the data format supports
-///    `Deserializer::deserialize`, it will drive the Visitor using whatever
+///    `Deserializer::deserialize_any`, it will drive the Visitor using whatever
 ///    type it sees in the input. JSON uses this approach when deserializing
 ///    `serde_json::Value` which is an enum that can represent any JSON
 ///    document. Without knowing what is in a JSON document, we can deserialize
-///    it to `serde_json::Value` by going through `Deserializer::deserialize`.
+///    it to `serde_json::Value` by going through `Deserializer::deserialize_any`.
 ///
 /// 2. The various `deserialize_*` methods. Non-self-describing formats like
 ///    Bincode need to be told what is in the input in order to deserialize it.
 ///    The `deserialize_*` methods are hints to the deserializer for how to
 ///    interpret the next piece of input. Non-self-describing formats are not
 ///    able to deserialize something like `serde_json::Value` which relies on
-///    `Deserializer::deserialize`.
+///    `Deserializer::deserialize_any`.
 ///
 /// When implementing `Deserialize`, you should avoid relying on
-/// `Deserializer::deserialize` unless you need to be told by the Deserializer
-/// what type is in the input. Know that relying on `Deserializer::deserialize`
+/// `Deserializer::deserialize_any` unless you need to be told by the Deserializer
+/// what type is in the input. Know that relying on `Deserializer::deserialize_any`
 /// means your data type will be able to deserialize from self-describing
 /// formats only, ruling out Bincode and many others.
 pub trait Deserializer<'de>: Sized {
@@ -790,12 +790,12 @@ pub trait Deserializer<'de>: Sized {
     /// on what data type is in the input.
     ///
     /// When implementing `Deserialize`, you should avoid relying on
-    /// `Deserializer::deserialize` unless you need to be told by the
+    /// `Deserializer::deserialize_any` unless you need to be told by the
     /// Deserializer what type is in the input. Know that relying on
-    /// `Deserializer::deserialize` means your data type will be able to
+    /// `Deserializer::deserialize_any` means your data type will be able to
     /// deserialize from self-describing formats only, ruling out Bincode and
     /// many others.
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
 

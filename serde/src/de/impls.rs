@@ -1070,7 +1070,7 @@ impl<'de> Deserialize<'de> for OsStringKind {
             }
         }
 
-        deserializer.deserialize(KindVisitor)
+        deserializer.deserialize_identifier(KindVisitor)
     }
 }
 
@@ -1581,7 +1581,7 @@ where
                     }
                 }
 
-                deserializer.deserialize(FieldVisitor)
+                deserializer.deserialize_identifier(FieldVisitor)
             }
         }
 
