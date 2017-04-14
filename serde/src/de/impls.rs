@@ -402,8 +402,7 @@ impl<'de> Deserialize<'de> for Box<CStr> {
     where
         D: Deserializer<'de>,
     {
-        let s = try!(CString::deserialize(deserializer));
-        Ok(s.into_boxed_c_str())
+        CString::deserialize(deserializer).map(CString::into_boxed_c_str)
     }
 }
 
@@ -444,7 +443,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        Ok(Some(try!(Deserialize::deserialize(deserializer))))
+        T::deserialize(deserializer).map(Some)
     }
 }
 
@@ -494,63 +493,56 @@ impl<'de, T> Deserialize<'de> for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! seq_impl {
     (
-        $ty:ident < T $(, $typaram:ident)* >,
-        $visitor_ty:ident $( < $($boundparam:ident : $bound1:ident $(+ $bound2:ident)*),* > )*,
+        $ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
         $access:ident,
         $ctor:expr,
         $with_capacity:expr,
         $insert:expr
     ) => {
-        struct $visitor_ty<T $(, $typaram)*> {
-            marker: PhantomData<$ty<T $(, $typaram)*>>,
-        }
-
-        impl<T $(, $typaram),*> $visitor_ty<T $(, $typaram)*> {
-            fn new() -> Self {
-                $visitor_ty {
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl<'de, T $(, $typaram)*> Visitor<'de> for $visitor_ty<T $(, $typaram)*>
-        where
-            T: Deserialize<'de>,
-            $($($boundparam: $bound1 $(+ $bound2)*),*)*
-        {
-            type Value = $ty<T $(, $typaram)*>;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a sequence")
-            }
-
-            #[inline]
-            fn visit_seq<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let mut values = $with_capacity;
-
-                while let Some(value) = try!($access.next_element()) {
-                    $insert(&mut values, value);
-                }
-
-                Ok(values)
-            }
-        }
-
         impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
         where
-            T: Deserialize<'de>,
-            $($($boundparam: $bound1 $(+ $bound2)*),*)*
+            T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
+            $($typaram: $bound1 $(+ $bound2)*,)*
         {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
-                deserializer.deserialize_seq($visitor_ty::new())
+                struct SeqVisitor<T $(, $typaram)*> {
+                    marker: PhantomData<$ty<T $(, $typaram)*>>,
+                }
+
+                impl<'de, T $(, $typaram)*> Visitor<'de> for SeqVisitor<T $(, $typaram)*>
+                where
+                    T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
+                    $($typaram: $bound1 $(+ $bound2)*,)*
+                {
+                    type Value = $ty<T $(, $typaram)*>;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("a sequence")
+                    }
+
+                    #[inline]
+                    fn visit_seq<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: SeqAccess<'de>,
+                    {
+                        let mut values = $with_capacity;
+
+                        while let Some(value) = try!($access.next_element()) {
+                            $insert(&mut values, value);
+                        }
+
+                        Ok(values)
+                    }
+                }
+
+                let visitor = SeqVisitor { marker: PhantomData };
+                deserializer.deserialize_seq(visitor)
             }
         }
     }
@@ -558,8 +550,7 @@ macro_rules! seq_impl {
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    BinaryHeap<T>,
-    BinaryHeapVisitor<T: Ord>,
+    BinaryHeap<T: Ord>,
     seq,
     BinaryHeap::new(),
     BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
@@ -567,8 +558,7 @@ seq_impl!(
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
-    BTreeSet<T>,
-    BTreeSetVisitor<T: Eq + Ord>,
+    BTreeSet<T: Eq + Ord>,
     seq,
     BTreeSet::new(),
     BTreeSet::new(),
@@ -577,7 +567,6 @@ seq_impl!(
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     LinkedList<T>,
-    LinkedListVisitor,
     seq,
     LinkedList::new(),
     LinkedList::new(),
@@ -585,9 +574,7 @@ seq_impl!(
 
 #[cfg(feature = "std")]
 seq_impl!(
-    HashSet<T, S>,
-    HashSetVisitor<T: Eq + Hash,
-                   S: BuildHasher + Default>,
+    HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
     HashSet::with_hasher(S::default()),
     HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
@@ -596,7 +583,6 @@ seq_impl!(
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     Vec<T>,
-    VecVisitor,
     seq,
     Vec::new(),
     Vec::with_capacity(size_hint::cautious(seq.size_hint())),
@@ -605,7 +591,6 @@ seq_impl!(
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     VecDeque<T>,
-    VecDequeVisitor,
     seq,
     VecDeque::new(),
     VecDeque::with_capacity(size_hint::cautious(seq.size_hint())),
@@ -731,7 +716,7 @@ array_impls! {
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {
-    ($($len:expr => $visitor:ident => ($($n:tt $name:ident)+))+) => {
+    ($($len:tt $visitor:ident => ($($n:tt $name:ident)+))+) => {
         $(
             struct $visitor<$($name,)+> {
                 marker: PhantomData<($($name,)+)>,
@@ -781,84 +766,77 @@ macro_rules! tuple_impls {
 }
 
 tuple_impls! {
-    1 => TupleVisitor1 => (0 T0)
-    2 => TupleVisitor2 => (0 T0 1 T1)
-    3 => TupleVisitor3 => (0 T0 1 T1 2 T2)
-    4 => TupleVisitor4 => (0 T0 1 T1 2 T2 3 T3)
-    5 => TupleVisitor5 => (0 T0 1 T1 2 T2 3 T3 4 T4)
-    6 => TupleVisitor6 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5)
-    7 => TupleVisitor7 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6)
-    8 => TupleVisitor8 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7)
-    9 => TupleVisitor9 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8)
-    10 => TupleVisitor10 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9)
-    11 => TupleVisitor11 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10)
-    12 => TupleVisitor12 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11)
-    13 => TupleVisitor13 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12)
-    14 => TupleVisitor14 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13)
-    15 => TupleVisitor15 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14)
-    16 => TupleVisitor16 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15)
+    1 TupleVisitor1 => (0 T0)
+    2 TupleVisitor2 => (0 T0 1 T1)
+    3 TupleVisitor3 => (0 T0 1 T1 2 T2)
+    4 TupleVisitor4 => (0 T0 1 T1 2 T2 3 T3)
+    5 TupleVisitor5 => (0 T0 1 T1 2 T2 3 T3 4 T4)
+    6 TupleVisitor6 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5)
+    7 TupleVisitor7 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6)
+    8 TupleVisitor8 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7)
+    9 TupleVisitor9 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8)
+    10 TupleVisitor10 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9)
+    11 TupleVisitor11 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10)
+    12 TupleVisitor12 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11)
+    13 TupleVisitor13 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12)
+    14 TupleVisitor14 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13)
+    15 TupleVisitor15 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14)
+    16 TupleVisitor16 => (0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! map_impl {
     (
-        $ty:ident < K, V $(, $typaram:ident)* >,
-        $visitor_ty:ident < $($boundparam:ident : $bound1:ident $(+ $bound2:ident)*),* >,
+        $ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
         $access:ident,
         $ctor:expr,
         $with_capacity:expr
     ) => {
-        struct $visitor_ty<K, V $(, $typaram)*> {
-            marker: PhantomData<$ty<K, V $(, $typaram)*>>,
-        }
-
-        impl<K, V $(, $typaram)*> $visitor_ty<K, V $(, $typaram)*> {
-            fn new() -> Self {
-                $visitor_ty {
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl<'de, K, V $(, $typaram)*> Visitor<'de> for $visitor_ty<K, V $(, $typaram)*>
-        where
-            K: Deserialize<'de>,
-            V: Deserialize<'de>,
-            $($boundparam: $bound1 $(+ $bound2)*),*
-        {
-            type Value = $ty<K, V $(, $typaram)*>;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a map")
-            }
-
-            #[inline]
-            fn visit_map<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let mut values = $with_capacity;
-
-                while let Some((key, value)) = try!($access.next_entry()) {
-                    values.insert(key, value);
-                }
-
-                Ok(values)
-            }
-        }
-
         impl<'de, K, V $(, $typaram)*> Deserialize<'de> for $ty<K, V $(, $typaram)*>
         where
-            K: Deserialize<'de>,
+            K: Deserialize<'de> $(+ $kbound1 $(+ $kbound2)*)*,
             V: Deserialize<'de>,
-            $($boundparam: $bound1 $(+ $bound2)*),*
+            $($typaram: $bound1 $(+ $bound2)*),*
         {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
-                deserializer.deserialize_map($visitor_ty::new())
+                struct MapVisitor<K, V $(, $typaram)*> {
+                    marker: PhantomData<$ty<K, V $(, $typaram)*>>,
+                }
+
+                impl<'de, K, V $(, $typaram)*> Visitor<'de> for MapVisitor<K, V $(, $typaram)*>
+                where
+                    K: Deserialize<'de> $(+ $kbound1 $(+ $kbound2)*)*,
+                    V: Deserialize<'de>,
+                    $($typaram: $bound1 $(+ $bound2)*),*
+                {
+                    type Value = $ty<K, V $(, $typaram)*>;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("a map")
+                    }
+
+                    #[inline]
+                    fn visit_map<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: MapAccess<'de>,
+                    {
+                        let mut values = $with_capacity;
+
+                        while let Some((key, value)) = try!($access.next_entry()) {
+                            values.insert(key, value);
+                        }
+
+                        Ok(values)
+                    }
+                }
+
+                let visitor = MapVisitor { marker: PhantomData };
+                deserializer.deserialize_map(visitor)
             }
         }
     }
@@ -866,17 +844,14 @@ macro_rules! map_impl {
 
 #[cfg(any(feature = "std", feature = "collections"))]
 map_impl!(
-    BTreeMap<K, V>,
-    BTreeMapVisitor<K: Ord>,
+    BTreeMap<K: Ord, V>,
     map,
     BTreeMap::new(),
     BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
-    HashMap<K, V, S>,
-    HashMapVisitor<K: Eq + Hash,
-                   S: BuildHasher + Default>,
+    HashMap<K: Eq + Hash, V, S: BuildHasher + Default>,
     map,
     HashMap::with_hasher(S::default()),
     HashMap::with_capacity_and_hasher(size_hint::cautious(map.size_hint()), S::default()));
@@ -884,90 +859,37 @@ map_impl!(
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for net::IpAddr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = try!(String::deserialize(deserializer));
-        match s.parse() {
-            Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::custom(err)),
+macro_rules! parse_impl {
+    ($ty:ty) => {
+        impl<'de> Deserialize<'de> for $ty {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                let s = try!(String::deserialize(deserializer));
+                s.parse().map_err(Error::custom)
+            }
         }
     }
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for net::Ipv4Addr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = try!(String::deserialize(deserializer));
-        match s.parse() {
-            Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::custom(err)),
-        }
-    }
-}
+parse_impl!(net::IpAddr);
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for net::Ipv6Addr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = try!(String::deserialize(deserializer));
-        match s.parse() {
-            Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::custom(err)),
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
+parse_impl!(net::Ipv4Addr);
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for net::SocketAddr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = try!(String::deserialize(deserializer));
-        match s.parse() {
-            Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::custom(err)),
-        }
-    }
-}
+parse_impl!(net::Ipv6Addr);
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for net::SocketAddrV4 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = try!(String::deserialize(deserializer));
-        match s.parse() {
-            Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::custom(err)),
-        }
-    }
-}
+parse_impl!(net::SocketAddr);
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for net::SocketAddrV6 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = try!(String::deserialize(deserializer));
-        match s.parse() {
-            Ok(s) => Ok(s),
-            Err(err) => Err(D::Error::custom(err)),
-        }
-    }
-}
+parse_impl!(net::SocketAddrV4);
+
+#[cfg(feature = "std")]
+parse_impl!(net::SocketAddrV6);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1140,8 +1062,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let val = try!(Deserialize::deserialize(deserializer));
-        Ok(Box::new(val))
+        T::deserialize(deserializer).map(Box::new)
     }
 }
 
@@ -1154,8 +1075,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let v: Vec<T> = try!(Deserialize::deserialize(deserializer));
-        Ok(v.into_boxed_slice())
+        Vec::<T>::deserialize(deserializer).map(Vec::into_boxed_slice)
     }
 }
 
@@ -1165,8 +1085,7 @@ impl<'de> Deserialize<'de> for Box<str> {
     where
         D: Deserializer<'de>,
     {
-        let s = try!(String::deserialize(deserializer));
-        Ok(s.into_boxed_str())
+        String::deserialize(deserializer).map(String::into_boxed_str)
     }
 }
 
@@ -1179,8 +1098,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let val = try!(Deserialize::deserialize(deserializer));
-        Ok(Arc::new(val))
+        T::deserialize(deserializer).map(Arc::new)
     }
 }
 
@@ -1193,8 +1111,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let val = try!(Deserialize::deserialize(deserializer));
-        Ok(Rc::new(val))
+        T::deserialize(deserializer).map(Rc::new)
     }
 }
 
@@ -1209,8 +1126,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let val = try!(Deserialize::deserialize(deserializer));
-        Ok(Cow::Owned(val))
+        T::Owned::deserialize(deserializer).map(Cow::Owned)
     }
 }
 
@@ -1505,6 +1421,8 @@ where
         if value == Zero::zero() {
             return Err(Error::custom("expected a non-zero value"));
         }
+        // Waiting for a safe way to construct NonZero<T>:
+        // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
         unsafe { Ok(NonZero::new(value)) }
     }
 }
