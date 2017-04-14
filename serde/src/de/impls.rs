@@ -8,11 +8,11 @@
 
 use lib::*;
 
-use de::{Deserialize, Deserializer, EnumVisitor, Error, SeqVisitor, Unexpected, VariantVisitor,
+use de::{Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess,
          Visitor};
 
 #[cfg(any(feature = "std", feature = "collections"))]
-use de::MapVisitor;
+use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 
@@ -340,14 +340,14 @@ impl<'de> Visitor<'de> for CStringVisitor {
         formatter.write_str("byte array")
     }
 
-    fn visit_seq<V>(self, mut visitor: V) -> Result<CString, V::Error>
+    fn visit_seq<A>(self, mut seq: A) -> Result<CString, A::Error>
     where
-        V: SeqVisitor<'de>,
+        A: SeqAccess<'de>,
     {
-        let len = cmp::min(visitor.size_hint().0, 4096);
+        let len = cmp::min(seq.size_hint().0, 4096);
         let mut values = Vec::with_capacity(len);
 
-        while let Some(value) = try!(visitor.visit()) {
+        while let Some(value) = try!(seq.next_element()) {
             values.push(value);
         }
 
@@ -495,7 +495,7 @@ macro_rules! seq_impl {
     (
         $ty:ident < T $(, $typaram:ident)* >,
         $visitor_ty:ident $( < $($boundparam:ident : $bound1:ident $(+ $bound2:ident)*),* > )*,
-        $visitor:ident,
+        $access:ident,
         $ctor:expr,
         $with_capacity:expr,
         $insert:expr
@@ -524,13 +524,13 @@ macro_rules! seq_impl {
             }
 
             #[inline]
-            fn visit_seq<V>(self, mut $visitor: V) -> Result<Self::Value, V::Error>
+            fn visit_seq<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
             where
-                V: SeqVisitor<'de>,
+                A: SeqAccess<'de>,
             {
                 let mut values = $with_capacity;
 
-                while let Some(value) = try!($visitor.visit()) {
+                while let Some(value) = try!($access.next_element()) {
                     $insert(&mut values, value);
                 }
 
@@ -628,9 +628,9 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
     }
 
     #[inline]
-    fn visit_seq<V>(self, _: V) -> Result<[T; 0], V::Error>
+    fn visit_seq<A>(self, _: A) -> Result<[T; 0], A::Error>
     where
-        V: SeqVisitor<'de>,
+        A: SeqAccess<'de>,
     {
         Ok([])
     }
@@ -660,12 +660,12 @@ macro_rules! array_impls {
                 }
 
                 #[inline]
-                fn visit_seq<V>(self, mut visitor: V) -> Result<[T; $len], V::Error>
+                fn visit_seq<A>(self, mut seq: A) -> Result<[T; $len], A::Error>
                 where
-                    V: SeqVisitor<'de>,
+                    A: SeqAccess<'de>,
                 {
                     $(
-                        let $name = match try!(visitor.visit()) {
+                        let $name = match try!(seq.next_element()) {
                             Some(val) => val,
                             None => return Err(Error::invalid_length($n, &self)),
                         };
@@ -749,12 +749,12 @@ macro_rules! tuple_impls {
 
                 #[inline]
                 #[allow(non_snake_case)]
-                fn visit_seq<V>(self, mut visitor: V) -> Result<($($name,)+), V::Error>
+                fn visit_seq<A>(self, mut seq: A) -> Result<($($name,)+), A::Error>
                 where
-                    V: SeqVisitor<'de>,
+                    A: SeqAccess<'de>,
                 {
                     $(
-                        let $name = match try!(visitor.visit()) {
+                        let $name = match try!(seq.next_element()) {
                             Some(value) => value,
                             None => return Err(Error::invalid_length($n, &self)),
                         };
@@ -802,7 +802,7 @@ macro_rules! map_impl {
     (
         $ty:ident < K, V $(, $typaram:ident)* >,
         $visitor_ty:ident < $($boundparam:ident : $bound1:ident $(+ $bound2:ident)*),* >,
-        $visitor:ident,
+        $access:ident,
         $ctor:expr,
         $with_capacity:expr
     ) => {
@@ -831,13 +831,13 @@ macro_rules! map_impl {
             }
 
             #[inline]
-            fn visit_map<Visitor>(self, mut $visitor: Visitor) -> Result<Self::Value, Visitor::Error>
+            fn visit_map<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
             where
-                Visitor: MapVisitor<'de>,
+                A: MapAccess<'de>,
             {
                 let mut values = $with_capacity;
 
-                while let Some((key, value)) = try!($visitor.visit()) {
+                while let Some((key, value)) = try!($access.next_entry()) {
                     values.insert(key, value);
                 }
 
@@ -1086,29 +1086,29 @@ impl<'de> Visitor<'de> for OsStringVisitor {
     }
 
     #[cfg(unix)]
-    fn visit_enum<V>(self, visitor: V) -> Result<OsString, V::Error>
+    fn visit_enum<A>(self, data: A) -> Result<OsString, A::Error>
     where
-        V: EnumVisitor<'de>,
+        A: EnumAccess<'de>,
     {
         use std::os::unix::ffi::OsStringExt;
 
-        match try!(visitor.visit_variant()) {
-            (OsStringKind::Unix, variant) => variant.visit_newtype().map(OsString::from_vec),
+        match try!(data.variant()) {
+            (OsStringKind::Unix, variant) => variant.deserialize_newtype().map(OsString::from_vec),
             (OsStringKind::Windows, _) => Err(Error::custom("cannot deserialize Windows OS string on Unix",),),
         }
     }
 
     #[cfg(windows)]
-    fn visit_enum<V>(self, visitor: V) -> Result<OsString, V::Error>
+    fn visit_enum<A>(self, data: A) -> Result<OsString, A::Error>
     where
-        V: EnumVisitor<'de>,
+        A: EnumAccess<'de>,
     {
         use std::os::windows::ffi::OsStringExt;
 
-        match try!(visitor.visit_variant()) {
+        match try!(data.variant()) {
             (OsStringKind::Windows, variant) => {
                 variant
-                    .visit_newtype::<Vec<u16>>()
+                    .deserialize_newtype::<Vec<u16>>()
                     .map(|vec| OsString::from_wide(&vec))
             }
             (OsStringKind::Unix, _) => Err(Error::custom("cannot deserialize Unix OS string on Windows",),),
@@ -1285,17 +1285,17 @@ impl<'de> Deserialize<'de> for Duration {
                 formatter.write_str("struct Duration")
             }
 
-            fn visit_seq<V>(self, mut visitor: V) -> Result<Duration, V::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<Duration, A::Error>
             where
-                V: SeqVisitor<'de>,
+                A: SeqAccess<'de>,
             {
-                let secs: u64 = match try!(visitor.visit()) {
+                let secs: u64 = match try!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(0, &self));
                     }
                 };
-                let nanos: u32 = match try!(visitor.visit()) {
+                let nanos: u32 = match try!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(1, &self));
@@ -1304,35 +1304,35 @@ impl<'de> Deserialize<'de> for Duration {
                 Ok(Duration::new(secs, nanos))
             }
 
-            fn visit_map<V>(self, mut visitor: V) -> Result<Duration, V::Error>
+            fn visit_map<A>(self, mut map: A) -> Result<Duration, A::Error>
             where
-                V: MapVisitor<'de>,
+                A: MapAccess<'de>,
             {
                 let mut secs: Option<u64> = None;
                 let mut nanos: Option<u32> = None;
-                while let Some(key) = try!(visitor.visit_key::<Field>()) {
+                while let Some(key) = try!(map.next_key()) {
                     match key {
                         Field::Secs => {
                             if secs.is_some() {
-                                return Err(<V::Error as Error>::duplicate_field("secs"));
+                                return Err(<A::Error as Error>::duplicate_field("secs"));
                             }
-                            secs = Some(try!(visitor.visit_value()));
+                            secs = Some(try!(map.next_value()));
                         }
                         Field::Nanos => {
                             if nanos.is_some() {
-                                return Err(<V::Error as Error>::duplicate_field("nanos"));
+                                return Err(<A::Error as Error>::duplicate_field("nanos"));
                             }
-                            nanos = Some(try!(visitor.visit_value()));
+                            nanos = Some(try!(map.next_value()));
                         }
                     }
                 }
                 let secs = match secs {
                     Some(secs) => secs,
-                    None => return Err(<V::Error as Error>::missing_field("secs")),
+                    None => return Err(<A::Error as Error>::missing_field("secs")),
                 };
                 let nanos = match nanos {
                     Some(nanos) => nanos,
-                    None => return Err(<V::Error as Error>::missing_field("nanos")),
+                    None => return Err(<A::Error as Error>::missing_field("nanos")),
                 };
                 Ok(Duration::new(secs, nanos))
             }
@@ -1425,17 +1425,17 @@ where
                 formatter.write_str("struct Range")
             }
 
-            fn visit_seq<V>(self, mut visitor: V) -> Result<ops::Range<Idx>, V::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<ops::Range<Idx>, A::Error>
             where
-                V: SeqVisitor<'de>,
+                A: SeqAccess<'de>,
             {
-                let start: Idx = match try!(visitor.visit()) {
+                let start: Idx = match try!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(0, &self));
                     }
                 };
-                let end: Idx = match try!(visitor.visit()) {
+                let end: Idx = match try!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(1, &self));
@@ -1444,35 +1444,35 @@ where
                 Ok(start..end)
             }
 
-            fn visit_map<V>(self, mut visitor: V) -> Result<ops::Range<Idx>, V::Error>
+            fn visit_map<A>(self, mut map: A) -> Result<ops::Range<Idx>, A::Error>
             where
-                V: MapVisitor<'de>,
+                A: MapAccess<'de>,
             {
                 let mut start: Option<Idx> = None;
                 let mut end: Option<Idx> = None;
-                while let Some(key) = try!(visitor.visit_key::<Field>()) {
+                while let Some(key) = try!(map.next_key()) {
                     match key {
                         Field::Start => {
                             if start.is_some() {
-                                return Err(<V::Error as Error>::duplicate_field("start"));
+                                return Err(<A::Error as Error>::duplicate_field("start"));
                             }
-                            start = Some(try!(visitor.visit_value()));
+                            start = Some(try!(map.next_value()));
                         }
                         Field::End => {
                             if end.is_some() {
-                                return Err(<V::Error as Error>::duplicate_field("end"));
+                                return Err(<A::Error as Error>::duplicate_field("end"));
                             }
-                            end = Some(try!(visitor.visit_value()));
+                            end = Some(try!(map.next_value()));
                         }
                     }
                 }
                 let start = match start {
                     Some(start) => start,
-                    None => return Err(<V::Error as Error>::missing_field("start")),
+                    None => return Err(<A::Error as Error>::missing_field("start")),
                 };
                 let end = match end {
                     Some(end) => end,
-                    None => return Err(<V::Error as Error>::missing_field("end")),
+                    None => return Err(<A::Error as Error>::missing_field("end")),
                 };
                 Ok(start..end)
             }
@@ -1598,13 +1598,13 @@ where
                 formatter.write_str("enum Result")
             }
 
-            fn visit_enum<V>(self, visitor: V) -> Result<Result<T, E>, V::Error>
+            fn visit_enum<A>(self, data: A) -> Result<Result<T, E>, A::Error>
             where
-                V: EnumVisitor<'de>,
+                A: EnumAccess<'de>,
             {
-                match try!(visitor.visit_variant()) {
-                    (Field::Ok, variant) => variant.visit_newtype().map(Ok),
-                    (Field::Err, variant) => variant.visit_newtype().map(Err),
+                match try!(data.variant()) {
+                    (Field::Ok, variant) => variant.deserialize_newtype().map(Ok),
+                    (Field::Err, variant) => variant.deserialize_newtype().map(Err),
                 }
             }
         }

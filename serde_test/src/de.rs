@@ -6,8 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use serde::de::{self, Deserialize, DeserializeSeed, EnumVisitor, IntoDeserializer, MapVisitor,
-                SeqVisitor, VariantVisitor, Visitor};
+use serde::de::{self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess,
+                SeqAccess, VariantAccess, Visitor};
 use serde::de::value::{MapVisitorDeserializer, SeqVisitorDeserializer};
 
 use error::Error;
@@ -390,10 +390,10 @@ struct DeserializerSeqVisitor<'a, 'de: 'a> {
     end: Token,
 }
 
-impl<'de, 'a> SeqVisitor<'de> for DeserializerSeqVisitor<'a, 'de> {
+impl<'de, 'a> SeqAccess<'de> for DeserializerSeqVisitor<'a, 'de> {
     type Error = Error;
 
-    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Error>
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Error>
     where
         T: DeserializeSeed<'de>,
     {
@@ -418,10 +418,10 @@ struct DeserializerMapVisitor<'a, 'de: 'a> {
     end: Token,
 }
 
-impl<'de, 'a> MapVisitor<'de> for DeserializerMapVisitor<'a, 'de> {
+impl<'de, 'a> MapAccess<'de> for DeserializerMapVisitor<'a, 'de> {
     type Error = Error;
 
-    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Error>
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Error>
     where
         K: DeserializeSeed<'de>,
     {
@@ -432,7 +432,7 @@ impl<'de, 'a> MapVisitor<'de> for DeserializerMapVisitor<'a, 'de> {
         seed.deserialize(&mut *self.de).map(Some)
     }
 
-    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Error>
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Error>
     where
         V: DeserializeSeed<'de>,
     {
@@ -451,11 +451,11 @@ struct DeserializerEnumVisitor<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
 }
 
-impl<'de, 'a> EnumVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
+impl<'de, 'a> EnumAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
     type Error = Error;
     type Variant = Self;
 
-    fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, Self), Error>
+    fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self), Error>
     where
         V: DeserializeSeed<'de>,
     {
@@ -477,10 +477,10 @@ impl<'de, 'a> EnumVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
     }
 }
 
-impl<'de, 'a> VariantVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
+impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
     type Error = Error;
 
-    fn visit_unit(self) -> Result<(), Error> {
+    fn deserialize_unit(self) -> Result<(), Error> {
         match self.de.tokens.first() {
             Some(&Token::UnitVariant(_, _)) => {
                 self.de.next_token();
@@ -491,7 +491,7 @@ impl<'de, 'a> VariantVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
         }
     }
 
-    fn visit_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+    fn deserialize_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
     where
         T: DeserializeSeed<'de>,
     {
@@ -505,7 +505,7 @@ impl<'de, 'a> VariantVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
         }
     }
 
-    fn visit_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
@@ -534,7 +534,7 @@ impl<'de, 'a> VariantVisitor<'de> for DeserializerEnumVisitor<'a, 'de> {
         }
     }
 
-    fn visit_struct<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value, Error>
+    fn deserialize_struct<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
@@ -589,10 +589,10 @@ impl<'a, 'de> EnumMapVisitor<'a, 'de> {
     }
 }
 
-impl<'de, 'a> MapVisitor<'de> for EnumMapVisitor<'a, 'de> {
+impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
     type Error = Error;
 
-    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Error>
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Error>
     where
         K: DeserializeSeed<'de>,
     {
@@ -608,7 +608,7 @@ impl<'de, 'a> MapVisitor<'de> for EnumMapVisitor<'a, 'de> {
         }
     }
 
-    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Error>
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Error>
     where
         V: DeserializeSeed<'de>,
     {

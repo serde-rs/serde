@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
+use de::{Deserialize, Deserializer, Visitor, SeqAccess, MapAccess, Error};
 
 /// An efficient way of discarding data from a deserializer.
 ///
@@ -20,7 +20,7 @@ use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
-/// use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, IgnoredAny};
+/// use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqAccess, IgnoredAny};
 ///
 /// /// A seed that can be used to deserialize only the `n`th element of a sequence
 /// /// while efficiently discarding elements of any type before or after index `n`.
@@ -53,19 +53,19 @@ use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
 ///         write!(formatter, "a sequence in which we care about element {}", self.n)
 ///     }
 ///
-///     fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
-///         where V: SeqVisitor<'de>
+///     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+///         where A: SeqAccess<'de>
 ///     {
 ///         // Skip over the first `n` elements.
 ///         for i in 0..self.n {
 ///             // It is an error if the sequence ends before we get to element `n`.
-///             if seq.visit::<IgnoredAny>()?.is_none() {
+///             if seq.next_element::<IgnoredAny>()?.is_none() {
 ///                 return Err(de::Error::invalid_length(i, &self));
 ///             }
 ///         }
 ///
 ///         // Deserialize the one we care about.
-///         let nth = match seq.visit()? {
+///         let nth = match seq.next_element()? {
 ///             Some(nth) => nth,
 ///             None => {
 ///                 return Err(de::Error::invalid_length(self.n, &self));
@@ -73,7 +73,7 @@ use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
 ///         };
 ///
 ///         // Skip over any remaining elements in the sequence after `n`.
-///         while let Some(IgnoredAny) = seq.visit()? {
+///         while let Some(IgnoredAny) = seq.next_element()? {
 ///             // ignore
 ///         }
 ///
@@ -173,22 +173,22 @@ impl<'de> Visitor<'de> for IgnoredAny {
     }
 
     #[inline]
-    fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
     where
-        V: SeqVisitor<'de>,
+        A: SeqAccess<'de>,
     {
-        while let Some(IgnoredAny) = try!(visitor.visit()) {
+        while let Some(IgnoredAny) = try!(seq.next_element()) {
             // Gobble
         }
         Ok(IgnoredAny)
     }
 
     #[inline]
-    fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
     where
-        V: MapVisitor<'de>,
+        A: MapAccess<'de>,
     {
-        while let Some((IgnoredAny, IgnoredAny)) = try!(visitor.visit()) {
+        while let Some((IgnoredAny, IgnoredAny)) = try!(map.next_entry()) {
             // Gobble
         }
         Ok(IgnoredAny)

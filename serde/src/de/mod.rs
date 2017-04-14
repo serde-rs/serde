@@ -585,7 +585,7 @@ where
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
-/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor};
+/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, SeqAccess};
 ///
 /// // A DeserializeSeed implementation that uses stateful deserialization to
 /// // append array elements onto the end of an existing vector. The preexisting
@@ -618,12 +618,12 @@ where
 ///                 write!(formatter, "an array of integers")
 ///             }
 ///
-///             fn visit_seq<V>(self, mut visitor: V) -> Result<(), V::Error>
-///                 where V: SeqVisitor<'de>
+///             fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
+///                 where A: SeqAccess<'de>
 ///             {
 ///                 // Visit each element in the inner array and push it onto
 ///                 // the existing vector.
-///                 while let Some(elem) = visitor.visit()? {
+///                 while let Some(elem) = seq.next_element()? {
 ///                     self.0.push(elem);
 ///                 }
 ///                 Ok(())
@@ -648,14 +648,14 @@ where
 ///         write!(formatter, "an array of arrays")
 ///     }
 ///
-///     fn visit_seq<V>(self, mut visitor: V) -> Result<Vec<T>, V::Error>
-///         where V: SeqVisitor<'de>
+///     fn visit_seq<A>(self, mut seq: A) -> Result<Vec<T>, A::Error>
+///         where A: SeqAccess<'de>
 ///     {
 ///         // Create a single Vec to hold the flattened contents.
 ///         let mut vec = Vec::new();
 ///
 ///         // Each iteration through this loop is one inner array.
-///         while let Some(()) = visitor.visit_seed(ExtendVec(&mut vec))? {
+///         while let Some(()) = seq.next_element_seed(ExtendVec(&mut vec))? {
 ///             // Nothing to do; inner array has been appended into `vec`.
 ///         }
 ///
@@ -1260,29 +1260,29 @@ pub trait Visitor<'de>: Sized {
     }
 
     /// Deserialize `Value` as a sequence of elements.
-    fn visit_seq<V>(self, visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
     where
-        V: SeqVisitor<'de>,
+        A: SeqAccess<'de>,
     {
-        let _ = visitor;
+        let _ = seq;
         Err(Error::invalid_type(Unexpected::Seq, &self))
     }
 
     /// Deserialize `Value` as a key-value map.
-    fn visit_map<V>(self, visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
     where
-        V: MapVisitor<'de>,
+        A: MapAccess<'de>,
     {
-        let _ = visitor;
+        let _ = map;
         Err(Error::invalid_type(Unexpected::Map, &self))
     }
 
     /// Deserialize `Value` as an enum.
-    fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
-        V: EnumVisitor<'de>,
+        A: EnumAccess<'de>,
     {
-        let _ = visitor;
+        let _ = data;
         Err(Error::invalid_type(Unexpected::Enum, &self))
     }
 
@@ -1345,11 +1345,11 @@ pub trait Visitor<'de>: Sized {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// `SeqVisitor` visits each item in a sequence.
+/// Provides a `Visitor` access to each element of a sequence in the input.
 ///
 /// This is a trait that a `Deserializer` passes to a `Visitor` implementation,
 /// which deserializes each item in a sequence.
-pub trait SeqVisitor<'de> {
+pub trait SeqAccess<'de> {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
     type Error: Error;
@@ -1357,9 +1357,9 @@ pub trait SeqVisitor<'de> {
     /// This returns `Ok(Some(value))` for the next value in the sequence, or
     /// `Ok(None)` if there are no more remaining items.
     ///
-    /// `Deserialize` implementations should typically use `SeqVisitor::visit`
-    /// instead.
-    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    /// `Deserialize` implementations should typically use
+    /// `SeqAcccess::next_element` instead.
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: DeserializeSeed<'de>;
 
@@ -1367,13 +1367,13 @@ pub trait SeqVisitor<'de> {
     /// `Ok(None)` if there are no more remaining items.
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
-    /// `SeqVisitor` implementations should not override the default behavior.
+    /// `SeqAccess` implementations should not override the default behavior.
     #[inline]
-    fn visit<T>(&mut self) -> Result<Option<T>, Self::Error>
+    fn next_element<T>(&mut self) -> Result<Option<T>, Self::Error>
     where
         T: Deserialize<'de>,
     {
-        self.visit_seed(PhantomData)
+        self.next_element_seed(PhantomData)
     }
 
     /// Return the lower and upper bound of items remaining in the sequence.
@@ -1383,26 +1383,26 @@ pub trait SeqVisitor<'de> {
     }
 }
 
-impl<'de, 'a, V> SeqVisitor<'de> for &'a mut V
+impl<'de, 'a, V> SeqAccess<'de> for &'a mut V
 where
-    V: SeqVisitor<'de>,
+    V: SeqAccess<'de>,
 {
     type Error = V::Error;
 
     #[inline]
-    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, V::Error>
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, V::Error>
     where
         T: DeserializeSeed<'de>,
     {
-        (**self).visit_seed(seed)
+        (**self).next_element_seed(seed)
     }
 
     #[inline]
-    fn visit<T>(&mut self) -> Result<Option<T>, V::Error>
+    fn next_element<T>(&mut self) -> Result<Option<T>, V::Error>
     where
         T: Deserialize<'de>,
     {
-        (**self).visit()
+        (**self).next_element()
     }
 
     #[inline]
@@ -1413,10 +1413,10 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// `MapVisitor` visits each item in a sequence.
+/// Provides a `Visitor` access to each entry of a map in the input.
 ///
 /// This is a trait that a `Deserializer` passes to a `Visitor` implementation.
-pub trait MapVisitor<'de> {
+pub trait MapAccess<'de> {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
     type Error: Error;
@@ -1425,29 +1425,29 @@ pub trait MapVisitor<'de> {
     /// if there are no more remaining entries.
     ///
     /// `Deserialize` implementations should typically use
-    /// `MapVisitor::visit_key` or `MapVisitor::visit` instead.
-    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+    /// `MapAccess::next_key` or `MapAccess::next_entry` instead.
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where
         K: DeserializeSeed<'de>;
 
     /// This returns a `Ok(value)` for the next value in the map.
     ///
     /// `Deserialize` implementations should typically use
-    /// `MapVisitor::visit_value` instead.
-    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
+    /// `MapAccess::next_value` instead.
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
     where
         V: DeserializeSeed<'de>;
 
     /// This returns `Ok(Some((key, value)))` for the next (key-value) pair in
     /// the map, or `Ok(None)` if there are no more remaining items.
     ///
-    /// `MapVisitor` implementations should override the default behavior if a
+    /// `MapAccess` implementations should override the default behavior if a
     /// more efficient implementation is possible.
     ///
-    /// `Deserialize` implementations should typically use `MapVisitor::visit`
-    /// instead.
+    /// `Deserialize` implementations should typically use
+    /// `MapAccess::next_entry` instead.
     #[inline]
-    fn visit_seed<K, V>(
+    fn next_entry_seed<K, V>(
         &mut self,
         kseed: K,
         vseed: V,
@@ -1456,9 +1456,9 @@ pub trait MapVisitor<'de> {
         K: DeserializeSeed<'de>,
         V: DeserializeSeed<'de>,
     {
-        match try!(self.visit_key_seed(kseed)) {
+        match try!(self.next_key_seed(kseed)) {
             Some(key) => {
-                let value = try!(self.visit_value_seed(vseed));
+                let value = try!(self.next_value_seed(vseed));
                 Ok(Some((key, value)))
             }
             None => Ok(None),
@@ -1469,39 +1469,39 @@ pub trait MapVisitor<'de> {
     /// if there are no more remaining entries.
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
-    /// `MapVisitor` implementations should not override the default behavior.
+    /// `MapAccess` implementations should not override the default behavior.
     #[inline]
-    fn visit_key<K>(&mut self) -> Result<Option<K>, Self::Error>
+    fn next_key<K>(&mut self) -> Result<Option<K>, Self::Error>
     where
         K: Deserialize<'de>,
     {
-        self.visit_key_seed(PhantomData)
+        self.next_key_seed(PhantomData)
     }
 
     /// This returns a `Ok(value)` for the next value in the map.
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
-    /// `MapVisitor` implementations should not override the default behavior.
+    /// `MapAccess` implementations should not override the default behavior.
     #[inline]
-    fn visit_value<V>(&mut self) -> Result<V, Self::Error>
+    fn next_value<V>(&mut self) -> Result<V, Self::Error>
     where
         V: Deserialize<'de>,
     {
-        self.visit_value_seed(PhantomData)
+        self.next_value_seed(PhantomData)
     }
 
     /// This returns `Ok(Some((key, value)))` for the next (key-value) pair in
     /// the map, or `Ok(None)` if there are no more remaining items.
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
-    /// `MapVisitor` implementations should not override the default behavior.
+    /// `MapAccess` implementations should not override the default behavior.
     #[inline]
-    fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
+    fn next_entry<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
     where
         K: Deserialize<'de>,
         V: Deserialize<'de>,
     {
-        self.visit_seed(PhantomData, PhantomData)
+        self.next_entry_seed(PhantomData, PhantomData)
     }
 
     /// Return the lower and upper bound of items remaining in the sequence.
@@ -1511,30 +1511,30 @@ pub trait MapVisitor<'de> {
     }
 }
 
-impl<'de, 'a, V_> MapVisitor<'de> for &'a mut V_
+impl<'de, 'a, V_> MapAccess<'de> for &'a mut V_
 where
-    V_: MapVisitor<'de>,
+    V_: MapAccess<'de>,
 {
     type Error = V_::Error;
 
     #[inline]
-    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where
         K: DeserializeSeed<'de>,
     {
-        (**self).visit_key_seed(seed)
+        (**self).next_key_seed(seed)
     }
 
     #[inline]
-    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
     where
         V: DeserializeSeed<'de>,
     {
-        (**self).visit_value_seed(seed)
+        (**self).next_value_seed(seed)
     }
 
     #[inline]
-    fn visit_seed<K, V>(
+    fn next_entry_seed<K, V>(
         &mut self,
         kseed: K,
         vseed: V,
@@ -1543,32 +1543,32 @@ where
         K: DeserializeSeed<'de>,
         V: DeserializeSeed<'de>,
     {
-        (**self).visit_seed(kseed, vseed)
+        (**self).next_entry_seed(kseed, vseed)
     }
 
     #[inline]
-    fn visit<K, V>(&mut self) -> Result<Option<(K, V)>, V_::Error>
+    fn next_entry<K, V>(&mut self) -> Result<Option<(K, V)>, V_::Error>
     where
         K: Deserialize<'de>,
         V: Deserialize<'de>,
     {
-        (**self).visit()
+        (**self).next_entry()
     }
 
     #[inline]
-    fn visit_key<K>(&mut self) -> Result<Option<K>, V_::Error>
+    fn next_key<K>(&mut self) -> Result<Option<K>, V_::Error>
     where
         K: Deserialize<'de>,
     {
-        (**self).visit_key()
+        (**self).next_key()
     }
 
     #[inline]
-    fn visit_value<V>(&mut self) -> Result<V, V_::Error>
+    fn next_value<V>(&mut self) -> Result<V, V_::Error>
     where
         V: Deserialize<'de>,
     {
-        (**self).visit_value()
+        (**self).next_value()
     }
 
     #[inline]
@@ -1579,44 +1579,45 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// `EnumVisitor` is a visitor that is created by the `Deserializer` and passed
-/// to the `Deserialize` in order to identify which variant of an enum to
-/// deserialize.
-pub trait EnumVisitor<'de>: Sized {
+/// Provides a `Visitor` access to the data of an enum in the input.
+///
+/// `EnumAccess` is created by the `Deserializer` and passed to the
+/// `Visitor` in order to identify which variant of an enum to deserialize.
+pub trait EnumAccess<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
     type Error: Error;
     /// The `Visitor` that will be used to deserialize the content of the enum
     /// variant.
-    type Variant: VariantVisitor<'de, Error = Self::Error>;
+    type Variant: VariantAccess<'de, Error = Self::Error>;
 
-    /// `visit_variant` is called to identify which variant to deserialize.
+    /// `variant` is called to identify which variant to deserialize.
     ///
-    /// `Deserialize` implementations should typically use
-    /// `EnumVisitor::visit_variant` instead.
-    fn visit_variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
+    /// `Deserialize` implementations should typically use `EnumAccess::variant`
+    /// instead.
+    fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
     where
         V: DeserializeSeed<'de>;
 
-    /// `visit_variant` is called to identify which variant to deserialize.
+    /// `variant` is called to identify which variant to deserialize.
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
-    /// `EnumVisitor` implementations should not override the default behavior.
+    /// `EnumAccess` implementations should not override the default behavior.
     #[inline]
-    fn visit_variant<V>(self) -> Result<(V, Self::Variant), Self::Error>
+    fn variant<V>(self) -> Result<(V, Self::Variant), Self::Error>
     where
         V: Deserialize<'de>,
     {
-        self.visit_variant_seed(PhantomData)
+        self.variant_seed(PhantomData)
     }
 }
 
-/// `VariantVisitor` is a visitor that is created by the `Deserializer` and
+/// `VariantAccess` is a visitor that is created by the `Deserializer` and
 /// passed to the `Deserialize` to deserialize the content of a particular enum
 /// variant.
-pub trait VariantVisitor<'de>: Sized {
+pub trait VariantAccess<'de>: Sized {
     /// The error type that can be returned if some error occurs during
-    /// deserialization. Must match the error type of our `EnumVisitor`.
+    /// deserialization. Must match the error type of our `EnumAccess`.
     type Error: Error;
 
     /// Called when deserializing a variant with no values.
@@ -1625,55 +1626,55 @@ pub trait VariantVisitor<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```rust
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantVisitor, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
     /// #
-    /// # impl<'de> VariantVisitor<'de> for X {
+    /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// fn visit_unit(self) -> Result<(), Self::Error> {
+    /// fn deserialize_unit(self) -> Result<(), Self::Error> {
     ///     // What the data actually contained; suppose it is a tuple variant.
     ///     let unexp = Unexpected::TupleVariant;
     ///     Err(de::Error::invalid_type(unexp, &"unit variant"))
     /// }
     /// #
-    /// #     fn visit_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #     fn deserialize_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
     /// #         where T: DeserializeSeed<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn visit_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn visit_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     fn deserialize_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// # }
     /// ```
-    fn visit_unit(self) -> Result<(), Self::Error>;
+    fn deserialize_unit(self) -> Result<(), Self::Error>;
 
     /// Called when deserializing a variant with a single value.
     ///
     /// `Deserialize` implementations should typically use
-    /// `VariantVisitor::visit_newtype` instead.
+    /// `VariantAccess::deserialize_newtype` instead.
     ///
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
     ///
     /// ```rust
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantVisitor, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
     /// #
-    /// # impl<'de> VariantVisitor<'de> for X {
+    /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// #     fn visit_unit(self) -> Result<(), Self::Error> {
+    /// #     fn deserialize_unit(self) -> Result<(), Self::Error> {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// fn visit_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+    /// fn deserialize_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
     ///     where T: DeserializeSeed<'de>
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
@@ -1681,30 +1682,30 @@ pub trait VariantVisitor<'de>: Sized {
     ///     Err(de::Error::invalid_type(unexp, &"newtype variant"))
     /// }
     /// #
-    /// #     fn visit_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn visit_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     fn deserialize_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// # }
     /// ```
-    fn visit_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+    fn deserialize_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
     where
         T: DeserializeSeed<'de>;
 
     /// Called when deserializing a variant with a single value.
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
-    /// `VariantVisitor` implementations should not override the default
+    /// `VariantAccess` implementations should not override the default
     /// behavior.
     #[inline]
-    fn visit_newtype<T>(self) -> Result<T, Self::Error>
+    fn deserialize_newtype<T>(self) -> Result<T, Self::Error>
     where
         T: Deserialize<'de>,
     {
-        self.visit_newtype_seed(PhantomData)
+        self.deserialize_newtype_seed(PhantomData)
     }
 
     /// Called when deserializing a tuple-like variant.
@@ -1715,24 +1716,24 @@ pub trait VariantVisitor<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```rust
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantVisitor, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
     /// #
-    /// # impl<'de> VariantVisitor<'de> for X {
+    /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// #     fn visit_unit(self) -> Result<(), Self::Error> {
+    /// #     fn deserialize_unit(self) -> Result<(), Self::Error> {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// #     fn visit_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #     fn deserialize_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
     /// #         where T: DeserializeSeed<'de>
     /// #     { unimplemented!() }
     /// #
-    /// fn visit_tuple<V>(self,
-    ///                   _len: usize,
-    ///                   _visitor: V) -> Result<V::Value, Self::Error>
+    /// fn deserialize_tuple<V>(self,
+    ///                         _len: usize,
+    ///                         _visitor: V) -> Result<V::Value, Self::Error>
     ///     where V: Visitor<'de>
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
@@ -1740,12 +1741,12 @@ pub trait VariantVisitor<'de>: Sized {
     ///     Err(de::Error::invalid_type(unexp, &"tuple variant"))
     /// }
     /// #
-    /// #     fn visit_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     fn deserialize_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// # }
     /// ```
-    fn visit_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
 
@@ -1757,28 +1758,28 @@ pub trait VariantVisitor<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```rust
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantVisitor, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
     /// #
-    /// # impl<'de> VariantVisitor<'de> for X {
+    /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// #     fn visit_unit(self) -> Result<(), Self::Error> {
+    /// #     fn deserialize_unit(self) -> Result<(), Self::Error> {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// #     fn visit_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #     fn deserialize_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
     /// #         where T: DeserializeSeed<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn visit_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// #
-    /// fn visit_struct<V>(self,
-    ///                    _fields: &'static [&'static str],
-    ///                    _visitor: V) -> Result<V::Value, Self::Error>
+    /// fn deserialize_struct<V>(self,
+    ///                          _fields: &'static [&'static str],
+    ///                          _visitor: V) -> Result<V::Value, Self::Error>
     ///     where V: Visitor<'de>
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
@@ -1787,7 +1788,7 @@ pub trait VariantVisitor<'de>: Sized {
     /// }
     /// # }
     /// ```
-    fn visit_struct<V>(
+    fn deserialize_struct<V>(
         self,
         fields: &'static [&'static str],
         visitor: V,
