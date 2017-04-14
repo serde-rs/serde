@@ -116,7 +116,7 @@ where
     }
 }
 
-/// A helper deserializer that deserializes a `()`.
+/// A deserializer holding a `()`.
 #[derive(Clone, Debug)]
 pub struct UnitDeserializer<E> {
     marker: PhantomData<E>,
@@ -152,8 +152,9 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! primitive_deserializer {
-    ($ty:ty, $name:ident, $method:ident $($cast:tt)*) => {
-        /// A helper deserializer that deserializes a number.
+    ($ty:ty, $doc:tt, $name:ident, $method:ident $($cast:tt)*) => {
+        #[doc = "A deserializer holding"]
+        #[doc = $doc]
         #[derive(Clone, Debug)]
         pub struct $name<E> {
             value: $ty,
@@ -196,21 +197,21 @@ macro_rules! primitive_deserializer {
     }
 }
 
-primitive_deserializer!(bool, BoolDeserializer, visit_bool);
-primitive_deserializer!(i8, I8Deserializer, visit_i8);
-primitive_deserializer!(i16, I16Deserializer, visit_i16);
-primitive_deserializer!(i32, I32Deserializer, visit_i32);
-primitive_deserializer!(i64, I64Deserializer, visit_i64);
-primitive_deserializer!(isize, IsizeDeserializer, visit_i64 as i64);
-primitive_deserializer!(u8, U8Deserializer, visit_u8);
-primitive_deserializer!(u16, U16Deserializer, visit_u16);
-primitive_deserializer!(u64, U64Deserializer, visit_u64);
-primitive_deserializer!(usize, UsizeDeserializer, visit_u64 as u64);
-primitive_deserializer!(f32, F32Deserializer, visit_f32);
-primitive_deserializer!(f64, F64Deserializer, visit_f64);
-primitive_deserializer!(char, CharDeserializer, visit_char);
+primitive_deserializer!(bool, "a `bool`.", BoolDeserializer, visit_bool);
+primitive_deserializer!(i8, "an `i8`.", I8Deserializer, visit_i8);
+primitive_deserializer!(i16, "an `i16`.", I16Deserializer, visit_i16);
+primitive_deserializer!(i32, "an `i32`.", I32Deserializer, visit_i32);
+primitive_deserializer!(i64, "an `i64`.", I64Deserializer, visit_i64);
+primitive_deserializer!(isize, "an `isize`.", IsizeDeserializer, visit_i64 as i64);
+primitive_deserializer!(u8, "a `u8`.", U8Deserializer, visit_u8);
+primitive_deserializer!(u16, "a `u16`.", U16Deserializer, visit_u16);
+primitive_deserializer!(u64, "a `u64`.", U64Deserializer, visit_u64);
+primitive_deserializer!(usize, "a `usize`.", UsizeDeserializer, visit_u64 as u64);
+primitive_deserializer!(f32, "an `f32`.", F32Deserializer, visit_f32);
+primitive_deserializer!(f64, "an `f64`.", F64Deserializer, visit_f64);
+primitive_deserializer!(char, "a `char`.", CharDeserializer, visit_char);
 
-/// A helper deserializer that deserializes a number.
+/// A deserializer holding a `u32`.
 #[derive(Clone, Debug)]
 pub struct U32Deserializer<E> {
     value: u32,
@@ -282,7 +283,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a `&str`.
+/// A deserializer holding a `&str`.
 #[derive(Clone, Debug)]
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
@@ -354,7 +355,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a `String`.
+/// A deserializer holding a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
 #[derive(Clone, Debug)]
 pub struct StringDeserializer<E> {
@@ -430,7 +431,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a `String`.
+/// A deserializer holding a `Cow<str>`.
 #[cfg(any(feature = "std", feature = "collections"))]
 #[derive(Clone, Debug)]
 pub struct CowStrDeserializer<'a, E> {
@@ -509,7 +510,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a sequence.
+/// A deserializer that iterates over a sequence.
 #[derive(Clone, Debug)]
 pub struct SeqDeserializer<I, E> {
     iter: iter::Fuse<I>,
@@ -688,7 +689,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a map.
+/// A deserializer that iterates over a map.
 pub struct MapDeserializer<'de, I, E>
 where
     I: Iterator,
