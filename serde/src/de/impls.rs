@@ -16,6 +16,9 @@ use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 
+#[cfg(any(feature = "std", feature = "collections"))]
+use private::de::size_hint;
+
 ////////////////////////////////////////////////////////////////////////////////
 
 struct UnitVisitor;
@@ -344,7 +347,7 @@ impl<'de> Visitor<'de> for CStringVisitor {
     where
         A: SeqAccess<'de>,
     {
-        let len = cmp::min(seq.size_hint().0, 4096);
+        let len = size_hint::cautious(seq.size_hint());
         let mut values = Vec::with_capacity(len);
 
         while let Some(value) = try!(seq.next_element()) {
@@ -557,16 +560,16 @@ macro_rules! seq_impl {
 seq_impl!(
     BinaryHeap<T>,
     BinaryHeapVisitor<T: Ord>,
-    visitor,
+    seq,
     BinaryHeap::new(),
-    BinaryHeap::with_capacity(cmp::min(visitor.size_hint().0, 4096)),
+    BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
     BinaryHeap::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BTreeSet<T>,
     BTreeSetVisitor<T: Eq + Ord>,
-    visitor,
+    seq,
     BTreeSet::new(),
     BTreeSet::new(),
     BTreeSet::insert);
@@ -575,7 +578,7 @@ seq_impl!(
 seq_impl!(
     LinkedList<T>,
     LinkedListVisitor,
-    visitor,
+    seq,
     LinkedList::new(),
     LinkedList::new(),
     LinkedList::push_back);
@@ -585,27 +588,27 @@ seq_impl!(
     HashSet<T, S>,
     HashSetVisitor<T: Eq + Hash,
                    S: BuildHasher + Default>,
-    visitor,
+    seq,
     HashSet::with_hasher(S::default()),
-    HashSet::with_capacity_and_hasher(cmp::min(visitor.size_hint().0, 4096), S::default()),
+    HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
     HashSet::insert);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     Vec<T>,
     VecVisitor,
-    visitor,
+    seq,
     Vec::new(),
-    Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096)),
+    Vec::with_capacity(size_hint::cautious(seq.size_hint())),
     Vec::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     VecDeque<T>,
     VecDequeVisitor,
-    visitor,
+    seq,
     VecDeque::new(),
-    VecDeque::with_capacity(cmp::min(visitor.size_hint().0, 4096)),
+    VecDeque::with_capacity(size_hint::cautious(seq.size_hint())),
     VecDeque::push_back);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -865,7 +868,7 @@ macro_rules! map_impl {
 map_impl!(
     BTreeMap<K, V>,
     BTreeMapVisitor<K: Ord>,
-    visitor,
+    map,
     BTreeMap::new(),
     BTreeMap::new());
 
@@ -874,9 +877,9 @@ map_impl!(
     HashMap<K, V, S>,
     HashMapVisitor<K: Eq + Hash,
                    S: BuildHasher + Default>,
-    visitor,
+    map,
     HashMap::with_hasher(S::default()),
-    HashMap::with_capacity_and_hasher(cmp::min(visitor.size_hint().0, 4096), S::default()));
+    HashMap::with_capacity_and_hasher(size_hint::cautious(map.size_hint()), S::default()));
 
 ////////////////////////////////////////////////////////////////////////////////
 

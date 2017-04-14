@@ -11,6 +11,7 @@
 use lib::*;
 
 use de::{self, IntoDeserializer, Expected, SeqAccess};
+use private::de::size_hint;
 use self::private::{First, Second};
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -545,8 +546,8 @@ where
         }
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+    fn size_hint(&self) -> Option<usize> {
+        size_hint::from_bounds(&self.iter)
     }
 }
 
@@ -799,8 +800,8 @@ where
         }
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+    fn size_hint(&self) -> Option<usize> {
+        size_hint::from_bounds(&self.iter)
     }
 }
 
@@ -827,8 +828,8 @@ where
         }
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+    fn size_hint(&self) -> Option<usize> {
+        size_hint::from_bounds(&self.iter)
     }
 }
 
@@ -910,7 +911,7 @@ where
         if pair_visitor.1.is_none() {
             Ok(pair)
         } else {
-            let remaining = pair_visitor.size_hint().0;
+            let remaining = pair_visitor.size_hint().unwrap();
             // First argument is the number of elements in the data, second
             // argument is the number of elements expected by the Deserialize.
             Err(de::Error::invalid_length(2, &ExpectedInSeq(2 - remaining)))
@@ -954,15 +955,14 @@ where
         }
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = if self.0.is_some() {
-            2
+    fn size_hint(&self) -> Option<usize> {
+        if self.0.is_some() {
+            Some(2)
         } else if self.1.is_some() {
-            1
+            Some(1)
         } else {
-            0
-        };
-        (len, Some(len))
+            Some(0)
+        }
     }
 }
 
