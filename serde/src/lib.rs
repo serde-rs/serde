@@ -94,7 +94,10 @@
 #![cfg_attr(feature = "collections", feature(collections))]
 
 // Whitelisted clippy lints.
-#![cfg_attr(feature = "cargo-clippy", allow(linkedlist, type_complexity, doc_markdown))]
+#![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
+#![cfg_attr(feature = "cargo-clippy", allow(linkedlist))]
+#![cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
+#![cfg_attr(feature = "cargo-clippy", allow(zero_prefixed_literal))]
 
 // Blacklisted Rust lints.
 #![deny(missing_docs, unused_imports)]
