@@ -8,7 +8,7 @@
 
 use serde::de::{self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess,
                 SeqAccess, VariantAccess, Visitor};
-use serde::de::value::{MapVisitorDeserializer, SeqVisitorDeserializer};
+use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 
 use error::Error;
 use token::Token;
@@ -618,7 +618,7 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
                         len: None,
                         end: Token::TupleVariantEnd,
                     };
-                    try!(seed.deserialize(SeqVisitorDeserializer::new(visitor)))
+                    try!(seed.deserialize(SeqAccessDeserializer::new(visitor)))
                 };
                 try!(self.de.expect_token(Token::TupleVariantEnd));
                 Ok(value)
@@ -630,7 +630,7 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
                         len: None,
                         end: Token::StructVariantEnd,
                     };
-                    try!(seed.deserialize(MapVisitorDeserializer::new(visitor)))
+                    try!(seed.deserialize(MapAccessDeserializer::new(visitor)))
                 };
                 try!(self.de.expect_token(Token::StructVariantEnd));
                 Ok(value)
