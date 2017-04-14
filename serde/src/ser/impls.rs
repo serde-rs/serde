@@ -303,7 +303,7 @@ macro_rules! map_impl {
             where
                 S: Serializer,
             {
-                serializer.collect_seq(self)
+                serializer.collect_map(self)
             }
         }
     }
