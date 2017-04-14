@@ -693,7 +693,7 @@ where
     Second<I::Item>: IntoDeserializer<'de, E>,
     E: de::Error,
 {
-    /// Construct a new `MapDeserializer<I, K, V, E>`.
+    /// Construct a new `MapDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
         MapDeserializer {
             iter: iter.fuse(),
@@ -741,30 +741,30 @@ where
 {
     type Error = E;
 
-    fn deserialize_any<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V_: de::Visitor<'de>,
+        V: de::Visitor<'de>,
     {
         let value = try!(visitor.visit_map(&mut self));
         try!(self.end());
         Ok(value)
     }
 
-    fn deserialize_seq<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V_: de::Visitor<'de>,
+        V: de::Visitor<'de>,
     {
         let value = try!(visitor.visit_seq(&mut self));
         try!(self.end());
         Ok(value)
     }
 
-    fn deserialize_seq_fixed_size<V_>(self,
-                                      _len: usize,
-                                      visitor: V_)
-                                      -> Result<V_::Value, Self::Error>
+    fn deserialize_seq_fixed_size<V>(self,
+                                     _len: usize,
+                                     visitor: V)
+                                     -> Result<V::Value, Self::Error>
     where
-        V_: de::Visitor<'de>,
+        V: de::Visitor<'de>,
     {
         self.deserialize_seq(visitor)
     }
