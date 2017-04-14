@@ -1259,7 +1259,6 @@ mod content {
         }
     }
 
-
     /// Not public API.
     pub struct ContentRefDeserializer<'a, E> {
         content: &'a Content,

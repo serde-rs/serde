@@ -919,7 +919,6 @@ impl<'de> Visitor<'de> for PathBufVisitor {
     }
 }
 
-
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for PathBuf {
     fn deserialize<D>(deserializer: D) -> Result<PathBuf, D::Error>
@@ -1404,9 +1403,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
-////////////////////////////////////////////////////////////////////////////////
-
 #[cfg(feature = "unstable")]
 #[allow(deprecated)] // num::Zero is deprecated but there is no replacement
 impl<'de, T> Deserialize<'de> for NonZero<T>
@@ -1428,7 +1424,6 @@ where
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
 
 impl<'de, T, E> Deserialize<'de> for Result<T, E>
 where
