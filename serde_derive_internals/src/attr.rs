@@ -319,52 +319,6 @@ impl Container {
             }
         }
 
-        let tag = match (untagged.get(), internal_tag.get(), content.get()) {
-            (false, None, None) => EnumTag::External,
-            (true, None, None) => EnumTag::None,
-            (false, Some(tag), None) => {
-                // Check that there are no tuple variants.
-                if let syn::Body::Enum(ref variants) = item.body {
-                    for variant in variants {
-                        match variant.data {
-                            syn::VariantData::Struct(_) |
-                            syn::VariantData::Unit => {}
-                            syn::VariantData::Tuple(ref fields) => {
-                                if fields.len() != 1 {
-                                    cx.error("#[serde(tag = \"...\")] cannot be used with tuple \
-                                              variants");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                EnumTag::Internal { tag: tag }
-            }
-            (true, Some(_), None) => {
-                cx.error("enum cannot be both untagged and internally tagged");
-                EnumTag::External // doesn't matter, will error
-            }
-            (false, None, Some(_)) => {
-                cx.error("#[serde(tag = \"...\", content = \"...\")] must be used together");
-                EnumTag::External
-            }
-            (true, None, Some(_)) => {
-                cx.error("untagged enum cannot have #[serde(content = \"...\")]");
-                EnumTag::External
-            }
-            (false, Some(tag), Some(content)) => {
-                EnumTag::Adjacent {
-                    tag: tag,
-                    content: content,
-                }
-            }
-            (true, Some(_), Some(_)) => {
-                cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
-                EnumTag::External
-            }
-        };
-
         Container {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
@@ -375,7 +329,7 @@ impl Container {
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: tag,
+            tag: decide_tag(cx, item, untagged, internal_tag, content),
             from_type: from_type.get(),
             into_type: into_type.get(),
             remote: remote.get(),
@@ -420,6 +374,60 @@ impl Container {
 
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
+    }
+}
+
+fn decide_tag(
+    cx: &Ctxt,
+    item: &syn::MacroInput,
+    untagged: BoolAttr,
+    internal_tag: Attr<String>,
+    content: Attr<String>,
+) -> EnumTag {
+    match (untagged.get(), internal_tag.get(), content.get()) {
+        (false, None, None) => EnumTag::External,
+        (true, None, None) => EnumTag::None,
+        (false, Some(tag), None) => {
+            // Check that there are no tuple variants.
+            if let syn::Body::Enum(ref variants) = item.body {
+                for variant in variants {
+                    match variant.data {
+                        syn::VariantData::Struct(_) |
+                        syn::VariantData::Unit => {}
+                        syn::VariantData::Tuple(ref fields) => {
+                            if fields.len() != 1 {
+                                cx.error("#[serde(tag = \"...\")] cannot be used with tuple \
+                                        variants");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            EnumTag::Internal { tag: tag }
+        }
+        (true, Some(_), None) => {
+            cx.error("enum cannot be both untagged and internally tagged");
+            EnumTag::External // doesn't matter, will error
+        }
+        (false, None, Some(_)) => {
+            cx.error("#[serde(tag = \"...\", content = \"...\")] must be used together");
+            EnumTag::External
+        }
+        (true, None, Some(_)) => {
+            cx.error("untagged enum cannot have #[serde(content = \"...\")]");
+            EnumTag::External
+        }
+        (false, Some(tag), Some(content)) => {
+            EnumTag::Adjacent {
+                tag: tag,
+                content: content,
+            }
+        }
+        (true, Some(_), Some(_)) => {
+            cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
+            EnumTag::External
+        }
     }
 }
 
