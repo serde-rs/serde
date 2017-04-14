@@ -1799,9 +1799,36 @@ pub trait VariantAccess<'de>: Sized {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// This trait converts primitive types into a deserializer.
+/// Converts an existing value into a `Deserializer` from which other values can
+/// be deserialized.
+///
+/// ```rust
+/// #[macro_use]
+/// extern crate serde_derive;
+///
+/// extern crate serde;
+///
+/// use std::str::FromStr;
+/// use serde::de::{value, Deserialize, IntoDeserializer};
+///
+/// #[derive(Deserialize)]
+/// enum Setting {
+///     On,
+///     Off,
+/// }
+///
+/// impl FromStr for Setting {
+///     type Err = value::Error;
+///
+///     fn from_str(s: &str) -> Result<Self, Self::Err> {
+///         Self::deserialize(s.into_deserializer())
+///     }
+/// }
+/// #
+/// # fn main() {}
+/// ```
 pub trait IntoDeserializer<'de, E: Error = value::Error> {
-    /// The actual deserializer type.
+    /// The type of the deserializer being converted into.
     type Deserializer: Deserializer<'de, Error = E>;
 
     /// Convert this value into a deserializer.

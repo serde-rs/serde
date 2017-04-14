@@ -6,7 +6,34 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! This module supports deserializing from primitives with the `ValueDeserializer` trait.
+//! Building blocks for deserializing basic values using the `IntoDeserializer`
+//! trait.
+//!
+//! ```rust
+//! #[macro_use]
+//! extern crate serde_derive;
+//!
+//! extern crate serde;
+//!
+//! use std::str::FromStr;
+//! use serde::de::{value, Deserialize, IntoDeserializer};
+//!
+//! #[derive(Deserialize)]
+//! enum Setting {
+//!     On,
+//!     Off,
+//! }
+//!
+//! impl FromStr for Setting {
+//!     type Err = value::Error;
+//!
+//!     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//!         Self::deserialize(s.into_deserializer())
+//!     }
+//! }
+//! #
+//! # fn main() {}
+//! ```
 
 use lib::*;
 
@@ -16,7 +43,8 @@ use self::private::{First, Second};
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// This represents all the possible errors that can occur using the `ValueDeserializer`.
+/// A minimal representation of all possible errors that can occur using the
+/// `IntoDeserializer` trait.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error {
     err: ErrorImpl,
