@@ -36,6 +36,7 @@ pub struct Field<'a> {
     pub ty: &'a syn::Ty,
 }
 
+#[derive(Copy, Clone)]
 pub enum Style {
     Struct,
     Tuple,

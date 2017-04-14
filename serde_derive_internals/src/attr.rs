@@ -111,6 +111,7 @@ pub struct Container {
     from_type: Option<syn::Ty>,
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
+    identifier: Identifier,
 }
 
 /// Styles of representing an enum.
@@ -145,6 +146,23 @@ pub enum EnumTag {
     None,
 }
 
+/// Whether this enum represents the fields of a struct or the variants of an
+/// enum.
+#[derive(Copy, Clone, Debug)]
+pub enum Identifier {
+    /// It does not.
+    No,
+
+    /// This enum represents the fields of a struct. All of the variants must be
+    /// unit variants, except possibly one which is annotated with
+    /// `#[serde(other)]` and is a newtype variant.
+    Field,
+
+    /// This enum represents the variants of an enum. All of the variants must
+    /// be unit variants.
+    Variant,
+}
+
 impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::MacroInput) -> Self {
@@ -161,6 +179,8 @@ impl Container {
         let mut from_type = Attr::none(cx, "from");
         let mut into_type = Attr::none(cx, "into");
         let mut remote = Attr::none(cx, "remote");
+        let mut field_identifier = BoolAttr::none(cx, "field_identifier");
+        let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -307,6 +327,16 @@ impl Container {
                         }
                     }
 
+                    // Parse `#[serde(field_identifier)]`
+                    MetaItem(Word(ref name)) if name == "field_identifier" => {
+                        field_identifier.set_true();
+                    }
+
+                    // Parse `#[serde(variant_identifier)]`
+                    MetaItem(Word(ref name)) if name == "variant_identifier" => {
+                        variant_identifier.set_true();
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -333,6 +363,7 @@ impl Container {
             from_type: from_type.get(),
             into_type: into_type.get(),
             remote: remote.get(),
+            identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
         }
     }
 
@@ -374,6 +405,10 @@ impl Container {
 
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
+    }
+
+    pub fn identifier(&self) -> Identifier {
+        self.identifier
     }
 }
 
@@ -431,6 +466,31 @@ fn decide_tag(
     }
 }
 
+fn decide_identifier(
+    cx: &Ctxt,
+    item: &syn::MacroInput,
+    field_identifier: BoolAttr,
+    variant_identifier: BoolAttr,
+) -> Identifier {
+    match (&item.body, field_identifier.get(), variant_identifier.get()) {
+        (_, false, false) => Identifier::No,
+        (_, true, true) => {
+            cx.error("`field_identifier` and `variant_identifier` cannot both be set");
+            Identifier::No
+        }
+        (&syn::Body::Struct(_), true, false) => {
+            cx.error("`field_identifier` can only be used on an enum");
+            Identifier::No
+        }
+        (&syn::Body::Struct(_), false, true) => {
+            cx.error("`variant_identifier` can only be used on an enum");
+            Identifier::No
+        }
+        (&syn::Body::Enum(_), true, false) => Identifier::Field,
+        (&syn::Body::Enum(_), false, true) => Identifier::Variant,
+    }
+}
+
 /// Represents variant attribute information
 #[derive(Debug)]
 pub struct Variant {
@@ -440,6 +500,7 @@ pub struct Variant {
     rename_all: RenameRule,
     skip_deserializing: bool,
     skip_serializing: bool,
+    other: bool,
 }
 
 impl Variant {
@@ -449,6 +510,7 @@ impl Variant {
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
+        let mut other = BoolAttr::none(cx, "other");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -487,9 +549,15 @@ impl Variant {
                     MetaItem(Word(ref name)) if name == "skip_deserializing" => {
                         skip_deserializing.set_true();
                     }
+
                     // Parse `#[serde(skip_serializing)]`
                     MetaItem(Word(ref name)) if name == "skip_serializing" => {
                         skip_serializing.set_true();
+                    }
+
+                    // Parse `#[serde(other)]`
+                    MetaItem(Word(ref name)) if name == "other" => {
+                        other.set_true();
                     }
 
                     MetaItem(ref meta_item) => {
@@ -517,6 +585,7 @@ impl Variant {
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
+            other: other.get(),
         }
     }
 
@@ -543,6 +612,10 @@ impl Variant {
 
     pub fn skip_serializing(&self) -> bool {
         self.skip_serializing
+    }
+
+    pub fn other(&self) -> bool {
+        self.other
     }
 }
 

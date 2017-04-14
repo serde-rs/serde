@@ -12,13 +12,14 @@ use quote::Tokens;
 use bound;
 use fragment::{Fragment, Stmts, Match};
 use internals::ast::{Body, Container, Field, Style, Variant};
-use internals::{self, attr};
+use internals::{attr, Ctxt};
 
 use std::u32;
 
 pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
-    let ctxt = internals::Ctxt::new();
+    let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
+    precondition(&ctxt, &cont);
     try!(ctxt.check());
 
     let ident = &cont.ident;
@@ -59,6 +60,18 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
         };
     },
     )
+}
+
+fn precondition(cx: &Ctxt, cont: &Container) {
+    match cont.attrs.identifier() {
+        attr::Identifier::No => {}
+        attr::Identifier::Field => {
+            cx.error("field identifiers cannot be serialized");
+        }
+        attr::Identifier::Variant => {
+            cx.error("variant identifiers cannot be serialized");
+        }
+    }
 }
 
 struct Parameters {
