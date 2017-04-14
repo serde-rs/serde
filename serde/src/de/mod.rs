@@ -48,12 +48,12 @@
 //!
 //! This is a slightly different set of types than what is supported for
 //! serialization. Some types can be serialized by Serde but not deserialized.
-//! One example is `&str`.
+//! One example is `OsStr`.
 //!
 //!  - **Primitive types**:
 //!    - bool
-//!    - isize, i8, i16, i32, i64
-//!    - usize, u8, u16, u32, u64
+//!    - i8, i16, i32, i64, isize
+//!    - u8, u16, u32, u64, usize
 //!    - f32, f64
 //!    - char
 //!  - **Compound types**:
@@ -81,10 +81,18 @@
 //!    - VecDeque\<T\>
 //!    - Vec\<T\>
 //!    - EnumSet\<T\> (unstable)
+//!  - **Zero-copy types**:
+//!    - &str
+//!    - &[u8]
+//!  - **FFI types**:
+//!    - CString
+//!    - Box\<CStr\>
+//!    - OsString
 //!  - **Miscellaneous standard library types**:
 //!    - Duration
 //!    - Path
 //!    - PathBuf
+//!    - Range\<T\>
 //!    - NonZero\<T\> (unstable)
 //!  - **Net types**:
 //!    - IpAddr
