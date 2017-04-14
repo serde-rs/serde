@@ -8,8 +8,8 @@
 
 //! Generic data structure deserialization framework.
 //!
-//! The two most important traits in this module are `Deserialize` and
-//! `Deserializer`.
+//! The two most important traits in this module are [`Deserialize`] and
+//! [`Deserializer`].
 //!
 //!  - **A type that implements `Deserialize` is a data structure** that can be
 //!    deserialized from any data format supported by Serde, and conversely
@@ -18,32 +18,31 @@
 //!
 //! # The Deserialize trait
 //!
-//! Serde provides `Deserialize` implementations for many Rust primitive and
+//! Serde provides [`Deserialize`] implementations for many Rust primitive and
 //! standard library types. The complete list is below. All of these can be
 //! deserialized using Serde out of the box.
 //!
-//! Additionally, Serde provides a procedural macro called `serde_derive` to
-//! automatically generate `Deserialize` implementations for structs and enums
-//! in your program. See the [codegen section of the manual][codegen] for how to
-//! use this.
+//! Additionally, Serde provides a procedural macro called [`serde_derive`] to
+//! automatically generate [`Deserialize`] implementations for structs and enums
+//! in your program. See the [codegen section of the manual] for how to use
+//! this.
 //!
-//! In rare cases it may be necessary to implement `Deserialize` manually for
-//! some type in your program. See the [Implementing
-//! `Deserialize`][impl-deserialize] section of the manual for more about this.
+//! In rare cases it may be necessary to implement [`Deserialize`] manually for
+//! some type in your program. See the [Implementing `Deserialize`] section of
+//! the manual for more about this.
 //!
-//! Third-party crates may provide `Deserialize` implementations for types that
-//! they expose. For example the `linked-hash-map` crate provides a
-//! `LinkedHashMap<K, V>` type that is deserializable by Serde because the crate
-//! provides an implementation of `Deserialize` for it.
+//! Third-party crates may provide [`Deserialize`] implementations for types
+//! that they expose. For example the [`linked-hash-map`] crate provides a
+//! [`LinkedHashMap<K, V>`] type that is deserializable by Serde because the
+//! crate provides an implementation of [`Deserialize`] for it.
 //!
 //! # The Deserializer trait
 //!
-//! `Deserializer` implementations are provided by third-party crates, for
-//! example [`serde_json`][serde_json], [`serde_yaml`][serde_yaml] and
-//! [`bincode`][bincode].
+//! [`Deserializer`] implementations are provided by third-party crates, for
+//! example [`serde_json`], [`serde_yaml`] and [`bincode`].
 //!
 //! A partial list of well-maintained formats is given on the [Serde
-//! website][data-formats].
+//! website][data formats].
 //!
 //! # Implementations of Deserialize provided by Serde
 //!
@@ -95,12 +94,17 @@
 //!    - SocketAddrV4
 //!    - SocketAddrV6
 //!
-//! [codegen]: https://serde.rs/codegen.html
-//! [impl-deserialize]: https://serde.rs/impl-deserialize.html
-//! [serde_json]: https://github.com/serde-rs/json
-//! [serde_yaml]: https://github.com/dtolnay/serde-yaml
-//! [bincode]: https://github.com/TyOverby/bincode
-//! [data-formats]: https://serde.rs/#data-formats
+//! [Implementing `Deserialize`]: https://serde.rs/impl-deserialize.html
+//! [`Deserialize`]: ../trait.Deserialize.html
+//! [`Deserializer`]: ../trait.Deserializer.html
+//! [`LinkedHashMap<K, V>`]: https://docs.rs/linked-hash-map/*/linked_hash_map/struct.LinkedHashMap.html
+//! [`bincode`]: https://github.com/TyOverby/bincode
+//! [`linked-hash-map`]: https://crates.io/crates/linked-hash-map
+//! [`serde_derive`]: https://crates.io/crates/serde_derive
+//! [`serde_json`]: https://github.com/serde-rs/json
+//! [`serde_yaml`]: https://github.com/dtolnay/serde-yaml
+//! [codegen section of the manual]: https://serde.rs/codegen.html
+//! [data formats]: https://serde.rs/#data-formats
 
 use lib::*;
 
