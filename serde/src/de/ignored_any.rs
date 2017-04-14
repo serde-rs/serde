@@ -2,8 +2,99 @@ use lib::*;
 
 use de::{Deserialize, Deserializer, Visitor, SeqVisitor, MapVisitor, Error};
 
-/// A target for deserializers that want to ignore data. Implements Deserialize
-/// and silently eats data given to it.
+/// An efficient way of discarding data from a deserializer.
+///
+/// Think of this like `serde_json::Value` in that it can be deserialized from
+/// any type, except that it does not store any information about the data that
+/// gets deserialized.
+///
+/// ```rust
+/// use std::fmt;
+/// use std::marker::PhantomData;
+///
+/// use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqVisitor, IgnoredAny};
+///
+/// /// A seed that can be used to deserialize only the `n`th element of a sequence
+/// /// while efficiently discarding elements of any type before or after index `n`.
+/// ///
+/// /// For example to deserialize only the element at index 3:
+/// ///
+/// /// ```rust
+/// /// NthElement::new(3).deserialize(deserializer)
+/// /// ```
+/// pub struct NthElement<T> {
+///     n: usize,
+///     marker: PhantomData<T>,
+/// }
+///
+/// impl<T> NthElement<T> {
+///     pub fn new(n: usize) -> Self {
+///         NthElement {
+///             n: n,
+///             marker: PhantomData,
+///         }
+///     }
+/// }
+///
+/// impl<'de, T> Visitor<'de> for NthElement<T>
+///     where T: Deserialize<'de>
+/// {
+///     type Value = T;
+///
+///     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+///         write!(formatter, "a sequence in which we care about element {}", self.n)
+///     }
+///
+///     fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
+///         where V: SeqVisitor<'de>
+///     {
+///         // Skip over the first `n` elements.
+///         for i in 0..self.n {
+///             // It is an error if the sequence ends before we get to element `n`.
+///             if seq.visit::<IgnoredAny>()?.is_none() {
+///                 return Err(de::Error::invalid_length(i, &self));
+///             }
+///         }
+///
+///         // Deserialize the one we care about.
+///         let nth = match seq.visit()? {
+///             Some(nth) => nth,
+///             None => {
+///                 return Err(de::Error::invalid_length(self.n, &self));
+///             }
+///         };
+///
+///         // Skip over any remaining elements in the sequence after `n`.
+///         while let Some(IgnoredAny) = seq.visit()? {
+///             // ignore
+///         }
+///
+///         Ok(nth)
+///     }
+/// }
+///
+/// impl<'de, T> DeserializeSeed<'de> for NthElement<T>
+///     where T: Deserialize<'de>
+/// {
+///     type Value = T;
+///
+///     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+///         where D: Deserializer<'de>
+///     {
+///         deserializer.deserialize_seq(self)
+///     }
+/// }
+///
+/// # fn example<'de, D>(deserializer: D) -> Result<(), D::Error>
+/// #     where D: Deserializer<'de>
+/// # {
+/// // Deserialize only the sequence element at index 3 from this deserializer.
+/// // The element at index 3 is required to be a string. Elements before and
+/// // after index 3 are allowed to be of any type.
+/// let s: String = NthElement::new(3).deserialize(deserializer)?;
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Copy, Clone, Debug, Default)]
 pub struct IgnoredAny;
 
