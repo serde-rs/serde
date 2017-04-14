@@ -634,30 +634,30 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a sequence using a `SeqAccess`.
+/// A deserializer holding a `SeqAccess`.
 #[derive(Clone, Debug)]
-pub struct SeqVisitorDeserializer<V_> {
-    visitor: V_,
+pub struct SeqAccessDeserializer<A> {
+    seq: A,
 }
 
-impl<V_> SeqVisitorDeserializer<V_> {
-    /// Construct a new `SeqVisitorDeserializer<V_, E>`.
-    pub fn new(visitor: V_) -> Self {
-        SeqVisitorDeserializer { visitor: visitor }
+impl<A> SeqAccessDeserializer<A> {
+    /// Construct a new `SeqAccessDeserializer<A>`.
+    pub fn new(seq: A) -> Self {
+        SeqAccessDeserializer { seq: seq }
     }
 }
 
-impl<'de, V_> de::Deserializer<'de> for SeqVisitorDeserializer<V_>
+impl<'de, A> de::Deserializer<'de> for SeqAccessDeserializer<A>
 where
-    V_: de::SeqAccess<'de>,
+    A: de::SeqAccess<'de>,
 {
-    type Error = V_::Error;
+    type Error = A::Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(self.visitor)
+        visitor.visit_seq(self.seq)
     }
 
     forward_to_deserialize_any! {
@@ -1038,30 +1038,30 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A helper deserializer that deserializes a map using a `MapAccess`.
+/// A deserializer holding a `MapAccess`.
 #[derive(Clone, Debug)]
-pub struct MapVisitorDeserializer<V_> {
-    visitor: V_,
+pub struct MapAccessDeserializer<A> {
+    map: A,
 }
 
-impl<V_> MapVisitorDeserializer<V_> {
-    /// Construct a new `MapVisitorDeserializer<V_, E>`.
-    pub fn new(visitor: V_) -> Self {
-        MapVisitorDeserializer { visitor: visitor }
+impl<A> MapAccessDeserializer<A> {
+    /// Construct a new `MapAccessDeserializer<A>`.
+    pub fn new(map: A) -> Self {
+        MapAccessDeserializer { map: map }
     }
 }
 
-impl<'de, V_> de::Deserializer<'de> for MapVisitorDeserializer<V_>
+impl<'de, A> de::Deserializer<'de> for MapAccessDeserializer<A>
 where
-    V_: de::MapAccess<'de>,
+    A: de::MapAccess<'de>,
 {
-    type Error = V_::Error;
+    type Error = A::Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_map(self.visitor)
+        visitor.visit_map(self.map)
     }
 
     forward_to_deserialize_any! {
