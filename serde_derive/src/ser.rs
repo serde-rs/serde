@@ -490,7 +490,7 @@ fn serialize_internally_tagged_variant(
                 &type_name,
             )
         }
-        Style::Tuple => unreachable!("checked in serde_codegen_internals"),
+        Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
 }
 

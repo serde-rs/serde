@@ -1090,7 +1090,7 @@ fn deserialize_internally_tagged_variant(
         Style::Newtype | Style::Struct => {
             deserialize_untagged_variant(params, variant, item_attrs, deserializer)
         }
-        Style::Tuple => unreachable!("checked in serde_codegen_internals"),
+        Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
 }
 
