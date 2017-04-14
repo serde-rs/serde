@@ -1383,14 +1383,14 @@ pub trait SeqAccess<'de> {
     }
 }
 
-impl<'de, 'a, V> SeqAccess<'de> for &'a mut V
+impl<'de, 'a, A> SeqAccess<'de> for &'a mut A
 where
-    V: SeqAccess<'de>,
+    A: SeqAccess<'de>,
 {
-    type Error = V::Error;
+    type Error = A::Error;
 
     #[inline]
-    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, V::Error>
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: DeserializeSeed<'de>,
     {
@@ -1398,7 +1398,7 @@ where
     }
 
     #[inline]
-    fn next_element<T>(&mut self) -> Result<Option<T>, V::Error>
+    fn next_element<T>(&mut self) -> Result<Option<T>, Self::Error>
     where
         T: Deserialize<'de>,
     {
@@ -1511,11 +1511,11 @@ pub trait MapAccess<'de> {
     }
 }
 
-impl<'de, 'a, V_> MapAccess<'de> for &'a mut V_
+impl<'de, 'a, A> MapAccess<'de> for &'a mut A
 where
-    V_: MapAccess<'de>,
+    A: MapAccess<'de>,
 {
-    type Error = V_::Error;
+    type Error = A::Error;
 
     #[inline]
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
@@ -1547,7 +1547,7 @@ where
     }
 
     #[inline]
-    fn next_entry<K, V>(&mut self) -> Result<Option<(K, V)>, V_::Error>
+    fn next_entry<K, V>(&mut self) -> Result<Option<(K, V)>, Self::Error>
     where
         K: Deserialize<'de>,
         V: Deserialize<'de>,
@@ -1556,7 +1556,7 @@ where
     }
 
     #[inline]
-    fn next_key<K>(&mut self) -> Result<Option<K>, V_::Error>
+    fn next_key<K>(&mut self) -> Result<Option<K>, Self::Error>
     where
         K: Deserialize<'de>,
     {
@@ -1564,7 +1564,7 @@ where
     }
 
     #[inline]
-    fn next_value<V>(&mut self) -> Result<V, V_::Error>
+    fn next_value<V>(&mut self) -> Result<V, Self::Error>
     where
         V: Deserialize<'de>,
     {
