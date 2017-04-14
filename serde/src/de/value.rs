@@ -39,6 +39,7 @@ use lib::*;
 
 use de::{self, IntoDeserializer, Expected, SeqAccess};
 use private::de::size_hint;
+use ser;
 use self::private::{First, Second};
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,6 +72,15 @@ impl de::Error for Error {
     {
         let _ = msg;
         Error { err: () }
+    }
+}
+
+impl ser::Error for Error {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
+        de::Error::custom(msg)
     }
 }
 
