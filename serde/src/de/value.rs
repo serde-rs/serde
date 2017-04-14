@@ -521,9 +521,8 @@ pub struct SeqDeserializer<I, E> {
 impl<I, E> SeqDeserializer<I, E>
 where
     I: Iterator,
-    E: de::Error,
 {
-    /// Construct a new `SeqDeserializer<I>`.
+    /// Construct a new `SeqDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
         SeqDeserializer {
             iter: iter.fuse(),
@@ -531,7 +530,13 @@ where
             marker: PhantomData,
         }
     }
+}
 
+impl<I, E> SeqDeserializer<I, E>
+where
+    I: Iterator,
+    E: de::Error,
+{
     /// Check for remaining elements after passing a `SeqDeserializer` to
     /// `Visitor::visit_seq`.
     pub fn end(mut self) -> Result<(), E> {
@@ -694,9 +699,6 @@ pub struct MapDeserializer<'de, I, E>
 where
     I: Iterator,
     I::Item: private::Pair,
-    First<I::Item>: IntoDeserializer<'de, E>,
-    Second<I::Item>: IntoDeserializer<'de, E>,
-    E: de::Error,
 {
     iter: iter::Fuse<I>,
     value: Option<Second<I::Item>>,
@@ -709,9 +711,6 @@ impl<'de, I, E> MapDeserializer<'de, I, E>
 where
     I: Iterator,
     I::Item: private::Pair,
-    First<I::Item>: IntoDeserializer<'de, E>,
-    Second<I::Item>: IntoDeserializer<'de, E>,
-    E: de::Error,
 {
     /// Construct a new `MapDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
@@ -723,7 +722,14 @@ where
             error: PhantomData,
         }
     }
+}
 
+impl<'de, I, E> MapDeserializer<'de, I, E>
+where
+    I: Iterator,
+    I::Item: private::Pair,
+    E: de::Error,
+{
     /// Check for remaining elements after passing a `MapDeserializer` to
     /// `Visitor::visit_map`.
     pub fn end(mut self) -> Result<(), E> {
@@ -739,7 +745,13 @@ where
             Err(de::Error::invalid_length(self.count + remaining, &ExpectedInMap(self.count)),)
         }
     }
+}
 
+impl<'de, I, E> MapDeserializer<'de, I, E>
+where
+    I: Iterator,
+    I::Item: private::Pair,
+{
     fn next_pair(&mut self) -> Option<(First<I::Item>, Second<I::Item>)> {
         match self.iter.next() {
             Some(kv) => {
@@ -884,16 +896,12 @@ where
     }
 }
 
-// Cannot #[derive(Clone)] because of the bound:
-//
-//    <I::Item as private::Pair>::Second: Clone
+// Cannot #[derive(Clone)] because of the bound `Second<I::Item>: Clone`.
 impl<'de, I, E> Clone for MapDeserializer<'de, I, E>
 where
     I: Iterator + Clone,
     I::Item: private::Pair,
-    First<I::Item>: IntoDeserializer<'de, E>,
-    Second<I::Item>: IntoDeserializer<'de, E> + Clone,
-    E: de::Error,
+    Second<I::Item>: Clone,
 {
     fn clone(&self) -> Self {
         MapDeserializer {
@@ -906,16 +914,12 @@ where
     }
 }
 
-// Cannot #[derive(Debug)] because of the bound:
-//
-//    <I::Item as private::Pair>::Second: Debug
+// Cannot #[derive(Debug)] because of the bound `Second<I::Item>: Debug`.
 impl<'de, I, E> Debug for MapDeserializer<'de, I, E>
 where
     I: Iterator + Debug,
     I::Item: private::Pair,
-    First<I::Item>: IntoDeserializer<'de, E>,
-    Second<I::Item>: IntoDeserializer<'de, E> + Debug,
-    E: de::Error,
+    Second<I::Item>: Debug,
 {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.debug_struct("MapDeserializer")
