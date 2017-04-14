@@ -11,6 +11,7 @@
 use lib::*;
 
 use de::{self, IntoDeserializer, Expected, SeqVisitor};
+use self::private::{First, Second};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -641,12 +642,12 @@ pub struct MapDeserializer<'de, I, E>
 where
     I: Iterator,
     I::Item: private::Pair,
-    <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
-    <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E>,
     E: de::Error,
 {
     iter: iter::Fuse<I>,
-    value: Option<<I::Item as private::Pair>::Second>,
+    value: Option<Second<I::Item>>,
     count: usize,
     lifetime: PhantomData<&'de ()>,
     error: PhantomData<E>,
@@ -656,10 +657,8 @@ impl<'de, I, E> MapDeserializer<'de, I, E>
 where
     I: Iterator,
     I::Item: private::Pair,
-    <I::Item as private::Pair>::First: IntoDeserializer<'de,
-                                                        E>,
-    <I::Item as private::Pair>::Second: IntoDeserializer<'de,
-                                                         E>,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E>,
     E: de::Error,
 {
     /// Construct a new `MapDeserializer<I, K, V, E>`.
@@ -689,9 +688,7 @@ where
         }
     }
 
-    fn next_pair
-        (&mut self,)
-         -> Option<(<I::Item as private::Pair>::First, <I::Item as private::Pair>::Second)> {
+    fn next_pair(&mut self) -> Option<(First<I::Item>, Second<I::Item>)> {
         match self.iter.next() {
             Some(kv) => {
                 self.count += 1;
@@ -705,8 +702,8 @@ where
 impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
+          First<I::Item>: IntoDeserializer<'de, E>,
+          Second<I::Item>: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -746,8 +743,8 @@ impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
 impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
+          First<I::Item>: IntoDeserializer<'de, E>,
+          Second<I::Item>: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -799,8 +796,8 @@ impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
 impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
     where I: Iterator,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E>,
+          First<I::Item>: IntoDeserializer<'de, E>,
+          Second<I::Item>: IntoDeserializer<'de, E>,
           E: de::Error
 {
     type Error = E;
@@ -828,8 +825,8 @@ impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
 impl<'de, I, E> Clone for MapDeserializer<'de, I, E>
     where I: Iterator + Clone,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E> + Clone,
+          First<I::Item>: IntoDeserializer<'de, E>,
+          Second<I::Item>: IntoDeserializer<'de, E> + Clone,
           E: de::Error
 {
     fn clone(&self) -> Self {
@@ -849,8 +846,8 @@ impl<'de, I, E> Clone for MapDeserializer<'de, I, E>
 impl<'de, I, E> Debug for MapDeserializer<'de, I, E>
     where I: Iterator + Debug,
           I::Item: private::Pair,
-          <I::Item as private::Pair>::First: IntoDeserializer<'de, E>,
-          <I::Item as private::Pair>::Second: IntoDeserializer<'de, E> + Debug,
+          First<I::Item>: IntoDeserializer<'de, E>,
+          Second<I::Item>: IntoDeserializer<'de, E> + Debug,
           E: de::Error
 {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1098,4 +1095,7 @@ mod private {
             self
         }
     }
+
+    pub type First<T> = <T as Pair>::First;
+    pub type Second<T> = <T as Pair>::Second;
 }
