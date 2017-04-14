@@ -137,10 +137,14 @@ impl<T> Serialize for [T; 0] {
 macro_rules! array_impls {
     ($($len:tt)+) => {
         $(
-            impl<T> Serialize for [T; $len] where T: Serialize {
+            impl<T> Serialize for [T; $len]
+            where
+                T: Serialize,
+            {
                 #[inline]
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                    where S: Serializer,
+                where
+                    S: Serializer,
                 {
                     let mut seq = try!(serializer.serialize_seq_fixed_size($len));
                     for e in self {
@@ -166,7 +170,8 @@ where
 {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer,
+    where
+        S: Serializer,
     {
         serializer.collect_seq(self)
     }
@@ -181,7 +186,8 @@ macro_rules! seq_impl {
         {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where S: Serializer,
+            where
+                S: Serializer,
             {
                 serializer.collect_seq(self)
             }
@@ -294,7 +300,8 @@ macro_rules! map_impl {
         {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where S: Serializer,
+            where
+                S: Serializer,
             {
                 serializer.collect_seq(self)
             }

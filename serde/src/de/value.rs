@@ -121,7 +121,8 @@ macro_rules! primitive_deserializer {
         }
 
         impl<'de, E> IntoDeserializer<'de, E> for $ty
-            where E: de::Error,
+        where
+            E: de::Error,
         {
             type Deserializer = $name<E>;
 
@@ -134,7 +135,8 @@ macro_rules! primitive_deserializer {
         }
 
         impl<'de, E> de::Deserializer<'de> for $name<E>
-            where E: de::Error,
+        where
+            E: de::Error,
         {
             type Error = E;
 
@@ -145,7 +147,8 @@ macro_rules! primitive_deserializer {
             }
 
             fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-                where V: de::Visitor<'de>,
+            where
+                V: de::Visitor<'de>,
             {
                 visitor.$method(self.value $($cast)*)
             }
@@ -700,16 +703,18 @@ where
 }
 
 impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
-    where I: Iterator,
-          I::Item: private::Pair,
-          First<I::Item>: IntoDeserializer<'de, E>,
-          Second<I::Item>: IntoDeserializer<'de, E>,
-          E: de::Error
+where
+    I: Iterator,
+    I::Item: private::Pair,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E>,
+    E: de::Error,
 {
     type Error = E;
 
     fn deserialize<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
-        where V_: de::Visitor<'de>
+    where
+        V_: de::Visitor<'de>,
     {
         let value = try!(visitor.visit_map(&mut self));
         try!(self.end());
@@ -717,7 +722,8 @@ impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
     }
 
     fn deserialize_seq<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
-        where V_: de::Visitor<'de>
+    where
+        V_: de::Visitor<'de>,
     {
         let value = try!(visitor.visit_seq(&mut self));
         try!(self.end());
@@ -728,7 +734,8 @@ impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
                                       _len: usize,
                                       visitor: V_)
                                       -> Result<V_::Value, Self::Error>
-        where V_: de::Visitor<'de>
+    where
+        V_: de::Visitor<'de>,
     {
         self.deserialize_seq(visitor)
     }
@@ -741,16 +748,18 @@ impl<'de, I, E> de::Deserializer<'de> for MapDeserializer<'de, I, E>
 }
 
 impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
-    where I: Iterator,
-          I::Item: private::Pair,
-          First<I::Item>: IntoDeserializer<'de, E>,
-          Second<I::Item>: IntoDeserializer<'de, E>,
-          E: de::Error
+where
+    I: Iterator,
+    I::Item: private::Pair,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E>,
+    E: de::Error,
 {
     type Error = E;
 
     fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-        where T: de::DeserializeSeed<'de>
+    where
+        T: de::DeserializeSeed<'de>,
     {
         match self.next_pair() {
             Some((key, value)) => {
@@ -762,7 +771,8 @@ impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
     }
 
     fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
-        where T: de::DeserializeSeed<'de>
+    where
+        T: de::DeserializeSeed<'de>,
     {
         let value = self.value.take();
         // Panic because this indicates a bug in the program rather than an
@@ -775,8 +785,9 @@ impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
                           kseed: TK,
                           vseed: TV)
                           -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
-        where TK: de::DeserializeSeed<'de>,
-              TV: de::DeserializeSeed<'de>
+    where
+        TK: de::DeserializeSeed<'de>,
+        TV: de::DeserializeSeed<'de>,
     {
         match self.next_pair() {
             Some((key, value)) => {
@@ -794,16 +805,18 @@ impl<'de, I, E> de::MapVisitor<'de> for MapDeserializer<'de, I, E>
 }
 
 impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
-    where I: Iterator,
-          I::Item: private::Pair,
-          First<I::Item>: IntoDeserializer<'de, E>,
-          Second<I::Item>: IntoDeserializer<'de, E>,
-          E: de::Error
+where
+    I: Iterator,
+    I::Item: private::Pair,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E>,
+    E: de::Error,
 {
     type Error = E;
 
     fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-        where T: de::DeserializeSeed<'de>
+    where
+        T: de::DeserializeSeed<'de>,
     {
         match self.next_pair() {
             Some((k, v)) => {
@@ -823,11 +836,12 @@ impl<'de, I, E> de::SeqVisitor<'de> for MapDeserializer<'de, I, E>
 //
 //    <I::Item as private::Pair>::Second: Clone
 impl<'de, I, E> Clone for MapDeserializer<'de, I, E>
-    where I: Iterator + Clone,
-          I::Item: private::Pair,
-          First<I::Item>: IntoDeserializer<'de, E>,
-          Second<I::Item>: IntoDeserializer<'de, E> + Clone,
-          E: de::Error
+where
+    I: Iterator + Clone,
+    I::Item: private::Pair,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E> + Clone,
+    E: de::Error,
 {
     fn clone(&self) -> Self {
         MapDeserializer {
@@ -844,11 +858,12 @@ impl<'de, I, E> Clone for MapDeserializer<'de, I, E>
 //
 //    <I::Item as private::Pair>::Second: Debug
 impl<'de, I, E> Debug for MapDeserializer<'de, I, E>
-    where I: Iterator + Debug,
-          I::Item: private::Pair,
-          First<I::Item>: IntoDeserializer<'de, E>,
-          Second<I::Item>: IntoDeserializer<'de, E> + Debug,
-          E: de::Error
+where
+    I: Iterator + Debug,
+    I::Item: private::Pair,
+    First<I::Item>: IntoDeserializer<'de, E>,
+    Second<I::Item>: IntoDeserializer<'de, E> + Debug,
+    E: de::Error,
 {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.debug_struct("MapDeserializer")

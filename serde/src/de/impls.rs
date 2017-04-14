@@ -78,7 +78,8 @@ macro_rules! visit_integer_method {
     ($src_ty:ident, $method:ident, $from_method:ident, $group:ident, $group_ty:ident) => {
         #[inline]
         fn $method<E>(self, v: $src_ty) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
@@ -92,7 +93,8 @@ macro_rules! visit_float_method {
     ($src_ty:ident, $method:ident) => {
         #[inline]
         fn $method<E>(self, v: $src_ty) -> Result<Self::Value, E>
-            where E: Error
+        where
+            E: Error,
         {
             Ok(v as Self::Value)
         }
@@ -104,7 +106,8 @@ macro_rules! impl_deserialize_num {
         impl<'de> Deserialize<'de> for $ty {
             #[inline]
             fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
-                where D: Deserializer<'de>,
+            where
+                D: Deserializer<'de>,
             {
                 struct PrimitiveVisitor;
 
@@ -510,8 +513,9 @@ macro_rules! seq_impl {
         }
 
         impl<'de, T $(, $typaram)*> Visitor<'de> for $visitor_ty<T $(, $typaram)*>
-            where T: Deserialize<'de>,
-                  $($($boundparam: $bound1 $(+ $bound2)*),*)*
+        where
+            T: Deserialize<'de>,
+            $($($boundparam: $bound1 $(+ $bound2)*),*)*
         {
             type Value = $ty<T $(, $typaram)*>;
 
@@ -521,7 +525,8 @@ macro_rules! seq_impl {
 
             #[inline]
             fn visit_seq<V>(self, mut $visitor: V) -> Result<Self::Value, V::Error>
-                where V: SeqVisitor<'de>,
+            where
+                V: SeqVisitor<'de>,
             {
                 let mut values = $with_capacity;
 
@@ -534,11 +539,13 @@ macro_rules! seq_impl {
         }
 
         impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
-            where T: Deserialize<'de>,
-                  $($($boundparam: $bound1 $(+ $bound2)*),*)*
+        where
+            T: Deserialize<'de>,
+            $($($boundparam: $bound1 $(+ $bound2)*),*)*
         {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                where D: Deserializer<'de>,
+            where
+                D: Deserializer<'de>,
             {
                 deserializer.deserialize_seq($visitor_ty::new())
             }
@@ -643,7 +650,8 @@ macro_rules! array_impls {
     ($($len:expr => ($($n:tt $name:ident)+))+) => {
         $(
             impl<'de, T> Visitor<'de> for ArrayVisitor<[T; $len]>
-                where T: Deserialize<'de>
+            where
+                T: Deserialize<'de>,
             {
                 type Value = [T; $len];
 
@@ -653,7 +661,8 @@ macro_rules! array_impls {
 
                 #[inline]
                 fn visit_seq<V>(self, mut visitor: V) -> Result<[T; $len], V::Error>
-                    where V: SeqVisitor<'de>,
+                where
+                    V: SeqVisitor<'de>,
                 {
                     $(
                         let $name = match try!(visitor.visit()) {
@@ -667,10 +676,12 @@ macro_rules! array_impls {
             }
 
             impl<'de, T> Deserialize<'de> for [T; $len]
-                where T: Deserialize<'de>,
+            where
+                T: Deserialize<'de>,
             {
                 fn deserialize<D>(deserializer: D) -> Result<[T; $len], D::Error>
-                    where D: Deserializer<'de>,
+                where
+                    D: Deserializer<'de>,
                 {
                     deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
                 }
@@ -739,7 +750,8 @@ macro_rules! tuple_impls {
                 #[inline]
                 #[allow(non_snake_case)]
                 fn visit_seq<V>(self, mut visitor: V) -> Result<($($name,)+), V::Error>
-                    where V: SeqVisitor<'de>,
+                where
+                    V: SeqVisitor<'de>,
                 {
                     $(
                         let $name = match try!(visitor.visit()) {
@@ -755,7 +767,8 @@ macro_rules! tuple_impls {
             impl<'de, $($name: Deserialize<'de>),+> Deserialize<'de> for ($($name,)+) {
                 #[inline]
                 fn deserialize<D>(deserializer: D) -> Result<($($name,)+), D::Error>
-                    where D: Deserializer<'de>,
+                where
+                    D: Deserializer<'de>,
                 {
                     deserializer.deserialize_tuple($len, $visitor::new())
                 }
@@ -806,9 +819,10 @@ macro_rules! map_impl {
         }
 
         impl<'de, K, V $(, $typaram)*> Visitor<'de> for $visitor_ty<K, V $(, $typaram)*>
-            where K: Deserialize<'de>,
-                  V: Deserialize<'de>,
-                  $($boundparam: $bound1 $(+ $bound2)*),*
+        where
+            K: Deserialize<'de>,
+            V: Deserialize<'de>,
+            $($boundparam: $bound1 $(+ $bound2)*),*
         {
             type Value = $ty<K, V $(, $typaram)*>;
 
@@ -818,7 +832,8 @@ macro_rules! map_impl {
 
             #[inline]
             fn visit_map<Visitor>(self, mut $visitor: Visitor) -> Result<Self::Value, Visitor::Error>
-                where Visitor: MapVisitor<'de>,
+            where
+                Visitor: MapVisitor<'de>,
             {
                 let mut values = $with_capacity;
 
@@ -831,12 +846,14 @@ macro_rules! map_impl {
         }
 
         impl<'de, K, V $(, $typaram)*> Deserialize<'de> for $ty<K, V $(, $typaram)*>
-            where K: Deserialize<'de>,
-                  V: Deserialize<'de>,
-                  $($boundparam: $bound1 $(+ $bound2)*),*
+        where
+            K: Deserialize<'de>,
+            V: Deserialize<'de>,
+            $($boundparam: $bound1 $(+ $bound2)*),*
         {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                where D: Deserializer<'de>,
+            where
+                D: Deserializer<'de>,
             {
                 deserializer.deserialize_map($visitor_ty::new())
             }
