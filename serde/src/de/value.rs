@@ -88,13 +88,13 @@ where
 {
     type Error = E;
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit seq
         seq_fixed_size bytes map unit_struct newtype_struct tuple_struct struct
         identifier tuple enum ignored_any byte_buf
     }
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -140,13 +140,13 @@ macro_rules! primitive_deserializer {
         {
             type Error = E;
 
-            forward_to_deserialize! {
+            forward_to_deserialize_any! {
                 bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit
                 option seq seq_fixed_size bytes map unit_struct newtype_struct
                 tuple_struct struct identifier tuple enum ignored_any byte_buf
             }
 
-            fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
             where
                 V: de::Visitor<'de>,
             {
@@ -197,13 +197,13 @@ where
 {
     type Error = E;
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple ignored_any byte_buf
     }
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -267,7 +267,7 @@ where
 {
     type Error = E;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -286,7 +286,7 @@ where
         visitor.visit_enum(self)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple ignored_any byte_buf
@@ -340,7 +340,7 @@ where
 {
     type Error = E;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -359,7 +359,7 @@ where
         visitor.visit_enum(self)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple ignored_any byte_buf
@@ -414,7 +414,7 @@ where
 {
     type Error = E;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -436,7 +436,7 @@ where
         visitor.visit_enum(self)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple ignored_any byte_buf
@@ -508,7 +508,7 @@ where
 {
     type Error = E;
 
-    fn deserialize<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -517,7 +517,7 @@ where
         Ok(v)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple enum ignored_any byte_buf
@@ -624,14 +624,14 @@ where
 {
     type Error = V_::Error;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         visitor.visit_seq(self.visitor)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple enum ignored_any byte_buf
@@ -712,7 +712,7 @@ where
 {
     type Error = E;
 
-    fn deserialize<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
+    fn deserialize_any<V_>(mut self, visitor: V_) -> Result<V_::Value, Self::Error>
     where
         V_: de::Visitor<'de>,
     {
@@ -740,7 +740,7 @@ where
         self.deserialize_seq(visitor)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         bytes map unit_struct newtype_struct tuple_struct struct identifier
         tuple enum ignored_any byte_buf
@@ -888,13 +888,13 @@ where
 {
     type Error = E;
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         bytes map unit_struct newtype_struct tuple_struct struct identifier
         tuple enum ignored_any byte_buf
     }
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -1029,14 +1029,14 @@ where
 {
     type Error = V_::Error;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         visitor.visit_map(self.visitor)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple enum ignored_any byte_buf

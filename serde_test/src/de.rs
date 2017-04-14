@@ -97,12 +97,12 @@ impl<'de> Deserializer<'de> {
 impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit
         seq bytes byte_buf map identifier ignored_any
     }
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
@@ -192,7 +192,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.next_token();
                 visitor.visit_some(self)
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -239,7 +239,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                     Err(Error::InvalidName(n))
                 }
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -257,7 +257,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                     Err(Error::InvalidName(n))
                 }
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -271,7 +271,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.next_token();
                 self.visit_seq(Some(len), Token::SeqEnd, visitor)
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -302,7 +302,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.next_token();
                 self.visit_seq(Some(len), Token::TupleStructEnd, visitor)
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -349,7 +349,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                     Err(Error::InvalidName(n))
                 }
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -376,7 +376,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.next_token();
                 self.visit_map(Some(fields.len()), Token::MapEnd, visitor)
             }
-            Some(_) => self.deserialize(visitor),
+            Some(_) => self.deserialize_any(visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -529,7 +529,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     Err(Error::UnexpectedToken(token))
                 }
             }
-            Some(_) => de::Deserializer::deserialize(self.de, visitor),
+            Some(_) => de::Deserializer::deserialize_any(self.de, visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -559,7 +559,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     Err(Error::UnexpectedToken(token))
                 }
             }
-            Some(_) => de::Deserializer::deserialize(self.de, visitor),
+            Some(_) => de::Deserializer::deserialize_any(self.de, visitor),
             None => Err(Error::EndOfTokens),
         }
     }
@@ -649,14 +649,14 @@ struct BytesDeserializer {
 impl<'de> de::Deserializer<'de> for BytesDeserializer {
     type Error = Error;
 
-    fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         visitor.visit_bytes(self.value)
     }
 
-    forward_to_deserialize! {
+    forward_to_deserialize_any! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
         seq seq_fixed_size bytes map unit_struct newtype_struct tuple_struct
         struct identifier tuple enum ignored_any byte_buf
