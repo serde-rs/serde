@@ -1376,10 +1376,10 @@ pub trait SeqAccess<'de> {
         self.next_element_seed(PhantomData)
     }
 
-    /// Return the lower and upper bound of items remaining in the sequence.
+    /// Returns the number of elements remaining in the sequence, if known.
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, None)
+    fn size_hint(&self) -> Option<usize> {
+        None
     }
 }
 
@@ -1406,7 +1406,7 @@ where
     }
 
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
+    fn size_hint(&self) -> Option<usize> {
         (**self).size_hint()
     }
 }
@@ -1504,10 +1504,10 @@ pub trait MapAccess<'de> {
         self.next_entry_seed(PhantomData, PhantomData)
     }
 
-    /// Return the lower and upper bound of items remaining in the sequence.
+    /// Returns the number of entries remaining in the map, if known.
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, None)
+    fn size_hint(&self) -> Option<usize> {
+        None
     }
 }
 
@@ -1572,7 +1572,7 @@ where
     }
 
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
+    fn size_hint(&self) -> Option<usize> {
         (**self).size_hint()
     }
 }

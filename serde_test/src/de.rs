@@ -404,9 +404,8 @@ impl<'de, 'a> SeqAccess<'de> for DeserializerSeqVisitor<'a, 'de> {
         seed.deserialize(&mut *self.de).map(Some)
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.len.unwrap_or(0);
-        (len, self.len)
+    fn size_hint(&self) -> Option<usize> {
+        self.len
     }
 }
 
@@ -439,9 +438,8 @@ impl<'de, 'a> MapAccess<'de> for DeserializerMapVisitor<'a, 'de> {
         seed.deserialize(&mut *self.de)
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.len.unwrap_or(0);
-        (len, self.len)
+    fn size_hint(&self) -> Option<usize> {
+        self.len
     }
 }
 

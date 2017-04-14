@@ -187,6 +187,29 @@ where
     deserializer.deserialize_str(CowBytesVisitor)
 }
 
+pub mod size_hint {
+    use lib::*;
+
+    pub fn from_bounds<I>(iter: &I) -> Option<usize>
+        where I: Iterator
+    {
+        helper(iter.size_hint())
+    }
+
+    pub fn cautious(hint: Option<usize>) -> usize {
+        cmp::min(hint.unwrap_or(0), 4096)
+    }
+
+    fn helper(bounds: (usize, Option<usize>)) -> Option<usize> {
+        match bounds {
+            (lower, Some(upper)) if lower == upper => {
+                Some(upper)
+            }
+            _ => None,
+        }
+    }
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 mod content {
     // This module is private and nothing here should be used outside of
@@ -203,6 +226,7 @@ mod content {
 
     use de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqAccess, MapAccess,
              EnumAccess, Unexpected};
+    use super::size_hint;
 
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.
@@ -428,7 +452,7 @@ mod content {
         where
             V: SeqAccess<'de>,
         {
-            let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
+            let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
             while let Some(e) = try!(visitor.next_element()) {
                 vec.push(e);
             }
@@ -439,7 +463,7 @@ mod content {
         where
             V: MapAccess<'de>,
         {
-            let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
+            let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
             while let Some(kv) = try!(visitor.next_entry()) {
                 vec.push(kv);
             }
@@ -764,7 +788,7 @@ mod content {
             V: MapAccess<'de>,
         {
             let mut tag = None;
-            let mut vec = Vec::with_capacity(cmp::min(visitor.size_hint().0, 4096));
+            let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
             while let Some(k) =
                 try!(visitor.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 match k {
@@ -1153,8 +1177,8 @@ mod content {
             }
         }
 
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            self.iter.size_hint()
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
         }
     }
 
@@ -1209,8 +1233,8 @@ mod content {
             }
         }
 
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            self.iter.size_hint()
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
         }
     }
 
@@ -1546,8 +1570,8 @@ mod content {
             }
         }
 
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            self.iter.size_hint()
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
         }
     }
 
@@ -1603,8 +1627,8 @@ mod content {
             }
         }
 
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            self.iter.size_hint()
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
         }
     }
 
