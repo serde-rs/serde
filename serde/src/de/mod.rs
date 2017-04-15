@@ -985,12 +985,6 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
-    /// Hint that the `Deserialize` type is expecting the name of a struct
-    /// field or the discriminant of an enum variant.
-    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>;
-
     /// Hint that the `Deserialize` type is expecting an enum value with a
     /// particular name and possible variants.
     fn deserialize_enum<V>(
@@ -999,6 +993,12 @@ pub trait Deserializer<'de>: Sized {
         variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>;
+
+    /// Hint that the `Deserialize` type is expecting the name of a struct
+    /// field or the discriminant of an enum variant.
+    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
 

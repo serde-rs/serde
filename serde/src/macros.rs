@@ -79,7 +79,7 @@
 ///     forward_to_deserialize_any! {
 ///         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
 ///         byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
-///         tuple tuple_struct map struct identifier enum ignored_any
+///         tuple tuple_struct map struct enum identifier ignored_any
 ///     }
 /// }
 /// #
@@ -114,7 +114,7 @@
 ///     <W: Visitor<'q>>
 ///     bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
 ///     byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
-///     tuple tuple_struct map struct identifier enum ignored_any
+///     tuple tuple_struct map struct enum identifier ignored_any
 /// }
 /// # }
 /// #
@@ -233,11 +233,11 @@ macro_rules! forward_to_deserialize_any_helper {
     (struct<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_struct<$l, $v>(name: &'static str, fields: &'static [&'static str])}
     };
-    (identifier<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_identifier<$l, $v>()}
-    };
     (enum<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_enum<$l, $v>(name: &'static str, variants: &'static [&'static str])}
+    };
+    (identifier<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_identifier<$l, $v>()}
     };
     (ignored_any<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_ignored_any<$l, $v>()}
