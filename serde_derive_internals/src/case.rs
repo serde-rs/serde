@@ -15,6 +15,8 @@ use self::RenameRule::*;
 pub enum RenameRule {
     /// Don't apply a default rename rule.
     None,
+    /// Rename direct children to "lowercase" style.
+    LowerCase,
     /// Rename direct children to "PascalCase" style, as typically used for enum variants.
     PascalCase,
     /// Rename direct children to "camelCase" style.
@@ -31,6 +33,7 @@ impl RenameRule {
     pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
             None | PascalCase => variant.to_owned(),
+            LowerCase => variant.to_ascii_lowercase(),
             CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
             SnakeCase => {
                 let mut snake = String::new();
@@ -49,7 +52,7 @@ impl RenameRule {
 
     pub fn apply_to_field(&self, field: &str) -> String {
         match *self {
-            None | SnakeCase => field.to_owned(),
+            None | LowerCase | SnakeCase => field.to_owned(),
             PascalCase => {
                 let mut pascal = String::new();
                 let mut capitalize = true;
@@ -80,6 +83,7 @@ impl FromStr for RenameRule {
 
     fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
         match rename_all_str {
+            "lowercase" => Ok(LowerCase),
             "PascalCase" => Ok(PascalCase),
             "camelCase" => Ok(CamelCase),
             "snake_case" => Ok(SnakeCase),
@@ -92,12 +96,13 @@ impl FromStr for RenameRule {
 
 #[test]
 fn rename_variants() {
-    for &(original, camel, snake, screaming, kebab) in
-        &[("Outcome", "outcome", "outcome", "OUTCOME", "outcome"),
-          ("VeryTasty", "veryTasty", "very_tasty", "VERY_TASTY", "very-tasty"),
-          ("A", "a", "a", "A", "a"),
-          ("Z42", "z42", "z42", "Z42", "z42")] {
+    for &(original, lower, camel, snake, screaming, kebab) in
+        &[("Outcome", "outcome", "outcome", "outcome", "OUTCOME", "outcome"),
+          ("VeryTasty", "verytasty", "veryTasty", "very_tasty", "VERY_TASTY", "very-tasty"),
+          ("A", "a", "a", "a", "A", "a"),
+          ("Z42", "z42", "z42", "z42", "Z42", "z42")] {
         assert_eq!(None.apply_to_variant(original), original);
+        assert_eq!(LowerCase.apply_to_variant(original), lower);
         assert_eq!(PascalCase.apply_to_variant(original), original);
         assert_eq!(CamelCase.apply_to_variant(original), camel);
         assert_eq!(SnakeCase.apply_to_variant(original), snake);
