@@ -935,6 +935,10 @@ impl<'de> Deserialize<'de> for PathBuf {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// If this were outside of the serde crate, it would just use:
+//
+//    #[derive(Deserialize)]
+//    #[serde(variant_identifier)]
 #[cfg(all(feature = "std", any(unix, windows)))]
 enum OsStringKind {
     Unix,
@@ -1149,6 +1153,10 @@ impl<'de> Deserialize<'de> for Duration {
     where
         D: Deserializer<'de>,
     {
+        // If this were outside of the serde crate, it would just use:
+        //
+        //    #[derive(Deserialize)]
+        //    #[serde(field_identifier, rename_all = "lowercase")]
         enum Field {
             Secs,
             Nanos,
@@ -1284,6 +1292,10 @@ where
     where
         D: Deserializer<'de>,
     {
+        // If this were outside of the serde crate, it would just use:
+        //
+        //    #[derive(Deserialize)]
+        //    #[serde(field_identifier, rename_all = "lowercase")]
         enum Field {
             Start,
             End,
@@ -1438,6 +1450,10 @@ where
     where
         D: Deserializer<'de>,
     {
+        // If this were outside of the serde crate, it would just use:
+        //
+        //    #[derive(Deserialize)]
+        //    #[serde(variant_identifier)]
         enum Field {
             Ok,
             Err,
