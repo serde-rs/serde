@@ -1072,7 +1072,9 @@ pub trait Visitor<'de>: Sized {
     /// ```
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result;
 
-    /// Deserialize a `bool` into a `Value`.
+    /// The input contains a boolean.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1080,7 +1082,11 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Bool(v), &self))
     }
 
-    /// Deserialize an `i8` into a `Value`.
+    /// The input contains an `i8`.
+    ///
+    /// The default implementation forwards to [`visit_i64`].
+    ///
+    /// [`visit_i64`]: #method.visit_i64
     fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1088,7 +1094,11 @@ pub trait Visitor<'de>: Sized {
         self.visit_i64(v as i64)
     }
 
-    /// Deserialize an `i16` into a `Value`.
+    /// The input contains an `i16`.
+    ///
+    /// The default implementation forwards to [`visit_i64`].
+    ///
+    /// [`visit_i64`]: #method.visit_i64
     fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1096,7 +1106,11 @@ pub trait Visitor<'de>: Sized {
         self.visit_i64(v as i64)
     }
 
-    /// Deserialize an `i32` into a `Value`.
+    /// The input contains an `i32`.
+    ///
+    /// The default implementation forwards to [`visit_i64`].
+    ///
+    /// [`visit_i64`]: #method.visit_i64
     fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1104,7 +1118,9 @@ pub trait Visitor<'de>: Sized {
         self.visit_i64(v as i64)
     }
 
-    /// Deserialize an `i64` into a `Value`.
+    /// The input contains an `i32`.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1112,7 +1128,11 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Signed(v), &self))
     }
 
-    /// Deserialize a `u8` into a `Value`.
+    /// The input contains a `u8`.
+    ///
+    /// The default implementation forwards to [`visit_u64`].
+    ///
+    /// [`visit_u64`]: #method.visit_u64
     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1120,7 +1140,11 @@ pub trait Visitor<'de>: Sized {
         self.visit_u64(v as u64)
     }
 
-    /// Deserialize a `u16` into a `Value`.
+    /// The input contains a `u16`.
+    ///
+    /// The default implementation forwards to [`visit_u64`].
+    ///
+    /// [`visit_u64`]: #method.visit_u64
     fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1128,7 +1152,11 @@ pub trait Visitor<'de>: Sized {
         self.visit_u64(v as u64)
     }
 
-    /// Deserialize a `u32` into a `Value`.
+    /// The input contains a `u32`.
+    ///
+    /// The default implementation forwards to [`visit_u64`].
+    ///
+    /// [`visit_u64`]: #method.visit_u64
     fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1136,7 +1164,9 @@ pub trait Visitor<'de>: Sized {
         self.visit_u64(v as u64)
     }
 
-    /// Deserialize a `u64` into a `Value`.
+    /// The input contains a `u64`.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1144,7 +1174,11 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Unsigned(v), &self))
     }
 
-    /// Deserialize a `f32` into a `Value`.
+    /// The input contains an `f32`.
+    ///
+    /// The default implementation forwards to [`visit_f64`].
+    ///
+    /// [`visit_f64`]: #method.visit_f64
     fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1152,7 +1186,9 @@ pub trait Visitor<'de>: Sized {
         self.visit_f64(v as f64)
     }
 
-    /// Deserialize a `f64` into a `Value`.
+    /// The input contains an `f64`.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1160,7 +1196,12 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Float(v), &self))
     }
 
-    /// Deserialize a `char` into a `Value`.
+    /// The input contains a `char`.
+    ///
+    /// The default implementation forwards to [`visit_str`] as a one-character
+    /// string.
+    ///
+    /// [`visit_str`]: #method.visit_str
     #[inline]
     fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
     where
@@ -1169,7 +1210,8 @@ pub trait Visitor<'de>: Sized {
         self.visit_str(utf8::encode(v).as_str())
     }
 
-    /// Deserialize a `&str` into a `Value`.
+    /// The input contains a string. The lifetime of the string is ephemeral and
+    /// it may be destroyed after this method returns.
     ///
     /// This method allows the `Deserializer` to avoid a copy by retaining
     /// ownership of any buffered data. `Deserialize` implementations that do
@@ -1186,7 +1228,8 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Str(v), &self))
     }
 
-    /// Deserialize a `&str` that is borrowed from the input data.
+    /// The input contains a string that lives at least as long as the
+    /// `Deserializer`.
     ///
     /// This enables zero-copy deserialization of strings in some formats. For
     /// example JSON input containing the JSON string `"borrowed"` can be
@@ -1202,7 +1245,8 @@ pub trait Visitor<'de>: Sized {
         self.visit_str(v)
     }
 
-    /// Deserialize a `String` into a `Value`.
+    /// The input contains a string and ownership of the string is being given
+    /// to the `Visitor`.
     ///
     /// This method allows the `Visitor` to avoid a copy by taking ownership of
     /// a string created by the `Deserializer`. `Deserialize` implementations
@@ -1225,7 +1269,8 @@ pub trait Visitor<'de>: Sized {
         self.visit_str(&v)
     }
 
-    /// Deserialize a `&[u8]` into a `Value`.
+    /// The input contains a byte array. The lifetime of the byte array is
+    /// ephemeral and it may be destroyed after this method returns.
     ///
     /// This method allows the `Deserializer` to avoid a copy by retaining
     /// ownership of any buffered data. `Deserialize` implementations that do
@@ -1243,7 +1288,8 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Bytes(v), &self))
     }
 
-    /// Deserialize a `&[u8]` that is borrowed from the input data.
+    /// The input contains a byte array that lives at least as long as the
+    /// `Deserializer`.
     ///
     /// This enables zero-copy deserialization of bytes in some formats. For
     /// example Bincode data containing bytes can be deserialized with zero
@@ -1258,7 +1304,8 @@ pub trait Visitor<'de>: Sized {
         self.visit_bytes(v)
     }
 
-    /// Deserialize a `Vec<u8>` into a `Value`.
+    /// The input contains a byte array and ownership of the byte array is being
+    /// given to the `Visitor`.
     ///
     /// This method allows the `Visitor` to avoid a copy by taking ownership of
     /// a byte buffer created by the `Deserializer`. `Deserialize`
@@ -1281,7 +1328,9 @@ pub trait Visitor<'de>: Sized {
         self.visit_bytes(&v)
     }
 
-    /// Deserialize an absent optional `Value`.
+    /// The input contains an optional that is absent.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_none<E>(self) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1289,7 +1338,9 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Option, &self))
     }
 
-    /// Deserialize a present optional `Value`.
+    /// The input contains an optional that is present.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
@@ -1298,7 +1349,9 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Option, &self))
     }
 
-    /// Deserialize a `()` into a `Value`.
+    /// The input contains a unit `()`.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_unit<E>(self) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1306,7 +1359,12 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Unit, &self))
     }
 
-    /// Deserialize `Value` as a newtype struct.
+    /// The input contains a newtype struct.
+    ///
+    /// The content of the newtype struct may be read from the given
+    /// `Deserializer`.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
@@ -1315,7 +1373,9 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::NewtypeStruct, &self))
     }
 
-    /// Deserialize `Value` as a sequence of elements.
+    /// The input contains a sequence of elements.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,
@@ -1324,7 +1384,9 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Seq, &self))
     }
 
-    /// Deserialize `Value` as a key-value map.
+    /// The input contains a key-value map.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,
@@ -1333,7 +1395,9 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Map, &self))
     }
 
-    /// Deserialize `Value` as an enum.
+    /// The input contains an enum.
+    ///
+    /// The default implementation fails with a type error.
     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
         A: EnumAccess<'de>,
