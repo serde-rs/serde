@@ -290,7 +290,7 @@ pub struct StrDeserializer<'a, E> {
     marker: PhantomData<E>,
 }
 
-impl<'de, 'a, E> IntoDeserializer<'de, E> for &'a str
+impl<'a, E> IntoDeserializer<'a, E> for &'a str
 where
     E: de::Error,
 {
@@ -304,7 +304,7 @@ where
     }
 }
 
-impl<'de, 'a, E> de::Deserializer<'de> for StrDeserializer<'a, E>
+impl<'de, E> de::Deserializer<'de> for StrDeserializer<'de, E>
 where
     E: de::Error,
 {
@@ -314,7 +314,7 @@ where
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_str(self.value)
+        visitor.visit_borrowed_str(self.value)
     }
 
     fn deserialize_enum<V>(
@@ -338,7 +338,7 @@ where
     }
 }
 
-impl<'de, 'a, E> de::EnumAccess<'de> for StrDeserializer<'a, E>
+impl<'de, E> de::EnumAccess<'de> for StrDeserializer<'de, E>
 where
     E: de::Error,
 {
