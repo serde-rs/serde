@@ -1056,14 +1056,14 @@ mod content {
     {
         type Error = E;
 
-        fn deserialize_unit(self) -> Result<(), E> {
+        fn unit_variant(self) -> Result<(), E> {
             match self.value {
                 Some(value) => de::Deserialize::deserialize(ContentDeserializer::new(value)),
                 None => Ok(()),
             }
         }
 
-        fn deserialize_newtype_seed<T>(self, seed: T) -> Result<T::Value, E>
+        fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, E>
         where
             T: de::DeserializeSeed<'de>,
         {
@@ -1075,7 +1075,7 @@ mod content {
             }
         }
 
-        fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
@@ -1088,7 +1088,7 @@ mod content {
             }
         }
 
-        fn deserialize_struct<V>(
+        fn struct_variant<V>(
             self,
             _fields: &'static [&'static str],
             visitor: V,
@@ -1448,14 +1448,14 @@ mod content {
     {
         type Error = E;
 
-        fn deserialize_unit(self) -> Result<(), E> {
+        fn unit_variant(self) -> Result<(), E> {
             match self.value {
                 Some(value) => de::Deserialize::deserialize(ContentRefDeserializer::new(value)),
                 None => Ok(()),
             }
         }
 
-        fn deserialize_newtype_seed<T>(self, seed: T) -> Result<T::Value, E>
+        fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, E>
         where
             T: de::DeserializeSeed<'de>,
         {
@@ -1467,7 +1467,7 @@ mod content {
             }
         }
 
-        fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
@@ -1480,7 +1480,7 @@ mod content {
             }
         }
 
-        fn deserialize_struct<V>(
+        fn struct_variant<V>(
             self,
             _fields: &'static [&'static str],
             visitor: V,

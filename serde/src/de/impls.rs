@@ -1025,7 +1025,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
         use std::os::unix::ffi::OsStringExt;
 
         match try!(data.variant()) {
-            (OsStringKind::Unix, variant) => variant.deserialize_newtype().map(OsString::from_vec),
+            (OsStringKind::Unix, v) => v.newtype_variant().map(OsString::from_vec),
             (OsStringKind::Windows, _) => Err(Error::custom("cannot deserialize Windows OS string on Unix",),),
         }
     }
@@ -1038,10 +1038,8 @@ impl<'de> Visitor<'de> for OsStringVisitor {
         use std::os::windows::ffi::OsStringExt;
 
         match try!(data.variant()) {
-            (OsStringKind::Windows, variant) => {
-                variant
-                    .deserialize_newtype::<Vec<u16>>()
-                    .map(|vec| OsString::from_wide(&vec))
+            (OsStringKind::Windows, v) => {
+                v.newtype_variant::<Vec<u16>>().map(|vec| OsString::from_wide(&vec))
             }
             (OsStringKind::Unix, _) => Err(Error::custom("cannot deserialize Unix OS string on Windows",),),
         }
@@ -1539,8 +1537,8 @@ where
                 A: EnumAccess<'de>,
             {
                 match try!(data.variant()) {
-                    (Field::Ok, variant) => variant.deserialize_newtype().map(Ok),
-                    (Field::Err, variant) => variant.deserialize_newtype().map(Err),
+                    (Field::Ok, v) => v.newtype_variant().map(Ok),
+                    (Field::Err, v) => v.newtype_variant().map(Err),
                 }
             }
         }

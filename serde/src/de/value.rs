@@ -1120,25 +1120,25 @@ mod private {
     {
         type Error = E;
 
-        fn deserialize_unit(self) -> Result<(), Self::Error> {
+        fn unit_variant(self) -> Result<(), Self::Error> {
             Ok(())
         }
 
-        fn deserialize_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+        fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
         where
             T: de::DeserializeSeed<'de>,
         {
             Err(de::Error::invalid_type(Unexpected::UnitVariant, &"newtype variant"),)
         }
 
-        fn deserialize_tuple<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
+        fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
             Err(de::Error::invalid_type(Unexpected::UnitVariant, &"tuple variant"),)
         }
 
-        fn deserialize_struct<V>(
+        fn struct_variant<V>(
             self,
             _fields: &'static [&'static str],
             _visitor: V,

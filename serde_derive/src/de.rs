@@ -299,7 +299,7 @@ fn deserialize_tuple(
     let dispatch = if let Some(deserializer) = deserializer {
         quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::deserialize_tuple(__variant, #nfields, #visitor_expr))
+        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
@@ -508,7 +508,7 @@ fn deserialize_struct(
         }
     } else if is_enum {
         quote! {
-            _serde::de::VariantAccess::deserialize_struct(__variant, FIELDS, #visitor_expr)
+            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
     } else {
         let type_name = cattrs.name().deserialize_name();
@@ -1048,7 +1048,7 @@ fn deserialize_externally_tagged_variant(
         Style::Unit => {
             let this = &params.this;
             quote_block! {
-                try!(_serde::de::VariantAccess::deserialize_unit(__variant));
+                try!(_serde::de::VariantAccess::unit_variant(__variant));
                 _serde::export::Ok(#this::#variant_ident)
             }
         }
@@ -1163,7 +1163,7 @@ fn deserialize_externally_tagged_newtype_variant(
             let field_ty = &field.ty;
             quote_expr! {
                 _serde::export::Result::map(
-                    _serde::de::VariantAccess::deserialize_newtype::<#field_ty>(__variant),
+                    _serde::de::VariantAccess::newtype_variant::<#field_ty>(__variant),
                     #this::#variant_ident)
             }
         }
@@ -1172,7 +1172,7 @@ fn deserialize_externally_tagged_newtype_variant(
             quote_block! {
                 #wrapper
                 _serde::export::Result::map(
-                    _serde::de::VariantAccess::deserialize_newtype::<#wrapper_ty>(__variant),
+                    _serde::de::VariantAccess::newtype_variant::<#wrapper_ty>(__variant),
                     |__wrapper| #this::#variant_ident(__wrapper.value))
             }
         }

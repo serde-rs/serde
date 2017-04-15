@@ -478,7 +478,7 @@ impl<'de, 'a> EnumAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
 impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
     type Error = Error;
 
-    fn deserialize_unit(self) -> Result<(), Error> {
+    fn unit_variant(self) -> Result<(), Error> {
         match self.de.tokens.first() {
             Some(&Token::UnitVariant(_, _)) => {
                 self.de.next_token();
@@ -489,7 +489,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
         }
     }
 
-    fn deserialize_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
     where
         T: DeserializeSeed<'de>,
     {
@@ -503,7 +503,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
         }
     }
 
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
+    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
@@ -532,7 +532,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
         }
     }
 
-    fn deserialize_struct<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value, Error>
+    fn struct_variant<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {

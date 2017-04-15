@@ -1697,31 +1697,31 @@ pub trait VariantAccess<'de>: Sized {
     /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// fn deserialize_unit(self) -> Result<(), Self::Error> {
+    /// fn unit_variant(self) -> Result<(), Self::Error> {
     ///     // What the data actually contained; suppose it is a tuple variant.
     ///     let unexp = Unexpected::TupleVariant;
     ///     Err(de::Error::invalid_type(unexp, &"unit variant"))
     /// }
     /// #
-    /// #     fn deserialize_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #     fn newtype_variant_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
     /// #         where T: DeserializeSeed<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn deserialize_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// # }
     /// ```
-    fn deserialize_unit(self) -> Result<(), Self::Error>;
+    fn unit_variant(self) -> Result<(), Self::Error>;
 
     /// Called when deserializing a variant with a single value.
     ///
     /// `Deserialize` implementations should typically use
-    /// `VariantAccess::deserialize_newtype` instead.
+    /// `VariantAccess::newtype_variant` instead.
     ///
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
@@ -1734,11 +1734,11 @@ pub trait VariantAccess<'de>: Sized {
     /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// #     fn deserialize_unit(self) -> Result<(), Self::Error> {
+    /// #     fn unit_variant(self) -> Result<(), Self::Error> {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// fn deserialize_newtype_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+    /// fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
     ///     where T: DeserializeSeed<'de>
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
@@ -1746,16 +1746,16 @@ pub trait VariantAccess<'de>: Sized {
     ///     Err(de::Error::invalid_type(unexp, &"newtype variant"))
     /// }
     /// #
-    /// #     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn deserialize_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// # }
     /// ```
-    fn deserialize_newtype_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
     where
         T: DeserializeSeed<'de>;
 
@@ -1765,11 +1765,11 @@ pub trait VariantAccess<'de>: Sized {
     /// `VariantAccess` implementations should not override the default
     /// behavior.
     #[inline]
-    fn deserialize_newtype<T>(self) -> Result<T, Self::Error>
+    fn newtype_variant<T>(self) -> Result<T, Self::Error>
     where
         T: Deserialize<'de>,
     {
-        self.deserialize_newtype_seed(PhantomData)
+        self.newtype_variant_seed(PhantomData)
     }
 
     /// Called when deserializing a tuple-like variant.
@@ -1787,15 +1787,15 @@ pub trait VariantAccess<'de>: Sized {
     /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// #     fn deserialize_unit(self) -> Result<(), Self::Error> {
+    /// #     fn unit_variant(self) -> Result<(), Self::Error> {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// #     fn deserialize_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #     fn newtype_variant_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
     /// #         where T: DeserializeSeed<'de>
     /// #     { unimplemented!() }
     /// #
-    /// fn deserialize_tuple<V>(self,
+    /// fn tuple_variant<V>(self,
     ///                         _len: usize,
     ///                         _visitor: V) -> Result<V::Value, Self::Error>
     ///     where V: Visitor<'de>
@@ -1805,12 +1805,12 @@ pub trait VariantAccess<'de>: Sized {
     ///     Err(de::Error::invalid_type(unexp, &"tuple variant"))
     /// }
     /// #
-    /// #     fn deserialize_struct<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// # }
     /// ```
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
 
@@ -1829,19 +1829,19 @@ pub trait VariantAccess<'de>: Sized {
     /// # impl<'de> VariantAccess<'de> for X {
     /// #     type Error = value::Error;
     /// #
-    /// #     fn deserialize_unit(self) -> Result<(), Self::Error> {
+    /// #     fn unit_variant(self) -> Result<(), Self::Error> {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// #     fn deserialize_newtype_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
+    /// #     fn newtype_variant_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
     /// #         where T: DeserializeSeed<'de>
     /// #     { unimplemented!() }
     /// #
-    /// #     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     /// #         where V: Visitor<'de>
     /// #     { unimplemented!() }
     /// #
-    /// fn deserialize_struct<V>(self,
+    /// fn struct_variant<V>(self,
     ///                          _fields: &'static [&'static str],
     ///                          _visitor: V) -> Result<V::Value, Self::Error>
     ///     where V: Visitor<'de>
@@ -1852,7 +1852,7 @@ pub trait VariantAccess<'de>: Sized {
     /// }
     /// # }
     /// ```
-    fn deserialize_struct<V>(
+    fn struct_variant<V>(
         self,
         fields: &'static [&'static str],
         visitor: V,
