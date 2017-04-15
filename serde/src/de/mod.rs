@@ -1498,6 +1498,11 @@ pub trait MapAccess<'de> {
     ///
     /// `Deserialize` implementations should typically use
     /// `MapAccess::next_value` instead.
+    ///
+    /// # Panics
+    ///
+    /// Calling `next_value_seed` before `next_key_seed` is incorrect and is
+    /// allowed to panic or return bogus results.
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
     where
         V: DeserializeSeed<'de>;
@@ -1546,6 +1551,11 @@ pub trait MapAccess<'de> {
     ///
     /// This method exists as a convenience for `Deserialize` implementations.
     /// `MapAccess` implementations should not override the default behavior.
+    ///
+    /// # Panics
+    ///
+    /// Calling `next_value` before `next_key` is incorrect and is allowed to
+    /// panic or return bogus results.
     #[inline]
     fn next_value<V>(&mut self) -> Result<V, Self::Error>
     where
