@@ -13,7 +13,18 @@ use ser::{Serialize, SerializeTuple, Serializer};
 #[cfg(feature = "std")]
 use ser::Error;
 
+<<<<<<< HEAD
 ////////////////////////////////////////////////////////////////////////////////
+||||||| merged common ancestors
+use core::marker::PhantomData;
+=======
+use core::cell::{Cell, RefCell};
+
+#[cfg(feature = "std")]
+use std::sync::{Mutex, RwLock};
+
+use core::marker::PhantomData;
+>>>>>>> origin/master
 
 macro_rules! primitive_impl {
     ($ty:ident, $method:ident $($cast:tt)*) => {
@@ -349,7 +360,65 @@ deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwne
 #[cfg(feature = "unstable")]
 deref_impl!(<T> Serialize for NonZero<T> where T: Serialize + Zeroable);
 
+<<<<<<< HEAD
 ////////////////////////////////////////////////////////////////////////////////
+||||||| merged common ancestors
+///////////////////////////////////////////////////////////////////////////////
+=======
+impl<T> Serialize for Cell<T>
+    where T: Serialize + Copy
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        self.get().serialize(serializer)
+    }
+}
+
+impl<T> Serialize for RefCell<T>
+    where T: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        self.borrow().serialize(serializer)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> Serialize for Mutex<T>
+    where T: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        match self.lock() {
+            Ok(locked) => locked.serialize(serializer),
+            Err(_) => Err(S::Error::custom("lock poison error while serializing")),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> Serialize for RwLock<T>
+    where T: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        match self.read() {
+            Ok(locked) => locked.serialize(serializer),
+            Err(_) => Err(S::Error::custom("lock poison error while serializing")),
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+>>>>>>> origin/master
 
 impl<T, E> Serialize for Result<T, E>
 where

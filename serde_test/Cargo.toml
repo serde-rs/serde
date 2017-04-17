@@ -1,6 +1,12 @@
 [package]
 name = "serde_test"
+<<<<<<< HEAD
 version = "0.9.13" # remember to update html_root_url
+||||||| merged common ancestors
+version = "0.9.13"
+=======
+version = "0.9.14"
+>>>>>>> origin/master
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"

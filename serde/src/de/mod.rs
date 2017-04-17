@@ -71,6 +71,10 @@
 //!    - Rc\<T\>
 //!    - Arc\<T\>
 //!    - Cow\<'a, T\>
+//!    - Cell\<T\>
+//!    - RefCell\<T\>
+//!    - Mutex\<T\>
+//!    - RwLock\<T\>
 //!  - **Collection types**:
 //!    - BTreeMap\<K, V\>
 //!    - BTreeSet\<T\>
