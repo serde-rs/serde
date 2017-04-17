@@ -36,6 +36,11 @@ use alloc::arc::Arc;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 
+use core::cell::{Cell, RefCell};
+
+#[cfg(feature = "std")]
+use std::sync::{Mutex, RwLock};
+
 use core::marker::PhantomData;
 
 #[cfg(feature = "unstable")]
@@ -583,6 +588,58 @@ impl<'a, T: ?Sized> Serialize for Cow<'a, T>
         where S: Serializer
     {
         (**self).serialize(serializer)
+    }
+}
+
+impl<T> Serialize for Cell<T>
+    where T: Serialize + Copy
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        self.get().serialize(serializer)
+    }
+}
+
+impl<T> Serialize for RefCell<T>
+    where T: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        self.borrow().serialize(serializer)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> Serialize for Mutex<T>
+    where T: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        match self.lock() {
+            Ok(locked) => locked.serialize(serializer),
+            Err(_) => Err(S::Error::custom("lock poison error while serializing")),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> Serialize for RwLock<T>
+    where T: Serialize
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        match self.read() {
+            Ok(locked) => locked.serialize(serializer),
+            Err(_) => Err(S::Error::custom("lock poison error while serializing")),
+        }
     }
 }
 
