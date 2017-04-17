@@ -121,9 +121,6 @@ macro_rules! __serialize_unimplemented_helper {
         type SerializeSeq = $crate::ser::Impossible<Self::Ok, Self::Error>;
         __serialize_unimplemented_method!(serialize_seq(Option<usize>) -> SerializeSeq);
     };
-    (seq_fixed_size) => {
-        __serialize_unimplemented_method!(serialize_seq_fixed_size(usize) -> SerializeSeq);
-    };
     (tuple) => {
         type SerializeTuple = $crate::ser::Impossible<Self::Ok, Self::Error>;
         __serialize_unimplemented_method!(serialize_tuple(usize) -> SerializeTuple);

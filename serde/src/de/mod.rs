@@ -704,7 +704,7 @@ where
 /// Serde.
 ///
 /// The role of this trait is to define the deserialization half of the Serde
-/// data model, which is a way to categorize every Rust data type into one of 28
+/// data model, which is a way to categorize every Rust data type into one of 27
 /// possible types. Each method of the `Serializer` trait corresponds to one of
 /// the types of the data model.
 ///
@@ -714,47 +714,54 @@ where
 ///
 /// The types that make up the Serde data model are:
 ///
-///  - 12 primitive types:
+///  - **12 primitive types**
 ///    - bool
 ///    - i8, i16, i32, i64
 ///    - u8, u16, u32, u64
 ///    - f32, f64
 ///    - char
-///  - string
-///  - byte array - [u8]
-///  - option
-///    - either none or some value
-///  - unit
-///    - unit is the type of () in Rust
-///  - unit_struct
-///    - for example `struct Unit` or `PhantomData<T>`
-///  - unit_variant
-///    - the `E::A` and `E::B` in `enum E { A, B }`
-///  - newtype_struct
-///    - for example `struct Millimeters(u8)`
-///  - newtype_variant
-///    - the `E::N` in `enum E { N(u8) }`
-///  - seq
-///    - a variably sized sequence of values, for example `Vec<T>` or
-///      `HashSet<T>`
-///  - seq_fixed_size
-///    - a statically sized sequence of values for which the size will be known
-///      at deserialization time without looking at the serialized data, for
-///      example `[u64; 10]`
-///  - tuple
-///    - for example `(u8,)` or `(String, u64, Vec<T>)`
-///  - tuple_struct
-///    - for example `struct Rgb(u8, u8, u8)`
-///  - tuple_variant
-///    - the `E::T` in `enum E { T(u8, u8) }`
-///  - map
-///    - for example `BTreeMap<K, V>`
-///  - struct
-///    - a key-value pairing in which the keys will be known at deserialization
-///      time without looking at the serialized data, for example `struct S { r:
-///      u8, g: u8, b: u8 }`
-///  - struct_variant
-///    - the `E::S` in `enum E { S { r: u8, g: u8, b: u8 } }`
+///  - **string**
+///    - UTF-8 bytes with a length and no null terminator.
+///    - When serializing, all strings are handled equally. When deserializing,
+///      there are three flavors of strings: transient, owned, and borrowed.
+///  - **byte array** - [u8]
+///    - Similar to strings, during deserialization byte arrays can be transient,
+///      owned, or borrowed.
+///  - **option**
+///    - Either none or some value.
+///  - **unit**
+///    - The type of `()` in Rust. It represents an anonymous value containing no
+///      data.
+///  - **unit_struct**
+///    - For example `struct Unit` or `PhantomData<T>`. It represents a named value
+///      containing no data.
+///  - **unit_variant**
+///    - For example the `E::A` and `E::B` in `enum E { A, B }`.
+///  - **newtype_struct**
+///    - For example `struct Millimeters(u8)`.
+///  - **newtype_variant**
+///    - For example the `E::N` in `enum E { N(u8) }`.
+///  - **seq**
+///    - A variably sized heterogeneous sequence of values, for example `Vec<T>` or
+///      `HashSet<T>`. When serializing, the length may or may not be known before
+///      iterating through all the data. When deserializing, the length is determined
+///      by looking at the serialized data.
+///  - **tuple**
+///    - A statically sized heterogeneous sequence of values for which the length
+///      will be known at deserialization time without looking at the serialized
+///      data, for example `(u8,)` or `(String, u64, Vec<T>)` or `[u64; 10]`.
+///  - **tuple_struct**
+///    - A named tuple, for example `struct Rgb(u8, u8, u8)`.
+///  - **tuple_variant**
+///    - For example the `E::T` in `enum E { T(u8, u8) }`.
+///  - **map**
+///    - A heterogeneous key-value pairing, for example `BTreeMap<K, V>`.
+///  - **struct**
+///    - A heterogeneous key-value pairing in which the keys are strings and will be
+///      known at deserialization time without looking at the serialized data, for
+///      example `struct S { r: u8, g: u8, b: u8 }`.
+///  - **struct_variant**
+///    - For example the `E::S` in `enum E { S { r: u8, g: u8, b: u8 } }`.
 ///
 /// The `Deserializer` trait supports two entry point styles which enables
 /// different kinds of deserialization.
@@ -944,16 +951,6 @@ pub trait Deserializer<'de>: Sized {
 
     /// Hint that the `Deserialize` type is expecting a sequence of values and
     /// knows how many values there are without looking at the serialized data.
-    fn deserialize_seq_fixed_size<V>(
-        self,
-        len: usize,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>;
-
-    /// Hint that the `Deserialize` type is expecting a tuple value with a
-    /// particular number of elements.
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;

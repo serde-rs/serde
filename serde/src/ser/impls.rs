@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use ser::{Serialize, SerializeSeq, SerializeTuple, Serializer};
+use ser::{Serialize, SerializeTuple, Serializer};
 
 #[cfg(feature = "std")]
 use ser::Error;
@@ -130,7 +130,7 @@ impl<T> Serialize for [T; 0] {
     where
         S: Serializer,
     {
-        try!(serializer.serialize_seq_fixed_size(0)).end()
+        try!(serializer.serialize_tuple(0)).end()
     }
 }
 
@@ -146,7 +146,7 @@ macro_rules! array_impls {
                 where
                     S: Serializer,
                 {
-                    let mut seq = try!(serializer.serialize_seq_fixed_size($len));
+                    let mut seq = try!(serializer.serialize_tuple($len));
                     for e in self {
                         try!(seq.serialize_element(e));
                     }

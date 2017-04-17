@@ -44,9 +44,9 @@
 /// }
 /// #
 /// #     forward_to_deserialize_any! {
-/// #         u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string unit option
-/// #         seq seq_fixed_size bytes byte_buf map unit_struct newtype_struct
-/// #         tuple_struct struct identifier tuple enum ignored_any
+/// #         i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+/// #         byte_buf option unit unit_struct newtype_struct seq tuple
+/// #         tuple_struct map struct enum identifier ignored_any
 /// #     }
 /// # }
 /// #
@@ -78,8 +78,8 @@
 ///
 ///     forward_to_deserialize_any! {
 ///         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-///         byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
-///         tuple tuple_struct map struct enum identifier ignored_any
+///         byte_buf option unit unit_struct newtype_struct seq tuple
+///         tuple_struct map struct enum identifier ignored_any
 ///     }
 /// }
 /// #
@@ -113,8 +113,8 @@
 /// forward_to_deserialize_any! {
 ///     <W: Visitor<'q>>
 ///     bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-///     byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
-///     tuple tuple_struct map struct enum identifier ignored_any
+///     byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
+///     map struct enum identifier ignored_any
 /// }
 /// # }
 /// #
@@ -217,9 +217,6 @@ macro_rules! forward_to_deserialize_any_helper {
     };
     (seq<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_seq<$l, $v>()}
-    };
-    (seq_fixed_size<$l:tt, $v:ident>) => {
-        forward_to_deserialize_any_method!{deserialize_seq_fixed_size<$l, $v>(len: usize)}
     };
     (tuple<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_tuple<$l, $v>(len: usize)}

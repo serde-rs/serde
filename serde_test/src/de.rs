@@ -132,7 +132,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             Token::UnitStruct(_name) => visitor.visit_unit(),
             Token::NewtypeStruct(_name) => visitor.visit_newtype_struct(self),
             Token::Seq(len) => self.visit_seq(len, Token::SeqEnd, visitor),
-            Token::SeqFixedSize(len) => self.visit_seq(Some(len), Token::SeqEnd, visitor),
             Token::Tuple(len) => self.visit_seq(Some(len), Token::TupleEnd, visitor),
             Token::TupleStruct(_, len) => self.visit_seq(Some(len), Token::TupleStructEnd, visitor),
             Token::Map(len) => self.visit_map(len, Token::MapEnd, visitor),
@@ -262,20 +261,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         }
     }
 
-    fn deserialize_seq_fixed_size<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
-    where
-        V: Visitor<'de>,
-    {
-        match self.tokens.first() {
-            Some(&Token::SeqFixedSize(_)) => {
-                self.next_token();
-                self.visit_seq(Some(len), Token::SeqEnd, visitor)
-            }
-            Some(_) => self.deserialize_any(visitor),
-            None => Err(Error::EndOfTokens),
-        }
-    }
-
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
@@ -287,10 +272,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_unit()
             }
             Some(&Token::Seq(_)) => {
-                self.next_token();
-                self.visit_seq(Some(len), Token::SeqEnd, visitor)
-            }
-            Some(&Token::SeqFixedSize(_)) => {
                 self.next_token();
                 self.visit_seq(Some(len), Token::SeqEnd, visitor)
             }
@@ -330,10 +311,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 }
             }
             Some(&Token::Seq(_)) => {
-                self.next_token();
-                self.visit_seq(Some(len), Token::SeqEnd, visitor)
-            }
-            Some(&Token::SeqFixedSize(_)) => {
                 self.next_token();
                 self.visit_seq(Some(len), Token::SeqEnd, visitor)
             }
@@ -656,7 +633,7 @@ impl<'de> de::Deserializer<'de> for BytesDeserializer {
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-        byte_buf option unit unit_struct newtype_struct seq seq_fixed_size
-        tuple tuple_struct map struct enum identifier ignored_any
+        byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
+        map struct enum identifier ignored_any
     }
 }
