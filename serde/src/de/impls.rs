@@ -43,6 +43,11 @@ use alloc::arc::Arc;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 
+use core::cell::{Cell, RefCell};
+
+#[cfg(feature = "std")]
+use std::sync::{Mutex, RwLock};
+
 #[cfg(feature = "std")]
 use std::time::Duration;
 
@@ -1103,6 +1108,44 @@ impl<'a, T: ?Sized> Deserialize for Cow<'a, T>
     {
         let val = try!(Deserialize::deserialize(deserializer));
         Ok(Cow::Owned(val))
+    }
+}
+
+impl<T: Deserialize + Copy> Deserialize for Cell<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Cell<T>, D::Error>
+        where D: Deserializer
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(Cell::new(val))
+    }
+}
+
+impl<T: Deserialize> Deserialize for RefCell<T> {
+    fn deserialize<D>(deserializer: D) -> Result<RefCell<T>, D::Error>
+        where D: Deserializer
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(RefCell::new(val))
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: Deserialize> Deserialize for Mutex<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Mutex<T>, D::Error>
+        where D: Deserializer
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(Mutex::new(val))
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: Deserialize> Deserialize for RwLock<T> {
+    fn deserialize<D>(deserializer: D) -> Result<RwLock<T>, D::Error>
+        where D: Deserializer
+    {
+        let val = try!(Deserialize::deserialize(deserializer));
+        Ok(RwLock::new(val))
     }
 }
 
