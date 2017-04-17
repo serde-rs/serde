@@ -634,7 +634,7 @@ impl<'de, T> Deserialize<'de> for [T; 0] {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_seq_fixed_size(0, ArrayVisitor::<[T; 0]>::new())
+        deserializer.deserialize_tuple(0, ArrayVisitor::<[T; 0]>::new())
     }
 }
 
@@ -675,7 +675,7 @@ macro_rules! array_impls {
                 where
                     D: Deserializer<'de>,
                 {
-                    deserializer.deserialize_seq_fixed_size($len, ArrayVisitor::<[T; $len]>::new())
+                    deserializer.deserialize_tuple($len, ArrayVisitor::<[T; $len]>::new())
                 }
             }
         )+

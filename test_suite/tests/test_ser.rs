@@ -138,15 +138,15 @@ declare_tests! {
     }
     test_array {
         [0; 0] => &[
-            Token::SeqFixedSize(0),
-            Token::SeqEnd,
+            Token::Tuple(0),
+            Token::TupleEnd,
         ],
         [1, 2, 3] => &[
-            Token::SeqFixedSize(3),
+            Token::Tuple(3),
                 Token::I32(1),
                 Token::I32(2),
                 Token::I32(3),
-            Token::SeqEnd,
+            Token::TupleEnd,
         ],
     }
     test_vec {
@@ -301,11 +301,11 @@ declare_tests! {
     }
     test_boxed_slice {
         Box::new([0, 1, 2]) => &[
-            Token::SeqFixedSize(3),
+            Token::Tuple(3),
             Token::I32(0),
             Token::I32(1),
             Token::I32(2),
-            Token::SeqEnd,
+            Token::TupleEnd,
         ],
     }
     test_duration {

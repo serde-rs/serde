@@ -245,10 +245,6 @@ where
         Err(self.bad_type(Unsupported::Sequence))
     }
 
-    fn serialize_seq_fixed_size(self, _: usize) -> Result<Self::SerializeSeq, Self::Error> {
-        Err(self.bad_type(Unsupported::Sequence))
-    }
-
     fn serialize_tuple(self, _: usize) -> Result<Self::SerializeTuple, Self::Error> {
         Err(self.bad_type(Unsupported::Tuple))
     }
@@ -484,7 +480,6 @@ mod content {
         NewtypeVariant(&'static str, u32, &'static str, Box<Content>),
 
         Seq(Vec<Content>),
-        SeqFixedSize(Vec<Content>),
         Tuple(Vec<Content>),
         TupleStruct(&'static str, Vec<Content>),
         TupleVariant(&'static str, u32, &'static str, Vec<Content>),
@@ -523,14 +518,6 @@ mod content {
                     serializer.serialize_newtype_variant(n, i, v, &**c)
                 }
                 Content::Seq(ref elements) => elements.serialize(serializer),
-                Content::SeqFixedSize(ref elements) => {
-                    use ser::SerializeSeq;
-                    let mut seq = try!(serializer.serialize_seq_fixed_size(elements.len()));
-                    for e in elements {
-                        try!(seq.serialize_element(e));
-                    }
-                    seq.end()
-                }
                 Content::Tuple(ref elements) => {
                     use ser::SerializeTuple;
                     let mut tuple = try!(serializer.serialize_tuple(elements.len()));
@@ -726,18 +713,7 @@ mod content {
         fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, E> {
             Ok(
                 SerializeSeq {
-                    fixed_size: false,
                     elements: Vec::with_capacity(len.unwrap_or(0)),
-                    error: PhantomData,
-                },
-            )
-        }
-
-        fn serialize_seq_fixed_size(self, size: usize) -> Result<Self::SerializeSeq, E> {
-            Ok(
-                SerializeSeq {
-                    fixed_size: true,
-                    elements: Vec::with_capacity(size),
                     error: PhantomData,
                 },
             )
@@ -828,7 +804,6 @@ mod content {
     }
 
     struct SerializeSeq<E> {
-        fixed_size: bool,
         elements: Vec<Content>,
         error: PhantomData<E>,
     }
@@ -850,13 +825,7 @@ mod content {
         }
 
         fn end(self) -> Result<Content, E> {
-            Ok(
-                if self.fixed_size {
-                    Content::SeqFixedSize(self.elements)
-                } else {
-                    Content::Seq(self.elements)
-                },
-            )
+            Ok(Content::Seq(self.elements))
         }
     }
 

@@ -103,12 +103,6 @@ pub enum Token {
     /// header is a list of elements, followed by `SeqEnd`.
     Seq(Option<usize>),
 
-    /// The header to an array of the given length.
-    ///
-    /// These are serialized via `serialize_seq_fized_size`, which requires a length. After this
-    /// header is a list of elements, followed by `SeqEnd`.
-    SeqFixedSize(usize),
-
     /// An indicator of the end of a sequence.
     SeqEnd,
 

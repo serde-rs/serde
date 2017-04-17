@@ -239,7 +239,7 @@ pub trait Serialize {
 /// A **data format** that can serialize any data structure supported by Serde.
 ///
 /// The role of this trait is to define the serialization half of the Serde data
-/// model, which is a way to categorize every Rust data structure into one of 28
+/// model, which is a way to categorize every Rust data structure into one of 27
 /// possible types. Each method of the `Serializer` trait corresponds to one of
 /// the types of the data model.
 ///
@@ -248,47 +248,54 @@ pub trait Serialize {
 ///
 /// The types that make up the Serde data model are:
 ///
-///  - 12 primitive types:
+///  - **12 primitive types**
 ///    - bool
 ///    - i8, i16, i32, i64
 ///    - u8, u16, u32, u64
 ///    - f32, f64
 ///    - char
-///  - string
-///  - byte array - [u8]
-///  - option
-///    - either none or some value
-///  - unit
-///    - unit is the type of () in Rust
-///  - unit_struct
-///    - for example `struct Unit` or `PhantomData<T>`
-///  - unit_variant
-///    - the `E::A` and `E::B` in `enum E { A, B }`
-///  - newtype_struct
-///    - for example `struct Millimeters(u8)`
-///  - newtype_variant
-///    - the `E::N` in `enum E { N(u8) }`
-///  - seq
-///    - a variably sized sequence of values, for example `Vec<T>` or
-///      `HashSet<T>`
-///  - seq_fixed_size
-///    - a statically sized sequence of values for which the size will be known
-///      at deserialization time without looking at the serialized data, for
-///      example `[u64; 10]`
-///  - tuple
-///    - for example `(u8,)` or `(String, u64, Vec<T>)`
-///  - tuple_struct
-///    - for example `struct Rgb(u8, u8, u8)`
-///  - tuple_variant
-///    - the `E::T` in `enum E { T(u8, u8) }`
-///  - map
-///    - for example `BTreeMap<K, V>`
-///  - struct
-///    - a key-value pairing in which the keys will be known at deserialization
-///      time without looking at the serialized data, for example `struct S { r:
-///      u8, g: u8, b: u8 }`
-///  - struct_variant
-///    - the `E::S` in `enum E { S { r: u8, g: u8, b: u8 } }`
+///  - **string**
+///    - UTF-8 bytes with a length and no null terminator.
+///    - When serializing, all strings are handled equally. When deserializing,
+///      there are three flavors of strings: transient, owned, and borrowed.
+///  - **byte array** - [u8]
+///    - Similar to strings, during deserialization byte arrays can be transient,
+///      owned, or borrowed.
+///  - **option**
+///    - Either none or some value.
+///  - **unit**
+///    - The type of `()` in Rust. It represents an anonymous value containing no
+///      data.
+///  - **unit_struct**
+///    - For example `struct Unit` or `PhantomData<T>`. It represents a named value
+///      containing no data.
+///  - **unit_variant**
+///    - For example the `E::A` and `E::B` in `enum E { A, B }`.
+///  - **newtype_struct**
+///    - For example `struct Millimeters(u8)`.
+///  - **newtype_variant**
+///    - For example the `E::N` in `enum E { N(u8) }`.
+///  - **seq**
+///    - A variably sized heterogeneous sequence of values, for example `Vec<T>` or
+///      `HashSet<T>`. When serializing, the length may or may not be known before
+///      iterating through all the data. When deserializing, the length is determined
+///      by looking at the serialized data.
+///  - **tuple**
+///    - A statically sized heterogeneous sequence of values for which the length
+///      will be known at deserialization time without looking at the serialized
+///      data, for example `(u8,)` or `(String, u64, Vec<T>)` or `[u64; 10]`.
+///  - **tuple_struct**
+///    - A named tuple, for example `struct Rgb(u8, u8, u8)`.
+///  - **tuple_variant**
+///    - For example the `E::T` in `enum E { T(u8, u8) }`.
+///  - **map**
+///    - A heterogeneous key-value pairing, for example `BTreeMap<K, V>`.
+///  - **struct**
+///    - A heterogeneous key-value pairing in which the keys are strings and will be
+///      known at deserialization time without looking at the serialized data, for
+///      example `struct S { r: u8, g: u8, b: u8 }`.
+///  - **struct_variant**
+///    - For example the `E::S` in `enum E { S { r: u8, g: u8, b: u8 } }`.
 ///
 /// Many Serde serializers produce text or binary data as output, for example
 /// JSON or Bincode. This is not a requirement of the `Serializer` trait, and
@@ -310,11 +317,10 @@ pub trait Serializer: Sized {
     /// The error type when some error occurs during serialization.
     type Error: Error;
 
-    /// Type returned from [`serialize_seq`] and [`serialize_seq_fixed_size`]
-    /// for serializing the content of the sequence.
+    /// Type returned from [`serialize_seq`] for serializing the content of the
+    /// sequence.
     ///
     /// [`serialize_seq`]: #tymethod.serialize_seq
-    /// [`serialize_seq_fixed_size`]: #tymethod.serialize_seq_fixed_size
     type SerializeSeq: SerializeSeq<Ok = Self::Ok, Error = Self::Error>;
 
     /// Type returned from [`serialize_tuple`] for serializing the content of
@@ -702,8 +708,7 @@ pub trait Serializer: Sized {
     /// #     __serialize_unimplemented! {
     /// #         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str none some
     /// #         unit unit_struct unit_variant newtype_struct newtype_variant
-    /// #         seq seq_fixed_size tuple tuple_struct tuple_variant map struct
-    /// #         struct_variant
+    /// #         seq tuple tuple_struct tuple_variant map struct struct_variant
     /// #     }
     /// # }
     /// #
@@ -966,29 +971,6 @@ pub trait Serializer: Sized {
     /// then a call to `end`.
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeSeq};
-    ///
-    /// const VRAM_SIZE: usize = 386;
-    /// struct Vram([u16; VRAM_SIZE]);
-    ///
-    /// impl Serialize for Vram {
-    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    ///         where S: Serializer
-    ///     {
-    ///         let mut seq = serializer.serialize_seq_fixed_size(VRAM_SIZE)?;
-    ///         for element in &self.0[..] {
-    ///             seq.serialize_element(element)?;
-    ///         }
-    ///         seq.end()
-    ///     }
-    /// }
-    /// ```
-    fn serialize_seq_fixed_size(self, size: usize) -> Result<Self::SerializeSeq, Self::Error>;
-
-    /// Begin to serialize a tuple. This call must be followed by zero or more
-    /// calls to `serialize_element`, then a call to `end`.
-    ///
-    /// ```rust
     /// use serde::ser::{Serialize, Serializer, SerializeTuple};
     ///
     /// # mod fool {
@@ -1012,6 +994,25 @@ pub trait Serializer: Sized {
     ///         tup.serialize_element(&self.1)?;
     ///         tup.serialize_element(&self.2)?;
     ///         tup.end()
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// ```rust
+    /// use serde::ser::{Serialize, Serializer, SerializeTuple};
+    ///
+    /// const VRAM_SIZE: usize = 386;
+    /// struct Vram([u16; VRAM_SIZE]);
+    ///
+    /// impl Serialize for Vram {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         let mut seq = serializer.serialize_tuple(VRAM_SIZE)?;
+    ///         for element in &self.0[..] {
+    ///             seq.serialize_element(element)?;
+    ///         }
+    ///         seq.end()
     ///     }
     /// }
     /// ```
@@ -1359,34 +1360,26 @@ pub trait Serializer: Sized {
         T: Display;
 }
 
-/// Returned from `Serializer::serialize_seq` and
-/// `Serializer::serialize_seq_fixed_size`.
+/// Returned from `Serializer::serialize_seq`.
 ///
 /// ```rust
 /// # use std::marker::PhantomData;
 /// #
-/// # macro_rules! unimplemented_vec {
-/// #     ($name:ident) => {
-/// #         struct $name<T>(PhantomData<T>);
+/// # struct Vec<T>(PhantomData<T>);
 /// #
-/// #         impl<T> $name<T> {
-/// #             fn len(&self) -> usize {
-/// #                 unimplemented!()
-/// #             }
-/// #         }
-/// #
-/// #         impl<'a, T> IntoIterator for &'a $name<T> {
-/// #             type Item = &'a T;
-/// #             type IntoIter = Box<Iterator<Item = &'a T>>;
-/// #             fn into_iter(self) -> Self::IntoIter {
-/// #                 unimplemented!()
-/// #             }
-/// #         }
+/// # impl<T> Vec<T> {
+/// #     fn len(&self) -> usize {
+/// #         unimplemented!()
 /// #     }
 /// # }
 /// #
-/// # unimplemented_vec!(Vec);
-/// # unimplemented_vec!(Array);
+/// # impl<'a, T> IntoIterator for &'a Vec<T> {
+/// #     type Item = &'a T;
+/// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+/// #     fn into_iter(self) -> Self::IntoIter {
+/// #         unimplemented!()
+/// #     }
+/// # }
 /// #
 /// use serde::ser::{Serialize, Serializer, SerializeSeq};
 ///
@@ -1397,26 +1390,6 @@ pub trait Serializer: Sized {
 ///         where S: Serializer
 ///     {
 ///         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-///         for element in self {
-///             seq.serialize_element(element)?;
-///         }
-///         seq.end()
-///     }
-/// }
-///
-/// # mod fool {
-/// #     trait Serialize {}
-/// impl<T> Serialize for [T; 16]
-/// #     {}
-/// # }
-/// #
-/// # impl<T> Serialize for Array<T>
-///     where T: Serialize
-/// {
-///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-///         where S: Serializer
-///     {
-///         let mut seq = serializer.serialize_seq_fixed_size(16)?;
 ///         for element in self {
 ///             seq.serialize_element(element)?;
 ///         }
@@ -1466,6 +1439,48 @@ pub trait SerializeSeq {
 ///         tup.serialize_element(&self.1)?;
 ///         tup.serialize_element(&self.2)?;
 ///         tup.end()
+///     }
+/// }
+/// ```
+///
+/// ```rust
+/// # use std::marker::PhantomData;
+/// #
+/// # struct Array<T>(PhantomData<T>);
+/// #
+/// # impl<T> Array<T> {
+/// #     fn len(&self) -> usize {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// # impl<'a, T> IntoIterator for &'a Array<T> {
+/// #     type Item = &'a T;
+/// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+/// #     fn into_iter(self) -> Self::IntoIter {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// use serde::ser::{Serialize, Serializer, SerializeTuple};
+///
+/// # mod fool {
+/// #     trait Serialize {}
+/// impl<T> Serialize for [T; 16]
+/// #     {}
+/// # }
+/// #
+/// # impl<T> Serialize for Array<T>
+///     where T: Serialize
+/// {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer
+///     {
+///         let mut seq = serializer.serialize_tuple(16)?;
+///         for element in self {
+///             seq.serialize_element(element)?;
+///         }
+///         seq.end()
 ///     }
 /// }
 /// ```

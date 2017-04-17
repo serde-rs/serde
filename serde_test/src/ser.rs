@@ -212,11 +212,6 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
         Ok(self)
     }
 
-    fn serialize_seq_fixed_size(self, len: usize) -> Result<Self, Error> {
-        assert_next_token!(self, SeqFixedSize(len));
-        Ok(self)
-    }
-
     fn serialize_tuple(self, len: usize) -> Result<Self, Error> {
         assert_next_token!(self, Tuple(len));
         Ok(self)

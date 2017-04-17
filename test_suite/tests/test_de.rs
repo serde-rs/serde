@@ -360,8 +360,8 @@ declare_tests! {
             Token::SeqEnd,
         ],
         [0; 0] => &[
-            Token::SeqFixedSize(0),
-            Token::SeqEnd,
+            Token::Tuple(0),
+            Token::TupleEnd,
         ],
         ([0; 0], [1], [2, 3]) => &[
             Token::Seq(Some(3)),
@@ -379,19 +379,19 @@ declare_tests! {
             Token::SeqEnd,
         ],
         ([0; 0], [1], [2, 3]) => &[
-            Token::SeqFixedSize(3),
-                Token::SeqFixedSize(0),
-                Token::SeqEnd,
+            Token::Tuple(3),
+                Token::Tuple(0),
+                Token::TupleEnd,
 
-                Token::SeqFixedSize(1),
+                Token::Tuple(1),
                     Token::I32(1),
-                Token::SeqEnd,
+                Token::TupleEnd,
 
-                Token::SeqFixedSize(2),
+                Token::Tuple(2),
                     Token::I32(2),
                     Token::I32(3),
-                Token::SeqEnd,
-            Token::SeqEnd,
+                Token::TupleEnd,
+            Token::TupleEnd,
         ],
         [0; 0] => &[
             Token::TupleStruct("Anything", 0),
