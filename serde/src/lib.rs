@@ -129,6 +129,7 @@ mod lib {
     pub use self::core::{u8, u16, u32, u64, usize};
     pub use self::core::{f32, f64};
 
+    pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
     pub use self::core::convert::{self, From, Into};
     pub use self::core::default::{self, Default};
@@ -187,6 +188,8 @@ mod lib {
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
     pub use std::time::Duration;
+    #[cfg(feature = "std")]
+    pub use std::sync::{Mutex, RwLock};
 
     #[cfg(feature = "unstable")]
     pub use core::nonzero::{NonZero, Zeroable};
