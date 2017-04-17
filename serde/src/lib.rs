@@ -70,7 +70,7 @@
 //! [Hjson]: https://github.com/laktak/hjson-rust
 //! [BSON]: https://github.com/zonyitoo/bson-rs
 //! [URL]: https://github.com/nox/serde_urlencoded
-//! [XML]:https://github.com/RReverser/serde-xml-rs
+//! [XML]: https://github.com/RReverser/serde-xml-rs
 //! [Envy]: https://github.com/softprops/envy
 //! [Redis]: https://github.com/OneSignal/serde-redis
 //! [Cargo]: http://doc.crates.io/manifest.html
