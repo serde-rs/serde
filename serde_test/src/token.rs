@@ -1,5 +1,13 @@
-#[derive(Clone, PartialEq, Debug)]
-pub enum Token<'a> {
+// Copyright 2017 Serde Developers
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Token {
     /// A serialized `bool`.
     Bool(bool),
 
@@ -37,90 +45,75 @@ pub enum Token<'a> {
     Char(char),
 
     /// A serialized `str`.
-    Str(&'a str),
+    Str(&'static str),
+
+    /// A borrowed `str`.
+    BorrowedStr(&'static str),
 
     /// A serialized `String`.
-    String(String),
+    String(&'static str),
 
     /// A serialized `[u8]`
-    Bytes(&'a [u8]),
+    Bytes(&'static [u8]),
+
+    /// A borrowed `[u8]`.
+    BorrowedBytes(&'static [u8]),
 
     /// A serialized `ByteBuf`
-    ByteBuf(Vec<u8>),
+    ByteBuf(&'static [u8]),
 
-    /// The header to a serialized `Option<T>`.
+    /// The header to a serialized `Option<T>` containing some value.
     ///
-    /// `None` is serialized as `Option(false)`, while `Some` is serialized as `Option(true)`, then
-    /// the value contained in the option.
-    Option(bool),
+    /// The tokens of the value follow after this header.
+    Some,
+
+    /// A serialized `Option<T>` containing none.
+    None,
 
     /// A serialized `()`.
     Unit,
 
     /// A serialized unit struct of the given name.
-    UnitStruct(&'a str),
+    UnitStruct(&'static str),
 
     /// The header to a serialized newtype struct of the given name.
     ///
     /// Newtype structs are serialized with this header, followed by the value contained in the
     /// newtype struct.
-    StructNewType(&'a str),
+    NewtypeStruct(&'static str),
 
     /// The header to an enum of the given name.
-    ///
-    /// This token is only used for deserializers, and ensures that the following tokens are read as
-    /// an enum. Because this is never emitted by serializers, calling `assert_ser_tokens` or
-    /// `assert_tokens` will fail if this token is used.
-    ///
-    /// TODO: Trash this.
-    EnumStart(&'a str),
+    Enum(&'static str),
 
     /// A unit variant of an enum of the given name, of the given name.
     ///
     /// The first string represents the name of the enum, and the second represents the name of the
     /// variant.
-    EnumUnit(&'a str, &'a str),
+    UnitVariant(&'static str, &'static str),
 
     /// The header to a newtype variant of an enum of the given name, of the given name.
     ///
     /// The first string represents the name of the enum, and the second represents the name of the
     /// variant. The value contained within this enum works the same as `StructNewType`.
-    EnumNewType(&'a str, &'a str),
+    NewtypeVariant(&'static str, &'static str),
 
     /// The header to a sequence of the given length.
     ///
     /// These are serialized via `serialize_seq`, which takes an optional length. After this
     /// header is a list of elements, followed by `SeqEnd`.
-    SeqStart(Option<usize>),
-
-    /// The header to an array of the given length.
-    ///
-    /// These are serialized via `serialize_seq_fized_size`, which requires a length. After this
-    /// header is a list of elements, followed by `SeqEnd`.
-    SeqArrayStart(usize),
-
-    /// A separator, which occurs *before* every element in a sequence.
-    ///
-    /// Elements in sequences are represented by a `SeqSep`, followed by the value of the element.
-    SeqSep,
+    Seq(Option<usize>),
 
     /// An indicator of the end of a sequence.
     SeqEnd,
 
-    /// The header to a tuple of the given length, similar to `SeqArrayStart`.
-    TupleStart(usize),
-
-    /// A separator, similar to `SeqSep`.
-    TupleSep,
+    /// The header to a tuple of the given length, similar to `SeqFixedSize`.
+    Tuple(usize),
 
     /// An indicator of the end of a tuple, similar to `SeqEnd`.
     TupleEnd,
 
     /// The header to a tuple struct of the given name and length.
-    TupleStructStart(&'a str, usize),
-
-    /// A separator, similar to `TupleSep`.
-    TupleStructSep,
+    TupleStruct(&'static str, usize),
 
     /// An indicator of the end of a tuple struct, similar to `TupleEnd`.
     TupleStructEnd,
@@ -129,42 +122,27 @@ pub enum Token<'a> {
     ///
     /// These are serialized via `serialize_map`, which takes an optional length. After this header
     /// is a list of key-value pairs, followed by `MapEnd`.
-    MapStart(Option<usize>),
-
-    /// A separator, which occurs *before* every key-value pair in a map.
-    ///
-    /// Elements in maps are represented by a `MapSep`, followed by a serialized key, followed
-    /// by a serialized value.
-    MapSep,
+    Map(Option<usize>),
 
     /// An indicator of the end of a map.
     MapEnd,
 
-    /// The header of a struct of the given name and length, similar to `MapStart`.
-    StructStart(&'a str, usize),
-
-    /// A separator, similar to `MapSep`.
-    StructSep,
+    /// The header of a struct of the given name and length, similar to `Map`.
+    Struct(&'static str, usize),
 
     /// An indicator of the end of a struct, similar to `MapEnd`.
     StructEnd,
 
     /// The header to a tuple variant of an enum of the given name, of the given name and length.
-    EnumSeqStart(&'a str, &'a str, usize),
-
-    /// A separator, similar to `TupleSep`.
-    EnumSeqSep,
+    TupleVariant(&'static str, &'static str, usize),
 
     /// An indicator of the end of a tuple variant, similar to `TupleEnd`.
-    EnumSeqEnd,
+    TupleVariantEnd,
 
     /// The header of a struct variant of an enum of the given name, of the given name and length,
-    /// similar to `StructStart`.
-    EnumMapStart(&'a str, &'a str, usize),
-
-    /// A separator, similar to `StructSep`.
-    EnumMapSep,
+    /// similar to `Struct`.
+    StructVariant(&'static str, &'static str, usize),
 
     /// An indicator of the end of a struct, similar to `StructEnd`.
-    EnumMapEnd,
+    StructVariantEnd,
 }

@@ -1,10 +1,19 @@
+// Copyright 2017 Serde Developers
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 use syn;
 use attr;
+use check;
 use Ctxt;
 
-pub struct Item<'a> {
+pub struct Container<'a> {
     pub ident: syn::Ident,
-    pub attrs: attr::Item,
+    pub attrs: attr::Container,
     pub body: Body<'a>,
     pub generics: &'a syn::Generics,
 }
@@ -27,6 +36,7 @@ pub struct Field<'a> {
     pub ty: &'a syn::Ty,
 }
 
+#[derive(Copy, Clone)]
 pub enum Style {
     Struct,
     Tuple,
@@ -34,9 +44,9 @@ pub enum Style {
     Unit,
 }
 
-impl<'a> Item<'a> {
-    pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Item<'a> {
-        let attrs = attr::Item::from_ast(cx, item);
+impl<'a> Container<'a> {
+    pub fn from_ast(cx: &Ctxt, item: &'a syn::MacroInput) -> Container<'a> {
+        let attrs = attr::Container::from_ast(cx, item);
 
         let mut body = match item.body {
             syn::Body::Enum(ref variants) => Body::Enum(enum_from_ast(cx, variants)),
@@ -62,12 +72,14 @@ impl<'a> Item<'a> {
             }
         }
 
-        Item {
+        let item = Container {
             ident: item.ident.clone(),
             attrs: attrs,
             body: body,
             generics: &item.generics,
-        }
+        };
+        check::check(cx, &item);
+        item
     }
 }
 
@@ -80,6 +92,10 @@ impl<'a> Body<'a> {
             }
             Body::Struct(_, ref fields) => Box::new(fields.iter()),
         }
+    }
+
+    pub fn has_getter(&self) -> bool {
+        self.all_fields().any(|f| f.attrs.getter().is_some())
     }
 }
 

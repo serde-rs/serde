@@ -1,33 +1,21 @@
+// Copyright 2017 Serde Developers
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 use std::collections::HashSet;
 
 use syn::{self, visit};
 
-use internals::ast::Item;
+use internals::ast::Container;
 use internals::attr;
 
 macro_rules! path {
-    ($first:ident $(:: $rest:ident)*) => {
-        syn::Path {
-            global: false,
-            segments: vec![
-                stringify!($first).into(),
-                $(
-                    stringify!($rest).into(),
-                )*
-            ],
-        }
-    };
-
-    (::$first:ident $(:: $rest:ident)*) => {
-        syn::Path {
-            global: true,
-            segments: vec![
-                stringify!($first).into(),
-                $(
-                    stringify!($rest).into(),
-                )*
-            ],
-        }
+    ($($path:tt)+) => {
+        syn::parse_path(stringify!($($path)+)).unwrap()
     };
 }
 
@@ -36,29 +24,43 @@ macro_rules! path {
 // allowed here".
 pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
     syn::Generics {
-        ty_params: generics.ty_params
+        ty_params: generics
+            .ty_params
             .iter()
-            .map(|ty_param| syn::TyParam { default: None, ..ty_param.clone() })
+            .map(
+                |ty_param| {
+                    syn::TyParam {
+                        default: None,
+                        ..ty_param.clone()
+                    }
+                },
+            )
             .collect(),
         ..generics.clone()
     }
 }
 
-pub fn with_where_predicates(generics: &syn::Generics,
-                             predicates: &[syn::WherePredicate])
-                             -> syn::Generics {
+pub fn with_where_predicates(
+    generics: &syn::Generics,
+    predicates: &[syn::WherePredicate],
+) -> syn::Generics {
     let mut generics = generics.clone();
-    generics.where_clause.predicates.extend_from_slice(predicates);
+    generics
+        .where_clause
+        .predicates
+        .extend_from_slice(predicates);
     generics
 }
 
-pub fn with_where_predicates_from_fields<F>(item: &Item,
-                                            generics: &syn::Generics,
-                                            from_field: F)
-                                            -> syn::Generics
-    where F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>
+pub fn with_where_predicates_from_fields<F>(
+    cont: &Container,
+    generics: &syn::Generics,
+    from_field: F,
+) -> syn::Generics
+where
+    F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
 {
-    let predicates = item.body
+    let predicates = cont.body
         .all_fields()
         .flat_map(|field| from_field(&field.attrs))
         .flat_map(|predicates| predicates.to_vec());
@@ -79,12 +81,14 @@ pub fn with_where_predicates_from_fields<F>(item: &Item,
 //         #[serde(skip_serializing)]
 //         c: C,
 //     }
-pub fn with_bound<F>(item: &Item,
-                     generics: &syn::Generics,
-                     filter: F,
-                     bound: &syn::Path)
-                     -> syn::Generics
-    where F: Fn(&attr::Field) -> bool
+pub fn with_bound<F>(
+    cont: &Container,
+    generics: &syn::Generics,
+    filter: F,
+    bound: &syn::Path,
+) -> syn::Generics
+where
+    F: Fn(&attr::Field) -> bool,
 {
     struct FindTyParams {
         // Set of all generic type parameters on the current struct (A, B, C in
@@ -114,12 +118,13 @@ pub fn with_bound<F>(item: &Item,
         }
     }
 
-    let all_ty_params: HashSet<_> = generics.ty_params
+    let all_ty_params: HashSet<_> = generics
+        .ty_params
         .iter()
         .map(|ty_param| ty_param.ident.clone())
         .collect();
 
-    let relevant_tys = item.body
+    let relevant_tys = cont.body
         .all_fields()
         .filter(|&field| filter(&field.attrs))
         .map(|field| &field.ty);
@@ -132,58 +137,66 @@ pub fn with_bound<F>(item: &Item,
         visit::walk_ty(&mut visitor, ty);
     }
 
-    let new_predicates = generics.ty_params
+    let new_predicates = generics
+        .ty_params
         .iter()
         .map(|ty_param| ty_param.ident.clone())
         .filter(|id| visitor.relevant_ty_params.contains(id))
-        .map(|id| {
-            syn::WherePredicate::BoundPredicate(syn::WhereBoundPredicate {
-                bound_lifetimes: Vec::new(),
-                // the type parameter that is being bounded e.g. T
-                bounded_ty: syn::Ty::Path(None, id.into()),
-                // the bound e.g. Serialize
-                bounds: vec![syn::TyParamBound::Trait(
-                    syn::PolyTraitRef {
+        .map(
+            |id| {
+                syn::WherePredicate::BoundPredicate(
+                    syn::WhereBoundPredicate {
                         bound_lifetimes: Vec::new(),
-                        trait_ref: bound.clone(),
+                        // the type parameter that is being bounded e.g. T
+                        bounded_ty: syn::Ty::Path(None, id.into()),
+                        // the bound e.g. Serialize
+                        bounds: vec![
+                            syn::TyParamBound::Trait(
+                                syn::PolyTraitRef {
+                                    bound_lifetimes: Vec::new(),
+                                    trait_ref: bound.clone(),
+                                },
+                                syn::TraitBoundModifier::None,
+                            ),
+                        ],
                     },
-                    syn::TraitBoundModifier::None
-                )],
-            })
-        });
+                )
+            },
+        );
 
     let mut generics = generics.clone();
     generics.where_clause.predicates.extend(new_predicates);
     generics
 }
 
-pub fn with_self_bound(item: &Item,
-                       generics: &syn::Generics,
-                       bound: &syn::Path)
-                       -> syn::Generics
-{
+pub fn with_self_bound(cont: &Container, generics: &syn::Generics, bound: &syn::Path) -> syn::Generics {
     let mut generics = generics.clone();
-    generics.where_clause.predicates.push(
-        syn::WherePredicate::BoundPredicate(syn::WhereBoundPredicate {
-            bound_lifetimes: Vec::new(),
-            // the type that is being bounded e.g. MyStruct<'a, T>
-            bounded_ty: type_of_item(item),
-            // the bound e.g. Default
-            bounds: vec![syn::TyParamBound::Trait(
-                syn::PolyTraitRef {
+    generics
+        .where_clause
+        .predicates
+        .push(
+            syn::WherePredicate::BoundPredicate(
+                syn::WhereBoundPredicate {
                     bound_lifetimes: Vec::new(),
-                    trait_ref: bound.clone(),
+                    // the type that is being bounded e.g. MyStruct<'a, T>
+                    bounded_ty: type_of_item(cont),
+                    // the bound e.g. Default
+                    bounds: vec![
+                        syn::TyParamBound::Trait(
+                            syn::PolyTraitRef {
+                                bound_lifetimes: Vec::new(),
+                                trait_ref: bound.clone(),
+                            },
+                            syn::TraitBoundModifier::None,
+                        ),
+                    ],
                 },
-                syn::TraitBoundModifier::None
-            )],
-        })
-    );
+            ),
+        );
     generics
 }
 
-pub fn with_lifetime_bound(generics: &syn::Generics,
-                           lifetime: &str)
-                           -> syn::Generics {
+pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Generics {
     let mut generics = generics.clone();
 
     for lifetime_def in &mut generics.lifetimes {
@@ -191,38 +204,49 @@ pub fn with_lifetime_bound(generics: &syn::Generics,
     }
 
     for ty_param in &mut generics.ty_params {
-        ty_param.bounds.push(syn::TyParamBound::Region(syn::Lifetime::new(lifetime)));
+        ty_param
+            .bounds
+            .push(syn::TyParamBound::Region(syn::Lifetime::new(lifetime)));
     }
 
-    generics.lifetimes.push(syn::LifetimeDef {
-        attrs: Vec::new(),
-        lifetime: syn::Lifetime::new(lifetime),
-        bounds: Vec::new(),
-    });
+    generics
+        .lifetimes
+        .push(
+            syn::LifetimeDef {
+                attrs: Vec::new(),
+                lifetime: syn::Lifetime::new(lifetime),
+                bounds: Vec::new(),
+            },
+        );
 
     generics
 }
 
-fn type_of_item(item: &Item) -> syn::Ty {
-    syn::Ty::Path(None, syn::Path {
-        global: false,
-        segments: vec![
-            syn::PathSegment {
-                ident: item.ident.clone(),
-                parameters: syn::PathParameters::AngleBracketed(syn::AngleBracketedParameterData {
-                    lifetimes: item.generics
-                                    .lifetimes
-                                    .iter()
-                                    .map(|def| def.lifetime.clone())
-                                    .collect(),
-                    types: item.generics
+fn type_of_item(cont: &Container) -> syn::Ty {
+    syn::Ty::Path(
+        None,
+        syn::Path {
+            global: false,
+            segments: vec![
+                syn::PathSegment {
+                    ident: cont.ident.clone(),
+                    parameters: syn::PathParameters::AngleBracketed(
+                        syn::AngleBracketedParameterData {
+                            lifetimes: cont.generics
+                                .lifetimes
+                                .iter()
+                                .map(|def| def.lifetime.clone())
+                                .collect(),
+                            types: cont.generics
                                 .ty_params
                                 .iter()
                                 .map(|param| syn::Ty::Path(None, param.ident.clone().into()))
                                 .collect(),
-                    bindings: Vec::new(),
-                }),
-            }
-        ]
-    })
+                            bindings: Vec::new(),
+                        },
+                    ),
+                },
+            ],
+        },
+    )
 }

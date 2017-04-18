@@ -1,26 +1,45 @@
+// Copyright 2017 Serde Developers
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 use syn::{self, Ident};
 use quote::Tokens;
 
 use bound;
 use fragment::{Fragment, Stmts, Match};
-use internals::ast::{Body, Field, Item, Style, Variant};
-use internals::{self, attr};
+use internals::ast::{Body, Container, Field, Style, Variant};
+use internals::{attr, Ctxt};
 
-pub fn expand_derive_serialize(item: &syn::DeriveInput) -> Result<Tokens, String> {
-    let ctxt = internals::Ctxt::new();
-    let item = Item::from_ast(&ctxt, item);
+use std::u32;
+
+pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
+    let ctxt = Ctxt::new();
+    let cont = Container::from_ast(&ctxt, input);
+    precondition(&ctxt, &cont);
     try!(ctxt.check());
 
-    let ident = &item.ident;
-    let generics = build_generics(&item);
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let ident = &cont.ident;
+    let params = Parameters::new(&cont);
+    let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let dummy_const = Ident::new(format!("_IMPL_SERIALIZE_FOR_{}", ident));
-    let body = Stmts(serialize_body(&item, &generics));
+    let body = Stmts(serialize_body(&cont, &params));
 
-    Ok(quote! {
-        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
-        const #dummy_const: () = {
-            extern crate serde as _serde;
+    let impl_block = if let Some(remote) = cont.attrs.remote() {
+        quote! {
+            impl #impl_generics #ident #ty_generics #where_clause {
+                fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                    where __S: _serde::Serializer
+                {
+                    #body
+                }
+            }
+        }
+    } else {
+        quote! {
             #[automatically_derived]
             impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
                 fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
@@ -29,25 +48,97 @@ pub fn expand_derive_serialize(item: &syn::DeriveInput) -> Result<Tokens, String
                     #body
                 }
             }
+        }
+    };
+
+    Ok(
+        quote! {
+        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const #dummy_const: () = {
+            extern crate serde as _serde;
+            #impl_block
         };
-    })
+    },
+    )
+}
+
+fn precondition(cx: &Ctxt, cont: &Container) {
+    match cont.attrs.identifier() {
+        attr::Identifier::No => {}
+        attr::Identifier::Field => {
+            cx.error("field identifiers cannot be serialized");
+        }
+        attr::Identifier::Variant => {
+            cx.error("variant identifiers cannot be serialized");
+        }
+    }
+}
+
+struct Parameters {
+    /// Variable holding the value being serialized. Either `self` for local
+    /// types or `__self` for remote types.
+    self_var: Ident,
+
+    /// Path to the type the impl is for. Either a single `Ident` for local
+    /// types or `some::remote::Ident` for remote types. Does not include
+    /// generic parameters.
+    this: syn::Path,
+
+    /// Generics including any explicit and inferred bounds for the impl.
+    generics: syn::Generics,
+
+    /// Type has a `serde(remote = "...")` attribute.
+    is_remote: bool,
+}
+
+impl Parameters {
+    fn new(cont: &Container) -> Self {
+        let is_remote = cont.attrs.remote().is_some();
+        let self_var = if is_remote {
+            Ident::new("__self")
+        } else {
+            Ident::new("self")
+        };
+
+        let this = match cont.attrs.remote() {
+            Some(remote) => remote.clone(),
+            None => cont.ident.clone().into(),
+        };
+
+        let generics = build_generics(cont);
+
+        Parameters {
+            self_var: self_var,
+            this: this,
+            generics: generics,
+            is_remote: is_remote,
+        }
+    }
+
+    /// Type name to use in error messages and `&'static str` arguments to
+    /// various Serializer methods.
+    fn type_name(&self) -> &str {
+        self.this.segments.last().unwrap().ident.as_ref()
+    }
 }
 
 // All the generics in the input, plus a bound `T: Serialize` for each generic
 // field type that will be serialized by us.
-fn build_generics(item: &Item) -> syn::Generics {
-    let generics = bound::without_defaults(item.generics);
+fn build_generics(cont: &Container) -> syn::Generics {
+    let generics = bound::without_defaults(cont.generics);
 
     let generics =
-        bound::with_where_predicates_from_fields(item, &generics, attr::Field::ser_bound);
+        bound::with_where_predicates_from_fields(cont, &generics, attr::Field::ser_bound);
 
-    match item.attrs.ser_bound() {
+    match cont.attrs.ser_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => {
-            bound::with_bound(item,
-                              &generics,
-                              needs_serialize_bound,
-                              &path!(_serde::Serialize))
+            bound::with_bound(
+                cont,
+                &generics,
+                needs_serialize_bound,
+                &path!(_serde::Serialize),
+            )
         }
     }
 }
@@ -60,60 +151,59 @@ fn needs_serialize_bound(attrs: &attr::Field) -> bool {
     !attrs.skip_serializing() && attrs.serialize_with().is_none() && attrs.ser_bound().is_none()
 }
 
-fn serialize_body(item: &Item, generics: &syn::Generics) -> Fragment {
-    if let Some(into_type) = item.attrs.into_type() {
-        serialize_into(into_type)
+fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
+    if let Some(into_type) = cont.attrs.into_type() {
+        serialize_into(params, into_type)
     } else {
-        match item.body {
-            Body::Enum(ref variants) => {
-                serialize_item_enum(&item.ident, generics, variants, &item.attrs)
-            }
+        match cont.body {
+            Body::Enum(ref variants) => serialize_enum(params, variants, &cont.attrs),
             Body::Struct(Style::Struct, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_none()) {
                     panic!("struct has unnamed fields");
                 }
-                serialize_struct(&item.ident, generics, fields, &item.attrs)
+                serialize_struct(params, fields, &cont.attrs)
             }
             Body::Struct(Style::Tuple, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_some()) {
                     panic!("tuple struct has named fields");
                 }
-                serialize_tuple_struct(&item.ident, generics, fields, &item.attrs)
+                serialize_tuple_struct(params, fields, &cont.attrs)
             }
             Body::Struct(Style::Newtype, ref fields) => {
-                serialize_newtype_struct(&item.ident, generics, &fields[0], &item.attrs)
+                serialize_newtype_struct(params, &fields[0], &cont.attrs)
             }
-            Body::Struct(Style::Unit, _) => serialize_unit_struct(&item.attrs),
+            Body::Struct(Style::Unit, _) => serialize_unit_struct(&cont.attrs),
         }
     }
 }
 
-fn serialize_into(into_type: &syn::Ty) -> Fragment {
+fn serialize_into(params: &Parameters, into_type: &syn::Ty) -> Fragment {
+    let self_var = &params.self_var;
     quote_block! {
         _serde::Serialize::serialize(
-            &<Self as _serde::export::Into<#into_type>>::into(_serde::export::Clone::clone(self)),
+            &_serde::export::Into::<#into_type>::into(_serde::export::Clone::clone(#self_var)),
             __serializer)
     }
 }
 
-fn serialize_unit_struct(item_attrs: &attr::Item) -> Fragment {
-    let type_name = item_attrs.name().serialize_name();
+fn serialize_unit_struct(cattrs: &attr::Container) -> Fragment {
+    let type_name = cattrs.name().serialize_name();
 
     quote_expr! {
         _serde::Serializer::serialize_unit_struct(__serializer, #type_name)
     }
 }
 
-fn serialize_newtype_struct(ident: &syn::Ident,
-                            generics: &syn::Generics,
-                            field: &Field,
-                            item_attrs: &attr::Item)
-                            -> Fragment {
-    let type_name = item_attrs.name().serialize_name();
+fn serialize_newtype_struct(
+    params: &Parameters,
+    field: &Field,
+    cattrs: &attr::Container,
+) -> Fragment {
+    let type_name = cattrs.name().serialize_name();
 
-    let mut field_expr = quote!(&self.0);
+    let mut field_expr = get_field(params, field, 0);
     if let Some(path) = field.attrs.serialize_with() {
-        field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
+        field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
     }
 
     quote_expr! {
@@ -121,19 +211,19 @@ fn serialize_newtype_struct(ident: &syn::Ident,
     }
 }
 
-fn serialize_tuple_struct(ident: &syn::Ident,
-                          generics: &syn::Generics,
-                          fields: &[Field],
-                          item_attrs: &attr::Item)
-                          -> Fragment {
-    let serialize_stmts =
-        serialize_tuple_struct_visitor(ident,
-                                       fields,
-                                       generics,
-                                       false,
-                                       quote!(_serde::ser::SerializeTupleStruct::serialize_field));
+fn serialize_tuple_struct(
+    params: &Parameters,
+    fields: &[Field],
+    cattrs: &attr::Container,
+) -> Fragment {
+    let serialize_stmts = serialize_tuple_struct_visitor(
+        fields,
+        params,
+        false,
+        quote!(_serde::ser::SerializeTupleStruct::serialize_field),
+    );
 
-    let type_name = item_attrs.name().serialize_name();
+    let type_name = cattrs.name().serialize_name();
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
 
@@ -144,35 +234,36 @@ fn serialize_tuple_struct(ident: &syn::Ident,
     }
 }
 
-fn serialize_struct(ident: &syn::Ident,
-                    generics: &syn::Generics,
-                    fields: &[Field],
-                    item_attrs: &attr::Item)
-                    -> Fragment {
-    let serialize_fields =
-        serialize_struct_visitor(ident,
-                                 fields,
-                                 generics,
-                                 false,
-                                 quote!(_serde::ser::SerializeStruct::serialize_field));
+fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
+    assert!(fields.len() as u64 <= u32::MAX as u64);
 
-    let type_name = item_attrs.name().serialize_name();
+    let serialize_fields = serialize_struct_visitor(
+        fields,
+        params,
+        false,
+        quote!(_serde::ser::SerializeStruct::serialize_field),
+    );
 
-    let mut serialized_fields = fields.iter()
+    let type_name = cattrs.name().serialize_name();
+
+    let mut serialized_fields = fields
+        .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields.map(|field| {
-            let ident = field.ident.clone().expect("struct has unnamed fields");
-            let field_expr = quote!(&self.#ident);
-
-            match field.attrs.skip_serializing_if() {
-                Some(path) => quote!(if #path(#field_expr) { 0 } else { 1 }),
+    let len = serialized_fields
+        .map(
+            |field| match field.attrs.skip_serializing_if() {
                 None => quote!(1),
-            }
-        })
+                Some(path) => {
+                    let ident = field.ident.clone().expect("struct has unnamed fields");
+                    let field_expr = get_field(params, field, ident);
+                    quote!(if #path(#field_expr) { 0 } else { 1 })
+                }
+            },
+        )
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote_block! {
@@ -182,106 +273,116 @@ fn serialize_struct(ident: &syn::Ident,
     }
 }
 
-fn serialize_item_enum(ident: &syn::Ident,
-                       generics: &syn::Generics,
-                       variants: &[Variant],
-                       item_attrs: &attr::Item)
-                       -> Fragment {
-    let arms: Vec<_> = variants.iter()
+fn serialize_enum(
+    params: &Parameters,
+    variants: &[Variant],
+    cattrs: &attr::Container,
+) -> Fragment {
+    assert!(variants.len() as u64 <= u32::MAX as u64);
+
+    let self_var = &params.self_var;
+
+    let arms: Vec<_> = variants
+        .iter()
         .enumerate()
-        .map(|(variant_index, variant)| {
-            serialize_variant(ident,
-                              generics,
-                              variant,
-                              variant_index,
-                              item_attrs)
-        })
+        .map(
+            |(variant_index, variant)| {
+                serialize_variant(params, variant, variant_index as u32, cattrs)
+            },
+        )
         .collect();
 
     quote_expr! {
-        match *self {
+        match *#self_var {
             #(#arms)*
         }
     }
 }
 
-fn serialize_variant(ident: &syn::Ident,
-                     generics: &syn::Generics,
-                     variant: &Variant,
-                     variant_index: usize,
-                     item_attrs: &attr::Item)
-                     -> Tokens {
+fn serialize_variant(
+    params: &Parameters,
+    variant: &Variant,
+    variant_index: u32,
+    cattrs: &attr::Container,
+) -> Tokens {
+    let this = &params.this;
     let variant_ident = variant.ident.clone();
 
     if variant.attrs.skip_serializing() {
-        let skipped_msg = format!("the enum variant {}::{} cannot be serialized",
-                                  ident, variant_ident);
+        let skipped_msg = format!(
+            "the enum variant {}::{} cannot be serialized",
+            params.type_name(),
+            variant_ident
+        );
         let skipped_err = quote! {
             _serde::export::Err(_serde::ser::Error::custom(#skipped_msg))
         };
         let fields_pat = match variant.style {
             Style::Unit => quote!(),
-            Style::Newtype | Style::Tuple => quote!( (..) ),
-            Style::Struct => quote!( {..} ),
+            Style::Newtype | Style::Tuple => quote!((..)),
+            Style::Struct => {
+                quote!(
+                    {
+                        ..
+                    }
+                )
+            }
         };
         quote! {
-            #ident::#variant_ident #fields_pat => #skipped_err,
+            #this::#variant_ident #fields_pat => #skipped_err,
         }
     } else {
         // variant wasn't skipped
         let case = match variant.style {
             Style::Unit => {
                 quote! {
-                    #ident::#variant_ident
+                    #this::#variant_ident
                 }
             }
             Style::Newtype => {
                 quote! {
-                    #ident::#variant_ident(ref __field0)
+                    #this::#variant_ident(ref __field0)
                 }
             }
             Style::Tuple => {
-                let field_names = (0..variant.fields.len())
-                    .map(|i| Ident::new(format!("__field{}", i)));
+                let field_names =
+                    (0..variant.fields.len()).map(|i| Ident::new(format!("__field{}", i)));
                 quote! {
-                    #ident::#variant_ident(#(ref #field_names),*)
+                    #this::#variant_ident(#(ref #field_names),*)
                 }
             }
             Style::Struct => {
-                let fields = variant.fields
+                let fields = variant
+                    .fields
                     .iter()
-                    .map(|f| f.ident.clone().expect("struct variant has unnamed fields"));
+                    .map(
+                        |f| {
+                            f.ident
+                                .clone()
+                                .expect("struct variant has unnamed fields")
+                        },
+                    );
                 quote! {
-                    #ident::#variant_ident { #(ref #fields),* }
+                    #this::#variant_ident { #(ref #fields),* }
                 }
             }
         };
 
-        let body = Match(match *item_attrs.tag() {
-            attr::EnumTag::External => {
-                serialize_externally_tagged_variant(ident,
-                                                    generics,
-                                                    variant,
-                                                    variant_index,
-                                                    item_attrs)
-            }
-            attr::EnumTag::Internal { ref tag } => {
-                serialize_internally_tagged_variant(ident,
-                                                    generics,
-                                                    variant,
-                                                    item_attrs,
-                                                    tag)
-            }
-            attr::EnumTag::Adjacent { ref tag, ref content } => {
-                serialize_adjacently_tagged_variant(ident,
-                                                    generics,
-                                                    variant,
-                                                    item_attrs,
-                                                    tag,
-                                                    content)
-            }
-            attr::EnumTag::None => serialize_untagged_variant(ident, generics, variant, item_attrs),
-        });
+        let body = Match(
+            match *cattrs.tag() {
+                attr::EnumTag::External => {
+                    serialize_externally_tagged_variant(params, variant, variant_index, cattrs)
+                }
+                attr::EnumTag::Internal { ref tag } => {
+                    serialize_internally_tagged_variant(params, variant, cattrs, tag)
+                }
+                attr::EnumTag::Adjacent {
+                    ref tag,
+                    ref content,
+                } => serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content),
+                attr::EnumTag::None => serialize_untagged_variant(params, variant, cattrs),
+            },
+        );
 
         quote! {
             #case => #body
@@ -289,13 +390,13 @@ fn serialize_variant(ident: &syn::Ident,
     }
 }
 
-fn serialize_externally_tagged_variant(ident: &syn::Ident,
-                                       generics: &syn::Generics,
-                                       variant: &Variant,
-                                       variant_index: usize,
-                                       item_attrs: &attr::Item)
-                                       -> Fragment {
-    let type_name = item_attrs.name().serialize_name();
+fn serialize_externally_tagged_variant(
+    params: &Parameters,
+    variant: &Variant,
+    variant_index: u32,
+    cattrs: &attr::Container,
+) -> Fragment {
+    let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
 
     match variant.style {
@@ -313,7 +414,7 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
+                field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
             }
 
             quote_expr! {
@@ -327,38 +428,40 @@ fn serialize_externally_tagged_variant(ident: &syn::Ident,
             }
         }
         Style::Tuple => {
-            serialize_tuple_variant(TupleVariant::ExternallyTagged {
-                                        type_name: type_name,
-                                        variant_index: variant_index,
-                                        variant_name: variant_name,
-                                    },
-                                    ident,
-                                    generics,
-                                    &variant.fields)
+            serialize_tuple_variant(
+                TupleVariant::ExternallyTagged {
+                    type_name: type_name,
+                    variant_index: variant_index,
+                    variant_name: variant_name,
+                },
+                params,
+                &variant.fields,
+            )
         }
         Style::Struct => {
-            serialize_struct_variant(StructVariant::ExternallyTagged {
-                                         variant_index: variant_index,
-                                         variant_name: variant_name,
-                                     },
-                                     ident,
-                                     generics,
-                                     &variant.fields,
-                                     &type_name)
+            serialize_struct_variant(
+                StructVariant::ExternallyTagged {
+                    variant_index: variant_index,
+                    variant_name: variant_name,
+                },
+                params,
+                &variant.fields,
+                &type_name,
+            )
         }
     }
 }
 
-fn serialize_internally_tagged_variant(ident: &syn::Ident,
-                                       generics: &syn::Generics,
-                                       variant: &Variant,
-                                       item_attrs: &attr::Item,
-                                       tag: &str)
-                                       -> Fragment {
-    let type_name = item_attrs.name().serialize_name();
+fn serialize_internally_tagged_variant(
+    params: &Parameters,
+    variant: &Variant,
+    cattrs: &attr::Container,
+    tag: &str,
+) -> Fragment {
+    let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
 
-    let enum_ident_str = ident.as_ref();
+    let enum_ident_str = params.type_name();
     let variant_ident_str = variant.ident.as_ref();
 
     match variant.style {
@@ -375,11 +478,11 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
+                field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
             }
 
             quote_expr! {
-                _serde::ser::private::serialize_tagged_newtype(
+                _serde::private::ser::serialize_tagged_newtype(
                     __serializer,
                     #enum_ident_str,
                     #variant_ident_str,
@@ -390,64 +493,66 @@ fn serialize_internally_tagged_variant(ident: &syn::Ident,
             }
         }
         Style::Struct => {
-            serialize_struct_variant(StructVariant::InternallyTagged {
-                                         tag: tag,
-                                         variant_name: variant_name,
-                                     },
-                                     ident,
-                                     generics,
-                                     &variant.fields,
-                                     &type_name)
+            serialize_struct_variant(
+                StructVariant::InternallyTagged {
+                    tag: tag,
+                    variant_name: variant_name,
+                },
+                params,
+                &variant.fields,
+                &type_name,
+            )
         }
-        Style::Tuple => unreachable!("checked in serde_codegen_internals"),
+        Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
 }
 
-fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
-                                       generics: &syn::Generics,
-                                       variant: &Variant,
-                                       item_attrs: &attr::Item,
-                                       tag: &str,
-                                       content: &str)
-                                       -> Fragment {
-    let type_name = item_attrs.name().serialize_name();
+fn serialize_adjacently_tagged_variant(
+    params: &Parameters,
+    variant: &Variant,
+    cattrs: &attr::Container,
+    tag: &str,
+    content: &str,
+) -> Fragment {
+    let this = &params.this;
+    let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
 
-    let inner = Stmts(match variant.style {
-        Style::Unit => {
-            return quote_block! {
+    let inner = Stmts(
+        match variant.style {
+            Style::Unit => {
+                return quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     __serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __struct, #tag, #variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
             };
-        }
-        Style::Newtype => {
-            let field = &variant.fields[0];
-            let mut field_expr = quote!(__field0);
-            if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
             }
+            Style::Newtype => {
+                let field = &variant.fields[0];
+                let mut field_expr = quote!(__field0);
+                if let Some(path) = field.attrs.serialize_with() {
+                    field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
+                }
 
-            quote_expr! {
+                quote_expr! {
                 _serde::Serialize::serialize(#field_expr, __serializer)
             }
-        }
-        Style::Tuple => {
-            serialize_tuple_variant(TupleVariant::Untagged,
-                                    ident,
-                                    generics,
-                                    &variant.fields)
-        }
-        Style::Struct => {
-            serialize_struct_variant(StructVariant::Untagged,
-                                     ident,
-                                     generics,
-                                     &variant.fields,
-                                     &variant_name)
-        }
-    });
+            }
+            Style::Tuple => {
+                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
+            }
+            Style::Struct => {
+                serialize_struct_variant(
+                    StructVariant::Untagged,
+                    params,
+                    &variant.fields,
+                    &variant_name,
+                )
+            }
+        },
+    );
 
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
     let ref fields_ident: Vec<_> = match variant.style {
@@ -459,22 +564,29 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
                 .collect()
         }
         Style::Struct => {
-            variant.fields
+            variant
+                .fields
                 .iter()
-                .map(|f| f.ident.clone().expect("struct variant has unnamed fields"))
+                .map(
+                    |f| {
+                        f.ident
+                            .clone()
+                            .expect("struct variant has unnamed fields")
+                    },
+                )
                 .collect()
         }
     };
 
-    let (_, ty_generics, where_clause) = generics.split_for_impl();
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
-    let wrapper_generics = bound::with_lifetime_bound(generics, "'__a");
+    let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
     quote_block! {
         struct __AdjacentlyTagged #wrapper_generics #where_clause {
             data: (#(&'__a #fields_ty,)*),
-            phantom: _serde::export::PhantomData<#ident #ty_generics>,
+            phantom: _serde::export::PhantomData<#this #ty_generics>,
         }
 
         impl #wrapper_impl_generics _serde::Serialize for __AdjacentlyTagged #wrapper_ty_generics #where_clause {
@@ -493,17 +605,17 @@ fn serialize_adjacently_tagged_variant(ident: &syn::Ident,
         try!(_serde::ser::SerializeStruct::serialize_field(
             &mut __struct, #content, &__AdjacentlyTagged {
                 data: (#(#fields_ident,)*),
-                phantom: _serde::export::PhantomData::<#ident #ty_generics>,
+                phantom: _serde::export::PhantomData::<#this #ty_generics>,
             }));
         _serde::ser::SerializeStruct::end(__struct)
     }
 }
 
-fn serialize_untagged_variant(ident: &syn::Ident,
-                              generics: &syn::Generics,
-                              variant: &Variant,
-                              item_attrs: &attr::Item)
-                              -> Fragment {
+fn serialize_untagged_variant(
+    params: &Parameters,
+    variant: &Variant,
+    cattrs: &attr::Container,
+) -> Fragment {
     match variant.style {
         Style::Unit => {
             quote_expr! {
@@ -514,23 +626,17 @@ fn serialize_untagged_variant(ident: &syn::Ident,
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(ident, generics, field.ty, path, field_expr);
+                field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
             }
 
             quote_expr! {
                 _serde::Serialize::serialize(#field_expr, __serializer)
             }
         }
-        Style::Tuple => {
-            serialize_tuple_variant(TupleVariant::Untagged, ident, generics, &variant.fields)
-        }
+        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
         Style::Struct => {
-            let type_name = item_attrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged,
-                                     ident,
-                                     generics,
-                                     &variant.fields,
-                                     &type_name)
+            let type_name = cattrs.name().serialize_name();
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
         }
     }
 }
@@ -538,17 +644,17 @@ fn serialize_untagged_variant(ident: &syn::Ident,
 enum TupleVariant {
     ExternallyTagged {
         type_name: String,
-        variant_index: usize,
+        variant_index: u32,
         variant_name: String,
     },
     Untagged,
 }
 
-fn serialize_tuple_variant(context: TupleVariant,
-                           ident: &syn::Ident,
-                           generics: &syn::Generics,
-                           fields: &[Field])
-                           -> Fragment {
+fn serialize_tuple_variant(
+    context: TupleVariant,
+    params: &Parameters,
+    fields: &[Field],
+) -> Fragment {
     let method = match context {
         TupleVariant::ExternallyTagged { .. } => {
             quote!(_serde::ser::SerializeTupleVariant::serialize_field)
@@ -556,14 +662,17 @@ fn serialize_tuple_variant(context: TupleVariant,
         TupleVariant::Untagged => quote!(_serde::ser::SerializeTuple::serialize_element),
     };
 
-    let serialize_stmts =
-        serialize_tuple_struct_visitor(ident, fields, generics, true, method);
+    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, method);
 
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
 
     match context {
-        TupleVariant::ExternallyTagged { type_name, variant_index, variant_name } => {
+        TupleVariant::ExternallyTagged {
+            type_name,
+            variant_index,
+            variant_name,
+        } => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_variant(
                     __serializer,
@@ -589,19 +698,19 @@ fn serialize_tuple_variant(context: TupleVariant,
 
 enum StructVariant<'a> {
     ExternallyTagged {
-        variant_index: usize,
+        variant_index: u32,
         variant_name: String,
     },
     InternallyTagged { tag: &'a str, variant_name: String },
     Untagged,
 }
 
-fn serialize_struct_variant<'a>(context: StructVariant<'a>,
-                                ident: &syn::Ident,
-                                generics: &syn::Generics,
-                                fields: &[Field],
-                                name: &str)
-                                -> Fragment {
+fn serialize_struct_variant<'a>(
+    context: StructVariant<'a>,
+    params: &Parameters,
+    fields: &[Field],
+    name: &str,
+) -> Fragment {
     let method = match context {
         StructVariant::ExternallyTagged { .. } => {
             quote!(_serde::ser::SerializeStructVariant::serialize_field)
@@ -610,26 +719,33 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
         StructVariant::Untagged => quote!(_serde::ser::SerializeStruct::serialize_field),
     };
 
-    let serialize_fields = serialize_struct_visitor(ident, fields, generics, true, method);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, method);
 
-    let mut serialized_fields = fields.iter()
+    let mut serialized_fields = fields
+        .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields.map(|field| {
-            let ident = field.ident.clone().expect("struct has unnamed fields");
+    let len = serialized_fields
+        .map(
+            |field| {
+                let ident = field.ident.clone().expect("struct has unnamed fields");
 
-            match field.attrs.skip_serializing_if() {
-                Some(path) => quote!(if #path(#ident) { 0 } else { 1 }),
-                None => quote!(1),
-            }
-        })
+                match field.attrs.skip_serializing_if() {
+                    Some(path) => quote!(if #path(#ident) { 0 } else { 1 }),
+                    None => quote!(1),
+                }
+            },
+        )
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     match context {
-        StructVariant::ExternallyTagged { variant_index, variant_name } => {
+        StructVariant::ExternallyTagged {
+            variant_index,
+            variant_name,
+        } => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct_variant(
                     __serializer,
@@ -672,98 +788,104 @@ fn serialize_struct_variant<'a>(context: StructVariant<'a>,
     }
 }
 
-fn serialize_tuple_struct_visitor(ident: &syn::Ident,
-                                  fields: &[Field],
-                                  generics: &syn::Generics,
-                                  is_enum: bool,
-                                  func: Tokens)
-                                  -> Vec<Tokens> {
-    fields.iter()
+fn serialize_tuple_struct_visitor(
+    fields: &[Field],
+    params: &Parameters,
+    is_enum: bool,
+    func: Tokens,
+) -> Vec<Tokens> {
+    fields
+        .iter()
         .enumerate()
-        .map(|(i, field)| {
-            let mut field_expr = if is_enum {
-                let id = Ident::new(format!("__field{}", i));
-                quote!(#id)
-            } else {
-                let i = Ident::new(i);
-                quote!(&self.#i)
-            };
+        .map(
+            |(i, field)| {
+                let mut field_expr = if is_enum {
+                    let id = Ident::new(format!("__field{}", i));
+                    quote!(#id)
+                } else {
+                    get_field(params, field, i)
+                };
 
-            let skip = field.attrs
-                .skip_serializing_if()
-                .map(|path| quote!(#path(#field_expr)));
+                let skip = field
+                    .attrs
+                    .skip_serializing_if()
+                    .map(|path| quote!(#path(#field_expr)));
 
-            if let Some(path) = field.attrs.serialize_with() {
-                field_expr =
-                    wrap_serialize_with(ident, generics, field.ty, path, field_expr);
-            }
+                if let Some(path) = field.attrs.serialize_with() {
+                    field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
+                }
 
-            let ser = quote! {
+                let ser = quote! {
                 try!(#func(&mut __serde_state, #field_expr));
             };
 
-            match skip {
-                None => ser,
-                Some(skip) => quote!(if !#skip { #ser }),
-            }
-        })
+                match skip {
+                    None => ser,
+                    Some(skip) => quote!(if !#skip { #ser }),
+                }
+            },
+        )
         .collect()
 }
 
-fn serialize_struct_visitor(ident: &syn::Ident,
-                            fields: &[Field],
-                            generics: &syn::Generics,
-                            is_enum: bool,
-                            func: Tokens)
-                            -> Vec<Tokens> {
-    fields.iter()
+fn serialize_struct_visitor(
+    fields: &[Field],
+    params: &Parameters,
+    is_enum: bool,
+    func: Tokens,
+) -> Vec<Tokens> {
+    fields
+        .iter()
         .filter(|&field| !field.attrs.skip_serializing())
-        .map(|field| {
-            let field_ident = field.ident.clone().expect("struct has unnamed field");
-            let mut field_expr = if is_enum {
-                quote!(#field_ident)
-            } else {
-                quote!(&self.#field_ident)
-            };
+        .map(
+            |field| {
+                let field_ident = field.ident.clone().expect("struct has unnamed field");
+                let mut field_expr = if is_enum {
+                    quote!(#field_ident)
+                } else {
+                    get_field(params, field, field_ident)
+                };
 
-            let key_expr = field.attrs.name().serialize_name();
+                let key_expr = field.attrs.name().serialize_name();
 
-            let skip = field.attrs
-                .skip_serializing_if()
-                .map(|path| quote!(#path(#field_expr)));
+                let skip = field
+                    .attrs
+                    .skip_serializing_if()
+                    .map(|path| quote!(#path(#field_expr)));
 
-            if let Some(path) = field.attrs.serialize_with() {
-                field_expr =
-                    wrap_serialize_with(ident, generics, field.ty, path, field_expr)
-            }
+                if let Some(path) = field.attrs.serialize_with() {
+                    field_expr = wrap_serialize_with(params, field.ty, path, field_expr)
+                }
 
-            let ser = quote! {
+                let ser = quote! {
                 try!(#func(&mut __serde_state, #key_expr, #field_expr));
             };
 
-            match skip {
-                None => ser,
-                Some(skip) => quote!(if !#skip { #ser }),
-            }
-        })
+                match skip {
+                    None => ser,
+                    Some(skip) => quote!(if !#skip { #ser }),
+                }
+            },
+        )
         .collect()
 }
 
-fn wrap_serialize_with(ident: &syn::Ident,
-                       generics: &syn::Generics,
-                       field_ty: &syn::Ty,
-                       serialize_with: &syn::Path,
-                       value: Tokens)
-                       -> Tokens {
-    let (_, ty_generics, where_clause) = generics.split_for_impl();
+fn wrap_serialize_with(
+    params: &Parameters,
+    field_ty: &syn::Ty,
+    serialize_with: &syn::Path,
+    value: Tokens,
+) -> Tokens {
+    let this = &params.this;
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
-    let wrapper_generics = bound::with_lifetime_bound(generics, "'__a");
+    let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
     quote!({
         struct __SerializeWith #wrapper_impl_generics #where_clause {
             value: &'__a #field_ty,
-            phantom: _serde::export::PhantomData<#ident #ty_generics>,
+            phantom: _serde::export::PhantomData<#this #ty_generics>,
         }
 
         impl #wrapper_impl_generics _serde::Serialize for __SerializeWith #wrapper_ty_generics #where_clause {
@@ -776,7 +898,7 @@ fn wrap_serialize_with(ident: &syn::Ident,
 
         &__SerializeWith {
             value: #value,
-            phantom: _serde::export::PhantomData::<#ident #ty_generics>,
+            phantom: _serde::export::PhantomData::<#this #ty_generics>,
         }
     })
 }
@@ -789,4 +911,29 @@ fn wrap_serialize_with(ident: &syn::Ident,
 // where we want to omit the `mut` to avoid a warning.
 fn mut_if(is_mut: bool) -> Option<Tokens> {
     if is_mut { Some(quote!(mut)) } else { None }
+}
+
+fn get_field<I>(params: &Parameters, field: &Field, ident: I) -> Tokens
+where
+    I: Into<Ident>,
+{
+    let self_var = &params.self_var;
+    match (params.is_remote, field.attrs.getter()) {
+        (false, None) => {
+            let ident = ident.into();
+            quote!(&#self_var.#ident)
+        }
+        (true, None) => {
+            let ty = field.ty;
+            let ident = ident.into();
+            quote!(_serde::private::ser::constrain::<#ty>(&#self_var.#ident))
+        }
+        (true, Some(getter)) => {
+            let ty = field.ty;
+            quote!(_serde::private::ser::constrain::<#ty>(&#getter(#self_var)))
+        }
+        (false, Some(_)) => {
+            unreachable!("getter is only allowed for remote impls");
+        }
+    }
 }

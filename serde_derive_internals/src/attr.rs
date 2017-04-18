@@ -1,11 +1,21 @@
+// Copyright 2017 Serde Developers
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 use Ctxt;
 use syn;
 use syn::MetaItem::{List, NameValue, Word};
 use syn::NestedMetaItem::{Literal, MetaItem};
+use synom::IResult;
+use std::collections::BTreeSet;
 use std::str::FromStr;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
-// are `attr::Item::from_ast`, `attr::Variant::from_ast`, and
+// are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
 // `attr::Field::from_ast`. Each returns an instance of the corresponding
 // struct. Note that none of them return a Result. Unrecognized, malformed, or
 // duplicated attributes result in a span_err but otherwise are ignored. The
@@ -90,7 +100,7 @@ impl Name {
 
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
-pub struct Item {
+pub struct Container {
     name: Name,
     deny_unknown_fields: bool,
     default: Default,
@@ -100,6 +110,8 @@ pub struct Item {
     tag: EnumTag,
     from_type: Option<syn::Ty>,
     into_type: Option<syn::Ty>,
+    remote: Option<syn::Path>,
+    identifier: Identifier,
 }
 
 /// Styles of representing an enum.
@@ -134,7 +146,24 @@ pub enum EnumTag {
     None,
 }
 
-impl Item {
+/// Whether this enum represents the fields of a struct or the variants of an
+/// enum.
+#[derive(Copy, Clone, Debug)]
+pub enum Identifier {
+    /// It does not.
+    No,
+
+    /// This enum represents the fields of a struct. All of the variants must be
+    /// unit variants, except possibly one which is annotated with
+    /// `#[serde(other)]` and is a newtype variant.
+    Field,
+
+    /// This enum represents the variants of an enum. All of the variants must
+    /// be unit variants.
+    Variant,
+}
+
+impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::MacroInput) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
@@ -149,11 +178,14 @@ impl Item {
         let mut content = Attr::none(cx, "content");
         let mut from_type = Attr::none(cx, "from");
         let mut into_type = Attr::none(cx, "into");
+        let mut remote = Attr::none(cx, "remote");
+        let mut field_identifier = BoolAttr::none(cx, "field_identifier");
+        let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
-                    // Parse `#[serde(rename="foo")]`
+                    // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_name.set(s.clone());
@@ -161,7 +193,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
@@ -169,7 +201,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(rename_all="foo")]`
+                    // Parse `#[serde(rename_all = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             match RenameRule::from_str(&s) {
@@ -201,7 +233,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(default="...")]`
+                    // Parse `#[serde(default = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             match item.body {
@@ -216,7 +248,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(bound="D: Serialize")]`
+                    // Parse `#[serde(bound = "D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
@@ -225,7 +257,7 @@ impl Item {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
                             ser_bound.set_opt(ser);
@@ -288,6 +320,23 @@ impl Item {
                         }
                     }
 
+                    // Parse `#[serde(remote = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "remote" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            remote.set(path);
+                        }
+                    }
+
+                    // Parse `#[serde(field_identifier)]`
+                    MetaItem(Word(ref name)) if name == "field_identifier" => {
+                        field_identifier.set_true();
+                    }
+
+                    // Parse `#[serde(variant_identifier)]`
+                    MetaItem(Word(ref name)) if name == "variant_identifier" => {
+                        variant_identifier.set_true();
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -300,53 +349,7 @@ impl Item {
             }
         }
 
-        let tag = match (untagged.get(), internal_tag.get(), content.get()) {
-            (false, None, None) => EnumTag::External,
-            (true, None, None) => EnumTag::None,
-            (false, Some(tag), None) => {
-                // Check that there are no tuple variants.
-                if let syn::Body::Enum(ref variants) = item.body {
-                    for variant in variants {
-                        match variant.data {
-                            syn::VariantData::Struct(_) |
-                            syn::VariantData::Unit => {}
-                            syn::VariantData::Tuple(ref fields) => {
-                                if fields.len() != 1 {
-                                    cx.error("#[serde(tag = \"...\")] cannot be used with tuple \
-                                              variants");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                EnumTag::Internal { tag: tag }
-            }
-            (true, Some(_), None) => {
-                cx.error("enum cannot be both untagged and internally tagged");
-                EnumTag::External // doesn't matter, will error
-            }
-            (false, None, Some(_)) => {
-                cx.error("#[serde(tag = \"...\", content = \"...\")] must be used together");
-                EnumTag::External
-            }
-            (true, None, Some(_)) => {
-                cx.error("untagged enum cannot have #[serde(content = \"...\")]");
-                EnumTag::External
-            }
-            (false, Some(tag), Some(content)) => {
-                EnumTag::Adjacent {
-                    tag: tag,
-                    content: content,
-                }
-            }
-            (true, Some(_), Some(_)) => {
-                cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
-                EnumTag::External
-            }
-        };
-
-        Item {
+        Container {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
                 deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
@@ -356,9 +359,11 @@ impl Item {
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: tag,
+            tag: decide_tag(cx, item, untagged, internal_tag, content),
             from_type: from_type.get(),
             into_type: into_type.get(),
+            remote: remote.get(),
+            identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
         }
     }
 
@@ -397,6 +402,93 @@ impl Item {
     pub fn into_type(&self) -> Option<&syn::Ty> {
         self.into_type.as_ref()
     }
+
+    pub fn remote(&self) -> Option<&syn::Path> {
+        self.remote.as_ref()
+    }
+
+    pub fn identifier(&self) -> Identifier {
+        self.identifier
+    }
+}
+
+fn decide_tag(
+    cx: &Ctxt,
+    item: &syn::MacroInput,
+    untagged: BoolAttr,
+    internal_tag: Attr<String>,
+    content: Attr<String>,
+) -> EnumTag {
+    match (untagged.get(), internal_tag.get(), content.get()) {
+        (false, None, None) => EnumTag::External,
+        (true, None, None) => EnumTag::None,
+        (false, Some(tag), None) => {
+            // Check that there are no tuple variants.
+            if let syn::Body::Enum(ref variants) = item.body {
+                for variant in variants {
+                    match variant.data {
+                        syn::VariantData::Struct(_) |
+                        syn::VariantData::Unit => {}
+                        syn::VariantData::Tuple(ref fields) => {
+                            if fields.len() != 1 {
+                                cx.error("#[serde(tag = \"...\")] cannot be used with tuple \
+                                        variants");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            EnumTag::Internal { tag: tag }
+        }
+        (true, Some(_), None) => {
+            cx.error("enum cannot be both untagged and internally tagged");
+            EnumTag::External // doesn't matter, will error
+        }
+        (false, None, Some(_)) => {
+            cx.error("#[serde(tag = \"...\", content = \"...\")] must be used together");
+            EnumTag::External
+        }
+        (true, None, Some(_)) => {
+            cx.error("untagged enum cannot have #[serde(content = \"...\")]");
+            EnumTag::External
+        }
+        (false, Some(tag), Some(content)) => {
+            EnumTag::Adjacent {
+                tag: tag,
+                content: content,
+            }
+        }
+        (true, Some(_), Some(_)) => {
+            cx.error("untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]");
+            EnumTag::External
+        }
+    }
+}
+
+fn decide_identifier(
+    cx: &Ctxt,
+    item: &syn::MacroInput,
+    field_identifier: BoolAttr,
+    variant_identifier: BoolAttr,
+) -> Identifier {
+    match (&item.body, field_identifier.get(), variant_identifier.get()) {
+        (_, false, false) => Identifier::No,
+        (_, true, true) => {
+            cx.error("`field_identifier` and `variant_identifier` cannot both be set");
+            Identifier::No
+        }
+        (&syn::Body::Struct(_), true, false) => {
+            cx.error("`field_identifier` can only be used on an enum");
+            Identifier::No
+        }
+        (&syn::Body::Struct(_), false, true) => {
+            cx.error("`variant_identifier` can only be used on an enum");
+            Identifier::No
+        }
+        (&syn::Body::Enum(_), true, false) => Identifier::Field,
+        (&syn::Body::Enum(_), false, true) => Identifier::Variant,
+    }
 }
 
 /// Represents variant attribute information
@@ -408,6 +500,7 @@ pub struct Variant {
     rename_all: RenameRule,
     skip_deserializing: bool,
     skip_serializing: bool,
+    other: bool,
 }
 
 impl Variant {
@@ -417,11 +510,12 @@ impl Variant {
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
+        let mut other = BoolAttr::none(cx, "other");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
-                    // Parse `#[serde(rename="foo")]`
+                    // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_name.set(s.clone());
@@ -429,7 +523,7 @@ impl Variant {
                         }
                     }
 
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
@@ -437,7 +531,7 @@ impl Variant {
                         }
                     }
 
-                    // Parse `#[serde(rename_all="foo")]`
+                    // Parse `#[serde(rename_all = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename_all" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             match RenameRule::from_str(&s) {
@@ -455,9 +549,15 @@ impl Variant {
                     MetaItem(Word(ref name)) if name == "skip_deserializing" => {
                         skip_deserializing.set_true();
                     }
+
                     // Parse `#[serde(skip_serializing)]`
                     MetaItem(Word(ref name)) if name == "skip_serializing" => {
                         skip_serializing.set_true();
+                    }
+
+                    // Parse `#[serde(other)]`
+                    MetaItem(Word(ref name)) if name == "other" => {
+                        other.set_true();
                     }
 
                     MetaItem(ref meta_item) => {
@@ -485,6 +585,7 @@ impl Variant {
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
+            other: other.get(),
         }
     }
 
@@ -512,6 +613,10 @@ impl Variant {
     pub fn skip_serializing(&self) -> bool {
         self.skip_serializing
     }
+
+    pub fn other(&self) -> bool {
+        self.other
+    }
 }
 
 /// Represents field attribute information
@@ -528,6 +633,8 @@ pub struct Field {
     deserialize_with: Option<syn::Path>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
+    borrowed_lifetimes: BTreeSet<syn::Lifetime>,
+    getter: Option<syn::Path>,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -554,6 +661,8 @@ impl Field {
         let mut deserialize_with = Attr::none(cx, "deserialize_with");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
+        let mut borrowed_lifetimes = Attr::none(cx, "borrow");
+        let mut getter = Attr::none(cx, "getter");
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
@@ -563,7 +672,7 @@ impl Field {
         for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
-                    // Parse `#[serde(rename="foo")]`
+                    // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
                         if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
                             ser_name.set(s.clone());
@@ -571,7 +680,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(rename(serialize="foo", deserialize="bar"))]`
+                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, meta_items) {
                             ser_name.set_opt(ser);
@@ -584,7 +693,7 @@ impl Field {
                         default.set(Default::Default);
                     }
 
-                    // Parse `#[serde(default="...")]`
+                    // Parse `#[serde(default = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "default" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             default.set(Default::Path(path));
@@ -601,28 +710,28 @@ impl Field {
                         skip_deserializing.set_true();
                     }
 
-                    // Parse `#[serde(skip_serializing_if="...")]`
+                    // Parse `#[serde(skip_serializing_if = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "skip_serializing_if" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             skip_serializing_if.set(path);
                         }
                     }
 
-                    // Parse `#[serde(serialize_with="...")]`
+                    // Parse `#[serde(serialize_with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "serialize_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             serialize_with.set(path);
                         }
                     }
 
-                    // Parse `#[serde(deserialize_with="...")]`
+                    // Parse `#[serde(deserialize_with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             deserialize_with.set(path);
                         }
                     }
 
-                    // Parse `#[serde(with="...")]`
+                    // Parse `#[serde(with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             let mut ser_path = path.clone();
@@ -634,7 +743,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(bound="D: Serialize")]`
+                    // Parse `#[serde(bound = "D: Serialize")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, name.as_ref(), name.as_ref(), lit) {
@@ -643,11 +752,39 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize="D: Serialize", deserialize="D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, meta_items) {
                             ser_bound.set_opt(ser);
                             de_bound.set_opt(de);
+                        }
+                    }
+
+                    // Parse `#[serde(borrow)]`
+                    MetaItem(Word(ref name)) if name == "borrow" => {
+                        if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
+                            borrowed_lifetimes.set(borrowable);
+                        }
+                    }
+
+                    // Parse `#[serde(borrow = "'a + 'b")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "borrow" => {
+                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, name.as_ref(), lit) {
+                            if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
+                                for lifetime in &lifetimes {
+                                    if !borrowable.contains(lifetime) {
+                                        cx.error(format!("field `{}` does not have lifetime {}", ident, lifetime.ident));
+                                    }
+                                }
+                                borrowed_lifetimes.set(lifetimes);
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(getter = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "getter" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            getter.set(path);
                         }
                     }
 
@@ -663,9 +800,33 @@ impl Field {
         }
 
         // Is skip_deserializing, initialize the field to Default::default()
-        // unless a different default is specified by `#[serde(default="...")]`
+        // unless a different default is specified by `#[serde(default = "...")]`
         if skip_deserializing.0.value.is_some() {
             default.set_if_none(Default::Default);
+        }
+
+        let mut borrowed_lifetimes = borrowed_lifetimes.get().unwrap_or_default();
+        if !borrowed_lifetimes.is_empty() {
+            // Cow<str> and Cow<[u8]> never borrow by default:
+            //
+            //     impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
+            //
+            // A #[serde(borrow)] attribute enables borrowing that corresponds
+            // roughly to these impls:
+            //
+            //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
+            //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
+            if is_cow(&field.ty, "str") {
+                let path = syn::parse_path("_serde::private::de::borrow_cow_str").unwrap();
+                deserialize_with.set_if_none(path);
+            } else if is_cow(&field.ty, "[u8]") {
+                let path = syn::parse_path("_serde::private::de::borrow_cow_bytes").unwrap();
+                deserialize_with.set_if_none(path);
+            }
+        } else if is_rptr(&field.ty, "str") || is_rptr(&field.ty, "[u8]") {
+            // Types &str and &[u8] are always implicitly borrowed. No need for
+            // a #[serde(borrow)].
+            borrowed_lifetimes = borrowable_lifetimes(cx, &ident, &field.ty).unwrap();
         }
 
         let ser_name = ser_name.get();
@@ -687,6 +848,8 @@ impl Field {
             deserialize_with: deserialize_with.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
+            borrowed_lifetimes: borrowed_lifetimes,
+            getter: getter.get(),
         }
     }
 
@@ -733,6 +896,14 @@ impl Field {
 
     pub fn de_bound(&self) -> Option<&[syn::WherePredicate]> {
         self.de_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn borrowed_lifetimes(&self) -> &BTreeSet<syn::Lifetime> {
+        &self.borrowed_lifetimes
+    }
+
+    pub fn getter(&self) -> Option<&syn::Path> {
+        self.getter.as_ref()
     }
 }
 
@@ -835,4 +1006,175 @@ fn parse_lit_into_ty(cx: &Ctxt,
     syn::parse_type(&string).map_err(|_| {
         cx.error(format!("failed to parse type: {} = {:?}", attr_name, string))
     })
+}
+
+// Parses a string literal like "'a + 'b + 'c" containing a nonempty list of
+// lifetimes separated by `+`.
+fn parse_lit_into_lifetimes(cx: &Ctxt,
+                            attr_name: &str,
+                            lit: &syn::Lit)
+                            -> Result<BTreeSet<syn::Lifetime>, ()> {
+    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
+    if string.is_empty() {
+        cx.error("at least one lifetime must be borrowed");
+        return Err(());
+    }
+
+    named!(lifetimes -> Vec<syn::Lifetime>,
+        separated_nonempty_list!(punct!("+"), syn::parse::lifetime)
+    );
+
+    if let IResult::Done(rest, o) = lifetimes(&string) {
+        if rest.trim().is_empty() {
+            let mut set = BTreeSet::new();
+            for lifetime in o {
+                if !set.insert(lifetime.clone()) {
+                    cx.error(format!("duplicate borrowed lifetime `{}`", lifetime.ident));
+                }
+            }
+            return Ok(set);
+        }
+    }
+    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string)))
+}
+
+// Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
+// This can have false negatives and false positives.
+//
+// False negative:
+//
+//     use std::borrow::Cow as Pig;
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         #[serde(borrow)]
+//         pig: Pig<'a, str>,
+//     }
+//
+// False positive:
+//
+//     type str = [i16];
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         #[serde(borrow)]
+//         cow: Cow<'a, str>,
+//     }
+fn is_cow(ty: &syn::Ty, elem: &str) -> bool {
+    let path = match *ty {
+        syn::Ty::Path(None, ref path) => path,
+        _ => {
+            return false;
+        }
+    };
+    let seg = match path.segments.last() {
+        Some(seg) => seg,
+        None => {
+            return false;
+        }
+    };
+    let params = match seg.parameters {
+        syn::PathParameters::AngleBracketed(ref params) => params,
+        _ => {
+            return false;
+        }
+    };
+    seg.ident == "Cow"
+        && params.lifetimes.len() == 1
+        && params.types == vec![syn::parse_type(elem).unwrap()]
+        && params.bindings.is_empty()
+}
+
+// Whether the type looks like it might be `&T` where elem="T". This can have
+// false negatives and false positives.
+//
+// False negative:
+//
+//     type Yarn = str;
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         r: &'a Yarn,
+//     }
+//
+// False positive:
+//
+//     type str = [i16];
+//
+//     #[derive(Deserialize)]
+//     struct S<'a> {
+//         r: &'a str,
+//     }
+fn is_rptr(ty: &syn::Ty, elem: &str) -> bool {
+    match *ty {
+        syn::Ty::Rptr(Some(_), ref mut_ty) => {
+            mut_ty.mutability == syn::Mutability::Immutable
+                && mut_ty.ty == syn::parse_type(elem).unwrap()
+        }
+        _ => false,
+    }
+}
+
+// All lifetimes that this type could borrow from a Deserializer.
+//
+// For example a type `S<'a, 'b>` could borrow `'a` and `'b`. On the other hand
+// a type `for<'a> fn(&'a str)` could not borrow `'a` from the Deserializer.
+//
+// This is used when there is an explicit or implicit `#[serde(borrow)]`
+// attribute on the field so there must be at least one borrowable lifetime.
+fn borrowable_lifetimes(cx: &Ctxt,
+                        name: &str,
+                        ty: &syn::Ty)
+                        -> Result<BTreeSet<syn::Lifetime>, ()> {
+    let mut lifetimes = BTreeSet::new();
+    collect_lifetimes(ty, &mut lifetimes);
+    if lifetimes.is_empty() {
+        Err(cx.error(format!("field `{}` has no lifetimes to borrow", name)))
+    } else {
+        Ok(lifetimes)
+    }
+}
+
+fn collect_lifetimes(ty: &syn::Ty, out: &mut BTreeSet<syn::Lifetime>) {
+    match *ty {
+        syn::Ty::Slice(ref elem) |
+        syn::Ty::Array(ref elem, _) |
+        syn::Ty::Paren(ref elem) => {
+            collect_lifetimes(elem, out);
+        }
+        syn::Ty::Ptr(ref elem) => {
+            collect_lifetimes(&elem.ty, out);
+        }
+        syn::Ty::Rptr(ref lifetime, ref elem) => {
+            out.extend(lifetime.iter().cloned());
+            collect_lifetimes(&elem.ty, out);
+        }
+        syn::Ty::Tup(ref elems) => {
+            for elem in elems {
+                collect_lifetimes(elem, out);
+            }
+        }
+        syn::Ty::Path(ref qself, ref path) => {
+            if let Some(ref qself) = *qself {
+                collect_lifetimes(&qself.ty, out);
+            }
+            for seg in &path.segments {
+                if let syn::PathParameters::AngleBracketed(ref params) = seg.parameters {
+                    out.extend(params.lifetimes.iter().cloned());
+                    for ty in &params.types {
+                        collect_lifetimes(ty, out);
+                    }
+                    for binding in &params.bindings {
+                        collect_lifetimes(&binding.ty, out);
+                    }
+                }
+            }
+        }
+        syn::Ty::BareFn(_) |
+        syn::Ty::Never |
+        syn::Ty::TraitObject(_) |
+        syn::Ty::ImplTrait(_) |
+        syn::Ty::Infer |
+        syn::Ty::Mac(_) => {}
+    }
 }

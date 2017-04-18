@@ -1,15 +1,27 @@
+// Copyright 2017 Serde Developer
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 // These just test that serde_codegen is able to produce code that compiles
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
+// Clippy false positive
+// https://github.com/Manishearth/rust-clippy/issues/292
+#![cfg_attr(feature = "cargo-clippy", allow(needless_lifetimes))]
+
 #[macro_use]
 extern crate serde_derive;
 
 extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
-use self::serde::de::{Deserialize, Deserializer};
+use self::serde::de::{DeserializeOwned, Deserializer};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -65,15 +77,6 @@ fn test_gen() {
     assert::<PhantomT<X>>();
 
     #[derive(Serialize, Deserialize)]
-    struct Bounds<T: Serialize + Deserialize> {
-        t: T,
-        option: Option<T>,
-        boxed: Box<T>,
-        option_boxed: Option<Box<T>>,
-    }
-    assert::<Bounds<i32>>();
-
-    #[derive(Serialize, Deserialize)]
     struct NoBounds<T> {
         t: T,
         option: Option<T>,
@@ -87,20 +90,28 @@ fn test_gen() {
         Unit,
         Newtype(
             #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-            X),
+            X
+        ),
         Tuple(
             T,
             #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-            X),
+            X
+        ),
         Struct {
             t: T,
             #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-            x: X },
+            x: X,
+        },
     }
     assert::<EnumWith<i32>>();
 
     #[derive(Serialize)]
-    struct MultipleRef<'a, 'b, 'c, T> where T: 'c, 'c: 'b, 'b: 'a {
+    struct MultipleRef<'a, 'b, 'c, T>
+    where
+        T: 'c,
+        'c: 'b,
+        'b: 'a,
+    {
         t: T,
         rrrt: &'a &'b &'c T,
     }
@@ -117,7 +128,7 @@ fn test_gen() {
     struct Tuple<T>(
         T,
         #[serde(serialize_with="ser_x", deserialize_with="de_x")]
-        X,
+        X
     );
     assert::<Tuple<i32>>();
 
@@ -127,9 +138,7 @@ fn test_gen() {
             left: Box<TreeNode<D>>,
             right: Box<TreeNode<D>>,
         },
-        Leaf {
-            data: D,
-        },
+        Leaf { data: D },
     }
     assert::<TreeNode<i32>>();
 
@@ -206,7 +215,7 @@ fn test_gen() {
     assert::<CowStr>();
 
     #[derive(Serialize, Deserialize)]
-    #[serde(bound(deserialize = "T::Owned: Deserialize"))]
+    #[serde(bound(deserialize = "T::Owned: DeserializeOwned"))]
     struct CowT<'a, T: ?Sized + 'a + ToOwned>(Cow<'a, T>);
     assert::<CowT<str>>();
 
@@ -223,7 +232,7 @@ fn test_gen() {
     #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     struct NonAsciiIdents {
-        σ: f64
+        σ: f64,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -256,11 +265,17 @@ fn test_gen() {
     struct EmptyTupleDenyUnknown();
 
     #[derive(Serialize, Deserialize)]
-    struct TupleSkipAll(#[serde(skip_deserializing)] u8);
+    struct TupleSkipAll(
+        #[serde(skip_deserializing)]
+        u8
+    );
 
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct TupleSkipAllDenyUnknown(#[serde(skip_deserializing)] u8);
+    struct TupleSkipAllDenyUnknown(
+        #[serde(skip_deserializing)]
+        u8
+    );
 
     #[derive(Serialize, Deserialize)]
     enum EmptyEnum {}
@@ -285,7 +300,10 @@ fn test_gen() {
             #[serde(skip_deserializing)]
             f: u8,
         },
-        TupleSkip(#[serde(skip_deserializing)] u8),
+        TupleSkip(
+            #[serde(skip_deserializing)]
+            u8
+        ),
     }
 
     #[cfg(feature = "unstable")]
@@ -298,17 +316,25 @@ fn test_gen() {
             #[serde(skip_deserializing)]
             f: u8,
         },
-        TupleSkip(#[serde(skip_deserializing)] u8),
+        TupleSkip(
+            #[serde(skip_deserializing)]
+            u8
+        ),
     }
 
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     struct UnitDenyUnknown;
+
+    #[derive(Serialize, Deserialize)]
+    struct EmptyArray {
+        empty: [X; 0],
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-fn assert<T: Serialize + Deserialize>() {}
+fn assert<T: Serialize + DeserializeOwned>() {}
 fn assert_ser<T: Serialize>() {}
 
 trait SerializeWith {
@@ -316,7 +342,7 @@ trait SerializeWith {
 }
 
 trait DeserializeWith: Sized {
-    fn deserialize_with<D: Deserializer>(_: D) -> StdResult<Self, D::Error>;
+    fn deserialize_with<'de, D: Deserializer<'de>>(_: D) -> StdResult<Self, D::Error>;
 }
 
 // Implements neither Serialize nor Deserialize
@@ -326,7 +352,7 @@ pub fn ser_x<S: Serializer>(_: &X, _: S) -> StdResult<S::Ok, S::Error> {
     unimplemented!()
 }
 
-pub fn de_x<D: Deserializer>(_: D) -> StdResult<X, D::Error> {
+pub fn de_x<'de, D: Deserializer<'de>>(_: D) -> StdResult<X, D::Error> {
     unimplemented!()
 }
 
@@ -341,7 +367,7 @@ impl SerializeWith for X {
 }
 
 impl DeserializeWith for X {
-    fn deserialize_with<D: Deserializer>(_: D) -> StdResult<Self, D::Error> {
+    fn deserialize_with<'de, D: Deserializer<'de>>(_: D) -> StdResult<Self, D::Error> {
         unimplemented!()
     }
 }

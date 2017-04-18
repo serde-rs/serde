@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "0.9.14"
+version = "0.9.14" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
@@ -8,11 +8,9 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde.rs/codegen.html"
 keywords = ["serde", "serialization", "no_std"]
-readme = "../README.md"
+readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
-
-[features]
-unstable = []
+publish = false # this branch contains breaking changes
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
@@ -23,5 +21,5 @@ proc-macro = true
 
 [dependencies]
 quote = "0.3.8"
-serde_codegen_internals = { version = "=0.14.2", default-features = false, path = "../serde_codegen_internals" }
+serde_derive_internals = { version = "=0.14.2", default-features = false, path = "../serde_derive_internals" }
 syn = { version = "0.11", features = ["visit"] }
