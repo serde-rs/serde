@@ -28,8 +28,10 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
         }
         Body::Struct(_, _) => {
             if cont.body.has_getter() && cont.attrs.remote().is_none() {
-                cx.error("#[serde(getter = \"...\")] can only be used in structs \
-                          that have #[serde(remote = \"...\")]");
+                cx.error(
+                    "#[serde(getter = \"...\")] can only be used in structs \
+                          that have #[serde(remote = \"...\")]",
+                );
             }
         }
     }
@@ -52,7 +54,8 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
     for (i, variant) in variants.iter().enumerate() {
         match (variant.style, cont.attrs.identifier(), variant.attrs.other()) {
             // The `other` attribute may only be used in a field_identifier.
-            (_, Identifier::Variant, true) | (_, Identifier::No, true) => {
+            (_, Identifier::Variant, true) |
+            (_, Identifier::No, true) => {
                 cx.error("#[serde(other)] may only be used inside a field_identifier");
             }
 

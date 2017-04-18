@@ -169,7 +169,11 @@ where
     generics
 }
 
-pub fn with_self_bound(cont: &Container, generics: &syn::Generics, bound: &syn::Path) -> syn::Generics {
+pub fn with_self_bound(
+    cont: &Container,
+    generics: &syn::Generics,
+    bound: &syn::Path,
+) -> syn::Generics {
     let mut generics = generics.clone();
     generics
         .where_clause

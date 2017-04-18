@@ -20,7 +20,11 @@ impl Ctxt {
     }
 
     pub fn error<T: Display>(&self, msg: T) {
-        self.errors.borrow_mut().as_mut().unwrap().push(msg.to_string());
+        self.errors
+            .borrow_mut()
+            .as_mut()
+            .unwrap()
+            .push(msg.to_string());
     }
 
     pub fn check(self) -> Result<(), String> {

@@ -273,11 +273,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
     }
 }
 
-fn serialize_enum(
-    params: &Parameters,
-    variants: &[Variant],
-    cattrs: &attr::Container,
-) -> Fragment {
+fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Container) -> Fragment {
     assert!(variants.len() as u64 <= u32::MAX as u64);
 
     let self_var = &params.self_var;

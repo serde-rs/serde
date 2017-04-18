@@ -288,7 +288,7 @@ fn deserialize_tuple(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, false, cattrs),);
+    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, false, cattrs));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -488,7 +488,7 @@ fn deserialize_struct(
         None => format!("struct {}", params.type_name()),
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs),);
+    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs));
 
     let (field_visitor, fields_stmt, visit_map) =
         deserialize_struct_visitor(type_path, params, fields, cattrs);
@@ -618,23 +618,21 @@ fn deserialize_externally_tagged_enum(
     let variant_visitor = Stmts(deserialize_generated_identifier(variant_names_idents, cattrs, true),);
 
     // Match arms to extract a variant from a string
-    let variant_arms =
-        variants
-            .iter()
-            .enumerate()
-            .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-            .map(
-                |(i, variant)| {
-                    let variant_name = field_i(i);
+    let variant_arms = variants
+        .iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(
+            |(i, variant)| {
+                let variant_name = field_i(i);
 
-                    let block =
-                        Match(deserialize_externally_tagged_variant(params, variant, cattrs),);
+                let block = Match(deserialize_externally_tagged_variant(params, variant, cattrs),);
 
-                    quote! {
+                quote! {
                 (__Field::#variant_name, __variant) => #block
             }
-                },
-            );
+            },
+        );
 
     let all_skipped = variants
         .iter()
@@ -1056,22 +1054,10 @@ fn deserialize_externally_tagged_variant(
             deserialize_externally_tagged_newtype_variant(variant_ident, params, &variant.fields[0])
         }
         Style::Tuple => {
-            deserialize_tuple(
-                Some(variant_ident),
-                params,
-                &variant.fields,
-                cattrs,
-                None,
-            )
+            deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
         }
         Style::Struct => {
-            deserialize_struct(
-                Some(variant_ident),
-                params,
-                &variant.fields,
-                cattrs,
-                None,
-            )
+            deserialize_struct(Some(variant_ident), params, &variant.fields, cattrs, None)
         }
     }
 }
@@ -1223,7 +1209,7 @@ fn deserialize_generated_identifier(
         (Some(ignore_variant), Some(fallthrough))
     };
 
-    let visitor_impl = Stmts(deserialize_identifier(this, &fields, is_variant, fallthrough));
+    let visitor_impl = Stmts(deserialize_identifier(this, &fields, is_variant, fallthrough),);
 
     quote_block! {
         #[allow(non_camel_case_types)]
@@ -1289,7 +1275,7 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident.clone()))
+        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident.clone()),)
         .collect();
 
     let names = names_idents.iter().map(|&(ref name, _)| name);
@@ -1308,8 +1294,9 @@ fn deserialize_custom_identifier(
         Some(fields)
     };
 
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params);
-    let visitor_impl = Stmts(deserialize_identifier(this.clone(), &names_idents, is_variant, fallthrough));
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let visitor_impl =
+        Stmts(deserialize_identifier(this.clone(), &names_idents, is_variant, fallthrough),);
 
     quote_block! {
         #names_const
@@ -1343,9 +1330,9 @@ fn deserialize_identifier(
     let field_bytes = fields.iter().map(|&(ref name, _)| quote::ByteStr(name));
 
     let constructors: &Vec<_> = &fields
-        .iter()
-        .map(|&(_, ref ident)| quote!(#this::#ident))
-        .collect();
+                                     .iter()
+                                     .map(|&(_, ref ident)| quote!(#this::#ident))
+                                     .collect();
 
     let expecting = if is_variant {
         "variant identifier"

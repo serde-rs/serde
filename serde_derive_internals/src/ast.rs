@@ -87,8 +87,7 @@ impl<'a> Body<'a> {
     pub fn all_fields(&'a self) -> Box<Iterator<Item = &'a Field<'a>> + 'a> {
         match *self {
             Body::Enum(ref variants) => {
-                Box::new(variants.iter()
-                    .flat_map(|variant| variant.fields.iter()))
+                Box::new(variants.iter().flat_map(|variant| variant.fields.iter()))
             }
             Body::Struct(_, ref fields) => Box::new(fields.iter()),
         }
@@ -100,16 +99,19 @@ impl<'a> Body<'a> {
 }
 
 fn enum_from_ast<'a>(cx: &Ctxt, variants: &'a [syn::Variant]) -> Vec<Variant<'a>> {
-    variants.iter()
-        .map(|variant| {
-            let (style, fields) = struct_from_ast(cx, &variant.data);
-            Variant {
-                ident: variant.ident.clone(),
-                attrs: attr::Variant::from_ast(cx, variant),
-                style: style,
-                fields: fields,
-            }
-        })
+    variants
+        .iter()
+        .map(
+            |variant| {
+                let (style, fields) = struct_from_ast(cx, &variant.data);
+                Variant {
+                    ident: variant.ident.clone(),
+                    attrs: attr::Variant::from_ast(cx, variant),
+                    style: style,
+                    fields: fields,
+                }
+            },
+        )
         .collect()
 }
 
@@ -125,14 +127,17 @@ fn struct_from_ast<'a>(cx: &Ctxt, data: &'a syn::VariantData) -> (Style, Vec<Fie
 }
 
 fn fields_from_ast<'a>(cx: &Ctxt, fields: &'a [syn::Field]) -> Vec<Field<'a>> {
-    fields.iter()
+    fields
+        .iter()
         .enumerate()
-        .map(|(i, field)| {
-            Field {
-                ident: field.ident.clone(),
-                attrs: attr::Field::from_ast(cx, i, field),
-                ty: &field.ty,
-            }
-        })
+        .map(
+            |(i, field)| {
+                Field {
+                    ident: field.ident.clone(),
+                    attrs: attr::Field::from_ast(cx, i, field),
+                    ty: &field.ty,
+                }
+            },
+        )
         .collect()
 }

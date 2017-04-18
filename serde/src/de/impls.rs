@@ -1039,7 +1039,8 @@ impl<'de> Visitor<'de> for OsStringVisitor {
 
         match try!(data.variant()) {
             (OsStringKind::Windows, v) => {
-                v.newtype_variant::<Vec<u16>>().map(|vec| OsString::from_wide(&vec))
+                v.newtype_variant::<Vec<u16>>()
+                    .map(|vec| OsString::from_wide(&vec))
             }
             (OsStringKind::Unix, _) => Err(Error::custom("cannot deserialize Unix OS string on Windows",),),
         }
@@ -1151,7 +1152,7 @@ where
 
 impl<'de, T> Deserialize<'de> for RefCell<T>
 where
-    T: Deserialize<'de>
+    T: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<RefCell<T>, D::Error>
     where

@@ -191,7 +191,8 @@ pub mod size_hint {
     use lib::*;
 
     pub fn from_bounds<I>(iter: &I) -> Option<usize>
-        where I: Iterator
+    where
+        I: Iterator,
     {
         helper(iter.size_hint())
     }
@@ -202,9 +203,7 @@ pub mod size_hint {
 
     fn helper(bounds: (usize, Option<usize>)) -> Option<usize> {
         match bounds {
-            (lower, Some(upper)) if lower == upper => {
-                Some(upper)
-            }
+            (lower, Some(upper)) if lower == upper => Some(upper),
             _ => None,
         }
     }
@@ -1026,10 +1025,7 @@ mod content {
         type Error = E;
         type Variant = VariantDeserializer<Self::Error>;
 
-        fn variant_seed<V>(
-            self,
-            seed: V,
-        ) -> Result<(V::Value, VariantDeserializer<E>), Self::Error>
+        fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), E>
         where
             V: de::DeserializeSeed<'de>,
         {

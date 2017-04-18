@@ -97,10 +97,12 @@ impl FromStr for RenameRule {
 #[test]
 fn rename_variants() {
     for &(original, lower, camel, snake, screaming, kebab) in
-        &[("Outcome", "outcome", "outcome", "outcome", "OUTCOME", "outcome"),
-          ("VeryTasty", "verytasty", "veryTasty", "very_tasty", "VERY_TASTY", "very-tasty"),
-          ("A", "a", "a", "a", "A", "a"),
-          ("Z42", "z42", "z42", "z42", "Z42", "z42")] {
+        &[
+            ("Outcome", "outcome", "outcome", "outcome", "OUTCOME", "outcome"),
+            ("VeryTasty", "verytasty", "veryTasty", "very_tasty", "VERY_TASTY", "very-tasty"),
+            ("A", "a", "a", "a", "A", "a"),
+            ("Z42", "z42", "z42", "z42", "Z42", "z42"),
+        ] {
         assert_eq!(None.apply_to_variant(original), original);
         assert_eq!(LowerCase.apply_to_variant(original), lower);
         assert_eq!(PascalCase.apply_to_variant(original), original);
@@ -114,10 +116,12 @@ fn rename_variants() {
 #[test]
 fn rename_fields() {
     for &(original, pascal, camel, screaming, kebab) in
-        &[("outcome", "Outcome", "outcome", "OUTCOME", "outcome"),
-          ("very_tasty", "VeryTasty", "veryTasty", "VERY_TASTY", "very-tasty"),
-          ("a", "A", "a", "A", "a"),
-          ("z42", "Z42", "z42", "Z42", "z42")] {
+        &[
+            ("outcome", "Outcome", "outcome", "OUTCOME", "outcome"),
+            ("very_tasty", "VeryTasty", "veryTasty", "VERY_TASTY", "very-tasty"),
+            ("a", "A", "a", "A", "a"),
+            ("z42", "Z42", "z42", "Z42", "z42"),
+        ] {
         assert_eq!(None.apply_to_field(original), original);
         assert_eq!(PascalCase.apply_to_field(original), pascal);
         assert_eq!(CamelCase.apply_to_field(original), camel);

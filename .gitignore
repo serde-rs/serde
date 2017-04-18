@@ -1,3 +1,4 @@
-Cargo.lock
-target
+target/
+**/*.rs.bk
 *.sw[po]
+Cargo.lock
