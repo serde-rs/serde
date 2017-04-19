@@ -115,21 +115,21 @@ declare_tests! {
     }
     test_result {
         Ok::<i32, i32>(0) => &[
-            Token::NewtypeVariant("Result", "Ok"),
+            Token::NewtypeVariant { name: "Result", variant: "Ok" },
             Token::I32(0),
         ],
         Err::<i32, i32>(1) => &[
-            Token::NewtypeVariant("Result", "Err"),
+            Token::NewtypeVariant { name: "Result", variant: "Err" },
             Token::I32(1),
         ],
     }
     test_slice {
         &[0][..0] => &[
-            Token::Seq(Some(0)),
+            Token::Seq { len: Some(0) },
             Token::SeqEnd,
         ],
         &[1, 2, 3][..] => &[
-            Token::Seq(Some(3)),
+            Token::Seq { len: Some(3) },
                 Token::I32(1),
                 Token::I32(2),
                 Token::I32(3),
@@ -138,11 +138,11 @@ declare_tests! {
     }
     test_array {
         [0; 0] => &[
-            Token::Tuple(0),
+            Token::Tuple { len: 0 },
             Token::TupleEnd,
         ],
         [1, 2, 3] => &[
-            Token::Tuple(3),
+            Token::Tuple { len: 3 },
                 Token::I32(1),
                 Token::I32(2),
                 Token::I32(3),
@@ -151,19 +151,19 @@ declare_tests! {
     }
     test_vec {
         Vec::<isize>::new() => &[
-            Token::Seq(Some(0)),
+            Token::Seq { len: Some(0) },
             Token::SeqEnd,
         ],
         vec![vec![], vec![1], vec![2, 3]] => &[
-            Token::Seq(Some(3)),
-                Token::Seq(Some(0)),
+            Token::Seq { len: Some(3) },
+                Token::Seq { len: Some(0) },
                 Token::SeqEnd,
 
-                Token::Seq(Some(1)),
+                Token::Seq { len: Some(1) },
                     Token::I32(1),
                 Token::SeqEnd,
 
-                Token::Seq(Some(2)),
+                Token::Seq { len: Some(2) },
                     Token::I32(2),
                     Token::I32(3),
                 Token::SeqEnd,
@@ -172,28 +172,28 @@ declare_tests! {
     }
     test_hashset {
         HashSet::<isize>::new() => &[
-            Token::Seq(Some(0)),
+            Token::Seq { len: Some(0) },
             Token::SeqEnd,
         ],
         hashset![1] => &[
-            Token::Seq(Some(1)),
+            Token::Seq { len: Some(1) },
                 Token::I32(1),
             Token::SeqEnd,
         ],
         hashset![FnvHasher @ 1] => &[
-            Token::Seq(Some(1)),
+            Token::Seq { len: Some(1) },
                 Token::I32(1),
             Token::SeqEnd,
         ],
     }
     test_tuple {
         (1,) => &[
-            Token::Tuple(1),
+            Token::Tuple { len: 1 },
                 Token::I32(1),
             Token::TupleEnd,
         ],
         (1, 2, 3) => &[
-            Token::Tuple(3),
+            Token::Tuple { len: 3 },
                 Token::I32(1),
                 Token::I32(2),
                 Token::I32(3),
@@ -202,13 +202,13 @@ declare_tests! {
     }
     test_btreemap {
         btreemap![1 => 2] => &[
-            Token::Map(Some(1)),
+            Token::Map { len: Some(1) },
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
         btreemap![1 => 2, 3 => 4] => &[
-            Token::Map(Some(2)),
+            Token::Map { len: Some(2) },
                 Token::I32(1),
                 Token::I32(2),
 
@@ -217,13 +217,13 @@ declare_tests! {
             Token::MapEnd,
         ],
         btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => &[
-            Token::Map(Some(2)),
+            Token::Map { len: Some(2) },
                 Token::I32(1),
-                Token::Map(Some(0)),
+                Token::Map { len: Some(0) },
                 Token::MapEnd,
 
                 Token::I32(2),
-                Token::Map(Some(2)),
+                Token::Map { len: Some(2) },
                     Token::I32(3),
                     Token::I32(4),
 
@@ -235,28 +235,28 @@ declare_tests! {
     }
     test_hashmap {
         HashMap::<isize, isize>::new() => &[
-            Token::Map(Some(0)),
+            Token::Map { len: Some(0) },
             Token::MapEnd,
         ],
         hashmap![1 => 2] => &[
-            Token::Map(Some(1)),
+            Token::Map { len: Some(1) },
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
         hashmap![FnvHasher @ 1 => 2] => &[
-            Token::Map(Some(1)),
+            Token::Map { len: Some(1) },
                 Token::I32(1),
                 Token::I32(2),
             Token::MapEnd,
         ],
     }
     test_unit_struct {
-        UnitStruct => &[Token::UnitStruct("UnitStruct")],
+        UnitStruct => &[Token::UnitStruct { name: "UnitStruct" }],
     }
     test_tuple_struct {
         TupleStruct(1, 2, 3) => &[
-            Token::TupleStruct("TupleStruct", 3),
+            Token::TupleStruct { name: "TupleStruct", len: 3 },
                 Token::I32(1),
                 Token::I32(2),
                 Token::I32(3),
@@ -265,7 +265,7 @@ declare_tests! {
     }
     test_struct {
         Struct { a: 1, b: 2, c: 3 } => &[
-            Token::Struct("Struct", 3),
+            Token::Struct { name: "Struct", len: 3 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -278,16 +278,16 @@ declare_tests! {
         ],
     }
     test_enum {
-        Enum::Unit => &[Token::UnitVariant("Enum", "Unit")],
-        Enum::One(42) => &[Token::NewtypeVariant("Enum", "One"), Token::I32(42)],
+        Enum::Unit => &[Token::UnitVariant { name: "Enum", variant: "Unit" }],
+        Enum::One(42) => &[Token::NewtypeVariant { name: "Enum", variant: "One" }, Token::I32(42)],
         Enum::Seq(1, 2) => &[
-            Token::TupleVariant("Enum", "Seq", 2),
+            Token::TupleVariant { name: "Enum", variant: "Seq", len: 2 },
                 Token::I32(1),
                 Token::I32(2),
             Token::TupleVariantEnd,
         ],
         Enum::Map { a: 1, b: 2 } => &[
-            Token::StructVariant("Enum", "Map", 2),
+            Token::StructVariant { name: "Enum", variant: "Map", len: 2 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -301,7 +301,7 @@ declare_tests! {
     }
     test_boxed_slice {
         Box::new([0, 1, 2]) => &[
-            Token::Tuple(3),
+            Token::Tuple { len: 3 },
             Token::I32(0),
             Token::I32(1),
             Token::I32(2),
@@ -310,7 +310,7 @@ declare_tests! {
     }
     test_duration {
         Duration::new(1, 2) => &[
-            Token::Struct("Duration", 2),
+            Token::Struct { name: "Duration", len: 2 },
                 Token::Str("secs"),
                 Token::U64(1),
 
@@ -321,7 +321,7 @@ declare_tests! {
     }
     test_range {
         1u32..2u32 => &[
-            Token::Struct("Range", 2),
+            Token::Struct { name: "Range", len: 2 },
                 Token::Str("start"),
                 Token::U32(1),
 

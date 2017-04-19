@@ -115,7 +115,7 @@ struct DefaultTyParam<T: AssociatedType<X = i32> = i32> {
 
 #[test]
 fn test_named_unit() {
-    assert_tokens(&NamedUnit, &[Token::UnitStruct("NamedUnit")]);
+    assert_tokens(&NamedUnit, &[Token::UnitStruct { name: "NamedUnit" }]);
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn test_ser_named_tuple() {
     assert_ser_tokens(
         &SerNamedTuple(&a, &mut b, c),
         &[
-            Token::TupleStruct("SerNamedTuple", 3),
+            Token::TupleStruct { name: "SerNamedTuple", len: 3 },
             Token::I32(5),
             Token::I32(6),
             Token::I32(7),
@@ -140,7 +140,7 @@ fn test_de_named_tuple() {
     assert_de_tokens(
         &DeNamedTuple(5, 6, 7),
         &[
-            Token::Seq(Some(3)),
+            Token::Seq { len: Some(3) },
             Token::I32(5),
             Token::I32(6),
             Token::I32(7),
@@ -151,7 +151,7 @@ fn test_de_named_tuple() {
     assert_de_tokens(
         &DeNamedTuple(5, 6, 7),
         &[
-            Token::TupleStruct("DeNamedTuple", 3),
+            Token::TupleStruct { name: "DeNamedTuple", len: 3 },
             Token::I32(5),
             Token::I32(6),
             Token::I32(7),
@@ -173,7 +173,7 @@ fn test_ser_named_map() {
              c: c,
          },
         &[
-            Token::Struct("SerNamedMap", 3),
+            Token::Struct { name: "SerNamedMap", len: 3 },
 
             Token::Str("a"),
             Token::I32(5),
@@ -194,7 +194,7 @@ fn test_de_named_map() {
     assert_de_tokens(
         &DeNamedMap { a: 5, b: 6, c: 7 },
         &[
-            Token::Struct("DeNamedMap", 3),
+            Token::Struct { name: "DeNamedMap", len: 3 },
 
             Token::Str("a"),
             Token::I32(5),
@@ -214,7 +214,7 @@ fn test_de_named_map() {
 fn test_ser_enum_unit() {
     assert_ser_tokens(
         &SerEnum::Unit::<u32, u32, u32>,
-        &[Token::UnitVariant("SerEnum", "Unit")],
+        &[Token::UnitVariant { name: "SerEnum", variant: "Unit" }],
     );
 }
 
@@ -228,7 +228,7 @@ fn test_ser_enum_seq() {
     assert_ser_tokens(
         &SerEnum::Seq(a, b, &c, &mut d),
         &[
-            Token::TupleVariant("SerEnum", "Seq", 4),
+            Token::TupleVariant { name: "SerEnum", variant: "Seq", len: 4 },
             Token::I8(1),
             Token::I32(2),
             Token::I32(3),
@@ -253,7 +253,7 @@ fn test_ser_enum_map() {
              d: &mut d,
          },
         &[
-            Token::StructVariant("SerEnum", "Map", 4),
+            Token::StructVariant { name: "SerEnum", variant: "Map", len: 4 },
 
             Token::Str("a"),
             Token::I8(1),
@@ -276,7 +276,7 @@ fn test_ser_enum_map() {
 fn test_de_enum_unit() {
     assert_tokens(
         &DeEnum::Unit::<u32, u32, u32>,
-        &[Token::UnitVariant("DeEnum", "Unit")],
+        &[Token::UnitVariant { name: "DeEnum", variant: "Unit" }],
     );
 }
 
@@ -290,7 +290,7 @@ fn test_de_enum_seq() {
     assert_tokens(
         &DeEnum::Seq(a, b, c, d),
         &[
-            Token::TupleVariant("DeEnum", "Seq", 4),
+            Token::TupleVariant { name: "DeEnum", variant: "Seq", len: 4 },
             Token::I8(1),
             Token::I32(2),
             Token::I32(3),
@@ -315,7 +315,7 @@ fn test_de_enum_map() {
              d: d,
          },
         &[
-            Token::StructVariant("DeEnum", "Map", 4),
+            Token::StructVariant { name: "DeEnum", variant: "Map", len: 4 },
 
             Token::Str("a"),
             Token::I8(1),
@@ -341,7 +341,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::LifetimeSeq(&value),
         &[
-            Token::NewtypeVariant("Lifetimes", "LifetimeSeq"),
+            Token::NewtypeVariant { name: "Lifetimes", variant: "LifetimeSeq" },
             Token::I32(5),
         ],
     );
@@ -349,7 +349,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::NoLifetimeSeq(5),
         &[
-            Token::NewtypeVariant("Lifetimes", "NoLifetimeSeq"),
+            Token::NewtypeVariant { name: "Lifetimes", variant: "NoLifetimeSeq" },
             Token::I32(5),
         ],
     );
@@ -357,7 +357,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::LifetimeMap { a: &value },
         &[
-            Token::StructVariant("Lifetimes", "LifetimeMap", 1),
+            Token::StructVariant { name: "Lifetimes", variant: "LifetimeMap", len: 1 },
 
             Token::Str("a"),
             Token::I32(5),
@@ -369,7 +369,7 @@ fn test_lifetimes() {
     assert_ser_tokens(
         &Lifetimes::NoLifetimeMap { a: 5 },
         &[
-            Token::StructVariant("Lifetimes", "NoLifetimeMap", 1),
+            Token::StructVariant { name: "Lifetimes", variant: "NoLifetimeMap", len: 1 },
 
             Token::Str("a"),
             Token::I32(5),
@@ -384,7 +384,7 @@ fn test_generic_struct() {
     assert_tokens(
         &GenericStruct { x: 5u32 },
         &[
-            Token::Struct("GenericStruct", 1),
+            Token::Struct { name: "GenericStruct", len: 1 },
 
             Token::Str("x"),
             Token::U32(5),
@@ -398,7 +398,7 @@ fn test_generic_struct() {
 fn test_generic_newtype_struct() {
     assert_tokens(
         &GenericNewTypeStruct(5u32),
-        &[Token::NewtypeStruct("GenericNewTypeStruct"), Token::U32(5)],
+        &[Token::NewtypeStruct { name: "GenericNewTypeStruct" }, Token::U32(5)],
     );
 }
 
@@ -407,7 +407,7 @@ fn test_generic_tuple_struct() {
     assert_tokens(
         &GenericTupleStruct(5u32, 6u32),
         &[
-            Token::TupleStruct("GenericTupleStruct", 2),
+            Token::TupleStruct { name: "GenericTupleStruct", len: 2 },
             Token::U32(5),
             Token::U32(6),
             Token::TupleStructEnd,
@@ -419,7 +419,7 @@ fn test_generic_tuple_struct() {
 fn test_generic_enum_unit() {
     assert_tokens(
         &GenericEnum::Unit::<u32, u32>,
-        &[Token::UnitVariant("GenericEnum", "Unit")],
+        &[Token::UnitVariant { name: "GenericEnum", variant: "Unit" }],
     );
 }
 
@@ -428,7 +428,7 @@ fn test_generic_enum_newtype() {
     assert_tokens(
         &GenericEnum::NewType::<u32, u32>(5),
         &[
-            Token::NewtypeVariant("GenericEnum", "NewType"),
+            Token::NewtypeVariant { name: "GenericEnum", variant: "NewType" },
             Token::U32(5),
         ],
     );
@@ -439,7 +439,7 @@ fn test_generic_enum_seq() {
     assert_tokens(
         &GenericEnum::Seq::<u32, u32>(5, 6),
         &[
-            Token::TupleVariant("GenericEnum", "Seq", 2),
+            Token::TupleVariant { name: "GenericEnum", variant: "Seq", len: 2 },
             Token::U32(5),
             Token::U32(6),
             Token::TupleVariantEnd,
@@ -452,7 +452,7 @@ fn test_generic_enum_map() {
     assert_tokens(
         &GenericEnum::Map::<u32, u32> { x: 5, y: 6 },
         &[
-            Token::StructVariant("GenericEnum", "Map", 2),
+            Token::StructVariant { name: "GenericEnum", variant: "Map", len: 2 },
 
             Token::Str("x"),
             Token::U32(5),
@@ -470,10 +470,10 @@ fn test_default_ty_param() {
     assert_tokens(
         &DefaultTyParam::<i32> { phantom: PhantomData },
         &[
-            Token::Struct("DefaultTyParam", 1),
+            Token::Struct { name: "DefaultTyParam", len: 1 },
 
             Token::Str("phantom"),
-            Token::UnitStruct("PhantomData"),
+            Token::UnitStruct { name: "PhantomData" },
 
             Token::StructEnd,
         ],
@@ -493,7 +493,7 @@ fn test_enum_state_field() {
              state: true,
          },
         &[
-            Token::StructVariant("SomeEnum", "Key", 2),
+            Token::StructVariant { name: "SomeEnum", variant: "Key", len: 2 },
 
             Token::Str("key"),
             Token::Char('a'),
@@ -522,7 +522,7 @@ fn test_untagged_enum() {
     assert_tokens(
         &Untagged::A { a: 1 },
         &[
-            Token::Struct("Untagged", 1),
+            Token::Struct { name: "Untagged", len: 1 },
 
             Token::Str("a"),
             Token::U8(1),
@@ -534,7 +534,7 @@ fn test_untagged_enum() {
     assert_tokens(
         &Untagged::B { b: 2 },
         &[
-            Token::Struct("Untagged", 1),
+            Token::Struct { name: "Untagged", len: 1 },
 
             Token::Str("b"),
             Token::U8(2),
@@ -550,7 +550,7 @@ fn test_untagged_enum() {
 
     assert_tokens(
         &Untagged::F(1, 2),
-        &[Token::Tuple(2), Token::U8(1), Token::U8(2), Token::TupleEnd],
+        &[Token::Tuple { len: 2 }, Token::U8(1), Token::U8(2), Token::TupleEnd],
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -559,13 +559,13 @@ fn test_untagged_enum() {
     );
 
     assert_de_tokens_error::<Untagged>(
-        &[Token::Tuple(1), Token::U8(1), Token::TupleEnd],
+        &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
         "data did not match any variant of untagged enum Untagged",
     );
 
     assert_de_tokens_error::<Untagged>(
         &[
-            Token::Tuple(3),
+            Token::Tuple { len: 3 },
             Token::U8(1),
             Token::U8(2),
             Token::U8(3),
@@ -599,7 +599,7 @@ fn test_internally_tagged_enum() {
     assert_tokens(
         &InternallyTagged::A { a: 1 },
         &[
-            Token::Struct("InternallyTagged", 2),
+            Token::Struct { name: "InternallyTagged", len: 2 },
 
             Token::Str("type"),
             Token::Str("A"),
@@ -614,7 +614,7 @@ fn test_internally_tagged_enum() {
     assert_tokens(
         &InternallyTagged::B { b: 2 },
         &[
-            Token::Struct("InternallyTagged", 2),
+            Token::Struct { name: "InternallyTagged", len: 2 },
 
             Token::Str("type"),
             Token::Str("B"),
@@ -629,7 +629,7 @@ fn test_internally_tagged_enum() {
     assert_tokens(
         &InternallyTagged::C,
         &[
-            Token::Struct("InternallyTagged", 1),
+            Token::Struct { name: "InternallyTagged", len: 1 },
 
             Token::Str("type"),
             Token::Str("C"),
@@ -641,7 +641,7 @@ fn test_internally_tagged_enum() {
     assert_tokens(
         &InternallyTagged::D(BTreeMap::new()),
         &[
-            Token::Map(Some(1)),
+            Token::Map { len: Some(1) },
 
             Token::Str("type"),
             Token::Str("D"),
@@ -653,7 +653,7 @@ fn test_internally_tagged_enum() {
     assert_tokens(
         &InternallyTagged::E(Newtype(BTreeMap::new())),
         &[
-            Token::Map(Some(1)),
+            Token::Map { len: Some(1) },
 
             Token::Str("type"),
             Token::Str("E"),
@@ -665,7 +665,7 @@ fn test_internally_tagged_enum() {
     assert_tokens(
         &InternallyTagged::F(Struct { f: 6 }),
         &[
-            Token::Struct("Struct", 2),
+            Token::Struct { name: "Struct", len: 2 },
 
             Token::Str("type"),
             Token::Str("F"),
@@ -678,13 +678,13 @@ fn test_internally_tagged_enum() {
     );
 
     assert_de_tokens_error::<InternallyTagged>(
-        &[Token::Map(Some(0)), Token::MapEnd],
+        &[Token::Map { len: Some(0) }, Token::MapEnd],
         "missing field `type`",
     );
 
     assert_de_tokens_error::<InternallyTagged>(
         &[
-            Token::Map(Some(1)),
+            Token::Map { len: Some(1) },
 
             Token::Str("type"),
             Token::Str("Z"),
@@ -710,7 +710,7 @@ fn test_adjacently_tagged_enum() {
     assert_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
-            Token::Struct("AdjacentlyTagged", 1),
+            Token::Struct { name: "AdjacentlyTagged", len: 1 },
 
             Token::Str("t"),
             Token::Str("Unit"),
@@ -723,7 +723,7 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
-            Token::Struct("AdjacentlyTagged", 1),
+            Token::Struct { name: "AdjacentlyTagged", len: 1 },
 
             Token::Str("t"),
             Token::Str("Unit"),
@@ -739,7 +739,7 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
-            Token::Struct("AdjacentlyTagged", 1),
+            Token::Struct { name: "AdjacentlyTagged", len: 1 },
 
             Token::Str("c"),
             Token::Unit,
@@ -755,7 +755,7 @@ fn test_adjacently_tagged_enum() {
     assert_tokens(
         &AdjacentlyTagged::Newtype::<u8>(1),
         &[
-            Token::Struct("AdjacentlyTagged", 2),
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Newtype"),
@@ -771,7 +771,7 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Newtype::<u8>(1),
         &[
-            Token::Struct("AdjacentlyTagged", 2),
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("c"),
             Token::U8(1),
@@ -787,13 +787,13 @@ fn test_adjacently_tagged_enum() {
     assert_tokens(
         &AdjacentlyTagged::Tuple::<u8>(1, 1),
         &[
-            Token::Struct("AdjacentlyTagged", 2),
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Tuple"),
 
             Token::Str("c"),
-            Token::Tuple(2),
+            Token::Tuple { len: 2 },
             Token::U8(1),
             Token::U8(1),
             Token::TupleEnd,
@@ -806,10 +806,10 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Tuple::<u8>(1, 1),
         &[
-            Token::Struct("AdjacentlyTagged", 2),
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("c"),
-            Token::Tuple(2),
+            Token::Tuple { len: 2 },
             Token::U8(1),
             Token::U8(1),
             Token::TupleEnd,
@@ -825,13 +825,13 @@ fn test_adjacently_tagged_enum() {
     assert_tokens(
         &AdjacentlyTagged::Struct::<u8> { f: 1 },
         &[
-            Token::Struct("AdjacentlyTagged", 2),
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Struct"),
 
             Token::Str("c"),
-            Token::Struct("Struct", 1),
+            Token::Struct { name: "Struct", len: 1 },
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
@@ -844,10 +844,10 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Struct::<u8> { f: 1 },
         &[
-            Token::Struct("AdjacentlyTagged", 2),
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("c"),
-            Token::Struct("Struct", 1),
+            Token::Struct { name: "Struct", len: 1 },
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
@@ -879,7 +879,7 @@ fn test_enum_in_internally_tagged_enum() {
     assert_tokens(
         &Outer::Inner(Inner::Unit),
         &[
-            Token::Map(Some(2)),
+            Token::Map { len: Some(2) },
 
             Token::Str("type"),
             Token::Str("Inner"),
@@ -894,7 +894,7 @@ fn test_enum_in_internally_tagged_enum() {
     assert_tokens(
         &Outer::Inner(Inner::Newtype(1)),
         &[
-            Token::Map(Some(2)),
+            Token::Map { len: Some(2) },
 
             Token::Str("type"),
             Token::Str("Inner"),
@@ -909,13 +909,13 @@ fn test_enum_in_internally_tagged_enum() {
     assert_tokens(
         &Outer::Inner(Inner::Tuple(1, 1)),
         &[
-            Token::Map(Some(2)),
+            Token::Map { len: Some(2) },
 
             Token::Str("type"),
             Token::Str("Inner"),
 
             Token::Str("Tuple"),
-            Token::TupleStruct("Tuple", 2),
+            Token::TupleStruct { name: "Tuple", len: 2 },
             Token::U8(1),
             Token::U8(1),
             Token::TupleStructEnd,
@@ -927,13 +927,13 @@ fn test_enum_in_internally_tagged_enum() {
     assert_tokens(
         &Outer::Inner(Inner::Struct { f: 1 }),
         &[
-            Token::Map(Some(2)),
+            Token::Map { len: Some(2) },
 
             Token::Str("type"),
             Token::Str("Inner"),
 
             Token::Str("Struct"),
-            Token::Struct("Struct", 1),
+            Token::Struct { name: "Struct", len: 1 },
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
@@ -961,18 +961,18 @@ fn test_enum_in_untagged_enum() {
 
     assert_tokens(
         &Outer::Inner(Inner::Unit),
-        &[Token::UnitVariant("Inner", "Unit")],
+        &[Token::UnitVariant { name: "Inner", variant: "Unit" }],
     );
 
     assert_tokens(
         &Outer::Inner(Inner::Newtype(1)),
-        &[Token::NewtypeVariant("Inner", "Newtype"), Token::U8(1)],
+        &[Token::NewtypeVariant { name: "Inner", variant: "Newtype" }, Token::U8(1)],
     );
 
     assert_tokens(
         &Outer::Inner(Inner::Tuple(1, 1)),
         &[
-            Token::TupleVariant("Inner", "Tuple", 2),
+            Token::TupleVariant { name: "Inner", variant: "Tuple", len: 2 },
             Token::U8(1),
             Token::U8(1),
             Token::TupleVariantEnd,
@@ -982,7 +982,7 @@ fn test_enum_in_untagged_enum() {
     assert_tokens(
         &Outer::Inner(Inner::Struct { f: 1 }),
         &[
-            Token::StructVariant("Inner", "Struct", 1),
+            Token::StructVariant { name: "Inner", variant: "Struct", len: 1 },
 
             Token::Str("f"),
             Token::U8(1),
@@ -1027,7 +1027,7 @@ fn test_rename_all() {
              serialize_seq: true,
          },
         &[
-            Token::StructVariant("E", "serialize", 2),
+            Token::StructVariant { name: "E", variant: "serialize", len: 2 },
             Token::Str("serialize"),
             Token::Bool(true),
             Token::Str("serializeSeq"),
@@ -1042,7 +1042,7 @@ fn test_rename_all() {
              serialize_seq: true,
          },
         &[
-            Token::StructVariant("E", "serialize_seq", 2),
+            Token::StructVariant { name: "E", variant: "serialize_seq", len: 2 },
             Token::Str("serialize"),
             Token::Bool(true),
             Token::Str("serialize-seq"),
@@ -1057,7 +1057,7 @@ fn test_rename_all() {
              serialize_seq: true,
          },
         &[
-            Token::StructVariant("E", "serialize_map", 2),
+            Token::StructVariant { name: "E", variant: "serialize_map", len: 2 },
             Token::Str("SERIALIZE"),
             Token::Bool(true),
             Token::Str("SERIALIZE_SEQ"),
@@ -1072,7 +1072,7 @@ fn test_rename_all() {
              serialize_seq: true,
          },
         &[
-            Token::Struct("S", 2),
+            Token::Struct { name: "S", len: 2 },
             Token::Str("Serialize"),
             Token::Bool(true),
             Token::Str("SerializeSeq"),
