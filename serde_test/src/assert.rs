@@ -51,7 +51,7 @@ where
 /// use std::sync::{Arc, Mutex};
 /// use std::thread;
 ///
-/// use serde_test::{assert_ser_tokens_error, Token, Error};
+/// use serde_test::{assert_ser_tokens_error, Token};
 ///
 /// #[derive(Serialize)]
 /// struct Example {
@@ -72,10 +72,10 @@ where
 /// }).join();
 ///
 /// let expected = &[
-///     Token::Struct("Example", 1),
+///     Token::Struct { name: "Example", len: 1 },
 ///     Token::Str("lock"),
 /// ];
-/// let error = Error::Message("lock poison error while serializing".to_owned());
+/// let error = "lock poison error while serializing";
 /// assert_ser_tokens_error(&example, expected, error);
 /// # }
 /// ```
