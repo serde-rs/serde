@@ -15,5 +15,9 @@ publish = false # this branch contains breaking changes
 [dependencies]
 serde = { version = "0.9", path = "../serde" }
 
+[dev-dependencies]
+serde = { version = "0.9", path = "../serde", features = ["rc"] }
+serde_derive = { version = "0.9", path = "../serde_derive" }
+
 [badges]
 travis-ci = { repository = "serde-rs/serde" }

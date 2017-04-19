@@ -13,10 +13,49 @@ use serde::{ser, de};
 
 use token::Token;
 
-/// Error returned by the test `Serializer` and `Deserializer`.
+/// Error expected in `assert_ser_tokens_error` and `assert_de_tokens_error`.
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
     /// A custom error.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde_derive;
+    /// #
+    /// # extern crate serde_test;
+    /// #
+    /// # fn main() {
+    /// use std::sync::{Arc, Mutex};
+    /// use std::thread;
+    ///
+    /// use serde_test::{assert_ser_tokens_error, Token, Error};
+    ///
+    /// #[derive(Serialize)]
+    /// struct Example {
+    ///     lock: Arc<Mutex<u32>>,
+    /// }
+    ///
+    /// let example = Example { lock: Arc::new(Mutex::new(0)) };
+    /// let lock = example.lock.clone();
+    ///
+    /// let _ = thread::spawn(move || {
+    ///     // This thread will acquire the mutex first, unwrapping the result
+    ///     // of `lock` because the lock has not been poisoned.
+    ///     let _guard = lock.lock().unwrap();
+    ///
+    ///     // This panic while holding the lock (`_guard` is in scope) will
+    ///     // poison the mutex.
+    ///     panic!()
+    /// }).join();
+    ///
+    /// let expected = &[
+    ///     Token::Struct("Example", 1),
+    ///     Token::Str("lock"),
+    /// ];
+    /// let error = Error::Message("lock poison error while serializing".to_owned());
+    /// assert_ser_tokens_error(&example, expected, error);
+    /// # }
+    /// ```
     Message(String),
 
     /// `Deserialize` was expecting a struct of one name, and another was found.
