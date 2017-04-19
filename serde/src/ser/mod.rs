@@ -702,8 +702,8 @@ pub trait Serializer: Sized {
     /// #     type Error = Error;
     /// #
     /// fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
-    ///     let mut seq = self.serialize_seq(Some(value.len()))?;
-    ///     for b in value {
+    ///     let mut seq = self.serialize_seq(Some(v.len()))?;
+    ///     for b in v {
     ///         seq.serialize_element(b)?;
     ///     }
     ///     seq.end()
