@@ -1639,6 +1639,11 @@ pub trait SerializeMap {
         T: Serialize;
 
     /// Serialize a map value.
+    ///
+    /// # Panics
+    ///
+    /// Calling `serialize_value` before `serialize_key` is incorrect and is
+    /// allowed to panic or produce bogus results.
     fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
         T: Serialize;
