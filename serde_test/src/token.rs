@@ -157,6 +157,16 @@ pub enum Token {
     /// A serialized `ByteBuf`
     ByteBuf(&'static [u8]),
 
+    /// A serialized `Option<T>` containing none.
+    ///
+    /// ```rust
+    /// # use serde_test::{assert_tokens, Token};
+    /// #
+    /// let opt = None::<char>;
+    /// assert_tokens(&opt, &[Token::None]);
+    /// ```
+    None,
+
     /// The header to a serialized `Option<T>` containing some value.
     ///
     /// The tokens of the value follow after this header.
@@ -171,16 +181,6 @@ pub enum Token {
     /// ]);
     /// ```
     Some,
-
-    /// A serialized `Option<T>` containing none.
-    ///
-    /// ```rust
-    /// # use serde_test::{assert_tokens, Token};
-    /// #
-    /// let opt = None::<char>;
-    /// assert_tokens(&opt, &[Token::None]);
-    /// ```
-    None,
 
     /// A serialized `()`.
     ///
@@ -211,6 +211,29 @@ pub enum Token {
     /// ```
     UnitStruct { name: &'static str },
 
+    /// A unit variant of an enum.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde_derive;
+    /// #
+    /// # extern crate serde;
+    /// # extern crate serde_test;
+    /// #
+    /// # use serde_test::{assert_tokens, Token};
+    /// #
+    /// # fn main() {
+    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    /// enum E {
+    ///     A,
+    /// }
+    ///
+    /// let a = E::A;
+    /// assert_tokens(&a, &[Token::UnitVariant { name: "E", variant: "A" }]);
+    /// # }
+    /// ```
+    UnitVariant { name: &'static str, variant: &'static str },
+
     /// The header to a serialized newtype struct of the given name.
     ///
     /// After this header is the value contained in the newtype struct.
@@ -236,86 +259,6 @@ pub enum Token {
     /// # }
     /// ```
     NewtypeStruct { name: &'static str },
-
-    /// The header to an enum of the given name.
-    ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
-    /// # use serde_test::{assert_tokens, Token};
-    /// #
-    /// # fn main() {
-    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    /// enum E {
-    ///     A,
-    ///     B(u8),
-    ///     C(u8, u8),
-    ///     D { d: u8 },
-    /// }
-    ///
-    /// let a = E::A;
-    /// assert_tokens(&a, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("A"),
-    ///     Token::Unit,
-    /// ]);
-    ///
-    /// let b = E::B(0);
-    /// assert_tokens(&b, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("B"),
-    ///     Token::U8(0),
-    /// ]);
-    ///
-    /// let c = E::C(0, 0);
-    /// assert_tokens(&c, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("C"),
-    ///     Token::Seq { len: Some(2) },
-    ///     Token::U8(0),
-    ///     Token::U8(0),
-    ///     Token::SeqEnd,
-    /// ]);
-    ///
-    /// let d = E::D { d: 0 };
-    /// assert_tokens(&d, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("D"),
-    ///     Token::Map { len: Some(1) },
-    ///     Token::Str("d"),
-    ///     Token::U8(0),
-    ///     Token::MapEnd,
-    /// ]);
-    /// # }
-    /// ```
-    Enum { name: &'static str },
-
-    /// A unit variant of an enum.
-    ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
-    /// # use serde_test::{assert_tokens, Token};
-    /// #
-    /// # fn main() {
-    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    /// enum E {
-    ///     A,
-    /// }
-    ///
-    /// let a = E::A;
-    /// assert_tokens(&a, &[Token::UnitVariant { name: "E", variant: "A" }]);
-    /// # }
-    /// ```
-    UnitVariant { name: &'static str, variant: &'static str },
 
     /// The header to a newtype variant of an enum.
     ///
@@ -419,6 +362,40 @@ pub enum Token {
     /// An indicator of the end of a tuple struct.
     TupleStructEnd,
 
+    /// The header to a tuple variant of an enum.
+    ///
+    /// After this header are the fields of the tuple variant, followed by
+    /// `TupleVariantEnd`.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde_derive;
+    /// #
+    /// # extern crate serde;
+    /// # extern crate serde_test;
+    /// #
+    /// # use serde_test::{assert_tokens, Token};
+    /// #
+    /// # fn main() {
+    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    /// enum E {
+    ///     C(u8, u8),
+    /// }
+    ///
+    /// let c = E::C(0, 0);
+    /// assert_tokens(&c, &[
+    ///     Token::TupleVariant { name: "E", variant: "C", len: 2 },
+    ///     Token::U8(0),
+    ///     Token::U8(0),
+    ///     Token::TupleVariantEnd,
+    /// ]);
+    /// # }
+    /// ```
+    TupleVariant { name: &'static str, variant: &'static str, len: usize },
+
+    /// An indicator of the end of a tuple variant.
+    TupleVariantEnd,
+
     /// The header to a map.
     ///
     /// After this header are the entries of the map, followed by `MapEnd`.
@@ -482,40 +459,6 @@ pub enum Token {
     /// An indicator of the end of a struct.
     StructEnd,
 
-    /// The header to a tuple variant of an enum.
-    ///
-    /// After this header are the fields of the tuple variant, followed by
-    /// `TupleVariantEnd`.
-    ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
-    /// # use serde_test::{assert_tokens, Token};
-    /// #
-    /// # fn main() {
-    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    /// enum E {
-    ///     C(u8, u8),
-    /// }
-    ///
-    /// let c = E::C(0, 0);
-    /// assert_tokens(&c, &[
-    ///     Token::TupleVariant { name: "E", variant: "C", len: 2 },
-    ///     Token::U8(0),
-    ///     Token::U8(0),
-    ///     Token::TupleVariantEnd,
-    /// ]);
-    /// # }
-    /// ```
-    TupleVariant { name: &'static str, variant: &'static str, len: usize },
-
-    /// An indicator of the end of a tuple variant.
-    TupleVariantEnd,
-
     /// The header of a struct variant of an enum.
     ///
     /// After this header are the fields of the struct variant, followed by
@@ -549,6 +492,63 @@ pub enum Token {
 
     /// An indicator of the end of a struct variant.
     StructVariantEnd,
+
+    /// The header to an enum of the given name.
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate serde_derive;
+    /// #
+    /// # extern crate serde;
+    /// # extern crate serde_test;
+    /// #
+    /// # use serde_test::{assert_tokens, Token};
+    /// #
+    /// # fn main() {
+    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    /// enum E {
+    ///     A,
+    ///     B(u8),
+    ///     C(u8, u8),
+    ///     D { d: u8 },
+    /// }
+    ///
+    /// let a = E::A;
+    /// assert_tokens(&a, &[
+    ///     Token::Enum { name: "E" },
+    ///     Token::Str("A"),
+    ///     Token::Unit,
+    /// ]);
+    ///
+    /// let b = E::B(0);
+    /// assert_tokens(&b, &[
+    ///     Token::Enum { name: "E" },
+    ///     Token::Str("B"),
+    ///     Token::U8(0),
+    /// ]);
+    ///
+    /// let c = E::C(0, 0);
+    /// assert_tokens(&c, &[
+    ///     Token::Enum { name: "E" },
+    ///     Token::Str("C"),
+    ///     Token::Seq { len: Some(2) },
+    ///     Token::U8(0),
+    ///     Token::U8(0),
+    ///     Token::SeqEnd,
+    /// ]);
+    ///
+    /// let d = E::D { d: 0 };
+    /// assert_tokens(&d, &[
+    ///     Token::Enum { name: "E" },
+    ///     Token::Str("D"),
+    ///     Token::Map { len: Some(1) },
+    ///     Token::Str("d"),
+    ///     Token::U8(0),
+    ///     Token::MapEnd,
+    /// ]);
+    /// # }
+    /// ```
+    Enum { name: &'static str },
 }
 
 impl Display for Token {
