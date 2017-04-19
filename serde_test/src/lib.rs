@@ -16,10 +16,7 @@ pub use assert::{assert_tokens, assert_ser_tokens, assert_ser_tokens_error, asse
                  assert_de_tokens_error};
 
 mod ser;
-pub use ser::Serializer;
-
 mod de;
-pub use de::Deserializer;
 
 mod token;
 pub use token::Token;
