@@ -51,15 +51,14 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
         }
     };
 
-    Ok(
-        quote! {
+    let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             extern crate serde as _serde;
             #impl_block
         };
-    },
-    )
+    };
+    Ok(generated)
 }
 
 fn precondition(cx: &Ctxt, cont: &Container) {
@@ -518,12 +517,12 @@ fn serialize_adjacently_tagged_variant(
         match variant.style {
             Style::Unit => {
                 return quote_block! {
-                let mut __struct = try!(_serde::Serializer::serialize_struct(
-                    __serializer, #type_name, 1));
-                try!(_serde::ser::SerializeStruct::serialize_field(
-                    &mut __struct, #tag, #variant_name));
-                _serde::ser::SerializeStruct::end(__struct)
-            };
+                    let mut __struct = try!(_serde::Serializer::serialize_struct(
+                        __serializer, #type_name, 1));
+                    try!(_serde::ser::SerializeStruct::serialize_field(
+                        &mut __struct, #tag, #variant_name));
+                    _serde::ser::SerializeStruct::end(__struct)
+                };
             }
             Style::Newtype => {
                 let field = &variant.fields[0];
@@ -533,8 +532,8 @@ fn serialize_adjacently_tagged_variant(
                 }
 
                 quote_expr! {
-                _serde::Serialize::serialize(#field_expr, __serializer)
-            }
+                    _serde::Serialize::serialize(#field_expr, __serializer)
+                }
             }
             Style::Tuple => {
                 serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
@@ -812,8 +811,8 @@ fn serialize_tuple_struct_visitor(
                 }
 
                 let ser = quote! {
-                try!(#func(&mut __serde_state, #field_expr));
-            };
+                    try!(#func(&mut __serde_state, #field_expr));
+                };
 
                 match skip {
                     None => ser,
@@ -854,8 +853,8 @@ fn serialize_struct_visitor(
                 }
 
                 let ser = quote! {
-                try!(#func(&mut __serde_state, #key_expr, #field_expr));
-            };
+                    try!(#func(&mut __serde_state, #key_expr, #field_expr));
+                };
 
                 match skip {
                     None => ser,

@@ -52,15 +52,14 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
         }
     };
 
-    Ok(
-        quote! {
+    let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             extern crate serde as _serde;
             #impl_block
         };
-    },
-    )
+    };
+    Ok(generated)
 }
 
 struct Parameters {
@@ -629,8 +628,8 @@ fn deserialize_externally_tagged_enum(
                 let block = Match(deserialize_externally_tagged_variant(params, variant, cattrs),);
 
                 quote! {
-                (__Field::#variant_name, __variant) => #block
-            }
+                    (__Field::#variant_name, __variant) => #block
+                }
             },
         );
 
@@ -788,8 +787,8 @@ fn deserialize_adjacently_tagged_enum(
                 );
 
                 quote! {
-                __Field::#variant_index => #block
-            }
+                    __Field::#variant_index => #block
+                }
             },
         )
         .collect();
@@ -820,8 +819,8 @@ fn deserialize_adjacently_tagged_enum(
         } else {
             Some(
                 quote! {
-                _ => #missing_content
-            },
+                    _ => #missing_content
+                },
             )
         };
         let arms = variants
@@ -833,8 +832,8 @@ fn deserialize_adjacently_tagged_enum(
                     let variant_index = field_i(i);
                     let variant_ident = &variant.ident;
                     quote! {
-                    __Field::#variant_index => _serde::export::Ok(#this::#variant_ident),
-                }
+                        __Field::#variant_index => _serde::export::Ok(#this::#variant_ident),
+                    }
                 },
             );
         missing_content = quote! {
@@ -1465,8 +1464,8 @@ fn deserialize_map(
             |&(field, ref name)| {
                 let field_ty = &field.ty;
                 quote! {
-                let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
-            }
+                    let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
+                }
             },
         );
 
@@ -1541,11 +1540,11 @@ fn deserialize_map(
                 let missing_expr = Match(expr_is_missing(&field, cattrs));
 
                 quote! {
-                let #name = match #name {
-                    _serde::export::Some(#name) => #name,
-                    _serde::export::None => #missing_expr
-                };
-            }
+                    let #name = match #name {
+                        _serde::export::Some(#name) => #name,
+                        _serde::export::None => #missing_expr
+                    };
+                }
             },
         );
 
