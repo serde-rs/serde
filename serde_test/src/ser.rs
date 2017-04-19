@@ -24,7 +24,7 @@ impl<'a> Serializer<'a> {
     }
 
     /// Pulls the next token off of the serializer, ignoring it.
-    pub fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&mut self) -> Option<Token> {
         if let Some((&first, rest)) = self.tokens.split_first() {
             self.tokens = rest;
             Some(first)
@@ -39,27 +39,26 @@ impl<'a> Serializer<'a> {
 }
 
 macro_rules! assert_next_token {
-    ($ser:ident, $expected:ident) => {
-        assert_next_token!($ser, Token::$expected, true);
+    ($ser:expr, $expected:ident) => {
+        assert_next_token!($ser, $expected, Token::$expected, true);
     };
-    ($ser:ident, $expected:ident($v:expr)) => {
-        assert_next_token!($ser, Token::$expected(v), v == $v);
+    ($ser:expr, $expected:ident($v:expr)) => {
+        assert_next_token!($ser, $expected, Token::$expected(v), v == $v);
     };
-    ($ser:ident, $expected:ident { $($k:ident),* }) => {
+    ($ser:expr, $expected:ident { $($k:ident),* }) => {
         let compare = ($($k,)*);
-        assert_next_token!($ser, Token::$expected { $($k),* }, ($($k,)*) == compare);
+        assert_next_token!($ser, $expected, Token::$expected { $($k),* }, ($($k,)*) == compare);
     };
-    ($ser:ident, $pat:pat, $guard:expr) => {
+    ($ser:expr, $expected:ident, $pat:pat, $guard:expr) => {
         match $ser.next_token() {
             Some($pat) if $guard => {}
-            //Some(Token::$expected $(($($n),*))*) $(if $($n == $v)&&*)* => {}
             Some(other) => {
-                panic!("expected Token::{} but serialized as {:?}",
-                       stringify!($pat), other);
+                panic!("expected Token::{} but serialized as {}",
+                       stringify!($expected), other);
             }
             None => {
                 panic!("expected Token::{} after end of serialized tokens",
-                       stringify!($pat));
+                       stringify!($expected));
             }
         }
     };
@@ -72,10 +71,10 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
     type SerializeSeq = Self;
     type SerializeTuple = Self;
     type SerializeTupleStruct = Self;
-    type SerializeTupleVariant = Self;
+    type SerializeTupleVariant = Variant<'s, 'a>;
     type SerializeMap = Self;
     type SerializeStruct = Self;
-    type SerializeStructVariant = Self;
+    type SerializeStructVariant = Variant<'s, 'a>;
 
     fn serialize_bool(self, v: bool) -> Result<(), Error> {
         assert_next_token!(self, Bool(v));
@@ -138,12 +137,20 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
     }
 
     fn serialize_str(self, v: &str) -> Result<(), Error> {
-        assert_next_token!(self, Str(v));
+        match self.tokens.first() {
+            Some(&Token::BorrowedStr(_)) => assert_next_token!(self, BorrowedStr(v)),
+            Some(&Token::String(_)) => assert_next_token!(self, String(v)),
+            _ => assert_next_token!(self, Str(v)),
+        }
         Ok(())
     }
 
-    fn serialize_bytes(self, value: &[u8]) -> Result<(), Self::Error> {
-        assert_next_token!(self, Bytes(value));
+    fn serialize_bytes(self, v: &[u8]) -> Result<(), Self::Error> {
+        match self.tokens.first() {
+            Some(&Token::BorrowedBytes(_)) => assert_next_token!(self, BorrowedBytes(v)),
+            Some(&Token::ByteBuf(_)) => assert_next_token!(self, ByteBuf(v)),
+            _ => assert_next_token!(self, Bytes(v)),
+        }
         Ok(())
     }
 
@@ -234,9 +241,17 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
         _variant_index: u32,
         variant: &'static str,
         len: usize,
-    ) -> Result<Self, Error> {
-        assert_next_token!(self, TupleVariant { name, variant, len });
-        Ok(self)
+    ) -> Result<Self::SerializeTupleVariant, Error> {
+        if self.tokens.first() == Some(&Token::Enum { name }) {
+            self.next_token();
+            assert_next_token!(self, Str(variant));
+            let len = Some(len);
+            assert_next_token!(self, Seq { len });
+            Ok(Variant { ser: self, end: Token::SeqEnd })
+        } else {
+            assert_next_token!(self, TupleVariant { name, variant, len });
+            Ok(Variant { ser: self, end: Token::TupleVariantEnd })
+        }
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self, Error> {
@@ -255,10 +270,23 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
         _variant_index: u32,
         variant: &'static str,
         len: usize,
-    ) -> Result<Self, Error> {
-        assert_next_token!(self, StructVariant { name, variant, len });
-        Ok(self)
+    ) -> Result<Self::SerializeStructVariant, Error> {
+        if self.tokens.first() == Some(&Token::Enum { name }) {
+            self.next_token();
+            assert_next_token!(self, Str(variant));
+            let len = Some(len);
+            assert_next_token!(self, Map { len });
+            Ok(Variant { ser: self, end: Token::MapEnd })
+        } else {
+            assert_next_token!(self, StructVariant { name, variant, len });
+            Ok(Variant { ser: self, end: Token::StructVariantEnd })
+        }
     }
+}
+
+pub struct Variant<'s, 'a: 's> {
+    ser: &'s mut Serializer<'a>,
+    end: Token,
 }
 
 impl<'s, 'a> ser::SerializeSeq for &'s mut Serializer<'a> {
@@ -312,7 +340,7 @@ impl<'s, 'a> ser::SerializeTupleStruct for &'s mut Serializer<'a> {
     }
 }
 
-impl<'s, 'a> ser::SerializeTupleVariant for &'s mut Serializer<'a> {
+impl<'s, 'a> ser::SerializeTupleVariant for Variant<'s, 'a> {
     type Ok = ();
     type Error = Error;
 
@@ -320,11 +348,15 @@ impl<'s, 'a> ser::SerializeTupleVariant for &'s mut Serializer<'a> {
     where
         T: Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<(), Error> {
-        assert_next_token!(self, TupleVariantEnd);
+        match self.end {
+            Token::TupleVariantEnd => assert_next_token!(self.ser, TupleVariantEnd),
+            Token::SeqEnd => assert_next_token!(self.ser, SeqEnd),
+            _ => unreachable!(),
+        }
         Ok(())
     }
 }
@@ -375,7 +407,7 @@ impl<'s, 'a> ser::SerializeStruct for &'s mut Serializer<'a> {
     }
 }
 
-impl<'s, 'a> ser::SerializeStructVariant for &'s mut Serializer<'a> {
+impl<'s, 'a> ser::SerializeStructVariant for Variant<'s, 'a> {
     type Ok = ();
     type Error = Error;
 
@@ -387,12 +419,16 @@ impl<'s, 'a> ser::SerializeStructVariant for &'s mut Serializer<'a> {
     where
         T: Serialize,
     {
-        try!(key.serialize(&mut **self));
-        value.serialize(&mut **self)
+        try!(key.serialize(&mut *self.ser));
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        assert_next_token!(self, StructVariantEnd);
+        match self.end {
+            Token::StructVariantEnd => assert_next_token!(self.ser, StructVariantEnd),
+            Token::MapEnd => assert_next_token!(self.ser, MapEnd),
+            _ => unreachable!(),
+        }
         Ok(())
     }
 }
