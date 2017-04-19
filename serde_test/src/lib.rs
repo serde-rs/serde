@@ -11,15 +11,17 @@
 #[macro_use]
 extern crate serde;
 
+mod ser;
+mod de;
+mod error;
+
+mod token;
 mod assert;
+
+pub use token::Token;
 pub use assert::{assert_tokens, assert_ser_tokens, assert_ser_tokens_error, assert_de_tokens,
                  assert_de_tokens_error};
 
-mod ser;
-mod de;
-
-mod token;
-pub use token::Token;
-
-mod error;
-pub use error::Error;
+// Not public API.
+#[doc(hidden)]
+pub use de::Deserializer;

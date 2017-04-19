@@ -13,7 +13,7 @@ extern crate serde;
 use serde::{Deserialize, Deserializer};
 
 extern crate serde_test;
-use serde_test::{Error, Token, assert_de_tokens, assert_de_tokens_error};
+use serde_test::{Token, assert_de_tokens, assert_de_tokens_error};
 
 use std::borrow::Cow;
 
@@ -26,7 +26,7 @@ fn test_borrowed_str() {
 fn test_borrowed_str_from_string() {
     assert_de_tokens_error::<&str>(
         &[Token::String("borrowed")],
-        Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned(),),
+        "invalid type: string \"borrowed\", expected a borrowed string",
     );
 }
 
@@ -34,7 +34,7 @@ fn test_borrowed_str_from_string() {
 fn test_borrowed_str_from_str() {
     assert_de_tokens_error::<&str>(
         &[Token::Str("borrowed")],
-        Error::Message("invalid type: string \"borrowed\", expected a borrowed string".to_owned(),),
+        "invalid type: string \"borrowed\", expected a borrowed string",
     );
 }
 
@@ -52,7 +52,7 @@ fn test_borrowed_bytes() {
 fn test_borrowed_bytes_from_bytebuf() {
     assert_de_tokens_error::<&[u8]>(
         &[Token::ByteBuf(b"borrowed")],
-        Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned(),),
+        "invalid type: byte array, expected a borrowed byte array",
     );
 }
 
@@ -60,7 +60,7 @@ fn test_borrowed_bytes_from_bytebuf() {
 fn test_borrowed_bytes_from_bytes() {
     assert_de_tokens_error::<&[u8]>(
         &[Token::Bytes(b"borrowed")],
-        Error::Message("invalid type: byte array, expected a borrowed byte array".to_owned(),),
+        "invalid type: byte array, expected a borrowed byte array",
     );
 }
 
@@ -128,7 +128,6 @@ fn test_cow() {
 
     let mut de = serde_test::Deserializer::new(tokens);
     let cows = Cows::deserialize(&mut de).unwrap();
-    assert_eq!(de.next_token(), None);
 
     match cows.copied {
         Cow::Owned(ref s) if s == "copied" => {}

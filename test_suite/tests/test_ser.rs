@@ -21,7 +21,7 @@ use std::str;
 extern crate serde;
 
 extern crate serde_test;
-use self::serde_test::{Error, Token, assert_ser_tokens, assert_ser_tokens_error};
+use self::serde_test::{Token, assert_ser_tokens, assert_ser_tokens_error};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -379,7 +379,7 @@ fn test_cannot_serialize_paths() {
     assert_ser_tokens_error(
         &Path::new(path),
         &[],
-        Error::Message("path contains invalid UTF-8 characters".to_owned()),
+        "path contains invalid UTF-8 characters",
     );
 
     let mut path_buf = PathBuf::new();
@@ -388,7 +388,7 @@ fn test_cannot_serialize_paths() {
     assert_ser_tokens_error(
         &path_buf,
         &[],
-        Error::Message("path contains invalid UTF-8 characters".to_owned()),
+        "path contains invalid UTF-8 characters",
     );
 }
 
@@ -397,21 +397,21 @@ fn test_enum_skipped() {
     assert_ser_tokens_error(
         &Enum::SkippedUnit,
         &[],
-        Error::Message("the enum variant Enum::SkippedUnit cannot be serialized".to_owned(),),
+        "the enum variant Enum::SkippedUnit cannot be serialized",
     );
     assert_ser_tokens_error(
         &Enum::SkippedOne(42),
         &[],
-        Error::Message("the enum variant Enum::SkippedOne cannot be serialized".to_owned(),),
+        "the enum variant Enum::SkippedOne cannot be serialized",
     );
     assert_ser_tokens_error(
         &Enum::SkippedSeq(1, 2),
         &[],
-        Error::Message("the enum variant Enum::SkippedSeq cannot be serialized".to_owned(),),
+        "the enum variant Enum::SkippedSeq cannot be serialized",
     );
     assert_ser_tokens_error(
         &Enum::SkippedMap { _a: 1, _b: 2 },
         &[],
-        Error::Message("the enum variant Enum::SkippedMap cannot be serialized".to_owned(),),
+        "the enum variant Enum::SkippedMap cannot be serialized",
     );
 }

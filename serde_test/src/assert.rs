@@ -9,7 +9,6 @@
 use serde::{Serialize, Deserialize};
 
 use de::Deserializer;
-use error::Error;
 use ser::Serializer;
 use token::Token;
 
@@ -41,14 +40,53 @@ where
 }
 
 /// Asserts that `value` serializes to the given `tokens`, and then yields `error`.
-pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], expected: Error)
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate serde_derive;
+/// #
+/// # extern crate serde_test;
+/// #
+/// # fn main() {
+/// use std::sync::{Arc, Mutex};
+/// use std::thread;
+///
+/// use serde_test::{assert_ser_tokens_error, Token, Error};
+///
+/// #[derive(Serialize)]
+/// struct Example {
+///     lock: Arc<Mutex<u32>>,
+/// }
+///
+/// let example = Example { lock: Arc::new(Mutex::new(0)) };
+/// let lock = example.lock.clone();
+///
+/// let _ = thread::spawn(move || {
+///     // This thread will acquire the mutex first, unwrapping the result
+///     // of `lock` because the lock has not been poisoned.
+///     let _guard = lock.lock().unwrap();
+///
+///     // This panic while holding the lock (`_guard` is in scope) will
+///     // poison the mutex.
+///     panic!()
+/// }).join();
+///
+/// let expected = &[
+///     Token::Struct("Example", 1),
+///     Token::Str("lock"),
+/// ];
+/// let error = Error::Message("lock poison error while serializing".to_owned());
+/// assert_ser_tokens_error(&example, expected, error);
+/// # }
+/// ```
+pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
 where
     T: Serialize,
 {
     let mut ser = Serializer::new(tokens);
     match value.serialize(&mut ser) {
         Ok(_) => panic!("value serialized successfully"),
-        Err(err) => assert_eq!(err, expected),
+        Err(e) => assert_eq!(e, *error),
     }
 
     if ser.remaining() > 0 {
@@ -64,7 +102,7 @@ where
     let mut de = Deserializer::new(tokens);
     match T::deserialize(&mut de) {
         Ok(v) => assert_eq!(v, *value),
-        Err(err) => panic!("tokens failed to deserialize: {}", err),
+        Err(e) => panic!("tokens failed to deserialize: {}", e),
     }
 
     if de.remaining() > 0 {
@@ -72,19 +110,19 @@ where
     }
 }
 
-/// Asserts that the given `tokens` yield `expected` error when deserializing.
-pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], expected: Error)
+/// Asserts that the given `tokens` yield `error` when deserializing.
+pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
 where
     T: Deserialize<'de>,
 {
     let mut de = Deserializer::new(tokens);
     match T::deserialize(&mut de) {
         Ok(_) => panic!("tokens deserialized successfully"),
-        Err(err) => assert_eq!(err, expected),
+        Err(e) => assert_eq!(e, *error),
     }
 
     // There may be one token left if a peek caused the error
-    de.next_token();
+    de.next_token_opt();
 
     if de.remaining() > 0 {
         panic!("{} remaining tokens", de.remaining());

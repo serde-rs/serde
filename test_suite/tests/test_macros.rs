@@ -10,7 +10,7 @@
 extern crate serde_derive;
 
 extern crate serde_test;
-use self::serde_test::{Error, Token, assert_tokens, assert_ser_tokens, assert_de_tokens,
+use self::serde_test::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens,
                        assert_de_tokens_error};
 
 use std::collections::BTreeMap;
@@ -555,12 +555,12 @@ fn test_untagged_enum() {
 
     assert_de_tokens_error::<Untagged>(
         &[Token::None],
-        Error::Message("data did not match any variant of untagged enum Untagged".to_owned(),),
+        "data did not match any variant of untagged enum Untagged",
     );
 
     assert_de_tokens_error::<Untagged>(
         &[Token::Tuple(1), Token::U8(1), Token::TupleEnd],
-        Error::Message("data did not match any variant of untagged enum Untagged".to_owned(),),
+        "data did not match any variant of untagged enum Untagged",
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -571,7 +571,7 @@ fn test_untagged_enum() {
             Token::U8(3),
             Token::TupleEnd,
         ],
-        Error::Message("data did not match any variant of untagged enum Untagged".to_owned(),),
+        "data did not match any variant of untagged enum Untagged",
     );
 }
 
@@ -679,7 +679,7 @@ fn test_internally_tagged_enum() {
 
     assert_de_tokens_error::<InternallyTagged>(
         &[Token::Map(Some(0)), Token::MapEnd],
-        Error::Message("missing field `type`".to_owned()),
+        "missing field `type`",
     );
 
     assert_de_tokens_error::<InternallyTagged>(
@@ -691,7 +691,7 @@ fn test_internally_tagged_enum() {
 
             Token::MapEnd,
         ],
-        Error::Message("unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`".to_owned(),),
+        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`",
     );
 }
 

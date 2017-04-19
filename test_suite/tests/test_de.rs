@@ -28,7 +28,7 @@ extern crate fnv;
 use self::fnv::FnvHasher;
 
 extern crate serde_test;
-use self::serde_test::{Error, Token, assert_de_tokens, assert_de_tokens_error};
+use self::serde_test::{Token, assert_de_tokens, assert_de_tokens_error};
 
 #[macro_use]
 mod macros;
@@ -149,8 +149,6 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         a: i32,
     }
 
-    let expected = IgnoreBase { a: 1 };
-
     // Embed the tokens to be ignored in the normal token
     // stream for an IgnoreBase type
     let concated_tokens: Vec<Token> = vec![
@@ -166,10 +164,8 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
             .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
-    let v: Result<IgnoreBase, Error> = Deserialize::deserialize(&mut de);
-
-    assert_eq!(v.as_ref(), Ok(&expected));
-    assert_eq!(de.next_token(), None);
+    let base = IgnoreBase::deserialize(&mut de).unwrap();
+    assert_eq!(base, IgnoreBase { a: 1 });
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -789,7 +785,7 @@ fn test_net_ipaddr() {
 fn test_cstr_internal_null() {
     assert_de_tokens_error::<Box<CStr>>(
         &[Token::Bytes(b"a\0c")],
-        Error::Message("nul byte found in provided data at position: 1".into()),
+        "nul byte found in provided data at position: 1",
     );
 }
 
@@ -798,7 +794,7 @@ fn test_cstr_internal_null() {
 fn test_cstr_internal_null_end() {
     assert_de_tokens_error::<Box<CStr>>(
         &[Token::Bytes(b"ac\0")],
-        Error::Message("nul byte found in provided data at position: 2".into()),
+        "nul byte found in provided data at position: 2",
     );
 }
 
@@ -811,48 +807,39 @@ declare_error_tests! {
 
                 Token::Str("d"),
         ],
-        Error::Message("unknown field `d`, expected `a`".to_owned()),
+        "unknown field `d`, expected `a`",
     }
     test_skipped_field_is_unknown<StructDenyUnknown> {
         &[
             Token::Struct("StructDenyUnknown", 2),
                 Token::Str("b"),
         ],
-        Error::Message("unknown field `b`, expected `a`".to_owned()),
+        "unknown field `b`, expected `a`",
     }
     test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
         &[
             Token::Struct("StructSkipAllDenyUnknown", 1),
                 Token::Str("a"),
         ],
-        Error::Message("unknown field `a`, there are no fields".to_owned()),
+        "unknown field `a`, there are no fields",
     }
     test_unknown_variant<Enum> {
         &[
             Token::UnitVariant("Enum", "Foo"),
         ],
-        Error::Message("unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
+        "unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`",
     }
     test_enum_skipped_variant<Enum> {
         &[
             Token::UnitVariant("Enum", "Skipped"),
         ],
-        Error::Message("unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`".to_owned()),
+        "unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`",
     }
     test_enum_skip_all<EnumSkipAll> {
         &[
             Token::UnitVariant("EnumSkipAll", "Skipped"),
         ],
-        Error::Message("unknown variant `Skipped`, there are no variants".to_owned()),
-    }
-    test_struct_seq_too_long<Struct> {
-        &[
-            Token::Seq(Some(4)),
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-        ],
-        Error::UnexpectedToken(Token::I32(3)),
+        "unknown variant `Skipped`, there are no variants",
     }
     test_duplicate_field_struct<Struct> {
         &[
@@ -862,7 +849,7 @@ declare_error_tests! {
 
                 Token::Str("a"),
         ],
-        Error::Message("duplicate field `a`".to_owned()),
+        "duplicate field `a`",
     }
     test_duplicate_field_enum<Enum> {
         &[
@@ -872,7 +859,7 @@ declare_error_tests! {
 
                 Token::Str("a"),
         ],
-        Error::Message("duplicate field `a`".to_owned()),
+        "duplicate field `a`",
     }
     test_enum_out_of_range<Enum> {
         &[
@@ -880,7 +867,7 @@ declare_error_tests! {
             Token::U32(4),
             Token::Unit,
         ],
-        Error::Message("invalid value: integer `4`, expected variant index 0 <= i < 4".into()),
+        "invalid value: integer `4`, expected variant index 0 <= i < 4",
     }
     test_short_tuple<(u8, u8, u8)> {
         &[
@@ -888,7 +875,7 @@ declare_error_tests! {
             Token::U8(1),
             Token::TupleEnd,
         ],
-        Error::Message("invalid length 1, expected a tuple of size 3".into()),
+        "invalid length 1, expected a tuple of size 3",
     }
     test_short_array<[u8; 3]> {
         &[
@@ -896,142 +883,142 @@ declare_error_tests! {
             Token::U8(1),
             Token::SeqEnd,
         ],
-        Error::Message("invalid length 1, expected an array of length 3".into()),
+        "invalid length 1, expected an array of length 3",
     }
     test_cstring_internal_null<CString> {
         &[
             Token::Bytes(b"a\0c"),
         ],
-        Error::Message("nul byte found in provided data at position: 1".into()),
+        "nul byte found in provided data at position: 1",
     }
     test_cstring_internal_null_end<CString> {
         &[
             Token::Bytes(b"ac\0"),
         ],
-        Error::Message("nul byte found in provided data at position: 2".into()),
+        "nul byte found in provided data at position: 2",
     }
     test_unit_from_empty_seq<()> {
         &[
             Token::Seq(Some(0)),
             Token::SeqEnd,
         ],
-        Error::Message("invalid type: sequence, expected unit".into()),
+        "invalid type: sequence, expected unit",
     }
     test_unit_from_empty_seq_without_len<()> {
         &[
             Token::Seq(None),
             Token::SeqEnd,
         ],
-        Error::Message("invalid type: sequence, expected unit".into()),
+        "invalid type: sequence, expected unit",
     }
     test_unit_from_tuple_struct<()> {
         &[
             Token::TupleStruct("Anything", 0),
             Token::TupleStructEnd,
         ],
-        Error::Message("invalid type: sequence, expected unit".into()),
+        "invalid type: sequence, expected unit",
     }
     test_string_from_unit<String> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected a string".into()),
+        "invalid type: unit value, expected a string",
     }
     test_btreeset_from_unit<BTreeSet<isize>> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected a sequence".into()),
+        "invalid type: unit value, expected a sequence",
     }
     test_btreeset_from_unit_struct<BTreeSet<isize>> {
         &[
             Token::UnitStruct("Anything"),
         ],
-        Error::Message("invalid type: unit value, expected a sequence".into()),
+        "invalid type: unit value, expected a sequence",
     }
     test_hashset_from_unit<HashSet<isize>> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected a sequence".into()),
+        "invalid type: unit value, expected a sequence",
     }
     test_hashset_from_unit_struct<HashSet<isize>> {
         &[
             Token::UnitStruct("Anything"),
         ],
-        Error::Message("invalid type: unit value, expected a sequence".into()),
+        "invalid type: unit value, expected a sequence",
     }
     test_vec_from_unit<Vec<isize>> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected a sequence".into()),
+        "invalid type: unit value, expected a sequence",
     }
     test_vec_from_unit_struct<Vec<isize>> {
         &[
             Token::UnitStruct("Anything"),
         ],
-        Error::Message("invalid type: unit value, expected a sequence".into()),
+        "invalid type: unit value, expected a sequence",
     }
     test_zero_array_from_unit<[isize; 0]> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected an empty array".into()),
+        "invalid type: unit value, expected an empty array",
     }
     test_zero_array_from_unit_struct<[isize; 0]> {
         &[
             Token::UnitStruct("Anything"),
         ],
-        Error::Message("invalid type: unit value, expected an empty array".into()),
+        "invalid type: unit value, expected an empty array",
     }
     test_btreemap_from_unit<BTreeMap<isize, isize>> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected a map".into()),
+        "invalid type: unit value, expected a map",
     }
     test_btreemap_from_unit_struct<BTreeMap<isize, isize>> {
         &[
             Token::UnitStruct("Anything"),
         ],
-        Error::Message("invalid type: unit value, expected a map".into()),
+        "invalid type: unit value, expected a map",
     }
     test_hashmap_from_unit<HashMap<isize, isize>> {
         &[
             Token::Unit,
         ],
-        Error::Message("invalid type: unit value, expected a map".into()),
+        "invalid type: unit value, expected a map",
     }
     test_hashmap_from_unit_struct<HashMap<isize, isize>> {
         &[
             Token::UnitStruct("Anything"),
         ],
-        Error::Message("invalid type: unit value, expected a map".into()),
+        "invalid type: unit value, expected a map",
     }
     test_bool_from_string<bool> {
         &[
             Token::Str("false"),
         ],
-        Error::Message("invalid type: string \"false\", expected a boolean".into()),
+        "invalid type: string \"false\", expected a boolean",
     }
     test_number_from_string<isize> {
         &[
             Token::Str("1"),
         ],
-        Error::Message("invalid type: string \"1\", expected isize".into()),
+        "invalid type: string \"1\", expected isize",
     }
     test_integer_from_float<isize> {
         &[
             Token::F32(0.0),
         ],
-        Error::Message("invalid type: floating point `0`, expected isize".into()),
+        "invalid type: floating point `0`, expected isize",
     }
     test_unit_struct_from_seq<UnitStruct> {
         &[
             Token::Seq(Some(0)),
             Token::SeqEnd,
         ],
-        Error::Message("invalid type: sequence, expected unit struct UnitStruct".into()),
+        "invalid type: sequence, expected unit struct UnitStruct",
     }
 }

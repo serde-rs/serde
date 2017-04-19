@@ -13,7 +13,7 @@ extern crate serde;
 use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 extern crate serde_test;
-use self::serde_test::{Error, Token, assert_tokens, assert_ser_tokens, assert_de_tokens,
+use self::serde_test::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens,
                        assert_de_tokens_error};
 
 trait MyDefault: Sized {
@@ -363,7 +363,7 @@ fn test_ignore_unknown() {
 
             Token::Str("whoops"),
         ],
-        Error::Message("unknown field `whoops`, expected `a1`".to_owned()),
+        "unknown field `whoops`, expected `a1`",
     );
 }
 
@@ -875,7 +875,7 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::Message("missing field `a3`".to_owned()),
+        "missing field `a3`",
     );
 
     assert_de_tokens_error::<RenameStructSerializeDeserialize>(
@@ -887,7 +887,7 @@ fn test_missing_renamed_field_struct() {
 
             Token::StructEnd,
         ],
-        Error::Message("missing field `a5`".to_owned()),
+        "missing field `a5`",
     );
 }
 
@@ -899,7 +899,7 @@ fn test_missing_renamed_field_enum() {
 
             Token::StructVariantEnd,
         ],
-        Error::Message("missing field `b`".to_owned()),
+        "missing field `b`",
     );
 
     assert_de_tokens_error::<RenameEnumSerializeDeserialize<i8>>(
@@ -911,7 +911,7 @@ fn test_missing_renamed_field_enum() {
 
             Token::StructVariantEnd,
         ],
-        Error::Message("missing field `d`".to_owned()),
+        "missing field `d`",
     );
 }
 
@@ -934,7 +934,7 @@ fn test_invalid_length_enum() {
             Token::I32(1),
             Token::TupleVariantEnd,
         ],
-        Error::Message("invalid length 1, expected tuple of 3 elements".to_owned()),
+        "invalid length 1, expected tuple of 3 elements",
     );
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
@@ -942,7 +942,7 @@ fn test_invalid_length_enum() {
             Token::I32(1),
             Token::TupleVariantEnd,
         ],
-        Error::Message("invalid length 1, expected tuple of 2 elements".to_owned()),
+        "invalid length 1, expected tuple of 2 elements",
     );
 }
 

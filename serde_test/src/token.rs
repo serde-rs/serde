@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use std::fmt::{self, Debug, Display};
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Token {
     /// A serialized `bool`.
@@ -145,4 +147,10 @@ pub enum Token {
 
     /// An indicator of the end of a struct, similar to `StructEnd`.
     StructVariantEnd,
+}
+
+impl Display for Token {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        Debug::fmt(self, formatter)
+    }
 }
