@@ -32,6 +32,10 @@ impl<'a> Serializer<'a> {
             None
         }
     }
+
+    pub fn remaining(&self) -> usize {
+        self.tokens.len()
+    }
 }
 
 macro_rules! assert_next_token {

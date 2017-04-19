@@ -30,19 +30,30 @@ where
     T: Serialize,
 {
     let mut ser = Serializer::new(tokens);
-    assert_eq!(Serialize::serialize(value, &mut ser), Ok(()));
-    assert_eq!(ser.next_token(), None);
+    match value.serialize(&mut ser) {
+        Ok(_) => {}
+        Err(err) => panic!("value failed to serialize: {}", err),
+    }
+
+    if ser.remaining() > 0 {
+        panic!("{} remaining tokens", ser.remaining());
+    }
 }
 
 /// Asserts that `value` serializes to the given `tokens`, and then yields `error`.
-pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: Error)
+pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], expected: Error)
 where
-    T: Serialize + PartialEq + Debug,
+    T: Serialize,
 {
     let mut ser = Serializer::new(tokens);
-    let v: Result<(), Error> = Serialize::serialize(value, &mut ser);
-    assert_eq!(v.as_ref(), Err(&error));
-    assert_eq!(ser.next_token(), None);
+    match value.serialize(&mut ser) {
+        Ok(_) => panic!("value serialized successfully"),
+        Err(err) => assert_eq!(err, expected),
+    }
+
+    if ser.remaining() > 0 {
+        panic!("{} remaining tokens", ser.remaining());
+    }
 }
 
 /// Asserts that the given `tokens` deserialize into `value`.
@@ -51,20 +62,31 @@ where
     T: Deserialize<'de> + PartialEq + Debug,
 {
     let mut de = Deserializer::new(tokens);
-    let v: Result<T, Error> = Deserialize::deserialize(&mut de);
-    assert_eq!(v.as_ref(), Ok(value));
-    assert_eq!(de.next_token(), None);
+    match T::deserialize(&mut de) {
+        Ok(v) => assert_eq!(v, *value),
+        Err(err) => panic!("tokens failed to deserialize: {}", err),
+    }
+
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
+    }
 }
 
-/// Asserts that the given `tokens` yield `error` when deserializing.
-pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: Error)
+/// Asserts that the given `tokens` yield `expected` error when deserializing.
+pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], expected: Error)
 where
-    T: Deserialize<'de> + PartialEq + Debug,
+    T: Deserialize<'de>,
 {
     let mut de = Deserializer::new(tokens);
-    let v: Result<T, Error> = Deserialize::deserialize(&mut de);
-    assert_eq!(v, Err(error));
+    match T::deserialize(&mut de) {
+        Ok(_) => panic!("tokens deserialized successfully"),
+        Err(err) => assert_eq!(err, expected),
+    }
+
     // There may be one token left if a peek caused the error
     de.next_token();
-    assert_eq!(de.next_token(), None);
+
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
+    }
 }

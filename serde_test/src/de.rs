@@ -49,6 +49,10 @@ impl<'de> Deserializer<'de> {
         }
     }
 
+    pub fn remaining(&self) -> usize {
+        self.tokens.len()
+    }
+
     fn visit_seq<V>(
         &mut self,
         len: Option<usize>,
