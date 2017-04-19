@@ -1634,6 +1634,11 @@ pub trait SerializeMap {
     type Error: Error;
 
     /// Serialize a map key.
+    ///
+    /// If possible, `Serialize` implementations are encouraged to use
+    /// `serialize_entry` instead as it may be implemented more efficiently in
+    /// some formats compared to a pair of calls to `serialize_key` and
+    /// `serialize_value`.
     fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
     where
         T: Serialize;
