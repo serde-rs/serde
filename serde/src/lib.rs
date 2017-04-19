@@ -79,7 +79,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/0.9.13")]
+#![doc(html_root_url = "https://docs.rs/serde/0.9.14")]
 
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]

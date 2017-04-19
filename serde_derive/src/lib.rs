@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/0.9.13")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/0.9.14")]
 
 #![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]
