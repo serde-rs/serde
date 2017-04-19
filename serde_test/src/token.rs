@@ -76,46 +76,46 @@ pub enum Token {
     Unit,
 
     /// A serialized unit struct of the given name.
-    UnitStruct(&'static str),
+    UnitStruct { name: &'static str },
 
     /// The header to a serialized newtype struct of the given name.
     ///
     /// Newtype structs are serialized with this header, followed by the value contained in the
     /// newtype struct.
-    NewtypeStruct(&'static str),
+    NewtypeStruct { name: &'static str },
 
     /// The header to an enum of the given name.
-    Enum(&'static str),
+    Enum { name: &'static str },
 
     /// A unit variant of an enum of the given name, of the given name.
     ///
     /// The first string represents the name of the enum, and the second represents the name of the
     /// variant.
-    UnitVariant(&'static str, &'static str),
+    UnitVariant { name: &'static str, variant: &'static str },
 
     /// The header to a newtype variant of an enum of the given name, of the given name.
     ///
     /// The first string represents the name of the enum, and the second represents the name of the
     /// variant. The value contained within this enum works the same as `StructNewType`.
-    NewtypeVariant(&'static str, &'static str),
+    NewtypeVariant { name: &'static str, variant: &'static str },
 
     /// The header to a sequence of the given length.
     ///
     /// These are serialized via `serialize_seq`, which takes an optional length. After this
     /// header is a list of elements, followed by `SeqEnd`.
-    Seq(Option<usize>),
+    Seq { len: Option<usize> },
 
     /// An indicator of the end of a sequence.
     SeqEnd,
 
     /// The header to a tuple of the given length, similar to `SeqFixedSize`.
-    Tuple(usize),
+    Tuple { len: usize },
 
     /// An indicator of the end of a tuple, similar to `SeqEnd`.
     TupleEnd,
 
     /// The header to a tuple struct of the given name and length.
-    TupleStruct(&'static str, usize),
+    TupleStruct { name: &'static str, len: usize },
 
     /// An indicator of the end of a tuple struct, similar to `TupleEnd`.
     TupleStructEnd,
@@ -124,26 +124,26 @@ pub enum Token {
     ///
     /// These are serialized via `serialize_map`, which takes an optional length. After this header
     /// is a list of key-value pairs, followed by `MapEnd`.
-    Map(Option<usize>),
+    Map { len: Option<usize> },
 
     /// An indicator of the end of a map.
     MapEnd,
 
     /// The header of a struct of the given name and length, similar to `Map`.
-    Struct(&'static str, usize),
+    Struct { name: &'static str, len: usize },
 
     /// An indicator of the end of a struct, similar to `MapEnd`.
     StructEnd,
 
     /// The header to a tuple variant of an enum of the given name, of the given name and length.
-    TupleVariant(&'static str, &'static str, usize),
+    TupleVariant { name: &'static str, variant: &'static str, len: usize },
 
     /// An indicator of the end of a tuple variant, similar to `TupleEnd`.
     TupleVariantEnd,
 
     /// The header of a struct variant of an enum of the given name, of the given name and length,
     /// similar to `Struct`.
-    StructVariant(&'static str, &'static str, usize),
+    StructVariant { name: &'static str, variant: &'static str, len: usize },
 
     /// An indicator of the end of a struct, similar to `StructEnd`.
     StructVariantEnd,
