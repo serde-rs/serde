@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "0.9.14" # remember to update html_root_url
+version = "1.0.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -11,17 +11,16 @@ keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
 readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
-publish = false # this branch contains breaking changes
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
 appveyor = { repository = "serde-rs/serde" }
 
 [dependencies]
-serde_derive = { version = "0.9", optional = true, path = "../serde_derive" }
+serde_derive = { version = "1.0", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
-serde_derive = { version = "0.9", path = "../serde_derive" }
+serde_derive = { version = "1.0", path = "../serde_derive" }
 
 
 ### FEATURES #################################################################

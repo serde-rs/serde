@@ -1,6 +1,6 @@
 [package]
 name = "serde_test"
-version = "0.9.14" # remember to update html_root_url
+version = "1.0.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"
@@ -10,14 +10,13 @@ documentation = "https://docs.serde.rs/serde_test/"
 keywords = ["serde", "serialization"]
 readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
-publish = false # this branch contains breaking changes
 
 [dependencies]
-serde = { version = "0.9", path = "../serde" }
+serde = { version = "1.0", path = "../serde" }
 
 [dev-dependencies]
-serde = { version = "0.9", path = "../serde", features = ["rc"] }
-serde_derive = { version = "0.9", path = "../serde_derive" }
+serde = { version = "1.0", path = "../serde", features = ["rc"] }
+serde_derive = { version = "1.0", path = "../serde_derive" }
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
