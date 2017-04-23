@@ -1471,22 +1471,24 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
-#[allow(deprecated)] // num::Zero is deprecated but there is no replacement
 impl<'de, T> Deserialize<'de> for NonZero<T>
 where
-    T: Deserialize<'de> + PartialEq + Zeroable + Zero,
+    T: Deserialize<'de> + Zeroable,
 {
     fn deserialize<D>(deserializer: D) -> Result<NonZero<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let value = try!(Deserialize::deserialize(deserializer));
-        if value == Zero::zero() {
-            return Err(Error::custom("expected a non-zero value"));
+        unsafe {
+            let ptr = &value as *const T as *const u8;
+            if slice::from_raw_parts(ptr, mem::size_of::<T>()).iter().all(|&b| b == 0) {
+                return Err(Error::custom("expected a non-zero value"));
+            }
+            // Waiting for a safe way to construct NonZero<T>:
+            // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
+            Ok(NonZero::new(value))
         }
-        // Waiting for a safe way to construct NonZero<T>:
-        // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
-        unsafe { Ok(NonZero::new(value)) }
     }
 }
 
