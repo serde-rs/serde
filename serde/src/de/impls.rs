@@ -20,10 +20,14 @@ use core::fmt;
 #[cfg(feature = "std")]
 use core::hash::{Hash, BuildHasher};
 use core::marker::PhantomData;
+#[cfg(all(feature="unstable"))]
+use core::mem;
 #[cfg(feature = "std")]
 use std::net;
 #[cfg(feature = "std")]
 use std::path;
+#[cfg(all(feature="unstable"))]
+use core::slice;
 use core::str;
 #[cfg(feature = "std")]
 use std::ffi::{CString, OsString};
@@ -56,10 +60,6 @@ use std;
 
 #[cfg(feature = "unstable")]
 use core::nonzero::{NonZero, Zeroable};
-
-#[cfg(feature = "unstable")]
-#[allow(deprecated)] // required for impl Deserialize for NonZero<T>
-use core::num::Zero;
 
 use de::{Deserialize, Deserializer, EnumVisitor, Error, MapVisitor, SeqVisitor, Unexpected,
          VariantVisitor, Visitor};
@@ -1409,18 +1409,23 @@ impl<Idx: Deserialize> Deserialize for std::ops::Range<Idx> {
 ///////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
-#[allow(deprecated)] // num::Zero is deprecated but there is no replacement
 impl<T> Deserialize for NonZero<T>
-    where T: Deserialize + PartialEq + Zeroable + Zero
+    where T: Deserialize + Zeroable
 {
     fn deserialize<D>(deserializer: D) -> Result<NonZero<T>, D::Error>
         where D: Deserializer
     {
         let value = try!(Deserialize::deserialize(deserializer));
-        if value == Zero::zero() {
-            return Err(Error::custom("expected a non-zero value"));
-        }
-        unsafe { Ok(NonZero::new(value)) }
+        unsafe {
+            let ptr = &value as *const T as *const u8;
+            if slice::from_raw_parts(ptr, mem::size_of::<T>()).iter().all(|&b| b == 0) {
+                return Err(Error::custom("expected a non-zero value"));
+            }
+            // Waiting for a safe way to construct NonZero<T>:
+            // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
+            Ok(NonZero::new(value))
+         }
+
     }
 }
 
