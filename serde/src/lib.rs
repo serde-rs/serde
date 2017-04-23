@@ -79,7 +79,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.0")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.1")]
 
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -88,7 +88,7 @@
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(nonzero, specialization, zero_one))]
+#![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
 #![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "collections", feature(collections))]
@@ -124,7 +124,7 @@ mod lib {
         pub use core::*;
     }
 
-    pub use self::core::{cmp, iter, mem, ops, str};
+    pub use self::core::{cmp, iter, mem, ops, slice, str};
     pub use self::core::{i8, i16, i32, i64, isize};
     pub use self::core::{u8, u16, u32, u64, usize};
     pub use self::core::{f32, f64};
@@ -193,9 +193,6 @@ mod lib {
 
     #[cfg(feature = "unstable")]
     pub use core::nonzero::{NonZero, Zeroable};
-    #[cfg(feature = "unstable")]
-    #[allow(deprecated)] // required for impl Deserialize for NonZero<T>
-    pub use core::num::Zero;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
