@@ -166,7 +166,7 @@ pub enum Identifier {
 
 impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
-    pub fn from_ast(cx: &Ctxt, item: &syn::MacroInput) -> Self {
+    pub fn from_ast(cx: &Ctxt, item: &syn::DeriveInput) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
@@ -421,7 +421,7 @@ impl Container {
 
 fn decide_tag(
     cx: &Ctxt,
-    item: &syn::MacroInput,
+    item: &syn::DeriveInput,
     untagged: BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
@@ -477,7 +477,7 @@ fn decide_tag(
 
 fn decide_identifier(
     cx: &Ctxt,
-    item: &syn::MacroInput,
+    item: &syn::DeriveInput,
     field_identifier: BoolAttr,
     variant_identifier: BoolAttr,
 ) -> Identifier {
