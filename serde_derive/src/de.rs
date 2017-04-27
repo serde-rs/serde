@@ -904,8 +904,6 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    
-
     quote_block! {
         #variant_visitor
 
