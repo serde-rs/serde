@@ -866,7 +866,7 @@ fn deserialize_adjacently_tagged_enum(
     } else {
         quote! {
             {
-                let mut __rk : Option<_serde::private::de::TagOrContentField> = None;
+                let mut __rk : _serde::export::Option<_serde::private::de::TagOrContentField> = _serde::export::None;
                 while let _serde::export::Some(__k) = #next_key {
                     match __k {
                         _serde::private::de::TagContentOtherField::Other => {
@@ -874,11 +874,11 @@ fn deserialize_adjacently_tagged_enum(
                             continue;
                         },
                         _serde::private::de::TagContentOtherField::Tag => {
-                            __rk = Some(_serde::private::de::TagOrContentField::Tag);
+                            __rk = _serde::export::Some(_serde::private::de::TagOrContentField::Tag);
                             break;
                         }
                         _serde::private::de::TagContentOtherField::Content => {
-                            __rk = Some(_serde::private::de::TagOrContentField::Content);
+                            __rk = _serde::export::Some(_serde::private::de::TagOrContentField::Content);
                             break;
                         }
                     }
