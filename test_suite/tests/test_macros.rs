@@ -751,6 +751,31 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // unit with excess content (f, g, h)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 3 },
+
+            Token::Str("f"),
+            Token::Unit,
+
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::Str("g"),
+            Token::Unit,
+
+            Token::Str("c"),
+            Token::Unit,
+
+            Token::Str("h"),
+            Token::Unit,
+
+            Token::StructEnd,
+        ],
+    );
+
     // newtype with tag first
     assert_tokens(
         &AdjacentlyTagged::Newtype::<u8>(1),
@@ -857,6 +882,66 @@ fn test_adjacently_tagged_enum() {
 
             Token::StructEnd,
         ],
+    );
+}
+
+#[test]
+fn test_adjacently_tagged_enum_deny_unknown_fields() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(tag = "t", content = "c", deny_unknown_fields)]
+    enum AdjacentlyTagged {
+        Unit,
+    }
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2},
+
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::Str("c"),
+            Token::Unit,
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 3},
+
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::Str("c"),
+            Token::Unit,
+
+            Token::Str("h"),
+        ],
+        r#"invalid value: string "h", expected "t" or "c""#
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 3},
+
+            Token::Str("h"),
+        ],
+        r#"invalid value: string "h", expected "t" or "c""#
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 3},
+
+            Token::Str("c"),
+            Token::Unit,
+
+            Token::Str("h"),
+        ],
+        r#"invalid value: string "h", expected "t" or "c""#
     );
 }
 
