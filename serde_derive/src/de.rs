@@ -795,9 +795,19 @@ fn deserialize_adjacently_tagged_enum(
 
     let expecting = format!("adjacently tagged enum {}", params.type_name());
     let type_name = cattrs.name().deserialize_name();
+    let deny_unknown_fields = cattrs.deny_unknown_fields();
+
+    /// If unknown fields are allowed, we pick the visitor that can
+    /// step over those. Otherwise we pick the visitor that fails on
+    /// unknown keys.
+    let field_visitor_ty = if deny_unknown_fields {
+        quote! { _serde::private::de::TagOrContentFieldVisitor }
+    } else {
+        quote! { _serde::private::de::TagContentOtherFieldVisitor }
+    };
 
     let tag_or_content = quote! {
-        _serde::private::de::TagOrContentFieldVisitor {
+        #field_visitor_ty {
             tag: #tag,
             content: #content,
         }
@@ -844,9 +854,46 @@ fn deserialize_adjacently_tagged_enum(
         };
     }
 
-    let visit_third_key = quote! {
-        // Visit the third key in the map, hopefully there isn't one.
-        match try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)) {
+    /// Advance the map by one key, returning early in case of error.
+    let next_key = quote! {
+        try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content))
+    };
+
+    /// When allowing unknown fields, we want to transparently step through keys we don't care
+    /// about until we find `tag`, `content`, or run out of keys.
+    let next_relevant_key = if deny_unknown_fields {
+        next_key
+    } else {
+        quote! {
+            {
+                let mut __rk : Option<_serde::private::de::TagOrContentField> = None;
+                while let _serde::export::Some(__k) = #next_key {
+                    match __k {
+                        _serde::private::de::TagContentOtherField::Other => {
+                            try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map));
+                            continue;
+                        },
+                        _serde::private::de::TagContentOtherField::Tag => {
+                            __rk = Some(_serde::private::de::TagOrContentField::Tag);
+                            break;
+                        }
+                        _serde::private::de::TagContentOtherField::Content => {
+                            __rk = Some(_serde::private::de::TagOrContentField::Content);
+                            break;
+                        }
+                    }
+                }
+
+                __rk
+            }
+        }
+    };
+
+    /// Step through remaining keys, looking for duplicates of previously-seen keys.
+    /// When unknown fields are denied, any key that isn't a duplicate will at this
+    /// point immediately produce an error.
+    let visit_remaining_keys = quote! {
+        match #next_relevant_key {
             _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                 _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
             }
@@ -856,6 +903,8 @@ fn deserialize_adjacently_tagged_enum(
             _serde::export::None => _serde::export::Ok(__ret),
         }
     };
+
+    
 
     quote_block! {
         #variant_visitor
@@ -895,14 +944,14 @@ fn deserialize_adjacently_tagged_enum(
             fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::MapAccess<'de>
             {
-                // Visit the first key.
-                match try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)) {
+                // Visit the first relevant key.
+                match #next_relevant_key {
                     // First key is the tag.
                     _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                         // Parse the tag.
                         let __field = try!(_serde::de::MapAccess::next_value(&mut __map));
                         // Visit the second key.
-                        match try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)) {
+                        match #next_relevant_key {
                             // Second key is a duplicate of the tag.
                             _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                                 _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
@@ -915,8 +964,8 @@ fn deserialize_adjacently_tagged_enum(
                                         marker: _serde::export::PhantomData,
                                         lifetime: _serde::export::PhantomData,
                                     }));
-                                // Visit the third key, hopefully there isn't one.
-                                #visit_third_key
+                                // Visit remaining keys, looking for duplicates.
+                                #visit_remaining_keys
                             }
                             // There is no second key; might be okay if the we have a unit variant.
                             _serde::export::None => #missing_content
@@ -927,7 +976,7 @@ fn deserialize_adjacently_tagged_enum(
                         // Buffer up the content.
                         let __content = try!(_serde::de::MapAccess::next_value::<_serde::private::de::Content>(&mut __map));
                         // Visit the second key.
-                        match try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)) {
+                        match #next_relevant_key {
                             // Second key is the tag.
                             _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                                 let __deserializer = _serde::private::de::ContentDeserializer::<__A::Error>::new(__content);
@@ -936,8 +985,8 @@ fn deserialize_adjacently_tagged_enum(
                                     // Deserialize the buffered content now that we know the variant.
                                     #(#variant_arms)*
                                 });
-                                // Visit the third key, hopefully there isn't one.
-                                #visit_third_key
+                                // Visit remaining keys, looking for duplicates.
+                                #visit_remaining_keys
                             }
                             // Second key is a duplicate of the content.
                             _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {

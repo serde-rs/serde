@@ -16,6 +16,7 @@ use de::Unexpected;
 #[cfg(any(feature = "std", feature = "collections"))]
 pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer,
                         TaggedContentVisitor, TagOrContentField, TagOrContentFieldVisitor,
+                        TagContentOtherField, TagContentOtherFieldVisitor,
                         InternallyTaggedUnitVisitor, UntaggedUnitVisitor};
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
@@ -859,6 +860,54 @@ mod content {
                 Ok(TagOrContentField::Content)
             } else {
                 Err(de::Error::invalid_value(Unexpected::Str(field), &self))
+            }
+        }
+    }
+
+    /// Used by generated code to deserialize an adjacently tagged enum when
+    /// ignoring unrelated fields is allowed.
+    ///
+    /// Not public API.
+    pub enum TagContentOtherField {
+        Tag,
+        Content,
+        Other,
+    }
+
+    /// Not public API.
+    pub struct TagContentOtherFieldVisitor {
+        pub tag: &'static str,
+        pub content: &'static str,
+    }
+
+    impl<'de> DeserializeSeed<'de> for TagContentOtherFieldVisitor {
+        type Value = TagContentOtherField;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_str(self)
+        }
+    }
+
+    impl<'de> Visitor<'de> for TagContentOtherFieldVisitor {
+        type Value = TagContentOtherField;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            write!(formatter, "{:?}, {:?}, or other ignored fields", self.tag, self.content)
+        }
+
+        fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if field == self.tag {
+                Ok(TagContentOtherField::Tag)
+            } else if field == self.content {
+                Ok(TagContentOtherField::Content)
+            } else {
+                Ok(TagContentOtherField::Other)
             }
         }
     }
