@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use serde::{Serialize, Deserialize};
+use serde::ser::{SerializeSeed, Unseeded};
 
 use de::Deserializer;
 use ser::Serializer;
@@ -84,8 +85,15 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 where
     T: Serialize,
 {
+    assert_ser_seed_tokens(&Unseeded(value), &(), tokens)
+}
+
+pub fn assert_ser_seed_tokens<T>(value: &T, seed: &T::Seed, tokens: &[Token])
+where
+    T: SerializeSeed,
+{
     let mut ser = Serializer::new(tokens);
-    match value.serialize(&mut ser) {
+    match value.serialize_seed(&mut ser, seed) {
         Ok(_) => {}
         Err(err) => panic!("value failed to serialize: {}", err),
     }
@@ -94,6 +102,7 @@ where
         panic!("{} remaining tokens", ser.remaining());
     }
 }
+
 
 /// Asserts that `value` serializes to the given `tokens`, and then yields `error`.
 ///

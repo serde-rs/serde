@@ -1814,3 +1814,107 @@ where
         _ => None,
     }
 }
+
+
+/// Placeholder
+pub trait SerializeSeed {
+    /// TODO Placeholder (use a type parameter instead?)
+    type Seed: ?Sized;
+
+    /// Placeholder
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer;
+}
+
+/// Placeholder
+pub struct Seeded<'seed, 'a, S, V>
+where
+    S: ?Sized + 'seed,
+    V: ?Sized + 'a,
+{
+    /// Placeholder
+    pub seed: &'seed S,
+    /// Placeholder
+    pub value: &'a V,
+}
+
+impl<'seed, 'a, S, V> Seeded<'seed, 'a, S, V>
+where
+    S: ?Sized,
+    V: ?Sized,
+{
+    /// Placeholder
+    #[inline]
+    pub fn new(seed: &'seed S, value: &'a V) -> Self {
+        Seeded {
+            seed: seed,
+            value: value,
+        }
+    }
+}
+
+impl<'seed, 'a, T, V> Serialize for Seeded<'seed, 'a, T, V>
+where
+    T: ?Sized,
+    V: ?Sized + SerializeSeed<Seed = T>,
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.value.serialize_seed(serializer, self.seed)
+    }
+}
+
+/// Placeholder
+pub struct Unseeded<'a, T: ?Sized + 'a>(pub &'a T);
+
+impl<'a, T> SerializeSeed for Unseeded<'a, T>
+where
+    T: ?Sized + Serialize + 'a,
+{
+    type Seed = ();
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, _: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<T> SerializeSeed for Option<T>
+where
+    T: SerializeSeed,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {
+            Some(ref value) => serializer.serialize_some(&Seeded::new(seed, value)),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<T> SerializeSeed for [T]
+where
+    T: SerializeSeed,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_seq(self.iter().map(|value| Seeded::new(seed, value)))
+    }
+}

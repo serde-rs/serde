@@ -16,7 +16,7 @@ use internals::{attr, Ctxt};
 
 use std::u32;
 
-pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
+pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<Tokens, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
     precondition(&ctxt, &cont);
@@ -39,13 +39,30 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
             }
         }
     } else {
-        quote! {
-            #[automatically_derived]
-            impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
-                fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                    where __S: _serde::Serializer
-                {
-                    #body
+        if seed {
+            let seed_ty = cont.attrs.seed().ok_or_else(|| "Need a seed attribute")?;
+
+            quote! {
+                #[automatically_derived]
+                impl #impl_generics _serde::ser::SerializeSeed for #ident #ty_generics #where_clause {
+                    type Seed = #seed_ty;
+
+                    fn serialize_seed<__S>(&self, __serializer: __S, __seed: &Self::Seed) -> _serde::export::Result<__S::Ok, __S::Error>
+                        where __S: _serde::Serializer
+                    {
+                        #body
+                    }
+                }
+            }
+        } else {
+            quote! {
+                #[automatically_derived]
+                impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
+                    fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                        where __S: _serde::Serializer
+                    {
+                        #body
+                    }
                 }
             }
         }
@@ -241,6 +258,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         params,
         false,
         quote!(_serde::ser::SerializeStruct::serialize_field),
+        cattrs.seed(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -442,6 +460,7 @@ fn serialize_externally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
+                cattrs.seed(),
             )
         }
     }
@@ -496,6 +515,7 @@ fn serialize_internally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
+                cattrs.seed(),
             )
         }
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -544,6 +564,7 @@ fn serialize_adjacently_tagged_variant(
                     params,
                     &variant.fields,
                     &variant_name,
+                    cattrs.seed(),
                 )
             }
         },
@@ -631,7 +652,7 @@ fn serialize_untagged_variant(
         Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.seed())
         }
     }
 }
@@ -705,6 +726,7 @@ fn serialize_struct_variant<'a>(
     params: &Parameters,
     fields: &[Field],
     name: &str,
+    seed_ty: Option<&syn::Ty>,
 ) -> Fragment {
     let method = match context {
         StructVariant::ExternallyTagged { .. } => {
@@ -714,7 +736,7 @@ fn serialize_struct_variant<'a>(
         StructVariant::Untagged => quote!(_serde::ser::SerializeStruct::serialize_field),
     };
 
-    let serialize_fields = serialize_struct_visitor(fields, params, true, method);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, method, seed_ty);
 
     let mut serialized_fields = fields
         .iter()
@@ -828,6 +850,7 @@ fn serialize_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     func: Tokens,
+    seed_ty: Option<&syn::Ty>,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -847,6 +870,15 @@ fn serialize_struct_visitor(
                     .attrs
                     .skip_serializing_if()
                     .map(|path| quote!(#path(#field_expr)));
+
+                if field.attrs.serialize_seed() {
+                    field_expr = wrap_serialize_seed(field_expr)
+                }
+
+                if let Some(path) = field.attrs.serialize_seed_with() {
+                    let seed_ty = seed_ty.expect("serialize_seed_with specified without a seed type");
+                    field_expr = wrap_serialize_seed_with(params, field.ty, seed_ty, path, field_expr)
+                }
 
                 if let Some(path) = field.attrs.serialize_with() {
                     field_expr = wrap_serialize_with(params, field.ty, path, field_expr)
@@ -893,6 +925,51 @@ fn wrap_serialize_with(
 
         &__SerializeWith {
             value: #value,
+            phantom: _serde::export::PhantomData::<#this #ty_generics>,
+        }
+    })
+}
+
+fn wrap_serialize_seed(
+    value: Tokens,
+) -> Tokens {
+    quote!({
+        &_serde::ser::Seeded::new(__seed, #value)
+    })
+}
+
+
+fn wrap_serialize_seed_with(
+    params: &Parameters,
+    field_ty: &syn::Ty,
+    seed_ty: &syn::Ty,
+    serialize_with: &syn::Path,
+    value: Tokens,
+) -> Tokens {
+    let this = &params.this;
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
+
+    let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
+    let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
+
+    quote!({
+        struct __SerializeWith #wrapper_impl_generics #where_clause {
+            value: &'__a #field_ty,
+            seed: &'__a #seed_ty,
+            phantom: _serde::export::PhantomData<#this #ty_generics>,
+        }
+
+        impl #wrapper_impl_generics _serde::Serialize for __SerializeWith #wrapper_ty_generics #where_clause {
+            fn serialize<__S>(&self, __s: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                where __S: _serde::Serializer
+            {
+                #serialize_with(self.value, __s, self.seed)
+            }
+        }
+
+        &__SerializeWith {
+            value: #value,
+            seed: __seed,
             phantom: _serde::export::PhantomData::<#this #ty_generics>,
         }
     })
