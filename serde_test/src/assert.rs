@@ -44,7 +44,7 @@ use std::fmt::Debug;
 /// ]);
 /// # }
 /// ```
-pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
+pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token<'static>])
 where
     T: Serialize + Deserialize<'de> + PartialEq + Debug,
 {
@@ -81,14 +81,14 @@ where
 /// ]);
 /// # }
 /// ```
-pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
+pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token<'static>])
 where
     T: Serialize,
 {
     assert_ser_seed_tokens(&Unseeded(value), &(), tokens)
 }
 
-pub fn assert_ser_seed_tokens<T>(value: &T, seed: &T::Seed, tokens: &[Token])
+pub fn assert_ser_seed_tokens<T>(value: &T, seed: &T::Seed, tokens: &[Token<'static>])
 where
     T: SerializeSeed,
 {
@@ -144,7 +144,7 @@ where
 /// assert_ser_tokens_error(&example, expected, error);
 /// # }
 /// ```
-pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
+pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token<'static>], error: &str)
 where
     T: Serialize,
 {
@@ -188,7 +188,7 @@ where
 /// ]);
 /// # }
 /// ```
-pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
+pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token<'static>])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
@@ -231,7 +231,7 @@ where
 /// );
 /// # }
 /// ```
-pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
+pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token<'static>], error: &str)
 where
     T: Deserialize<'de>,
 {

@@ -15,7 +15,7 @@ use token::Token;
 
 #[derive(Debug)]
 pub struct Deserializer<'de> {
-    tokens: &'de [Token],
+    tokens: &'de [Token<'static>],
 }
 
 macro_rules! assert_next_token {
@@ -47,22 +47,22 @@ macro_rules! end_of_tokens {
 }
 
 impl<'de> Deserializer<'de> {
-    pub fn new(tokens: &'de [Token]) -> Self {
+    pub fn new(tokens: &'de [Token<'static>]) -> Self {
         Deserializer { tokens: tokens }
     }
 
-    fn peek_token_opt(&self) -> Option<Token> {
+    fn peek_token_opt(&self) -> Option<Token<'static>> {
         self.tokens.first().cloned()
     }
 
-    fn peek_token(&self) -> Token {
+    fn peek_token(&self) -> Token<'static> {
         match self.peek_token_opt() {
             Some(token) => token,
             None => end_of_tokens!(),
         }
     }
 
-    pub fn next_token_opt(&mut self) -> Option<Token> {
+    pub fn next_token_opt(&mut self) -> Option<Token<'static>> {
         match self.tokens.split_first() {
             Some((&first, rest)) => {
                 self.tokens = rest;
@@ -72,7 +72,7 @@ impl<'de> Deserializer<'de> {
         }
     }
 
-    fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Token<'static> {
         match self.tokens.split_first() {
             Some((&first, rest)) => {
                 self.tokens = rest;
@@ -89,7 +89,7 @@ impl<'de> Deserializer<'de> {
     fn visit_seq<V>(
         &mut self,
         len: Option<usize>,
-        end: Token,
+        end: Token<'static>,
         visitor: V,
     ) -> Result<V::Value, Error>
     where
@@ -111,7 +111,7 @@ impl<'de> Deserializer<'de> {
     fn visit_map<V>(
         &mut self,
         len: Option<usize>,
-        end: Token,
+        end: Token<'static>,
         visitor: V,
     ) -> Result<V::Value, Error>
     where
@@ -371,7 +371,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 struct DeserializerSeqVisitor<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
     len: Option<usize>,
-    end: Token,
+    end: Token<'static>,
 }
 
 impl<'de, 'a> SeqAccess<'de> for DeserializerSeqVisitor<'a, 'de> {
@@ -398,7 +398,7 @@ impl<'de, 'a> SeqAccess<'de> for DeserializerSeqVisitor<'a, 'de> {
 struct DeserializerMapVisitor<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
     len: Option<usize>,
-    end: Token,
+    end: Token<'static>,
 }
 
 impl<'de, 'a> MapAccess<'de> for DeserializerMapVisitor<'a, 'de> {
@@ -546,7 +546,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
 
 struct EnumMapVisitor<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
-    variant: Option<Token>,
+    variant: Option<Token<'static>>,
     format: EnumFormat,
 }
 
@@ -557,7 +557,7 @@ enum EnumFormat {
 }
 
 impl<'a, 'de> EnumMapVisitor<'a, 'de> {
-    fn new(de: &'a mut Deserializer<'de>, variant: Token, format: EnumFormat) -> Self {
+    fn new(de: &'a mut Deserializer<'de>, variant: Token<'static>, format: EnumFormat) -> Self {
         EnumMapVisitor {
             de: de,
             variant: Some(variant),

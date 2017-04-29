@@ -14,17 +14,17 @@ use token::Token;
 /// A `Serializer` that ensures that a value serializes to a given list of tokens.
 #[derive(Debug)]
 pub struct Serializer<'a> {
-    tokens: &'a [Token],
+    tokens: &'a [Token<'static>],
 }
 
 impl<'a> Serializer<'a> {
     /// Creates the serializer.
-    pub fn new(tokens: &'a [Token]) -> Self {
+    pub fn new(tokens: &'a [Token<'static>]) -> Self {
         Serializer { tokens: tokens }
     }
 
     /// Pulls the next token off of the serializer, ignoring it.
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&mut self) -> Option<Token<'static>> {
         if let Some((&first, rest)) = self.tokens.split_first() {
             self.tokens = rest;
             Some(first)
@@ -286,7 +286,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
 
 pub struct Variant<'s, 'a: 's> {
     ser: &'s mut Serializer<'a>,
-    end: Token,
+    end: Token<'static>,
 }
 
 impl<'s, 'a> ser::SerializeSeq for &'s mut Serializer<'a> {
