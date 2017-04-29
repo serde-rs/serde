@@ -143,7 +143,7 @@ macro_rules! declare_error_tests {
     }
 }
 
-fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
+fn assert_de_tokens_ignore(ignorable_tokens: &[Token<'static>]) {
     #[derive(PartialEq, Debug, Deserialize)]
     struct IgnoreBase {
         a: i32,
