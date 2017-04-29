@@ -9,6 +9,7 @@ fn start(_argc: isize, _argv: *const *const u8) -> isize {
     0
 }
 
+#[cfg(not(windows))]
 #[lang = "eh_personality"]
 #[no_mangle]
 pub extern fn rust_eh_personality() {}
@@ -17,6 +18,7 @@ pub extern fn rust_eh_personality() {}
 #[no_mangle]
 pub extern fn rust_eh_unwind_resume() {}
 
+#[cfg(not(windows))]
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
