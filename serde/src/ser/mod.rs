@@ -1828,10 +1828,7 @@ pub trait SerializeSeed {
 }
 
 /// Placeholder
-pub struct Seeded<'seed, 'a, S, V>
-where
-    S: ?Sized + 'seed,
-    V: ?Sized + 'a,
+pub struct Seeded<'seed, 'a, S: ?Sized + 'seed, V: ?Sized + 'a>
 {
     /// Placeholder
     pub seed: &'seed S,
@@ -1839,10 +1836,7 @@ where
     pub value: &'a V,
 }
 
-impl<'seed, 'a, S, V> Seeded<'seed, 'a, S, V>
-where
-    S: ?Sized,
-    V: ?Sized,
+impl<'seed, 'a, S: ?Sized, V: ?Sized> Seeded<'seed, 'a, S, V>
 {
     /// Placeholder
     #[inline]
@@ -1854,10 +1848,9 @@ where
     }
 }
 
-impl<'seed, 'a, T, V> Serialize for Seeded<'seed, 'a, T, V>
+impl<'seed, 'a, T: ?Sized, V: ?Sized> Serialize for Seeded<'seed, 'a, T, V>
 where
-    T: ?Sized,
-    V: ?Sized + SerializeSeed<Seed = T>,
+    V: SerializeSeed<Seed = T>,
 {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -1871,9 +1864,9 @@ where
 /// Placeholder
 pub struct Unseeded<'a, T: ?Sized + 'a>(pub &'a T);
 
-impl<'a, T> SerializeSeed for Unseeded<'a, T>
+impl<'a, T: ?Sized> SerializeSeed for Unseeded<'a, T>
 where
-    T: ?Sized + Serialize + 'a,
+    T: Serialize + 'a,
 {
     type Seed = ();
 
