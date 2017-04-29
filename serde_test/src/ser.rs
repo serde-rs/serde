@@ -40,25 +40,24 @@ impl<'a> Serializer<'a> {
 
 macro_rules! assert_next_token {
     ($ser:expr, $expected:ident) => {
-        assert_next_token!($ser, $expected, Token::$expected, true);
+        assert_next_token!($ser, Token::$expected, @);
     };
     ($ser:expr, $expected:ident($v:expr)) => {
-        assert_next_token!($ser, $expected, Token::$expected(v), v == $v);
+        assert_next_token!($ser, Token::$expected($v), @);
     };
     ($ser:expr, $expected:ident { $($k:ident),* }) => {
-        let compare = ($($k,)*);
-        assert_next_token!($ser, $expected, Token::$expected { $($k),* }, ($($k,)*) == compare);
+        let compare = Token::$expected { $($k : $k,)* };
+        assert_next_token!($ser, compare, @)
     };
-    ($ser:expr, $expected:ident, $pat:pat, $guard:expr) => {
+    ($ser:expr, $expected:expr, @) => {
         match $ser.next_token() {
-            Some($pat) if $guard => {}
             Some(other) => {
-                panic!("expected Token::{} but serialized as {}",
-                       stringify!($expected), other);
+                if $expected != other {
+                    panic!("expected {:?} but serialized as {}", $expected, other);
+                }
             }
             None => {
-                panic!("expected Token::{} after end of serialized tokens",
-                       stringify!($expected));
+                panic!("expected {:?} after end of serialized tokens", $expected);
             }
         }
     };
@@ -247,10 +246,20 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
             assert_next_token!(self, Str(variant));
             let len = Some(len);
             assert_next_token!(self, Seq { len });
-            Ok(Variant { ser: self, end: Token::SeqEnd })
+            Ok(
+                Variant {
+                    ser: self,
+                    end: Token::SeqEnd,
+                },
+            )
         } else {
             assert_next_token!(self, TupleVariant { name, variant, len });
-            Ok(Variant { ser: self, end: Token::TupleVariantEnd })
+            Ok(
+                Variant {
+                    ser: self,
+                    end: Token::TupleVariantEnd,
+                },
+            )
         }
     }
 
@@ -276,10 +285,20 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
             assert_next_token!(self, Str(variant));
             let len = Some(len);
             assert_next_token!(self, Map { len });
-            Ok(Variant { ser: self, end: Token::MapEnd })
+            Ok(
+                Variant {
+                    ser: self,
+                    end: Token::MapEnd,
+                },
+            )
         } else {
             assert_next_token!(self, StructVariant { name, variant, len });
-            Ok(Variant { ser: self, end: Token::StructVariantEnd })
+            Ok(
+                Variant {
+                    ser: self,
+                    end: Token::StructVariantEnd,
+                },
+            )
         }
     }
 }
