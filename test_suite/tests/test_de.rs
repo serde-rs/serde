@@ -1021,4 +1021,48 @@ declare_error_tests! {
         ],
         "invalid type: sequence, expected unit struct UnitStruct",
     }
+    test_btreemap_duplicate_key<BTreeMap<isize, isize>> {
+        &[
+            Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::I32(2),
+
+            Token::I32(1),
+            Token::I32(4),
+            Token::MapEnd,
+        ],
+       "invalid entry: found duplicate key",
+    }
+    test_hashmap_duplicate_key<HashMap<isize, isize>> {
+        &[
+            Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::I32(2),
+
+            Token::I32(1),
+            Token::I32(4),
+            Token::MapEnd,
+        ],
+        "invalid entry: found duplicate key",
+    }
+    test_btreeset_duplicate_entry<BTreeSet<isize>> {
+        &[
+            Token::Seq { len: Some(2) },
+            Token::I32(1),
+
+            Token::I32(1),
+            Token::SeqEnd,
+        ],
+        "invalid entry: found duplicate key",
+    }
+    test_hashset_duplicate_entry<HashSet<isize>> {
+        &[
+            Token::Seq { len: Some(2) },
+            Token::I32(1),
+
+            Token::I32(1),
+            Token::SeqEnd,
+        ],
+        "invalid entry: found duplicate key",
+    }
 }
