@@ -553,6 +553,63 @@ macro_rules! seq_impl {
 }
 
 #[cfg(any(feature = "std", feature = "collections"))]
+macro_rules! set_impl {
+    (
+        $ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
+        $access:ident,
+        $ctor:expr,
+        $with_capacity:expr,
+        $insert:expr
+    ) => {
+        impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
+        where
+            T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
+            $($typaram: $bound1 $(+ $bound2)*,)*
+        {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct SeqVisitor<T $(, $typaram)*> {
+                    marker: PhantomData<$ty<T $(, $typaram)*>>,
+                }
+
+                impl<'de, T $(, $typaram)*> Visitor<'de> for SeqVisitor<T $(, $typaram)*>
+                where
+                    T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
+                    $($typaram: $bound1 $(+ $bound2)*,)*
+                {
+                    type Value = $ty<T $(, $typaram)*>;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("a sequence")
+                    }
+
+                    #[inline]
+                    fn visit_seq<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: SeqAccess<'de>,
+                    {
+                        let mut values = $with_capacity;
+
+                        while let Some(value) = try!($access.next_element()) {
+                            if !$insert(&mut values, value) {
+                                return Err(Error::custom("invalid entry: found duplicate key"));
+                            };
+                        }
+
+                        Ok(values)
+                    }
+                }
+
+                let visitor = SeqVisitor { marker: PhantomData };
+                deserializer.deserialize_seq(visitor)
+            }
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
 seq_impl!(
     BinaryHeap<T: Ord>,
     seq,
@@ -561,7 +618,7 @@ seq_impl!(
     BinaryHeap::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-seq_impl!(
+set_impl!(
     BTreeSet<T: Eq + Ord>,
     seq,
     BTreeSet::new(),
@@ -577,7 +634,7 @@ seq_impl!(
     LinkedList::push_back);
 
 #[cfg(feature = "std")]
-seq_impl!(
+set_impl!(
     HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
     HashSet::with_hasher(S::default()),
@@ -832,7 +889,10 @@ macro_rules! map_impl {
                         let mut values = $with_capacity;
 
                         while let Some((key, value)) = try!($access.next_entry()) {
-                            values.insert(key, value);
+                            match values.insert(key, value) {
+                                None => {},
+                                Some(_) => return Err(Error::custom("invalid entry: found duplicate key")),
+                            };
                         }
 
                         Ok(values)
