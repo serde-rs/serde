@@ -346,10 +346,20 @@ deref_impl!(<T> Serialize for Arc<T> where T: Serialize);
 #[cfg(any(feature = "std", feature = "collections"))]
 deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);
 
-#[cfg(feature = "unstable")]
-deref_impl!(<T> Serialize for NonZero<T> where T: Serialize + Zeroable);
-
 ////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "unstable")]
+impl<T> Serialize for NonZero<T>
+where
+    T: Serialize + Zeroable + Clone,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.clone().get().serialize(serializer)
+    }
+}
 
 impl<T> Serialize for Cell<T>
 where
