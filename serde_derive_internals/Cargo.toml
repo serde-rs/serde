@@ -12,6 +12,7 @@ readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
+ident_case = "1.0.0"
 syn = { version = "0.11.10", default-features = false, features = ["parsing"] }
 synom = "0.11"
 

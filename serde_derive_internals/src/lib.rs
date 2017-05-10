@@ -8,6 +8,7 @@
 
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.15.0")]
 
+extern crate ident_case;
 extern crate syn;
 #[macro_use]
 extern crate synom;
