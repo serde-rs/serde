@@ -13,7 +13,7 @@ extern crate serde_derive;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use std::default::Default;
 use std::ffi::{CString, OsString};
@@ -709,6 +709,11 @@ declare_tests! {
         "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
         "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
         "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
+    }
+    test_path {
+        Path::new("/usr/local/lib") => &[
+            Token::BorrowedStr("/usr/local/lib"),
+        ],
     }
     test_path_buf {
         PathBuf::from("/usr/local/lib") => &[
