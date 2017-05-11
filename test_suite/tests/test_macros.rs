@@ -696,6 +696,30 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_borrow() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    pub enum Input<'a> {
+        Package { name: &'a str },
+    }
+
+    assert_tokens(
+        &Input::Package { name: "borrowed" },
+        &[
+            Token::Struct { name: "Input", len: 2 },
+
+            Token::BorrowedStr("type"),
+            Token::BorrowedStr("Package"),
+
+            Token::BorrowedStr("name"),
+            Token::BorrowedStr("borrowed"),
+
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_adjacently_tagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t", content = "c")]
