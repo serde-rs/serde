@@ -20,10 +20,10 @@ struct Inner;
 
 struct InnerSeed(Rc<Cell<i32>>);
 
-impl<'a> From<&'a mut Seed> for InnerSeed {
-    fn from(value: &'a mut Seed) -> Self {
-        InnerSeed(value.0.clone())
-    }
+fn deserialize_inner<'de, D>(seed: &mut Seed, deserializer: D) -> Result<Inner, D::Error>
+    where D: Deserializer<'de>
+{
+    InnerSeed(seed.0.clone()).deserialize(deserializer)
 }
 
 impl<'de> DeserializeSeed<'de> for InnerSeed {
@@ -40,9 +40,9 @@ impl<'de> DeserializeSeed<'de> for InnerSeed {
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "Seed")]
 struct SeedStruct {
-    #[serde(deserialize_seed_with = "InnerSeed::from")]
+    #[serde(deserialize_seed_with = "deserialize_inner")]
     value: Inner,
-    #[serde(deserialize_seed_with = "InnerSeed::from")]
+    #[serde(deserialize_seed_with = "deserialize_inner")]
     value2: Inner,
     value3: Inner,
 }
