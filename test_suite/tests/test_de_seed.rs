@@ -3,12 +3,12 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_test;
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use serde::de::{Deserialize, Deserializer, DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor, Unexpected};
+use serde::de::{Deserialize, Deserializer, DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor};
 
 use serde_test::{Token, assert_de_seed_tokens};
 
@@ -20,8 +20,8 @@ struct Inner;
 
 struct InnerSeed(Rc<Cell<i32>>);
 
-impl From<Seed> for InnerSeed {
-    fn from(value: Seed) -> Self {
+impl<'a> From<&'a mut Seed> for InnerSeed {
+    fn from(value: &'a mut Seed) -> Self {
         InnerSeed(value.0.clone())
     }
 }
@@ -85,17 +85,9 @@ struct Node {
 }
 
 type Id = u32;
-type SharedToId<T> = HashMap<*const T, Id>;
 type IdToShared<T> = HashMap<Id, T>;
 
-type NodeToId = SharedToId<Node>;
 type IdToNode = IdToShared<Rc<Node>>;
-
-enum Lookup {
-    Unique,
-    Found(Id),
-    Inserted(Id),
-}
 
 pub trait Shared: ::std::ops::Deref
     where Self::Target: Sized
