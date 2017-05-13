@@ -594,7 +594,7 @@ fn deserialize_struct(
             #visit_seq
 
             #[inline]
-            fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_map<__A>(mut self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::MapAccess<'de>
             {
                 #visit_map
@@ -1577,7 +1577,7 @@ fn deserialize_map(
                 }
                 (Some(path), _) => {
                     quote!({
-                        let __seed = #path(self.seed.clone());
+                        let __seed = #path(&mut self.seed);
                         try!(_serde::de::MapAccess::next_value_seed(&mut __map, __seed))
                     })
                 }
