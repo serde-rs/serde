@@ -169,7 +169,7 @@ mod assert;
 
 pub use token::Token;
 pub use assert::{assert_tokens, assert_ser_tokens, assert_ser_seed_tokens,
-                 assert_ser_tokens_error, assert_de_tokens, assert_de_tokens_error};
+                 assert_ser_tokens_error, assert_de_tokens, assert_de_seed_tokens, assert_de_tokens_error};
 
 // Not public API.
 #[doc(hidden)]

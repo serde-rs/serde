@@ -438,6 +438,10 @@ impl Container {
         self.identifier
     }
 
+    pub fn deserialize_seed(&self) -> Option<&syn::Ty> {
+        self.deserialize_seed.as_ref()
+    }
+
     pub fn serialize_seed(&self) -> Option<&syn::Ty> {
         self.serialize_seed.as_ref()
     }

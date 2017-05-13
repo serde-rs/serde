@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeSeed;
 use serde::ser::{SerializeSeed, Unseeded};
 
 use de::Deserializer;
@@ -194,6 +195,22 @@ where
 {
     let mut de = Deserializer::new(tokens);
     match T::deserialize(&mut de) {
+        Ok(v) => assert_eq!(v, *value),
+        Err(e) => panic!("tokens failed to deserialize: {}", e),
+    }
+
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
+    }
+}
+
+pub fn assert_de_seed_tokens<'de, T>(seed: T, value: &T::Value, tokens: &'de [Token<'static>])
+where
+    T: DeserializeSeed<'de>,
+    T::Value: PartialEq + Debug,
+{
+    let mut de = Deserializer::new(tokens);
+    match seed.deserialize(&mut de) {
         Ok(v) => assert_eq!(v, *value),
         Err(e) => panic!("tokens failed to deserialize: {}", e),
     }
