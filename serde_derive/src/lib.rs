@@ -53,7 +53,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let input = syn::parse_derive_input(&input.to_string()).unwrap();
-    match de::expand_derive_deserialize(&input) {
+    match de::expand_derive_deserialize(&input, false) {
         Ok(expanded) => expanded.parse().unwrap(),
         Err(msg) => panic!(msg),
     }
@@ -63,6 +63,15 @@ pub fn derive_deserialize(input: TokenStream) -> TokenStream {
 pub fn derive_serialize_seed(input: TokenStream) -> TokenStream {
     let input = syn::parse_derive_input(&input.to_string()).unwrap();
     match ser::expand_derive_serialize(&input, true) {
+        Ok(expanded) => expanded.parse().unwrap(),
+        Err(msg) => panic!(msg),
+    }
+}
+
+#[proc_macro_derive(DeserializeSeed, attributes(serde))]
+pub fn derive_deserialize_seed(input: TokenStream) -> TokenStream {
+    let input = syn::parse_derive_input(&input.to_string()).unwrap();
+    match de::expand_derive_deserialize(&input, true) {
         Ok(expanded) => expanded.parse().unwrap(),
         Err(msg) => panic!(msg),
     }

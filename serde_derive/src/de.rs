@@ -16,7 +16,7 @@ use internals::{self, attr};
 
 use std::collections::BTreeSet;
 
-pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
+pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Result<Tokens, String> {
     let ctxt = internals::Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
     try!(ctxt.check());
@@ -38,13 +38,30 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
             }
         }
     } else {
-        quote! {
-            #[automatically_derived]
-            impl #de_impl_generics _serde::Deserialize<'de> for #ident #ty_generics #where_clause {
-                fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
-                    where __D: _serde::Deserializer<'de>
-                {
-                    #body
+        if seeded {
+            let seed_ty = cont.attrs.deserialize_seed()
+                .ok_or_else(|| "Need a deserialize_seed attribute")?;
+            quote! {
+                #[automatically_derived]
+                impl #de_impl_generics _serde::de::DeserializeSeed<'de> for #seed_ty #ty_generics #where_clause {
+                    type Value = #ident #ty_generics;
+
+                    fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+                        where __D: _serde::Deserializer<'de>
+                    {
+                        #body
+                    }
+                }
+            }
+        } else {
+            quote! {
+                #[automatically_derived]
+                impl #de_impl_generics _serde::Deserialize<'de> for #ident #ty_generics #where_clause {
+                    fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+                        where __D: _serde::Deserializer<'de>
+                    {
+                        #body
+                    }
                 }
             }
         }
@@ -419,14 +436,21 @@ fn deserialize_seq(
 }
 
 fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &Field) -> Tokens {
-    let value = match field.attrs.deserialize_with() {
-        None => {
+    let value = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
+        (None, None) => {
             let field_ty = &field.ty;
             quote! {
                 try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
             }
         }
-        Some(path) => {
+        (Some(path), _) => {
+            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
+            quote!({
+                #wrapper
+                try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
+            })
+        }
+        (_, Some(path)) => {
             let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
             quote!({
                 #wrapper
@@ -493,12 +517,25 @@ fn deserialize_struct(
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
+    let visitor_field;
+    let visitor_field_def;
+    if let Some(seed_ty) = cattrs.deserialize_seed() {
+        visitor_field = Some(quote! { seed: self, });
+        visitor_field_def = Some(quote! { seed: #seed_ty, });
+    } else {
+        visitor_field = None;
+        visitor_field_def = None;
+    }
+
     let visitor_expr = quote! {
         __Visitor {
+            #visitor_field
+
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
         }
     };
+
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
@@ -541,6 +578,8 @@ fn deserialize_struct(
         #field_visitor
 
         struct __Visitor #de_impl_generics #where_clause {
+            #visitor_field_def
+
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }
@@ -902,12 +941,19 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let (visitor_field, visitor_field_def) = cattrs.deserialize_seed()
+        .map(|ty| (Some(quote! { seed: self }), Some(quote! { seed: #ty, })))
+        .unwrap_or((None, None));
+
+
     quote_block! {
         #variant_visitor
 
         #variants_stmt
 
         struct __Seed #de_impl_generics #where_clause {
+            #visitor_field_def
+
             field: __Field,
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
@@ -1032,6 +1078,8 @@ fn deserialize_adjacently_tagged_enum(
         const FIELDS: &'static [&'static str] = &[#tag, #content];
         _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS,
             __Visitor {
+                #visitor_field
+
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
             })
@@ -1520,14 +1568,20 @@ fn deserialize_map(
         .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
 
-            let visit = match field.attrs.deserialize_with() {
-                None => {
+            let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
+                (None, None) => {
                     let field_ty = &field.ty;
                     quote! {
                         try!(_serde::de::MapAccess::next_value::<#field_ty>(&mut __map))
                     }
                 }
-                Some(path) => {
+                (Some(path), _) => {
+                    quote!({
+                        let __seed = #path(self.seed.clone());
+                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, __seed))
+                    })
+                }
+                (_, Some(path)) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_with(
                         params, field.ty, path);
                     quote!({
