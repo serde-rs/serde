@@ -26,7 +26,7 @@ impl SerializeSeed for Inner {
 }
 
 #[derive(SerializeSeed)]
-#[serde(seed = "Cell<i32>")]
+#[serde(serialize_seed = "Cell<i32>")]
 struct SeedStruct {
     #[serde(serialize_seed)]
     value: Inner,
@@ -131,7 +131,7 @@ use std::rc::Rc;
 use serde::Serializer;
 
 #[derive(Debug, SerializeSeed)]
-#[serde(seed = "RefCell<NodeToId>")]
+#[serde(serialize_seed = "RefCell<NodeToId>")]
 struct Node {
     data: char,
     #[serde(serialize_seed_with = "serialize_option_rc_seed")]
@@ -373,7 +373,7 @@ where
     S: Serializer,
 {
     #[derive(Debug, SerializeSeed)]
-    #[serde(seed = "RefCell<NodeToId>")]
+    #[serde(serialize_seed = "RefCell<NodeToId>")]
     #[serde(rename = "Node")]
     enum NodeVariant<'a> {
         Plain {

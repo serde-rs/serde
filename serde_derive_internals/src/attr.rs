@@ -113,7 +113,7 @@ pub struct Container {
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
     identifier: Identifier,
-    seed: Option<syn::Ty>,
+    serialize_seed: Option<syn::Ty>,
 }
 
 /// Styles of representing an enum.
@@ -183,7 +183,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut seed = Attr::none(cx, "seed");
+        let mut serialize_seed = Attr::none(cx, "serialize_seed");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -346,10 +346,10 @@ impl Container {
                         variant_identifier.set_true();
                     }
 
-                    // Parse `#[serde(seed = "...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "seed" => {
+                    // Parse `#[serde(serialize_seed = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_seed" => {
                         if let Ok(path) = parse_lit_into_ty(cx, name.as_ref(), lit) {
-                            seed.set(path);
+                            serialize_seed.set(path);
                         }
                     }
 
@@ -381,7 +381,7 @@ impl Container {
             into_type: into_type.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
-            seed: seed.get(),
+            serialize_seed: serialize_seed.get(),
         }
     }
 
@@ -429,8 +429,8 @@ impl Container {
         self.identifier
     }
 
-    pub fn seed(&self) -> Option<&syn::Ty> {
-        self.seed.as_ref()
+    pub fn serialize_seed(&self) -> Option<&syn::Ty> {
+        self.serialize_seed.as_ref()
     }
 }
 

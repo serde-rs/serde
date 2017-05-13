@@ -40,7 +40,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
         }
     } else {
         if seed {
-            let seed_ty = cont.attrs.seed().ok_or_else(|| "Need a seed attribute")?;
+            let seed_ty = cont.attrs.serialize_seed().ok_or_else(|| "Need a seed attribute")?;
 
             quote! {
                 #[automatically_derived]
@@ -258,7 +258,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         params,
         false,
         quote!(_serde::ser::SerializeStruct::serialize_field),
-        cattrs.seed(),
+        cattrs.serialize_seed(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -460,7 +460,7 @@ fn serialize_externally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
-                cattrs.seed(),
+                cattrs.serialize_seed(),
             )
         }
     }
@@ -515,7 +515,7 @@ fn serialize_internally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
-                cattrs.seed(),
+                cattrs.serialize_seed(),
             )
         }
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -564,7 +564,7 @@ fn serialize_adjacently_tagged_variant(
                     params,
                     &variant.fields,
                     &variant_name,
-                    cattrs.seed(),
+                    cattrs.serialize_seed(),
                 )
             }
         },
@@ -652,7 +652,7 @@ fn serialize_untagged_variant(
         Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.seed())
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.serialize_seed())
         }
     }
 }
