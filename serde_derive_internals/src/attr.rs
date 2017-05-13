@@ -113,6 +113,7 @@ pub struct Container {
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    deserialize_seed: Option<syn::Ty>,
     serialize_seed: Option<syn::Ty>,
 }
 
@@ -183,6 +184,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
+        let mut deserialize_seed = Attr::none(cx, "deserialize_seed");
         let mut serialize_seed = Attr::none(cx, "serialize_seed");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
@@ -346,13 +348,19 @@ impl Container {
                         variant_identifier.set_true();
                     }
 
+                    // Parse `#[serde(deserialize_seed = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_seed" => {
+                        if let Ok(path) = parse_lit_into_ty(cx, name.as_ref(), lit) {
+                            deserialize_seed.set(path);
+                        }
+                    }
+
                     // Parse `#[serde(serialize_seed = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "serialize_seed" => {
                         if let Ok(path) = parse_lit_into_ty(cx, name.as_ref(), lit) {
                             serialize_seed.set(path);
                         }
                     }
-
 
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
@@ -381,6 +389,7 @@ impl Container {
             into_type: into_type.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
+            deserialize_seed: deserialize_seed.get(),
             serialize_seed: serialize_seed.get(),
         }
     }
@@ -659,6 +668,8 @@ pub struct Field {
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::Path>,
+    deserialize_seed_with: Option<syn::Path>,
+    deserialize_seed: bool,
     serialize_seed_with: Option<syn::Path>,
     serialize_seed: bool,
 }
@@ -689,6 +700,8 @@ impl Field {
         let mut de_bound = Attr::none(cx, "bound");
         let mut borrowed_lifetimes = Attr::none(cx, "borrow");
         let mut getter = Attr::none(cx, "getter");
+        let mut deserialize_seed_with = Attr::none(cx, "deserialize_seed_with");
+        let mut deserialize_seed = BoolAttr::none(cx, "deserialize_seed");
         let mut serialize_seed_with = Attr::none(cx, "serialize_seed_with");
         let mut serialize_seed = BoolAttr::none(cx, "serialize_seed");
 
@@ -828,6 +841,18 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(deserialize_seed_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_seed_with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            deserialize_seed_with.set(path);
+                        }
+                    }
+
+                    // Parse `#[serde(deserialize_seed_)]`
+                    MetaItem(Word(ref name)) if name == "deserialize_seed" => {
+                        deserialize_seed.set_true();
+                    }
+
                     // Parse `#[serde(serialize_seed_with = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "serialize_seed_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
@@ -902,6 +927,8 @@ impl Field {
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
+            deserialize_seed_with: deserialize_seed_with.get(),
+            deserialize_seed: deserialize_seed.get(),
             serialize_seed_with: serialize_seed_with.get(),
             serialize_seed: serialize_seed.get(),
         }
@@ -958,6 +985,14 @@ impl Field {
 
     pub fn getter(&self) -> Option<&syn::Path> {
         self.getter.as_ref()
+    }
+
+    pub fn deserialize_seed(&self) -> bool {
+        self.deserialize_seed
+    }
+
+    pub fn deserialize_seed_with(&self) -> Option<&syn::Path> {
+        self.deserialize_seed_with.as_ref()
     }
 
     pub fn serialize_seed(&self) -> bool {
