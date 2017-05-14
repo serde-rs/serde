@@ -121,6 +121,42 @@ fn test_newtype_deserialize_seed() {
     assert_eq!(seed.0.get(), 1);
 }
 
+#[derive(Clone)]
+struct EnumSeed(Rc<Cell<i32>>);
+
+impl AsMut<Rc<Cell<i32>>> for EnumSeed {
+    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+        &mut self.0
+    }
+}
+
+#[derive(DeserializeSeed, Debug, PartialEq)]
+#[serde(deserialize_seed = "EnumSeed")]
+enum Enum {
+    Inner(
+        #[serde(deserialize_seed_with = "deserialize_inner")]
+        Inner
+    ),
+}
+
+#[test]
+fn test_enum_deserialize_seed() {
+    let value = Enum::Inner(Inner);
+    let seed = EnumSeed(Rc::new(Cell::new(0)));
+    assert_de_seed_tokens(
+        seed.clone(),
+        &value,
+        &[
+            Token::NewtypeVariant { name: "Enum", variant: "Inner" },
+
+            Token::UnitStruct { name: "Inner" },
+        ],
+    );
+
+    assert_eq!(seed.0.get(), 1);
+}
+
+
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "NodeSeed<Rc<Node>>")]
 struct Node {
