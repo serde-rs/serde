@@ -1082,7 +1082,7 @@ mod content {
                     }
                     (variant, Some(value))
                 }
-                Content::String(variant) => (Content::String(variant), None),
+                s @ Content::String(_) | s @ Content::Str(_) => (s, None),
                 other => {
                     return Err(de::Error::invalid_type(other.unexpected(), &"string or map"),);
                 }
@@ -1476,7 +1476,7 @@ mod content {
                     }
                     (variant, Some(value))
                 }
-                ref s @ Content::String(_) => (s, None),
+                ref s @ Content::String(_) | ref s @ Content::Str(_) => (s, None),
                 ref other => {
                     return Err(de::Error::invalid_type(other.unexpected(), &"string or map"),);
                 }
