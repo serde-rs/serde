@@ -130,6 +130,7 @@ mod impls;
 mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
+pub use self::impls::{OptionSeed, SeqSeed};
 
 ////////////////////////////////////////////////////////////////////////////////
 
