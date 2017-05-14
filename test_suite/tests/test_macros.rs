@@ -696,6 +696,35 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_struct_variant_containing_unit_variant() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    pub enum Level {
+        Info,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "action")]
+    pub enum Message {
+        Log { level: Level },
+    }
+
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Struct { name: "Message", len: 2 },
+
+            Token::Str("action"),
+            Token::Str("Log"),
+
+            Token::Str("level"),
+            Token::BorrowedStr("Info"),
+
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_internally_tagged_borrow() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
