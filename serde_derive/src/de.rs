@@ -753,7 +753,7 @@ fn deserialize_externally_tagged_enum(
                 _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
-            fn visit_enum<__A>(self, __data: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_enum<__A>(mut self, __data: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::EnumAccess<'de>
             {
                 #match_variant
@@ -1192,7 +1192,7 @@ fn deserialize_externally_tagged_variant(
             }
         }
         Style::Newtype => {
-            deserialize_externally_tagged_newtype_variant(variant_ident, params, &variant.fields[0])
+            deserialize_externally_tagged_newtype_variant(variant_ident, params, &variant.fields[0], cattrs)
         }
         Style::Tuple => {
             deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
@@ -1283,10 +1283,11 @@ fn deserialize_externally_tagged_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
+    cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
-    match field.attrs.deserialize_with() {
-        None => {
+    match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
+        (None, None) => {
             let field_ty = &field.ty;
             quote_expr! {
                 _serde::export::Result::map(
@@ -1294,7 +1295,20 @@ fn deserialize_externally_tagged_newtype_variant(
                     #this::#variant_ident)
             }
         }
-        Some(path) => {
+        (Some(path), _) => {
+            let (wrapper, wrapper_value) = wrap_deserialize_seed_with(
+                params,
+                cattrs.deserialize_seed().expect("deserialize_seed"),
+                field.ty,
+                path);
+            quote_block! {
+                #wrapper
+                _serde::export::Result::map(
+                    _serde::de::VariantAccess::newtype_variant_seed(__variant, #wrapper_value),
+                    #this::#variant_ident)
+            }
+        }
+        (_, Some(path)) => {
             let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
             quote_block! {
                 #wrapper
