@@ -703,6 +703,21 @@ where
     }
 }
 
+impl<'de, 'a, T> DeserializeSeed<'de> for &'a mut PhantomData<T>
+where
+    T: Deserialize<'de>,
+{
+    type Value = T;
+
+    #[inline]
+    fn deserialize<D>(self, deserializer: D) -> Result<T, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize(deserializer)
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A **data format** that can deserialize any data structure supported by
