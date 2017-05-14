@@ -382,12 +382,23 @@ fn deserialize_seq(
                     let #var = #default;
                 }
             } else {
-                let visit = match field.attrs.deserialize_with() {
-                    None => {
+                let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
+                    (None, None) => {
                         let field_ty = &field.ty;
                         quote!(try!(_serde::de::SeqAccess::next_element::<#field_ty>(&mut __seq)))
                     }
-                    Some(path) => {
+                    (Some(path), _) => {
+                        let (wrapper, seed) = wrap_deserialize_seed_with(
+                            params,
+                            cattrs.deserialize_seed().expect("deserialize_seed"),
+                            field.ty,
+                            path);
+                        quote!({
+                            #wrapper
+                            try!(_serde::de::SeqAccess::next_element_seed(&mut __seq, #seed))
+                        })
+                    }
+                    (_, Some(path)) => {
                         let (wrapper, wrapper_ty) = wrap_deserialize_with(
                             params, field.ty, path);
                         quote!({
@@ -520,7 +531,11 @@ fn deserialize_struct(
     let visitor_field;
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
-        visitor_field = Some(quote! { seed: self, });
+        visitor_field = Some(if variant_ident.is_some() {
+            quote! { seed: self.seed, }
+        } else {
+            quote! { seed: self, }
+        });
         visitor_field_def = Some(quote! { seed: #seed_ty, });
     } else {
         visitor_field = None;
@@ -566,7 +581,7 @@ fn deserialize_struct(
     } else {
         Some(quote! {
             #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(mut self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::SeqAccess<'de>
             {
                 #visit_seq
@@ -692,10 +707,22 @@ fn deserialize_externally_tagged_enum(
         }
     };
 
+    let visitor_field;
+    let visitor_field_def;
+    if let Some(seed_ty) = cattrs.deserialize_seed() {
+        visitor_field = Some(quote! { seed: self, });
+        visitor_field_def = Some(quote! { seed: #seed_ty, });
+    } else {
+        visitor_field = None;
+        visitor_field_def = None;
+    }
+
     quote_block! {
         #variant_visitor
 
         struct __Visitor #de_impl_generics #where_clause {
+            #visitor_field_def
+
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }
@@ -718,6 +745,8 @@ fn deserialize_externally_tagged_enum(
 
         _serde::Deserializer::deserialize_enum(__deserializer, #type_name, VARIANTS,
                                                __Visitor {
+                                                   #visitor_field
+
                                                    marker: _serde::export::PhantomData::<#this #ty_generics>,
                                                    lifetime: _serde::export::PhantomData,
                                                })
@@ -942,7 +971,7 @@ fn deserialize_adjacently_tagged_enum(
     };
 
     let (visitor_field, visitor_field_def) = cattrs.deserialize_seed()
-        .map(|ty| (Some(quote! { seed: self }), Some(quote! { seed: #ty, })))
+        .map(|ty| (Some(quote! { seed: self.seed }), Some(quote! { seed: #ty, })))
         .unwrap_or((None, None));
 
 
@@ -1810,16 +1839,16 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     }
 
     let name = field.attrs.name().deserialize_name();
-    match field.attrs.deserialize_with() {
-        None => {
-            quote_expr! {
-                try!(_serde::private::de::missing_field(#name))
-            }
+
+    let has_with_wrapper =
+        field.attrs.deserialize_with().is_some() || field.attrs.deserialize_seed_with().is_some();
+    if has_with_wrapper {
+        quote_expr! {
+            return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
         }
-        Some(_) => {
-            quote_expr! {
-                return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
-            }
+    } else {
+        quote_expr! {
+            try!(_serde::private::de::missing_field(#name))
         }
     }
 }
