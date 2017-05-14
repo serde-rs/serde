@@ -3,13 +3,12 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_test;
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use serde::de::{Deserialize, Deserializer, DeserializeSeed, EnumAccess, Error, MapAccess,
-                SeqAccess, VariantAccess, Visitor};
+use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error, Visitor};
 
 use serde_test::{Token, assert_de_seed_tokens};
 
@@ -84,276 +83,79 @@ fn test_deserialize_seed() {
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(DeserializeSeed, Debug, PartialEq)]
+#[serde(deserialize_seed = "NodeSeed<Rc<Node>>")]
 struct Node {
     data: char,
+    #[serde(deserialize_seed_with = "deserialize_option_node")]
     left: Option<Rc<Node>>,
+    #[serde(deserialize_seed_with = "deserialize_option_node")]
     right: Option<Rc<Node>>,
 }
+
+fn deserialize_option_node<'de, S, D>(
+    seed: &mut S,
+    deserializer: D,
+) -> Result<Option<Rc<Node>>, D::Error>
+where
+    S: AsMut<NodeMap>,
+    D: Deserializer<'de>,
+{
+    let variant = OptionSeed(VariantSeed { map: seed.as_mut().clone() })
+        .deserialize(deserializer)?;
+    match variant {
+        None => Ok(None),
+        Some(variant) => {
+            match variant {
+                Variant::Marked {
+                    id,
+                    data,
+                    left,
+                    right,
+                } => {
+                    let node = Rc::new(Node { data, left, right });
+                    seed.as_mut().borrow_mut().insert(id, node.clone());
+                    Ok(Some(node))
+                }
+                Variant::Plain { data, left, right } => Ok(Some(Rc::new(Node { data, left, right }),),),
+                Variant::Reference(id) => {
+                    match seed.as_mut().borrow_mut().get(&id) {
+                        Some(rc) => Ok(Some(rc.clone())),
+                        None => Err(Error::custom(format_args!("missing id {}", id))),
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 type Id = u32;
 type IdToShared<T> = HashMap<Id, T>;
 
 type IdToNode = IdToShared<Rc<Node>>;
 
-pub trait Shared: ::std::ops::Deref
-where
-    Self::Target: Sized,
-{
-    fn unique(&self) -> bool;
-}
-
-impl<T> Shared for Rc<T>
-where
-    T: Sized,
-{
-    fn unique(&self) -> bool {
-        Rc::strong_count(self) == 1
-    }
-}
+type NodeMap = Rc<RefCell<IdToShared<Rc<Node>>>>;
 
 impl<'de> Deserialize<'de> for Node {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let mut map = IdToNode::default();
-        deserializer.deserialize_struct("Node", FIELDS, PlainNodeVisitor { map: &mut map })
+        let map = NodeSeed { map: Rc::new(RefCell::new(IdToNode::default())) };
+        map.deserialize(deserializer)
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct NodeSeed<'a, T: 'a> {
-    map: &'a mut IdToShared<T>,
+struct NodeSeed<T> {
+    map: Rc<RefCell<IdToShared<T>>>,
 }
 
-pub trait DagVisitable<'de, 'a>: Shared + Sized
-where
-    <Self as std::ops::Deref>::Target: Sized,
-{
-    type PlainVisitor: Visitor<'de, Value = Self::Target> + 'a;
-    type MarkedVisitor: Visitor<'de, Value = Self> + 'a;
-    fn plain(map: &'a mut IdToShared<Self>) -> Self::PlainVisitor;
-    fn marked(map: &'a mut IdToShared<Self>) -> Self::MarkedVisitor;
-}
-
-impl<'de, 'a> DagVisitable<'de, 'a> for Rc<Node> {
-    type PlainVisitor = PlainNodeVisitor<'a>;
-    type MarkedVisitor = MarkedNodeVisitor<'a>;
-    fn plain(map: &'a mut IdToShared<Self>) -> Self::PlainVisitor {
-        PlainNodeVisitor { map: map }
-    }
-    fn marked(map: &'a mut IdToShared<Self>) -> Self::MarkedVisitor {
-        MarkedNodeVisitor { map: map }
-    }
-}
-
-impl<'de, 'a, T> Visitor<'de> for NodeSeed<'a, Rc<T>>
-    where Rc<T>: DagVisitable<'de, 'a> + std::ops::Deref<Target = T>
-{
-    type Value = Rc<T>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("struct Node")
-    }
-
-    fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
-        where V: EnumAccess<'de>
-    {
-        match visitor.variant()? {
-            (Variant::Plain, variant) => {
-                variant
-                    .struct_variant(FIELDS, <Rc<T>>::plain(self.map))
-                    .map(Rc::new)
-            }
-            (Variant::Marked, variant) => {
-                variant.struct_variant(MARKED_FIELDS, <Rc<T>>::marked(self.map))
-            }
-            (Variant::Reference, variant) => {
-                let id = variant.newtype_variant()?;
-                match self.map.get(&id) {
-                    Some(rc) => Ok(rc.clone()),
-                    None => Err(Error::custom(format_args!("missing id {}", id))),
-                }
-            }
-        }
-    }
-}
-
-impl<'de, 'a> DeserializeSeed<'de> for NodeSeed<'a, Rc<Node>> {
-    type Value = Rc<Node>;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_enum("Node", VARIANTS, self)
-    }
-}
-
-struct PlainNodeVisitor<'a> {
-    map: &'a mut IdToNode,
-}
-
-impl<'de, 'a> Visitor<'de> for PlainNodeVisitor<'a> {
-    type Value = Node;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("struct Node")
-    }
-
-    fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-    where
-        V: SeqAccess<'de>,
-    {
-        let data = visitor
-            .next_element()?
-            .ok_or_else(|| Error::invalid_length(0, &self))?;
-        let left = visitor
-            .next_element_seed(OptionSeed(NodeSeed { map: self.map }))?
-            .ok_or_else(|| Error::invalid_length(1, &self))?;
-        let right = visitor
-            .next_element_seed(OptionSeed(NodeSeed { map: self.map }))?
-            .ok_or_else(|| Error::invalid_length(2, &self))?;
-        Ok(
-            Node {
-                data: data,
-                left: left,
-                right: right,
-            },
-        )
-    }
-
-    fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-    where
-        V: MapAccess<'de>,
-    {
-        let mut data = None;
-        let mut left = None;
-        let mut right = None;
-        while let Some(key) = visitor.next_key()? {
-            match key {
-                Field::Data => {
-                    if data.is_some() {
-                        return Err(Error::duplicate_field("data"));
-                    }
-                    data = Some(visitor.next_value()?);
-                }
-                Field::Left => {
-                    if left.is_some() {
-                        return Err(Error::duplicate_field("left"));
-                    }
-                    left = visitor
-                        .next_value_seed(OptionSeed(NodeSeed { map: self.map }))?;
-                }
-                Field::Right => {
-                    if right.is_some() {
-                        return Err(Error::duplicate_field("right"));
-                    }
-                    right = visitor
-                        .next_value_seed(OptionSeed(NodeSeed { map: self.map }))?;
-                }
-            }
-        }
-        let data = data.ok_or_else(|| Error::missing_field("data"))?;
-        Ok(
-            Node {
-                data: data,
-                left: left,
-                right: right,
-            },
-        )
-    }
-}
-
-struct MarkedNodeVisitor<'a> {
-    map: &'a mut IdToNode,
-}
-
-impl<'de, 'a> Visitor<'de> for MarkedNodeVisitor<'a> {
-    type Value = Rc<Node>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("struct Node")
-    }
-
-    fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-    where
-        V: SeqAccess<'de>,
-    {
-        let id = visitor
-            .next_element()?
-            .ok_or_else(|| Error::invalid_length(0, &self))?;
-        let data = visitor
-            .next_element()?
-            .ok_or_else(|| Error::invalid_length(1, &self))?;
-        let left = visitor
-            .next_element_seed(OptionSeed(NodeSeed { map: self.map }))?
-            .ok_or_else(|| Error::invalid_length(2, &self))?;
-        let right = visitor
-            .next_element_seed(OptionSeed(NodeSeed { map: self.map }))?
-            .ok_or_else(|| Error::invalid_length(3, &self))?;
-        let node = Rc::new(
-            Node {
-                data: data,
-                left: left,
-                right: right,
-            },
-        );
-        self.map.insert(id, node.clone());
-        Ok(node)
-    }
-
-    fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
-    where
-        V: MapAccess<'de>,
-    {
-        let mut id = None;
-        let mut data = None;
-        let mut left = None;
-        let mut right = None;
-        while let Some(key) = visitor.next_key()? {
-            match key {
-                MarkedField::Id => {
-                    if id.is_some() {
-                        return Err(Error::duplicate_field("id"));
-                    }
-                    id = Some(visitor.next_value()?);
-                }
-                MarkedField::Data => {
-                    if data.is_some() {
-                        return Err(Error::duplicate_field("data"));
-                    }
-                    data = Some(visitor.next_value()?);
-                }
-                MarkedField::Left => {
-                    if left.is_some() {
-                        return Err(Error::duplicate_field("left"));
-                    }
-                    left = visitor
-                        .next_value_seed(OptionSeed(NodeSeed { map: self.map }))?;
-                }
-                MarkedField::Right => {
-                    if right.is_some() {
-                        return Err(Error::duplicate_field("right"));
-                    }
-                    right = visitor
-                        .next_value_seed(OptionSeed(NodeSeed { map: self.map }))?;
-                }
-            }
-        }
-        let id = id.ok_or_else(|| Error::missing_field("id"))?;
-        let data = data.ok_or_else(|| Error::missing_field("data"))?;
-        let node = Rc::new(
-            Node {
-                data: data,
-                left: left,
-                right: right,
-            },
-        );
-        self.map.insert(id, node.clone());
-        Ok(node)
+impl AsMut<NodeMap> for NodeSeed<Rc<Node>> {
+    fn as_mut(&mut self) -> &mut NodeMap {
+        &mut self.map
     }
 }
 
@@ -403,35 +205,36 @@ where
 }
 
 //////////////////////////////////////////////////////////////////////////////
+struct VariantSeed {
+    map: NodeMap,
+}
 
-#[derive(Deserialize)]
-#[serde(variant_identifier)]
+impl AsMut<NodeMap> for VariantSeed {
+    fn as_mut(&mut self) -> &mut NodeMap {
+        &mut self.map
+    }
+}
+
+#[derive(DeserializeSeed)]
+#[serde(deserialize_seed = "VariantSeed", rename = "Node")]
 enum Variant {
-    Plain,
-    Marked,
-    Reference,
+    Plain {
+        data: char,
+        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        left: Option<Rc<Node>>,
+        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        right: Option<Rc<Node>>,
+    },
+    Marked {
+        id: u32,
+        data: char,
+        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        left: Option<Rc<Node>>,
+        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        right: Option<Rc<Node>>,
+    },
+    Reference(u32),
 }
-
-#[derive(Deserialize)]
-#[serde(field_identifier, rename_all = "lowercase")]
-enum Field {
-    Data,
-    Left,
-    Right,
-}
-
-#[derive(Deserialize)]
-#[serde(field_identifier, rename_all = "lowercase")]
-enum MarkedField {
-    Id,
-    Data,
-    Left,
-    Right,
-}
-
-const VARIANTS: &'static [&'static str] = &["Plain", "Marked", "Reference"];
-const FIELDS: &'static [&'static str] = &["data", "left", "right"];
-const MARKED_FIELDS: &'static [&'static str] = &["id", "data", "left", "right"];
 
 #[test]
 fn test_node_deserialize() {
@@ -449,15 +252,14 @@ fn test_node_deserialize() {
             right: Some(b.clone()),
         },
     );
-    let mut map = HashMap::new();
-    let seed = NodeSeed { map: &mut map };
+    let map = Rc::new(RefCell::new(HashMap::new()));
+    let seed = NodeSeed { map: map };
     assert_de_seed_tokens(
         seed,
         &a,
         &[
-            Token::StructVariant {
+            Token::Struct {
                 name: "Node",
-                variant: "Plain",
                 len: 3,
             },
 
@@ -496,7 +298,7 @@ fn test_node_deserialize() {
             },
             Token::U32(0),
 
-            Token::StructVariantEnd,
+            Token::StructEnd,
         ],
     );
 }
