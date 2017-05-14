@@ -297,19 +297,32 @@ fn deserialize_tuple(
     let nfields = fields.len();
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_newtype_struct(&type_path, params, &fields[0]))
+        Some(deserialize_newtype_struct(&type_path, params, &fields[0], cattrs))
     } else {
         None
     };
 
     let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, false, cattrs));
 
+    let visitor_field;
+    let visitor_field_def;
+    if let Some(seed_ty) = cattrs.deserialize_seed() {
+        visitor_field = Some(quote! { seed: self, });
+        visitor_field_def = Some(quote! { seed: #seed_ty, });
+    } else {
+        visitor_field = None;
+        visitor_field_def = None;
+    }
+
     let visitor_expr = quote! {
         __Visitor {
+            #visitor_field
+
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
         }
     };
+
     let dispatch = if let Some(deserializer) = deserializer {
         quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
@@ -333,6 +346,8 @@ fn deserialize_tuple(
 
     quote_block! {
         struct __Visitor #de_impl_generics #where_clause {
+            #visitor_field_def
+
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }
@@ -347,7 +362,7 @@ fn deserialize_tuple(
             #visit_newtype_struct
 
             #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(mut self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::SeqAccess<'de>
             {
                 #visit_seq
@@ -446,7 +461,7 @@ fn deserialize_seq(
     }
 }
 
-fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &Field) -> Tokens {
+fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &Field, cattrs: &attr::Container) -> Tokens {
     let value = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
         (None, None) => {
             let field_ty = &field.ty;
@@ -455,10 +470,14 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
             }
         }
         (Some(path), _) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
+            let (wrapper, wrapper_value) = wrap_deserialize_seed_with(
+                params,
+                cattrs.deserialize_seed().expect("deserialize_seed"),
+                field.ty,
+                path);
             quote!({
                 #wrapper
-                try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
+                try!(_serde::de::DeserializeSeed::deserialize(#wrapper_value, __e))
             })
         }
         (_, Some(path)) => {
@@ -480,7 +499,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
 
     quote! {
         #[inline]
-        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
+        fn visit_newtype_struct<__E>(mut self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer<'de>
         {
             _serde::export::Ok(#result)
@@ -974,7 +993,6 @@ fn deserialize_adjacently_tagged_enum(
         .map(|ty| (Some(quote! { seed: self.seed }), Some(quote! { seed: #ty, })))
         .unwrap_or((None, None));
 
-
     quote_block! {
         #variant_visitor
 
@@ -1001,6 +1019,8 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         struct __Visitor #de_impl_generics #where_clause {
+            #visitor_field_def
+
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }

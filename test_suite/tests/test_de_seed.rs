@@ -14,16 +14,23 @@ use serde_test::{Token, assert_de_seed_tokens};
 #[derive(Clone)]
 struct Seed(Rc<Cell<i32>>);
 
+impl AsMut<Rc<Cell<i32>>> for Seed {
+    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+        &mut self.0
+    }
+}
+
 #[derive(Deserialize, Debug, PartialEq)]
 struct Inner;
 
 struct InnerSeed(Rc<Cell<i32>>);
 
-fn deserialize_inner<'de, D>(seed: &mut Seed, deserializer: D) -> Result<Inner, D::Error>
+fn deserialize_inner<'de, S, D>(seed: &mut S, deserializer: D) -> Result<Inner, D::Error>
 where
+    S: AsMut<Rc<Cell<i32>>>,
     D: Deserializer<'de>,
 {
-    InnerSeed(seed.0.clone()).deserialize(deserializer)
+    InnerSeed(seed.as_mut().clone()).deserialize(deserializer)
 }
 
 impl<'de> DeserializeSeed<'de> for InnerSeed {
@@ -81,6 +88,38 @@ fn test_deserialize_seed() {
     assert_eq!(seed.0.get(), 2);
 }
 
+#[derive(Clone)]
+struct NewtypeSeed(Rc<Cell<i32>>);
+
+impl AsMut<Rc<Cell<i32>>> for NewtypeSeed {
+    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+        &mut self.0
+    }
+}
+
+#[derive(DeserializeSeed, Debug, PartialEq)]
+#[serde(deserialize_seed = "NewtypeSeed")]
+struct Newtype(
+    #[serde(deserialize_seed_with = "deserialize_inner")]
+    Inner
+);
+
+#[test]
+fn test_newtype_deserialize_seed() {
+    let value = Newtype(Inner);
+    let seed = NewtypeSeed(Rc::new(Cell::new(0)));
+    assert_de_seed_tokens(
+        seed.clone(),
+        &value,
+        &[
+            Token::NewtypeStruct { name: "Newtype" },
+
+            Token::UnitStruct { name: "Inner" },
+        ],
+    );
+
+    assert_eq!(seed.0.get(), 1);
+}
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "NodeSeed<Rc<Node>>")]
