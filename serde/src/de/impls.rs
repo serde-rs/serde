@@ -418,45 +418,6 @@ forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct OptionVisitor<T> {
-    marker: PhantomData<T>,
-}
-
-impl<'de, T> Visitor<'de> for OptionVisitor<T>
-where
-    T: Deserialize<'de>,
-{
-    type Value = Option<T>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("option")
-    }
-
-    #[inline]
-    fn visit_unit<E>(self) -> Result<Option<T>, E>
-    where
-        E: Error,
-    {
-        Ok(None)
-    }
-
-    #[inline]
-    fn visit_none<E>(self) -> Result<Option<T>, E>
-    where
-        E: Error,
-    {
-        Ok(None)
-    }
-
-    #[inline]
-    fn visit_some<D>(self, deserializer: D) -> Result<Option<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(Some)
-    }
-}
-
 impl<'de, T> Deserialize<'de> for Option<T>
 where
     T: Deserialize<'de>,
@@ -465,7 +426,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_option(OptionVisitor { marker: PhantomData })
+        OptionSeed(PhantomData).deserialize(deserializer)
     }
 }
 
@@ -503,6 +464,7 @@ impl<'de, T> Deserialize<'de> for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// TODO
 pub struct SeqSeed<S, F, T> {
     seed: T,
     with_capacity: F,
@@ -511,6 +473,7 @@ pub struct SeqSeed<S, F, T> {
 
 impl<S, F, T> SeqSeed<S, F, T>
 {
+    /// TODO
     pub fn new(seed: T, with_capacity: F) -> SeqSeed<S, F, T> {
         SeqSeed {
             seed: seed,
@@ -560,6 +523,60 @@ where
         }
 
         deserializer.deserialize_seq(self)
+    }
+}
+
+/// TODO
+pub struct OptionSeed<S>(pub S);
+
+impl<'de, S> DeserializeSeed<'de> for OptionSeed<S>
+where
+    S: DeserializeSeed<'de>,
+{
+    type Value = Option<S::Value>;
+
+    #[inline]
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        impl<'de, S> Visitor<'de> for OptionSeed<S>
+        where
+            S: DeserializeSeed<'de>,
+        {
+            type Value = Option<S::Value>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("option")
+            }
+
+            #[inline]
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(None)
+            }
+
+
+            #[inline]
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(None)
+            }
+
+            #[inline]
+            fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                self.0.deserialize(deserializer).map(Some)
+            }
+        }
+
+        deserializer.deserialize_option(self)
     }
 }
 

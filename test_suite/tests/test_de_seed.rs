@@ -5,10 +5,9 @@ extern crate serde_test;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::fmt;
 use std::rc::Rc;
 
-use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error, Visitor};
+use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error, OptionSeed};
 
 use serde_test::{Token, assert_de_seed_tokens};
 
@@ -156,51 +155,6 @@ struct NodeSeed<T> {
 impl AsMut<NodeMap> for NodeSeed<Rc<Node>> {
     fn as_mut(&mut self) -> &mut NodeMap {
         &mut self.map
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-/// Maybe this should be provided by Serde. Just turns any seed into an
-/// optional one.
-struct OptionSeed<S>(S);
-
-impl<'de, S> Visitor<'de> for OptionSeed<S>
-where
-    S: DeserializeSeed<'de>,
-{
-    type Value = Option<S::Value>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("option")
-    }
-
-    fn visit_none<E>(self) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Ok(None)
-    }
-
-    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        self.0.deserialize(deserializer).map(Some)
-    }
-}
-
-impl<'de, S> DeserializeSeed<'de> for OptionSeed<S>
-where
-    S: DeserializeSeed<'de>,
-{
-    type Value = Option<S::Value>;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_option(self)
     }
 }
 
