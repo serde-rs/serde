@@ -719,6 +719,12 @@ impl Field {
                         skip_deserializing.set_true();
                     }
 
+                    // Parse `#[serde(skip)]`
+                    MetaItem(Word(ref name)) if name == "skip" => {
+                        skip_serializing.set_true();
+                        skip_deserializing.set_true();
+                    },
+
                     // Parse `#[serde(skip_serializing_if = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "skip_serializing_if" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {

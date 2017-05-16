@@ -580,6 +580,41 @@ fn test_skip_serializing_struct() {
     );
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct SkipStruct<B>
+{
+    a: i8,
+    #[serde(skip)]
+    b: B,
+}
+
+#[test]
+fn test_skip_struct() {
+    assert_ser_tokens(
+        &SkipStruct { a: 1, b: 2 },
+        &[
+            Token::Struct { name: "SkipStruct", len: 1 },
+
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &SkipStruct { a: 1, b: 0 },
+        &[
+            Token::Struct { name: "SkipStruct", len: 1 },
+
+            Token::Str("a"),
+            Token::I8(1),
+
+            Token::StructEnd,
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Serialize)]
 enum SkipSerializingEnum<'a, B, C>
 where
