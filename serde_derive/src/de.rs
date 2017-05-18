@@ -307,7 +307,11 @@ fn deserialize_tuple(
     let visitor_field;
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
-        visitor_field = Some(quote! { seed: self, });
+        visitor_field = Some(if variant_ident.is_some() {
+            quote! { seed: self.seed, }
+        } else {
+            quote! { seed: self, }
+        });
         visitor_field_def = Some(quote! { seed: #seed_ty, });
     } else {
         visitor_field = None;
