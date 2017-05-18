@@ -137,6 +137,11 @@ enum Enum {
         #[serde(deserialize_seed_with = "deserialize_inner")]
         Inner
     ),
+    Inner2(
+        u32,
+        #[serde(deserialize_seed_with = "deserialize_inner")]
+        Inner
+    )
 }
 
 #[test]
@@ -156,6 +161,27 @@ fn test_enum_deserialize_seed() {
     assert_eq!(seed.0.get(), 1);
 }
 
+
+#[test]
+fn test_enum_deserialize_seed_2() {
+    let value = Enum::Inner2(3, Inner);
+    let seed = EnumSeed(Rc::new(Cell::new(0)));
+    assert_de_seed_tokens(
+        seed.clone(),
+        &value,
+        &[
+            Token::TupleVariant { name: "Enum", variant: "Inner2", len: 2 },
+
+            Token::U32(3),
+
+            Token::UnitStruct { name: "Inner" },
+
+            Token::TupleVariantEnd
+        ],
+    );
+
+    assert_eq!(seed.0.get(), 1);
+}
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "NodeSeed<Rc<Node>>")]
