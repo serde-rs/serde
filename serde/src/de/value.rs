@@ -355,6 +355,75 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// A deserializer holding a `&str` with a lifetime tied to another
+/// deserializer.
+#[derive(Clone, Debug)]
+pub struct BorrowedStrDeserializer<'de, E> {
+    value: &'de str,
+    marker: PhantomData<E>,
+}
+
+impl<'de, E> BorrowedStrDeserializer<'de, E> {
+    /// Create a new borrowed deserializer from the given string.
+    pub fn new(value: &'de str) -> BorrowedStrDeserializer<'de, E> {
+        BorrowedStrDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, E> de::Deserializer<'de> for BorrowedStrDeserializer<'de, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_borrowed_str(self.value)
+    }
+
+    fn deserialize_enum<V>(
+        self,
+        name: &str,
+        variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        let _ = name;
+        let _ = variants;
+        visitor.visit_enum(self)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
+        map struct identifier ignored_any
+    }
+}
+
+impl<'de, E> de::EnumAccess<'de> for BorrowedStrDeserializer<'de, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+    type Variant = private::UnitOnly<E>;
+
+    fn variant_seed<T>(self, seed: T) -> Result<(T::Value, Self::Variant), Self::Error>
+    where
+        T: de::DeserializeSeed<'de>,
+    {
+        seed.deserialize(self).map(private::unit_only)
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// A deserializer holding a `String`.
 #[cfg(any(feature = "std", feature = "collections"))]
 #[derive(Clone, Debug)]
@@ -505,6 +574,46 @@ where
         T: de::DeserializeSeed<'de>,
     {
         seed.deserialize(self).map(private::unit_only)
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// A deserializer holding a `&[u8]` with a lifetime tied to another
+/// deserializer.
+#[derive(Clone, Debug)]
+pub struct BorrowedBytesDeserializer<'de, E> {
+    value: &'de [u8],
+    marker: PhantomData<E>,
+}
+
+impl<'de, E> BorrowedBytesDeserializer<'de, E> {
+    /// Create a new borrowed deserializer from the given byte slice.
+    pub fn new(value: &'de [u8]) -> BorrowedBytesDeserializer<'de, E> {
+        BorrowedBytesDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, E> de::Deserializer<'de> for BorrowedBytesDeserializer<'de, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_borrowed_bytes(self.value)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
+        map struct identifier ignored_any enum
     }
 }
 
