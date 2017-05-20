@@ -2001,7 +2001,9 @@ impl<'a> ToTokens for DeSeedImplGenerics<'a> {
                 .bounds
                 .push(syn::TyParamBound::Region(syn::Lifetime::new("'seed")));
         }
-        generics.lifetimes.insert(0, self.0.de_lifetime_def());
+        let mut de = self.0.de_lifetime_def();
+        de.bounds.push(syn::Lifetime::new("'seed"));
+        generics.lifetimes.insert(0, de);
         generics
             .lifetimes
             .insert(0, syn::LifetimeDef::new("'seed"));
