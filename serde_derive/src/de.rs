@@ -14,6 +14,7 @@ use fragment::{Fragment, Expr, Stmts, Match};
 use internals::ast::{Body, Container, Field, Style, Variant};
 use internals::{self, attr};
 
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Result<Tokens, String> {
@@ -38,13 +39,15 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
             }
         }
     } else {
-        let (de_impl_generics, _, ty_value_generics, ty_generics, where_clause) = split_with_de_lifetime(&params);
+        let (de_impl_generics, _, ty_value_generics, ty_generics, where_clause) =
+            split_with_de_lifetime(&params);
         if seeded {
-            let seed_ty = cont.attrs.deserialize_seed()
+            let seed_ty = cont.attrs
+                .deserialize_seed()
                 .ok_or_else(|| "Need a deserialize_seed attribute")?;
             quote! {
                 #[automatically_derived]
-                impl #de_impl_generics _serde::de::DeserializeSeed<'de> for #seed_ty #ty_generics #where_clause {
+                impl #de_impl_generics _serde::de::DeserializeSeed<'de> for #seed_ty #where_clause {
                     type Value = #ident #ty_value_generics;
 
                     fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
@@ -158,10 +161,10 @@ fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
                 &generics,
                 needs_deserialize_bound,
                 &if seeded {
-                    path!(_serde::de::DeserializeSeed<'de>)
-                } else {
-                    path!(_serde::Deserialize<'de>)
-                },
+                     path!(_serde::de::DeserializeSeed<'de>)
+                 } else {
+                     path!(_serde::Deserialize<'de>)
+                 },
             );
 
             bound::with_bound(
@@ -277,7 +280,8 @@ fn deserialize_tuple(
     deserializer: Option<Tokens>,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -302,7 +306,7 @@ fn deserialize_tuple(
     let nfields = fields.len();
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_newtype_struct(&type_path, params, &fields[0], cattrs))
+        Some(deserialize_newtype_struct(&type_path, params, &fields[0], cattrs),)
     } else {
         None
     };
@@ -312,12 +316,14 @@ fn deserialize_tuple(
     let visitor_field;
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
-        visitor_field = Some(if variant_ident.is_some() {
-            quote! { seed: self.seed, }
-        } else {
-            quote! { seed: self, }
-        });
-        visitor_field_def = Some(quote! { seed: #seed_ty #ty_generics, });
+        visitor_field = Some(
+            if variant_ident.is_some() {
+                quote! { seed: self.seed, }
+            } else {
+                quote! { seed: self, }
+            },
+        );
+        visitor_field_def = Some(quote! { seed: #seed_ty, });
     } else {
         visitor_field = None;
         visitor_field_def = None;
@@ -408,7 +414,7 @@ fn deserialize_seq(
             } else {
                 let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
                     (None, None) => {
-                        let field_ty = SeedValue(&field.ty);
+                        let field_ty = rename_type(&field.ty, params);
                         quote!(try!(_serde::de::SeqAccess::next_element::<#field_ty>(&mut __seq)))
                     }
                     (Some(path), _) => {
@@ -470,7 +476,12 @@ fn deserialize_seq(
     }
 }
 
-fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &Field, cattrs: &attr::Container) -> Tokens {
+fn deserialize_newtype_struct(
+    type_path: &Tokens,
+    params: &Parameters,
+    field: &Field,
+    cattrs: &attr::Container,
+) -> Tokens {
     let value = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
         (None, None) => {
             let field_ty = &field.ty;
@@ -483,7 +494,8 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
                 params,
                 cattrs.deserialize_seed().expect("deserialize_seed"),
                 field.ty,
-                path);
+                path,
+            );
             quote!({
                 #wrapper
                 try!(_serde::de::DeserializeSeed::deserialize(#wrapper_value, __e))
@@ -527,7 +539,8 @@ fn deserialize_struct(
     let is_untagged = deserializer.is_some();
 
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -559,12 +572,14 @@ fn deserialize_struct(
     let visitor_field;
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
-        visitor_field = Some(if variant_ident.is_some() {
-            quote! { seed: self.seed, }
-        } else {
-            quote! { seed: self, }
-        });
-        visitor_field_def = Some(quote! { seed: #seed_ty #ty_generics, });
+        visitor_field = Some(
+            if variant_ident.is_some() {
+                quote! { seed: self.seed, }
+            } else {
+                quote! { seed: self, }
+            },
+        );
+        visitor_field_def = Some(quote! { seed: #seed_ty, });
     } else {
         visitor_field = None;
         visitor_field_def = None;
@@ -674,7 +689,8 @@ fn deserialize_externally_tagged_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
 
     let type_name = cattrs.name().deserialize_name();
 
@@ -739,7 +755,7 @@ fn deserialize_externally_tagged_enum(
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
         visitor_field = Some(quote! { seed: self, });
-        visitor_field_def = Some(quote! { seed: #seed_ty #ty_generics, });
+        visitor_field_def = Some(quote! { seed: #seed_ty, });
     } else {
         visitor_field = None;
         visitor_field_def = None;
@@ -845,7 +861,8 @@ fn deserialize_adjacently_tagged_enum(
     content: &str,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_value_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
 
     let variant_names_idents: Vec<_> = variants
         .iter()
@@ -998,8 +1015,9 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    let (visitor_field, visitor_field_def) = cattrs.deserialize_seed()
-        .map(|ty| (Some(quote! { seed: self.seed }), Some(quote! { seed: #ty, })))
+    let (visitor_field, visitor_field_def) = cattrs
+        .deserialize_seed()
+        .map(|ty| (Some(quote! { seed: self.seed }), Some(quote! { seed: #ty, })),)
         .unwrap_or((None, None));
 
     quote_block! {
@@ -1201,7 +1219,12 @@ fn deserialize_externally_tagged_variant(
             }
         }
         Style::Newtype => {
-            deserialize_externally_tagged_newtype_variant(variant_ident, params, &variant.fields[0], cattrs)
+            deserialize_externally_tagged_newtype_variant(
+                variant_ident,
+                params,
+                &variant.fields[0],
+                cattrs,
+            )
         }
         Style::Tuple => {
             deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
@@ -1309,7 +1332,8 @@ fn deserialize_externally_tagged_newtype_variant(
                 params,
                 cattrs.deserialize_seed().expect("deserialize_seed"),
                 field.ty,
-                path);
+                path,
+            );
             quote_block! {
                 #wrapper
                 _serde::export::Result::map(
@@ -1627,7 +1651,7 @@ fn deserialize_map(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(
             |&(field, ref name)| {
-                let field_ty = SeedValue(&field.ty);
+                let field_ty = &field.ty;
                 quote! {
                     let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
                 }
@@ -1642,7 +1666,7 @@ fn deserialize_map(
 
             let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
                 (None, None) => {
-                    let field_ty = SeedValue(&field.ty);
+                    let field_ty = &field.ty;
                     quote! {
                         try!(_serde::de::MapAccess::next_value::<#field_ty>(&mut __map))
                     }
@@ -1830,11 +1854,14 @@ fn wrap_deserialize_seed_with(
     deserialize_with: &syn::Path,
 ) -> (Tokens, Tokens) {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_and_seed_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_and_seed_lifetime(params);
+
+    let field_ty = rename_type(field_ty, params);
 
     let wrapper = quote! {
         struct __DeserializeWith #de_impl_generics #where_clause {
-            seed: &'seed mut #seed_ty #ty_generics,
+            seed: &'seed mut #seed_ty,
             phantom: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }
@@ -1883,8 +1910,8 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
 
     let name = field.attrs.name().deserialize_name();
 
-    let has_with_wrapper =
-        field.attrs.deserialize_with().is_some() || field.attrs.deserialize_seed_with().is_some();
+    let has_with_wrapper = field.attrs.deserialize_with().is_some() ||
+                           field.attrs.deserialize_seed_with().is_some();
     if has_with_wrapper {
         quote_expr! {
             return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
@@ -1924,7 +1951,8 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
 struct SeedValue<'a, T: 'a>(&'a T);
 
 impl<'a, T> ToTokens for SeedValue<'a, T>
-    where T: ToTokens
+where
+    T: ToTokens,
 {
     fn to_tokens(&self, tokens: &mut Tokens) {
         self.0.to_tokens(tokens);
@@ -1941,27 +1969,22 @@ impl<'a> ToTokens for TyValueGenerics<'a> {
         if has_lifetimes || has_ty_params {
             tokens.append("<");
             // Leave off the lifetime bounds and attributes
-            let lifetimes = self.0
-                .lifetimes
-                .iter()
-                .map(|ld| &ld.lifetime);
+            let lifetimes = self.0.lifetimes.iter().map(|ld| &ld.lifetime);
             tokens.append_separated(lifetimes, ",");
             if has_lifetimes && has_ty_params {
                 tokens.append(",");
             }
             // Leave off the type parameter bounds, defaults, and attributes
-            let ty_params = self.0
-                .ty_params
-                .iter()
-                .map(|tp| SeedValue(&tp.ident));
+            let ty_params = self.0.ty_params.iter().map(|tp| SeedValue(&tp.ident));
             tokens.append_separated(ty_params, ",");
             tokens.append(">");
         }
     }
 }
 
-fn split_with_de_lifetime(params: &Parameters,)
-    -> (DeImplGenerics, DeTyGenerics, TyValueGenerics, syn::TyGenerics, &syn::WhereClause) {
+fn split_with_de_lifetime
+    (params: &Parameters,)
+     -> (DeImplGenerics, DeTyGenerics, TyValueGenerics, syn::TyGenerics, &syn::WhereClause) {
     let de_impl_generics = DeImplGenerics(&params);
     let de_ty_generics = DeTyGenerics(&params.generics);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
@@ -1974,7 +1997,9 @@ impl<'a> ToTokens for DeSeedImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         for param in &mut generics.ty_params {
-            param.bounds.push(syn::TyParamBound::Region(syn::Lifetime::new("'seed")));
+            param
+                .bounds
+                .push(syn::TyParamBound::Region(syn::Lifetime::new("'seed")));
         }
         generics.lifetimes.insert(0, self.0.de_lifetime_def());
         generics
@@ -2001,10 +2026,160 @@ impl<'a> ToTokens for DeSeedTyGenerics<'a> {
     }
 }
 
-fn split_with_de_and_seed_lifetime(params: &Parameters,)
-    -> (DeSeedImplGenerics, DeSeedTyGenerics, syn::TyGenerics, &syn::WhereClause) {
+fn split_with_de_and_seed_lifetime
+    (params: &Parameters,)
+     -> (DeSeedImplGenerics, DeSeedTyGenerics, syn::TyGenerics, &syn::WhereClause) {
     let de_impl_generics = DeSeedImplGenerics(&params);
     let de_ty_generics = DeSeedTyGenerics(&params.generics);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
+}
+
+fn rename_type<'t>(ty: &'t syn::Ty, params: &Parameters) -> Cow<'t, syn::Ty> {
+    let mut f = |ty: &syn::Ty| match *ty {
+        syn::Ty::Path(ref qself, ref path) => {
+            let rename = path.segments.len() == 1 &&
+                         params
+                             .generics
+                             .ty_params
+                             .iter()
+                             .any(|param| path.segments[0].ident == param.ident);
+            if rename {
+                Some(
+                    syn::Ty::Path(
+                        qself.clone(),
+                        syn::parse_path(&format!("{}::Value", path.segments[0].ident)).unwrap(),
+                    ),
+                )
+            } else {
+                None
+            }
+        }
+        _ => None,
+    };
+    rename_type_(ty, &mut f).map_or(Cow::Borrowed(ty), Cow::Owned)
+}
+
+fn rename_path<F>(path: &syn::Path, f: &mut F) -> Option<syn::Path>
+where
+    F: FnMut(&syn::Ty) -> Option<syn::Ty>,
+{
+    merge_iter(
+        &path.segments,
+        |segment| match segment.parameters {
+            syn::PathParameters::AngleBracketed(ref params) => {
+                merge_iter(&params.types, |ty| rename_type_(ty, f), syn::Ty::clone).map(
+                    |types| {
+                        syn::PathSegment {
+                            ident: segment.ident.clone(),
+                            parameters: syn::PathParameters::AngleBracketed(
+                                syn::AngleBracketedParameterData {
+                                    lifetimes: params.lifetimes.clone(),
+                                    types: types,
+                                    bindings: params.bindings.clone(),
+                                },
+                            ),
+                        }
+                    },
+                )
+            }
+            _ => unimplemented!(),
+        },
+        |segment| segment.clone(),
+    )
+            .map(
+                |segments| {
+                    syn::Path {
+                        global: path.global,
+                        segments: segments,
+                    }
+                },
+            )
+}
+fn rename_type_<F>(ty: &syn::Ty, f: &mut F) -> Option<syn::Ty>
+where
+    F: FnMut(&syn::Ty) -> Option<syn::Ty>,
+{
+    match f(ty) {
+        Some(ty) => return Some(ty),
+        None => (),
+    }
+    match *ty {
+        syn::Ty::Path(ref qself, ref path) => {
+            rename_path(path, f).map(|path| syn::Ty::Path(qself.clone(), path))
+        } 
+        _ => None,
+    }
+}
+
+/// Merges two values using `f` if either or both them is `Some(..)`.
+/// If both are `None`, `None` is returned.
+fn merge<F, A: ?Sized, B: ?Sized, R>(
+    a_original: &A,
+    a: Option<A::Owned>,
+    b_original: &B,
+    b: Option<B::Owned>,
+    f: F,
+) -> Option<R>
+where
+    A: ToOwned,
+    B: ToOwned,
+    F: FnOnce(A::Owned, B::Owned) -> R,
+{
+    match (a, b) {
+        (Some(a), Some(b)) => Some(f(a, b)),
+        (Some(a), None) => Some(f(a, b_original.to_owned())),
+        (None, Some(b)) => Some(f(a_original.to_owned(), b)),
+        (None, None) => None,
+    }
+}
+
+fn merge_iter<'a, I, F, G, U>(types: I, mut action: F, mut converter: G) -> Option<Vec<U>>
+where
+    I: IntoIterator,
+    F: FnMut(I::Item) -> Option<U>,
+    G: FnMut(I::Item) -> U,
+    I::Item: Copy,
+{
+    let mut out = Vec::new();
+    merge_iter_(
+        types.into_iter(),
+        false,
+        &mut out,
+        &mut action,
+        &mut converter,
+    );
+    if out[..].is_empty() {
+        None
+    } else {
+        out[..].reverse();
+        Some(out)
+    }
+}
+
+fn merge_iter_<'a, I, F, G, U>(
+    mut types: I,
+    replaced: bool,
+    output: &mut Vec<U>,
+    f: &mut F,
+    converter: &mut G,
+) where
+    I: Iterator,
+    F: FnMut(I::Item) -> Option<U>,
+    G: FnMut(I::Item) -> U,
+    I::Item: Copy,
+{
+    if let Some(l) = types.next() {
+        let new = f(l);
+        merge_iter_(types, replaced || new.is_some(), output, f, converter);
+        match new {
+            Some(typ) => {
+                output.push(typ);
+            }
+            None if replaced || !output[..].is_empty() => {
+                output.push(converter(l));
+            }
+            None => (),
+        }
+    }
 }
