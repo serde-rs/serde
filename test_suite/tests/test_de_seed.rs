@@ -5,6 +5,7 @@ extern crate serde_test;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error, OptionSeed};
@@ -120,6 +121,45 @@ fn test_newtype_deserialize_seed() {
 
     assert_eq!(seed.0.get(), 1);
 }
+
+#[derive(Clone)]
+struct GenericNewtypeSeed<T>(Rc<Cell<i32>>, PhantomData<T>);
+
+impl<T> AsMut<Rc<Cell<i32>>> for GenericNewtypeSeed<T> {
+    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+        &mut self.0
+    }
+}
+
+#[derive(DeserializeSeed, Debug, PartialEq)]
+#[serde(deserialize_seed = "GenericNewtypeSeed")]
+struct GenericNewtype<T>(
+    #[serde(deserialize_seed_with = "deserialize_inner")]
+    Inner,
+    T
+);
+
+#[test]
+fn test_generic_deserialize_seed() {
+    let value = GenericNewtype(Inner, 3);
+    let seed = GenericNewtypeSeed(Rc::new(Cell::new(0)), PhantomData);
+    assert_de_seed_tokens(
+        seed.clone(),
+        &value,
+        &[
+            Token::Struct { name: "Newtype", len: 2 },
+
+            Token::UnitStruct { name: "Inner" },
+
+            Token::I32(3),
+
+            Token::StructEnd
+        ],
+    );
+
+    assert_eq!(seed.0.get(), 1);
+}
+
 
 #[derive(Clone)]
 struct EnumSeed(Rc<Cell<i32>>);
