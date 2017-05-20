@@ -24,6 +24,7 @@ impl AsMut<Rc<Cell<i32>>> for Seed {
 #[derive(Deserialize, Debug, PartialEq)]
 struct Inner;
 
+#[derive(Clone)]
 struct InnerSeed(Rc<Cell<i32>>);
 
 fn deserialize_inner<'de, S, D>(seed: &mut S, deserializer: D) -> Result<Inner, D::Error>
@@ -123,37 +124,94 @@ fn test_newtype_deserialize_seed() {
 }
 
 #[derive(Clone)]
-struct GenericNewtypeSeed<T>(Rc<Cell<i32>>, PhantomData<T>);
+struct VecSeed<T>(T);
 
-impl<T> AsMut<Rc<Cell<i32>>> for GenericNewtypeSeed<T> {
+fn deserialize_vec<'de, T, D>(seed: &mut VecSeed<T>, deserializer: D) -> Result<Vec<T::Value>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeSeed<'de> + Clone,
+{
+    use serde::de::SeqSeed;
+    SeqSeed::new(seed.0.clone(), Vec::with_capacity).deserialize(deserializer)
+}
+
+#[derive(DeserializeSeed, Debug, PartialEq)]
+#[serde(deserialize_seed = "VecSeed<T>")]
+#[serde(bound = "T: DeserializeSeed<'de> + Clone")]
+struct VecNewtype<T>(
+    #[serde(deserialize_seed_with = "deserialize_vec")]
+    Vec<T>
+);
+
+#[test]
+fn test_vec_newtype_deserialize_seed() {
+    let value = VecNewtype(vec![Inner, Inner]);
+    let seed = VecSeed(InnerSeed(Rc::new(Cell::new(0))));
+    assert_de_seed_tokens(
+        seed.clone(),
+        &value,
+        &[
+            Token::NewtypeStruct { name: "VecNewtype" },
+
+            Token::Seq { len: Some(2) },
+            Token::UnitStruct { name: "Inner" },
+            Token::UnitStruct { name: "Inner" },
+            Token::SeqEnd,
+        ],
+    );
+
+    assert_eq!((seed.0).0.get(), 2);
+}
+
+#[derive(Clone)]
+struct GenericTypeSeed<T>(Rc<Cell<i32>>, T);
+
+impl<T> AsMut<Rc<Cell<i32>>> for GenericTypeSeed<T> {
     fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
         &mut self.0
     }
 }
 
+fn deserialize_nested_seed<'de, T, D>(
+    seed: &mut GenericTypeSeed<T>,
+    deserializer: D,
+) -> Result<T::Value, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeSeed<'de> + Clone,
+{
+    seed.1.clone().deserialize(deserializer)
+}
+
 #[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "GenericNewtypeSeed")]
-struct GenericNewtype<T>(
+#[serde(deserialize_seed = "GenericTypeSeed<PhantomData<T>>")]
+struct GenericType<T> {
     #[serde(deserialize_seed_with = "deserialize_inner")]
-    Inner,
-    T
-);
+    inner: Inner,
+    #[serde(deserialize_seed_with = "deserialize_nested_seed")]
+    t: T
+}
 
 #[test]
 fn test_generic_deserialize_seed() {
-    let value = GenericNewtype(Inner, 3);
-    let seed = GenericNewtypeSeed(Rc::new(Cell::new(0)), PhantomData);
+    let value = GenericType { inner: Inner, t: 3 };
+    let seed = GenericTypeSeed(Rc::new(Cell::new(0)), PhantomData);
     assert_de_seed_tokens(
         seed.clone(),
         &value,
         &[
-            Token::Struct { name: "Newtype", len: 2 },
+            Token::Struct {
+                name: "GenericType",
+                len: 2,
+            },
 
+            Token::String("inner"),
             Token::UnitStruct { name: "Inner" },
 
+            Token::String("t"),
             Token::I32(3),
 
-            Token::StructEnd
+            Token::StructEnd,
         ],
     );
 
@@ -181,7 +239,7 @@ enum Enum {
         u32,
         #[serde(deserialize_seed_with = "deserialize_inner")]
         Inner
-    )
+    ),
 }
 
 #[test]
@@ -192,7 +250,10 @@ fn test_enum_deserialize_seed() {
         seed.clone(),
         &value,
         &[
-            Token::NewtypeVariant { name: "Enum", variant: "Inner" },
+            Token::NewtypeVariant {
+                name: "Enum",
+                variant: "Inner",
+            },
 
             Token::UnitStruct { name: "Inner" },
         ],
@@ -210,13 +271,17 @@ fn test_enum_deserialize_seed_2() {
         seed.clone(),
         &value,
         &[
-            Token::TupleVariant { name: "Enum", variant: "Inner2", len: 2 },
+            Token::TupleVariant {
+                name: "Enum",
+                variant: "Inner2",
+                len: 2,
+            },
 
             Token::U32(3),
 
             Token::UnitStruct { name: "Inner" },
 
-            Token::TupleVariantEnd
+            Token::TupleVariantEnd,
         ],
     );
 
