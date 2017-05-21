@@ -484,7 +484,7 @@ fn deserialize_newtype_struct(
 ) -> Tokens {
     let value = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
         (None, None) => {
-            let field_ty = &field.ty;
+            let field_ty = rename_type(&field.ty, params);
             quote! {
                 try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
             }
@@ -1320,7 +1320,7 @@ fn deserialize_externally_tagged_newtype_variant(
     let this = &params.this;
     match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
         (None, None) => {
-            let field_ty = &field.ty;
+            let field_ty = rename_type(&field.ty, params);
             quote_expr! {
                 _serde::export::Result::map(
                     _serde::de::VariantAccess::newtype_variant::<#field_ty>(__variant),
@@ -1362,7 +1362,7 @@ fn deserialize_untagged_newtype_variant(
     let this = &params.this;
     match field.attrs.deserialize_with() {
         None => {
-            let field_ty = &field.ty;
+            let field_ty = rename_type(&field.ty, params);
             quote_expr! {
                 _serde::export::Result::map(
                     <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
@@ -1651,7 +1651,7 @@ fn deserialize_map(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(
             |&(field, ref name)| {
-                let field_ty = &field.ty;
+                let field_ty = rename_type(&field.ty, params);
                 quote! {
                     let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
                 }
@@ -1666,7 +1666,7 @@ fn deserialize_map(
 
             let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
                 (None, None) => {
-                    let field_ty = &field.ty;
+                    let field_ty = rename_type(&field.ty, params);
                     quote! {
                         try!(_serde::de::MapAccess::next_value::<#field_ty>(&mut __map))
                     }
