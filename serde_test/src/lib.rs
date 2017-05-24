@@ -155,7 +155,7 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.7")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.8")]
 
 #[macro_use]
 extern crate serde;

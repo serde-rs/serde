@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.15.0")]
+#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.15.1")]
 
 extern crate syn;
 #[macro_use]
