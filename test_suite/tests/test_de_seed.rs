@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error, OptionSeed};
+use serde::de::{Deserialize, Deserializer, DeserializeSeed, DeserializeSeedEx, Error, OptionSeed};
 
 use serde_test::{Token, assert_de_seed_tokens};
 
@@ -24,25 +24,20 @@ impl AsMut<Rc<Cell<i32>>> for Seed {
 #[derive(Deserialize, Debug, PartialEq)]
 struct Inner;
 
-#[derive(Clone)]
-struct InnerSeed(Rc<Cell<i32>>);
-
 fn deserialize_inner<'de, S, D>(seed: &mut S, deserializer: D) -> Result<Inner, D::Error>
 where
     S: AsMut<Rc<Cell<i32>>>,
     D: Deserializer<'de>,
 {
-    InnerSeed(seed.as_mut().clone()).deserialize(deserializer)
+    Inner::deserialize_seed(seed.as_mut().clone(), deserializer)
 }
 
-impl<'de> DeserializeSeed<'de> for InnerSeed {
-    type Value = Inner;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+impl<'de> DeserializeSeedEx<'de, Rc<Cell<i32>>> for Inner {
+    fn deserialize_seed<D>(seed: Rc<Cell<i32>>, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        self.0.set(self.0.get() + 1);
+        seed.set(seed.get() + 1);
         Inner::deserialize(deserializer)
     }
 }
@@ -171,7 +166,10 @@ where
     T: DeserializeSeed<'de> + Clone,
 {
     use serde::de::SeqSeed;
-    SeqSeed::new(seed.0.clone(), Vec::with_capacity).deserialize(deserializer)
+    DeserializeSeed::deserialize(
+        SeqSeed::new(seed.0.clone(), Vec::with_capacity),
+        deserializer,
+    )
 }
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
@@ -186,7 +184,7 @@ struct VecNewtype<T>(
 #[test]
 fn test_vec_newtype_deserialize_seed() {
     let value = VecNewtype(vec![Inner, Inner]);
-    let seed = VecSeed(InnerSeed(Rc::new(Cell::new(0))));
+    let seed = VecSeed(serde::de::Seed::new(Rc::new(Cell::new(0))));
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -200,7 +198,7 @@ fn test_vec_newtype_deserialize_seed() {
         ],
     );
 
-    assert_eq!((seed.0).0.get(), 2);
+    assert_eq!((seed.0).seed.get(), 2);
 }
 
 #[derive(Clone)]
@@ -231,7 +229,7 @@ struct GenericType<T> {
     #[serde(deserialize_seed_with = "deserialize_inner")]
     inner: Inner,
     #[serde(deserialize_seed_with = "deserialize_nested_seed")]
-    t: T
+    t: T,
 }
 
 #[test]

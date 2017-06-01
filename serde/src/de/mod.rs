@@ -719,6 +719,64 @@ where
     }
 }
 
+/// TODO
+pub trait DeserializeSeedEx<'de, Seed>: Sized {
+    /// TODO
+    fn deserialize_seed<D>(seed: Seed, deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>;
+}
+
+/// TODO
+#[derive(Debug)]
+pub struct Seed<S, T> {
+    /// TODO
+    pub seed: S,
+    _marker: PhantomData<T>,
+}
+
+impl<S, T> Clone for Seed<S, T>
+where
+    S: Clone,
+{
+    fn clone(&self) -> Self {
+        Seed {
+            seed: self.seed.clone(),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<S, T> Copy for Seed<S, T>
+where
+    S: Copy,
+{
+}
+
+impl<S, T> Seed<S, T> {
+    /// TODO
+    pub fn new(seed: S) -> Seed<S, T> {
+        Seed {
+            seed: seed,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, S, T> DeserializeSeed<'de> for Seed<S, T>
+where
+    T: DeserializeSeedEx<'de, S>,
+{
+    type Value = T;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize_seed(self.seed, deserializer)
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A **data format** that can deserialize any data structure supported by
