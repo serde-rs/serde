@@ -113,6 +113,7 @@ pub struct Container {
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    attributes: Option<Vec<(syn::Ident, syn::Path)>>,
 }
 
 /// Styles of representing an enum.
@@ -182,6 +183,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
+        let mut function_attributes = Attr::none(cx, "attributes");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -200,6 +202,22 @@ impl Container {
                             ser_name.set_opt(ser);
                             de_name.set_opt(de);
                         }
+                    }
+
+                    MetaItem(List(ref name, ref meta_items)) if name == "attributes" => {
+                        let mut attrs = vec![];
+                        for meta_item in meta_items {
+                            match meta_item {
+                                &syn::NestedMetaItem::MetaItem(NameValue(ref id, ref lit)) => {
+                                    if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), &lit) {
+                                        attrs.push((id.clone(), path));
+                                    }
+                                } 
+                                _ => cx.error("malformed attribute list!"),
+                        }
+                    }
+                        println!("Parsed attributes list: {:?}", attrs);
+                        function_attributes.set(attrs);
                     }
 
                     // Parse `#[serde(rename_all = "foo")]`
@@ -371,6 +389,7 @@ impl Container {
             into_type: into_type.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
+            attributes: function_attributes.get(),
         }
     }
 
