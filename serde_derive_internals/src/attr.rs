@@ -884,6 +884,17 @@ impl Field {
                         serialize_seed.set_true();
                     }
 
+                    MetaItem(NameValue(ref name, ref lit)) if name == "seed_with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            let mut ser_path = path.clone();
+                            ser_path.segments.push("serialize".into());
+                            serialize_seed_with.set(ser_path);
+                            let mut de_path = path;
+                            de_path.segments.push("deserialize".into());
+                            deserialize_seed_with.set(de_path);
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde field attribute `{}`", meta_item.name()),);
                     }
