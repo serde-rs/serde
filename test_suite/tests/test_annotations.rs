@@ -1043,14 +1043,62 @@ fn test_from_into_traits() {
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(method_properties(data = "MethodPropertiesTest::as_string"))]
 struct MethodPropertiesTest {
     dummy: i32,
 }
 
 impl MethodPropertiesTest {
+    #[allow(unused)]
     pub fn as_string(&self) -> String {
         format!("The value is {}", self.dummy)
     }
+}
+
+#[test]
+fn test_method_properties() {
+    let value = MethodPropertiesTest { dummy: 32 };
+    assert_de_tokens::<MethodPropertiesTest>(&value,
+        &[
+            Token::Struct { name: "MethodPropertiesTest", len: 2 },
+            Token::Str("dummy"),
+            Token::I32(32),
+            Token::Str("data"),
+            Token::String("The value is 32"),
+            Token::StructEnd
+        ])
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(method_properties(data = "MethodPropertiesEnumTest::as_string"))]
+enum MethodPropertiesEnumTest {
+    StructVariant { value: i32 },
+    TupleVariant(i32),
+    UnitVariant
+}
+
+impl MethodPropertiesEnumTest {
+    #[allow(unused)]
+    pub fn as_string(&self) -> String {
+        match *self {
+            MethodPropertiesEnumTest::StructVariant { value } => format!("StructVariant: {}", value),
+            MethodPropertiesEnumTest::TupleVariant(v) => format!("TupleVariant: {}", v),
+            MethodPropertiesEnumTest::UnitVariant => format!("UnitVariant"),
+        }
+    }
+}
+
+#[test]
+fn test_method_properties_enum() {
+    let struct_variant = MethodPropertiesEnumTest::StructVariant { value: 32 };
+    assert_de_tokens(&struct_variant, 
+        &[
+            Token::StructVariant { name: "MethodPropertiesEnumTest", variant: "StructVariant", len: 2 },
+            Token::Str("value"),
+            Token::I32(32),
+            Token::Str("data"),
+            Token::String("StructVariant: 32"),
+            Token::StructVariantEnd,
+        ])
 }

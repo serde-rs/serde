@@ -88,6 +88,8 @@ struct Parameters {
 
     /// Type has a `serde(remote = "...")` attribute.
     is_remote: bool,
+
+    method_properties: Option<Vec<(syn::Ident, syn::Path)>>,
 }
 
 impl Parameters {
@@ -105,12 +107,14 @@ impl Parameters {
         };
 
         let generics = build_generics(cont);
-
+        let method_properties = cont.attrs.method_properties().cloned();
+        
         Parameters {
             self_var: self_var,
             this: this,
             generics: generics,
             is_remote: is_remote,
+            method_properties: method_properties,
         }
     }
 
@@ -829,7 +833,7 @@ fn serialize_struct_visitor(
     is_enum: bool,
     func: Tokens,
 ) -> Vec<Tokens> {
-    fields
+    let mut fields: Vec<Tokens> = fields
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .map(
@@ -862,8 +866,23 @@ fn serialize_struct_visitor(
                 }
             },
         )
-        .collect()
+        .collect();
+        if let Some(ref method_properties) = params.method_properties {
+            let iter = method_properties
+                .iter()
+                .map(|&(ref ident, ref path)| {
+                    let name = ident.to_string();
+                    quote! {
+                        let __result = #path(self);
+                        try!(#func(&mut __serde_state, #name, &__result));
+                    }
+                });
+            fields.extend(iter);
+        }
+        fields
 }
+
+
 
 fn wrap_serialize_with(
     params: &Parameters,

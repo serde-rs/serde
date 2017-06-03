@@ -81,9 +81,6 @@ struct Parameters {
     /// At least one field has a serde(getter) attribute, implying that the
     /// remote type has a private field.
     has_getter: bool,
-
-    /// Method properties that are computed by some function and have an identifier.
-    method_properties: Option<Vec<(syn::Ident, syn::Path)>>,
 }
 
 impl Parameters {
@@ -96,15 +93,13 @@ impl Parameters {
         let generics = build_generics(cont);
         let borrowed = borrowed_lifetimes(cont);
         let has_getter = cont.body.has_getter();
-        let method_properties = cont.attrs.method_properties().cloned();
 
         Parameters {
             local: local,
             this: this,
             generics: generics,
             borrowed: borrowed,
-            has_getter: has_getter,
-            method_properties: method_properties
+            has_getter: has_getter
         }
     }
 
@@ -1501,8 +1496,6 @@ fn deserialize_map(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    // TODO I think this is where I need to deserialize method properties?
-
     // Create the field names for the fields.
     let fields_names: Vec<_> = fields
         .iter()
@@ -1657,7 +1650,7 @@ fn deserialize_map(
         #let_default
 
         #(#extract_values)*
-
+        
         _serde::export::Ok(#result)
     }
 }
