@@ -113,7 +113,7 @@ pub struct Container {
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
     identifier: Identifier,
-    attributes: Option<Vec<(syn::Ident, syn::Path)>>,
+    method_properties: Option<Vec<(syn::Ident, syn::Path)>>,
 }
 
 /// Styles of representing an enum.
@@ -183,7 +183,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut function_attributes = Attr::none(cx, "attributes");
+        let mut method_properties = Attr::none(cx, "method_properties");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -204,7 +204,7 @@ impl Container {
                         }
                     }
 
-                    MetaItem(List(ref name, ref meta_items)) if name == "attributes" => {
+                    MetaItem(List(ref name, ref meta_items)) if name == "method_properties" => {
                         let mut attrs = vec![];
                         for meta_item in meta_items {
                             match meta_item {
@@ -214,10 +214,9 @@ impl Container {
                                     }
                                 } 
                                 _ => cx.error("malformed attribute list!"),
+                            }
                         }
-                    }
-                        println!("Parsed attributes list: {:?}", attrs);
-                        function_attributes.set(attrs);
+                        method_properties.set(attrs);
                     }
 
                     // Parse `#[serde(rename_all = "foo")]`
@@ -389,7 +388,7 @@ impl Container {
             into_type: into_type.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
-            attributes: function_attributes.get(),
+            method_properties: method_properties.get(),
         }
     }
 
@@ -435,6 +434,10 @@ impl Container {
 
     pub fn identifier(&self) -> Identifier {
         self.identifier
+    }
+
+    pub fn method_properties(&self) -> Option<&Vec<(syn::Ident, syn::Path)>> {
+        self.method_properties.as_ref()
     }
 }
 
