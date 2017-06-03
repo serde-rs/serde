@@ -100,6 +100,8 @@ struct Parameters {
     /// At least one field has a serde(getter) attribute, implying that the
     /// remote type has a private field.
     has_getter: bool,
+
+    de_parameter_ident: Option<syn::Ident>,
 }
 
 impl Parameters {
@@ -119,6 +121,7 @@ impl Parameters {
             generics: generics,
             borrowed: borrowed,
             has_getter: has_getter,
+            de_parameter_ident: cont.attrs.de_parameter().cloned()
         }
     }
 
@@ -1928,17 +1931,23 @@ struct DeImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
+        if let Some(ref ident) = self.0.de_parameter_ident {
+            generics.ty_params.push(ident.clone().into());
+        }
         generics.lifetimes.insert(0, self.0.de_lifetime_def());
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
     }
 }
 
-struct DeTyGenerics<'a>(&'a syn::Generics);
+struct DeTyGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
-        let mut generics = self.0.clone();
+        let mut generics = self.0.generics.clone();
+        if let Some(ref ident) = self.0.de_parameter_ident {
+            generics.ty_params.push(ident.clone().into());
+        }
         generics
             .lifetimes
             .insert(0, syn::LifetimeDef::new("'de"));
@@ -1986,7 +1995,7 @@ fn split_with_de_lifetime
     (params: &Parameters,)
      -> (DeImplGenerics, DeTyGenerics, TyValueGenerics, syn::TyGenerics, &syn::WhereClause) {
     let de_impl_generics = DeImplGenerics(&params);
-    let de_ty_generics = DeTyGenerics(&params.generics);
+    let de_ty_generics = DeTyGenerics(&params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, TyValueGenerics(&params.generics), ty_generics, where_clause)
 }
@@ -1996,6 +2005,9 @@ struct DeSeedImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeSeedImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
+        if let Some(ref ident) = self.0.de_parameter_ident {
+            generics.ty_params.push(ident.clone().into());
+        }
         for param in &mut generics.ty_params {
             param
                 .bounds
@@ -2012,11 +2024,14 @@ impl<'a> ToTokens for DeSeedImplGenerics<'a> {
     }
 }
 
-struct DeSeedTyGenerics<'a>(&'a syn::Generics);
+struct DeSeedTyGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeSeedTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
-        let mut generics = self.0.clone();
+        let mut generics = self.0.generics.clone();
+        if let Some(ref ident) = self.0.de_parameter_ident {
+            generics.ty_params.push(ident.clone().into());
+        }
         generics
             .lifetimes
             .insert(0, syn::LifetimeDef::new("'de"));
@@ -2032,7 +2047,7 @@ fn split_with_de_and_seed_lifetime
     (params: &Parameters,)
      -> (DeSeedImplGenerics, DeSeedTyGenerics, syn::TyGenerics, &syn::WhereClause) {
     let de_impl_generics = DeSeedImplGenerics(&params);
-    let de_ty_generics = DeSeedTyGenerics(&params.generics);
+    let de_ty_generics = DeSeedTyGenerics(&params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
 }
