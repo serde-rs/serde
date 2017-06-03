@@ -124,9 +124,48 @@ fn test_newtype_deserialize_seed() {
 }
 
 #[derive(Clone)]
+struct ExtraParameterNewtypeSeed<T>(Rc<Cell<i32>>, PhantomData<T>);
+
+impl<T> AsMut<Rc<Cell<i32>>> for ExtraParameterNewtypeSeed<T> {
+    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+        &mut self.0
+    }
+}
+
+
+#[derive(DeserializeSeed, Debug, PartialEq)]
+#[serde(deserialize_seed = "ExtraParameterNewtypeSeed<T>")]
+#[serde(de_parameter = "T")]
+struct ExtraParameterNewtype(
+    #[serde(deserialize_seed_with = "deserialize_inner")]
+    Inner
+);
+
+
+#[test]
+fn extra_parameter_test_newtype_deserialize_seed() {
+    let value = ExtraParameterNewtype(Inner);
+    let seed = ExtraParameterNewtypeSeed(Rc::new(Cell::new(0)), PhantomData::<i32>);
+    assert_de_seed_tokens(
+        seed.clone(),
+        &value,
+        &[
+            Token::NewtypeStruct { name: "ExtraParameterNewtype" },
+
+            Token::UnitStruct { name: "Inner" },
+        ],
+    );
+
+    assert_eq!(seed.0.get(), 1);
+}
+
+#[derive(Clone)]
 struct VecSeed<T>(T);
 
-fn deserialize_vec<'de, T, D>(seed: &mut VecSeed<T>, deserializer: D) -> Result<Vec<T::Value>, D::Error>
+fn deserialize_vec<'de, T, D>(
+    seed: &mut VecSeed<T>,
+    deserializer: D,
+) -> Result<Vec<T::Value>, D::Error>
 where
     D: Deserializer<'de>,
     T: DeserializeSeed<'de> + Clone,
