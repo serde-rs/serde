@@ -1911,3 +1911,18 @@ where
         serializer.collect_seq(self.iter().map(|value| Seeded::new(seed, value)))
     }
 }
+
+impl<T> SerializeSeed for Vec<T>
+where
+    T: SerializeSeed,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self[..].serialize_seed(serializer, seed)
+    }
+}
