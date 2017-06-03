@@ -1042,3 +1042,15 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
 }
+
+#[derive(Deserialize)]
+#[serde(method_properties(data = "MethodPropertiesTest::as_string"))]
+struct MethodPropertiesTest {
+    dummy: i32,
+}
+
+impl MethodPropertiesTest {
+    pub fn as_string(&self) -> String {
+        format!("The value is {}", self.dummy)
+    }
+}
