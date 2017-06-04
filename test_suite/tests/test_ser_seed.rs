@@ -123,6 +123,61 @@ fn test_serialize_option_none_seed() {
     assert_eq!(seed.get(), 0);
 }
 
+#[derive(SerializeSeed)]
+#[serde(serialize_seed = "Cell<i32>")]
+enum SeedEnum {
+    A(
+        #[serde(serialize_seed)]
+        Inner
+    ),
+    B {
+        #[serde(serialize_seed)]
+        inner: Inner,
+    },
+}
+
+#[test]
+fn test_serialize_seed_newtype_variant() {
+    let value = SeedEnum::A(Inner);
+    let seed = Cell::new(0);
+    assert_ser_tokens(
+        &Seeded::new(&seed, &value),
+        &[
+            Token::NewtypeVariant {
+                name: "SeedEnum",
+                variant: "A",
+            },
+
+            Token::UnitStruct { name: "Inner" },
+        ],
+    );
+
+    assert_eq!(seed.get(), 1);
+}
+
+#[test]
+fn test_serialize_seed_newtype_variant2() {
+    let value = SeedEnum::B { inner: Inner };
+    let seed = Cell::new(0);
+    assert_ser_tokens(
+        &Seeded::new(&seed, &value),
+        &[
+            Token::StructVariant {
+                name: "SeedEnum",
+                variant: "B",
+                len: 1,
+            },
+
+            Token::Str("inner"),
+            Token::UnitStruct { name: "Inner" },
+
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_eq!(seed.get(), 1);
+}
+
 
 use std::cell::RefCell;
 use std::collections::HashMap;
