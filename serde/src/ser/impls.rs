@@ -455,6 +455,23 @@ impl Serialize for Duration {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "std")]
+impl Serialize for SystemTime {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let duration_since_epoch = self.duration_since(UNIX_EPOCH).expect("SystemTime must be later than UNIX_EPOCH");
+        let mut state = try!(serializer.serialize_struct("SystemTime", 2));
+        try!(state.serialize_field("secs_since_epoch", &duration_since_epoch.as_secs()));
+        try!(state.serialize_field("nanos_since_epoch", &duration_since_epoch.subsec_nanos()));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// Serialize a value that implements `Display` as a string, when that string is
 /// statically known to never have more than a constant `MAX_LEN` bytes.
 ///

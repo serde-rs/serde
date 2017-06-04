@@ -94,6 +94,7 @@
 //!    - OsString
 //!  - **Miscellaneous standard library types**:
 //!    - Duration
+//!    - SystemTime
 //!    - Path
 //!    - PathBuf
 //!    - Range\<T\>
