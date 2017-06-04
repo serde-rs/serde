@@ -426,6 +426,11 @@ fn serialize_externally_tagged_variant(
         Style::Newtype => {
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
+
+            if field.attrs.serialize_seed() {
+                field_expr = wrap_serialize_seed(field_expr)
+            }
+
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
             }
