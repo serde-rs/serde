@@ -237,6 +237,7 @@ fn serialize_tuple_struct(
         params,
         false,
         quote!(_serde::ser::SerializeTupleStruct::serialize_field),
+        cattrs.serialize_seed(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -411,6 +412,7 @@ fn serialize_externally_tagged_variant(
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
+    let seed_ty = cattrs.serialize_seed();
 
     match variant.style {
         Style::Unit => {
@@ -429,6 +431,11 @@ fn serialize_externally_tagged_variant(
 
             if field.attrs.serialize_seed() {
                 field_expr = wrap_serialize_seed(field_expr)
+            }
+
+            if let Some(path) = field.attrs.serialize_seed_with() {
+                let seed_ty = seed_ty.expect("serialize_seed_with specified without a seed type");
+                field_expr = wrap_serialize_seed_with(params, field.ty, seed_ty, path, field_expr)
             }
 
             if let Some(path) = field.attrs.serialize_with() {
@@ -454,6 +461,7 @@ fn serialize_externally_tagged_variant(
                 },
                 params,
                 &variant.fields,
+                cattrs.serialize_seed(),
             )
         }
         Style::Struct => {
@@ -561,7 +569,7 @@ fn serialize_adjacently_tagged_variant(
                 }
             }
             Style::Tuple => {
-                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
+                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_seed())
             }
             Style::Struct => {
                 serialize_struct_variant(
@@ -654,7 +662,7 @@ fn serialize_untagged_variant(
                 _serde::Serialize::serialize(#field_expr, __serializer)
             }
         }
-        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
+        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_seed()),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
             serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.serialize_seed())
@@ -675,6 +683,7 @@ fn serialize_tuple_variant(
     context: TupleVariant,
     params: &Parameters,
     fields: &[Field],
+    seed_ty: Option<&syn::Ty>,
 ) -> Fragment {
     let method = match context {
         TupleVariant::ExternallyTagged { .. } => {
@@ -683,7 +692,7 @@ fn serialize_tuple_variant(
         TupleVariant::Untagged => quote!(_serde::ser::SerializeTuple::serialize_element),
     };
 
-    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, method);
+    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, method, seed_ty);
 
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
@@ -815,6 +824,7 @@ fn serialize_tuple_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     func: Tokens,
+    seed_ty: Option<&syn::Ty>,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -835,6 +845,11 @@ fn serialize_tuple_struct_visitor(
 
                 if field.attrs.serialize_seed() {
                     field_expr = wrap_serialize_seed(field_expr)
+                }
+
+                if let Some(path) = field.attrs.serialize_seed_with() {
+                    let seed_ty = seed_ty.expect("serialize_seed_with specified without a seed type");
+                    field_expr = wrap_serialize_seed_with(params, field.ty, seed_ty, path, field_expr)
                 }
 
                 if let Some(path) = field.attrs.serialize_with() {
