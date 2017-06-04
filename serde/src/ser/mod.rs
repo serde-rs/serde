@@ -1861,6 +1861,22 @@ where
     }
 }
 
+impl<'a, T: ?Sized> SerializeSeed for &'a T
+where
+    T: SerializeSeed + 'a,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        (**self).serialize_seed(serializer, seed)
+    }
+}
+
+
 /// Placeholder
 pub struct Unseeded<'a, T: ?Sized + 'a>(pub &'a T);
 
