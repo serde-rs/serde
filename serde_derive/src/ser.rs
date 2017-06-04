@@ -867,14 +867,17 @@ fn serialize_struct_visitor(
             },
         )
         .collect();
+        // If there are any method properties, add them to the list of fields.
         if let Some(ref method_properties) = params.method_properties {
             let iter = method_properties
                 .iter()
+                // ident is the chosen name for the property, path is the path to the method
+                // that should be called
+                // FIXME prevent duplicate keys
                 .map(|&(ref ident, ref path)| {
                     let name = ident.to_string();
                     quote! {
-                        let __result = #path(self);
-                        try!(#func(&mut __serde_state, #name, &__result));
+                        try!(#func(&mut __serde_state, #name, &#path(self)));
                     }
                 });
             fields.extend(iter);
