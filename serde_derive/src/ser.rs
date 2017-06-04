@@ -833,6 +833,10 @@ fn serialize_tuple_struct_visitor(
                     .skip_serializing_if()
                     .map(|path| quote!(#path(#field_expr)));
 
+                if field.attrs.serialize_seed() {
+                    field_expr = wrap_serialize_seed(field_expr)
+                }
+
                 if let Some(path) = field.attrs.serialize_with() {
                     field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
                 }
