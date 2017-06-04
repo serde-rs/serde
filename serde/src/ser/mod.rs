@@ -1828,19 +1828,17 @@ pub trait SerializeSeed {
 }
 
 /// Placeholder
-pub struct Seeded<'seed, 'a, S: ?Sized + 'seed, V: ?Sized + 'a>
-{
+pub struct Seeded<'seed, S: ?Sized + 'seed, V> {
     /// Placeholder
     pub seed: &'seed S,
     /// Placeholder
-    pub value: &'a V,
+    pub value: V,
 }
 
-impl<'seed, 'a, S: ?Sized, V: ?Sized> Seeded<'seed, 'a, S, V>
-{
+impl<'seed, S: ?Sized, V> Seeded<'seed, S, V> {
     /// Placeholder
     #[inline]
-    pub fn new(seed: &'seed S, value: &'a V) -> Self {
+    pub fn new(seed: &'seed S, value: V) -> Self {
         Seeded {
             seed: seed,
             value: value,
@@ -1848,7 +1846,7 @@ impl<'seed, 'a, S: ?Sized, V: ?Sized> Seeded<'seed, 'a, S, V>
     }
 }
 
-impl<'seed, 'a, T: ?Sized, V: ?Sized> Serialize for Seeded<'seed, 'a, T, V>
+impl<'seed, T: ?Sized, V> Serialize for Seeded<'seed, T, V>
 where
     V: SerializeSeed<Seed = T>,
 {
@@ -1878,11 +1876,11 @@ where
 
 
 /// Placeholder
-pub struct Unseeded<'a, T: ?Sized + 'a>(pub &'a T);
+pub struct Unseeded<T>(pub T);
 
-impl<'a, T: ?Sized> SerializeSeed for Unseeded<'a, T>
+impl<T> SerializeSeed for Unseeded<T>
 where
-    T: Serialize + 'a,
+    T: Serialize,
 {
     type Seed = ();
 
