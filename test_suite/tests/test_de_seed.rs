@@ -175,8 +175,9 @@ where
 }
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "VecSeed<T>")]
-#[serde(bound = "T: DeserializeSeed<'de> + Clone")]
+#[serde(deserialize_seed = "VecSeed<S>")]
+#[serde(de_parameter = "S")]
+#[serde(bound = "S: DeserializeSeed<'de, Value = T> + Clone")]
 struct VecNewtype<T>(
     #[serde(deserialize_seed_with = "deserialize_vec")]
     Vec<T>
@@ -223,7 +224,9 @@ where
 }
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "GenericTypeSeed<PhantomData<T>>")]
+#[serde(deserialize_seed = "GenericTypeSeed<S>")]
+#[serde(de_parameter = "S")]
+#[serde(bound = "S: Clone + DeserializeSeed<'de, Value = T>")]
 struct GenericType<T> {
     #[serde(deserialize_seed_with = "deserialize_inner")]
     inner: Inner,

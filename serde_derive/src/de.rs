@@ -14,7 +14,6 @@ use fragment::{Fragment, Expr, Stmts, Match};
 use internals::ast::{Body, Container, Field, Style, Variant};
 use internals::{self, attr};
 
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Result<Tokens, String> {
@@ -151,7 +150,7 @@ fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
     match cont.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => {
-            let generics = match *cont.attrs.default() {
+            let mut generics = match *cont.attrs.default() {
                 attr::Default::Default => {
                     bound::with_self_bound(cont, &generics, &path!(_serde::export::Default))
                 }
@@ -159,16 +158,14 @@ fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
                 attr::Default::Path(_) => generics,
             };
 
-            let generics = bound::with_bound(
-                cont,
-                &generics,
-                needs_deserialize_bound,
-                &if seeded {
-                     path!(_serde::de::DeserializeSeed<'de>)
-                 } else {
-                     path!(_serde::Deserialize<'de>)
-                 },
-            );
+            if !seeded {
+                generics = bound::with_bound(
+                    cont,
+                    &generics,
+                    needs_deserialize_bound,
+                    &path!(_serde::Deserialize<'de>),
+                );
+            }
 
             bound::with_bound(
                 cont,
@@ -417,7 +414,7 @@ fn deserialize_seq(
             } else {
                 let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
                     (None, None) => {
-                        let field_ty = rename_type(&field.ty, params);
+                        let field_ty = &field.ty;
                         quote!(try!(_serde::de::SeqAccess::next_element::<#field_ty>(&mut __seq)))
                     }
                     (Some(path), _) => {
@@ -487,7 +484,7 @@ fn deserialize_newtype_struct(
 ) -> Tokens {
     let value = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
         (None, None) => {
-            let field_ty = rename_type(&field.ty, params);
+            let field_ty = &field.ty;
             quote! {
                 try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
             }
@@ -1323,7 +1320,7 @@ fn deserialize_externally_tagged_newtype_variant(
     let this = &params.this;
     match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
         (None, None) => {
-            let field_ty = rename_type(&field.ty, params);
+            let field_ty = &field.ty;
             quote_expr! {
                 _serde::export::Result::map(
                     _serde::de::VariantAccess::newtype_variant::<#field_ty>(__variant),
@@ -1365,7 +1362,7 @@ fn deserialize_untagged_newtype_variant(
     let this = &params.this;
     match field.attrs.deserialize_with() {
         None => {
-            let field_ty = rename_type(&field.ty, params);
+            let field_ty = &field.ty;
             quote_expr! {
                 _serde::export::Result::map(
                     <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
@@ -1654,7 +1651,7 @@ fn deserialize_map(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(
             |&(field, ref name)| {
-                let field_ty = rename_type(&field.ty, params);
+                let field_ty = &field.ty;
                 quote! {
                     let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
                 }
@@ -1669,7 +1666,7 @@ fn deserialize_map(
 
             let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
                 (None, None) => {
-                    let field_ty = rename_type(&field.ty, params);
+                    let field_ty = &field.ty;
                     quote! {
                         try!(_serde::de::MapAccess::next_value::<#field_ty>(&mut __map))
                     }
@@ -1860,8 +1857,6 @@ fn wrap_deserialize_seed_with(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_and_seed_lifetime(params);
 
-    let field_ty = rename_type(field_ty, params);
-
     let wrapper = quote! {
         struct __DeserializeWith #de_impl_generics #where_clause {
             seed: &'seed mut #seed_ty,
@@ -1957,18 +1952,6 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
 }
 
 
-struct SeedValue<'a, T: 'a>(&'a T);
-
-impl<'a, T> ToTokens for SeedValue<'a, T>
-where
-    T: ToTokens,
-{
-    fn to_tokens(&self, tokens: &mut Tokens) {
-        self.0.to_tokens(tokens);
-        tokens.append("::Value");
-    }
-}
-
 struct TyValueGenerics<'a>(&'a syn::Generics);
 
 impl<'a> ToTokens for TyValueGenerics<'a> {
@@ -1984,7 +1967,7 @@ impl<'a> ToTokens for TyValueGenerics<'a> {
                 tokens.append(",");
             }
             // Leave off the type parameter bounds, defaults, and attributes
-            let ty_params = self.0.ty_params.iter().map(|tp| SeedValue(&tp.ident));
+            let ty_params = self.0.ty_params.iter();
             tokens.append_separated(ty_params, ",");
             tokens.append(">");
         }
@@ -2050,153 +2033,4 @@ fn split_with_de_and_seed_lifetime
     let de_ty_generics = DeSeedTyGenerics(&params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
-}
-
-fn rename_type<'t>(ty: &'t syn::Ty, params: &Parameters) -> Cow<'t, syn::Ty> {
-    let mut f = |ty: &syn::Ty| match *ty {
-        syn::Ty::Path(ref qself, ref path) => {
-            let rename = path.segments.len() == 1 &&
-                         params
-                             .generics
-                             .ty_params
-                             .iter()
-                             .any(|param| path.segments[0].ident == param.ident);
-            if rename {
-                Some(
-                    syn::Ty::Path(
-                        qself.clone(),
-                        syn::parse_path(&format!("{}::Value", path.segments[0].ident)).unwrap(),
-                    ),
-                )
-            } else {
-                None
-            }
-        }
-        _ => None,
-    };
-    rename_type_(ty, &mut f).map_or(Cow::Borrowed(ty), Cow::Owned)
-}
-
-fn rename_path<F>(path: &syn::Path, f: &mut F) -> Option<syn::Path>
-where
-    F: FnMut(&syn::Ty) -> Option<syn::Ty>,
-{
-    merge_iter(
-        &path.segments,
-        |segment| match segment.parameters {
-            syn::PathParameters::AngleBracketed(ref params) => {
-                merge_iter(&params.types, |ty| rename_type_(ty, f), syn::Ty::clone).map(
-                    |types| {
-                        syn::PathSegment {
-                            ident: segment.ident.clone(),
-                            parameters: syn::PathParameters::AngleBracketed(
-                                syn::AngleBracketedParameterData {
-                                    lifetimes: params.lifetimes.clone(),
-                                    types: types,
-                                    bindings: params.bindings.clone(),
-                                },
-                            ),
-                        }
-                    },
-                )
-            }
-            _ => unimplemented!(),
-        },
-        |segment| segment.clone(),
-    )
-            .map(
-                |segments| {
-                    syn::Path {
-                        global: path.global,
-                        segments: segments,
-                    }
-                },
-            )
-}
-fn rename_type_<F>(ty: &syn::Ty, f: &mut F) -> Option<syn::Ty>
-where
-    F: FnMut(&syn::Ty) -> Option<syn::Ty>,
-{
-    match f(ty) {
-        Some(ty) => return Some(ty),
-        None => (),
-    }
-    match *ty {
-        syn::Ty::Path(ref qself, ref path) => {
-            rename_path(path, f).map(|path| syn::Ty::Path(qself.clone(), path))
-        } 
-        _ => None,
-    }
-}
-
-/// Merges two values using `f` if either or both them is `Some(..)`.
-/// If both are `None`, `None` is returned.
-fn merge<F, A: ?Sized, B: ?Sized, R>(
-    a_original: &A,
-    a: Option<A::Owned>,
-    b_original: &B,
-    b: Option<B::Owned>,
-    f: F,
-) -> Option<R>
-where
-    A: ToOwned,
-    B: ToOwned,
-    F: FnOnce(A::Owned, B::Owned) -> R,
-{
-    match (a, b) {
-        (Some(a), Some(b)) => Some(f(a, b)),
-        (Some(a), None) => Some(f(a, b_original.to_owned())),
-        (None, Some(b)) => Some(f(a_original.to_owned(), b)),
-        (None, None) => None,
-    }
-}
-
-fn merge_iter<'a, I, F, G, U>(types: I, mut action: F, mut converter: G) -> Option<Vec<U>>
-where
-    I: IntoIterator,
-    F: FnMut(I::Item) -> Option<U>,
-    G: FnMut(I::Item) -> U,
-    I::Item: Copy,
-{
-    let mut out = Vec::new();
-    merge_iter_(
-        types.into_iter(),
-        false,
-        &mut out,
-        &mut action,
-        &mut converter,
-    );
-    if out[..].is_empty() {
-        None
-    } else {
-        out[..].reverse();
-        Some(out)
-    }
-}
-
-fn merge_iter_<'a, I, F, G, U>(
-    mut types: I,
-    replaced: bool,
-    output: &mut Vec<U>,
-    f: &mut F,
-    converter: &mut G,
-) where
-    I: Iterator,
-    F: FnMut(I::Item) -> Option<U>,
-    G: FnMut(I::Item) -> U,
-    I::Item: Copy,
-{
-    if let Some(l) = types.next() {
-        let new = f(l);
-        merge_iter_(types, replaced || new.is_some(), output, f, converter);
-        match new {
-            Some(typ) => {
-                output.push(typ);
-            }
-            None if replaced || !output[..].is_empty() => {
-                output.push(converter(l));
-            }
-            None => (),
-        }
-    }
 }
