@@ -89,6 +89,7 @@ struct Parameters {
     /// Type has a `serde(remote = "...")` attribute.
     is_remote: bool,
 
+    /// List of properties that are computed by methods.
     method_properties: Option<Vec<(syn::Ident, syn::Path)>>,
 }
 
@@ -867,6 +868,7 @@ fn serialize_struct_visitor(
             },
         )
         .collect();
+
         if let Some(ref method_properties) = params.method_properties {
             let iter = method_properties
                 .iter()
@@ -879,10 +881,9 @@ fn serialize_struct_visitor(
                 });
             fields.extend(iter);
         }
+
         fields
 }
-
-
 
 fn wrap_serialize_with(
     params: &Parameters,

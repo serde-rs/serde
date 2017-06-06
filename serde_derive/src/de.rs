@@ -99,7 +99,7 @@ impl Parameters {
             this: this,
             generics: generics,
             borrowed: borrowed,
-            has_getter: has_getter
+            has_getter: has_getter,
         }
     }
 
@@ -1650,7 +1650,7 @@ fn deserialize_map(
         #let_default
 
         #(#extract_values)*
-        
+
         _serde::export::Ok(#result)
     }
 }
