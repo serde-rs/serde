@@ -1073,29 +1073,29 @@ fn test_method_properties() {
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(method_properties(data = "MethodPropertiesEnumTest::as_string"))]
 enum MethodPropertiesEnumTest {
-    StructVariant { value: i32 },
-    TupleVariant(i32),
-    UnitVariant
+    Struct { value: i32 },
+    Tuple(i32),
+    Unit
 }
 
 impl MethodPropertiesEnumTest {
     #[allow(unused)]
     pub fn as_string(&self) -> String {
         match *self {
-            MethodPropertiesEnumTest::StructVariant { value } => format!("StructVariant: {}", value),
-            MethodPropertiesEnumTest::TupleVariant(v) => format!("TupleVariant: {}", v),
-            MethodPropertiesEnumTest::UnitVariant => format!("UnitVariant"),
+            MethodPropertiesEnumTest::Struct { value } => format!("StructVariant: {}", value),
+            MethodPropertiesEnumTest::Tuple(v) => format!("TupleVariant: {}", v),
+            MethodPropertiesEnumTest::Unit => format!("UnitVariant"),
         }
     }
 }
 
 #[test]
 fn test_method_properties_enum() {
-    let struct_variant = MethodPropertiesEnumTest::StructVariant { value: 32 };
+    let struct_variant = MethodPropertiesEnumTest::Struct { value: 32 };
     // TODO why does this test fail when len of the StructVariant > 1?
     assert_de_tokens(&struct_variant, 
         &[
-            Token::StructVariant { name: "MethodPropertiesEnumTest", variant: "StructVariant", len: 1 },
+            Token::StructVariant { name: "MethodPropertiesEnumTest", variant: "Struct", len: 1 },
             Token::Str("value"),
             Token::I32(32),
             Token::Str("data"),
