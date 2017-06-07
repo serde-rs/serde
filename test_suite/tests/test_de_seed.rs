@@ -135,7 +135,7 @@ impl<T> AsMut<Rc<Cell<i32>>> for ExtraParameterNewtypeSeed<T> {
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "ExtraParameterNewtypeSeed<T>")]
-#[serde(de_parameter = "T")]
+#[serde(de_parameters = "T")]
 struct ExtraParameterNewtype(
     #[serde(deserialize_seed_with = "deserialize_inner")]
     Inner
@@ -176,7 +176,7 @@ where
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "VecSeed<S>")]
-#[serde(de_parameter = "S")]
+#[serde(de_parameters = "S")]
 #[serde(bound = "S: DeserializeSeed<'de, Value = T> + Clone")]
 struct VecNewtype<T>(
     #[serde(deserialize_seed_with = "deserialize_vec")]
@@ -225,7 +225,7 @@ where
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "GenericTypeSeed<S>")]
-#[serde(de_parameter = "S")]
+#[serde(de_parameters = "S")]
 #[serde(bound = "S: Clone + DeserializeSeed<'de, Value = T>")]
 struct GenericType<T> {
     #[serde(deserialize_seed_with = "deserialize_inner")]

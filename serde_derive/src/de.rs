@@ -101,7 +101,7 @@ struct Parameters {
     /// remote type has a private field.
     has_getter: bool,
 
-    de_parameter_ident: Option<syn::Ident>,
+    de_parameter_idents: Option<Vec<syn::Ident>>,
 }
 
 impl Parameters {
@@ -121,7 +121,7 @@ impl Parameters {
             generics: generics,
             borrowed: borrowed,
             has_getter: has_getter,
-            de_parameter_ident: cont.attrs.de_parameter().cloned()
+            de_parameter_idents: cont.attrs.de_parameters().map(|params| params.to_owned())
         }
     }
 
@@ -1927,8 +1927,8 @@ struct DeImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref ident) = self.0.de_parameter_ident {
-            generics.ty_params.push(ident.clone().into());
+        if let Some(ref idents) = self.0.de_parameter_idents {
+            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
         }
         generics.lifetimes.insert(0, self.0.de_lifetime_def());
         let (impl_generics, _, _) = generics.split_for_impl();
@@ -1941,8 +1941,8 @@ struct DeTyGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref ident) = self.0.de_parameter_ident {
-            generics.ty_params.push(ident.clone().into());
+        if let Some(ref idents) = self.0.de_parameter_idents {
+            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
         }
         generics
             .lifetimes
@@ -1989,8 +1989,8 @@ struct DeSeedImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeSeedImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref ident) = self.0.de_parameter_ident {
-            generics.ty_params.push(ident.clone().into());
+        if let Some(ref idents) = self.0.de_parameter_idents {
+            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
         }
         for param in &mut generics.ty_params {
             param
@@ -2013,8 +2013,8 @@ struct DeSeedTyGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeSeedTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref ident) = self.0.de_parameter_ident {
-            generics.ty_params.push(ident.clone().into());
+        if let Some(ref idents) = self.0.de_parameter_idents {
+            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
         }
         generics
             .lifetimes

@@ -115,7 +115,7 @@ pub struct Container {
     identifier: Identifier,
     deserialize_seed: Option<syn::Ty>,
     serialize_seed: Option<syn::Ty>,
-    de_parameter: Option<syn::Ident>,
+    de_parameters: Option<Vec<syn::Ident>>,
 }
 
 /// Styles of representing an enum.
@@ -187,7 +187,7 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
         let mut deserialize_seed = Attr::none(cx, "deserialize_seed");
         let mut serialize_seed = Attr::none(cx, "serialize_seed");
-        let mut de_parameter = Attr::none(cx, "de_parameter");
+        let mut de_parameters = Attr::none(cx, "de_parameters");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -364,10 +364,9 @@ impl Container {
                         }
                     }
 
-                    MetaItem(NameValue(ref name, ref lit)) if name == "de_parameter" => {
-                        let string = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit).unwrap();
-                        if let Ok(path) = syn::parse_ident(&string) {
-                            de_parameter.set(path);
+                    MetaItem(NameValue(ref name, ref lit)) if name == "de_parameters" => {
+                        if let Ok(path) = parse_lit_into_identifiers(cx, name.as_ref(), lit) {
+                            de_parameters.set(path);
                         }
                     }
 
@@ -401,7 +400,7 @@ impl Container {
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             deserialize_seed: deserialize_seed.get(),
             serialize_seed: serialize_seed.get(),
-            de_parameter: de_parameter.get(),
+            de_parameters: de_parameters.get(),
         }
     }
 
@@ -457,8 +456,8 @@ impl Container {
         self.serialize_seed.as_ref()
     }
 
-    pub fn de_parameter(&self) -> Option<&syn::Ident> {
-        self.de_parameter.as_ref()
+    pub fn de_parameters(&self) -> Option<&[syn::Ident]> {
+        self.de_parameters.as_ref().map(|x| &x[..])
     }
 }
 
@@ -1179,6 +1178,30 @@ fn parse_lit_into_lifetimes(
     }
     Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string)),)
 }
+
+fn parse_lit_into_identifiers(
+    cx: &Ctxt,
+    attr_name: &str,
+    lit: &syn::Lit,
+) -> Result<Vec<syn::Ident>, ()> {
+    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
+    if string.is_empty() {
+        cx.error("at least one lifetime must be borrowed");
+        return Err(());
+    }
+
+    named!(identifiers -> Vec<syn::Ident>,
+        separated_nonempty_list!(punct!(","), syn::parse::ident)
+    );
+
+    if let IResult::Done(rest, o) = identifiers(&string) {
+        if rest.trim().is_empty() {
+            return Ok(o);
+        }
+    }
+    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string)),)
+}
+
 
 // Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
 // This can have false negatives and false positives.
