@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use ser::{Serialize, SerializeTuple, Serializer};
+use ser::{Serialize, SerializeTuple, Serializer, SerializeSeed};
 
 #[cfg(feature = "std")]
 use ser::Error;
@@ -630,3 +630,33 @@ impl Serialize for OsString {
         self.as_os_str().serialize(serializer)
     }
 }
+
+macro_rules! deref_impl_seed {
+    ($($desc:tt)+) => {
+        impl $($desc)+ {
+            type Seed = T::Seed;
+            #[inline]
+            fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                (**self).serialize_seed(serializer, seed)
+            }
+        }
+    };
+}
+
+deref_impl_seed!(<'a, T: ?Sized> SerializeSeed for &'a T where T: SerializeSeed);
+deref_impl_seed!(<'a, T: ?Sized> SerializeSeed for &'a mut T where T: SerializeSeed);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+deref_impl_seed!(<T: ?Sized> SerializeSeed for Box<T> where T: SerializeSeed);
+
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+deref_impl_seed!(<T> SerializeSeed for Rc<T> where T: SerializeSeed);
+
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+deref_impl_seed!(<T> SerializeSeed for Arc<T> where T: SerializeSeed);
+
+#[cfg(any(feature = "std", feature = "collections"))]
+deref_impl_seed!(<'a, T: ?Sized> SerializeSeed for Cow<'a, T> where T: SerializeSeed + ToOwned);
