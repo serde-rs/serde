@@ -178,6 +178,87 @@ fn test_serialize_seed_newtype_variant2() {
     assert_eq!(seed.get(), 1);
 }
 
+#[derive(SerializeSeed)]
+#[serde(serialize_seed = "Cell<i32>")]
+struct GenericNewtype<T>(
+    #[serde(serialize_seed)]
+    T
+);
+
+#[test]
+fn test_serialize_seed_generic_newtype() {
+    let value = GenericNewtype(Inner);
+    let seed = Cell::new(0);
+    assert_ser_tokens(
+        &Seeded::new(&seed, &value),
+        &[
+            Token::NewtypeStruct {
+                name: "GenericNewtype",
+            },
+
+            Token::UnitStruct { name: "Inner" },
+        ],
+    );
+
+    assert_eq!(seed.get(), 1);
+}
+
+
+#[derive(SerializeSeed)]
+#[serde(serialize_seed = "Cell<i32>")]
+enum GenericSeedEnum<T> {
+    A(
+        #[serde(serialize_seed)]
+        T
+    ),
+    B {
+        #[serde(serialize_seed)]
+        inner: T,
+    },
+}
+
+#[test]
+fn test_serialize_seed_generic_newtype_variant() {
+    let value = GenericSeedEnum::A(Inner);
+    let seed = Cell::new(0);
+    assert_ser_tokens(
+        &Seeded::new(&seed, &value),
+        &[
+            Token::NewtypeVariant {
+                name: "GenericSeedEnum",
+                variant: "A",
+            },
+
+            Token::UnitStruct { name: "Inner" },
+        ],
+    );
+
+    assert_eq!(seed.get(), 1);
+}
+
+#[test]
+fn test_serialize_seed_generic_struct_variant() {
+    let value = GenericSeedEnum::B { inner: Inner };
+    let seed = Cell::new(0);
+    assert_ser_tokens(
+        &Seeded::new(&seed, &value),
+        &[
+            Token::StructVariant {
+                name: "GenericSeedEnum",
+                variant: "B",
+                len: 1
+            },
+
+            Token::Str("inner"),
+            Token::UnitStruct { name: "Inner" },
+
+            Token::StructVariantEnd
+        ],
+    );
+
+    assert_eq!(seed.get(), 1);
+}
+
 
 use std::cell::RefCell;
 use std::collections::HashMap;
