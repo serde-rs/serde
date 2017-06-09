@@ -16,7 +16,6 @@ use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 
-#[cfg(any(feature = "std", feature = "collections"))]
 use private::de::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
