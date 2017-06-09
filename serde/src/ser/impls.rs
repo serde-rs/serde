@@ -631,6 +631,105 @@ impl Serialize for OsString {
     }
 }
 
+/// Placeholder
+pub struct Seeded<'seed, S: ?Sized + 'seed, V> {
+    /// Placeholder
+    pub seed: &'seed S,
+    /// Placeholder
+    pub value: V,
+}
+
+impl<'seed, S: ?Sized, V> Seeded<'seed, S, V> {
+    /// Placeholder
+    #[inline]
+    pub fn new(seed: &'seed S, value: V) -> Self {
+        Seeded {
+            seed: seed,
+            value: value,
+        }
+    }
+}
+
+impl<'seed, T: ?Sized, V> Serialize for Seeded<'seed, T, V>
+where
+    V: SerializeSeed<Seed = T>,
+{
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.value.serialize_seed(serializer, self.seed)
+    }
+}
+
+/// Placeholder
+pub struct Unseeded<T>(pub T);
+
+impl<T> SerializeSeed for Unseeded<T>
+where
+    T: Serialize,
+{
+    type Seed = ();
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, _: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<T> SerializeSeed for Option<T>
+where
+    T: SerializeSeed,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {
+            Some(ref value) => serializer.serialize_some(&Seeded::new(seed, value)),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<T> SerializeSeed for [T]
+where
+    T: SerializeSeed,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_seq(self.iter().map(|value| Seeded::new(seed, value)))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+impl<T> SerializeSeed for Vec<T>
+where
+    T: SerializeSeed,
+{
+    type Seed = T::Seed;
+
+    #[inline]
+    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self[..].serialize_seed(serializer, seed)
+    }
+}
+
 macro_rules! deref_impl_seed {
     ($($desc:tt)+) => {
         impl $($desc)+ {
