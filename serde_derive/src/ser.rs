@@ -16,14 +16,14 @@ use internals::{attr, Ctxt};
 
 use std::u32;
 
-pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
+pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<Tokens, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
     let ident = &cont.ident;
-    let params = Parameters::new(&cont);
+    let params = Parameters::new(&cont, seed);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let dummy_const = Ident::new(format!("_IMPL_SERIALIZE_FOR_{}", ident));
     let body = Stmts(serialize_body(&cont, &params));
@@ -39,13 +39,30 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
             }
         }
     } else {
-        quote! {
-            #[automatically_derived]
-            impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
-                fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                    where __S: _serde::Serializer
-                {
-                    #body
+        if seed {
+            let seed_ty = cont.attrs.serialize_seed().ok_or_else(|| "Need a seed attribute")?;
+
+            quote! {
+                #[automatically_derived]
+                impl #impl_generics _serde::ser::SerializeSeed for #ident #ty_generics #where_clause {
+                    type Seed = #seed_ty;
+
+                    fn serialize_seed<__S>(&self, __serializer: __S, __seed: &Self::Seed) -> _serde::export::Result<__S::Ok, __S::Error>
+                        where __S: _serde::Serializer
+                    {
+                        #body
+                    }
+                }
+            }
+        } else {
+            quote! {
+                #[automatically_derived]
+                impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
+                    fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                        where __S: _serde::Serializer
+                    {
+                        #body
+                    }
                 }
             }
         }
@@ -91,7 +108,7 @@ struct Parameters {
 }
 
 impl Parameters {
-    fn new(cont: &Container) -> Self {
+    fn new(cont: &Container, seeded: bool) -> Self {
         let is_remote = cont.attrs.remote().is_some();
         let self_var = if is_remote {
             Ident::new("__self")
@@ -104,7 +121,7 @@ impl Parameters {
             None => cont.ident.clone().into(),
         };
 
-        let generics = build_generics(cont);
+        let generics = build_generics(cont, seeded);
 
         Parameters {
             self_var: self_var,
@@ -123,7 +140,7 @@ impl Parameters {
 
 // All the generics in the input, plus a bound `T: Serialize` for each generic
 // field type that will be serialized by us.
-fn build_generics(cont: &Container) -> syn::Generics {
+fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
     let generics = bound::without_defaults(cont.generics);
 
     let generics =
@@ -136,7 +153,14 @@ fn build_generics(cont: &Container) -> syn::Generics {
                 cont,
                 &generics,
                 needs_serialize_bound,
-                &path!(_serde::Serialize),
+                &if seeded {
+                    let serialize_seed = cont.attrs.serialize_seed()
+                        .expect("derive(SerializeSeed) specified without a seed type");
+                    let path = quote!(_serde::ser::SerializeSeed<Seed = #serialize_seed>);
+                    syn::parse_path(&path.to_string()).unwrap()
+                } else {
+                    path!(_serde::Serialize)
+                },
             )
         }
     }
@@ -201,9 +225,10 @@ fn serialize_newtype_struct(
     let type_name = cattrs.name().serialize_name();
 
     let mut field_expr = get_field(params, field, 0);
-    if let Some(path) = field.attrs.serialize_with() {
-        field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
-    }
+
+    let seed_ty = cattrs.serialize_seed();
+
+    field_expr = wrap_field(params, field, seed_ty, field_expr);
 
     quote_expr! {
         _serde::Serializer::serialize_newtype_struct(__serializer, #type_name, #field_expr)
@@ -220,6 +245,7 @@ fn serialize_tuple_struct(
         params,
         false,
         quote!(_serde::ser::SerializeTupleStruct::serialize_field),
+        cattrs.serialize_seed(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -241,6 +267,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         params,
         false,
         quote!(_serde::ser::SerializeStruct::serialize_field),
+        cattrs.serialize_seed(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -393,6 +420,7 @@ fn serialize_externally_tagged_variant(
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
+    let seed_ty = cattrs.serialize_seed();
 
     match variant.style {
         Style::Unit => {
@@ -408,9 +436,8 @@ fn serialize_externally_tagged_variant(
         Style::Newtype => {
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
-            if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
-            }
+
+            field_expr = wrap_field(params, field, seed_ty, field_expr);
 
             quote_expr! {
                 _serde::Serializer::serialize_newtype_variant(
@@ -431,6 +458,7 @@ fn serialize_externally_tagged_variant(
                 },
                 params,
                 &variant.fields,
+                cattrs.serialize_seed(),
             )
         }
         Style::Struct => {
@@ -442,6 +470,7 @@ fn serialize_externally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
+                cattrs.serialize_seed(),
             )
         }
     }
@@ -471,10 +500,9 @@ fn serialize_internally_tagged_variant(
         }
         Style::Newtype => {
             let field = &variant.fields[0];
+            let seed_ty = cattrs.serialize_seed();
             let mut field_expr = quote!(__field0);
-            if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
-            }
+            field_expr = wrap_field(params, field, seed_ty, field_expr);
 
             quote_expr! {
                 _serde::private::ser::serialize_tagged_newtype(
@@ -496,6 +524,7 @@ fn serialize_internally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
+                cattrs.serialize_seed(),
             )
         }
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -526,17 +555,16 @@ fn serialize_adjacently_tagged_variant(
             }
             Style::Newtype => {
                 let field = &variant.fields[0];
+                let seed_ty = cattrs.serialize_seed();
                 let mut field_expr = quote!(__field0);
-                if let Some(path) = field.attrs.serialize_with() {
-                    field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
-                }
+                field_expr = wrap_field(params, field, seed_ty, field_expr);
 
                 quote_expr! {
                     _serde::Serialize::serialize(#field_expr, __serializer)
                 }
             }
             Style::Tuple => {
-                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
+                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_seed())
             }
             Style::Struct => {
                 serialize_struct_variant(
@@ -544,6 +572,7 @@ fn serialize_adjacently_tagged_variant(
                     params,
                     &variant.fields,
                     &variant_name,
+                    cattrs.serialize_seed(),
                 )
             }
         },
@@ -618,20 +647,19 @@ fn serialize_untagged_variant(
             }
         }
         Style::Newtype => {
+            let seed_ty = cattrs.serialize_seed();
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
-            if let Some(path) = field.attrs.serialize_with() {
-                field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
-            }
+            field_expr = wrap_field(params, field, seed_ty, field_expr);
 
             quote_expr! {
                 _serde::Serialize::serialize(#field_expr, __serializer)
             }
         }
-        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
+        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_seed()),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.serialize_seed())
         }
     }
 }
@@ -649,6 +677,7 @@ fn serialize_tuple_variant(
     context: TupleVariant,
     params: &Parameters,
     fields: &[Field],
+    seed_ty: Option<&syn::Ty>,
 ) -> Fragment {
     let method = match context {
         TupleVariant::ExternallyTagged { .. } => {
@@ -657,7 +686,7 @@ fn serialize_tuple_variant(
         TupleVariant::Untagged => quote!(_serde::ser::SerializeTuple::serialize_element),
     };
 
-    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, method);
+    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, method, seed_ty);
 
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
@@ -705,6 +734,7 @@ fn serialize_struct_variant<'a>(
     params: &Parameters,
     fields: &[Field],
     name: &str,
+    seed_ty: Option<&syn::Ty>,
 ) -> Fragment {
     let method = match context {
         StructVariant::ExternallyTagged { .. } => {
@@ -714,7 +744,7 @@ fn serialize_struct_variant<'a>(
         StructVariant::Untagged => quote!(_serde::ser::SerializeStruct::serialize_field),
     };
 
-    let serialize_fields = serialize_struct_visitor(fields, params, true, method);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, method, seed_ty);
 
     let mut serialized_fields = fields
         .iter()
@@ -788,6 +818,7 @@ fn serialize_tuple_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     func: Tokens,
+    seed_ty: Option<&syn::Ty>,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -806,9 +837,7 @@ fn serialize_tuple_struct_visitor(
                     .skip_serializing_if()
                     .map(|path| quote!(#path(#field_expr)));
 
-                if let Some(path) = field.attrs.serialize_with() {
-                    field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
-                }
+                field_expr = wrap_field(params, field, seed_ty, field_expr);
 
                 let ser = quote! {
                     try!(#func(&mut __serde_state, #field_expr));
@@ -828,6 +857,7 @@ fn serialize_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     func: Tokens,
+    seed_ty: Option<&syn::Ty>,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -848,9 +878,7 @@ fn serialize_struct_visitor(
                     .skip_serializing_if()
                     .map(|path| quote!(#path(#field_expr)));
 
-                if let Some(path) = field.attrs.serialize_with() {
-                    field_expr = wrap_serialize_with(params, field.ty, path, field_expr)
-                }
+                field_expr = wrap_field(params, field, seed_ty, field_expr);
 
                 let ser = quote! {
                     try!(#func(&mut __serde_state, #key_expr, #field_expr));
@@ -893,6 +921,72 @@ fn wrap_serialize_with(
 
         &__SerializeWith {
             value: #value,
+            phantom: _serde::export::PhantomData::<#this #ty_generics>,
+        }
+    })
+}
+
+fn wrap_serialize_seed(
+    value: Tokens,
+) -> Tokens {
+    quote!( {
+        &_serde::ser::Seeded::new(__seed, #value)
+    })
+}
+
+fn wrap_field(
+    params: &Parameters,
+    field: &Field,
+    seed_ty: Option<&syn::Ty>,
+    mut field_expr: Tokens,
+) -> Tokens {
+    if field.attrs.serialize_seed() {
+        field_expr = wrap_serialize_seed(field_expr)
+    }
+
+    if let Some(path) = field.attrs.serialize_seed_with() {
+        let seed_ty = seed_ty.expect("serialize_seed_with specified without a seed type");
+        field_expr = wrap_serialize_seed_with(params, field.ty, seed_ty, path, field_expr)
+    }
+
+    if let Some(path) = field.attrs.serialize_with() {
+        field_expr = wrap_serialize_with(params, field.ty, path, field_expr)
+    }
+    field_expr
+}
+
+
+fn wrap_serialize_seed_with(
+    params: &Parameters,
+    field_ty: &syn::Ty,
+    seed_ty: &syn::Ty,
+    serialize_with: &syn::Path,
+    value: Tokens,
+) -> Tokens {
+    let this = &params.this;
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
+
+    let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
+    let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
+
+    quote!({
+        struct __SerializeWith #wrapper_impl_generics #where_clause {
+            value: &'__a #field_ty,
+            seed: &'__a #seed_ty,
+            phantom: _serde::export::PhantomData<#this #ty_generics>,
+        }
+
+        impl #wrapper_impl_generics _serde::Serialize for __SerializeWith #wrapper_ty_generics #where_clause {
+            fn serialize<__S>(&self, __s: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                where __S: _serde::Serializer
+            {
+                #serialize_with(self.value, __s, self.seed)
+            }
+        }
+
+        &__SerializeWith {
+            value: #value,
+            seed: __seed,
             phantom: _serde::export::PhantomData::<#this #ty_generics>,
         }
     })

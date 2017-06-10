@@ -7,6 +7,8 @@
 // except according to those terms.
 
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeSeed;
+use serde::ser::{SerializeSeed, Unseeded};
 
 use de::Deserializer;
 use ser::Serializer;
@@ -43,7 +45,7 @@ use std::fmt::Debug;
 /// ]);
 /// # }
 /// ```
-pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
+pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token<'static>])
 where
     T: Serialize + Deserialize<'de> + PartialEq + Debug,
 {
@@ -80,12 +82,19 @@ where
 /// ]);
 /// # }
 /// ```
-pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
+pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token<'static>])
 where
     T: Serialize,
 {
+    assert_ser_seed_tokens(&Unseeded(value), &(), tokens)
+}
+
+pub fn assert_ser_seed_tokens<T>(value: &T, seed: &T::Seed, tokens: &[Token<'static>])
+where
+    T: SerializeSeed,
+{
     let mut ser = Serializer::new(tokens);
-    match value.serialize(&mut ser) {
+    match value.serialize_seed(&mut ser, seed) {
         Ok(_) => {}
         Err(err) => panic!("value failed to serialize: {}", err),
     }
@@ -94,6 +103,7 @@ where
         panic!("{} remaining tokens", ser.remaining());
     }
 }
+
 
 /// Asserts that `value` serializes to the given `tokens`, and then yields `error`.
 ///
@@ -135,7 +145,7 @@ where
 /// assert_ser_tokens_error(&example, expected, error);
 /// # }
 /// ```
-pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
+pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token<'static>], error: &str)
 where
     T: Serialize,
 {
@@ -179,12 +189,28 @@ where
 /// ]);
 /// # }
 /// ```
-pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
+pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token<'static>])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
     let mut de = Deserializer::new(tokens);
     match T::deserialize(&mut de) {
+        Ok(v) => assert_eq!(v, *value),
+        Err(e) => panic!("tokens failed to deserialize: {}", e),
+    }
+
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
+    }
+}
+
+pub fn assert_de_seed_tokens<'de, T>(seed: T, value: &T::Value, tokens: &'de [Token<'static>])
+where
+    T: DeserializeSeed<'de>,
+    T::Value: PartialEq + Debug,
+{
+    let mut de = Deserializer::new(tokens);
+    match seed.deserialize(&mut de) {
         Ok(v) => assert_eq!(v, *value),
         Err(e) => panic!("tokens failed to deserialize: {}", e),
     }
@@ -222,7 +248,7 @@ where
 /// );
 /// # }
 /// ```
-pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
+pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token<'static>], error: &str)
 where
     T: Deserialize<'de>,
 {

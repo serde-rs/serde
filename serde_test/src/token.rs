@@ -9,7 +9,7 @@
 use std::fmt::{self, Debug, Display};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub enum Token {
+pub enum Token<'a> {
     /// A serialized `bool`.
     ///
     /// ```rust
@@ -126,7 +126,7 @@ pub enum Token {
     /// let s = String::from("transient");
     /// assert_tokens(&s, &[Token::Str("transient")]);
     /// ```
-    Str(&'static str),
+    Str(&'a str),
 
     /// A borrowed `str`.
     ///
@@ -136,7 +136,7 @@ pub enum Token {
     /// let s: &str = "borrowed";
     /// assert_tokens(&s, &[Token::BorrowedStr("borrowed")]);
     /// ```
-    BorrowedStr(&'static str),
+    BorrowedStr(&'a str),
 
     /// A serialized `String`.
     ///
@@ -146,16 +146,16 @@ pub enum Token {
     /// let s = String::from("owned");
     /// assert_tokens(&s, &[Token::String("owned")]);
     /// ```
-    String(&'static str),
+    String(&'a str),
 
     /// A serialized `[u8]`
-    Bytes(&'static [u8]),
+    Bytes(&'a [u8]),
 
     /// A borrowed `[u8]`.
-    BorrowedBytes(&'static [u8]),
+    BorrowedBytes(&'a [u8]),
 
     /// A serialized `ByteBuf`
-    ByteBuf(&'static [u8]),
+    ByteBuf(&'a [u8]),
 
     /// A serialized `Option<T>` containing none.
     ///
@@ -551,7 +551,7 @@ pub enum Token {
     Enum { name: &'static str },
 }
 
-impl Display for Token {
+impl<'a> Display for Token<'a> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         Debug::fmt(self, formatter)
     }

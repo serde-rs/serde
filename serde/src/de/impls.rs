@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess,
+use de::{Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess,
          Visitor};
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -16,7 +16,6 @@ use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 
-#[cfg(any(feature = "std", feature = "collections"))]
 use private::de::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -412,45 +411,6 @@ impl<'de> Deserialize<'de> for Box<CStr> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct OptionVisitor<T> {
-    marker: PhantomData<T>,
-}
-
-impl<'de, T> Visitor<'de> for OptionVisitor<T>
-where
-    T: Deserialize<'de>,
-{
-    type Value = Option<T>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("option")
-    }
-
-    #[inline]
-    fn visit_unit<E>(self) -> Result<Option<T>, E>
-    where
-        E: Error,
-    {
-        Ok(None)
-    }
-
-    #[inline]
-    fn visit_none<E>(self) -> Result<Option<T>, E>
-    where
-        E: Error,
-    {
-        Ok(None)
-    }
-
-    #[inline]
-    fn visit_some<D>(self, deserializer: D) -> Result<Option<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(Some)
-    }
-}
-
 impl<'de, T> Deserialize<'de> for Option<T>
 where
     T: Deserialize<'de>,
@@ -459,7 +419,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_option(OptionVisitor { marker: PhantomData })
+        OptionSeed(PhantomData).deserialize(deserializer)
     }
 }
 
@@ -497,6 +457,122 @@ impl<'de, T> Deserialize<'de> for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// TODO
+pub struct SeqSeed<S, F, T> {
+    seed: T,
+    with_capacity: F,
+    _marker: PhantomData<S>
+}
+
+impl<S, F, T> SeqSeed<S, F, T>
+{
+    /// TODO
+    pub fn new(seed: T, with_capacity: F) -> SeqSeed<S, F, T> {
+        SeqSeed {
+            seed: seed,
+            with_capacity: with_capacity,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, S, F, T> DeserializeSeed<'de> for SeqSeed<S, F, T>
+where
+    T: DeserializeSeed<'de> + Clone,
+    F: FnOnce(usize) -> S,
+    S: Extend<T::Value>
+{
+    type Value = S;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        impl<'de, S, F, T> Visitor<'de> for SeqSeed<S, F, T>
+        where
+            T: DeserializeSeed<'de> + Clone,
+            F: FnOnce(usize) -> S,
+            S: Extend<T::Value>
+        {
+            type Value = S;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            #[inline]
+            fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut values = (self.with_capacity)(size_hint::cautious(access.size_hint()));
+
+                while let Some(value) = try!(access.next_element_seed(self.seed.clone())) {
+                    values.extend(Some(value));
+                }
+
+                Ok(values)
+            }
+        }
+
+        deserializer.deserialize_seq(self)
+    }
+}
+
+/// TODO
+pub struct OptionSeed<S>(pub S);
+
+impl<'de, S> DeserializeSeed<'de> for OptionSeed<S>
+where
+    S: DeserializeSeed<'de>,
+{
+    type Value = Option<S::Value>;
+
+    #[inline]
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        impl<'de, S> Visitor<'de> for OptionSeed<S>
+        where
+            S: DeserializeSeed<'de>,
+        {
+            type Value = Option<S::Value>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("option")
+            }
+
+            #[inline]
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(None)
+            }
+
+
+            #[inline]
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(None)
+            }
+
+            #[inline]
+            fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                self.0.deserialize(deserializer).map(Some)
+            }
+        }
+
+        deserializer.deserialize_option(self)
+    }
+}
+
 #[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! seq_impl {
     (
@@ -515,37 +591,7 @@ macro_rules! seq_impl {
             where
                 D: Deserializer<'de>,
             {
-                struct SeqVisitor<T $(, $typaram)*> {
-                    marker: PhantomData<$ty<T $(, $typaram)*>>,
-                }
-
-                impl<'de, T $(, $typaram)*> Visitor<'de> for SeqVisitor<T $(, $typaram)*>
-                where
-                    T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
-                    $($typaram: $bound1 $(+ $bound2)*,)*
-                {
-                    type Value = $ty<T $(, $typaram)*>;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("a sequence")
-                    }
-
-                    #[inline]
-                    fn visit_seq<A>(self, mut $access: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: SeqAccess<'de>,
-                    {
-                        let mut values = $with_capacity;
-
-                        while let Some(value) = try!($access.next_element()) {
-                            $insert(&mut values, value);
-                        }
-
-                        Ok(values)
-                    }
-                }
-
-                let visitor = SeqVisitor { marker: PhantomData };
+                let visitor = SeqSeed::new(PhantomData, $with_capacity);
                 deserializer.deserialize_seq(visitor)
             }
         }
@@ -557,7 +603,7 @@ seq_impl!(
     BinaryHeap<T: Ord>,
     seq,
     BinaryHeap::new(),
-    BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
+    BinaryHeap::with_capacity,
     BinaryHeap::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -565,7 +611,7 @@ seq_impl!(
     BTreeSet<T: Eq + Ord>,
     seq,
     BTreeSet::new(),
-    BTreeSet::new(),
+    |_| BTreeSet::new(),
     BTreeSet::insert);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -573,7 +619,7 @@ seq_impl!(
     LinkedList<T>,
     seq,
     LinkedList::new(),
-    LinkedList::new(),
+    |_| LinkedList::new(),
     LinkedList::push_back);
 
 #[cfg(feature = "std")]
@@ -581,7 +627,7 @@ seq_impl!(
     HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
     HashSet::with_hasher(S::default()),
-    HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
+    |size| HashSet::with_capacity_and_hasher(size, S::default()),
     HashSet::insert);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -589,7 +635,7 @@ seq_impl!(
     Vec<T>,
     seq,
     Vec::new(),
-    Vec::with_capacity(size_hint::cautious(seq.size_hint())),
+    Vec::with_capacity,
     Vec::push);
 
 #[cfg(any(feature = "std", feature = "collections"))]
@@ -597,7 +643,7 @@ seq_impl!(
     VecDeque<T>,
     seq,
     VecDeque::new(),
-    VecDeque::with_capacity(size_hint::cautious(seq.size_hint())),
+    VecDeque::with_capacity,
     VecDeque::push_back);
 
 ////////////////////////////////////////////////////////////////////////////////
