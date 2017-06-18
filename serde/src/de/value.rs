@@ -51,13 +51,13 @@ pub struct Error {
     err: ErrorImpl,
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 type ErrorImpl = Box<str>;
-#[cfg(not(any(feature = "std", feature = "collections")))]
+#[cfg(not(any(feature = "std", feature = "alloc")))]
 type ErrorImpl = ();
 
 impl de::Error for Error {
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn custom<T>(msg: T) -> Self
     where
         T: Display,
@@ -65,7 +65,7 @@ impl de::Error for Error {
         Error { err: msg.to_string().into_boxed_str() }
     }
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn custom<T>(msg: T) -> Self
     where
         T: Display,
@@ -85,12 +85,12 @@ impl ser::Error for Error {
 }
 
 impl Display for Error {
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         formatter.write_str(&self.err)
     }
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         formatter.write_str("Serde deserialization error")
     }
@@ -425,14 +425,14 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `String`.
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 #[derive(Clone, Debug)]
 pub struct StringDeserializer<E> {
     value: String,
     marker: PhantomData<E>,
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, E> IntoDeserializer<'de, E> for String
 where
     E: de::Error,
@@ -447,7 +447,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, E> de::Deserializer<'de> for StringDeserializer<E>
 where
     E: de::Error,
@@ -482,7 +482,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, E> de::EnumAccess<'de> for StringDeserializer<E>
 where
     E: de::Error,
@@ -501,14 +501,14 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `Cow<str>`.
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 #[derive(Clone, Debug)]
 pub struct CowStrDeserializer<'a, E> {
     value: Cow<'a, str>,
     marker: PhantomData<E>,
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, E> IntoDeserializer<'de, E> for Cow<'a, str>
 where
     E: de::Error,
@@ -523,7 +523,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, E> de::Deserializer<'de> for CowStrDeserializer<'a, E>
 where
     E: de::Error,
@@ -561,7 +561,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, E> de::EnumAccess<'de> for CowStrDeserializer<'a, E>
 where
     E: de::Error,
@@ -727,7 +727,7 @@ impl Expected for ExpectedInSeq {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, T, E> IntoDeserializer<'de, E> for Vec<T>
 where
     T: IntoDeserializer<'de, E>,
@@ -740,7 +740,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, T, E> IntoDeserializer<'de, E> for BTreeSet<T>
 where
     T: IntoDeserializer<'de, E> + Eq + Ord,
@@ -1145,7 +1145,7 @@ impl Expected for ExpectedInMap {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, K, V, E> IntoDeserializer<'de, E> for BTreeMap<K, V>
 where
     K: IntoDeserializer<'de, E> + Eq + Ord,

@@ -56,7 +56,7 @@ impl Serialize for str {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl Serialize for String {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -195,22 +195,22 @@ macro_rules! seq_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(BinaryHeap<T: Ord>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(BTreeSet<T: Ord>);
 
 #[cfg(feature = "std")]
 seq_impl!(HashSet<T: Eq + Hash, H: BuildHasher>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(LinkedList<T>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(Vec<T>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(VecDeque<T>);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -309,7 +309,7 @@ macro_rules! map_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 map_impl!(BTreeMap<K: Ord, V>);
 
 #[cfg(feature = "std")]
@@ -343,7 +343,7 @@ deref_impl!(<T> Serialize for Rc<T> where T: Serialize);
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 deref_impl!(<T> Serialize for Arc<T> where T: Serialize);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);
 
 ////////////////////////////////////////////////////////////////////////////////
