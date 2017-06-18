@@ -1321,7 +1321,7 @@ pub trait Serializer: Sized {
     ///
     /// [`String`]: https://doc.rust-lang.org/std/string/struct.String.html
     /// [`serialize_str`]: #tymethod.serialize_str
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Display,
@@ -1358,7 +1358,7 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Display;

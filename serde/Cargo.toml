@@ -48,21 +48,14 @@ std = []
 #    https://github.com/serde-rs/serde/issues/812
 unstable = []
 
-# Provide impls for types that require memory allocation like Box<T> and Rc<T>.
-# This is a subset of std but may be enabled without depending on all of std.
+# Provide impls for types in the Rust core allocation and collections library
+# including String, Box<T>, Vec<T>, and Cow<T>. This is a subset of std but may
+# be enabled without depending on all of std.
 #
 # Requires a dependency on the unstable core allocation library:
 #
 #    https://doc.rust-lang.org/alloc/
 alloc = ["unstable"]
-
-# Provide impls for collection types like String and Cow<T>. This is a subset of
-# std but may be enabled without depending on all of std.
-#
-# Requires a dependency on the unstable collections library:
-#
-#    https://doc.rust-lang.org/collections/
-collections = ["alloc"]
 
 # Opt into impls for Rc<T> and Arc<T>. Serializing and deserializing these types
 # does not preserve identity and may result in multiple copies of the same data.

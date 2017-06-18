@@ -19,7 +19,7 @@ pub use self::string::from_utf8_lossy;
 mod string {
     use lib::*;
 
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     pub fn from_utf8_lossy(bytes: &[u8]) -> Cow<str> {
         String::from_utf8_lossy(bytes)
     }
@@ -31,7 +31,7 @@ mod string {
     //
     // so it is okay for the return type to be different from the std case as long
     // as the above works.
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     pub fn from_utf8_lossy(bytes: &[u8]) -> &str {
         // Three unicode replacement characters if it fails. They look like a
         // white-on-black question mark. The user will recognize it as invalid
