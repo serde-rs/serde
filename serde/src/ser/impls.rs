@@ -177,6 +177,7 @@ where
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! seq_impl {
     ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)* >) => {
         impl<T $(, $typaram)*> Serialize for $ty<T $(, $typaram)*>
@@ -290,6 +291,7 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! map_impl {
     ($ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)* >) => {
         impl<K, V $(, $typaram)*> Serialize for $ty<K, V $(, $typaram)*>
