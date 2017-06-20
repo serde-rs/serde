@@ -1387,10 +1387,10 @@ fn deserialize_identifier(
     };
 
     let visit_index = if is_variant {
-        let variant_indices = 0u32..;
+        let variant_indices = 0u64..;
         let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
         let visit_index = quote! {
-            fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
+            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
                 match __value {

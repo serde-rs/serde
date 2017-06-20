@@ -23,7 +23,10 @@ fn test_variant_identifier() {
         Bbb,
     }
 
+    assert_de_tokens(&V::Aaa, &[Token::U8(0)]);
+    assert_de_tokens(&V::Aaa, &[Token::U16(0)]);
     assert_de_tokens(&V::Aaa, &[Token::U32(0)]);
+    assert_de_tokens(&V::Aaa, &[Token::U64(0)]);
     assert_de_tokens(&V::Aaa, &[Token::Str("Aaa")]);
     assert_de_tokens(&V::Aaa, &[Token::Bytes(b"Aaa")]);
 }
