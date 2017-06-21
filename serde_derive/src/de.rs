@@ -413,33 +413,14 @@ fn deserialize_seq(
                     let #var = #default;
                 }
             } else {
-                let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
-                    (None, None) => {
-                        let field_ty = &field.ty;
-                        quote!(try!(_serde::de::SeqAccess::next_element::<#field_ty>(&mut __seq)))
-                    }
-                    (Some(path), _) => {
-                        let (wrapper, seed) = wrap_deserialize_seed_with(
-                            params,
-                            cattrs.deserialize_seed().expect("deserialize_seed"),
-                            field.ty,
-                            path);
-                        quote!({
-                            #wrapper
-                            try!(_serde::de::SeqAccess::next_element_seed(&mut __seq, #seed))
-                        })
-                    }
-                    (_, Some(path)) => {
-                        let (wrapper, wrapper_ty) = wrap_deserialize_with(
-                            params, field.ty, path);
-                        quote!({
-                            #wrapper
-                            _serde::export::Option::map(
-                                try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)),
-                                |__wrap| __wrap.value)
-                        })
-                    }
-                };
+                let (wrapper, wrapper_value) = wrap_deserialize(
+                    params,
+                    field,
+                    cattrs.deserialize_seed());
+                let visit = quote!({
+                    #wrapper
+                    try!(_serde::de::SeqAccess::next_element_seed(&mut __seq, #wrapper_value))
+                });
                 let assign = quote! {
                     let #var = match #visit {
                         Some(__value) => __value,
@@ -483,33 +464,11 @@ fn deserialize_newtype_struct(
     field: &Field,
     cattrs: &attr::Container,
 ) -> Tokens {
-    let value = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
-        (None, None) => {
-            let field_ty = &field.ty;
-            quote! {
-                try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
-            }
-        }
-        (Some(path), _) => {
-            let (wrapper, wrapper_value) = wrap_deserialize_seed_with(
-                params,
-                cattrs.deserialize_seed().expect("deserialize_seed"),
-                field.ty,
-                path,
-            );
-            quote!({
-                #wrapper
-                try!(_serde::de::DeserializeSeed::deserialize(#wrapper_value, __e))
-            })
-        }
-        (_, Some(path)) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
-            quote!({
-                #wrapper
-                try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
-            })
-        }
-    };
+    let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_seed());
+    let value = quote!({
+        #wrapper
+        try!(_serde::de::DeserializeSeed::deserialize(#wrapper_value, __e))
+    });
 
     let mut result = quote!(#type_path(#value));
     if params.has_getter {
@@ -1292,6 +1251,7 @@ fn deserialize_untagged_variant(
                 variant_ident,
                 params,
                 &variant.fields[0],
+                cattrs.deserialize_seed(),
                 deserializer,
             )
         }
@@ -1323,38 +1283,12 @@ fn deserialize_externally_tagged_newtype_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
-    match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
-        (None, None) => {
-            let field_ty = &field.ty;
-            quote_expr! {
-                _serde::export::Result::map(
-                    _serde::de::VariantAccess::newtype_variant::<#field_ty>(__variant),
-                    #this::#variant_ident)
-            }
-        }
-        (Some(path), _) => {
-            let (wrapper, wrapper_value) = wrap_deserialize_seed_with(
-                params,
-                cattrs.deserialize_seed().expect("deserialize_seed"),
-                field.ty,
-                path,
-            );
-            quote_block! {
-                #wrapper
-                _serde::export::Result::map(
-                    _serde::de::VariantAccess::newtype_variant_seed(__variant, #wrapper_value),
-                    #this::#variant_ident)
-            }
-        }
-        (_, Some(path)) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
-            quote_block! {
-                #wrapper
-                _serde::export::Result::map(
-                    _serde::de::VariantAccess::newtype_variant::<#wrapper_ty>(__variant),
-                    |__wrapper| #this::#variant_ident(__wrapper.value))
-            }
-        }
+    let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_seed());
+    quote_block! {
+        #wrapper
+        _serde::export::Result::map(
+            _serde::de::VariantAccess::newtype_variant_seed(__variant, #wrapper_value),
+            #this::#variant_ident)
     }
 }
 
@@ -1362,27 +1296,17 @@ fn deserialize_untagged_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
+    seed_ty: Option<&syn::Ty>,
     deserializer: Tokens,
 ) -> Fragment {
     let this = &params.this;
-    match field.attrs.deserialize_with() {
-        None => {
-            let field_ty = &field.ty;
-            quote_expr! {
-                _serde::export::Result::map(
-                    <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
-                    #this::#variant_ident)
-            }
-        }
-        Some(path) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
-            quote_block! {
-                #wrapper
-                _serde::export::Result::map(
-                    <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer),
-                    |__wrapper| #this::#variant_ident(__wrapper.value))
-            }
-        }
+    let (wrapper, wrapper_value) = wrap_deserialize(params, field, seed_ty);
+    quote_block! {
+        #wrapper
+        _serde::export::Result::map(
+            _serde::de::DeserializeSeed>::deserialize(#wrapper_value, #deserializer),
+            #this::#variant_ident,
+        )
     }
 }
 
@@ -1669,33 +1593,13 @@ fn deserialize_map(
         .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
 
-            let visit = match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
-                (None, None) => {
-                    let field_ty = &field.ty;
-                    quote! {
-                        try!(_serde::de::MapAccess::next_value::<#field_ty>(&mut __map))
-                    }
-                }
-                (Some(path), _) => {
-                    let (wrapper, seed) = wrap_deserialize_seed_with(
-                        params,
-                        cattrs.deserialize_seed().expect("deserialize_seed"),
-                        field.ty,
-                        path);
-                    quote!({
-                        #wrapper
-                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, #seed))
-                    })
-                }
-                (_, Some(path)) => {
-                    let (wrapper, wrapper_ty) = wrap_deserialize_with(
-                        params, field.ty, path);
-                    quote!({
-                        #wrapper
-                        try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
-                    })
-                }
-            };
+            let (wrapper, wrapper_value) = wrap_deserialize(params, field, 
+                    cattrs.deserialize_seed());
+            let visit = quote!({
+                #wrapper
+                try!(_serde::de::MapAccess::next_value_seed(&mut __map, #wrapper_value))
+            });
+            
             quote! {
                 __Field::#name => {
                     if _serde::export::Option::is_some(&#name) {
@@ -1817,6 +1721,23 @@ fn field_i(i: usize) -> Ident {
     Ident::new(format!("__field{}", i))
 }
 
+fn wrap_deserialize(
+    params: &Parameters,
+    field: &Field,
+    seed_ty: Option<&syn::Ty>,
+) -> (Tokens, Tokens) {
+    match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
+        (None, None) => {
+            let field_ty = &field.ty;
+            (quote!(), quote!( _serde::export::PhantomData::<#field_ty> ))
+        }
+        (Some(path), _) => {
+            wrap_deserialize_seed_with(params, seed_ty.expect("deserialize_seed"), field.ty, path)
+        }
+        (_, Some(path)) => wrap_deserialize_with(params, field.ty, path),
+    }
+}
+
 /// This function wraps the expression in `#[serde(deserialize_with = "...")]`
 /// in a trait to prevent it from accessing the internal `Deserialize` state.
 fn wrap_deserialize_with(
@@ -1829,27 +1750,29 @@ fn wrap_deserialize_with(
 
     let wrapper = quote! {
         struct __DeserializeWith #de_impl_generics #where_clause {
-            value: #field_ty,
             phantom: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }
 
-        impl #de_impl_generics _serde::Deserialize<'de> for __DeserializeWith #de_ty_generics #where_clause {
-            fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+        impl #de_impl_generics _serde::de::DeserializeSeed<'de> for __DeserializeWith #de_ty_generics #where_clause {
+            type Value = #field_ty;
+
+            fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
                 where __D: _serde::Deserializer<'de>
             {
-                _serde::export::Ok(__DeserializeWith {
-                    value: try!(#deserialize_with(__deserializer)),
-                    phantom: _serde::export::PhantomData,
-                    lifetime: _serde::export::PhantomData,
-                })
+                #deserialize_with(__deserializer)
             }
         }
     };
 
-    let wrapper_ty = quote!(__DeserializeWith #de_ty_generics);
+    let wrapper_value = quote!{
+        __DeserializeWith {
+            phantom: _serde::export::PhantomData,
+            lifetime: _serde::export::PhantomData,
+        }
+    };
 
-    (wrapper, wrapper_ty)
+    (wrapper, wrapper_value)
 }
 
 fn wrap_deserialize_seed_with(
