@@ -8,16 +8,16 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use serde::de::{Deserialize, Deserializer, DeserializeSeed, DeserializeSeedEx, Error, OptionSeed};
+use serde::de::{Deserialize, Deserializer, DeserializeSeed, DeserializeSeedEx, Error};
 
 use serde_test::{Token, assert_de_seed_tokens};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct Seed(Rc<Cell<i32>>);
 
-impl AsMut<Rc<Cell<i32>>> for Seed {
-    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
-        &mut self.0
+impl AsMut<Seed> for Seed {
+    fn as_mut(&mut self) -> &mut Seed {
+        self
     }
 }
 
@@ -26,18 +26,18 @@ struct Inner;
 
 fn deserialize_inner<'de, S, D>(seed: &mut S, deserializer: D) -> Result<Inner, D::Error>
 where
-    S: AsMut<Rc<Cell<i32>>>,
+    S: AsMut<Seed>,
     D: Deserializer<'de>,
 {
     Inner::deserialize_seed(seed.as_mut().clone(), deserializer)
 }
 
-impl<'de> DeserializeSeedEx<'de, Rc<Cell<i32>>> for Inner {
-    fn deserialize_seed<D>(seed: Rc<Cell<i32>>, deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeSeedEx<'de, Seed> for Inner {
+    fn deserialize_seed<D>(seed: Seed, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        seed.set(seed.get() + 1);
+        seed.0.set(seed.0.get() + 1);
         Inner::deserialize(deserializer)
     }
 }
@@ -85,17 +85,8 @@ fn test_deserialize_seed() {
     assert_eq!(seed.0.get(), 2);
 }
 
-#[derive(Clone)]
-struct NewtypeSeed(Rc<Cell<i32>>);
-
-impl AsMut<Rc<Cell<i32>>> for NewtypeSeed {
-    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
-        &mut self.0
-    }
-}
-
 #[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "NewtypeSeed")]
+#[serde(deserialize_seed = "Seed")]
 struct Newtype(
     #[serde(deserialize_seed_with = "deserialize_inner")]
     Inner
@@ -104,7 +95,7 @@ struct Newtype(
 #[test]
 fn test_newtype_deserialize_seed() {
     let value = Newtype(Inner);
-    let seed = NewtypeSeed(Rc::new(Cell::new(0)));
+    let seed = Seed::default();
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -119,10 +110,10 @@ fn test_newtype_deserialize_seed() {
 }
 
 #[derive(Clone)]
-struct ExtraParameterNewtypeSeed<T>(Rc<Cell<i32>>, PhantomData<T>);
+struct ExtraParameterNewtypeSeed<T>(Seed, PhantomData<T>);
 
-impl<T> AsMut<Rc<Cell<i32>>> for ExtraParameterNewtypeSeed<T> {
-    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+impl<T> AsMut<Seed> for ExtraParameterNewtypeSeed<T> {
+    fn as_mut(&mut self) -> &mut Seed {
         &mut self.0
     }
 }
@@ -140,7 +131,7 @@ struct ExtraParameterNewtype(
 #[test]
 fn extra_parameter_test_newtype_deserialize_seed() {
     let value = ExtraParameterNewtype(Inner);
-    let seed = ExtraParameterNewtypeSeed(Rc::new(Cell::new(0)), PhantomData::<i32>);
+    let seed = ExtraParameterNewtypeSeed(Seed::default(), PhantomData::<i32>);
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -151,7 +142,7 @@ fn extra_parameter_test_newtype_deserialize_seed() {
         ],
     );
 
-    assert_eq!(seed.0.get(), 1);
+    assert_eq!((seed.0).0.get(), 1);
 }
 
 #[derive(Clone)]
@@ -184,7 +175,7 @@ struct VecNewtype<T>(
 #[test]
 fn test_vec_newtype_deserialize_seed() {
     let value = VecNewtype(vec![Inner, Inner]);
-    let seed = VecSeed(serde::de::Seed::new(Rc::new(Cell::new(0))));
+    let seed = VecSeed(serde::de::Seed::new(Seed::default()));
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -198,14 +189,14 @@ fn test_vec_newtype_deserialize_seed() {
         ],
     );
 
-    assert_eq!((seed.0).seed.get(), 2);
+    assert_eq!(seed.0.seed.0.get(), 2);
 }
 
 #[derive(Clone)]
-struct GenericTypeSeed<T>(Rc<Cell<i32>>, T);
+struct GenericTypeSeed<T>(Seed, T);
 
-impl<T> AsMut<Rc<Cell<i32>>> for GenericTypeSeed<T> {
-    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
+impl<T> AsMut<Seed> for GenericTypeSeed<T> {
+    fn as_mut(&mut self) -> &mut Seed {
         &mut self.0
     }
 }
@@ -235,7 +226,7 @@ struct GenericType<T> {
 #[test]
 fn test_generic_deserialize_seed() {
     let value = GenericType { inner: Inner, t: 3 };
-    let seed = GenericTypeSeed(Rc::new(Cell::new(0)), PhantomData);
+    let seed = GenericTypeSeed(Seed::default(), PhantomData);
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -255,21 +246,12 @@ fn test_generic_deserialize_seed() {
         ],
     );
 
-    assert_eq!(seed.0.get(), 1);
+    assert_eq!((seed.0).0.get(), 1);
 }
 
-
-#[derive(Clone)]
-struct EnumSeed(Rc<Cell<i32>>);
-
-impl AsMut<Rc<Cell<i32>>> for EnumSeed {
-    fn as_mut(&mut self) -> &mut Rc<Cell<i32>> {
-        &mut self.0
-    }
-}
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "EnumSeed")]
+#[serde(deserialize_seed = "Seed")]
 enum Enum {
     Inner(
         #[serde(deserialize_seed_with = "deserialize_inner")]
@@ -285,7 +267,7 @@ enum Enum {
 #[test]
 fn test_enum_deserialize_seed() {
     let value = Enum::Inner(Inner);
-    let seed = EnumSeed(Rc::new(Cell::new(0)));
+    let seed = Seed::default();
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -306,7 +288,7 @@ fn test_enum_deserialize_seed() {
 #[test]
 fn test_enum_deserialize_seed_2() {
     let value = Enum::Inner2(3, Inner);
-    let seed = EnumSeed(Rc::new(Cell::new(0)));
+    let seed = Seed::default();
     assert_de_seed_tokens(
         seed.clone(),
         &value,
@@ -329,7 +311,7 @@ fn test_enum_deserialize_seed_2() {
 }
 
 #[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "NodeSeed<Rc<Node>>")]
+#[serde(deserialize_seed = "NodeMap")]
 struct Node {
     data: char,
     #[serde(deserialize_seed_with = "deserialize_option_node")]
@@ -338,16 +320,14 @@ struct Node {
     right: Option<Rc<Node>>,
 }
 
-fn deserialize_option_node<'de, S, D>(
-    seed: &mut S,
+fn deserialize_option_node<'de, D>(
+    seed: &mut NodeMap,
     deserializer: D,
 ) -> Result<Option<Rc<Node>>, D::Error>
 where
-    S: AsMut<NodeMap>,
     D: Deserializer<'de>,
 {
-    let variant = OptionSeed(VariantSeed { map: seed.as_mut().clone() })
-        .deserialize(deserializer)?;
+    let variant = Option::<Variant>::deserialize_seed(seed.clone(), deserializer)?;
     match variant {
         None => Ok(None),
         Some(variant) => {
@@ -359,12 +339,12 @@ where
                     right,
                 } => {
                     let node = Rc::new(Node { data, left, right });
-                    seed.as_mut().borrow_mut().insert(id, node.clone());
+                    seed.borrow_mut().insert(id, node.clone());
                     Ok(Some(node))
                 }
                 Variant::Plain { data, left, right } => Ok(Some(Rc::new(Node { data, left, right }),),),
                 Variant::Reference(id) => {
-                    match seed.as_mut().borrow_mut().get(&id) {
+                    match seed.borrow_mut().get(&id) {
                         Some(rc) => Ok(Some(rc.clone())),
                         None => Err(Error::custom(format_args!("missing id {}", id))),
                     }
@@ -387,36 +367,15 @@ impl<'de> Deserialize<'de> for Node {
     where
         D: Deserializer<'de>,
     {
-        let map = NodeSeed { map: Rc::new(RefCell::new(IdToNode::default())) };
-        map.deserialize(deserializer)
+        let map = Rc::new(RefCell::new(IdToNode::default()));
+        Self::deserialize_seed(map, deserializer)
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-struct NodeSeed<T> {
-    map: Rc<RefCell<IdToShared<T>>>,
-}
-
-impl AsMut<NodeMap> for NodeSeed<Rc<Node>> {
-    fn as_mut(&mut self) -> &mut NodeMap {
-        &mut self.map
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-struct VariantSeed {
-    map: NodeMap,
-}
-
-impl AsMut<NodeMap> for VariantSeed {
-    fn as_mut(&mut self) -> &mut NodeMap {
-        &mut self.map
-    }
-}
 
 #[derive(DeserializeSeed)]
-#[serde(deserialize_seed = "VariantSeed", rename = "Node")]
+#[serde(deserialize_seed = "NodeMap", rename = "Node")]
 enum Variant {
     Plain {
         data: char,
@@ -453,10 +412,10 @@ fn test_node_deserialize() {
         },
     );
     let map = Rc::new(RefCell::new(HashMap::new()));
-    let seed = NodeSeed { map: map };
+    let seed = map;
     assert_de_seed_tokens(
         seed,
-        &a,
+        &*a,
         &[
             Token::Struct {
                 name: "Node",

@@ -8,8 +8,8 @@
 
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess,
-         Visitor};
+use de::{Deserialize, DeserializeSeed, DeserializeSeedEx, Deserializer, EnumAccess, Error, Seed,
+         SeqAccess, Unexpected, VariantAccess, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::MapAccess;
@@ -467,11 +467,10 @@ impl<'de, T> Deserialize<'de> for PhantomData<T> {
 pub struct SeqSeed<S, F, T> {
     seed: T,
     with_capacity: F,
-    _marker: PhantomData<S>
+    _marker: PhantomData<S>,
 }
 
-impl<S, F, T> SeqSeed<S, F, T>
-{
+impl<S, F, T> SeqSeed<S, F, T> {
     /// TODO
     pub fn new(seed: T, with_capacity: F) -> SeqSeed<S, F, T> {
         SeqSeed {
@@ -486,7 +485,7 @@ impl<'de, S, F, T> DeserializeSeed<'de> for SeqSeed<S, F, T>
 where
     T: DeserializeSeed<'de> + Clone,
     F: FnOnce(usize) -> S,
-    S: Extend<T::Value>
+    S: Extend<T::Value>,
 {
     type Value = S;
 
@@ -498,7 +497,7 @@ where
         where
             T: DeserializeSeed<'de> + Clone,
             F: FnOnce(usize) -> S,
-            S: Extend<T::Value>
+            S: Extend<T::Value>,
         {
             type Value = S;
 
@@ -578,6 +577,19 @@ where
         deserializer.deserialize_option(self)
     }
 }
+
+impl<'de, T, S> DeserializeSeedEx<'de, S> for Option<T>
+where
+    T: DeserializeSeedEx<'de, S>,
+{
+    fn deserialize_seed<D>(seed: S, deserializer: D) -> Result<Option<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        OptionSeed(Seed::new(seed)).deserialize(deserializer)
+    }
+}
+
 
 #[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! seq_impl {
@@ -1621,7 +1633,9 @@ where
         let value = try!(Deserialize::deserialize(deserializer));
         unsafe {
             let ptr = &value as *const T as *const u8;
-            if slice::from_raw_parts(ptr, mem::size_of::<T>()).iter().all(|&b| b == 0) {
+            if slice::from_raw_parts(ptr, mem::size_of::<T>())
+                   .iter()
+                   .all(|&b| b == 0) {
                 return Err(Error::custom("expected a non-zero value"));
             }
             // Waiting for a safe way to construct NonZero<T>:

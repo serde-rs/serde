@@ -38,18 +38,16 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
             }
         }
     } else {
-        let (de_impl_generics, _, ty_generics, where_clause) =
-            split_with_de_lifetime(&params);
+        let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
         if seeded {
             let seed_ty = cont.attrs
                 .deserialize_seed()
                 .ok_or_else(|| "Need a deserialize_seed attribute")?;
             quote! {
                 #[automatically_derived]
-                impl #de_impl_generics _serde::de::DeserializeSeed<'de> for #seed_ty #where_clause {
-                    type Value = #ident #ty_generics;
+                impl #de_impl_generics _serde::de::DeserializeSeedEx<'de, #seed_ty> for #ident #ty_generics #where_clause {
 
-                    fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+                    fn deserialize_seed<__D>(__seed: #seed_ty, __deserializer: __D) -> _serde::export::Result<Self, __D::Error>
                         where __D: _serde::Deserializer<'de>
                     {
                         #body
@@ -120,7 +118,9 @@ impl Parameters {
             generics: generics,
             borrowed: borrowed,
             has_getter: has_getter,
-            de_parameter_idents: cont.attrs.de_parameters().map(|params| params.to_owned())
+            de_parameter_idents: cont.attrs
+                .de_parameters()
+                .map(|params| params.to_owned()),
         }
     }
 
@@ -280,8 +280,7 @@ fn deserialize_tuple(
     deserializer: Option<Tokens>,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
-        split_with_de_lifetime(params);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -320,7 +319,7 @@ fn deserialize_tuple(
             if variant_ident.is_some() {
                 quote! { seed: self.seed, }
             } else {
-                quote! { seed: self, }
+                quote! { seed: __seed, }
             },
         );
         visitor_field_def = Some(quote! { seed: #seed_ty, });
@@ -541,8 +540,7 @@ fn deserialize_struct(
     let is_untagged = deserializer.is_some();
 
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
-        split_with_de_lifetime(params);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -578,7 +576,7 @@ fn deserialize_struct(
             if variant_ident.is_some() {
                 quote! { seed: self.seed, }
             } else {
-                quote! { seed: self, }
+                quote! { seed: __seed, }
             },
         );
         visitor_field_def = Some(quote! { seed: #seed_ty, });
@@ -642,7 +640,7 @@ fn deserialize_struct(
             #visitor_field_def
 
             marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&'de ()>,
+            lifetime: _serde::export::PhantomData<(&'de (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
@@ -693,8 +691,7 @@ fn deserialize_externally_tagged_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
-        split_with_de_lifetime(params);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
 
     let type_name = cattrs.name().deserialize_name();
 
@@ -758,7 +755,7 @@ fn deserialize_externally_tagged_enum(
     let visitor_field;
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
-        visitor_field = Some(quote! { seed: self, });
+        visitor_field = Some(quote! { seed: __seed, });
         visitor_field_def = Some(quote! { seed: #seed_ty, });
     } else {
         visitor_field = None;
@@ -866,8 +863,7 @@ fn deserialize_adjacently_tagged_enum(
     content: &str,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
-        split_with_de_lifetime(params);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
 
     let variant_names_idents: Vec<_> = variants
         .iter()
@@ -1035,7 +1031,7 @@ fn deserialize_adjacently_tagged_enum(
 
             field: __Field,
             marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&'de ()>,
+            lifetime: _serde::export::PhantomData<(&'de (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::DeserializeSeed<'de> for __Seed #de_ty_generics #where_clause {
@@ -1932,7 +1928,9 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
+            generics
+                .ty_params
+                .extend(idents.iter().map(|ident| ident.clone().into()));
         }
         generics.lifetimes.insert(0, self.0.de_lifetime_def());
         let (impl_generics, _, _) = generics.split_for_impl();
@@ -1946,7 +1944,9 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
+            generics
+                .ty_params
+                .extend(idents.iter().map(|ident| ident.clone().into()));
         }
         generics
             .lifetimes
@@ -1956,9 +1956,8 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
     }
 }
 
-fn split_with_de_lifetime
-    (params: &Parameters,)
-     -> (DeImplGenerics, DeTyGenerics, syn::TyGenerics, &syn::WhereClause) {
+fn split_with_de_lifetime(params: &Parameters,)
+    -> (DeImplGenerics, DeTyGenerics, syn::TyGenerics, &syn::WhereClause) {
     let de_impl_generics = DeImplGenerics(&params);
     let de_ty_generics = DeTyGenerics(&params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
@@ -1971,7 +1970,9 @@ impl<'a> ToTokens for DeSeedImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
+            generics
+                .ty_params
+                .extend(idents.iter().map(|ident| ident.clone().into()));
         }
         for param in &mut generics.ty_params {
             param
@@ -1995,7 +1996,9 @@ impl<'a> ToTokens for DeSeedTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.ty_params.extend(idents.iter().map(|ident| ident.clone().into()));
+            generics
+                .ty_params
+                .extend(idents.iter().map(|ident| ident.clone().into()));
         }
         generics
             .lifetimes
