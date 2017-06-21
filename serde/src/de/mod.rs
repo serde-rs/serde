@@ -131,7 +131,7 @@ mod impls;
 mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
-pub use self::impls::{OptionSeed, SeqSeed};
+pub use self::impls::{OptionSeed, SeqSeed, SeqSeedEx};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -722,7 +722,7 @@ where
 /// TODO
 pub trait DeserializeSeedEx<'de, Seed>: Sized {
     /// TODO
-    fn deserialize_seed<D>(seed: Seed, deserializer: D) -> Result<Self, D::Error>
+    fn deserialize_seed<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>;
 }
@@ -763,7 +763,7 @@ impl<S, T> Seed<S, T> {
     }
 }
 
-impl<'de, S, T> DeserializeSeed<'de> for Seed<S, T>
+impl<'de, 's, S, T> DeserializeSeed<'de> for Seed<&'s mut S, T>
 where
     T: DeserializeSeedEx<'de, S>,
 {

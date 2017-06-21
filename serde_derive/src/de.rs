@@ -47,7 +47,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
                 #[automatically_derived]
                 impl #de_impl_generics _serde::de::DeserializeSeedEx<'de, #seed_ty> for #ident #ty_generics #where_clause {
 
-                    fn deserialize_seed<__D>(__seed: #seed_ty, __deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+                    fn deserialize_seed<__D>(__seed: &mut #seed_ty, __deserializer: __D) -> _serde::export::Result<Self, __D::Error>
                         where __D: _serde::Deserializer<'de>
                     {
                         #body
@@ -280,7 +280,8 @@ fn deserialize_tuple(
     deserializer: Option<Tokens>,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_and_seed_lifetime(params);
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -322,7 +323,7 @@ fn deserialize_tuple(
                 quote! { seed: __seed, }
             },
         );
-        visitor_field_def = Some(quote! { seed: #seed_ty, });
+        visitor_field_def = Some(quote! { seed: &'seed mut #seed_ty, });
     } else {
         visitor_field = None;
         visitor_field_def = None;
@@ -363,7 +364,7 @@ fn deserialize_tuple(
             #visitor_field_def
 
             marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&'de ()>,
+            lifetime: _serde::export::PhantomData<(&'de (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
@@ -540,7 +541,8 @@ fn deserialize_struct(
     let is_untagged = deserializer.is_some();
 
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_and_seed_lifetime(params);
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -579,7 +581,7 @@ fn deserialize_struct(
                 quote! { seed: __seed, }
             },
         );
-        visitor_field_def = Some(quote! { seed: #seed_ty, });
+        visitor_field_def = Some(quote! { seed: &'seed mut #seed_ty, });
     } else {
         visitor_field = None;
         visitor_field_def = None;
@@ -691,7 +693,8 @@ fn deserialize_externally_tagged_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_and_seed_lifetime(params);
 
     let type_name = cattrs.name().deserialize_name();
 
@@ -756,7 +759,7 @@ fn deserialize_externally_tagged_enum(
     let visitor_field_def;
     if let Some(seed_ty) = cattrs.deserialize_seed() {
         visitor_field = Some(quote! { seed: __seed, });
-        visitor_field_def = Some(quote! { seed: #seed_ty, });
+        visitor_field_def = Some(quote! { seed: &'seed mut #seed_ty, });
     } else {
         visitor_field = None;
         visitor_field_def = None;
@@ -769,7 +772,7 @@ fn deserialize_externally_tagged_enum(
             #visitor_field_def
 
             marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&'de ()>,
+            lifetime: _serde::export::PhantomData<(&'de (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {
@@ -863,7 +866,8 @@ fn deserialize_adjacently_tagged_enum(
     content: &str,
 ) -> Fragment {
     let this = &params.this;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_and_seed_lifetime(params);
 
     let variant_names_idents: Vec<_> = variants
         .iter()
@@ -1050,7 +1054,7 @@ fn deserialize_adjacently_tagged_enum(
             #visitor_field_def
 
             marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&'de ()>,
+            lifetime: _serde::export::PhantomData<(&'de (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<'de> for __Visitor #de_ty_generics #where_clause {

@@ -525,6 +525,53 @@ where
 }
 
 /// TODO
+pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> {
+    seed: &'seed mut T,
+    with_capacity: F,
+    _marker: PhantomData<(S, U)>,
+}
+
+impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U> {
+    /// TODO
+    pub fn new(seed: &'seed mut T, with_capacity: F) -> SeqSeedEx<'seed, S, F, T, U> {
+        SeqSeedEx {
+            seed: seed,
+            with_capacity: with_capacity,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
+where
+    U: DeserializeSeedEx<'de,
+                         T>,
+    F: FnOnce(usize) -> S,
+    S: Extend<U>,
+{
+    type Value = S;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a sequence")
+    }
+
+    #[inline]
+    fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = (self.with_capacity)(size_hint::cautious(access.size_hint()));
+
+        while let Some(value) = try!(access.next_element_seed(Seed::new(&mut *self.seed))) {
+            values.extend(Some(value));
+        }
+
+        Ok(values)
+    }
+}
+
+
+/// TODO
 pub struct OptionSeed<S>(pub S);
 
 impl<'de, S> DeserializeSeed<'de> for OptionSeed<S>
@@ -582,14 +629,13 @@ impl<'de, T, S> DeserializeSeedEx<'de, S> for Option<T>
 where
     T: DeserializeSeedEx<'de, S>,
 {
-    fn deserialize_seed<D>(seed: S, deserializer: D) -> Result<Option<T>, D::Error>
+    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Option<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
         OptionSeed(Seed::new(seed)).deserialize(deserializer)
     }
 }
-
 
 #[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! seq_impl {
@@ -610,6 +656,20 @@ macro_rules! seq_impl {
                 D: Deserializer<'de>,
             {
                 let visitor = SeqSeed::new(PhantomData, $with_capacity);
+                deserializer.deserialize_seq(visitor)
+            }
+        }
+
+        impl<'de, Seed, T $(, $typaram)*> DeserializeSeedEx<'de, Seed> for $ty<T $(, $typaram)*>
+        where
+            T: DeserializeSeedEx<'de, Seed> $(+ $tbound1 $(+ $tbound2)*)*,
+            $($typaram: $bound1 $(+ $bound2)*,)*
+        {
+            fn deserialize_seed<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                let visitor = SeqSeedEx::new(seed, $with_capacity);
                 deserializer.deserialize_seq(visitor)
             }
         }
