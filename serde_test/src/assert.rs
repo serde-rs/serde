@@ -204,7 +204,7 @@ where
     }
 }
 
-pub fn assert_de_seed_tokens<'de, S, T>(seed: S, value: &T, tokens: &'de [Token<'static>])
+pub fn assert_de_seed_tokens<'de, S, T>(seed: &mut S, value: &T, tokens: &'de [Token<'static>])
 where
     T: DeserializeSeedEx<'de, S> + PartialEq + Debug,
 {
