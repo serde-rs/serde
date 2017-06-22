@@ -44,7 +44,7 @@ impl<'de> DeserializeSeedEx<'de, Seed> for Inner {
 #[derive(DeserializeSeed, Debug, PartialEq)]
 #[serde(deserialize_seed = "Seed")]
 struct SeedStruct {
-    #[serde(deserialize_seed_with = "deserialize_inner")]
+    #[serde(deserialize_seed)]
     value: Inner,
     #[serde(deserialize_seed_with = "deserialize_inner")]
     value2: Inner,

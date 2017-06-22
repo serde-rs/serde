@@ -1726,15 +1726,18 @@ fn wrap_deserialize(
     field: &Field,
     seed_ty: Option<&syn::Ty>,
 ) -> (Tokens, Tokens) {
-    match (field.attrs.deserialize_seed_with(), field.attrs.deserialize_with()) {
-        (None, None) => {
+    match (field.attrs.deserialize_seed(),
+           field.attrs.deserialize_seed_with(),
+           field.attrs.deserialize_with()) {
+        (false, None, None) => {
             let field_ty = &field.ty;
             (quote!(), quote!( _serde::export::PhantomData::<#field_ty> ))
         }
-        (Some(path), _) => {
+        (true, _, _) => (quote!(), quote!( _serde::de::Seed::new(&mut *self.seed) )),
+        (_, Some(path), _) => {
             wrap_deserialize_seed_with(params, seed_ty.expect("deserialize_seed"), field.ty, path)
         }
-        (_, Some(path)) => wrap_deserialize_with(params, field.ty, path),
+        (_, _, Some(path)) => wrap_deserialize_with(params, field.ty, path),
     }
 }
 
