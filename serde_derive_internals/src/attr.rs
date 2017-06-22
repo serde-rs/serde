@@ -370,7 +370,6 @@ impl Container {
                         }
                     }
 
-
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -773,7 +772,7 @@ impl Field {
                     MetaItem(Word(ref name)) if name == "skip" => {
                         skip_serializing.set_true();
                         skip_deserializing.set_true();
-                    },
+                    }
 
                     // Parse `#[serde(skip_serializing_if = "...")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "skip_serializing_if" => {
@@ -878,9 +877,15 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(serialize_seed_)]`
+                    // Parse `#[serde(serialize_seed)]`
                     MetaItem(Word(ref name)) if name == "serialize_seed" => {
                         serialize_seed.set_true();
+                    }
+
+                    // Parse `#[serde(seed)]`
+                    MetaItem(Word(ref name)) if name == "seed" => {
+                        serialize_seed.set_true();
+                        deserialize_seed.set_true();
                     }
 
                     MetaItem(NameValue(ref name, ref lit)) if name == "seed_with" => {
