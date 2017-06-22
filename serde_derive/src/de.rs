@@ -408,7 +408,7 @@ fn deserialize_seq(
     let let_values = vars.clone().zip(fields)
         .map(|(var, field)| {
             if field.attrs.skip_deserializing() {
-                let default = Expr(expr_is_missing(&field, cattrs));
+                let default = Expr(expr_is_missing(params, &field, cattrs));
                 quote! {
                     let #var = #default;
                 }
@@ -1646,7 +1646,7 @@ fn deserialize_map(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(
             |&(field, ref name)| {
-                let missing_expr = Match(expr_is_missing(&field, cattrs));
+                let missing_expr = Match(expr_is_missing(params, &field, cattrs));
 
                 quote! {
                     let #name = match #name {
@@ -1666,7 +1666,7 @@ fn deserialize_map(
                     .clone()
                     .expect("struct contains unnamed fields");
                 if field.attrs.skip_deserializing() {
-                    let value = Expr(expr_is_missing(&field, cattrs));
+                    let value = Expr(expr_is_missing(params, &field, cattrs));
                     quote!(#ident: #value)
                 } else {
                     quote!(#ident: #name)
@@ -1817,7 +1817,7 @@ fn wrap_deserialize_seed_with(
     (wrapper, wrapper_value)
 }
 
-fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
+fn expr_is_missing(params: &Parameters, field: &Field, cattrs: &attr::Container) -> Fragment {
     match *field.attrs.default() {
         attr::Default::Default => {
             return quote_expr!(_serde::export::Default::default());
@@ -1846,8 +1846,10 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
             return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
         }
     } else {
+        let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_seed());
         quote_expr! {
-            try!(_serde::private::de::missing_field(#name))
+            #wrapper
+            try!(_serde::private::de::missing_field(#wrapper_value, #name))
         }
     }
 }
