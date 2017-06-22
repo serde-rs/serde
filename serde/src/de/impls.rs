@@ -542,31 +542,46 @@ impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U> {
     }
 }
 
-impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
+impl<'de, 'seed, S, F, T, U> DeserializeSeed<'de> for SeqSeedEx<'seed, S, F, T, U>
 where
-    U: DeserializeSeedEx<'de,
-                         T>,
+    U: DeserializeSeedEx<'de, T>,
     F: FnOnce(usize) -> S,
     S: Extend<U>,
 {
     type Value = S;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a sequence")
-    }
-
-    #[inline]
-    fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        A: SeqAccess<'de>,
+        D: Deserializer<'de>,
     {
-        let mut values = (self.with_capacity)(size_hint::cautious(access.size_hint()));
+        impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
+        where
+            U: DeserializeSeedEx<'de,
+                                T>,
+            F: FnOnce(usize) -> S,
+            S: Extend<U>,
+        {
+            type Value = S;
 
-        while let Some(value) = try!(access.next_element_seed(Seed::new(&mut *self.seed))) {
-            values.extend(Some(value));
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            #[inline]
+            fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut values = (self.with_capacity)(size_hint::cautious(access.size_hint()));
+
+                while let Some(value) = try!(access.next_element_seed(Seed::new(&mut *self.seed))) {
+                    values.extend(Some(value));
+                }
+
+                Ok(values)
+            }
         }
-
-        Ok(values)
+        deserializer.deserialize_seq(self)
     }
 }
 
