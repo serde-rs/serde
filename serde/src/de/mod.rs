@@ -753,6 +753,15 @@ where
 {
 }
 
+impl<S, T, U> AsMut<U> for Seed<S, T>
+where
+    S: AsMut<U>
+{
+    fn as_mut(&mut self) -> &mut U {
+        self.seed.as_mut()
+    }
+}
+
 impl<S, T> Seed<S, T> {
     /// TODO
     pub fn new(seed: S) -> Seed<S, T> {
