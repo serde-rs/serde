@@ -330,6 +330,34 @@ fn test_gen() {
     struct EmptyArray {
         empty: [X; 0],
     }
+
+    enum Or<A, B> {
+        A(A),
+        B(B),
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(untagged, remote = "Or")]
+    enum OrDef<A, B> {
+        #[allow(dead_code)]
+        A(A),
+        #[allow(dead_code)]
+        B(B),
+    }
+
+    struct Str<'a>(&'a str);
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(remote = "Str")]
+    struct StrDef<'a>(&'a str);
+
+    #[derive(Serialize, Deserialize)]
+    struct Remote<'a> {
+        #[serde(with = "OrDef")]
+        or: Or<u8, bool>,
+        #[serde(borrow, with = "StrDef")]
+        s: Str<'a>,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
