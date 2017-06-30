@@ -10,7 +10,7 @@ use syn::{self, Ident};
 use quote::Tokens;
 
 use bound;
-use fragment::{Fragment, Stmts, Match};
+use fragment::{Fragment, Stmts, Match, StrBoolInt};
 use internals::ast::{Body, Container, Field, Style, Variant};
 use internals::{attr, Ctxt};
 
@@ -392,7 +392,10 @@ fn serialize_externally_tagged_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let variant_name = match variant.attrs.name().serialize_name() {
+        attr::StrBoolInt::Str(s) => s,
+        _ => unreachable!(),
+    };
 
     match variant.style {
         Style::Unit => {
@@ -454,7 +457,7 @@ fn serialize_internally_tagged_variant(
     tag: &str,
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let variant_name = StrBoolInt::from(variant.attrs.name().serialize_name());
 
     let enum_ident_str = params.type_name();
     let variant_ident_str = variant.ident.as_ref();
@@ -511,7 +514,7 @@ fn serialize_adjacently_tagged_variant(
 ) -> Fragment {
     let this = &params.this;
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let variant_name = StrBoolInt::from(variant.attrs.name().serialize_name());
 
     let inner = Stmts(
         match variant.style {
@@ -539,11 +542,12 @@ fn serialize_adjacently_tagged_variant(
                 serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
             }
             Style::Struct => {
+                let str_variant_name = variant_name.stringify();
                 serialize_struct_variant(
                     StructVariant::Untagged,
                     params,
                     &variant.fields,
-                    &variant_name,
+                    &str_variant_name,
                 )
             }
         },
@@ -696,7 +700,7 @@ enum StructVariant<'a> {
         variant_index: u32,
         variant_name: String,
     },
-    InternallyTagged { tag: &'a str, variant_name: String },
+    InternallyTagged { tag: &'a str, variant_name: StrBoolInt },
     Untagged,
 }
 

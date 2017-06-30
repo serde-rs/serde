@@ -10,7 +10,7 @@ use syn::{self, Ident};
 use quote::{self, Tokens, ToTokens};
 
 use bound;
-use fragment::{Fragment, Expr, Stmts, Match};
+use fragment::{Fragment, Expr, Stmts, Match, StrBoolInt};
 use internals::ast::{Body, Container, Field, Style, Variant};
 use internals::{self, attr};
 
@@ -602,7 +602,11 @@ fn deserialize_externally_tagged_enum(
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)),)
+        .map(|(i, variant)| (match variant.attrs.name().deserialize_name() {
+                                 attr::StrBoolInt::Str(s) => s,
+                                 _ => unreachable!(),
+                             },
+                             field_i(i)),)
         .collect();
 
     let variants_stmt = {
@@ -695,15 +699,20 @@ fn deserialize_internally_tagged_enum(
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)),)
+        .map(|(i, variant)| (StrBoolInt::from(variant.attrs.name().deserialize_name()), field_i(i)),)
         .collect();
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name);
+        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name.stringify());
         quote! {
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
     };
+
+    // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
+    let variant_names_idents = variant_names_idents.iter().map(|&(ref variant, ref ident)|
+                                                            (variant.stringify(), ident.clone()))
+                                                     .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(variant_names_idents, cattrs, true),);
 
@@ -755,15 +764,20 @@ fn deserialize_adjacently_tagged_enum(
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)),)
+        .map(|(i, variant)| (StrBoolInt::from(variant.attrs.name().deserialize_name()), field_i(i)),)
         .collect();
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name);
+        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name.stringify());
         quote! {
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
     };
+
+    // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
+    let variant_names_idents = variant_names_idents.iter().map(|&(ref variant, ref ident)|
+                                                            (variant.stringify(), ident.clone()))
+                                                     .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(variant_names_idents, cattrs, true),);
 
@@ -1319,10 +1333,10 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident.clone()),)
+        .map(|variant| (StrBoolInt::from(variant.attrs.name().deserialize_name()), variant.ident.clone()),)
         .collect();
 
-    let names = names_idents.iter().map(|&(ref name, _)| name);
+    let names = names_idents.iter().map(|&(ref name, _)| name.stringify());
 
     let names_const = if fallthrough.is_some() {
         None
@@ -1337,6 +1351,12 @@ fn deserialize_custom_identifier(
         };
         Some(fields)
     };
+
+    // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
+    let names_idents : Vec<_> = names_idents.iter().map(|&(ref variant, ref ident)|
+                                                 (variant.stringify(), ident.clone()))
+                                                     .collect();
+
 
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
     let visitor_impl =

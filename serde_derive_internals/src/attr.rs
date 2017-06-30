@@ -99,6 +99,32 @@ impl Name {
     }
 }
 
+/// An extended name, used for the type tag for enums.
+#[derive(Debug, Clone)]
+pub enum StrBoolInt {
+    Str(String),
+    Bool(bool),
+    Int(u64),
+}
+
+#[derive(Debug)]
+pub struct VariantName {
+    serialize: StrBoolInt,
+    deserialize: StrBoolInt,
+}
+
+impl VariantName {
+    /// Return the container name for the container when serializing.
+    pub fn serialize_name(&self) -> StrBoolInt {
+        self.serialize.clone()
+    }
+
+    /// Return the container name for the container when deserializing.
+    pub fn deserialize_name(&self) -> StrBoolInt {
+        self.deserialize.clone()
+    }
+}
+
 /// Represents container (e.g. struct) attribute information
 #[derive(Debug)]
 pub struct Container {
@@ -503,7 +529,7 @@ fn decide_identifier(
 /// Represents variant attribute information
 #[derive(Debug)]
 pub struct Variant {
-    name: Name,
+    name: VariantName,
     ser_renamed: bool,
     de_renamed: bool,
     rename_all: RenameRule,
@@ -526,7 +552,10 @@ impl Variant {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     MetaItem(NameValue(ref name, ref lit)) if name == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, name.as_ref(), name.as_ref(), lit) {
+                        if let Ok(s) = get_int_or_string_or_bool_from_lit(cx,
+                                                                          name.as_ref(),
+                                                                          name.as_ref(),
+                                                                          lit) {
                             ser_name.set(s.clone());
                             de_name.set(s);
                         }
@@ -534,7 +563,7 @@ impl Variant {
 
                     // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
-                        if let Ok((ser, de)) = get_renames(cx, meta_items) {
+                        if let Ok((ser, de)) = get_revariantnames(cx, meta_items) {
                             ser_name.set_opt(ser);
                             de_name.set_opt(de);
                         }
@@ -585,9 +614,9 @@ impl Variant {
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
         Variant {
-            name: Name {
-                serialize: ser_name.unwrap_or_else(|| variant.ident.to_string()),
-                deserialize: de_name.unwrap_or_else(|| variant.ident.to_string()),
+            name: VariantName {
+                serialize: ser_name.unwrap_or_else(|| StrBoolInt::Str(variant.ident.to_string())),
+                deserialize: de_name.unwrap_or_else(|| StrBoolInt::Str(variant.ident.to_string())),
             },
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
@@ -598,16 +627,20 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &VariantName {
         &self.name
     }
 
     pub fn rename_by_rule(&mut self, rule: &RenameRule) {
         if !self.ser_renamed {
-            self.name.serialize = rule.apply_to_variant(&self.name.serialize);
+            if let StrBoolInt::Str(ref mut serialize) = self.name.serialize {
+                *serialize = rule.apply_to_variant(&serialize);
+            }
         }
         if !self.de_renamed {
-            self.name.deserialize = rule.apply_to_variant(&self.name.deserialize);
+            if let StrBoolInt::Str(ref mut deserialize) = self.name.deserialize {
+               *deserialize = rule.apply_to_variant(&deserialize);
+            }
         }
     }
 
@@ -976,6 +1009,10 @@ fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<Stri
     get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
 
+fn get_revariantnames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<StrBoolInt>, ()> {
+    get_ser_and_de(cx, "rename", items, get_int_or_string_or_bool_from_lit)
+}
+
 fn get_where_predicates(
     cx: &Ctxt,
     items: &[syn::NestedMetaItem],
@@ -1004,6 +1041,33 @@ fn get_string_from_lit(
                 "expected serde {} attribute to be a string: `{} = \"...\"`",
                 attr_name,
                 meta_item_name
+            ),
+        );
+        Err(())
+    }
+}
+
+fn get_int_or_string_or_bool_from_lit(
+    cx: &Ctxt,
+    attr_name: &str,
+    meta_item_name: &str,
+    lit: &syn::Lit,
+) -> Result<StrBoolInt, ()> {
+    if let syn::Lit::Str(ref s, _) = *lit {
+        Ok(StrBoolInt::Str(s.clone()))
+    } else if let syn::Lit::Int(u, _) = *lit {
+        Ok(StrBoolInt::Int(u))
+    } else if let syn::Lit::Bool(b) = *lit {
+        Ok(StrBoolInt::Bool(b))
+    } else {
+        cx.error(
+            format!(
+                "expected serde {} attribute to be a string, an int or a bool: \
+                `{mn} = \"...\"` or \
+                `{mn} = 3 or \
+                `{mn} = true` ",
+                attr_name,
+                mn=meta_item_name
             ),
         );
         Err(())
