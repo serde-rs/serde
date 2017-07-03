@@ -722,7 +722,6 @@ fn test_internally_tagged_enum_renamed() {
         F(Struct),
     }
 
-    // TODO: Deserialize also
     assert_tokens(
         &InternallyTagged::A { a: 1 },
         &[
@@ -738,7 +737,7 @@ fn test_internally_tagged_enum_renamed() {
         ],
     );
 
-    assert_ser_tokens(
+    assert_tokens(
         &InternallyTagged::B { b: 1 },
         &[
             Token::Struct { name: "InternallyTagged", len: 2 },
@@ -753,7 +752,7 @@ fn test_internally_tagged_enum_renamed() {
         ],
     );
 
-    assert_ser_tokens(
+    assert_tokens(
         &InternallyTagged::C,
         &[
             Token::Struct { name: "InternallyTagged", len: 1 },
@@ -763,6 +762,63 @@ fn test_internally_tagged_enum_renamed() {
 
             Token::StructEnd,
         ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::D(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(1) },
+
+            Token::Str("type"),
+            Token::U64(4),
+
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::E(Newtype(BTreeMap::new())),
+        &[
+            Token::Map { len: Some(1) },
+
+            Token::Str("type"),
+            Token::U64(5),
+
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::F(Struct { f: 6 }),
+        &[
+            Token::Struct { name: "Struct", len: 2 },
+
+            Token::Str("type"),
+            Token::U64(6),
+
+            Token::Str("f"),
+            Token::U8(6),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::Bool(false)
+        ],
+        "unknown variant `false`, expected one of `abc`, `true`, `3`, `4`, `5`, `6`",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Struct { name: "Struct", len: 2 },
+            Token::Str("type"),
+            Token::U8(9),
+        ],
+        "unknown variant `9`, expected one of `abc`, `true`, `3`, `4`, `5`, `6`",
     );
 }
 

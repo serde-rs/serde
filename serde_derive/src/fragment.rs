@@ -99,9 +99,30 @@ impl StrBoolInt {
     pub fn stringify(&self) -> String {
         match *self {
             StrBoolInt::Str(ref s) => s.clone(),
-            StrBoolInt::Bool(true) => "bool: true".to_owned(),
-            StrBoolInt::Bool(false) => "bool: false".to_owned(),
-            StrBoolInt::Int(i) => format!("integer: {}", i),
+            StrBoolInt::Bool(true) => "true".to_owned(),
+            StrBoolInt::Bool(false) => "false".to_owned(),
+            StrBoolInt::Int(i) => format!("{}", i),
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match *self {
+            StrBoolInt::Str(ref s) => Some(&s),
+            _ => None,
+        }
+    }
+
+    pub fn as_int(&self) -> Option<u64> {
+        match *self {
+            StrBoolInt::Int(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match *self {
+            StrBoolInt::Bool(b) => Some(b),
+            _ => None,
         }
     }
 }
@@ -113,6 +134,12 @@ impl From<StrBoolIntInternal> for StrBoolInt {
             StrBoolIntInternal::Bool(b) => StrBoolInt::Bool(b),
             StrBoolIntInternal::Int(i) => StrBoolInt::Int(i),
         }
+    }
+}
+
+impl From<String> for StrBoolInt {
+    fn from(src: String) -> StrBoolInt {
+        StrBoolInt::Str(src)
     }
 }
 

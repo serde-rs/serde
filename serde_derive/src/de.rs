@@ -602,11 +602,7 @@ fn deserialize_externally_tagged_enum(
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| (match variant.attrs.name().deserialize_name() {
-                                 attr::StrBoolInt::Str(s) => s,
-                                 _ => unreachable!(),
-                             },
-                             field_i(i)),)
+        .map(|(i, variant)| (StrBoolInt::from(variant.attrs.name().deserialize_name()), field_i(i)))
         .collect();
 
     let variants_stmt = {
@@ -711,7 +707,7 @@ fn deserialize_internally_tagged_enum(
 
     // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
     let variant_names_idents = variant_names_idents.iter().map(|&(ref variant, ref ident)|
-                                                            (variant.stringify(), ident.clone()))
+                                                            (variant.clone(), ident.clone()))
                                                      .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(variant_names_idents, cattrs, true),);
@@ -773,11 +769,6 @@ fn deserialize_adjacently_tagged_enum(
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
     };
-
-    // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
-    let variant_names_idents = variant_names_idents.iter().map(|&(ref variant, ref ident)|
-                                                            (variant.stringify(), ident.clone()))
-                                                     .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(variant_names_idents, cattrs, true),);
 
@@ -1252,7 +1243,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: Vec<(String, Ident)>,
+    fields: Vec<(StrBoolInt, Ident)>,
     cattrs: &attr::Container,
     is_variant: bool,
 ) -> Fragment {
@@ -1352,12 +1343,6 @@ fn deserialize_custom_identifier(
         Some(fields)
     };
 
-    // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
-    let names_idents : Vec<_> = names_idents.iter().map(|&(ref variant, ref ident)|
-                                                 (variant.stringify(), ident.clone()))
-                                                     .collect();
-
-
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
     let visitor_impl =
         Stmts(deserialize_identifier(this.clone(), &names_idents, is_variant, fallthrough),);
@@ -1386,14 +1371,29 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: Tokens,
-    fields: &[(String, Ident)],
+    fields: &[(StrBoolInt, Ident)],
     is_variant: bool,
     fallthrough: Option<Tokens>,
 ) -> Fragment {
-    let field_strs = fields.iter().map(|&(ref name, _)| name);
-    let field_bytes = fields.iter().map(|&(ref name, _)| quote::ByteStr(name));
+    let field_strs = fields.iter().filter_map(|&(ref n, _)| n.as_str());
+    let field_bytes = fields.iter().filter_map(|&(ref n, _)| n.as_str().map(|n| quote::ByteStr(n)));
+    let field_ints = fields.iter().filter_map(|&(ref n, _)| n.as_int());
+    let field_bools = fields.iter().filter_map(|&(ref n, _)| n.as_bool());
 
-    let constructors: &Vec<_> = &fields
+    let constructors_strs : &Vec<_> = &fields.iter()
+                                             .filter_map(|&(ref n, ref i)| n.as_str().map(|_| i))
+                                             .map(|i| quote!(#this::#i))
+                                             .collect();
+    let constructors_bools : &Vec<_> = &fields.iter()
+                                              .filter_map(|&(ref n, ref i)| n.as_bool().map(|_| i))
+                                              .map(|i| quote!(#this::#i))
+                                              .collect();
+    let constructors_ints : &Vec<_> = &fields.iter()
+                                              .filter_map(|&(ref n, ref i)| n.as_int().map(|_| i))
+                                              .map(|i| quote!(#this::#i))
+                                              .collect();
+
+    let constructors_index: &Vec<_> = &fields
                                      .iter()
                                      .map(|&(_, ref ident)| quote!(#this::#ident))
                                      .collect();
@@ -1404,35 +1404,21 @@ fn deserialize_identifier(
         "field identifier"
     };
 
-    let visit_index = if is_variant {
-        let variant_indices = 0u32..;
-        let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
-        let visit_index = quote! {
-            fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
-            {
-                match __value {
-                    #(
-                        #variant_indices => _serde::export::Ok(#constructors),
-                    )*
-                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                                _serde::de::Unexpected::Unsigned(__value as u64),
-                                &#fallthrough_msg))
-                }
-            }
-        };
-        Some(visit_index)
-    } else {
-        None
-    };
 
-    let bytes_to_str = if fallthrough.is_some() {
-        None
+    let (bytes_to_str, int_to_str, bool_to_str) = if fallthrough.is_some() {
+        (None, None, None)
     } else {
-        let conversion = quote! {
+        let conversion_bytes = quote! {
             let __value = &_serde::export::from_utf8_lossy(__value);
         };
-        Some(conversion)
+        let conversion_int = quote! {
+            let __value = &_serde::export::from_int(__value);
+            let __value = &_serde::export::from_utf8_lossy(__value);
+        };
+        let conversion_bool = quote! {
+            let __value = _serde::export::from_bool(__value);
+        };
+        (Some(conversion_bytes), Some(conversion_int), Some(conversion_bool))
     };
 
     let fallthrough_arm = if let Some(fallthrough) = fallthrough {
@@ -1447,19 +1433,82 @@ fn deserialize_identifier(
         }
     };
 
+    let visit_int = if constructors_ints.is_empty() && is_variant {
+        let variant_indices = 0u32..;
+        let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
+        let visit_index = quote! {
+            fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                match __value {
+                    #(
+                        #variant_indices => _serde::export::Ok(#constructors_index),
+                    )*
+                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
+                                _serde::de::Unexpected::Unsigned(__value as u64),
+                                &#fallthrough_msg))
+                }
+            }
+        };
+        Some(visit_index)
+    } else if ! constructors_ints.is_empty() {
+        let visit_int = quote! {
+            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                match __value {
+                    #(
+                        #field_ints => _serde::export::Ok(#constructors_ints),
+                    )*
+                    _ => {
+                        #int_to_str
+                        #fallthrough_arm
+                    }
+                }
+            }
+        };
+        Some(visit_int)
+    } else {
+        None
+    };
+
+    let visit_bool = if constructors_bools.is_empty() {
+        None
+    } else {
+        let visit_bool = quote! {
+            fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                match __value {
+                    #(
+                        #field_bools => _serde::export::Ok(#constructors_bools),
+                    )*
+                    _ => {
+                        #bool_to_str
+                        #fallthrough_arm
+                    }
+                }
+            }
+        };
+        Some(visit_bool)
+    };
+
+
     quote_block! {
         fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
             _serde::export::Formatter::write_str(formatter, #expecting)
         }
 
-        #visit_index
+        #visit_int
+
+        #visit_bool
 
         fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
             where __E: _serde::de::Error
         {
             match __value {
                 #(
-                    #field_strs => _serde::export::Ok(#constructors),
+                    #field_strs => _serde::export::Ok(#constructors_strs),
                 )*
                 _ => #fallthrough_arm
             }
@@ -1470,7 +1519,7 @@ fn deserialize_identifier(
         {
             match __value {
                 #(
-                    #field_bytes => _serde::export::Ok(#constructors),
+                    #field_bytes => _serde::export::Ok(#constructors_strs),
                 )*
                 _ => {
                     #bytes_to_str
@@ -1491,7 +1540,7 @@ fn deserialize_struct_visitor(
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)),)
+        .map(|(i, field)| (StrBoolInt::from(field.attrs.name().deserialize_name()), field_i(i)),)
         .collect();
 
     let fields_stmt = {
