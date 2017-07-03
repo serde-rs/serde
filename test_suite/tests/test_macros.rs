@@ -714,13 +714,16 @@ fn test_internally_tagged_enum_renamed() {
         B { b: u8 },
         #[serde(rename="3", rename_as="int")]
         C,
+        #[serde(rename="4", rename_as="int")]
         D(BTreeMap<String, String>),
+        #[serde(rename="5", rename_as="int")]
         E(Newtype),
+        #[serde(rename="6", rename_as="int")]
         F(Struct),
     }
 
     // TODO: Deserialize also
-    assert_ser_tokens(
+    assert_tokens(
         &InternallyTagged::A { a: 1 },
         &[
             Token::Struct { name: "InternallyTagged", len: 2 },
@@ -730,6 +733,33 @@ fn test_internally_tagged_enum_renamed() {
 
             Token::Str("a"),
             Token::U8(1),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &InternallyTagged::B { b: 1 },
+        &[
+            Token::Struct { name: "InternallyTagged", len: 2 },
+
+            Token::Str("type"),
+            Token::Bool(true),
+
+            Token::Str("b"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &InternallyTagged::C,
+        &[
+            Token::Struct { name: "InternallyTagged", len: 1 },
+
+            Token::Str("type"),
+            Token::U64(3),
 
             Token::StructEnd,
         ],
