@@ -100,7 +100,7 @@ impl Name {
 }
 
 /// An extended name, used for the type tag for enums.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum StrBoolInt {
     Str(String),
     Bool(bool),
@@ -541,7 +541,9 @@ pub struct Variant {
 impl Variant {
     pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
+        let mut ser_rename_as = Attr::none(cx, "rename_as");
         let mut de_name = Attr::none(cx, "rename");
+        let mut de_rename_as = Attr::none(cx, "rename_as");
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
@@ -563,9 +565,28 @@ impl Variant {
 
                     // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     MetaItem(List(ref name, ref meta_items)) if name == "rename" => {
-                        if let Ok((ser, de)) = get_revariantnames(cx, meta_items) {
+                        if let Ok((ser, de)) = get_ser_and_de(cx, "rename", meta_items,
+                                                              get_int_or_string_or_bool_from_lit) {
                             ser_name.set_opt(ser);
                             de_name.set_opt(de);
+                        }
+                    }
+
+                    // Parse `#[serde(rename_as = "int")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "rename_as" => {
+                        if let Ok(s) = get_string_from_lit(cx, "rename_as", name.as_ref(), lit) {
+                            let rename_as = match_rename_as(cx, &Some(s));
+                            ser_rename_as.set(rename_as.clone());
+                            de_rename_as.set(rename_as);
+                        }
+                    }
+
+                    // Parse `#[serde(rename_as(serialize = "int", deserialize = "bool"))]`
+                    MetaItem(List(ref name, ref meta_items)) if name == "rename_as" => {
+                        if let Ok((ser, de)) = get_ser_and_de(cx, "rename_as", meta_items,
+                                                              get_string_from_lit) {
+                            ser_rename_as.set(match_rename_as(cx, &ser));
+                            de_rename_as.set(match_rename_as(cx, &de));
                         }
                     }
 
@@ -609,10 +630,12 @@ impl Variant {
             }
         }
 
-        let ser_name = ser_name.get();
+        let (ser_name, de_name) = ser_de_interpret_as(cx,
+                                                      ser_name.get(), de_name.get(),
+                                                      ser_rename_as.get(), de_rename_as.get());
         let ser_renamed = ser_name.is_some();
-        let de_name = de_name.get();
         let de_renamed = de_name.is_some();
+
         Variant {
             name: VariantName {
                 serialize: ser_name.unwrap_or_else(|| StrBoolInt::Str(variant.ident.to_string())),
@@ -1009,10 +1032,6 @@ fn get_renames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<Stri
     get_ser_and_de(cx, "rename", items, get_string_from_lit)
 }
 
-fn get_revariantnames(cx: &Ctxt, items: &[syn::NestedMetaItem]) -> Result<SerAndDe<StrBoolInt>, ()> {
-    get_ser_and_de(cx, "rename", items, get_int_or_string_or_bool_from_lit)
-}
-
 fn get_where_predicates(
     cx: &Ctxt,
     items: &[syn::NestedMetaItem],
@@ -1136,6 +1155,93 @@ fn parse_lit_into_lifetimes(
         }
     }
     Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string)),)
+}
+
+fn match_rename_as(cx: &Ctxt, rename_as : &Option<String>) -> StrBoolInt {
+    match rename_as.as_ref() {
+        Some(s) if s == "bool" => {
+            StrBoolInt::Bool(false)
+        },
+        Some(s) if s == "int" => {
+            StrBoolInt::Int(0)
+        },
+        None => {
+            StrBoolInt::Str("".to_owned())
+        },
+        Some(s) => {
+            cx.error(format!("unknown rename type for #[serde(rename_as = \"{}\")]. \
+                              expected \"int\" or \"bool\"",
+                             s));
+            StrBoolInt::Str("".to_owned())
+        },
+    }
+}
+
+fn interpret_as(
+    cx: &Ctxt,
+    name : StrBoolInt,
+    rename_as : &Option<StrBoolInt>
+) -> Result<StrBoolInt, StrBoolInt> {
+    match (name, rename_as) {
+        (StrBoolInt::Str(name), &Some(StrBoolInt::Int(_))) => {
+            if let Ok(i) = u64::from_str(&name) {
+                Ok(StrBoolInt::Int(i))
+            } else {
+                cx.error(format!("failed to parse {:?} as int", name));
+                Err(StrBoolInt::Str(name))
+            }
+        },
+        (StrBoolInt::Str(name), &Some(StrBoolInt::Bool(_))) => {
+            if let Ok(b) = bool::from_str(&name) {
+                Ok(StrBoolInt::Bool(b))
+            } else {
+                cx.error(format!("failed to parse {:?} as bool", name));
+                Err(StrBoolInt::Str(name))
+            }
+        },
+        (StrBoolInt::Int(i), &Some(_)) => {
+            cx.error(format!("#[serde(rename = {i})] is not compatible with \
+                              #[serde(rename_as = ...)]. Use a string literal as in \
+                              #[serde(rename = \"{i}\")]"
+                             , i=i));
+            Err(StrBoolInt::Int(i))
+        },
+        (StrBoolInt::Bool(b), &Some(_)) => {
+            cx.error(format!("#[serde(rename = {b})] is not compatible with \
+                              #[serde(rename_as = ...)]. Use a string literal as in \
+                              #[serde(rename = \"{b}\")]"
+                             , b=b));
+            Err(StrBoolInt::Bool(b))
+        },
+        (r @ _, _) => Ok(r)
+    }
+}
+
+fn ser_de_interpret_as(
+    cx: &Ctxt,
+    ser_name: Option<StrBoolInt>,
+    de_name: Option<StrBoolInt>,
+    ser_rename_as: Option<StrBoolInt>,
+    de_rename_as: Option<StrBoolInt>
+) -> (Option<StrBoolInt>, Option<StrBoolInt>) {
+    // Display rename_as related errors only once.
+    let equal = ser_name == de_name && ser_rename_as == de_rename_as;
+    let mut rename_as_error = false;
+    let ser_name = ser_name.map(|name| {
+        interpret_as(cx, name, &ser_rename_as)
+            .unwrap_or_else(|name| {
+                rename_as_error = true;
+                name
+            })
+    });
+    let de_name = de_name.map(|name| {
+        if !rename_as_error || !equal {
+            interpret_as(cx, name, &de_rename_as).unwrap_or_else(|n| n)
+        } else {
+            name
+        }
+    });
+    (ser_name, de_name)
 }
 
 // Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".

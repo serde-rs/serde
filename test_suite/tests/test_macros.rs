@@ -696,6 +696,47 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_enum_renamed() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTagged {
+        #[serde(rename="abc")]
+        A { a: u8 },
+        #[serde(rename="true", rename_as="bool")]
+        B { b: u8 },
+        #[serde(rename="3", rename_as="int")]
+        C,
+        D(BTreeMap<String, String>),
+        E(Newtype),
+        F(Struct),
+    }
+
+    // TODO: Deserialize also
+    assert_ser_tokens(
+        &InternallyTagged::A { a: 1 },
+        &[
+            Token::Struct { name: "InternallyTagged", len: 2 },
+
+            Token::Str("type"),
+            Token::Str("abc"),
+
+            Token::Str("a"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_internally_tagged_struct_variant_containing_unit_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     pub enum Level {

@@ -120,8 +120,14 @@ impl ToTokens for StrBoolInt {
     fn to_tokens(&self, out: &mut Tokens) {
         match *self {
             StrBoolInt::Str(ref s) => s.to_tokens(out),
-            StrBoolInt::Bool(b) => b.to_tokens(out),
-            StrBoolInt::Int(i) => i.to_tokens(out),
+            StrBoolInt::Bool(b) => {
+                out.append("&");
+                b.to_tokens(out);
+            },
+            StrBoolInt::Int(i) => {
+                out.append("&");
+                i.to_tokens(out);
+            }
         }
     }
 }
