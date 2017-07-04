@@ -705,11 +705,6 @@ fn deserialize_internally_tagged_enum(
         }
     };
 
-    // TODO: just to keep the compiler quiet for now, this must not be strinfied here!
-    let variant_names_idents = variant_names_idents.iter().map(|&(ref variant, ref ident)|
-                                                            (variant.clone(), ident.clone()))
-                                                     .collect();
-
     let variant_visitor = Stmts(deserialize_generated_identifier(variant_names_idents, cattrs, true),);
 
     // Match arms to extract a variant from a string

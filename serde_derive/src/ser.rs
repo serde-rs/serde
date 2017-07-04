@@ -542,6 +542,8 @@ fn serialize_adjacently_tagged_variant(
                 serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
             }
             Style::Struct => {
+                // TODO: stringify variant name? See test_adjacently_tagged_enum_renamed()
+                //       AdjacentlyTagged::B for consequences.
                 let str_variant_name = variant_name.stringify();
                 serialize_struct_variant(
                     StructVariant::Untagged,
