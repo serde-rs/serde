@@ -48,10 +48,10 @@ impl Serialize for VariantName {
     where
         S: Serializer
     {
-        match self {
-            &VariantName::Str(s) => serializer.serialize_str(s),
-            &VariantName::Bool(b) => serializer.serialize_bool(b),
-            &VariantName::Int(i) => serializer.serialize_u64(i),
+        match *self {
+            VariantName::Str(s) => serializer.serialize_str(s),
+            VariantName::Bool(b) => serializer.serialize_bool(b),
+            VariantName::Int(i) => serializer.serialize_u64(i),
         }
     }
 }

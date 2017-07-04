@@ -14,9 +14,7 @@ pub use lib::marker::PhantomData;
 pub use lib::option::Option::{self, None, Some};
 pub use lib::result::Result::{self, Ok, Err};
 
-pub use self::string::from_utf8_lossy;
-pub use self::string::from_int;
-pub use self::string::from_bool;
+pub use self::string::{from_utf8_lossy, from_int, from_bool};
 
 mod string {
     use lib::*;
@@ -42,22 +40,30 @@ mod string {
     }
 
     pub fn from_bool(b : bool) -> &'static str {
-        match b {
-            true => "true",
-            false => "false",
+        if b {
+            "true"
+        } else {
+            "false"
         }
     }
 
     #[cfg(any(feature = "std", feature = "alloc"))]
     pub fn from_int(i: u64) -> Vec<u8> {
-        format!("{}", i).into_bytes()
+        use lib::fmt::Write;
+        let mut buf = String::with_capacity(20);
+        write!(&mut buf, "{}", i).ok();
+        buf.into_bytes()
     }
 
     #[cfg(not(any(feature = "std", feature = "alloc")))]
     pub fn from_int(i: u64) -> [u8; 20] {
-        let buf = [0; 20];
-        let wrap = Wrapper { buf: &buf };
-        write!(wrap, "{}", i);
+        use lib::fmt::Write;
+        // len(str(1<<64)) = 20
+        let mut buf = [0; 20];
+        {
+            let mut wrap = Wrapper { buf: &mut buf };
+            write!(wrap, "{}", i).ok();
+        }
         buf
     }
 
