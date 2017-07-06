@@ -7,3 +7,8 @@ members = [
     "test_suite",
     "test_suite/no_std",
 ]
+
+[replace]
+'syn:0.11.11' = { git = "http://github.com/dtolnay/syn", branch = "master" }
+'synom:0.11.3' = { git = "http://github.com/dtolnay/syn", branch = "master" }
+'quote:0.3.15' = { git = "http://github.com/dtolnay/quote", branch = "master" }

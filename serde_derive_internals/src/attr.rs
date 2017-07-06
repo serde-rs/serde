@@ -8,9 +8,9 @@
 
 use Ctxt;
 use syn;
-use syn::MetaItem::{List, NameValue, Word};
+use syn::MetaItem::{List, NameValue, Term};
 use syn::NestedMetaItem::{Literal, MetaItem};
-use synom::IResult;
+use synom::PResult;
 use std::collections::BTreeSet;
 use std::str::FromStr;
 
@@ -217,12 +217,12 @@ impl Container {
                     }
 
                     // Parse `#[serde(deny_unknown_fields)]`
-                    MetaItem(Word(ref name)) if name == "deny_unknown_fields" => {
+                    MetaItem(Term(ref name)) if name == "deny_unknown_fields" => {
                         deny_unknown_fields.set_true();
                     }
 
                     // Parse `#[serde(default)]`
-                    MetaItem(Word(ref name)) if name == "default" => {
+                    MetaItem(Term(ref name)) if name == "default" => {
                         match item.body {
                             syn::Body::Struct(syn::VariantData::Struct(_)) => {
                                 default.set(Default::Default);
@@ -271,7 +271,7 @@ impl Container {
                     }
 
                     // Parse `#[serde(untagged)]`
-                    MetaItem(Word(ref name)) if name == "untagged" => {
+                    MetaItem(Term(ref name)) if name == "untagged" => {
                         match item.body {
                             syn::Body::Enum(_) => {
                                 untagged.set_true();
@@ -335,12 +335,12 @@ impl Container {
                     }
 
                     // Parse `#[serde(field_identifier)]`
-                    MetaItem(Word(ref name)) if name == "field_identifier" => {
+                    MetaItem(Term(ref name)) if name == "field_identifier" => {
                         field_identifier.set_true();
                     }
 
                     // Parse `#[serde(variant_identifier)]`
-                    MetaItem(Word(ref name)) if name == "variant_identifier" => {
+                    MetaItem(Term(ref name)) if name == "variant_identifier" => {
                         variant_identifier.set_true();
                     }
 
@@ -555,17 +555,17 @@ impl Variant {
                     }
 
                     // Parse `#[serde(skip_deserializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_deserializing" => {
+                    MetaItem(Term(ref name)) if name == "skip_deserializing" => {
                         skip_deserializing.set_true();
                     }
 
                     // Parse `#[serde(skip_serializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_serializing" => {
+                    MetaItem(Term(ref name)) if name == "skip_serializing" => {
                         skip_serializing.set_true();
                     }
 
                     // Parse `#[serde(other)]`
-                    MetaItem(Word(ref name)) if name == "other" => {
+                    MetaItem(Term(ref name)) if name == "other" => {
                         other.set_true();
                     }
 
@@ -698,7 +698,7 @@ impl Field {
                     }
 
                     // Parse `#[serde(default)]`
-                    MetaItem(Word(ref name)) if name == "default" => {
+                    MetaItem(Term(ref name)) if name == "default" => {
                         default.set(Default::Default);
                     }
 
@@ -710,17 +710,17 @@ impl Field {
                     }
 
                     // Parse `#[serde(skip_serializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_serializing" => {
+                    MetaItem(Term(ref name)) if name == "skip_serializing" => {
                         skip_serializing.set_true();
                     }
 
                     // Parse `#[serde(skip_deserializing)]`
-                    MetaItem(Word(ref name)) if name == "skip_deserializing" => {
+                    MetaItem(Term(ref name)) if name == "skip_deserializing" => {
                         skip_deserializing.set_true();
                     }
 
                     // Parse `#[serde(skip)]`
-                    MetaItem(Word(ref name)) if name == "skip" => {
+                    MetaItem(Term(ref name)) if name == "skip" => {
                         skip_serializing.set_true();
                         skip_deserializing.set_true();
                     },
@@ -776,7 +776,7 @@ impl Field {
                     }
 
                     // Parse `#[serde(borrow)]`
-                    MetaItem(Word(ref name)) if name == "borrow" => {
+                    MetaItem(Term(ref name)) if name == "borrow" => {
                         if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
                             borrowed_lifetimes.set(borrowable);
                         }
@@ -838,10 +838,10 @@ impl Field {
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
             if is_cow(&field.ty, "str") {
-                let path = syn::parse_path("_serde::private::de::borrow_cow_str").unwrap();
+                let path = syn::Path::parse_str("_serde::private::de::borrow_cow_str").unwrap();
                 deserialize_with.set_if_none(path);
             } else if is_cow(&field.ty, "[u8]") {
-                let path = syn::parse_path("_serde::private::de::borrow_cow_bytes").unwrap();
+                let path = syn::Path::parse_str("_serde::private::de::borrow_cow_bytes").unwrap();
                 deserialize_with.set_if_none(path);
             }
         } else if is_rptr(&field.ty, "str") || is_rptr(&field.ty, "[u8]") {
@@ -1012,7 +1012,7 @@ fn get_string_from_lit(
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
-    syn::parse_path(&string).map_err(|err| cx.error(err))
+    syn::Path::parse_str(&string).map_err(|err| cx.error(err))
 }
 
 fn parse_lit_into_where(
@@ -1028,7 +1028,7 @@ fn parse_lit_into_where(
 
     let where_string = format!("where {}", string);
 
-    syn::parse_where_clause(&where_string)
+    syn::WhereClause::parse_str(&where_string)
         .map(|wh| wh.predicates)
         .map_err(|err| cx.error(err))
 }
@@ -1036,7 +1036,7 @@ fn parse_lit_into_where(
 fn parse_lit_into_ty(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Ty, ()> {
     let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
 
-    syn::parse_type(&string).map_err(
+    syn::Ty::parse_str(&string).map_err(
         |_| {
             cx.error(format!("failed to parse type: {} = {:?}", attr_name, string),)
         },
@@ -1060,7 +1060,7 @@ fn parse_lit_into_lifetimes(
         separated_nonempty_list!(punct!("+"), syn::parse::lifetime)
     );
 
-    if let IResult::Done(rest, o) = lifetimes(&string) {
+    if let Ok((rest, o)) = lifetimes(&string) {
         if rest.trim().is_empty() {
             let mut set = BTreeSet::new();
             for lifetime in o {
@@ -1116,7 +1116,7 @@ fn is_cow(ty: &syn::Ty, elem: &str) -> bool {
         }
     };
     seg.ident == "Cow" && params.lifetimes.len() == 1 &&
-    params.types == vec![syn::parse_type(elem).unwrap()] && params.bindings.is_empty()
+    params.types == vec![syn::Ty::parse_str(elem).unwrap()] && params.bindings.is_empty()
 }
 
 // Whether the type looks like it might be `&T` where elem="T". This can have
@@ -1143,7 +1143,7 @@ fn is_rptr(ty: &syn::Ty, elem: &str) -> bool {
     match *ty {
         syn::Ty::Rptr(Some(_), ref mut_ty) => {
             mut_ty.mutability == syn::Mutability::Immutable &&
-            mut_ty.ty == syn::parse_type(elem).unwrap()
+            mut_ty.ty == syn::Ty::parse_str(elem).unwrap()
         }
         _ => false,
     }
@@ -1206,10 +1206,10 @@ fn collect_lifetimes(ty: &syn::Ty, out: &mut BTreeSet<syn::Lifetime>) {
             }
         }
         syn::Ty::BareFn(_) |
-        syn::Ty::Never |
+        syn::Ty::Never(_) |
         syn::Ty::TraitObject(_) |
         syn::Ty::ImplTrait(_) |
-        syn::Ty::Infer |
+        syn::Ty::Infer(_) |
         syn::Ty::Mac(_) => {}
     }
 }
