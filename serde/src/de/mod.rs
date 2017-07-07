@@ -786,6 +786,37 @@ where
     }
 }
 
+/// TODO
+pub struct SharedSeed<S, T> {
+    /// TODO
+    pub seed: ::std::cell::RefCell<S>,
+    _marker: PhantomData<fn () -> T>,
+}
+
+impl<S, T> SharedSeed<S, T> {
+    /// TODO
+    pub fn new(seed: S) -> Self {
+        SharedSeed {
+            seed: ::std::cell::RefCell::new(seed),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, 's, 't, S, T> DeserializeSeed<'de> for &'s SharedSeed<&'t mut S, T>
+where
+    T: DeserializeSeedEx<'de, S>,
+{
+    type Value = T;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize_seed(&mut self.seed.borrow_mut(), deserializer)
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A **data format** that can deserialize any data structure supported by
