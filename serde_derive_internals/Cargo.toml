@@ -12,8 +12,13 @@ readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-syn = { version = "0.11.10", default-features = false, features = ["parsing"] }
-synom = "0.11"
+literalext = { git = 'https://github.com/mystor/literalext' }
+proc-macro2 = "0.1"
+
+[dependencies.syn]
+git = 'https://github.com/dtolnay/syn'
+default-features = false
+features = ["parsing", "extra-traits"]
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }

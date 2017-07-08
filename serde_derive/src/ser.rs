@@ -6,8 +6,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use proc_macro2::Literal;
+use quote::{Tokens, ToTokens};
 use syn::{self, Ident};
-use quote::Tokens;
+use syn::Span;
 
 use bound;
 use fragment::{Fragment, Stmts, Match};
@@ -25,7 +27,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
-    let dummy_const = Ident::new(format!("_IMPL_SERIALIZE_FOR_{}", ident));
+    let dummy_const = Ident::from(format!("_IMPL_SERIALIZE_FOR_{}", ident));
     let body = Stmts(serialize_body(&cont, &params));
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
@@ -94,9 +96,9 @@ impl Parameters {
     fn new(cont: &Container) -> Self {
         let is_remote = cont.attrs.remote().is_some();
         let self_var = if is_remote {
-            Ident::new("__self")
+            Ident::from("__self")
         } else {
-            Ident::new("self")
+            Ident::from("self")
         };
 
         let this = match cont.attrs.remote() {
@@ -117,7 +119,7 @@ impl Parameters {
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Serializer methods.
     fn type_name(&self) -> &str {
-        self.this.segments.last().unwrap().ident.as_ref()
+        self.this.segments.last().unwrap().item().ident.as_ref()
     }
 }
 
@@ -200,7 +202,7 @@ fn serialize_newtype_struct(
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
 
-    let mut field_expr = get_field(params, field, 0);
+    let mut field_expr = get_field(params, field, lit(0));
     if let Some(path) = field.attrs.serialize_with() {
         field_expr = wrap_serialize_with(params, field.ty, path, field_expr);
     }
@@ -341,7 +343,7 @@ fn serialize_variant(
             }
             Style::Tuple => {
                 let field_names =
-                    (0..variant.fields.len()).map(|i| Ident::new(format!("__field{}", i)));
+                    (0..variant.fields.len()).map(|i| Ident::from(format!("__field{}", i)));
                 quote! {
                     #this::#variant_ident(#(ref #field_names),*)
                 }
@@ -552,10 +554,10 @@ fn serialize_adjacently_tagged_variant(
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
     let ref fields_ident: Vec<_> = match variant.style {
         Style::Unit => unreachable!(),
-        Style::Newtype => vec![Ident::new("__field0")],
+        Style::Newtype => vec![Ident::from("__field0")],
         Style::Tuple => {
             (0..variant.fields.len())
-                .map(|i| Ident::new(format!("__field{}", i)))
+                .map(|i| Ident::from(format!("__field{}", i)))
                 .collect()
         }
         Style::Struct => {
@@ -783,6 +785,13 @@ fn serialize_struct_variant<'a>(
     }
 }
 
+fn lit(i: usize) -> syn::Lit {
+    syn::Lit {
+        value: syn::LitKind::Other(Literal::integer(i as i64)),
+        span: Span::default(),
+    }
+}
+
 fn serialize_tuple_struct_visitor(
     fields: &[Field],
     params: &Parameters,
@@ -795,10 +804,10 @@ fn serialize_tuple_struct_visitor(
         .map(
             |(i, field)| {
                 let mut field_expr = if is_enum {
-                    let id = Ident::new(format!("__field{}", i));
+                    let id = Ident::from(format!("__field{}", i));
                     quote!(#id)
                 } else {
-                    get_field(params, field, i)
+                    get_field(params, field, lit(i))
                 };
 
                 let skip = field
@@ -910,17 +919,15 @@ fn mut_if(is_mut: bool) -> Option<Tokens> {
 
 fn get_field<I>(params: &Parameters, field: &Field, ident: I) -> Tokens
 where
-    I: Into<Ident>,
+    I: ToTokens,
 {
     let self_var = &params.self_var;
     match (params.is_remote, field.attrs.getter()) {
         (false, None) => {
-            let ident = ident.into();
             quote!(&#self_var.#ident)
         }
         (true, None) => {
             let ty = field.ty;
-            let ident = ident.into();
             quote!(_serde::private::ser::constrain::<#ty>(&#self_var.#ident))
         }
         (true, Some(getter)) => {

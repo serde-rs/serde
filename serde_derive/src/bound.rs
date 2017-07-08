@@ -8,14 +8,18 @@
 
 use std::collections::HashSet;
 
+use proc_macro2::Term;
 use syn::{self, visit};
+use syn::Span;
+use syn::tokens;
+use syn::delimited::Delimited;
 
 use internals::ast::Container;
 use internals::attr;
 
 macro_rules! path {
     ($($path:tt)+) => {
-        syn::parse_path(stringify!($($path)+)).unwrap()
+        syn::parse_str::<syn::Path>(stringify!($($path)+)).unwrap()
     };
 }
 
@@ -31,7 +35,7 @@ pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
                 |ty_param| {
                     syn::TyParam {
                         default: None,
-                        ..ty_param.clone()
+                        ..ty_param.into_item().clone()
                     }
                 },
             )
@@ -45,10 +49,12 @@ pub fn with_where_predicates(
     predicates: &[syn::WherePredicate],
 ) -> syn::Generics {
     let mut generics = generics.clone();
-    generics
-        .where_clause
-        .predicates
-        .extend_from_slice(predicates);
+    for predicate in predicates {
+        if generics.where_clause.where_token.is_none() {
+            generics.where_clause.where_token = Some(tokens::Where::default());
+        }
+        generics.where_clause.predicates.push_default(predicate.clone());
+    }
     generics
 }
 
@@ -66,7 +72,12 @@ where
         .flat_map(|predicates| predicates.to_vec());
 
     let mut generics = generics.clone();
-    generics.where_clause.predicates.extend(predicates);
+    for predicate in predicates {
+        if generics.where_clause.where_token.is_none() {
+            generics.where_clause.where_token = Some(tokens::Where::default());
+        }
+        generics.where_clause.predicates.push_default(predicate);
+    }
     generics
 }
 
@@ -101,15 +112,16 @@ where
     }
     impl visit::Visitor for FindTyParams {
         fn visit_path(&mut self, path: &syn::Path) {
-            if let Some(seg) = path.segments.last() {
+            if path.segments.len() > 0 {
+                let seg = *path.segments.last().unwrap().item();
                 if seg.ident == "PhantomData" {
                     // Hardcoded exception, because PhantomData<T> implements
                     // Serialize and Deserialize whether or not T implements it.
                     return;
                 }
             }
-            if !path.global && path.segments.len() == 1 {
-                let id = path.segments[0].ident.clone();
+            if !path.global() && path.segments.len() == 1 {
+                let id = path.segments.first().unwrap().item().ident.clone();
                 if self.all_ty_params.contains(&id) {
                     self.relevant_ty_params.insert(id);
                 }
@@ -121,7 +133,7 @@ where
     let all_ty_params: HashSet<_> = generics
         .ty_params
         .iter()
-        .map(|ty_param| ty_param.ident.clone())
+        .map(|ty_param| ty_param.item().ident.clone())
         .collect();
 
     let relevant_tys = cont.body
@@ -140,32 +152,41 @@ where
     let new_predicates = generics
         .ty_params
         .iter()
-        .map(|ty_param| ty_param.ident.clone())
+        .map(|ty_param| ty_param.item().ident.clone())
         .filter(|id| visitor.relevant_ty_params.contains(id))
         .map(
             |id| {
                 syn::WherePredicate::BoundPredicate(
                     syn::WhereBoundPredicate {
-                        bound_lifetimes: Vec::new(),
+                        colon_token: tokens::Colon::default(),
+                        bound_lifetimes: None,
                         // the type parameter that is being bounded e.g. T
-                        bounded_ty: syn::Ty::Path(None, id.into()),
+                        bounded_ty: syn::Ty::Path(syn::TyPath {
+                            qself: None,
+                            path: id.into(),
+                        }),
                         // the bound e.g. Serialize
                         bounds: vec![
                             syn::TyParamBound::Trait(
                                 syn::PolyTraitRef {
-                                    bound_lifetimes: Vec::new(),
+                                    bound_lifetimes: None,
                                     trait_ref: bound.clone(),
                                 },
                                 syn::TraitBoundModifier::None,
                             ),
-                        ],
+                        ].into(),
                     },
                 )
             },
         );
 
     let mut generics = generics.clone();
-    generics.where_clause.predicates.extend(new_predicates);
+    for predicate in new_predicates {
+        if generics.where_clause.where_token.is_none() {
+            generics.where_clause.where_token = Some(tokens::Where::default());
+        }
+        generics.where_clause.predicates.push_default(predicate);
+    }
     generics
 }
 
@@ -178,22 +199,23 @@ pub fn with_self_bound(
     generics
         .where_clause
         .predicates
-        .push(
+        .push_default(
             syn::WherePredicate::BoundPredicate(
                 syn::WhereBoundPredicate {
-                    bound_lifetimes: Vec::new(),
+                    colon_token: tokens::Colon::default(),
+                    bound_lifetimes: None,
                     // the type that is being bounded e.g. MyStruct<'a, T>
                     bounded_ty: type_of_item(cont),
                     // the bound e.g. Default
                     bounds: vec![
                         syn::TyParamBound::Trait(
                             syn::PolyTraitRef {
-                                bound_lifetimes: Vec::new(),
+                                bound_lifetimes: None,
                                 trait_ref: bound.clone(),
                             },
                             syn::TraitBoundModifier::None,
                         ),
-                    ],
+                    ].into(),
                 },
             ),
         );
@@ -203,54 +225,82 @@ pub fn with_self_bound(
 pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Generics {
     let mut generics = generics.clone();
 
-    for lifetime_def in &mut generics.lifetimes {
-        lifetime_def.bounds.push(syn::Lifetime::new(lifetime));
+    let lifetime = syn::Lifetime::new(Term::intern(lifetime), Span::default());
+
+    for lifetime_def in generics.lifetimes.iter_mut().map(|m| m.into_item()) {
+        if lifetime_def.colon_token.is_none() {
+            lifetime_def.colon_token = Some(tokens::Colon::default());
+        }
+        lifetime_def
+            .bounds
+            .push_default(lifetime.clone());
     }
 
-    for ty_param in &mut generics.ty_params {
+    for ty_param in generics.ty_params.iter_mut().map(|i| i.into_item()) {
+        if ty_param.colon_token.is_none() {
+            ty_param.colon_token = Some(tokens::Colon::default());
+        }
         ty_param
             .bounds
-            .push(syn::TyParamBound::Region(syn::Lifetime::new(lifetime)));
+            .push_default(syn::TyParamBound::Region(lifetime.clone()));
+    }
+
+    if generics.lt_token.is_none() {
+        generics.lt_token = Some(tokens::Lt::default());
+        generics.gt_token = Some(tokens::Gt::default());
     }
 
     generics
         .lifetimes
-        .push(
+        .push_default(
             syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(lifetime),
-                bounds: Vec::new(),
+                lifetime: lifetime,
+                bounds: Delimited::default(),
+                colon_token: None,
             },
         );
+
+    if generics.ty_params.len() > 0 && !generics.lifetimes.trailing_delim() {
+        generics.lifetimes.push_trailing(tokens::Comma::default());
+    }
 
     generics
 }
 
 fn type_of_item(cont: &Container) -> syn::Ty {
-    syn::Ty::Path(
-        None,
-        syn::Path {
-            global: false,
+    syn::Ty::Path(syn::TyPath {
+        qself: None,
+        path: syn::Path {
+            leading_colon: None,
             segments: vec![
                 syn::PathSegment {
                     ident: cont.ident.clone(),
                     parameters: syn::PathParameters::AngleBracketed(
                         syn::AngleBracketedParameterData {
+                            gt_token: tokens::Gt::default(),
+                            lt_token: tokens::Lt::default(),
+                            turbofish: None,
                             lifetimes: cont.generics
                                 .lifetimes
                                 .iter()
-                                .map(|def| def.lifetime.clone())
+                                .map(|def| def.item().lifetime.clone())
                                 .collect(),
                             types: cont.generics
                                 .ty_params
                                 .iter()
-                                .map(|param| syn::Ty::Path(None, param.ident.clone().into()))
+                                .map(|param| {
+                                    syn::Ty::Path(syn::TyPath {
+                                        qself: None,
+                                        path: param.item().ident.clone().into(),
+                                    })
+                                })
                                 .collect(),
-                            bindings: Vec::new(),
+                            bindings: Delimited::default(),
                         },
                     ),
                 },
-            ],
+            ].into(),
         },
-    )
+    })
 }
