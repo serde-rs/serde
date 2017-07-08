@@ -1831,3 +1831,16 @@ where
         deserializer.deserialize_enum("Result", VARIANTS, ResultVisitor(PhantomData))
     }
 }
+
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+impl<'de, T, S> DeserializeSeedEx<'de, S> for Arc<T>
+where
+    T: DeserializeSeedEx<'de, S>,
+{
+    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Arc<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize_seed(seed, deserializer).map(Arc::new)
+    }
+}
