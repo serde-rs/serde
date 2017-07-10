@@ -202,7 +202,7 @@ pub mod de;
 #[doc(inline)]
 pub use ser::{Serialize, Serializer};
 #[doc(inline)]
-pub use de::{Deserialize, Deserializer};
+pub use de::{Deserialize, DeserializeOwned, Deserializer};
 
 // Generated code uses these to support no_std. Not public API.
 #[doc(hidden)]
