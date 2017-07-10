@@ -400,15 +400,21 @@ impl<'de> Deserialize<'de> for CString {
     }
 }
 
-#[cfg(all(feature = "std", feature = "unstable"))]
-impl<'de> Deserialize<'de> for Box<CStr> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        CString::deserialize(deserializer).map(CString::into_boxed_c_str)
+macro_rules! forwarded_impl {
+    (( $($id: ident),* ), $ty: ty, $func: expr) => {
+        impl<'de $(, $id : Deserialize<'de>,)*> Deserialize<'de> for $ty {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                Deserialize::deserialize(deserializer).map($func)
+            }
+        }
     }
 }
+
+#[cfg(all(feature = "std", feature = "unstable"))]
+forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1098,66 +1104,19 @@ impl<'de> Deserialize<'de> for OsString {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'de, T> Deserialize<'de> for Box<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Box<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(Box::new)
-    }
-}
+forwarded_impl!((T), Box<T>, Box::new);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'de, T> Deserialize<'de> for Box<[T]>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Box<[T]>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Vec::<T>::deserialize(deserializer).map(Vec::into_boxed_slice)
-    }
-}
+forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'de> Deserialize<'de> for Box<str> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer).map(String::into_boxed_str)
-    }
-}
+forwarded_impl!((), Box<str>, String::into_boxed_str);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-impl<'de, T> Deserialize<'de> for Arc<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Arc<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(Arc::new)
-    }
-}
+forwarded_impl!((T), Arc<T>, Arc::new);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-impl<'de, T> Deserialize<'de> for Rc<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Rc<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(Rc::new)
-    }
-}
+forwarded_impl!((T), Rc<T>, Rc::new);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
@@ -1188,43 +1147,13 @@ where
     }
 }
 
-impl<'de, T> Deserialize<'de> for RefCell<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<RefCell<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(RefCell::new)
-    }
-}
+forwarded_impl!((T), RefCell<T>, RefCell::new);
 
 #[cfg(feature = "std")]
-impl<'de, T> Deserialize<'de> for Mutex<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Mutex<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(Mutex::new)
-    }
-}
+forwarded_impl!((T), Mutex<T>, Mutex::new);
 
 #[cfg(feature = "std")]
-impl<'de, T> Deserialize<'de> for RwLock<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<RwLock<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(RwLock::new)
-    }
-}
+forwarded_impl!((T), RwLock<T>, RwLock::new);
 
 ////////////////////////////////////////////////////////////////////////////////
 
