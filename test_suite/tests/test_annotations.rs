@@ -1084,7 +1084,7 @@ impl MethodPropertiesEnumTest {
         match *self {
             MethodPropertiesEnumTest::StructVariant { value } => format!("StructVariant: {}", value),
             MethodPropertiesEnumTest::TupleVariant(v) => format!("TupleVariant: {}", v),
-            MethodPropertiesEnumTest::UnitVariant => format!("UnitVariant"),
+            MethodPropertiesEnumTest::UnitVariant => "UnitVariant".to_string(),
         }
     }
 }
