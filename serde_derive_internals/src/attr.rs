@@ -203,7 +203,8 @@ impl Container {
                             de_name.set_opt(de);
                         }
                     }
-
+                    
+                    // Parse `#[serde(method_properties(foo = "bar")]`
                     MetaItem(List(ref name, ref meta_items)) if name == "method_properties" => {
                         let mut attrs = vec![];
                         for meta_item in meta_items {
