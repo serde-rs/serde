@@ -1082,9 +1082,9 @@ impl MethodPropertiesEnumTest {
     #[allow(unused)]
     pub fn as_string(&self) -> String {
         match *self {
-            MethodPropertiesEnumTest::StructVariant { value } => format!("StructVariant: {}", value),
-            MethodPropertiesEnumTest::TupleVariant(v) => format!("TupleVariant: {}", v),
-            MethodPropertiesEnumTest::UnitVariant => "UnitVariant".to_string(),
+            MethodPropertiesEnumTest::Struct { value } => format!("StructVariant: {}", value),
+            MethodPropertiesEnumTest::Tuple(v) => format!("TupleVariant: {}", v),
+            MethodPropertiesEnumTest::Unit => "UnitVariant".to_string(),
         }
     }
 }
