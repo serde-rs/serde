@@ -11,12 +11,12 @@ use lib::*;
 use de::{Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess,
          Visitor};
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 use private::de::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -208,10 +208,10 @@ impl<'de> Deserialize<'de> for char {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 struct StringVisitor;
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de> Visitor<'de> for StringVisitor {
     type Value = String;
 
@@ -254,7 +254,7 @@ impl<'de> Visitor<'de> for StringVisitor {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de> Deserialize<'de> for String {
     fn deserialize<D>(deserializer: D) -> Result<String, D::Error>
     where
@@ -497,7 +497,7 @@ impl<'de, T> Deserialize<'de> for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! seq_impl {
     (
         $ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
@@ -552,7 +552,7 @@ macro_rules! seq_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
     BinaryHeap<T: Ord>,
     seq,
@@ -560,7 +560,7 @@ seq_impl!(
     BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
     BinaryHeap::push);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
     BTreeSet<T: Eq + Ord>,
     seq,
@@ -568,7 +568,7 @@ seq_impl!(
     BTreeSet::new(),
     BTreeSet::insert);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
     LinkedList<T>,
     seq,
@@ -584,7 +584,7 @@ seq_impl!(
     HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
     HashSet::insert);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
     Vec<T>,
     seq,
@@ -592,7 +592,7 @@ seq_impl!(
     Vec::with_capacity(size_hint::cautious(seq.size_hint())),
     Vec::push);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
     VecDeque<T>,
     seq,
@@ -790,7 +790,7 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! map_impl {
     (
         $ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
@@ -846,7 +846,7 @@ macro_rules! map_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 map_impl!(
     BTreeMap<K: Ord, V>,
     map,
@@ -1110,7 +1110,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, T> Deserialize<'de> for Box<[T]>
 where
     T: Deserialize<'de>,
@@ -1123,7 +1123,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de> Deserialize<'de> for Box<str> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1159,7 +1159,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
 where
     T: ToOwned,

@@ -23,15 +23,14 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
 
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
+    let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
     let body = Stmts(deserialize_body(&cont, &params));
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
-        let (impl_generics, ty_generics, where_clause) = cont.generics.split_for_impl();
-        let de_lifetime = params.de_lifetime_def();
         quote! {
-            impl #impl_generics #ident #ty_generics #where_clause {
-                fn deserialize<#de_lifetime, __D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
+            impl #de_impl_generics #ident #ty_generics #where_clause {
+                fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
                     where __D: _serde::Deserializer<'de>
                 {
                     #body
@@ -39,7 +38,6 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
             }
         }
     } else {
-        let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
         quote! {
             #[automatically_derived]
             impl #de_impl_generics _serde::Deserialize<'de> for #ident #ty_generics #where_clause {

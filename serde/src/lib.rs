@@ -79,7 +79,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.8")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.9")]
 
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -91,7 +91,6 @@
 #![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
 #![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
-#![cfg_attr(feature = "collections", feature(collections))]
 
 // Whitelisted clippy lints.
 #![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
@@ -104,18 +103,15 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "collections")]
-extern crate collections;
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(all(feature = "unstable", feature = "std"))]
 extern crate core;
 
-/// A facade around all the types we need from the `std`, `core`, `alloc`, and
-/// `collections` crates. This avoids elaborate import wrangling having to
-/// happen in every module.
+/// A facade around all the types we need from the `std`, `core`, and `alloc`
+/// crates. This avoids elaborate import wrangling having to happen in every
+/// module.
 mod lib {
     mod core {
         #[cfg(feature = "std")]
@@ -140,18 +136,18 @@ mod lib {
 
     #[cfg(feature = "std")]
     pub use std::borrow::{Cow, ToOwned};
-    #[cfg(all(feature = "collections", not(feature = "std")))]
-    pub use collections::borrow::{Cow, ToOwned};
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::borrow::{Cow, ToOwned};
 
     #[cfg(feature = "std")]
     pub use std::string::String;
-    #[cfg(all(feature = "collections", not(feature = "std")))]
-    pub use collections::string::{String, ToString};
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::string::{String, ToString};
 
     #[cfg(feature = "std")]
     pub use std::vec::Vec;
-    #[cfg(all(feature = "collections", not(feature = "std")))]
-    pub use collections::vec::Vec;
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::vec::Vec;
 
     #[cfg(feature = "std")]
     pub use std::boxed::Box;
@@ -170,8 +166,8 @@ mod lib {
 
     #[cfg(feature = "std")]
     pub use std::collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
-    #[cfg(all(feature = "collections", not(feature = "std")))]
-    pub use collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
     pub use std::{error, net};

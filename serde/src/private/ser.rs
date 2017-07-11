@@ -10,7 +10,7 @@ use lib::*;
 
 use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct, Impossible};
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 use self::content::{SerializeTupleVariantAsMapValue, SerializeStructVariantAsMapValue};
 
 /// Used to check that serde(getter) attributes return the expected type.
@@ -64,7 +64,7 @@ enum Unsupported {
     Sequence,
     Tuple,
     TupleStruct,
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     Enum,
 }
 
@@ -83,7 +83,7 @@ impl Display for Unsupported {
             Unsupported::Sequence => formatter.write_str("a sequence"),
             Unsupported::Tuple => formatter.write_str("a tuple"),
             Unsupported::TupleStruct => formatter.write_str("a tuple struct"),
-            #[cfg(not(any(feature = "std", feature = "collections")))]
+            #[cfg(not(any(feature = "std", feature = "alloc")))]
             Unsupported::Enum => formatter.write_str("an enum"),
         }
     }
@@ -117,14 +117,14 @@ where
     type SerializeMap = S::SerializeMap;
     type SerializeStruct = S::SerializeStruct;
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     type SerializeTupleVariant = Impossible<S::Ok, S::Error>;
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     type SerializeTupleVariant = SerializeTupleVariantAsMapValue<S::SerializeMap>;
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     type SerializeStructVariant = Impossible<S::Ok, S::Error>;
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     type SerializeStructVariant = SerializeStructVariantAsMapValue<S::SerializeMap>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
@@ -257,7 +257,7 @@ where
         Err(self.bad_type(Unsupported::TupleStruct))
     }
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn serialize_tuple_variant(
         self,
         _: &'static str,
@@ -270,7 +270,7 @@ where
         Err(self.bad_type(Unsupported::Enum))
     }
 
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn serialize_tuple_variant(
         self,
         _: &'static str,
@@ -300,7 +300,7 @@ where
         Ok(state)
     }
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn serialize_struct_variant(
         self,
         _: &'static str,
@@ -313,7 +313,7 @@ where
         Err(self.bad_type(Unsupported::Enum))
     }
 
-    #[cfg(any(feature = "std", feature = "collections"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn serialize_struct_variant(
         self,
         _: &'static str,
@@ -327,7 +327,7 @@ where
         Ok(SerializeStructVariantAsMapValue::new(map, inner_variant, len),)
     }
 
-    #[cfg(not(any(feature = "std", feature = "collections")))]
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn collect_str<T: ?Sized>(self, _: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Display,
@@ -363,7 +363,7 @@ impl Display for Error {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
     use lib::*;
 
