@@ -9,7 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -167,6 +167,17 @@ declare_tests! {
                     Token::I32(2),
                     Token::I32(3),
                 Token::SeqEnd,
+            Token::SeqEnd,
+        ],
+    }
+    test_btreeset {
+        BTreeSet::<isize>::new() => &[
+            Token::Seq { len: Some(0) },
+            Token::SeqEnd,
+        ],
+        btreeset![1] => &[
+            Token::Seq { len: Some(1) },
+                Token::I32(1),
             Token::SeqEnd,
         ],
     }

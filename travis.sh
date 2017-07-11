@@ -46,7 +46,6 @@ else
     channel build
     channel build --no-default-features
     channel build --no-default-features --features alloc
-    channel build --no-default-features --features collections
     channel test --features 'rc unstable'
     cd "$DIR/test_suite/deps"
     channel build

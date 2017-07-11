@@ -1,4 +1,4 @@
-#![feature(lang_items, start, libc, compiler_builtins_lib)]
+#![feature(lang_items, start, compiler_builtins_lib)]
 #![no_std]
 
 extern crate libc;
