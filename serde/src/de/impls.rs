@@ -1426,7 +1426,7 @@ impl<'de> Deserialize<'de> for SystemTime {
             type Value = Duration;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Duration")
+                formatter.write_str("struct SystemTime")
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Duration, A::Error>
@@ -1483,7 +1483,7 @@ impl<'de> Deserialize<'de> for SystemTime {
         }
 
         const FIELDS: &'static [&'static str] = &["secs_since_epoch", "nanos_since_epoch"];
-        let duration = try!(deserializer.deserialize_struct("Duration", FIELDS, DurationVisitor));
+        let duration = try!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
         Ok(UNIX_EPOCH + duration)
     }
 }
