@@ -8,4 +8,5 @@ publish = false
 
 [dependencies]
 serde = { path = "../../serde" }
-serde_derive = { path = "../../serde_derive" }
+serde_derive = "1.0"
+serde_derive_seed = { path = "../../serde_derive" }

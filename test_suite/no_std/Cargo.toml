@@ -6,4 +6,5 @@ publish = false
 [dependencies]
 libc = { version = "0.2", default-features = false }
 serde = { path = "../../serde", default-features = false }
-serde_derive = { path = "../../serde_derive" }
+serde_derive = "1.0"
+serde_derive_seed = { path = "../../serde_derive" }

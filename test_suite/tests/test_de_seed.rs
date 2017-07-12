@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive_seed;
 extern crate serde;
 extern crate serde_test;
 

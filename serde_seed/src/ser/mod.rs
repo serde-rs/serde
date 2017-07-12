@@ -6,6 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+//! Generic data structure serialization framework.
 
 mod seed_impls;
 pub use self::seed_impls::{Seeded, Unseeded};

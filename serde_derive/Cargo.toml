@@ -1,6 +1,6 @@
 [package]
-name = "serde_derive"
-version = "1.0.10" # remember to update html_root_url
+name = "serde_derive_seed"
+version = "0.1.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
@@ -15,7 +15,7 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-
 travis-ci = { repository = "serde-rs/serde" }
 
 [lib]
-name = "serde_derive"
+name = "serde_derive_seed"
 proc-macro = true
 
 [dependencies]
