@@ -183,7 +183,7 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
-    pub use std::time::Duration;
+    pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
     #[cfg(feature = "std")]
     pub use std::sync::{Mutex, RwLock};
 
