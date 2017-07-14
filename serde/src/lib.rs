@@ -79,7 +79,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.9")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.10")]
 
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -183,7 +183,7 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
-    pub use std::time::Duration;
+    pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
     #[cfg(feature = "std")]
     pub use std::sync::{Mutex, RwLock};
 

@@ -9,10 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, UNIX_EPOCH};
 use std::ffi::CString;
 
 #[cfg(unix)]
@@ -170,6 +170,17 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_btreeset {
+        BTreeSet::<isize>::new() => &[
+            Token::Seq { len: Some(0) },
+            Token::SeqEnd,
+        ],
+        btreeset![1] => &[
+            Token::Seq { len: Some(1) },
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+    }
     test_hashset {
         HashSet::<isize>::new() => &[
             Token::Seq { len: Some(0) },
@@ -315,6 +326,17 @@ declare_tests! {
                 Token::U64(1),
 
                 Token::Str("nanos"),
+                Token::U32(2),
+            Token::StructEnd,
+        ],
+    }
+    test_system_time {
+        UNIX_EPOCH + Duration::new(1, 2) => &[
+            Token::Struct { name: "SystemTime", len: 2 },
+                Token::Str("secs_since_epoch"),
+                Token::U64(1),
+
+                Token::Str("nanos_since_epoch"),
                 Token::U32(2),
             Token::StructEnd,
         ],
