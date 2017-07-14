@@ -49,12 +49,10 @@ pub fn with_where_predicates(
     predicates: &[syn::WherePredicate],
 ) -> syn::Generics {
     let mut generics = generics.clone();
-    for predicate in predicates {
-        if generics.where_clause.where_token.is_none() {
-            generics.where_clause.where_token = Some(tokens::Where::default());
-        }
-        generics.where_clause.predicates.push_default(predicate.clone());
-    }
+    generics
+        .where_clause
+        .predicates
+        .extend(predicates.iter().cloned());
     generics
 }
 
@@ -72,12 +70,7 @@ where
         .flat_map(|predicates| predicates.to_vec());
 
     let mut generics = generics.clone();
-    for predicate in predicates {
-        if generics.where_clause.where_token.is_none() {
-            generics.where_clause.where_token = Some(tokens::Where::default());
-        }
-        generics.where_clause.predicates.push_default(predicate);
-    }
+    generics.where_clause.predicates.extend(predicates);
     generics
 }
 
@@ -112,8 +105,8 @@ where
     }
     impl visit::Visitor for FindTyParams {
         fn visit_path(&mut self, path: &syn::Path) {
-            if path.segments.len() > 0 {
-                let seg = *path.segments.last().unwrap().item();
+            if let Some(seg) = path.segments.last() {
+                let seg = *seg.item();
                 if seg.ident == "PhantomData" {
                     // Hardcoded exception, because PhantomData<T> implements
                     // Serialize and Deserialize whether or not T implements it.
@@ -181,12 +174,7 @@ where
         );
 
     let mut generics = generics.clone();
-    for predicate in new_predicates {
-        if generics.where_clause.where_token.is_none() {
-            generics.where_clause.where_token = Some(tokens::Where::default());
-        }
-        generics.where_clause.predicates.push_default(predicate);
-    }
+    generics.where_clause.predicates.extend(new_predicates);
     generics
 }
 
@@ -228,26 +216,13 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
     let lifetime = syn::Lifetime::new(Term::intern(lifetime), Span::default());
 
     for lifetime_def in generics.lifetimes.iter_mut().map(|m| m.into_item()) {
-        if lifetime_def.colon_token.is_none() {
-            lifetime_def.colon_token = Some(tokens::Colon::default());
-        }
-        lifetime_def
-            .bounds
-            .push_default(lifetime.clone());
+        lifetime_def.bounds.push_default(lifetime.clone());
     }
 
     for ty_param in generics.ty_params.iter_mut().map(|i| i.into_item()) {
-        if ty_param.colon_token.is_none() {
-            ty_param.colon_token = Some(tokens::Colon::default());
-        }
         ty_param
             .bounds
             .push_default(syn::TyParamBound::Region(lifetime.clone()));
-    }
-
-    if generics.lt_token.is_none() {
-        generics.lt_token = Some(tokens::Lt::default());
-        generics.gt_token = Some(tokens::Gt::default());
     }
 
     generics
@@ -260,10 +235,6 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
                 colon_token: None,
             },
         );
-
-    if generics.ty_params.len() > 0 && !generics.lifetimes.trailing_delim() {
-        generics.lifetimes.push_trailing(tokens::Comma::default());
-    }
 
     generics
 }

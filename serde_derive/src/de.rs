@@ -10,7 +10,6 @@ use proc_macro2::Term;
 use quote::{self, Tokens, ToTokens};
 use syn::{self, Ident};
 use syn::delimited::Delimited;
-use syn::tokens::{Comma, Colon, Lt, Gt};
 use syn::Span;
 
 use bound;
@@ -117,11 +116,7 @@ impl Parameters {
             attrs: Vec::new(),
             lifetime: syn::Lifetime::new(Term::intern("'de"), Span::default()),
             bounds: self.borrowed.iter().cloned().collect(),
-            colon_token: if self.borrowed.len() > 0 {
-                Some(Colon::default())
-            } else {
-                None
-            },
+            colon_token: None,
         }
     }
 }
@@ -1745,17 +1740,7 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
         let mut lifetimes = Delimited::new();
         lifetimes.push_first(self.0.de_lifetime_def());
         for lifetime in mem::replace(&mut generics.lifetimes, Delimited::default()) {
-            if !lifetimes.trailing_delim() {
-                lifetimes.push_trailing(Comma::default());
-            }
-            lifetimes.push(lifetime);
-        }
-        if generics.ty_params.len() > 0 && !lifetimes.trailing_delim() {
-            lifetimes.push_trailing(Comma::default());
-        }
-        if generics.lt_token.is_none() {
-            generics.lt_token = Some(Lt::default());
-            generics.gt_token = Some(Gt::default());
+            lifetimes.push_default(lifetime.into_item());
         }
         generics.lifetimes = lifetimes;
         let (impl_generics, _, _) = generics.split_for_impl();
@@ -1772,17 +1757,7 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
         let mut lifetimes = Delimited::new();
         lifetimes.push_first(syn::LifetimeDef::new(lifetime));
         for lifetime in mem::replace(&mut generics.lifetimes, Delimited::default()) {
-            if !lifetimes.trailing_delim() {
-                lifetimes.push_trailing(Comma::default());
-            }
-            lifetimes.push(lifetime);
-        }
-        if generics.ty_params.len() > 0 && !lifetimes.trailing_delim() {
-            lifetimes.push_trailing(Comma::default());
-        }
-        if generics.lt_token.is_none() {
-            generics.lt_token = Some(Lt::default());
-            generics.gt_token = Some(Gt::default());
+            lifetimes.push_default(lifetime.into_item());
         }
         generics.lifetimes = lifetimes;
         let (_, ty_generics, _) = generics.split_for_impl();
