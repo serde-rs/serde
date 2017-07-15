@@ -16,7 +16,7 @@ mod seed_impls;
 
 pub use self::seed_impls::{OptionSeed, SeqSeed, SeqSeedEx};
 
-use serde::de::*;
+pub use serde::de::*;
 
 /// TODO
 pub trait DeserializeSeedEx<'de, Seed>: Sized {

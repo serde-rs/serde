@@ -1,14 +1,13 @@
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate serde_derive_seed;
 extern crate serde;
+extern crate serde_seed;
 extern crate serde_test;
 
 use std::cell::Cell;
 
 use serde::Serialize;
-use serde::ser::{Seeded, SerializeSeed};
+use serde_seed::ser::{Seeded, SerializeSeed};
 
 use serde_test::{Token, assert_ser_tokens};
 

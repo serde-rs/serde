@@ -7,8 +7,8 @@
 // except according to those terms.
 
 use serde::{Serialize, Deserialize};
-use serde::de::DeserializeSeedEx;
-use serde::ser::{SerializeSeed, Unseeded};
+use serde_seed::de::DeserializeSeedEx;
+use serde_seed::ser::{SerializeSeed, Unseeded};
 
 use de::Deserializer;
 use ser::Serializer;

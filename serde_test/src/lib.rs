@@ -159,6 +159,7 @@
 
 #[macro_use]
 extern crate serde;
+extern crate serde_seed;
 
 mod ser;
 mod de;

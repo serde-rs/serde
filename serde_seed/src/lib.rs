@@ -113,6 +113,7 @@ extern crate alloc;
 #[cfg(all(feature = "unstable", feature = "std"))]
 extern crate core;
 
+#[macro_use]
 extern crate serde;
 
 /// A facade around all the types we need from the `std`, `core`, `alloc`, and
@@ -201,5 +202,8 @@ mod lib {
 
 pub mod ser;
 pub mod de;
+
+#[doc(hidden)]
+pub mod private;
 
 pub use serde::*;

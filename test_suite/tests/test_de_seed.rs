@@ -1,15 +1,15 @@
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate serde_derive_seed;
 extern crate serde;
+extern crate serde_seed;
 extern crate serde_test;
 
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use serde::de::{Deserialize, Deserializer, DeserializeSeed, DeserializeSeedEx, Error};
+use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error};
+use serde_seed::de::DeserializeSeedEx;
 
 use serde_test::{Token, assert_de_seed_tokens};
 
@@ -154,7 +154,7 @@ where
     D: Deserializer<'de>,
     U: DeserializeSeedEx<'de, T>,
 {
-    use serde::de::SeqSeedEx;
+    use serde_seed::de::SeqSeedEx;
     deserializer.deserialize_seq(SeqSeedEx::new(&mut seed.0, Vec::with_capacity))
 }
 

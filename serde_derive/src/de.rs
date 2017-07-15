@@ -71,7 +71,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
     let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
-            extern crate serde as _serde;
+            extern crate serde_seed as _serde;
             #impl_block
         };
     };
