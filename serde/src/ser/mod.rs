@@ -120,7 +120,6 @@ mod impls;
 mod impossible;
 
 pub use self::impossible::Impossible;
-pub use self::impls::{Seeded, Unseeded};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1814,16 +1813,4 @@ where
         (lo, Some(hi)) if lo == hi => Some(lo),
         _ => None,
     }
-}
-
-
-/// Placeholder
-pub trait SerializeSeed {
-    /// TODO Placeholder (use a type parameter instead?)
-    type Seed: ?Sized;
-
-    /// Placeholder
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer;
 }

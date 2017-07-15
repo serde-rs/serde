@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{DeserializeSeed, Deserializer, IntoDeserializer, Error, Visitor};
+use de::{Deserialize, Deserializer, IntoDeserializer, Error, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::Unexpected;
@@ -21,9 +21,9 @@ pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer,
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
-pub fn missing_field<'de, V, E>(seed: V, field: &'static str) -> Result<V::Value, E>
+pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
 where
-    V: DeserializeSeed<'de>,
+    V: Deserialize<'de>,
     E: Error,
 {
     struct MissingFieldDeserializer<E>(&'static str, PhantomData<E>);
@@ -56,7 +56,7 @@ where
     }
 
     let deserializer = MissingFieldDeserializer(field, PhantomData);
-    seed.deserialize(deserializer)
+    Deserialize::deserialize(deserializer)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
