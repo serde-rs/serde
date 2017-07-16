@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, DeserializeSeedEx, Deserializer, EnumAccess, Error, Seed,
+use de::{Deserialize, DeserializeSeed, DeserializeState, Deserializer, EnumAccess, Error, Seed,
          SeqAccess, Unexpected, VariantAccess, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -20,14 +20,14 @@ use private::de::size_hint;
 
 macro_rules! forwarded_impl {
     (( $($id: ident),* ), $ty: ty, $func: expr) => {
-        impl<'de, S $(, $id)*> DeserializeSeedEx<'de, S> for $ty
-            where $($id : DeserializeSeedEx<'de, S>,)*
+        impl<'de, S $(, $id)*> DeserializeState<'de, S> for $ty
+            where $($id : DeserializeState<'de, S>,)*
         {
-            fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
+            fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
-                DeserializeSeedEx::deserialize_seed(seed, deserializer).map($func)
+                DeserializeState::deserialize_state(seed, deserializer).map($func)
             }
         }
     }
@@ -35,11 +35,11 @@ macro_rules! forwarded_impl {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<'de, T, S> DeserializeSeedEx<'de, S> for Option<T>
+impl<'de, T, S> DeserializeState<'de, S> for Option<T>
 where
-    T: DeserializeSeedEx<'de, S>,
+    T: DeserializeState<'de, S>,
 {
-    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Option<T>, D::Error>
+    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<Option<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -69,8 +69,8 @@ impl<'de, T> Visitor<'de> for PhantomDataVisitor<T> {
     }
 }
 
-impl<'de, T, S> DeserializeSeedEx<'de, S> for PhantomData<T> {
-    fn deserialize_seed<D>(_: &mut S, deserializer: D) -> Result<PhantomData<T>, D::Error>
+impl<'de, T, S> DeserializeState<'de, S> for PhantomData<T> {
+    fn deserialize_state<D>(_: &mut S, deserializer: D) -> Result<PhantomData<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -144,7 +144,7 @@ where
 }
 
 /// `SeqSeedEx` implements `DeserializeSeed` for sequences whose elements implement
-/// `DeserializeSeedEx`
+/// `DeserializeState`
 pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> {
     seed: &'seed mut T,
     with_capacity: F,
@@ -164,7 +164,7 @@ impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U> {
 
 impl<'de, 'seed, S, F, T, U> DeserializeSeed<'de> for SeqSeedEx<'seed, S, F, T, U>
 where
-    U: DeserializeSeedEx<'de, T>,
+    U: DeserializeState<'de, T>,
     F: FnOnce(usize) -> S,
     S: Extend<U>,
 {
@@ -176,7 +176,7 @@ where
     {
         impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
         where
-            U: DeserializeSeedEx<'de,
+            U: DeserializeState<'de,
                                 T>,
             F: FnOnce(usize) -> S,
             S: Extend<U>,
@@ -269,12 +269,12 @@ macro_rules! seq_impl {
         $with_capacity:expr,
         $insert:expr
     ) => {
-        impl<'de, Seed, T $(, $typaram)*> DeserializeSeedEx<'de, Seed> for $ty<T $(, $typaram)*>
+        impl<'de, Seed, T $(, $typaram)*> DeserializeState<'de, Seed> for $ty<T $(, $typaram)*>
         where
-            T: DeserializeSeedEx<'de, Seed> $(+ $tbound1 $(+ $tbound2)*)*,
+            T: DeserializeState<'de, Seed> $(+ $tbound1 $(+ $tbound2)*)*,
             $($typaram: $bound1 $(+ $bound2)*,)*
         {
-            fn deserialize_seed<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
+            fn deserialize_state<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -362,9 +362,9 @@ impl<'de, 'seed, S, T> Visitor<'de> for ArrayVisitor<'seed, S, [T; 0]> {
     }
 }
 
-// Does not require T: DeserializeSeedEx<'de, S>.
-impl<'de, S, T> DeserializeSeedEx<'de, S> for [T; 0] {
-    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<[T; 0], D::Error>
+// Does not require T: DeserializeState<'de, S>.
+impl<'de, S, T> DeserializeState<'de, S> for [T; 0] {
+    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<[T; 0], D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -377,7 +377,7 @@ macro_rules! array_impls {
         $(
             impl<'de, 'seed, T, S> Visitor<'de> for ArrayVisitor<'seed, S, [T; $len]>
             where
-                T: DeserializeSeedEx<'de, S>,
+                T: DeserializeState<'de, S>,
             {
                 type Value = [T; $len];
 
@@ -401,11 +401,11 @@ macro_rules! array_impls {
                 }
             }
 
-            impl<'de, S, T> DeserializeSeedEx<'de, S> for [T; $len]
+            impl<'de, S, T> DeserializeState<'de, S> for [T; $len]
             where
-                T: DeserializeSeedEx<'de, S>,
+                T: DeserializeState<'de, S>,
             {
-                fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<[T; $len], D::Error>
+                fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<[T; $len], D::Error>
                 where
                     D: Deserializer<'de>,
                 {
@@ -467,7 +467,7 @@ macro_rules! tuple_impls {
                 }
             }
 
-            impl<'de, 'seed, S, $($name: DeserializeSeedEx<'de, S>),+> Visitor<'de> for $visitor<'seed, S, $($name,)+> {
+            impl<'de, 'seed, S, $($name: DeserializeState<'de, S>),+> Visitor<'de> for $visitor<'seed, S, $($name,)+> {
                 type Value = ($($name,)+);
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -491,9 +491,9 @@ macro_rules! tuple_impls {
                 }
             }
 
-            impl<'de, S, $($name: DeserializeSeedEx<'de, S>),+> DeserializeSeedEx<'de, S> for ($($name,)+) {
+            impl<'de, S, $($name: DeserializeState<'de, S>),+> DeserializeState<'de, S> for ($($name,)+) {
                 #[inline]
-                fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<($($name,)+), D::Error>
+                fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<($($name,)+), D::Error>
                 where
                     D: Deserializer<'de>,
                 {
@@ -533,13 +533,13 @@ macro_rules! map_impl {
         $ctor:expr,
         $with_capacity:expr
     ) => {
-        impl<'de, S2, K, V $(, $typaram)*> DeserializeSeedEx<'de, S2> for $ty<K, V $(, $typaram)*>
+        impl<'de, S2, K, V $(, $typaram)*> DeserializeState<'de, S2> for $ty<K, V $(, $typaram)*>
         where
-            K: DeserializeSeedEx<'de, S2> $(+ $kbound1 $(+ $kbound2)*)*,
-            V: DeserializeSeedEx<'de, S2>,
+            K: DeserializeState<'de, S2> $(+ $kbound1 $(+ $kbound2)*)*,
+            V: DeserializeState<'de, S2>,
             $($typaram: $bound1 $(+ $bound2)*),*
         {
-            fn deserialize_seed<D>(seed: &mut S2, deserializer: D) -> Result<Self, D::Error>
+            fn deserialize_state<D>(seed: &mut S2, deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -550,8 +550,8 @@ macro_rules! map_impl {
 
                 impl<'de, 'seed, S2, K, V $(, $typaram)*> Visitor<'de> for MapVisitor<'seed, S2, K, V $(, $typaram)*>
                 where
-                    K: DeserializeSeedEx<'de, S2> $(+ $kbound1 $(+ $kbound2)*)*,
-                    V: DeserializeSeedEx<'de, S2>,
+                    K: DeserializeState<'de, S2> $(+ $kbound1 $(+ $kbound2)*)*,
+                    V: DeserializeState<'de, S2>,
                     $($typaram: $bound1 $(+ $bound2)*),*
                 {
                     type Value = $ty<K, V $(, $typaram)*>;
@@ -612,17 +612,17 @@ forwarded_impl!((T), Arc<T>, Arc::new);
 forwarded_impl!((T), Rc<T>, Rc::new);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'de, 'a, S, T: ?Sized> DeserializeSeedEx<'de, S> for Cow<'a, T>
+impl<'de, 'a, S, T: ?Sized> DeserializeState<'de, S> for Cow<'a, T>
 where
     T: ToOwned,
-    T::Owned: DeserializeSeedEx<'de, S>,
+    T::Owned: DeserializeState<'de, S>,
 {
     #[inline]
-    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Cow<'a, T>, D::Error>
+    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<Cow<'a, T>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        T::Owned::deserialize_seed(seed, deserializer).map(Cow::Owned)
+        T::Owned::deserialize_state(seed, deserializer).map(Cow::Owned)
     }
 }
 
@@ -650,11 +650,11 @@ forwarded_impl!((T), RwLock<T>, RwLock::new);
 //         end: u32,
 //     }
 #[cfg(feature = "std")]
-impl<'de, S, Idx> DeserializeSeedEx<'de, S> for ops::Range<Idx>
+impl<'de, S, Idx> DeserializeState<'de, S> for ops::Range<Idx>
 where
-    Idx: DeserializeSeedEx<'de, S>,
+    Idx: DeserializeState<'de, S>,
 {
-    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
+    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -718,7 +718,7 @@ where
 
         impl<'de, 'seed, S, Idx> Visitor<'de> for RangeVisitor<'seed, S, Idx>
         where
-            Idx: DeserializeSeedEx<'de, S>,
+            Idx: DeserializeState<'de, S>,
         {
             type Value = ops::Range<Idx>;
 
@@ -787,15 +787,15 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
-impl<'de, T> DeserializeSeedEx<'de, S> for NonZero<T>
+impl<'de, T> DeserializeState<'de, S> for NonZero<T>
 where
-    T: DeserializeSeedEx<'de, S> + Zeroable,
+    T: DeserializeState<'de, S> + Zeroable,
 {
-    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<NonZero<T>, D::Error>
+    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<NonZero<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let value = try!(Deserialize::deserialize_seed(seed, deserializer));
+        let value = try!(Deserialize::deserialize_state(seed, deserializer));
         unsafe {
             let ptr = &value as *const T as *const u8;
             if slice::from_raw_parts(ptr, mem::size_of::<T>())
@@ -812,12 +812,12 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<'de, S, T, E> DeserializeSeedEx<'de, S> for Result<T, E>
+impl<'de, S, T, E> DeserializeState<'de, S> for Result<T, E>
 where
-    T: DeserializeSeedEx<'de, S>,
-    E: DeserializeSeedEx<'de, S>,
+    T: DeserializeState<'de, S>,
+    E: DeserializeState<'de, S>,
 {
-    fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Result<T, E>, D::Error>
+    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<Result<T, E>, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -899,8 +899,8 @@ where
 
         impl<'de, 'seed, S, T, E> Visitor<'de> for ResultVisitor<'seed, S, T, E>
         where
-            T: DeserializeSeedEx<'de, S>,
-            E: DeserializeSeedEx<'de, S>,
+            T: DeserializeState<'de, S>,
+            E: DeserializeState<'de, S>,
         {
             type Value = Result<T, E>;
 

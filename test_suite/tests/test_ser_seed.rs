@@ -1,25 +1,25 @@
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
-extern crate serde_derive_seed;
+extern crate serde_derive_state;
 extern crate serde;
-extern crate serde_seed;
+extern crate serde_state;
 extern crate serde_test;
 
 use std::cell::Cell;
 
 use serde::Serialize;
-use serde_seed::ser::{Seeded, SerializeSeed};
+use serde_state::ser::{Seeded, SerializeState};
 
 use serde_test::{Token, assert_ser_tokens};
 
 #[derive(Serialize)]
 struct Inner;
 
-impl SerializeSeed for Inner {
+impl SerializeState for Inner {
     type Seed = Cell<i32>;
 
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -28,15 +28,15 @@ impl SerializeSeed for Inner {
     }
 }
 
-#[derive(SerializeSeed)]
-#[serde(serialize_seed = "Cell<i32>")]
+#[derive(SerializeState)]
+#[serde(serialize_state = "Cell<i32>")]
 struct SeedStruct {
-    #[serde(serialize_seed)]
+    #[serde(serialize_state)]
     value: Inner,
 }
 
 #[test]
-fn test_serialize_seed() {
+fn test_serialize_state() {
     let value = SeedStruct { value: Inner };
     let seed = Cell::new(0);
     assert_ser_tokens(
@@ -126,21 +126,21 @@ fn test_serialize_option_none_seed() {
     assert_eq!(seed.get(), 0);
 }
 
-#[derive(SerializeSeed)]
-#[serde(serialize_seed = "Cell<i32>")]
+#[derive(SerializeState)]
+#[serde(serialize_state = "Cell<i32>")]
 enum SeedEnum {
     A(
-        #[serde(serialize_seed)]
+        #[serde(serialize_state)]
         Inner
     ),
     B {
-        #[serde(serialize_seed)]
+        #[serde(serialize_state)]
         inner: Inner,
     },
 }
 
 #[test]
-fn test_serialize_seed_newtype_variant() {
+fn test_serialize_state_newtype_variant() {
     let value = SeedEnum::A(Inner);
     let seed = Cell::new(0);
     assert_ser_tokens(
@@ -159,7 +159,7 @@ fn test_serialize_seed_newtype_variant() {
 }
 
 #[test]
-fn test_serialize_seed_newtype_variant2() {
+fn test_serialize_state_newtype_variant2() {
     let value = SeedEnum::B { inner: Inner };
     let seed = Cell::new(0);
     assert_ser_tokens(
@@ -181,15 +181,15 @@ fn test_serialize_seed_newtype_variant2() {
     assert_eq!(seed.get(), 1);
 }
 
-#[derive(SerializeSeed)]
-#[serde(serialize_seed = "Cell<i32>")]
+#[derive(SerializeState)]
+#[serde(serialize_state = "Cell<i32>")]
 struct GenericNewtype<T>(
-    #[serde(serialize_seed)]
+    #[serde(serialize_state)]
     T
 );
 
 #[test]
-fn test_serialize_seed_generic_newtype() {
+fn test_serialize_state_generic_newtype() {
     let value = GenericNewtype(Inner);
     let seed = Cell::new(0);
     assert_ser_tokens(
@@ -207,21 +207,21 @@ fn test_serialize_seed_generic_newtype() {
 }
 
 
-#[derive(SerializeSeed)]
-#[serde(serialize_seed = "Cell<i32>")]
+#[derive(SerializeState)]
+#[serde(serialize_state = "Cell<i32>")]
 enum GenericSeedEnum<T> {
     A(
-        #[serde(serialize_seed)]
+        #[serde(serialize_state)]
         T
     ),
     B {
-        #[serde(serialize_seed)]
+        #[serde(serialize_state)]
         inner: T,
     },
 }
 
 #[test]
-fn test_serialize_seed_generic_newtype_variant() {
+fn test_serialize_state_generic_newtype_variant() {
     let value = GenericSeedEnum::A(Inner);
     let seed = Cell::new(0);
     assert_ser_tokens(
@@ -240,7 +240,7 @@ fn test_serialize_seed_generic_newtype_variant() {
 }
 
 #[test]
-fn test_serialize_seed_generic_struct_variant() {
+fn test_serialize_state_generic_struct_variant() {
     let value = GenericSeedEnum::B { inner: Inner };
     let seed = Cell::new(0);
     assert_ser_tokens(
@@ -269,13 +269,13 @@ use std::rc::Rc;
 
 use serde::Serializer;
 
-#[derive(Debug, SerializeSeed)]
-#[serde(serialize_seed = "RefCell<NodeToId>")]
+#[derive(Debug, SerializeState)]
+#[serde(serialize_state = "RefCell<NodeToId>")]
 struct Node {
     data: char,
-    #[serde(serialize_seed_with = "serialize_option_rc_seed")]
+    #[serde(serialize_state_with = "serialize_option_rc_seed")]
     left: Option<Rc<Node>>,
-    #[serde(serialize_seed_with = "serialize_option_rc_seed")]
+    #[serde(serialize_state_with = "serialize_option_rc_seed")]
     right: Option<Rc<Node>>,
 }
 
@@ -485,7 +485,7 @@ impl Serialize for Node {
     where
         S: Serializer,
     {
-        self.serialize_seed(serializer, &RefCell::default())
+        self.serialize_state(serializer, &RefCell::default())
     }
 }
 
@@ -511,24 +511,24 @@ fn serialize_rc_seed<S>(
 where
     S: Serializer,
 {
-    #[derive(Debug, SerializeSeed)]
-    #[serde(serialize_seed = "RefCell<NodeToId>")]
+    #[derive(Debug, SerializeState)]
+    #[serde(serialize_state = "RefCell<NodeToId>")]
     #[serde(rename = "Node")]
     enum NodeVariant<'a> {
         Plain {
             data: char,
-            #[serde(serialize_seed_with = "serialize_option_rc_seed")]
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
             left: &'a Option<Rc<Node>>,
-            #[serde(serialize_seed_with = "serialize_option_rc_seed")]
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
             right: &'a Option<Rc<Node>>,
         },
         Reference(Id),
         Marked {
             id: Id,
             data: char,
-            #[serde(serialize_seed_with = "serialize_option_rc_seed")]
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
             left: &'a Option<Rc<Node>>,
-            #[serde(serialize_seed_with = "serialize_option_rc_seed")]
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
             right: &'a Option<Rc<Node>>,
         },
     }
@@ -551,5 +551,5 @@ where
             }
         }
     };
-    node.serialize_seed(serializer, map)
+    node.serialize_state(serializer, map)
 }

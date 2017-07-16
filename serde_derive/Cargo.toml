@@ -1,5 +1,5 @@
 [package]
-name = "serde_derive_seed"
+name = "serde_derive_state"
 version = "0.1.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
@@ -15,10 +15,10 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-
 travis-ci = { repository = "serde-rs/serde" }
 
 [lib]
-name = "serde_derive_seed"
+name = "serde_derive_state"
 proc-macro = true
 
 [dependencies]
 quote = "0.3.8"
-serde_derive_seed_internals = { version = "=0.1.0", default-features = false, path = "../serde_derive_internals" }
+serde_derive_state_internals = { version = "=0.1.0", default-features = false, path = "../serde_derive_internals" }
 syn = { version = "0.11", features = ["visit"] }

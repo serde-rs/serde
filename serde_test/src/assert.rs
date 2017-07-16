@@ -7,8 +7,8 @@
 // except according to those terms.
 
 use serde::{Serialize, Deserialize};
-use serde_seed::de::DeserializeSeedEx;
-use serde_seed::ser::{SerializeSeed, Unseeded};
+use serde_state::de::DeserializeState;
+use serde_state::ser::{SerializeState, Unseeded};
 
 use de::Deserializer;
 use ser::Serializer;
@@ -91,10 +91,10 @@ where
 
 pub fn assert_ser_seed_tokens<T>(value: &T, seed: &T::Seed, tokens: &[Token])
 where
-    T: SerializeSeed,
+    T: SerializeState,
 {
     let mut ser = Serializer::new(tokens);
-    match value.serialize_seed(&mut ser, seed) {
+    match value.serialize_state(&mut ser, seed) {
         Ok(_) => {}
         Err(err) => panic!("value failed to serialize: {}", err),
     }
@@ -206,10 +206,10 @@ where
 
 pub fn assert_de_seed_tokens<'de, S, T>(seed: &mut S, value: &T, tokens: &'de [Token])
 where
-    T: DeserializeSeedEx<'de, S> + PartialEq + Debug,
+    T: DeserializeState<'de, S> + PartialEq + Debug,
 {
     let mut de = Deserializer::new(tokens);
-    match T::deserialize_seed(seed, &mut de) {
+    match T::deserialize_state(seed, &mut de) {
         Ok(v) => assert_eq!(v, *value),
         Err(e) => panic!("tokens failed to deserialize: {}", e),
     }

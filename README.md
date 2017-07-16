@@ -1,16 +1,16 @@
-# serde_seed &emsp; [![Build Status]][travis] [![Latest Version]][crates.io]
+# serde_state &emsp; [![Build Status]][travis] [![Latest Version]][crates.io]
 
 [Build Status]: https://api.travis-ci.org/Marwes/serde.svg?branch=master
 [travis]: https://travis-ci.org/Marwes/serde
-[Latest Version]: https://img.shields.io/crates/v/serde_seed.svg
-[crates.io]: https://crates.io/crates/serde_seed
+[Latest Version]: https://img.shields.io/crates/v/serde_state.svg
+[crates.io]: https://crates.io/crates/serde_state
 
 
-**serde_seed is an experimental addition to serde which makes it possible to pass state to the [de]serialized data structures.**
+**serde_state is an experimental addition to serde which makes it possible to pass state to the [de]serialized data structures.**
 
 ## Serde in action
 
-See https://docs.rs/serde_seed for examples
+See https://docs.rs/serde_state for examples
 
 ## Getting help
 

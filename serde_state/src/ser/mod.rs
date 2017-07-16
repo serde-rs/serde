@@ -13,12 +13,12 @@ pub use self::seed_impls::{Seeded, Unseeded};
 
 pub use serde::ser::*;
 /// Placeholder
-pub trait SerializeSeed {
+pub trait SerializeState {
     /// TODO Placeholder (use a type parameter instead?)
     type Seed: ?Sized;
 
     /// Placeholder
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer;
 }

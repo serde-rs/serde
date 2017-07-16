@@ -1,12 +1,12 @@
 [package]
-name = "serde_seed"
+name = "serde_state"
 version = "0.1.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Stateful serialization/deserialization for serde"
 homepage = "https://serde.rs"
-repository = "https://github.com/Marwes/serde_seed"
-documentation = "https://docs.serde.rs/serde_seed/"
+repository = "https://github.com/Marwes/serde_state"
+documentation = "https://docs.serde.rs/serde_state/"
 keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
 readme = "README.md"
@@ -22,6 +22,7 @@ serde_derive = { version = "1.0", optional = true }
 
 [dev-dependencies]
 serde_derive = { version = "1.0" }
+serde_derive_state = { version = "0.1", path = "../serde_derive" }
 serde_json = { version = "1.0" }
 
 

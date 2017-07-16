@@ -6,33 +6,33 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! # serde_seed
+//! # serde_state
 //!
-//! `serde_seed` is a crate which extends the normal `Deserialize` and `Serialize` traits to allow
+//! `serde_state` is a crate which extends the normal `Deserialize` and `Serialize` traits to allow
 //! state to be passed to every value which is serialized or deserialized.
 //!
 //! ## Example
 //!
 //! ```
 //! extern crate serde_json;
-//! extern crate serde_seed as serde;
+//! extern crate serde_state as serde;
 //! #[macro_use]
 //! extern crate serde_derive;
 //! #[macro_use]
-//! extern crate serde_derive_seed;
+//! extern crate serde_derive_state;
 //!
 //! use std::borrow::BorrowMut;
 //! use std::cell::Cell;
-//! use serde::ser::{Serialize, Serializer, SerializeSeed};
-//! use serde::de::{Deserialize, Deserializer, DeserializeSeedEx};
+//! use serde::ser::{Serialize, Serializer, SerializeState};
+//! use serde::de::{Deserialize, Deserializer, DeserializeState};
 //!
 //! #[derive(Deserialize, Serialize)]
 //! struct Inner;
 //!
-//! impl SerializeSeed for Inner {
+//! impl SerializeState for Inner {
 //!     type Seed = Cell<i32>;
 //! 
-//!     fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+//!     fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
 //!     where
 //!         S: Serializer,
 //!     {
@@ -41,9 +41,9 @@
 //!     }
 //! }
 //!
-//! impl<'de, S> DeserializeSeedEx<'de, S> for Inner where S: BorrowMut<i32> {
+//! impl<'de, S> DeserializeState<'de, S> for Inner where S: BorrowMut<i32> {
 //! 
-//!     fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
+//!     fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
 //!     where
 //!         D: Deserializer<'de>,
 //!     {
@@ -52,24 +52,24 @@
 //!     }
 //! }
 //!
-//! #[derive(SerializeSeed, DeserializeSeed)]
+//! #[derive(SerializeState, DeserializeState)]
 //!
-//! // `serialize_seed` or `deserialize_seed` is necessary to tell the derived implementation which
+//! // `serialize_state` or `deserialize_state` is necessary to tell the derived implementation which
 //! // seed that is passed
-//! #[serde(serialize_seed = "Cell<i32>")]
+//! #[serde(serialize_state = "Cell<i32>")]
 //!
 //! // `de_parameters` can be used to specify additional type parameters for the derived instance
 //! #[serde(de_parameters = "S")]
 //! #[serde(bound(deserialize = "S: BorrowMut<i32>"))]
-//! #[serde(deserialize_seed = "S")]
+//! #[serde(deserialize_state = "S")]
 //! struct Struct {
-//!     // The `serialize_seed` attribute must be specified to use seeded serialization
-//!     #[serde(serialize_seed)]
-//!     // The `deserialize_seed` attribute must be specified to use seeded deserialization
-//!     #[serde(deserialize_seed)]
+//!     // The `serialize_state` attribute must be specified to use seeded serialization
+//!     #[serde(serialize_state)]
+//!     // The `deserialize_state` attribute must be specified to use seeded deserialization
+//!     #[serde(deserialize_state)]
 //!     value: Inner,
 //!
-//!     // The `seed` attribute can be used to specify `deserialize_seed` and `serialize_seed`
+//!     // The `seed` attribute can be used to specify `deserialize_state` and `serialize_state`
 //!     // simultaneously
 //!     #[serde(seed)]
 //!     value2: Inner,
@@ -77,9 +77,9 @@
 //!     // If no attributes are specified then normal serialization and/or deserialization is used
 //!     value3: Inner,
 //!
-//!     // The `[de]serialize_seed_with` attribute can be used to specify a custom function which
+//!     // The `[de]serialize_state_with` attribute can be used to specify a custom function which
 //!     // does the serialization or deserialization
-//!     #[serde(serialize_seed_with = "serialize_inner")]
+//!     #[serde(serialize_state_with = "serialize_inner")]
 //!     value4: Inner,
 //! }
 //!
@@ -102,13 +102,13 @@
 //!     {
 //!         let mut serializer = serde_json::Serializer::pretty(&mut buffer);
 //!         let seed = Cell::new(0);
-//!         s.serialize_seed(&mut serializer, &seed).unwrap();
+//!         s.serialize_state(&mut serializer, &seed).unwrap();
 //!         assert_eq!(seed.get(), 12);
 //!     }
 //!     {
 //!         let mut deserializer = serde_json::Deserializer::from_slice(&buffer);
 //!         let mut seed = 0;
-//!         Struct::deserialize_seed(&mut seed, &mut deserializer).unwrap();
+//!         Struct::deserialize_state(&mut seed, &mut deserializer).unwrap();
 //!         assert_eq!(seed, 2);
 //!     }
 //! }

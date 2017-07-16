@@ -40,14 +40,14 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
         }
     } else {
         if seed {
-            let seed_ty = cont.attrs.serialize_seed().ok_or_else(|| "Need a seed attribute")?;
+            let seed_ty = cont.attrs.serialize_state().ok_or_else(|| "Need a seed attribute")?;
 
             quote! {
                 #[automatically_derived]
-                impl #impl_generics _serde::ser::SerializeSeed for #ident #ty_generics #where_clause {
+                impl #impl_generics _serde::ser::SerializeState for #ident #ty_generics #where_clause {
                     type Seed = #seed_ty;
 
-                    fn serialize_seed<__S>(&self, __serializer: __S, __seed: &Self::Seed) -> _serde::export::Result<__S::Ok, __S::Error>
+                    fn serialize_state<__S>(&self, __serializer: __S, __seed: &Self::Seed) -> _serde::export::Result<__S::Ok, __S::Error>
                         where __S: _serde::Serializer
                     {
                         #body
@@ -71,7 +71,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
     let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
-            extern crate serde_seed as _serde;
+            extern crate serde_state as _serde;
             #impl_block
         };
     };
@@ -154,9 +154,9 @@ fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
                 &generics,
                 needs_serialize_bound,
                 &if seeded {
-                    let serialize_seed = cont.attrs.serialize_seed()
-                        .expect("derive(SerializeSeed) specified without a seed type");
-                    let path = quote!(_serde::ser::SerializeSeed<Seed = #serialize_seed>);
+                    let serialize_state = cont.attrs.serialize_state()
+                        .expect("derive(SerializeState) specified without a seed type");
+                    let path = quote!(_serde::ser::SerializeState<Seed = #serialize_state>);
                     syn::parse_path(&path.to_string()).unwrap()
                 } else {
                     path!(_serde::Serialize)
@@ -226,7 +226,7 @@ fn serialize_newtype_struct(
 
     let mut field_expr = get_field(params, field, 0);
 
-    let seed_ty = cattrs.serialize_seed();
+    let seed_ty = cattrs.serialize_state();
 
     field_expr = wrap_field(params, field, seed_ty, field_expr);
 
@@ -245,7 +245,7 @@ fn serialize_tuple_struct(
         params,
         false,
         quote!(_serde::ser::SerializeTupleStruct::serialize_field),
-        cattrs.serialize_seed(),
+        cattrs.serialize_state(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -267,7 +267,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         params,
         false,
         quote!(_serde::ser::SerializeStruct::serialize_field),
-        cattrs.serialize_seed(),
+        cattrs.serialize_state(),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -420,7 +420,7 @@ fn serialize_externally_tagged_variant(
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
-    let seed_ty = cattrs.serialize_seed();
+    let seed_ty = cattrs.serialize_state();
 
     match variant.style {
         Style::Unit => {
@@ -458,7 +458,7 @@ fn serialize_externally_tagged_variant(
                 },
                 params,
                 &variant.fields,
-                cattrs.serialize_seed(),
+                cattrs.serialize_state(),
             )
         }
         Style::Struct => {
@@ -470,7 +470,7 @@ fn serialize_externally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
-                cattrs.serialize_seed(),
+                cattrs.serialize_state(),
             )
         }
     }
@@ -500,7 +500,7 @@ fn serialize_internally_tagged_variant(
         }
         Style::Newtype => {
             let field = &variant.fields[0];
-            let seed_ty = cattrs.serialize_seed();
+            let seed_ty = cattrs.serialize_state();
             let mut field_expr = quote!(__field0);
             field_expr = wrap_field(params, field, seed_ty, field_expr);
 
@@ -524,7 +524,7 @@ fn serialize_internally_tagged_variant(
                 params,
                 &variant.fields,
                 &type_name,
-                cattrs.serialize_seed(),
+                cattrs.serialize_state(),
             )
         }
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -555,7 +555,7 @@ fn serialize_adjacently_tagged_variant(
             }
             Style::Newtype => {
                 let field = &variant.fields[0];
-                let seed_ty = cattrs.serialize_seed();
+                let seed_ty = cattrs.serialize_state();
                 let mut field_expr = quote!(__field0);
                 field_expr = wrap_field(params, field, seed_ty, field_expr);
 
@@ -564,7 +564,7 @@ fn serialize_adjacently_tagged_variant(
                 }
             }
             Style::Tuple => {
-                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_seed())
+                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_state())
             }
             Style::Struct => {
                 serialize_struct_variant(
@@ -572,7 +572,7 @@ fn serialize_adjacently_tagged_variant(
                     params,
                     &variant.fields,
                     &variant_name,
-                    cattrs.serialize_seed(),
+                    cattrs.serialize_state(),
                 )
             }
         },
@@ -647,7 +647,7 @@ fn serialize_untagged_variant(
             }
         }
         Style::Newtype => {
-            let seed_ty = cattrs.serialize_seed();
+            let seed_ty = cattrs.serialize_state();
             let field = &variant.fields[0];
             let mut field_expr = quote!(__field0);
             field_expr = wrap_field(params, field, seed_ty, field_expr);
@@ -656,10 +656,10 @@ fn serialize_untagged_variant(
                 _serde::Serialize::serialize(#field_expr, __serializer)
             }
         }
-        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_seed()),
+        Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields, cattrs.serialize_state()),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.serialize_seed())
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name, cattrs.serialize_state())
         }
     }
 }
@@ -926,7 +926,7 @@ fn wrap_serialize_with(
     })
 }
 
-fn wrap_serialize_seed(
+fn wrap_serialize_state(
     value: Tokens,
 ) -> Tokens {
     quote!( {
@@ -940,13 +940,13 @@ fn wrap_field(
     seed_ty: Option<&syn::Ty>,
     mut field_expr: Tokens,
 ) -> Tokens {
-    if field.attrs.serialize_seed() {
-        field_expr = wrap_serialize_seed(field_expr)
+    if field.attrs.serialize_state() {
+        field_expr = wrap_serialize_state(field_expr)
     }
 
-    if let Some(path) = field.attrs.serialize_seed_with() {
-        let seed_ty = seed_ty.expect("serialize_seed_with specified without a seed type");
-        field_expr = wrap_serialize_seed_with(params, field.ty, seed_ty, path, field_expr)
+    if let Some(path) = field.attrs.serialize_state_with() {
+        let seed_ty = seed_ty.expect("serialize_state_with specified without a seed type");
+        field_expr = wrap_serialize_state_with(params, field.ty, seed_ty, path, field_expr)
     }
 
     if let Some(path) = field.attrs.serialize_with() {
@@ -956,7 +956,7 @@ fn wrap_field(
 }
 
 
-fn wrap_serialize_seed_with(
+fn wrap_serialize_state_with(
     params: &Parameters,
     field_ty: &syn::Ty,
     seed_ty: &syn::Ty,

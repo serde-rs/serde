@@ -18,16 +18,16 @@ pub use self::seed_impls::{OptionSeed, SeqSeed, SeqSeedEx};
 
 pub use serde::de::*;
 
-/// `DeserializeSeedEx` is a trait which specifies how to deserialize a type which requires extra
+/// `DeserializeState` is a trait which specifies how to deserialize a type which requires extra
 /// state to deserialize
-pub trait DeserializeSeedEx<'de, Seed>: Sized {
+pub trait DeserializeState<'de, Seed>: Sized {
     /// Deserializes `Self` using `seed` and the `deserializer`
-    fn deserialize_seed<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
+    fn deserialize_state<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>;
 }
 
-/// Wrapper type which implements `DeserializeSeed` for `DeserializeSeedEx` instances
+/// Wrapper type which implements `DeserializeSeed` for `DeserializeState` instances
 #[derive(Debug)]
 pub struct Seed<S, T> {
     /// The wrapped seed
@@ -74,7 +74,7 @@ impl<S, T> Seed<S, T> {
 
 impl<'de, 's, S, T> DeserializeSeed<'de> for Seed<&'s mut S, T>
 where
-    T: DeserializeSeedEx<'de, S>,
+    T: DeserializeState<'de, S>,
 {
     type Value = T;
 
@@ -82,6 +82,6 @@ where
     where
         D: Deserializer<'de>,
     {
-        T::deserialize_seed(self.seed, deserializer)
+        T::deserialize_state(self.seed, deserializer)
     }
 }

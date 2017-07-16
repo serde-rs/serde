@@ -113,8 +113,8 @@ pub struct Container {
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
     identifier: Identifier,
-    deserialize_seed: Option<syn::Ty>,
-    serialize_seed: Option<syn::Ty>,
+    deserialize_state: Option<syn::Ty>,
+    serialize_state: Option<syn::Ty>,
     de_parameters: Option<Vec<syn::Ident>>,
 }
 
@@ -185,8 +185,8 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut deserialize_seed = Attr::none(cx, "deserialize_seed");
-        let mut serialize_seed = Attr::none(cx, "serialize_seed");
+        let mut deserialize_state = Attr::none(cx, "deserialize_state");
+        let mut serialize_state = Attr::none(cx, "serialize_state");
         let mut de_parameters = Attr::none(cx, "de_parameters");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
@@ -350,17 +350,17 @@ impl Container {
                         variant_identifier.set_true();
                     }
 
-                    // Parse `#[serde(deserialize_seed = "...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_seed" => {
+                    // Parse `#[serde(deserialize_state = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_state" => {
                         if let Ok(path) = parse_lit_into_ty(cx, name.as_ref(), lit) {
-                            deserialize_seed.set(path);
+                            deserialize_state.set(path);
                         }
                     }
 
-                    // Parse `#[serde(serialize_seed = "...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_seed" => {
+                    // Parse `#[serde(serialize_state = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_state" => {
                         if let Ok(path) = parse_lit_into_ty(cx, name.as_ref(), lit) {
-                            serialize_seed.set(path);
+                            serialize_state.set(path);
                         }
                     }
 
@@ -397,8 +397,8 @@ impl Container {
             into_type: into_type.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
-            deserialize_seed: deserialize_seed.get(),
-            serialize_seed: serialize_seed.get(),
+            deserialize_state: deserialize_state.get(),
+            serialize_state: serialize_state.get(),
             de_parameters: de_parameters.get(),
         }
     }
@@ -447,12 +447,12 @@ impl Container {
         self.identifier
     }
 
-    pub fn deserialize_seed(&self) -> Option<&syn::Ty> {
-        self.deserialize_seed.as_ref()
+    pub fn deserialize_state(&self) -> Option<&syn::Ty> {
+        self.deserialize_state.as_ref()
     }
 
-    pub fn serialize_seed(&self) -> Option<&syn::Ty> {
-        self.serialize_seed.as_ref()
+    pub fn serialize_state(&self) -> Option<&syn::Ty> {
+        self.serialize_state.as_ref()
     }
 
     pub fn de_parameters(&self) -> Option<&[syn::Ident]> {
@@ -685,10 +685,10 @@ pub struct Field {
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::Path>,
-    deserialize_seed_with: Option<syn::Path>,
-    deserialize_seed: bool,
-    serialize_seed_with: Option<syn::Path>,
-    serialize_seed: bool,
+    deserialize_state_with: Option<syn::Path>,
+    deserialize_state: bool,
+    serialize_state_with: Option<syn::Path>,
+    serialize_state: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -717,10 +717,10 @@ impl Field {
         let mut de_bound = Attr::none(cx, "bound");
         let mut borrowed_lifetimes = Attr::none(cx, "borrow");
         let mut getter = Attr::none(cx, "getter");
-        let mut deserialize_seed_with = Attr::none(cx, "deserialize_seed_with");
-        let mut deserialize_seed = BoolAttr::none(cx, "deserialize_seed");
-        let mut serialize_seed_with = Attr::none(cx, "serialize_seed_with");
-        let mut serialize_seed = BoolAttr::none(cx, "serialize_seed");
+        let mut deserialize_state_with = Attr::none(cx, "deserialize_state_with");
+        let mut deserialize_state = BoolAttr::none(cx, "deserialize_state");
+        let mut serialize_state_with = Attr::none(cx, "serialize_state_with");
+        let mut serialize_state = BoolAttr::none(cx, "serialize_state");
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
@@ -858,44 +858,44 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(deserialize_seed_with = "...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_seed_with" => {
+                    // Parse `#[serde(deserialize_state_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_state_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            deserialize_seed_with.set(path);
+                            deserialize_state_with.set(path);
                         }
                     }
 
-                    // Parse `#[serde(deserialize_seed_)]`
-                    MetaItem(Word(ref name)) if name == "deserialize_seed" => {
-                        deserialize_seed.set_true();
+                    // Parse `#[serde(deserialize_state_)]`
+                    MetaItem(Word(ref name)) if name == "deserialize_state" => {
+                        deserialize_state.set_true();
                     }
 
-                    // Parse `#[serde(serialize_seed_with = "...")]`
-                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_seed_with" => {
+                    // Parse `#[serde(serialize_state_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_state_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
-                            serialize_seed_with.set(path);
+                            serialize_state_with.set(path);
                         }
                     }
 
-                    // Parse `#[serde(serialize_seed)]`
-                    MetaItem(Word(ref name)) if name == "serialize_seed" => {
-                        serialize_seed.set_true();
+                    // Parse `#[serde(serialize_state)]`
+                    MetaItem(Word(ref name)) if name == "serialize_state" => {
+                        serialize_state.set_true();
                     }
 
                     // Parse `#[serde(seed)]`
                     MetaItem(Word(ref name)) if name == "seed" => {
-                        serialize_seed.set_true();
-                        deserialize_seed.set_true();
+                        serialize_state.set_true();
+                        deserialize_state.set_true();
                     }
 
                     MetaItem(NameValue(ref name, ref lit)) if name == "seed_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             let mut ser_path = path.clone();
                             ser_path.segments.push("serialize".into());
-                            serialize_seed_with.set(ser_path);
+                            serialize_state_with.set(ser_path);
                             let mut de_path = path;
                             de_path.segments.push("deserialize".into());
-                            deserialize_seed_with.set(de_path);
+                            deserialize_state_with.set(de_path);
                         }
                     }
 
@@ -961,10 +961,10 @@ impl Field {
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
-            deserialize_seed_with: deserialize_seed_with.get(),
-            deserialize_seed: deserialize_seed.get(),
-            serialize_seed_with: serialize_seed_with.get(),
-            serialize_seed: serialize_seed.get(),
+            deserialize_state_with: deserialize_state_with.get(),
+            deserialize_state: deserialize_state.get(),
+            serialize_state_with: serialize_state_with.get(),
+            serialize_state: serialize_state.get(),
         }
     }
 
@@ -1021,20 +1021,20 @@ impl Field {
         self.getter.as_ref()
     }
 
-    pub fn deserialize_seed(&self) -> bool {
-        self.deserialize_seed
+    pub fn deserialize_state(&self) -> bool {
+        self.deserialize_state
     }
 
-    pub fn deserialize_seed_with(&self) -> Option<&syn::Path> {
-        self.deserialize_seed_with.as_ref()
+    pub fn deserialize_state_with(&self) -> Option<&syn::Path> {
+        self.deserialize_state_with.as_ref()
     }
 
-    pub fn serialize_seed(&self) -> bool {
-        self.serialize_seed
+    pub fn serialize_state(&self) -> bool {
+        self.serialize_state
     }
 
-    pub fn serialize_seed_with(&self) -> Option<&syn::Path> {
-        self.serialize_seed_with.as_ref()
+    pub fn serialize_state_with(&self) -> Option<&syn::Path> {
+        self.serialize_state_with.as_ref()
     }
 }
 

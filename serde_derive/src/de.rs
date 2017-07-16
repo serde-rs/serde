@@ -41,13 +41,13 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
         let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
         if seeded {
             let seed_ty = cont.attrs
-                .deserialize_seed()
-                .ok_or_else(|| "Need a deserialize_seed attribute")?;
+                .deserialize_state()
+                .ok_or_else(|| "Need a deserialize_state attribute")?;
             quote! {
                 #[automatically_derived]
-                impl #de_impl_generics _serde::de::DeserializeSeedEx<'de, #seed_ty> for #ident #ty_generics #where_clause {
+                impl #de_impl_generics _serde::de::DeserializeState<'de, #seed_ty> for #ident #ty_generics #where_clause {
 
-                    fn deserialize_seed<__D>(__seed: &mut #seed_ty, __deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+                    fn deserialize_state<__D>(__seed: &mut #seed_ty, __deserializer: __D) -> _serde::export::Result<Self, __D::Error>
                         where __D: _serde::Deserializer<'de>
                     {
                         #body
@@ -71,7 +71,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
     let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
-            extern crate serde_seed as _serde;
+            extern crate serde_state as _serde;
             #impl_block
         };
     };
@@ -315,7 +315,7 @@ fn deserialize_tuple(
 
     let visitor_field;
     let visitor_field_def;
-    if let Some(seed_ty) = cattrs.deserialize_seed() {
+    if let Some(seed_ty) = cattrs.deserialize_state() {
         visitor_field = Some(
             if variant_ident.is_some() {
                 quote! { seed: self.seed, }
@@ -416,7 +416,7 @@ fn deserialize_seq(
                 let (wrapper, wrapper_value) = wrap_deserialize(
                     params,
                     field,
-                    cattrs.deserialize_seed());
+                    cattrs.deserialize_state());
                 let visit = quote!({
                     #wrapper
                     try!(_serde::de::SeqAccess::next_element_seed(&mut __seq, #wrapper_value))
@@ -464,7 +464,7 @@ fn deserialize_newtype_struct(
     field: &Field,
     cattrs: &attr::Container,
 ) -> Tokens {
-    let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_seed());
+    let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_state());
     let value = quote!({
         #wrapper
         try!(_serde::de::DeserializeSeed::deserialize(#wrapper_value, __e))
@@ -532,7 +532,7 @@ fn deserialize_struct(
 
     let visitor_field;
     let visitor_field_def;
-    if let Some(seed_ty) = cattrs.deserialize_seed() {
+    if let Some(seed_ty) = cattrs.deserialize_state() {
         visitor_field = Some(
             if variant_ident.is_some() {
                 quote! { seed: self.seed, }
@@ -716,7 +716,7 @@ fn deserialize_externally_tagged_enum(
 
     let visitor_field;
     let visitor_field_def;
-    if let Some(seed_ty) = cattrs.deserialize_seed() {
+    if let Some(seed_ty) = cattrs.deserialize_state() {
         visitor_field = Some(quote! { seed: __seed, });
         visitor_field_def = Some(quote! { seed: &'seed mut #seed_ty, });
     } else {
@@ -980,7 +980,7 @@ fn deserialize_adjacently_tagged_enum(
     };
 
     let (visitor_field, visitor_field_def) = cattrs
-        .deserialize_seed()
+        .deserialize_state()
         .map(|ty| (Some(quote! { seed: self.seed }), Some(quote! { seed: #ty, })),)
         .unwrap_or((None, None));
 
@@ -1251,7 +1251,7 @@ fn deserialize_untagged_variant(
                 variant_ident,
                 params,
                 &variant.fields[0],
-                cattrs.deserialize_seed(),
+                cattrs.deserialize_state(),
                 deserializer,
             )
         }
@@ -1283,7 +1283,7 @@ fn deserialize_externally_tagged_newtype_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
-    let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_seed());
+    let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_state());
     quote_block! {
         #wrapper
         _serde::export::Result::map(
@@ -1594,7 +1594,7 @@ fn deserialize_map(
             let deser_name = field.attrs.name().deserialize_name();
 
             let (wrapper, wrapper_value) = wrap_deserialize(params, field, 
-                    cattrs.deserialize_seed());
+                    cattrs.deserialize_state());
             let visit = quote!({
                 #wrapper
                 try!(_serde::de::MapAccess::next_value_seed(&mut __map, #wrapper_value))
@@ -1726,8 +1726,8 @@ fn wrap_deserialize(
     field: &Field,
     seed_ty: Option<&syn::Ty>,
 ) -> (Tokens, Tokens) {
-    match (field.attrs.deserialize_seed(),
-           field.attrs.deserialize_seed_with(),
+    match (field.attrs.deserialize_state(),
+           field.attrs.deserialize_state_with(),
            field.attrs.deserialize_with()) {
         (false, None, None) => {
             let field_ty = &field.ty;
@@ -1735,7 +1735,7 @@ fn wrap_deserialize(
         }
         (true, _, _) => (quote!(), quote!( _serde::de::Seed::new(&mut *self.seed) )),
         (_, Some(path), _) => {
-            wrap_deserialize_seed_with(params, seed_ty.expect("deserialize_seed"), field.ty, path)
+            wrap_deserialize_state_with(params, seed_ty.expect("deserialize_state"), field.ty, path)
         }
         (_, _, Some(path)) => wrap_deserialize_with(params, field.ty, path),
     }
@@ -1778,7 +1778,7 @@ fn wrap_deserialize_with(
     (wrapper, wrapper_value)
 }
 
-fn wrap_deserialize_seed_with(
+fn wrap_deserialize_state_with(
     params: &Parameters,
     seed_ty: &syn::Ty,
     field_ty: &syn::Ty,
@@ -1840,13 +1840,13 @@ fn expr_is_missing(params: &Parameters, field: &Field, cattrs: &attr::Container)
     let name = field.attrs.name().deserialize_name();
 
     let has_with_wrapper = field.attrs.deserialize_with().is_some() ||
-                           field.attrs.deserialize_seed_with().is_some();
+                           field.attrs.deserialize_state_with().is_some();
     if has_with_wrapper {
         quote_expr! {
             return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
         }
     } else {
-        let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_seed());
+        let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_state());
         quote_expr! {
             #wrapper
             try!(_serde::private::de::missing_field(#wrapper_value, #name))

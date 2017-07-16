@@ -28,7 +28,7 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
-extern crate serde_derive_seed_internals as internals;
+extern crate serde_derive_state_internals as internals;
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
@@ -41,8 +41,8 @@ mod fragment;
 mod ser;
 mod de;
 
-#[proc_macro_derive(SerializeSeed, attributes(serde))]
-pub fn derive_serialize_seed(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(SerializeState, attributes(serde))]
+pub fn derive_serialize_state(input: TokenStream) -> TokenStream {
     let input = syn::parse_derive_input(&input.to_string()).unwrap();
     match ser::expand_derive_serialize(&input, true) {
         Ok(expanded) => expanded.parse().unwrap(),
@@ -50,8 +50,8 @@ pub fn derive_serialize_seed(input: TokenStream) -> TokenStream {
     }
 }
 
-#[proc_macro_derive(DeserializeSeed, attributes(serde))]
-pub fn derive_deserialize_seed(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(DeserializeState, attributes(serde))]
+pub fn derive_deserialize_state(input: TokenStream) -> TokenStream {
     let input = syn::parse_derive_input(&input.to_string()).unwrap();
     match de::expand_derive_deserialize(&input, true) {
         Ok(expanded) => expanded.parse().unwrap(),

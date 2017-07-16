@@ -8,21 +8,21 @@
 
 use lib::*;
 
-use ser::{Serialize, SerializeTuple, Serializer, SerializeSeed};
+use ser::{Serialize, SerializeTuple, Serializer, SerializeState};
 
 #[cfg(feature = "std")]
 use ser::Error;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T> SerializeSeed for Option<T>
+impl<T> SerializeState for Option<T>
 where
-    T: SerializeSeed,
+    T: SerializeState,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -38,14 +38,14 @@ where
 macro_rules! array_impls {
     ($($len:tt)+) => {
         $(
-            impl<T> SerializeSeed for [T; $len]
+            impl<T> SerializeState for [T; $len]
             where
-                T: SerializeSeed,
+                T: SerializeState,
             {
                 type Seed = T::Seed;
 
                 #[inline]
-                fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+                fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
                 where
                     S: Serializer,
                 {
@@ -67,14 +67,14 @@ array_impls!(01 02 03 04 05 06 07 08 09 10
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T> SerializeSeed for [T]
+impl<T> SerializeState for [T]
 where
-    T: SerializeSeed,
+    T: SerializeState,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -85,15 +85,15 @@ where
 
 macro_rules! seq_impl {
     ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)* >) => {
-        impl<T $(, $typaram)*> SerializeSeed for $ty<T $(, $typaram)*>
+        impl<T $(, $typaram)*> SerializeState for $ty<T $(, $typaram)*>
         where
-            T: SerializeSeed $(+ $tbound1 $(+ $tbound2)*)*,
+            T: SerializeState $(+ $tbound1 $(+ $tbound2)*)*,
             $($typaram: $bound,)*
         {
             type Seed = T::Seed;
 
             #[inline]
-            fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+            fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
             where
                 S: Serializer,
             {
@@ -124,13 +124,13 @@ seq_impl!(VecDeque<T>);
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl<Idx> SerializeSeed for ops::Range<Idx>
+impl<Idx> SerializeState for ops::Range<Idx>
 where
-    Idx: SerializeSeed,
+    Idx: SerializeState,
 {
     type Seed = Idx::Seed;
 
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -147,14 +147,14 @@ where
 macro_rules! tuple_impls {
     ($seed: ident; $($len:expr => ($($n:tt $name:ident)+))+) => {
         $(
-            impl<$seed, $($name),+> SerializeSeed for ($($name,)+)
+            impl<$seed, $($name),+> SerializeState for ($($name,)+)
             where
-                $($name: SerializeSeed<Seed = $seed>,)+
+                $($name: SerializeState<Seed = $seed>,)+
             {
                 type Seed = $seed;
 
                 #[inline]
-                fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+                fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
                 where
                     S: Serializer,
                 {
@@ -193,16 +193,16 @@ tuple_impls! {
 
 macro_rules! map_impl {
     ($ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)* >) => {
-        impl<K, V $(, $typaram)*> SerializeSeed for $ty<K, V $(, $typaram)*>
+        impl<K, V $(, $typaram)*> SerializeState for $ty<K, V $(, $typaram)*>
         where
-            K: SerializeSeed $(+ $kbound1 $(+ $kbound2)*)*,
-            V: SerializeSeed<Seed = K::Seed>,
+            K: SerializeState $(+ $kbound1 $(+ $kbound2)*)*,
+            V: SerializeState<Seed = K::Seed>,
             $($typaram: $bound,)*
         {
             type Seed = K::Seed;
 
             #[inline]
-            fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+            fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
             where
                 S: Serializer,
             {
@@ -224,42 +224,42 @@ macro_rules! deref_impl {
         impl $($desc)+ {
             type Seed = T::Seed;
             #[inline]
-            fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+            fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
             where
                 S: Serializer,
             {
-                (**self).serialize_seed(serializer, seed)
+                (**self).serialize_state(serializer, seed)
             }
         }
     };
 }
 
-deref_impl!(<'a, T: ?Sized> SerializeSeed for &'a T where T: SerializeSeed);
-deref_impl!(<'a, T: ?Sized> SerializeSeed for &'a mut T where T: SerializeSeed);
+deref_impl!(<'a, T: ?Sized> SerializeState for &'a T where T: SerializeState);
+deref_impl!(<'a, T: ?Sized> SerializeState for &'a mut T where T: SerializeState);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-deref_impl!(<T: ?Sized> SerializeSeed for Box<T> where T: SerializeSeed);
+deref_impl!(<T: ?Sized> SerializeState for Box<T> where T: SerializeState);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T> SerializeSeed for Rc<T> where T: SerializeSeed);
+deref_impl!(<T> SerializeState for Rc<T> where T: SerializeState);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T> SerializeSeed for Arc<T> where T: SerializeSeed);
+deref_impl!(<T> SerializeState for Arc<T> where T: SerializeState);
 
 #[cfg(any(feature = "std", feature = "collections"))]
-deref_impl!(<'a, T: ?Sized> SerializeSeed for Cow<'a, T> where T: SerializeSeed + ToOwned);
+deref_impl!(<'a, T: ?Sized> SerializeState for Cow<'a, T> where T: SerializeState + ToOwned);
 
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
-impl<T> SerializeSeed for NonZero<T>
+impl<T> SerializeState for NonZero<T>
 where
-    T: SerializeSeed + Zeroable + Clone,
+    T: SerializeState + Zeroable + Clone,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -267,69 +267,69 @@ where
     }
 }
 
-impl<T> SerializeSeed for Cell<T>
+impl<T> SerializeState for Cell<T>
 where
-    T: SerializeSeed + Copy,
+    T: SerializeState + Copy,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        self.get().serialize_seed(serializer, seed)
+        self.get().serialize_state(serializer, seed)
     }
 }
 
-impl<T> SerializeSeed for RefCell<T>
+impl<T> SerializeState for RefCell<T>
 where
-    T: SerializeSeed,
+    T: SerializeState,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        self.borrow().serialize_seed(serializer, seed)
+        self.borrow().serialize_state(serializer, seed)
     }
 }
 
 #[cfg(feature = "std")]
-impl<T> SerializeSeed for Mutex<T>
+impl<T> SerializeState for Mutex<T>
 where
-    T: SerializeSeed,
+    T: SerializeState,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match self.lock() {
-            Ok(locked) => locked.serialize_seed(serializer, seed),
+            Ok(locked) => locked.serialize_state(serializer, seed),
             Err(_) => Err(S::Error::custom("lock poison error while serializing")),
         }
     }
 }
 
 #[cfg(feature = "std")]
-impl<T> SerializeSeed for RwLock<T>
+impl<T> SerializeState for RwLock<T>
 where
-    T: SerializeSeed,
+    T: SerializeState,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match self.read() {
-            Ok(locked) => locked.serialize_seed(serializer, seed),
+            Ok(locked) => locked.serialize_state(serializer, seed),
             Err(_) => Err(S::Error::custom("lock poison error while serializing")),
         }
     }
@@ -337,15 +337,15 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T, E> SerializeSeed for Result<T, E>
+impl<T, E> SerializeState for Result<T, E>
 where
-    T: SerializeSeed,
-    E: SerializeSeed<Seed = T::Seed>,
+    T: SerializeState,
+    E: SerializeState<Seed = T::Seed>,
 {
     type Seed = T::Seed;
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -379,28 +379,28 @@ impl<'seed, S: ?Sized, V> Seeded<'seed, S, V> {
 
 impl<'seed, T: ?Sized, V> Serialize for Seeded<'seed, T, V>
 where
-    V: SerializeSeed<Seed = T>,
+    V: SerializeState<Seed = T>,
 {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        self.value.serialize_seed(serializer, self.seed)
+        self.value.serialize_state(serializer, self.seed)
     }
 }
 
 /// Placeholder
 pub struct Unseeded<T>(pub T);
 
-impl<T> SerializeSeed for Unseeded<T>
+impl<T> SerializeState for Unseeded<T>
 where
     T: Serialize,
 {
     type Seed = ();
 
     #[inline]
-    fn serialize_seed<S>(&self, serializer: S, _: &Self::Seed) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, _: &Self::Seed) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {

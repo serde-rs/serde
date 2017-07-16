@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
-extern crate serde_derive_seed;
+extern crate serde_derive_state;
 extern crate serde;
-extern crate serde_seed;
+extern crate serde_state;
 extern crate serde_test;
 
 use std::collections::HashMap;
@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 
 use serde::de::{Deserialize, Deserializer, DeserializeSeed, Error};
-use serde_seed::de::DeserializeSeedEx;
+use serde_state::de::DeserializeState;
 
 use serde_test::{Token, assert_de_seed_tokens};
 
@@ -32,11 +32,11 @@ where
     S: AsMut<Seed>,
     D: Deserializer<'de>,
 {
-    Inner::deserialize_seed(seed.as_mut(), deserializer)
+    Inner::deserialize_state(seed.as_mut(), deserializer)
 }
 
-impl<'de> DeserializeSeedEx<'de, Seed> for Inner {
-    fn deserialize_seed<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeState<'de, Seed> for Inner {
+    fn deserialize_state<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -45,18 +45,18 @@ impl<'de> DeserializeSeedEx<'de, Seed> for Inner {
     }
 }
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "Seed")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "Seed")]
 struct SeedStruct {
-    #[serde(deserialize_seed)]
+    #[serde(deserialize_state)]
     value: Inner,
-    #[serde(deserialize_seed_with = "deserialize_inner")]
+    #[serde(deserialize_state_with = "deserialize_inner")]
     value2: Inner,
     value3: Inner,
 }
 
 #[test]
-fn test_deserialize_seed() {
+fn test_deserialize_state() {
     let value = SeedStruct {
         value: Inner,
         value2: Inner,
@@ -88,15 +88,15 @@ fn test_deserialize_seed() {
     assert_eq!(seed.0, 2);
 }
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "Seed")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "Seed")]
 struct Newtype(
-    #[serde(deserialize_seed_with = "deserialize_inner")]
+    #[serde(deserialize_state_with = "deserialize_inner")]
     Inner
 );
 
 #[test]
-fn test_newtype_deserialize_seed() {
+fn test_newtype_deserialize_state() {
     let value = Newtype(Inner);
     let mut seed = Seed::default();
     assert_de_seed_tokens(
@@ -122,17 +122,17 @@ impl<T> AsMut<Seed> for ExtraParameterNewtypeSeed<T> {
 }
 
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "ExtraParameterNewtypeSeed<T>")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "ExtraParameterNewtypeSeed<T>")]
 #[serde(de_parameters = "T")]
 struct ExtraParameterNewtype(
-    #[serde(deserialize_seed_with = "deserialize_inner")]
+    #[serde(deserialize_state_with = "deserialize_inner")]
     Inner
 );
 
 
 #[test]
-fn extra_parameter_test_newtype_deserialize_seed() {
+fn extra_parameter_test_newtype_deserialize_state() {
     let value = ExtraParameterNewtype(Inner);
     let mut seed = ExtraParameterNewtypeSeed(Seed::default(), PhantomData::<i32>);
     assert_de_seed_tokens(
@@ -154,23 +154,23 @@ struct VecSeed<T>(T);
 fn deserialize_vec<'de, T, U, D>(seed: &mut VecSeed<T>, deserializer: D) -> Result<Vec<U>, D::Error>
 where
     D: Deserializer<'de>,
-    U: DeserializeSeedEx<'de, T>,
+    U: DeserializeState<'de, T>,
 {
-    use serde_seed::de::SeqSeedEx;
+    use serde_state::de::SeqSeedEx;
     deserializer.deserialize_seq(SeqSeedEx::new(&mut seed.0, Vec::with_capacity))
 }
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "VecSeed<S>")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "VecSeed<S>")]
 #[serde(de_parameters = "S")]
-#[serde(bound = "T: DeserializeSeedEx<'de, S>")]
+#[serde(bound = "T: DeserializeState<'de, S>")]
 struct VecNewtype<T>(
-    #[serde(deserialize_seed_with = "deserialize_vec")]
+    #[serde(deserialize_state_with = "deserialize_vec")]
     Vec<T>
 );
 
 #[test]
-fn test_vec_newtype_deserialize_seed() {
+fn test_vec_newtype_deserialize_state() {
     let value = VecNewtype(vec![Inner, Inner]);
     let mut seed = VecSeed(Seed::default());
     assert_de_seed_tokens(
@@ -209,19 +209,19 @@ where
     seed.1.clone().deserialize(deserializer)
 }
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "GenericTypeSeed<S>")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "GenericTypeSeed<S>")]
 #[serde(de_parameters = "S")]
 #[serde(bound = "S: Clone + DeserializeSeed<'de, Value = T>")]
 struct GenericType<T> {
-    #[serde(deserialize_seed_with = "deserialize_inner")]
+    #[serde(deserialize_state_with = "deserialize_inner")]
     inner: Inner,
-    #[serde(deserialize_seed_with = "deserialize_nested_seed")]
+    #[serde(deserialize_state_with = "deserialize_nested_seed")]
     t: T,
 }
 
 #[test]
-fn test_generic_deserialize_seed() {
+fn test_generic_deserialize_state() {
     let value = GenericType { inner: Inner, t: 3 };
     let mut seed = GenericTypeSeed(Seed::default(), PhantomData);
     assert_de_seed_tokens(
@@ -247,22 +247,22 @@ fn test_generic_deserialize_seed() {
 }
 
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "Seed")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "Seed")]
 enum Enum {
     Inner(
-        #[serde(deserialize_seed_with = "deserialize_inner")]
+        #[serde(deserialize_state_with = "deserialize_inner")]
         Inner
     ),
     Inner2(
         u32,
-        #[serde(deserialize_seed_with = "deserialize_inner")]
+        #[serde(deserialize_state_with = "deserialize_inner")]
         Inner
     ),
 }
 
 #[test]
-fn test_enum_deserialize_seed() {
+fn test_enum_deserialize_state() {
     let value = Enum::Inner(Inner);
     let mut seed = Seed::default();
     assert_de_seed_tokens(
@@ -283,7 +283,7 @@ fn test_enum_deserialize_seed() {
 
 
 #[test]
-fn test_enum_deserialize_seed_2() {
+fn test_enum_deserialize_state_2() {
     let value = Enum::Inner2(3, Inner);
     let mut seed = Seed::default();
     assert_de_seed_tokens(
@@ -307,13 +307,13 @@ fn test_enum_deserialize_seed_2() {
     assert_eq!(seed.0, 1);
 }
 
-#[derive(DeserializeSeed, Debug, PartialEq)]
-#[serde(deserialize_seed = "NodeMap")]
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "NodeMap")]
 struct Node {
     data: char,
-    #[serde(deserialize_seed_with = "deserialize_option_node")]
+    #[serde(deserialize_state_with = "deserialize_option_node")]
     left: Option<Rc<Node>>,
-    #[serde(deserialize_seed_with = "deserialize_option_node")]
+    #[serde(deserialize_state_with = "deserialize_option_node")]
     right: Option<Rc<Node>>,
 }
 
@@ -324,7 +324,7 @@ fn deserialize_option_node<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    let variant = Option::<Variant>::deserialize_seed(seed, deserializer)?;
+    let variant = Option::<Variant>::deserialize_state(seed, deserializer)?;
     match variant {
         None => Ok(None),
         Some(variant) => {
@@ -365,28 +365,28 @@ impl<'de> Deserialize<'de> for Node {
         D: Deserializer<'de>,
     {
         let mut map = IdToNode::default();
-        Self::deserialize_seed(&mut map, deserializer)
+        Self::deserialize_state(&mut map, deserializer)
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[derive(DeserializeSeed)]
-#[serde(deserialize_seed = "NodeMap", rename = "Node")]
+#[derive(DeserializeState)]
+#[serde(deserialize_state = "NodeMap", rename = "Node")]
 enum Variant {
     Plain {
         data: char,
-        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        #[serde(deserialize_state_with = "deserialize_option_node")]
         left: Option<Rc<Node>>,
-        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        #[serde(deserialize_state_with = "deserialize_option_node")]
         right: Option<Rc<Node>>,
     },
     Marked {
         id: u32,
         data: char,
-        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        #[serde(deserialize_state_with = "deserialize_option_node")]
         left: Option<Rc<Node>>,
-        #[serde(deserialize_seed_with = "deserialize_option_node")]
+        #[serde(deserialize_state_with = "deserialize_option_node")]
         right: Option<Rc<Node>>,
     },
     Reference(u32),

@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "serde",
-    "serde_seed",
+    "serde_state",
     "serde_derive",
     "serde_derive_internals",
     "serde_test",
