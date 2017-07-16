@@ -41,24 +41,6 @@ mod fragment;
 mod ser;
 mod de;
 
-#[proc_macro_derive(Serialize, attributes(serde))]
-pub fn derive_serialize(input: TokenStream) -> TokenStream {
-    let input = syn::parse_derive_input(&input.to_string()).unwrap();
-    match ser::expand_derive_serialize(&input, false) {
-        Ok(expanded) => expanded.parse().unwrap(),
-        Err(msg) => panic!(msg),
-    }
-}
-
-#[proc_macro_derive(Deserialize, attributes(serde))]
-pub fn derive_deserialize(input: TokenStream) -> TokenStream {
-    let input = syn::parse_derive_input(&input.to_string()).unwrap();
-    match de::expand_derive_deserialize(&input, false) {
-        Ok(expanded) => expanded.parse().unwrap(),
-        Err(msg) => panic!(msg),
-    }
-}
-
 #[proc_macro_derive(SerializeSeed, attributes(serde))]
 pub fn derive_serialize_seed(input: TokenStream) -> TokenStream {
     let input = syn::parse_derive_input(&input.to_string()).unwrap();
