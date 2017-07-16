@@ -73,3 +73,88 @@ impl ToTokens for Match {
         }
     }
 }
+
+use internals::attr::StrBoolInt as StrBoolIntInternal;
+
+/// An extended name, used for the type tag for enums.
+#[derive(Debug, Clone)]
+pub enum StrBoolInt {
+    Str(String),
+    Bool(bool),
+    Int(u64),
+}
+
+impl StrBoolInt {
+    /// Get a string description for use in error messages.
+    ///
+    /// It will be used as second argument in
+    /// `_serde::Serializer::serialize_struct(__serializer, name, len)`
+    /// while serializing the inner struct in adjacently tagged enums.
+    ///
+    /// It will be used in the `VARIANTS` const array, that is given to
+    /// `serde::de::Error::unknown_variant(variant, expected)`.
+    /// and
+    /// `_serde::Deserializer::deserialize_enum(name, variants, visitor)`
+    ///
+    pub fn stringify(&self) -> String {
+        match *self {
+            StrBoolInt::Str(ref s) => s.clone(),
+            StrBoolInt::Bool(true) => "true".to_owned(),
+            StrBoolInt::Bool(false) => "false".to_owned(),
+            StrBoolInt::Int(i) => format!("{}", i),
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match *self {
+            StrBoolInt::Str(ref s) => Some(&s),
+            _ => None,
+        }
+    }
+
+    pub fn as_int(&self) -> Option<u64> {
+        match *self {
+            StrBoolInt::Int(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match *self {
+            StrBoolInt::Bool(b) => Some(b),
+            _ => None,
+        }
+    }
+}
+
+impl From<StrBoolIntInternal> for StrBoolInt {
+    fn from(src: StrBoolIntInternal) -> StrBoolInt {
+        match src {
+            StrBoolIntInternal::Str(s) => StrBoolInt::Str(s),
+            StrBoolIntInternal::Bool(b) => StrBoolInt::Bool(b),
+            StrBoolIntInternal::Int(i) => StrBoolInt::Int(i),
+        }
+    }
+}
+
+impl From<String> for StrBoolInt {
+    fn from(src: String) -> StrBoolInt {
+        StrBoolInt::Str(src)
+    }
+}
+
+impl ToTokens for StrBoolInt {
+    fn to_tokens(&self, out: &mut Tokens) {
+        match *self {
+            StrBoolInt::Str(ref s) => s.to_tokens(out),
+            StrBoolInt::Bool(b) => {
+                out.append("&");
+                b.to_tokens(out);
+            },
+            StrBoolInt::Int(i) => {
+                out.append("&");
+                i.to_tokens(out);
+            }
+        }
+    }
+}

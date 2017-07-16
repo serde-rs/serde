@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use ast::{Body, Container, Style};
-use attr::Identifier;
+use attr::{Identifier, EnumTag, StrBoolInt};
 use Ctxt;
 
 /// Cross-cutting checks that require looking at more than a single attrs
@@ -15,6 +15,7 @@ use Ctxt;
 pub fn check(cx: &Ctxt, cont: &Container) {
     check_getter(cx, cont);
     check_identifier(cx, cont);
+    check_variant_name(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -30,7 +31,7 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
             if cont.body.has_getter() && cont.attrs.remote().is_none() {
                 cx.error(
                     "#[serde(getter = \"...\")] can only be used in structs \
-                          that have #[serde(remote = \"...\")]",
+                     that have #[serde(remote = \"...\")]",
                 );
             }
         }
@@ -52,7 +53,11 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
     };
 
     for (i, variant) in variants.iter().enumerate() {
-        match (variant.style, cont.attrs.identifier(), variant.attrs.other()) {
+        match (
+            variant.style,
+            cont.attrs.identifier(),
+            variant.attrs.other(),
+        ) {
             // The `other` attribute may only be used in a field_identifier.
             (_, Identifier::Variant, true) |
             (_, Identifier::No, true) => {
@@ -90,6 +95,36 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
 
             (_, Identifier::Variant, false) => {
                 cx.error("variant_identifier may only contain unit variants");
+            }
+        }
+    }
+}
+
+/// Renaming variants is only allowed for internal and adjacent tagging.
+fn check_variant_name(cx: &Ctxt, cont: &Container) {
+    let tagtype = cont.attrs.tag();
+
+    match cont.body {
+        Body::Struct(_, _) => {}
+        Body::Enum(ref variants) => {
+            for name in variants.iter().map(|v| v.attrs.name()) {
+                match (name.serialize_name(), name.deserialize_name()) {
+                    (StrBoolInt::Bool(_), _) |
+                    (_, StrBoolInt::Bool(_)) |
+                    (_, StrBoolInt::Int(_)) |
+                    (StrBoolInt::Int(_), _) => {
+                        match *tagtype {
+                            EnumTag::External => {
+                                cx.error("#[serde(rename = int|bool)] cannot be used with external tagging");
+                            },
+                            EnumTag::None => {
+                                cx.error("#[serde(rename = int|bool)] cannot be used with #[serde(untagged)]");
+                            },
+                            _ => {}
+                        }
+                    },
+                    _ => {}
+                }
             }
         }
     }

@@ -696,6 +696,262 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_enum_renamed() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTagged {
+        #[serde(rename="abc")]
+        A { a: u8 },
+        #[serde(rename="true", rename_as="bool")]
+        B { b: u8 },
+        #[serde(rename="3", rename_as="int")]
+        C,
+        #[serde(rename="4", rename_as="int")]
+        D(BTreeMap<String, String>),
+        #[serde(rename="5", rename_as="int")]
+        E(Newtype),
+        #[serde(rename="6", rename_as="int")]
+        F(Struct),
+    }
+
+    assert_tokens(
+        &InternallyTagged::A { a: 1 },
+        &[
+            Token::Struct { name: "InternallyTagged", len: 2 },
+
+            Token::Str("type"),
+            Token::Str("abc"),
+
+            Token::Str("a"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::B { b: 1 },
+        &[
+            Token::Struct { name: "InternallyTagged", len: 2 },
+
+            Token::Str("type"),
+            Token::Bool(true),
+
+            Token::Str("b"),
+            Token::U8(1),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::C,
+        &[
+            Token::Struct { name: "InternallyTagged", len: 1 },
+
+            Token::Str("type"),
+            Token::U64(3),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::D(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(1) },
+
+            Token::Str("type"),
+            Token::U64(4),
+
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::E(Newtype(BTreeMap::new())),
+        &[
+            Token::Map { len: Some(1) },
+
+            Token::Str("type"),
+            Token::U64(5),
+
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::F(Struct { f: 6 }),
+        &[
+            Token::Struct { name: "Struct", len: 2 },
+
+            Token::Str("type"),
+            Token::U64(6),
+
+            Token::Str("f"),
+            Token::U8(6),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::Bool(false)
+        ],
+        "unknown variant `false`, expected one of `abc`, `true`, `3`, `4`, `5`, `6`",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Struct { name: "Struct", len: 2 },
+            Token::Str("type"),
+            Token::U8(9),
+        ],
+        "unknown variant `9`, expected one of `abc`, `true`, `3`, `4`, `5`, `6`",
+    );
+}
+
+#[test]
+fn test_adjacently_tagged_enum_renamed() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "t", content = "c")]
+    enum AdjacentlyTagged {
+        #[serde(rename="abc")]
+        A { a: u8 },
+        #[serde(rename="true", rename_as="bool")]
+        B { b: u8 },
+        #[serde(rename="3", rename_as="int")]
+        C,
+        #[serde(rename="4", rename_as="int")]
+        D(BTreeMap<String, String>),
+        #[serde(rename="5", rename_as="int")]
+        E(Newtype),
+        #[serde(rename="6", rename_as="int")]
+        F(Struct),
+    }
+
+    assert_tokens(
+        &AdjacentlyTagged::A { a: 1 },
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
+
+            Token::Str("t"),
+            Token::Str("abc"),
+
+            Token::Str("c"),
+            Token::Struct { name: "abc", len: 1 },
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &AdjacentlyTagged::B { b: 1 },
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
+
+            Token::Str("t"),
+            Token::Bool(true),
+
+            Token::Str("c"),
+            // TODO: Is this the correct way to name the struct? stringify the rename?
+            Token::Struct { name: "true", len: 1 },
+            Token::Str("b"),
+            Token::U8(1),
+            Token::StructEnd,
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &AdjacentlyTagged::C,
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 1 },
+
+            Token::Str("t"),
+            Token::U64(3),
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &AdjacentlyTagged::D(BTreeMap::new()),
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
+
+            Token::Str("t"),
+            Token::U64(4),
+
+            Token::Str("c"),
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &AdjacentlyTagged::E(Newtype(BTreeMap::new())),
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
+
+            Token::Str("t"),
+            Token::U64(5),
+
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &AdjacentlyTagged::F(Struct { f: 6 }),
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
+
+            Token::Str("t"),
+            Token::U64(6),
+
+            Token::Str("c"),
+            Token::Struct { name: "Struct", len: 1 },
+            Token::Str("f"),
+            Token::U8(6),
+            Token::StructEnd,
+
+            Token::StructEnd,
+        ],
+    );
+
+}
+
+#[test]
 fn test_internally_tagged_struct_variant_containing_unit_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     pub enum Level {

@@ -14,7 +14,7 @@ pub use lib::marker::PhantomData;
 pub use lib::option::Option::{self, None, Some};
 pub use lib::result::Result::{self, Ok, Err};
 
-pub use self::string::from_utf8_lossy;
+pub use self::string::{from_utf8_lossy, from_int, from_bool};
 
 mod string {
     use lib::*;
@@ -37,5 +37,50 @@ mod string {
         // white-on-black question mark. The user will recognize it as invalid
         // UTF-8.
         str::from_utf8(bytes).unwrap_or("\u{fffd}\u{fffd}\u{fffd}")
+    }
+
+    pub fn from_bool(b : bool) -> &'static str {
+        if b {
+            "true"
+        } else {
+            "false"
+        }
+    }
+
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    pub fn from_int(i: u64) -> Vec<u8> {
+        use lib::fmt::Write;
+        let mut buf = String::with_capacity(20);
+        write!(&mut buf, "{}", i).ok();
+        buf.into_bytes()
+    }
+
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
+    pub fn from_int(i: u64) -> [u8; 20] {
+        use lib::fmt::Write;
+        // len(str(1<<64)) = 20
+        let mut buf = [0; 20];
+        {
+            let mut wrap = Wrapper { buf: &mut buf };
+            write!(wrap, "{}", i).ok();
+        }
+        buf
+    }
+
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
+    struct Wrapper<'a> {
+        buf: &'a mut [u8],
+    }
+
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
+    impl<'a> fmt::Write for Wrapper<'a> {
+        // Could panic if buf is too small.
+        fn write_str(&mut self, s: &str) -> fmt::Result {
+            let bytes = s.as_bytes();
+            self.buf[..bytes.len()].copy_from_slice(bytes);
+            let this : &mut[u8] = mem::replace(&mut self.buf, &mut []);
+            self.buf = &mut this[bytes.len()..];
+            Ok(())
+        }
     }
 }

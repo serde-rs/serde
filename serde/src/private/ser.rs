@@ -19,25 +19,63 @@ pub fn constrain<T: ?Sized>(t: &T) -> &T {
     t
 }
 
+pub enum VariantName {
+    Str(&'static str),
+    Bool(bool),
+    Int(u64),
+}
+
+impl From<&'static str> for VariantName {
+    fn from(src: &'static str) -> VariantName {
+        VariantName::Str(src)
+    }
+}
+
+impl<'a> From<&'a bool> for VariantName {
+    fn from(src: &bool) -> VariantName {
+        VariantName::Bool(*src)
+    }
+}
+
+impl<'a> From<&'a u64> for VariantName {
+    fn from(src: &u64) -> VariantName {
+        VariantName::Int(*src)
+    }
+}
+
+impl Serialize for VariantName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        match *self {
+            VariantName::Str(s) => serializer.serialize_str(s),
+            VariantName::Bool(b) => serializer.serialize_bool(b),
+            VariantName::Int(i) => serializer.serialize_u64(i),
+        }
+    }
+}
+
 /// Not public API.
-pub fn serialize_tagged_newtype<S, T>(
+pub fn serialize_tagged_newtype<S, T, U>(
     serializer: S,
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_name: U,
     value: &T,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
     T: Serialize,
+    U: Into<VariantName>
 {
     value.serialize(
         TaggedSerializer {
             type_ident: type_ident,
             variant_ident: variant_ident,
             tag: tag,
-            variant_name: variant_name,
+            variant_name: variant_name.into(),
             delegate: serializer,
         },
     )
@@ -47,7 +85,7 @@ struct TaggedSerializer<S> {
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_name: VariantName,
     delegate: S,
 }
 
@@ -209,7 +247,7 @@ where
         inner_variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_name));
         try!(map.serialize_entry(inner_variant, &()));
         map.end()
     }
@@ -236,7 +274,7 @@ where
         T: Serialize,
     {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_name));
         try!(map.serialize_entry(inner_variant, inner_value));
         map.end()
     }
@@ -279,14 +317,14 @@ where
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_name));
         try!(map.serialize_key(inner_variant));
         Ok(SerializeTupleVariantAsMapValue::new(map, inner_variant, len),)
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(len.map(|len| len + 1)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_name));
         Ok(map)
     }
 
@@ -296,7 +334,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         let mut state = try!(self.delegate.serialize_struct(name, len + 1));
-        try!(state.serialize_field(self.tag, self.variant_name));
+        try!(state.serialize_field(self.tag, &self.variant_name));
         Ok(state)
     }
 
@@ -322,7 +360,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_name));
         try!(map.serialize_key(inner_variant));
         Ok(SerializeStructVariantAsMapValue::new(map, inner_variant, len),)
     }

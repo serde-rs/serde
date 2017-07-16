@@ -9,23 +9,10 @@ fn start(_argc: isize, _argv: *const *const u8) -> isize {
     0
 }
 
-#[lang = "eh_personality"]
-#[no_mangle]
-pub extern fn rust_eh_personality() {}
-
 #[lang = "eh_unwind_resume"]
 #[no_mangle]
 pub extern fn rust_eh_unwind_resume() {}
 
-#[lang = "panic_fmt"]
-#[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
-                               _file: &'static str,
-                               _line: u32) -> ! {
-    unsafe {
-        libc::abort()
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////////
 
