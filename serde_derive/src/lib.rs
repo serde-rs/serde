@@ -28,7 +28,7 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
-extern crate serde_derive_internals as internals;
+extern crate serde_derive_seed_internals as internals;
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
