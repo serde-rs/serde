@@ -12,11 +12,11 @@ readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-serde = { version = "1.0", path = "../serde" }
+serde = { version = "1.0" }
 serde_seed = { version = "0.1", path = "../serde_seed" }
 
 [dev-dependencies]
-serde = { version = "1.0", path = "../serde", features = ["rc"] }
+serde = { version = "1.0", features = ["rc"] }
 serde_derive = { version = "1.0" }
 serde_derive_seed = { version = "0.1", path = "../serde_derive" }
 
