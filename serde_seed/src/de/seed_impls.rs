@@ -81,7 +81,7 @@ impl<'de, T, S> DeserializeSeedEx<'de, S> for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// TODO
+/// Implementation of `DeserializeSeed` which deserializes sequences into a container
 pub struct SeqSeed<S, F, T> {
     seed: T,
     with_capacity: F,
@@ -89,7 +89,8 @@ pub struct SeqSeed<S, F, T> {
 }
 
 impl<S, F, T> SeqSeed<S, F, T> {
-    /// TODO
+    /// Constructs a new `SeqSeed` with a `seed` and a function which constructs the deserialized
+    /// type (`with_capacity`)
     pub fn new(seed: T, with_capacity: F) -> SeqSeed<S, F, T> {
         SeqSeed {
             seed: seed,
@@ -142,7 +143,8 @@ where
     }
 }
 
-/// TODO
+/// `SeqSeedEx` implements `DeserializeSeed` for sequences whose elements implement
+/// `DeserializeSeedEx`
 pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> {
     seed: &'seed mut T,
     with_capacity: F,
@@ -150,7 +152,7 @@ pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> {
 }
 
 impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U> {
-    /// TODO
+    /// Constructs a new instance of `SeqSeedEx`
     pub fn new(seed: &'seed mut T, with_capacity: F) -> SeqSeedEx<'seed, S, F, T, U> {
         SeqSeedEx {
             seed: seed,
@@ -204,7 +206,7 @@ where
 }
 
 
-/// TODO
+/// `DeserializeSeed` instances for optional values
 pub struct OptionSeed<S>(pub S);
 
 impl<'de, S> DeserializeSeed<'de> for OptionSeed<S>

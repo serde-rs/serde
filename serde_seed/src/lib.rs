@@ -6,75 +6,114 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! # Serde
+//! # serde_seed
 //!
-//! Serde is a framework for ***ser***ializing and ***de***serializing Rust data
-//! structures efficiently and generically.
+//! `serde_seed` is a crate which extends the normal `Deserialize` and `Serialize` traits to allow
+//! state to be passed to every value which is serialized or deserialized.
 //!
-//! The Serde ecosystem consists of data structures that know how to serialize
-//! and deserialize themselves along with data formats that know how to
-//! serialize and deserialize other things. Serde provides the layer by which
-//! these two groups interact with each other, allowing any supported data
-//! structure to be serialized and deserialized using any supported data format.
+//! ## Example
 //!
-//! See the Serde website [https://serde.rs/] for additional documentation and
-//! usage examples.
+//! ```
+//! extern crate serde_json;
+//! extern crate serde_seed as serde;
+//! #[macro_use]
+//! extern crate serde_derive;
+//! #[macro_use]
+//! extern crate serde_derive_seed;
 //!
-//! [https://serde.rs/]: https://serde.rs/
+//! use std::borrow::BorrowMut;
+//! use std::cell::Cell;
+//! use serde::ser::{Serialize, Serializer, SerializeSeed};
+//! use serde::de::{Deserialize, Deserializer, DeserializeSeedEx};
 //!
-//! ## Design
+//! #[derive(Deserialize, Serialize)]
+//! struct Inner;
 //!
-//! Where many other languages rely on runtime reflection for serializing data,
-//! Serde is instead built on Rust's powerful trait system. A data structure
-//! that knows how to serialize and deserialize itself is one that implements
-//! Serde's `Serialize` and `Deserialize` traits (or uses Serde's derive
-//! attribute to automatically generate implementations at compile time). This
-//! avoids any overhead of reflection or runtime type information. In fact in
-//! many situations the interaction between data structure and data format can
-//! be completely optimized away by the Rust compiler, leaving Serde
-//! serialization to perform the same speed as a handwritten serializer for the
-//! specific selection of data structure and data format.
+//! impl SerializeSeed for Inner {
+//!     type Seed = Cell<i32>;
+//! 
+//!     fn serialize_seed<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+//!     where
+//!         S: Serializer,
+//!     {
+//!         seed.set(seed.get() + 1);
+//!         self.serialize(serializer)
+//!     }
+//! }
 //!
-//! ## Data formats
+//! impl<'de, S> DeserializeSeedEx<'de, S> for Inner where S: BorrowMut<i32> {
+//! 
+//!     fn deserialize_seed<D>(seed: &mut S, deserializer: D) -> Result<Self, D::Error>
+//!     where
+//!         D: Deserializer<'de>,
+//!     {
+//!         *seed.borrow_mut() += 1;
+//!         Self::deserialize(deserializer)
+//!     }
+//! }
 //!
-//! The following is a partial list of data formats that have been implemented
-//! for Serde by the community.
+//! #[derive(SerializeSeed, DeserializeSeed)]
 //!
-//! - [JSON], the ubiquitous JavaScript Object Notation used by many HTTP APIs.
-//! - [Bincode], a compact binary format
-//!   used for IPC within the Servo rendering engine.
-//! - [CBOR], a Concise Binary Object Representation designed for small message
-//!   size without the need for version negotiation.
-//! - [YAML], a popular human-friendly configuration language that ain't markup
-//!   language.
-//! - [MessagePack], an efficient binary format that resembles a compact JSON.
-//! - [TOML], a minimal configuration format used by [Cargo].
-//! - [Pickle], a format common in the Python world.
-//! - [Hjson], a variant of JSON designed to be readable and writable by humans.
-//! - [BSON], the data storage and network transfer format used by MongoDB.
-//! - [URL], the x-www-form-urlencoded format.
-//! - [XML], the flexible machine-friendly W3C standard.
-//!   *(deserialization only)*
-//! - [Envy], a way to deserialize environment variables into Rust structs.
-//!   *(deserialization only)*
-//! - [Redis], deserialize values from Redis when using [redis-rs].
-//!   *(deserialization only)*
+//! // `serialize_seed` or `deserialize_seed` is necessary to tell the derived implementation which
+//! // seed that is passed
+//! #[serde(serialize_seed = "Cell<i32>")]
 //!
-//! [JSON]: https://github.com/serde-rs/json
-//! [Bincode]: https://github.com/TyOverby/bincode
-//! [CBOR]: https://github.com/pyfisch/cbor
-//! [YAML]: https://github.com/dtolnay/serde-yaml
-//! [MessagePack]: https://github.com/3Hren/msgpack-rust
-//! [TOML]: https://github.com/alexcrichton/toml-rs
-//! [Pickle]: https://github.com/birkenfeld/serde-pickle
-//! [Hjson]: https://github.com/laktak/hjson-rust
-//! [BSON]: https://github.com/zonyitoo/bson-rs
-//! [URL]: https://github.com/nox/serde_urlencoded
-//! [XML]: https://github.com/RReverser/serde-xml-rs
-//! [Envy]: https://github.com/softprops/envy
-//! [Redis]: https://github.com/OneSignal/serde-redis
-//! [Cargo]: http://doc.crates.io/manifest.html
-//! [redis-rs]: https://crates.io/crates/redis
+//! // `de_parameters` can be used to specify additional type parameters for the derived instance
+//! #[serde(de_parameters = "S")]
+//! #[serde(bound(deserialize = "S: BorrowMut<i32>"))]
+//! #[serde(deserialize_seed = "S")]
+//! struct Struct {
+//!     // The `serialize_seed` attribute must be specified to use seeded serialization
+//!     #[serde(serialize_seed)]
+//!     // The `deserialize_seed` attribute must be specified to use seeded deserialization
+//!     #[serde(deserialize_seed)]
+//!     value: Inner,
+//!
+//!     // The `seed` attribute can be used to specify `deserialize_seed` and `serialize_seed`
+//!     // simultaneously
+//!     #[serde(seed)]
+//!     value2: Inner,
+//!
+//!     // If no attributes are specified then normal serialization and/or deserialization is used
+//!     value3: Inner,
+//!
+//!     // The `[de]serialize_seed_with` attribute can be used to specify a custom function which
+//!     // does the serialization or deserialization
+//!     #[serde(serialize_seed_with = "serialize_inner")]
+//!     value4: Inner,
+//! }
+//!
+//! fn serialize_inner<S>(self_: &Inner, serializer: S, seed: &Cell<i32>) -> Result<S::Ok, S::Error>
+//!     where S: Serializer
+//! {
+//!     seed.set(seed.get() + 10);
+//!     self_.serialize(serializer)
+//! }
+//!
+//! fn main() {
+//!     let s = Struct {
+//!         value: Inner,
+//!         value2: Inner,
+//!         value3: Inner,
+//!         value4: Inner,
+//!     };
+//!
+//!     let mut buffer = Vec::new();
+//!     {
+//!         let mut serializer = serde_json::Serializer::pretty(&mut buffer);
+//!         let seed = Cell::new(0);
+//!         s.serialize_seed(&mut serializer, &seed).unwrap();
+//!         assert_eq!(seed.get(), 12);
+//!     }
+//!     {
+//!         let mut deserializer = serde_json::Deserializer::from_slice(&buffer);
+//!         let mut seed = 0;
+//!         Struct::deserialize_seed(&mut seed, &mut deserializer).unwrap();
+//!         assert_eq!(seed, 2);
+//!     }
+//! }
+//!
+//! ```
 
 ////////////////////////////////////////////////////////////////////////////////
 

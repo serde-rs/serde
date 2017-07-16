@@ -18,18 +18,19 @@ pub use self::seed_impls::{OptionSeed, SeqSeed, SeqSeedEx};
 
 pub use serde::de::*;
 
-/// TODO
+/// `DeserializeSeedEx` is a trait which specifies how to deserialize a type which requires extra
+/// state to deserialize
 pub trait DeserializeSeedEx<'de, Seed>: Sized {
-    /// TODO
+    /// Deserializes `Self` using `seed` and the `deserializer`
     fn deserialize_seed<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>;
 }
 
-/// TODO
+/// Wrapper type which implements `DeserializeSeed` for `DeserializeSeedEx` instances
 #[derive(Debug)]
 pub struct Seed<S, T> {
-    /// TODO
+    /// The wrapped seed
     pub seed: S,
     _marker: PhantomData<T>,
 }
@@ -62,7 +63,7 @@ where
 }
 
 impl<S, T> Seed<S, T> {
-    /// TODO
+    /// Constructs a new instance of `Seed`
     pub fn new(seed: S) -> Seed<S, T> {
         Seed {
             seed: seed,
@@ -82,36 +83,5 @@ where
         D: Deserializer<'de>,
     {
         T::deserialize_seed(self.seed, deserializer)
-    }
-}
-
-/// TODO
-pub struct SharedSeed<S, T> {
-    /// TODO
-    pub seed: ::std::cell::RefCell<S>,
-    _marker: PhantomData<fn () -> T>,
-}
-
-impl<S, T> SharedSeed<S, T> {
-    /// TODO
-    pub fn new(seed: S) -> Self {
-        SharedSeed {
-            seed: ::std::cell::RefCell::new(seed),
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<'de, 's, 't, S, T> DeserializeSeed<'de> for &'s SharedSeed<&'t mut S, T>
-where
-    T: DeserializeSeedEx<'de, S>,
-{
-    type Value = T;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize_seed(&mut self.seed.borrow_mut(), deserializer)
     }
 }
