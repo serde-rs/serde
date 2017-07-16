@@ -888,7 +888,7 @@ impl Field {
                         deserialize_state.set_true();
                     }
 
-                    MetaItem(NameValue(ref name, ref lit)) if name == "seed_with" => {
+                    MetaItem(NameValue(ref name, ref lit)) if name == "state_with" => {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             let mut ser_path = path.clone();
                             ser_path.segments.push("serialize".into());
