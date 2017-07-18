@@ -1,7 +1,7 @@
 # serde_state &emsp; [![Build Status]][travis] [![Latest Version]][crates.io]
 
-[Build Status]: https://api.travis-ci.org/Marwes/serde.svg?branch=master
-[travis]: https://travis-ci.org/Marwes/serde
+[Build Status]: https://api.travis-ci.org/Marwes/serde_state.svg?branch=master
+[travis]: https://travis-ci.org/Marwes/serde_state
 [Latest Version]: https://img.shields.io/crates/v/serde_state.svg
 [crates.io]: https://crates.io/crates/serde_state
 
