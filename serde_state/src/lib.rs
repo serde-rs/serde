@@ -71,7 +71,7 @@
 //!
 //!     // The `seed` attribute can be used to specify `deserialize_state` and `serialize_state`
 //!     // simultaneously
-//!     #[serde(seed)]
+//!     #[serde(state)]
 //!     value2: Inner,
 //!
 //!     // If no attributes are specified then normal serialization and/or deserialization is used

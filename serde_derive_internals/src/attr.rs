@@ -882,8 +882,8 @@ impl Field {
                         serialize_state.set_true();
                     }
 
-                    // Parse `#[serde(seed)]`
-                    MetaItem(Word(ref name)) if name == "seed" => {
+                    // Parse `#[serde(state)]`
+                    MetaItem(Word(ref name)) if name == "state" => {
                         serialize_state.set_true();
                         deserialize_state.set_true();
                     }
