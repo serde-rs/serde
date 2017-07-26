@@ -28,9 +28,10 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let body = Stmts(deserialize_body(&cont, &params));
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
+        let vis = &input.vis;
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
-                fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
+                #vis fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
                     where __D: _serde::Deserializer<'de>
                 {
                     #body

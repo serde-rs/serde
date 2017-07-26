@@ -358,6 +358,21 @@ fn test_gen() {
         #[serde(borrow, with = "StrDef")]
         s: Str<'a>,
     }
+
+    mod vis {
+        pub struct S;
+
+        #[derive(Serialize, Deserialize)]
+        #[serde(remote = "S")]
+        pub struct SDef;
+    }
+
+    // This would not work if SDef::serialize / deserialize are private.
+    #[derive(Serialize, Deserialize)]
+    struct RemoteVisibility {
+        #[serde(with = "vis::SDef")]
+        s: vis::S,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
