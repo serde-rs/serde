@@ -1573,14 +1573,9 @@ where
         D: Deserializer<'de>,
     {
         let value = try!(Deserialize::deserialize(deserializer));
-        unsafe {
-            let ptr = &value as *const T as *const u8;
-            if slice::from_raw_parts(ptr, mem::size_of::<T>()).iter().all(|&b| b == 0) {
-                return Err(Error::custom("expected a non-zero value"));
-            }
-            // Waiting for a safe way to construct NonZero<T>:
-            // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
-            Ok(NonZero::new(value))
+        match NonZero::new(value) {
+            Some(nonzero) => Ok(nonzero),
+            None => Err(Error::custom("expected a non-zero value")),
         }
     }
 }
