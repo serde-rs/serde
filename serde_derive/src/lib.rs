@@ -16,7 +16,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.10")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.11")]
 
 #![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]
