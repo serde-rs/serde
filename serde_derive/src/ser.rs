@@ -44,10 +44,9 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
 
             quote! {
                 #[automatically_derived]
-                impl #impl_generics _serde::ser::SerializeState for #ident #ty_generics #where_clause {
-                    type Seed = #seed_ty;
+                impl #impl_generics _serde::ser::SerializeState<#seed_ty> for #ident #ty_generics #where_clause {
 
-                    fn serialize_state<__S>(&self, __serializer: __S, __seed: &Self::Seed) -> _serde::export::Result<__S::Ok, __S::Error>
+                    fn serialize_state<__S>(&self, __serializer: __S, __seed: &#seed_ty) -> _serde::export::Result<__S::Ok, __S::Error>
                         where __S: _serde::Serializer
                     {
                         #body
@@ -156,7 +155,7 @@ fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
                 &if seeded {
                     let serialize_state = cont.attrs.serialize_state()
                         .expect("derive(SerializeState) specified without a seed type");
-                    let path = quote!(_serde::ser::SerializeState<Seed = #serialize_state>);
+                    let path = quote!(_serde::ser::SerializeState<#serialize_state>);
                     syn::parse_path(&path.to_string()).unwrap()
                 } else {
                     path!(_serde::Serialize)

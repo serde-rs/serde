@@ -89,9 +89,9 @@ where
     assert_ser_seed_tokens(&Unseeded(value), &(), tokens)
 }
 
-pub fn assert_ser_seed_tokens<T>(value: &T, seed: &T::Seed, tokens: &[Token])
+pub fn assert_ser_seed_tokens<T, Seed>(value: &T, seed: &Seed, tokens: &[Token])
 where
-    T: SerializeState,
+    T: SerializeState<Seed>,
 {
     let mut ser = Serializer::new(tokens);
     match value.serialize_state(&mut ser, seed) {

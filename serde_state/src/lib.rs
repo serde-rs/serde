@@ -29,10 +29,9 @@
 //! #[derive(Deserialize, Serialize)]
 //! struct Inner;
 //!
-//! impl SerializeState for Inner {
-//!     type Seed = Cell<i32>;
+//! impl SerializeState<Cell<i32>> for Inner {
 //! 
-//!     fn serialize_state<S>(&self, serializer: S, seed: &Self::Seed) -> Result<S::Ok, S::Error>
+//!     fn serialize_state<S>(&self, serializer: S, seed: &Cell<i32>) -> Result<S::Ok, S::Error>
 //!     where
 //!         S: Serializer,
 //!     {

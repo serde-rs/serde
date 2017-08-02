@@ -20,7 +20,7 @@ pub use serde::de::*;
 
 /// `DeserializeState` is a trait which specifies how to deserialize a type which requires extra
 /// state to deserialize
-pub trait DeserializeState<'de, Seed>: Sized {
+pub trait DeserializeState<'de, Seed: ?Sized>: Sized {
     /// Deserializes `Self` using `seed` and the `deserializer`
     fn deserialize_state<D>(seed: &mut Seed, deserializer: D) -> Result<Self, D::Error>
     where
@@ -74,6 +74,7 @@ impl<S, T> Seed<S, T> {
 
 impl<'de, 's, S, T> DeserializeSeed<'de> for Seed<&'s mut S, T>
 where
+    S: ?Sized,
     T: DeserializeState<'de, S>,
 {
     type Value = T;

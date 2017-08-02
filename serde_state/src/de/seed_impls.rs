@@ -18,6 +18,40 @@ use private::de::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+macro_rules! deserialize_impl {
+    ($($ty: ty),*) => {
+        $(
+        impl<'de, S> DeserializeState<'de, S> for $ty
+        {
+            fn deserialize_state<D>(_seed: &mut S, deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                <$ty>::deserialize(deserializer)
+            }
+        }
+        )*
+    }
+}
+
+deserialize_impl! {
+    u8,
+    u16,
+    u32,
+    u64,
+    usize,
+    i8,
+    i16,
+    i32,
+    i64,
+    isize,
+    f32,
+    f64,
+    String,
+    (),
+    bool
+}
+
 macro_rules! forwarded_impl {
     (( $($id: ident),* ), $ty: ty, $func: expr) => {
         impl<'de, S $(, $id)*> DeserializeState<'de, S> for $ty
@@ -145,13 +179,15 @@ where
 
 /// `SeqSeedEx` implements `DeserializeSeed` for sequences whose elements implement
 /// `DeserializeState`
-pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> {
+pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> where T: ?Sized {
     seed: &'seed mut T,
     with_capacity: F,
     _marker: PhantomData<(S, U)>,
 }
 
-impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U> {
+impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U>
+    where T: ?Sized
+{
     /// Constructs a new instance of `SeqSeedEx`
     pub fn new(seed: &'seed mut T, with_capacity: F) -> SeqSeedEx<'seed, S, F, T, U> {
         SeqSeedEx {
@@ -164,6 +200,7 @@ impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U> {
 
 impl<'de, 'seed, S, F, T, U> DeserializeSeed<'de> for SeqSeedEx<'seed, S, F, T, U>
 where
+    T: ?Sized,
     U: DeserializeState<'de, T>,
     F: FnOnce(usize) -> S,
     S: Extend<U>,
@@ -176,6 +213,7 @@ where
     {
         impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
         where
+            T: ?Sized,
             U: DeserializeState<'de,
                                 T>,
             F: FnOnce(usize) -> S,
@@ -271,6 +309,7 @@ macro_rules! seq_impl {
     ) => {
         impl<'de, Seed, T $(, $typaram)*> DeserializeState<'de, Seed> for $ty<T $(, $typaram)*>
         where
+            Seed: ?Sized,
             T: DeserializeState<'de, Seed> $(+ $tbound1 $(+ $tbound2)*)*,
             $($typaram: $bound1 $(+ $bound2)*,)*
         {
