@@ -15,6 +15,40 @@ use ser::Error;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+macro_rules! serialize_impl {
+    ($($ty: ty),*) => {
+        $(
+        impl<Seed: ?Sized> SerializeState<Seed> for $ty {
+            #[inline]
+            fn serialize_state<S>(&self, serializer: S, _seed: &Seed) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                self.serialize(serializer)
+            }
+        }
+        )*
+    }
+}
+
+serialize_impl! {
+    u8,
+    u16,
+    u32,
+    u64,
+    usize,
+    i8,
+    i16,
+    i32,
+    i64,
+    isize,
+    f32,
+    f64,
+    String,
+    (),
+    bool
+}
+
 impl<T, Seed: ?Sized> SerializeState<Seed> for Option<T>
 where
     T: SerializeState<Seed>,
