@@ -116,6 +116,7 @@ pub struct Container {
     deserialize_state: Option<syn::Ty>,
     serialize_state: Option<syn::Ty>,
     de_parameters: Option<Vec<syn::Ident>>,
+    ser_parameters: Option<Vec<syn::Ident>>,
 }
 
 /// Styles of representing an enum.
@@ -188,6 +189,7 @@ impl Container {
         let mut deserialize_state = Attr::none(cx, "deserialize_state");
         let mut serialize_state = Attr::none(cx, "serialize_state");
         let mut de_parameters = Attr::none(cx, "de_parameters");
+        let mut ser_parameters = Attr::none(cx, "ser_parameters");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -370,6 +372,12 @@ impl Container {
                         }
                     }
 
+                    MetaItem(NameValue(ref name, ref lit)) if name == "ser_parameters" => {
+                        if let Ok(path) = parse_lit_into_identifiers(cx, name.as_ref(), lit) {
+                            ser_parameters.set(path);
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -400,6 +408,7 @@ impl Container {
             deserialize_state: deserialize_state.get(),
             serialize_state: serialize_state.get(),
             de_parameters: de_parameters.get(),
+            ser_parameters: ser_parameters.get(),
         }
     }
 
@@ -457,6 +466,10 @@ impl Container {
 
     pub fn de_parameters(&self) -> Option<&[syn::Ident]> {
         self.de_parameters.as_ref().map(|x| &x[..])
+    }
+
+    pub fn ser_parameters(&self) -> Option<&[syn::Ident]> {
+        self.ser_parameters.as_ref().map(|x| &x[..])
     }
 }
 

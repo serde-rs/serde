@@ -16,19 +16,22 @@ use serde_test::{Token, assert_ser_tokens};
 #[derive(Serialize)]
 struct Inner;
 
-impl SerializeState<Cell<i32>> for Inner {
+impl<T> SerializeState<T> for Inner where T: ::std::borrow::Borrow<Cell<i32>> {
 
-    fn serialize_state<S>(&self, serializer: S, seed: &Cell<i32>) -> Result<S::Ok, S::Error>
+    fn serialize_state<S>(&self, serializer: S, seed: &T) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
+        let seed = seed.borrow();
         seed.set(seed.get() + 1);
         self.serialize(serializer)
     }
 }
 
 #[derive(SerializeState)]
-#[serde(serialize_state = "Cell<i32>")]
+#[serde(serialize_state = "S")]
+#[serde(ser_parameters = "S")]
+#[serde(bound(serialize = "S: ::std::borrow::Borrow<Cell<i32>>"))]
 struct SeedStruct {
     #[serde(serialize_state)]
     value: Inner,

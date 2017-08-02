@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use syn::{self, Ident};
-use quote::Tokens;
+use quote::{Tokens, ToTokens};
 
 use bound;
 use fragment::{Fragment, Stmts, Match};
@@ -24,7 +24,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
 
     let ident = &cont.ident;
     let params = Parameters::new(&cont, seed);
-    let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = split_for_impl(&params);
     let dummy_const = Ident::new(format!("_IMPL_SERIALIZE_FOR_{}", ident));
     let body = Stmts(serialize_body(&cont, &params));
 
@@ -104,6 +104,8 @@ struct Parameters {
 
     /// Type has a `serde(remote = "...")` attribute.
     is_remote: bool,
+
+    ser_parameter_idents: Option<Vec<syn::Ident>>,
 }
 
 impl Parameters {
@@ -127,6 +129,9 @@ impl Parameters {
             this: this,
             generics: generics,
             is_remote: is_remote,
+            ser_parameter_idents: cont.attrs
+                .ser_parameters()
+                .map(|params| params.to_owned()),
         }
     }
 
@@ -965,9 +970,8 @@ fn wrap_serialize_state_with(
     let this = &params.this;
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
-    let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
-    let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
-
+    let (wrapper_impl_generics, wrapper_ty_generics, _) = split_with_lifetime_impl(params);
+ 
     quote!({
         struct __SerializeWith #wrapper_impl_generics #where_clause {
             value: &'__a #field_ty,
@@ -1024,4 +1028,61 @@ where
             unreachable!("getter is only allowed for remote impls");
         }
     }
+}
+
+struct SerImplGenerics<'a>(&'a Parameters);
+
+impl<'a> ToTokens for SerImplGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut Tokens) {
+        let mut generics = self.0.generics.clone();
+        if let Some(ref idents) = self.0.ser_parameter_idents {
+            generics
+                .ty_params
+                .extend(idents.iter().map(|ident| ident.clone().into()));
+        }
+        let (impl_generics, _, _) = generics.split_for_impl();
+        impl_generics.to_tokens(tokens);
+    }
+}
+
+fn split_for_impl
+    (params: &Parameters,)
+     -> (SerImplGenerics, syn::TyGenerics, &syn::WhereClause) {
+    let ser_impl_generics = SerImplGenerics(&params);
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
+    (ser_impl_generics, ty_generics, where_clause)
+}
+
+struct SerLifetimeImplGenerics<'a>(&'a Parameters);
+
+impl<'a> ToTokens for SerLifetimeImplGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut Tokens) {
+        let mut generics = bound::with_lifetime_bound(&self.0.generics, "'__a");
+        if let Some(ref idents) = self.0.ser_parameter_idents {
+            generics
+                .ty_params
+                .extend(idents.iter().map(|ident| ident.clone().into()));
+        }
+        let (impl_generics, _, _) = generics.split_for_impl();
+        impl_generics.to_tokens(tokens);
+    }
+}
+
+struct SerTyGenerics<'a>(&'a Parameters);
+
+impl<'a> ToTokens for SerTyGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut Tokens) {
+        let generics = bound::with_lifetime_bound(&self.0.generics, "'__a");
+        let (_, ty_generics, _) = generics.split_for_impl();
+        ty_generics.to_tokens(tokens);
+    }
+}
+
+fn split_with_lifetime_impl
+    (params: &Parameters,)
+     -> (SerLifetimeImplGenerics, SerTyGenerics, &syn::WhereClause) {
+    let ser_impl_generics = SerLifetimeImplGenerics(&params);
+    let ty_generics = SerTyGenerics(&params);
+    let (_, _, where_clause) = params.generics.split_for_impl();
+    (ser_impl_generics, ty_generics, where_clause)
 }
