@@ -113,6 +113,7 @@ pub struct Container {
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    empty_struct: bool,
 }
 
 /// Styles of representing an enum.
@@ -182,6 +183,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
+        let mut empty_struct = BoolAttr::none(cx, "empty_struct");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -344,6 +346,24 @@ impl Container {
                         variant_identifier.set_true();
                     }
 
+                    // Parse `#[serde(empty_struct)]`
+                    MetaItem(Word(ref name)) if name == "empty_struct" => {
+                        match item.body {
+                            syn::Body::Enum(_) => {
+                                cx.error("#[serde(empty_struct)] can't be attached to an \
+                                          enum");
+                            }
+                            syn::Body::Struct(ref data) => {
+                                if let &syn::VariantData::Unit = data {
+                                    empty_struct.set_true();
+                                } else {
+                                    cx.error("#[serde(empty_struct)] can't be attached \
+                                              to a non-unit struct");
+                                }
+                            }
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde container attribute `{}`",
                                          meta_item.name()));
@@ -371,6 +391,7 @@ impl Container {
             into_type: into_type.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
+            empty_struct: empty_struct.get(),
         }
     }
 
@@ -416,6 +437,10 @@ impl Container {
 
     pub fn identifier(&self) -> Identifier {
         self.identifier
+    }
+
+    pub fn empty_struct(&self) -> bool {
+        self.empty_struct
     }
 }
 
@@ -510,6 +535,7 @@ pub struct Variant {
     skip_deserializing: bool,
     skip_serializing: bool,
     other: bool,
+    empty_struct: bool,
 }
 
 impl Variant {
@@ -520,6 +546,7 @@ impl Variant {
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
         let mut other = BoolAttr::none(cx, "other");
+        let mut empty_struct = BoolAttr::none(cx, "empty_struct");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -569,6 +596,16 @@ impl Variant {
                         other.set_true();
                     }
 
+                    // Parse `#[serde(empty_struct)]`
+                    MetaItem(Word(ref name)) if name == "empty_struct" => {
+                        if let syn::VariantData::Unit = variant.data {
+                            empty_struct.set_true();
+                        } else {
+                            cx.error("#[serde(empty_struct)] can't be attached to a non-unit \
+                                      variant");
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde variant attribute `{}`", meta_item.name()));
                     }
@@ -595,6 +632,7 @@ impl Variant {
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
             other: other.get(),
+            empty_struct: empty_struct.get(),
         }
     }
 
@@ -625,6 +663,10 @@ impl Variant {
 
     pub fn other(&self) -> bool {
         self.other
+    }
+
+    pub fn empty_struct(&self) -> bool {
+        self.empty_struct
     }
 }
 
