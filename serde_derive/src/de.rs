@@ -498,7 +498,7 @@ fn deserialize_struct(
     let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, is_unit, cattrs));
 
     let (field_visitor, fields_stmt, visit_map) =
-        deserialize_struct_visitor(type_path, params, fields, is_unit, cattrs);
+        deserialize_struct_visitor(&type_path, params, fields, is_unit, cattrs);
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
@@ -547,6 +547,19 @@ fn deserialize_struct(
         })
     };
 
+    let visit_unit = if is_unit {
+        Some(quote! {
+            #[inline]
+            fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                _serde::export::Ok(#type_path)
+            }
+        })
+    } else {
+        None
+    };
+
     quote_block! {
         #field_visitor
 
@@ -561,6 +574,8 @@ fn deserialize_struct(
             fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
                 _serde::export::Formatter::write_str(formatter, #expecting)
             }
+
+            #visit_unit
 
             #visit_seq
 
@@ -823,8 +838,8 @@ fn deserialize_adjacently_tagged_enum(
 
     fn is_unit(variant: &Variant) -> bool {
         match variant.style {
-            Style::Unit if !variant.attrs.empty_struct() => true,
-            Style::Struct | Style::Tuple | Style::Newtype | Style::Unit => false,
+            Style::Unit => true,
+            Style::Struct | Style::Tuple | Style::Newtype => false,
         }
     }
 
@@ -1474,7 +1489,7 @@ fn deserialize_identifier(
 }
 
 fn deserialize_struct_visitor(
-    struct_path: Tokens,
+    struct_path: &Tokens,
     params: &Parameters,
     fields: &[Field],
     is_unit: bool,
@@ -1502,7 +1517,7 @@ fn deserialize_struct_visitor(
 }
 
 fn deserialize_map(
-    struct_path: Tokens,
+    struct_path: &Tokens,
     params: &Parameters,
     fields: &[Field],
     is_unit: bool,
