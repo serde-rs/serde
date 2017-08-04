@@ -655,6 +655,8 @@ pub enum Default {
     Default,
     /// The default is given by this function.
     Path(syn::Path),
+    /// The default is specified as a value.
+    Value(syn::Lit),
 }
 
 impl Field {
@@ -707,6 +709,11 @@ impl Field {
                         if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
                             default.set(Default::Path(path));
                         }
+                    }
+                    
+                    // Parse `#[serde(default_value = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "default_value" => {
+                        default.set(Default::Value(lit.clone()))
                     }
 
                     // Parse `#[serde(skip_serializing)]`

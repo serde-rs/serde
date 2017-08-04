@@ -133,6 +133,7 @@ fn build_generics(cont: &Container) -> syn::Generics {
                     bound::with_self_bound(cont, &generics, &path!(_serde::export::Default))
                 }
                 attr::Default::None |
+                attr::Default::Value(_) |
                 attr::Default::Path(_) => generics,
             };
 
@@ -1626,6 +1627,7 @@ fn deserialize_map(
             ),
             )
         }
+        attr::Default::Value(_) => unimplemented!(),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
@@ -1701,6 +1703,14 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
         attr::Default::Path(ref path) => {
             return quote_expr!(#path());
         }
+        attr::Default::Value(ref lit) => {
+            if let syn::Lit::Str(ref s, _) = *lit {
+                let mut t = Tokens::new();
+                t.append(s);
+
+                return Fragment::Expr(t);
+            }
+        }
         attr::Default::None => { /* below */ }
     }
 
@@ -1710,6 +1720,7 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
             let ident = &field.ident;
             return quote_expr!(__default.#ident);
         }
+        attr::Default::Value(_) => {}
         attr::Default::None => { /* below */ }
     }
 
