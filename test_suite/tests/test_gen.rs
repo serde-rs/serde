@@ -373,6 +373,39 @@ fn test_gen() {
         #[serde(with = "vis::SDef")]
         s: vis::S,
     }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(empty_struct)]
+    struct SerEmptyStruct;
+
+    #[derive(Serialize, Deserialize)]
+    enum SerEmptyStructExternal {
+        Hello {
+            foo: String,
+        },
+        #[serde(empty_struct)]
+        World,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(tag = "tag")]
+    enum SerEmptyStructInternal {
+        Hello {
+            foo: String,
+        },
+        #[serde(empty_struct)]
+        World,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(tag = "tag", content = "content")]
+    enum SerEmptyStructAdjacent {
+        Hello {
+            foo: String,
+        },
+        #[serde(empty_struct)]
+        World,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

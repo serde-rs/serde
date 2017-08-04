@@ -157,7 +157,10 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
     } else {
         match cont.body {
             Body::Enum(ref variants) => serialize_enum(params, variants, &cont.attrs),
-            Body::Struct(Style::Struct, ref fields) => {
+            Body::Struct(Style::Unit, _) if !cont.attrs.empty_struct() => {
+                serialize_unit_struct(&cont.attrs)
+            }
+            Body::Struct(Style::Struct, ref fields) | Body::Struct(Style::Unit, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_none()) {
                     panic!("struct has unnamed fields");
                 }
@@ -172,7 +175,6 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
             Body::Struct(Style::Newtype, ref fields) => {
                 serialize_newtype_struct(params, &fields[0], &cont.attrs)
             }
-            Body::Struct(Style::Unit, _) => serialize_unit_struct(&cont.attrs),
         }
     }
 }
@@ -396,7 +398,7 @@ fn serialize_externally_tagged_variant(
     let variant_name = variant.attrs.name().serialize_name();
 
     match variant.style {
-        Style::Unit => {
+        Style::Unit if !variant.attrs.empty_struct() => {
             quote_expr! {
                 _serde::Serializer::serialize_unit_variant(
                     __serializer,
@@ -434,7 +436,7 @@ fn serialize_externally_tagged_variant(
                 &variant.fields,
             )
         }
-        Style::Struct => {
+        Style::Struct | Style::Unit => {
             serialize_struct_variant(
                 StructVariant::ExternallyTagged {
                     variant_index: variant_index,
@@ -461,7 +463,7 @@ fn serialize_internally_tagged_variant(
     let variant_ident_str = variant.ident.as_ref();
 
     match variant.style {
-        Style::Unit => {
+        Style::Unit if !variant.attrs.empty_struct() => {
             quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     __serializer, #type_name, 1));
@@ -488,7 +490,7 @@ fn serialize_internally_tagged_variant(
                 )
             }
         }
-        Style::Struct => {
+        Style::Struct | Style::Unit => {
             serialize_struct_variant(
                 StructVariant::InternallyTagged {
                     tag: tag,
@@ -516,7 +518,7 @@ fn serialize_adjacently_tagged_variant(
 
     let inner = Stmts(
         match variant.style {
-            Style::Unit => {
+            Style::Unit if !variant.attrs.empty_struct() => {
                 return quote_block! {
                     let mut __struct = try!(_serde::Serializer::serialize_struct(
                         __serializer, #type_name, 1));
@@ -539,7 +541,7 @@ fn serialize_adjacently_tagged_variant(
             Style::Tuple => {
                 serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
             }
-            Style::Struct => {
+            Style::Struct | Style::Unit => {
                 serialize_struct_variant(
                     StructVariant::Untagged,
                     params,
@@ -552,14 +554,14 @@ fn serialize_adjacently_tagged_variant(
 
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
     let ref fields_ident: Vec<_> = match variant.style {
-        Style::Unit => unreachable!(),
+        Style::Unit if !variant.attrs.empty_struct() => unreachable!(),
         Style::Newtype => vec![Ident::new("__field0")],
         Style::Tuple => {
             (0..variant.fields.len())
                 .map(|i| Ident::new(format!("__field{}", i)))
                 .collect()
         }
-        Style::Struct => {
+        Style::Struct | Style::Unit => {
             variant
                 .fields
                 .iter()
@@ -576,7 +578,11 @@ fn serialize_adjacently_tagged_variant(
 
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
-    let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
+    let wrapper_generics = if let Style::Unit = variant.style {
+        params.generics.clone()
+    } else {
+        bound::with_lifetime_bound(&params.generics, "'__a")
+    };
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
     quote_block! {
@@ -613,7 +619,7 @@ fn serialize_untagged_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     match variant.style {
-        Style::Unit => {
+        Style::Unit if !variant.attrs.empty_struct() => {
             quote_expr! {
                 _serde::Serializer::serialize_unit(__serializer)
             }
@@ -630,7 +636,7 @@ fn serialize_untagged_variant(
             }
         }
         Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
-        Style::Struct => {
+        Style::Struct | Style::Unit => {
             let type_name = cattrs.name().serialize_name();
             serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
         }

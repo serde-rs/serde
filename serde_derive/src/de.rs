@@ -187,11 +187,15 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match cont.body {
             Body::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
-            Body::Struct(Style::Struct, ref fields) => {
+            Body::Struct(Style::Unit, _) if !cont.attrs.empty_struct() => {
+                deserialize_unit_struct(params, &cont.attrs)
+            }
+            Body::Struct(Style::Struct, ref fields) | Body::Struct(Style::Unit, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_none()) {
                     panic!("struct has unnamed fields");
                 }
-                deserialize_struct(None, params, fields, &cont.attrs, None)
+                deserialize_struct(None, params, fields, cont.attrs.empty_struct(), &cont.attrs,
+                                   None)
             }
             Body::Struct(Style::Tuple, ref fields) |
             Body::Struct(Style::Newtype, ref fields) => {
@@ -200,7 +204,6 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
                 }
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
             }
-            Body::Struct(Style::Unit, _) => deserialize_unit_struct(params, &cont.attrs),
         }
     } else {
         match cont.body {
@@ -286,7 +289,7 @@ fn deserialize_tuple(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, false, cattrs));
+    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, false, false, cattrs));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -347,6 +350,7 @@ fn deserialize_seq(
     params: &Parameters,
     fields: &[Field],
     is_struct: bool,
+    is_unit: bool,
     cattrs: &attr::Container,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
@@ -395,7 +399,11 @@ fn deserialize_seq(
             }
         });
 
-    let mut result = if is_struct {
+    let mut result = if is_unit {
+        quote! {
+            #type_path
+        }
+    } else if is_struct {
         let names = fields.iter().map(|f| &f.ident);
         quote! {
             #type_path { #( #names: #vars ),* }
@@ -458,6 +466,7 @@ fn deserialize_struct(
     variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
+    is_unit: bool,
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
 ) -> Fragment {
@@ -486,10 +495,10 @@ fn deserialize_struct(
         None => format!("struct {}", params.type_name()),
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs));
+    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, is_unit, cattrs));
 
     let (field_visitor, fields_stmt, visit_map) =
-        deserialize_struct_visitor(type_path, params, fields, cattrs);
+        deserialize_struct_visitor(&type_path, params, fields, is_unit, cattrs);
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
@@ -538,6 +547,19 @@ fn deserialize_struct(
         })
     };
 
+    let visit_unit = if is_unit {
+        Some(quote! {
+            #[inline]
+            fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                _serde::export::Ok(#type_path)
+            }
+        })
+    } else {
+        None
+    };
+
     quote_block! {
         #field_visitor
 
@@ -552,6 +574,8 @@ fn deserialize_struct(
             fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
                 _serde::export::Formatter::write_str(formatter, #expecting)
             }
+
+            #visit_unit
 
             #visit_seq
 
@@ -1088,7 +1112,7 @@ fn deserialize_externally_tagged_variant(
     let variant_ident = &variant.ident;
 
     match variant.style {
-        Style::Unit => {
+        Style::Unit if !variant.attrs.empty_struct() => {
             let this = &params.this;
             quote_block! {
                 try!(_serde::de::VariantAccess::unit_variant(__variant));
@@ -1101,8 +1125,9 @@ fn deserialize_externally_tagged_variant(
         Style::Tuple => {
             deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
         }
-        Style::Struct => {
-            deserialize_struct(Some(variant_ident), params, &variant.fields, cattrs, None)
+        Style::Struct | Style::Unit => {
+            deserialize_struct(Some(variant_ident), params, &variant.fields,
+                               variant.attrs.empty_struct(), cattrs, None)
         }
     }
 }
@@ -1116,7 +1141,7 @@ fn deserialize_internally_tagged_variant(
     let variant_ident = &variant.ident;
 
     match variant.style {
-        Style::Unit => {
+        Style::Unit if !variant.attrs.empty_struct() => {
             let this = &params.this;
             let type_name = params.type_name();
             let variant_name = variant.ident.as_ref();
@@ -1125,7 +1150,7 @@ fn deserialize_internally_tagged_variant(
                 _serde::export::Ok(#this::#variant_ident)
             }
         }
-        Style::Newtype | Style::Struct => {
+        Style::Newtype | Style::Struct | Style::Unit => {
             deserialize_untagged_variant(params, variant, cattrs, deserializer)
         }
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -1141,7 +1166,7 @@ fn deserialize_untagged_variant(
     let variant_ident = &variant.ident;
 
     match variant.style {
-        Style::Unit => {
+        Style::Unit if !variant.attrs.empty_struct() => {
             let this = &params.this;
             let type_name = params.type_name();
             let variant_name = variant.ident.as_ref();
@@ -1171,11 +1196,12 @@ fn deserialize_untagged_variant(
                 Some(deserializer),
             )
         }
-        Style::Struct => {
+        Style::Struct | Style::Unit => {
             deserialize_struct(
                 Some(variant_ident),
                 params,
                 &variant.fields,
+                variant.attrs.empty_struct(),
                 cattrs,
                 Some(deserializer),
             )
@@ -1463,9 +1489,10 @@ fn deserialize_identifier(
 }
 
 fn deserialize_struct_visitor(
-    struct_path: Tokens,
+    struct_path: &Tokens,
     params: &Parameters,
     fields: &[Field],
+    is_unit: bool,
     cattrs: &attr::Container,
 ) -> (Fragment, Fragment, Fragment) {
     let field_names_idents: Vec<_> = fields
@@ -1484,15 +1511,16 @@ fn deserialize_struct_visitor(
 
     let field_visitor = deserialize_generated_identifier(field_names_idents, cattrs, false);
 
-    let visit_map = deserialize_map(struct_path, params, fields, cattrs);
+    let visit_map = deserialize_map(struct_path, params, fields, is_unit, cattrs);
 
     (field_visitor, fields_stmt, visit_map)
 }
 
 fn deserialize_map(
-    struct_path: Tokens,
+    struct_path: &Tokens,
     params: &Parameters,
     fields: &[Field],
+    is_unit: bool,
     cattrs: &attr::Container,
 ) -> Fragment {
     // Create the field names for the fields.
@@ -1594,22 +1622,27 @@ fn deserialize_map(
             },
         );
 
-    let result = fields_names
-        .iter()
-        .map(
-            |&(field, ref name)| {
-                let ident = field
-                    .ident
-                    .clone()
-                    .expect("struct contains unnamed fields");
-                if field.attrs.skip_deserializing() {
-                    let value = Expr(expr_is_missing(&field, cattrs));
-                    quote!(#ident: #value)
-                } else {
-                    quote!(#ident: #name)
-                }
-            },
-        );
+    let result = if is_unit {
+        quote!()
+    } else {
+        let fields = fields_names
+            .iter()
+            .map(
+                |&(field, ref name)| {
+                    let ident = field
+                        .ident
+                        .clone()
+                        .expect("struct contains unnamed fields");
+                    if field.attrs.skip_deserializing() {
+                        let value = Expr(expr_is_missing(&field, cattrs));
+                        quote!(#ident: #value)
+                    } else {
+                        quote!(#ident: #name)
+                    }
+                },
+            );
+        quote!({ #(#fields),* })
+    };
 
     let let_default = match *cattrs.default() {
         attr::Default::Default => {
@@ -1633,7 +1666,7 @@ fn deserialize_map(
         }
     };
 
-    let mut result = quote!(#struct_path { #(#result),* });
+    let mut result = quote!(#struct_path #result);
     if params.has_getter {
         let this = &params.this;
         result = quote! {
