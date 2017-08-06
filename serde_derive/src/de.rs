@@ -796,9 +796,8 @@ fn deserialize_adjacently_tagged_enum(
     let type_name = cattrs.name().deserialize_name();
     let deny_unknown_fields = cattrs.deny_unknown_fields();
 
-    /// If unknown fields are allowed, we pick the visitor that can
-    /// step over those. Otherwise we pick the visitor that fails on
-    /// unknown keys.
+    // If unknown fields are allowed, we pick the visitor that can step over
+    // those. Otherwise we pick the visitor that fails on unknown keys.
     let field_visitor_ty = if deny_unknown_fields {
         quote! { _serde::private::de::TagOrContentFieldVisitor }
     } else {
@@ -853,13 +852,13 @@ fn deserialize_adjacently_tagged_enum(
         };
     }
 
-    /// Advance the map by one key, returning early in case of error.
+    // Advance the map by one key, returning early in case of error.
     let next_key = quote! {
         try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content))
     };
 
-    /// When allowing unknown fields, we want to transparently step through keys we don't care
-    /// about until we find `tag`, `content`, or run out of keys.
+    // When allowing unknown fields, we want to transparently step through keys
+    // we don't care about until we find `tag`, `content`, or run out of keys.
     let next_relevant_key = if deny_unknown_fields {
         next_key
     } else {
@@ -888,9 +887,9 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    /// Step through remaining keys, looking for duplicates of previously-seen keys.
-    /// When unknown fields are denied, any key that isn't a duplicate will at this
-    /// point immediately produce an error.
+    // Step through remaining keys, looking for duplicates of previously-seen
+    // keys. When unknown fields are denied, any key that isn't a duplicate will
+    // at this point immediately produce an error.
     let visit_remaining_keys = quote! {
         match #next_relevant_key {
             _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
