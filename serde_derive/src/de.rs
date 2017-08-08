@@ -157,14 +157,17 @@ fn build_generics(cont: &Container) -> syn::Generics {
 // deserialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Deserialize` bound where T is the type of the field.
-fn needs_deserialize_bound(attrs: &attr::Field) -> bool {
-    !attrs.skip_deserializing() && attrs.deserialize_with().is_none() && attrs.de_bound().is_none()
+fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -> bool {
+    !field.skip_deserializing() &&
+    field.deserialize_with().is_none() &&
+    field.de_bound().is_none() &&
+    variant.map_or(true, |variant| variant.deserialize_with().is_none())
 }
 
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
-fn requires_default(attrs: &attr::Field) -> bool {
-    attrs.default() == &attr::Default::Default
+fn requires_default(field: &attr::Field, _variant: Option<&attr::Variant>) -> bool {
+    field.default() == &attr::Default::Default
 }
 
 // The union of lifetimes borrowed by each field of the container.

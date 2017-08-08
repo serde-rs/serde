@@ -811,6 +811,74 @@ fn test_serialize_with_enum() {
     );
 }
 
+#[derive(Debug, PartialEq, Serialize)]
+enum SerializeWithVariant {
+    #[serde(serialize_with="serialize_unit_variant_as_i8")]
+    Unit,
+
+    #[serde(serialize_with="SerializeWith::serialize_with")]
+    Newtype(i32),
+
+    #[serde(serialize_with="serialize_some_other_variant")]
+    Tuple(String, u8),
+
+    #[serde(serialize_with="serialize_some_other_variant")]
+    Struct {
+        f1: String,
+        f2: u8,
+    },
+}
+
+fn serialize_unit_variant_as_i8<S>(serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    serializer.serialize_i8(0)
+}
+
+fn serialize_some_other_variant<S>(f1: &String,
+                                   f2: &u8,
+                                   serializer: S)
+                                   -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    serializer.serialize_str(format!("{};{:?}", f1, f2).as_str())
+}
+
+#[test]
+fn test_serialize_with_variant() {
+    assert_ser_tokens(
+        &SerializeWithVariant::Unit,
+        &[
+            Token::NewtypeVariant { name: "SerializeWithVariant", variant: "Unit" },
+            Token::I8(0),
+        ],
+    );
+
+    assert_ser_tokens(
+        &SerializeWithVariant::Newtype(123),
+        &[
+            Token::NewtypeVariant { name: "SerializeWithVariant", variant: "Newtype" },
+            Token::Bool(true),
+        ],
+    );
+
+    assert_ser_tokens(
+        &SerializeWithVariant::Tuple("hello".into(), 0),
+        &[
+            Token::NewtypeVariant { name: "SerializeWithVariant", variant: "Tuple" },
+            Token::Str("hello;0"),
+        ],
+    );
+
+    assert_ser_tokens(
+        &SerializeWithVariant::Struct { f1: "world".into(), f2: 1 },
+        &[
+            Token::NewtypeVariant { name: "SerializeWithVariant", variant: "Struct" },
+            Token::Str("world;1"),
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Deserialize)]
 struct DeserializeWithStruct<B>
 where

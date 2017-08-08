@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use syn::{self, visit};
 
-use internals::ast::Container;
+use internals::ast::{Body, Container};
 use internals::attr;
 
 macro_rules! path {
@@ -88,7 +88,7 @@ pub fn with_bound<F>(
     bound: &syn::Path,
 ) -> syn::Generics
 where
-    F: Fn(&attr::Field) -> bool,
+    F: Fn(&attr::Field, Option<&attr::Variant>) -> bool,
 {
     struct FindTyParams {
         // Set of all generic type parameters on the current struct (A, B, C in
@@ -124,17 +124,27 @@ where
         .map(|ty_param| ty_param.ident.clone())
         .collect();
 
-    let relevant_tys = cont.body
-        .all_fields()
-        .filter(|&field| filter(&field.attrs))
-        .map(|field| &field.ty);
-
     let mut visitor = FindTyParams {
         all_ty_params: all_ty_params,
         relevant_ty_params: HashSet::new(),
     };
-    for ty in relevant_tys {
-        visit::walk_ty(&mut visitor, ty);
+    match cont.body {
+        Body::Enum(ref variants) => {
+            for variant in variants.iter() {
+                let relevant_fields = variant
+                    .fields
+                    .iter()
+                    .filter(|field| filter(&field.attrs, Some(&variant.attrs)));
+                for field in relevant_fields {
+                    visit::walk_ty(&mut visitor, field.ty);
+                }
+            }
+        }
+        Body::Struct(_, ref fields) => {
+            for field in fields.iter().filter(|field| filter(&field.attrs, None)) {
+                visit::walk_ty(&mut visitor, field.ty);
+            }
+        }
     }
 
     let new_predicates = generics

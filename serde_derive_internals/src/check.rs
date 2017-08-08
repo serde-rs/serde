@@ -15,6 +15,7 @@ use Ctxt;
 pub fn check(cx: &Ctxt, cont: &Container) {
     check_getter(cx, cont);
     check_identifier(cx, cont);
+    check_variant_skip_attrs(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -90,6 +91,43 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
 
             (_, Identifier::Variant, false) => {
                 cx.error("variant_identifier may only contain unit variants");
+            }
+        }
+    }
+}
+
+/// Skip-(de)serializing attributes are not allowed on variants marked
+/// (de)serialize_with.
+fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
+    let variants = match cont.body {
+        Body::Enum(ref variants) => variants,
+        Body::Struct(_, _) => {
+            return;
+        }
+    };
+
+    for variant in variants.iter() {
+        if variant.attrs.serialize_with().is_some() {
+            if variant.attrs.skip_serializing() {
+                cx.error(format!("variant `{}` cannot have both #[serde(serialize_with)] and \
+                                  #[serde(skip_serializing)]", variant.ident));
+            }
+
+            for (i, field) in variant.fields.iter().enumerate() {
+                let ident = field.ident.as_ref().map_or_else(|| format!("{}", i),
+                                                             |ident| format!("`{}`", ident));
+
+                if field.attrs.skip_serializing() {
+                    cx.error(format!("variant `{}` cannot have both #[serde(serialize_with)] and \
+                                      a field {} marked with #[serde(skip_serializing)]",
+                                     variant.ident, ident));
+                }
+
+                if field.attrs.skip_serializing_if().is_some() {
+                    cx.error(format!("variant `{}` cannot have both #[serde(serialize_with)] and \
+                                      a field {} marked with #[serde(skip_serializing_if)]",
+                                     variant.ident, ident));
+                }
             }
         }
     }
