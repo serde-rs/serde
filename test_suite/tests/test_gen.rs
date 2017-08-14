@@ -374,7 +374,7 @@ fn test_gen() {
         s: vis::S,
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Deserialize)]
     enum ExternallyTaggedVariantWith {
         #[allow(dead_code)]
         Normal { f1: String },
@@ -404,7 +404,7 @@ fn test_gen() {
     }
     assert_ser::<ExternallyTaggedVariantWith>();
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Deserialize)]
     #[serde(tag = "t")]
     enum InternallyTaggedVariantWith {
         #[allow(dead_code)]
@@ -430,7 +430,7 @@ fn test_gen() {
     }
     assert_ser::<InternallyTaggedVariantWith>();
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Deserialize)]
     #[serde(tag = "t", content = "c")]
     enum AdjacentlyTaggedVariantWith {
         #[allow(dead_code)]
@@ -461,7 +461,7 @@ fn test_gen() {
     }
     assert_ser::<AdjacentlyTaggedVariantWith>();
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Deserialize)]
     #[serde(untagged)]
     enum UntaggedVariantWith {
         #[allow(dead_code)]

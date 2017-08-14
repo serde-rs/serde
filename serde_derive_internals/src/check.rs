@@ -130,5 +130,23 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 }
             }
         }
+
+        if variant.attrs.deserialize_with().is_some() {
+            if variant.attrs.skip_deserializing() {
+                cx.error(format!("variant `{}` cannot have both #[serde(deserialize_with)] and \
+                                  #[serde(skip_deserializing)]", variant.ident));
+            }
+
+            for (i, field) in variant.fields.iter().enumerate() {
+                if field.attrs.skip_deserializing() {
+                    let ident = field.ident.as_ref().map_or_else(|| format!("{}", i),
+                                                                 |ident| format!("`{}`", ident));
+
+                    cx.error(format!("variant `{}` cannot have both #[serde(deserialize_with)] \
+                                      and a field {} marked with #[serde(skip_deserializing)]",
+                                     variant.ident, ident));
+                }
+            }
+        }
     }
 }
