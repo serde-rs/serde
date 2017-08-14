@@ -13,7 +13,7 @@ extern crate compiletest_rs as compiletest;
 use std::env;
 
 fn run_mode(mode: &'static str) {
-    let mut config = compiletest::default_config();
+    let mut config = compiletest::Config::default();
 
     config.mode = mode.parse().expect("invalid mode");
     config.target_rustcflags = Some("-L deps/target/debug/deps".to_owned());
@@ -21,6 +21,7 @@ fn run_mode(mode: &'static str) {
         config.filter = Some(name);
     }
     config.src_base = format!("tests/{}", mode).into();
+    config.link_deps();
 
     compiletest::run_tests(&config);
 }
