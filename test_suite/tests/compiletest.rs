@@ -21,6 +21,7 @@ fn run_mode(mode: &'static str) {
         config.filter = Some(name);
     }
     config.src_base = format!("tests/{}", mode).into();
+    config.link_deps();
 
     compiletest::run_tests(&config);
 }
