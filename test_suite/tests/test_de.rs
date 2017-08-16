@@ -603,6 +603,17 @@ declare_tests! {
             Token::StructEnd,
         ],
     }
+    test_struct_integer_keys {
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Struct { name: "Struct", len: 2 },
+                Token::U32(0),
+                Token::I32(1),
+
+                Token::U32(1),
+                Token::I32(2),
+            Token::StructEnd,
+        ],
+    }
     test_enum_unit {
         Enum::Unit => &[
             Token::UnitVariant { name: "Enum", variant: "Unit" },

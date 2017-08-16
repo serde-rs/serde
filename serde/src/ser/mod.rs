@@ -1704,9 +1704,9 @@ pub trait SerializeMap {
 ///         where S: Serializer
 ///     {
 ///         let mut rgb = serializer.serialize_struct("Rgb", 3)?;
-///         rgb.serialize_field("r", &self.r)?;
-///         rgb.serialize_field("g", &self.g)?;
-///         rgb.serialize_field("b", &self.b)?;
+///         rgb.serialize_indexed_field("r", 0, &self.r)?;
+///         rgb.serialize_indexed_field("g", 1, &self.g)?;
+///         rgb.serialize_indexed_field("b", 2, &self.b)?;
 ///         rgb.end()
 ///     }
 /// }
@@ -1719,6 +1719,8 @@ pub trait SerializeStruct {
     type Error: Error;
 
     /// Serialize a struct field.
+    ///
+    /// `serialize_indexed_field` should be used in preference to this method when serializing.
     fn serialize_field<T: ?Sized>(
         &mut self,
         key: &'static str,
@@ -1726,6 +1728,23 @@ pub trait SerializeStruct {
     ) -> Result<(), Self::Error>
     where
         T: Serialize;
+
+    /// Serialize a struct field with its index in the struct definition provided.
+    ///
+    /// The default implementation delegates to `serialize_field`.
+    #[inline]
+    fn serialize_indexed_field<T: ?Sized>(
+        &mut self,
+        key: &'static str,
+        key_index: u32,
+        value: &T,
+    ) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        let _ = key_index;
+        self.serialize_field(key, value)
+    }
 
     /// Finish serializing a struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
@@ -1747,9 +1766,9 @@ pub trait SerializeStruct {
 ///         match *self {
 ///             E::S { ref r, ref g, ref b } => {
 ///                 let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
-///                 sv.serialize_field("r", r)?;
-///                 sv.serialize_field("g", g)?;
-///                 sv.serialize_field("b", b)?;
+///                 sv.serialize_indexed_field("r", 0, r)?;
+///                 sv.serialize_indexed_field("g", 1, g)?;
+///                 sv.serialize_indexed_field("b", 2, b)?;
 ///                 sv.end()
 ///             }
 ///         }
@@ -1764,6 +1783,8 @@ pub trait SerializeStructVariant {
     type Error: Error;
 
     /// Serialize a struct variant field.
+    ///
+    /// `serialize_indexed_field` should be used in preference to this method when serializing.
     fn serialize_field<T: ?Sized>(
         &mut self,
         key: &'static str,
@@ -1771,6 +1792,23 @@ pub trait SerializeStructVariant {
     ) -> Result<(), Self::Error>
     where
         T: Serialize;
+
+    /// Serialize a struct variant field with its index in the struct definition provided.
+    ///
+    /// The default implementation delegates to `serialize_field`.
+    #[inline]
+    fn serialize_indexed_field<T: ?Sized>(
+        &mut self,
+        key: &'static str,
+        key_index: u32,
+        value: &T,
+    ) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        let _ = key_index;
+        self.serialize_field(key, value)
+    }
 
     /// Finish serializing a struct variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;

@@ -1384,26 +1384,21 @@ fn deserialize_identifier(
         "field identifier"
     };
 
-    let visit_index = if is_variant {
-        let variant_indices = 0u32..;
-        let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
-        let visit_index = quote! {
-            fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
-            {
-                match __value {
-                    #(
-                        #variant_indices => _serde::export::Ok(#constructors),
-                    )*
-                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                                _serde::de::Unexpected::Unsigned(__value as u64),
-                                &#fallthrough_msg))
-                }
+    let variant_indices = 0u32..;
+    let fallthrough_msg = format!("variant index 0 <= i < {}", fields.len());
+    let visit_index = quote! {
+        fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
+            where __E: _serde::de::Error
+        {
+            match __value {
+                #(
+                    #variant_indices => _serde::export::Ok(#constructors),
+                )*
+                _ => _serde::export::Err(_serde::de::Error::invalid_value(
+                            _serde::de::Unexpected::Unsigned(__value as u64),
+                            &#fallthrough_msg))
             }
-        };
-        Some(visit_index)
-    } else {
-        None
+        }
     };
 
     let bytes_to_str = if fallthrough.is_some() {
