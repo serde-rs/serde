@@ -89,7 +89,6 @@
 //
 //    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
-#![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 
 // Whitelisted clippy lints.

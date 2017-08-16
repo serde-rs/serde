@@ -6,8 +6,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![cfg_attr(feature = "unstable", feature(into_boxed_c_str))]
-
 #[macro_use]
 extern crate serde_derive;
 
