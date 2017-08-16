@@ -545,7 +545,7 @@ pub fn deserialize_some_unit_variant<'de, D>(_: D) -> StdResult<(), D::Error>
     unimplemented!()
 }
 
-pub fn serialize_some_other_variant<S>(_: &String, _: &u8, _: S) -> StdResult<S::Ok, S::Error>
+pub fn serialize_some_other_variant<S>(_: &str, _: &u8, _: S) -> StdResult<S::Ok, S::Error>
     where S: Serializer,
 {
     unimplemented!()

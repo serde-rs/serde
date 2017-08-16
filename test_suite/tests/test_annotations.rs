@@ -850,7 +850,7 @@ fn deserialize_i8_as_unit_variant<'de, D>(deserializer: D) -> Result<(), D::Erro
     }
 }
 
-fn serialize_variant_as_string<S>(f1: &String,
+fn serialize_variant_as_string<S>(f1: &str,
                                   f2: &u8,
                                   serializer: S)
                                   -> Result<S::Ok, S::Error>
