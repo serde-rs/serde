@@ -52,8 +52,10 @@ else
     channel build
     cd "$DIR/test_suite"
     channel test --features unstable
-    cd "$DIR/test_suite/no_std"
-    channel build
+    if [ -z "${APPVEYOR}" ]; then
+        cd "$DIR/test_suite/no_std"
+        channel build
+    fi
 
     CHANNEL=beta
     cd "$DIR"
