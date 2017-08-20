@@ -1424,7 +1424,7 @@ pub trait SeqAccess<'de> {
     /// `Ok(None)` if there are no more remaining items.
     ///
     /// `Deserialize` implementations should typically use
-    /// `SeqAcccess::next_element` instead.
+    /// `SeqAccess::next_element` instead.
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: DeserializeSeed<'de>;
