@@ -94,6 +94,7 @@
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(
+    cast_lossless,
     doc_markdown,
     linkedlist,
     type_complexity,
