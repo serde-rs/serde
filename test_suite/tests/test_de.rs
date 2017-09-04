@@ -15,6 +15,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, UNIX_EPOCH};
 use std::default::Default;
 use std::ffi::{CString, OsString};
+use std::rc::Rc;
+use std::sync::Arc;
 
 #[cfg(feature = "unstable")]
 use std::ffi::CStr;
@@ -738,6 +740,40 @@ declare_tests! {
     test_cstring {
         CString::new("abc").unwrap() => &[
             Token::Bytes(b"abc"),
+        ],
+    }
+    test_rc {
+        Rc::new(true) => &[
+            Token::Bool(true),
+        ],
+    }
+    test_arc {
+        Arc::new(true) => &[
+            Token::Bool(true),
+        ],
+    }
+}
+
+#[cfg(feature = "unstable")]
+declare_tests! {
+    test_rc_dst {
+        Rc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Rc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
+    test_arc_dst {
+        Arc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Arc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
         ],
     }
 }
