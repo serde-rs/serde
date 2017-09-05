@@ -340,10 +340,10 @@ deref_impl!(<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize);
 deref_impl!(<T: ?Sized> Serialize for Box<T> where T: Serialize);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T> Serialize for Rc<T> where T: Serialize);
+deref_impl!(<T: ?Sized> Serialize for Rc<T> where T: Serialize);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T> Serialize for Arc<T> where T: Serialize);
+deref_impl!(<T: ?Sized> Serialize for Arc<T> where T: Serialize);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);

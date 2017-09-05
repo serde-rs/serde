@@ -41,6 +41,7 @@ if [ -n "${CLIPPY}" ]; then
     cargo clippy -- -Dclippy
 else
     CHANNEL=nightly
+    cd "$DIR"
     cargo clean
     cd "$DIR/serde"
     channel build
@@ -51,10 +52,13 @@ else
     channel build
     cd "$DIR/test_suite"
     channel test --features unstable
-    cd "$DIR/test_suite/no_std"
-    channel build
+    if [ -z "${APPVEYOR}" ]; then
+        cd "$DIR/test_suite/no_std"
+        channel build
+    fi
 
     CHANNEL=beta
+    cd "$DIR"
     cargo clean
     cd "$DIR/serde"
     channel build --features rc
@@ -62,6 +66,7 @@ else
     channel test
 
     CHANNEL=stable
+    cd "$DIR"
     cargo clean
     cd "$DIR/serde"
     channel build --features rc
@@ -71,6 +76,7 @@ else
     channel test
 
     CHANNEL=1.13.0
+    cd "$DIR"
     cargo clean
     cd "$DIR/serde"
     channel build --features rc

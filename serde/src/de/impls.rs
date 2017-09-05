@@ -1112,10 +1112,10 @@ forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
 #[cfg(any(feature = "std", feature = "alloc"))]
 forwarded_impl!((), Box<str>, String::into_boxed_str);
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(not(feature = "unstable"), feature = "rc", any(feature = "std", feature = "alloc")))]
 forwarded_impl!((T), Arc<T>, Arc::new);
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(not(feature = "unstable"), feature = "rc", any(feature = "std", feature = "alloc")))]
 forwarded_impl!((T), Rc<T>, Rc::new);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -1132,6 +1132,31 @@ where
         T::Owned::deserialize(deserializer).map(Cow::Owned)
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc")))]
+macro_rules! box_forwarded_impl {
+    ($t:ident) => {
+        impl<'de, T: ?Sized> Deserialize<'de> for $t<T>
+        where
+            Box<T>: Deserialize<'de>,
+        {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                Box::deserialize(deserializer).map(Into::into)
+            }
+        }
+    }
+}
+
+#[cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc")))]
+box_forwarded_impl!(Rc);
+
+#[cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc")))]
+box_forwarded_impl!(Arc);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1573,14 +1598,9 @@ where
         D: Deserializer<'de>,
     {
         let value = try!(Deserialize::deserialize(deserializer));
-        unsafe {
-            let ptr = &value as *const T as *const u8;
-            if slice::from_raw_parts(ptr, mem::size_of::<T>()).iter().all(|&b| b == 0) {
-                return Err(Error::custom("expected a non-zero value"));
-            }
-            // Waiting for a safe way to construct NonZero<T>:
-            // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
-            Ok(NonZero::new(value))
+        match NonZero::new(value) {
+            Some(nonzero) => Ok(nonzero),
+            None => Err(Error::custom("expected a non-zero value")),
         }
     }
 }

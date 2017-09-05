@@ -29,9 +29,10 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
     let body = Stmts(serialize_body(&cont, &params));
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
+        let vis = &input.vis;
         quote! {
             impl #impl_generics #ident #ty_generics #where_clause {
-                fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body

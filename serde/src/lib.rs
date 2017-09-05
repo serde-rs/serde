@@ -79,7 +79,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.10")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.12")]
 
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -89,14 +89,40 @@
 //
 //    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
-#![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 
-// Whitelisted clippy lints.
-#![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
-#![cfg_attr(feature = "cargo-clippy", allow(linkedlist))]
-#![cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
-#![cfg_attr(feature = "cargo-clippy", allow(zero_prefixed_literal))]
+#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+// Whitelisted clippy lints
+#![cfg_attr(feature = "cargo-clippy", allow(
+    cast_lossless,
+    doc_markdown,
+    linkedlist,
+    type_complexity,
+    unreadable_literal,
+    zero_prefixed_literal,
+))]
+// Whitelisted clippy_pedantic lints
+#![cfg_attr(feature = "cargo-clippy", allow(
+// integer and float ser/de requires these sorts of casts
+    cast_possible_truncation,
+    cast_possible_wrap,
+    cast_precision_loss,
+    cast_sign_loss,
+// simplifies some macros
+    invalid_upcast_comparisons,
+// things are often more readable this way
+    option_unwrap_used,
+    result_unwrap_used,
+    shadow_reuse,
+    single_match_else,
+    stutter,
+    use_self,
+// not practical
+    missing_docs_in_private_items,
+// alternative is not stable
+    empty_enum,
+    use_debug,
+))]
 
 // Blacklisted Rust lints.
 #![deny(missing_docs, unused_imports)]
