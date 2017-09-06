@@ -522,6 +522,15 @@ declare_tests! {
             Token::MapEnd,
         ],
         Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::U32(0),
+                Token::I32(1),
+
+                Token::U32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
             Token::Struct { name: "Struct", len: 3 },
                 Token::Str("a"),
                 Token::I32(1),
