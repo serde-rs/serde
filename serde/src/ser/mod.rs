@@ -1728,6 +1728,7 @@ pub trait SerializeStruct {
         T: Serialize;
 
     /// Indicate that a struct field has been skipped.
+    #[inline]
     fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
         let _ = key;
         Ok(())
@@ -1779,6 +1780,7 @@ pub trait SerializeStructVariant {
         T: Serialize;
 
     /// Indicate that a struct variant field has been skipped.
+    #[inline]
     fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
         let _ = key;
         Ok(())
