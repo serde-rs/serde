@@ -1011,6 +1011,12 @@ pub trait Deserializer<'de>: Sized {
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
+
+    /// Returns whether the serialized data is human readable or not.
+    ///
+    /// Some formats are not intended to be human readable. For these formats
+    /// a type being serialized may opt to serialize into a more compact form.
+    fn is_human_readable(&self) -> bool { true }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

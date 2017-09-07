@@ -1363,6 +1363,12 @@ pub trait Serializer: Sized {
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Display;
+
+    /// Returns wheter the data format is human readable or not.
+    ///
+    /// Some formats are not intended to be human readable. For these formats
+    /// a type being serialized may opt to serialize into a more compact form.
+    fn is_human_readable(&self) -> bool { true }
 }
 
 /// Returned from `Serializer::serialize_seq`.

@@ -28,7 +28,7 @@ extern crate fnv;
 use self::fnv::FnvHasher;
 
 extern crate serde_test;
-use self::serde_test::{Token, assert_de_tokens, assert_de_tokens_error};
+use self::serde_test::{Token, assert_de_tokens, assert_de_tokens_error, assert_de_tokens_readable};
 
 #[macro_use]
 mod macros;
@@ -1077,4 +1077,40 @@ declare_error_tests! {
         ],
         "invalid type: sequence, expected unit struct UnitStruct",
     }
+}
+
+#[derive(Debug, PartialEq)]
+struct CompactBinary((u8, u8));
+
+impl<'de> serde::Deserialize<'de> for CompactBinary {
+    fn deserialize<D>(deserializer: D) -> Result<CompactBinary, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            <(u8, u8)>::deserialize(deserializer).map(CompactBinary)
+        } else {
+            <&[u8]>::deserialize(deserializer).map(|bytes| {
+                CompactBinary((bytes[0], bytes[1]))
+            })
+        }
+    }
+}
+
+#[test]
+fn test_human_readable() {
+    assert_de_tokens(
+        &CompactBinary((1, 2)),
+        &[
+            Token::Tuple { len: 2},
+            Token::U8(1),
+            Token::U8(2),
+            Token::TupleEnd,
+        ],
+    );
+    assert_de_tokens_readable(
+        &CompactBinary((1, 2)),
+        &[Token::BorrowedBytes(&[1, 2])],
+        false,
+    );
 }

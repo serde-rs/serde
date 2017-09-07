@@ -15,12 +15,17 @@ use token::Token;
 #[derive(Debug)]
 pub struct Serializer<'a> {
     tokens: &'a [Token],
+    is_human_readable: bool,
 }
 
 impl<'a> Serializer<'a> {
     /// Creates the serializer.
     pub fn new(tokens: &'a [Token]) -> Self {
-        Serializer { tokens: tokens }
+        Serializer::readable(tokens, true)
+    }
+
+    pub fn readable(tokens: &'a [Token], is_human_readable: bool) -> Self {
+        Serializer { tokens: tokens, is_human_readable: is_human_readable }
     }
 
     /// Pulls the next token off of the serializer, ignoring it.
@@ -281,6 +286,10 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
             assert_next_token!(self, StructVariant { name, variant, len });
             Ok(Variant { ser: self, end: Token::StructVariantEnd })
         }
+    }
+
+    fn is_human_readable(&self) -> bool {
+        self.is_human_readable
     }
 }
 

@@ -16,6 +16,7 @@ use token::Token;
 #[derive(Debug)]
 pub struct Deserializer<'de> {
     tokens: &'de [Token],
+    is_human_readable: bool,
 }
 
 macro_rules! assert_next_token {
@@ -48,7 +49,11 @@ macro_rules! end_of_tokens {
 
 impl<'de> Deserializer<'de> {
     pub fn new(tokens: &'de [Token]) -> Self {
-        Deserializer { tokens: tokens }
+        Deserializer::readable(tokens, true)
+    }
+
+    pub fn readable(tokens: &'de [Token], is_human_readable: bool) -> Self {
+        Deserializer { tokens: tokens, is_human_readable: is_human_readable }
     }
 
     fn peek_token_opt(&self) -> Option<Token> {
@@ -363,6 +368,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
             _ => self.deserialize_any(visitor),
         }
+    }
+
+    fn is_human_readable(&self) -> bool {
+        self.is_human_readable
     }
 }
 
