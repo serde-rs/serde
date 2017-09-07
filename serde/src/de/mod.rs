@@ -1120,7 +1120,7 @@ pub trait Visitor<'de>: Sized {
         self.visit_i64(v as i64)
     }
 
-    /// The input contains an `i32`.
+    /// The input contains an `i64`.
     ///
     /// The default implementation fails with a type error.
     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
