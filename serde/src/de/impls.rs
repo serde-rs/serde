@@ -868,38 +868,113 @@ map_impl!(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+macro_rules! count {
+    () => {
+        0
+    };
+    ($first: expr $(,$rest: expr)*) => {
+        1 + count!($($rest),*)
+    }
+}
+
 #[cfg(feature = "std")]
-macro_rules! parse_impl {
-    ($ty:ty) => {
+macro_rules! parse_ip_impl {
+    ($ty:ty; $($size: expr),*) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
-                let s = try!(String::deserialize(deserializer));
-                s.parse().map_err(Error::custom)
+                struct ParseVisitor;
+                impl<'de> Visitor<'de> for ParseVisitor {
+                    type Value = $ty;
+
+                    #[allow(unused_assignments)]
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        write!(formatter, "Expected bytes of length ")?;
+                        let mut i = 0;
+                        $(
+                            let sep = match i {
+                                0 => "",
+                                _ if i + 1 == count!($size) => " or ",
+                                _ => ", ",
+                            };
+                            write!(formatter, "{}{}", sep, $size)?;
+                            i += 1;
+                        )*
+                        Ok(())
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<$ty, E>
+                    where
+                        E: Error,
+                    {
+                        value.parse().map_err(Error::custom)
+                    }
+
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<$ty, E>
+                    where
+                        E: Error,
+                    {
+                        match value.len() {
+                            $(
+                                $size => {
+                                    let mut buffer = [0; $size];
+                                    buffer.copy_from_slice(value);
+                                    Ok(<$ty>::from(buffer))
+                                }
+                            )*
+                            _ => Err(Error::invalid_length(value.len(), &self)),
+                        }
+                    }
+                }
+                if deserializer.is_human_readable() {
+                    let s = try!(String::deserialize(deserializer));
+                    s.parse().map_err(Error::custom)
+                } else {
+                    deserializer.deserialize_bytes(ParseVisitor)
+                }
             }
         }
     }
 }
 
 #[cfg(feature = "std")]
-parse_impl!(net::IpAddr);
+parse_ip_impl!(net::IpAddr; 16, 4);
 
 #[cfg(feature = "std")]
-parse_impl!(net::Ipv4Addr);
+parse_ip_impl!(net::Ipv4Addr; 4);
 
 #[cfg(feature = "std")]
-parse_impl!(net::Ipv6Addr);
+parse_ip_impl!(net::Ipv6Addr; 16);
 
 #[cfg(feature = "std")]
-parse_impl!(net::SocketAddr);
+macro_rules! parse_socket_impl {
+    ($ty:ty, $new: expr) => {
+        impl<'de> Deserialize<'de> for $ty {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                if deserializer.is_human_readable() {
+                    let s = try!(String::deserialize(deserializer));
+                    s.parse().map_err(Error::custom)
+                } else {
+                    <(_, u16)>::deserialize(deserializer).map(|(ip, port)| $new(ip, port))
+                }
+            }
+        }
+    }
+}
 
 #[cfg(feature = "std")]
-parse_impl!(net::SocketAddrV4);
+parse_socket_impl!(net::SocketAddr, net::SocketAddr::new);
 
 #[cfg(feature = "std")]
-parse_impl!(net::SocketAddrV6);
+parse_socket_impl!(net::SocketAddrV4, net::SocketAddrV4::new);
+
+#[cfg(feature = "std")]
+parse_socket_impl!(net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(ip, port, 0, 0));
 
 ////////////////////////////////////////////////////////////////////////////////
 
