@@ -242,6 +242,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         params,
         false,
         quote!(_serde::ser::SerializeStruct::serialize_field),
+        quote!(_serde::ser::SerializeStruct::skip_field),
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -707,15 +708,23 @@ fn serialize_struct_variant<'a>(
     fields: &[Field],
     name: &str,
 ) -> Fragment {
-    let method = match context {
+    let (method, skip_method) = match context {
         StructVariant::ExternallyTagged { .. } => {
-            quote!(_serde::ser::SerializeStructVariant::serialize_field)
+            (
+                quote!(_serde::ser::SerializeStructVariant::serialize_field),
+                quote!(_serde::ser::SerializeStructVariant::skip_field),
+            )
         }
         StructVariant::InternallyTagged { .. } |
-        StructVariant::Untagged => quote!(_serde::ser::SerializeStruct::serialize_field),
+        StructVariant::Untagged => {
+            (
+                quote!(_serde::ser::SerializeStruct::serialize_field),
+                quote!(_serde::ser::SerializeStruct::skip_field),
+            )
+        }
     };
 
-    let serialize_fields = serialize_struct_visitor(fields, params, true, method);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, method, skip_method);
 
     let mut serialized_fields = fields
         .iter()
@@ -829,6 +838,7 @@ fn serialize_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     func: Tokens,
+    skip_func: Tokens,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -859,7 +869,15 @@ fn serialize_struct_visitor(
 
                 match skip {
                     None => ser,
-                    Some(skip) => quote!(if !#skip { #ser }),
+                    Some(skip) => {
+                        quote! {
+                            if !#skip {
+                                #ser
+                            } else {
+                                try!(#skip_func(&mut __serde_state, #key_expr));
+                            }
+                        }
+                    }
                 }
             },
         )
