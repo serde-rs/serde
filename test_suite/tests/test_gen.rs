@@ -10,6 +10,8 @@
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
+#![deny(warnings)]
+
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
 // Clippy false positive
@@ -491,6 +493,28 @@ fn test_gen() {
         Unit,
     }
     assert_ser::<UntaggedVariantWith>();
+
+    #[derive(Serialize, Deserialize)]
+    struct StaticStrStruct<'a> {
+        a: &'a str,
+        b: &'static str,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct StaticStrTupleStruct<'a>(&'a str, &'static str);
+
+    #[derive(Serialize, Deserialize)]
+    struct StaticStrNewtypeStruct(&'static str);
+
+    #[derive(Serialize, Deserialize)]
+    enum StaticStrEnum<'a> {
+        Struct {
+            a: &'a str,
+            b: &'static str,
+        },
+        Tuple(&'a str, &'static str),
+        Newtype(&'static str),
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

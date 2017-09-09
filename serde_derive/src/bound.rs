@@ -15,7 +15,7 @@ use internals::attr;
 
 macro_rules! path {
     ($($path:tt)+) => {
-        syn::parse_path(stringify!($($path)+)).unwrap()
+        syn::parse_path(quote!($($path)+).as_str()).unwrap()
     };
 }
 
