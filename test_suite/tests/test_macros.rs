@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![deny(trivial_numeric_casts)]
+
 #[macro_use]
 extern crate serde_derive;
 
