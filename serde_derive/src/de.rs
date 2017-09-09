@@ -1428,7 +1428,7 @@ fn deserialize_identifier(
                     #variant_indices => _serde::export::Ok(#constructors),
                 )*
                 _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value as u64),
+                            _serde::de::Unexpected::Unsigned(__value),
                             &#fallthrough_msg))
             }
         }
