@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
+
 #[macro_use]
 extern crate serde_derive;
 
