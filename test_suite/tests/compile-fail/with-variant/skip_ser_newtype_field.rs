@@ -16,10 +16,4 @@ enum Enum {
     Newtype(#[serde(skip_serializing)] String),
 }
 
-fn serialize_some_newtype_variant<S>(_: &String) -> StdResult<S::Ok, S::Error>
-    where S: Serializer,
-{
-    unimplemented!()
-}
-
 fn main() { }

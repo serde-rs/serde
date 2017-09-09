@@ -16,12 +16,4 @@ enum Enum {
     Newtype(#[serde(skip_serializing_if = "always")] String),
 }
 
-fn serialize_some_newtype_variant<S>(_: &String) -> StdResult<S::Ok, S::Error>
-    where S: Serializer,
-{
-    unimplemented!()
-}
-
-fn always<T>(_: &T) -> bool { true }
-
 fn main() { }

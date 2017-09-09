@@ -16,10 +16,4 @@ enum Enum {
     Newtype(#[serde(skip_deserializing)] String),
 }
 
-fn deserialize_some_newtype_variant<'de, D>(_: D) -> StdResult<String, D::Error>
-    where D: Deserializer<'de>,
-{
-    unimplemented!()
-}
-
 fn main() { }

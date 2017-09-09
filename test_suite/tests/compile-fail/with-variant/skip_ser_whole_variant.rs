@@ -17,10 +17,4 @@ enum Enum {
     Unit,
 }
 
-fn serialize_some_unit_variant<S>(_: S) -> StdResult<S::Ok, S::Error>
-    where S: Serializer,
-{
-    unimplemented!()
-}
-
 fn main() { }

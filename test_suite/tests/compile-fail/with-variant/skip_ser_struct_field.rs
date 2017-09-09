@@ -20,10 +20,4 @@ enum Enum {
     },
 }
 
-fn serialize_some_other_variant<S>(_: &String, _: Option<&u8>, _: S) -> StdResult<S::Ok, S::Error>
-    where S: Serializer,
-{
-    unimplemented!()
-}
-
 fn main() { }

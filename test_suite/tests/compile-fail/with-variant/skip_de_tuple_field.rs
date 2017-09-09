@@ -16,10 +16,4 @@ enum Enum {
     Tuple(#[serde(skip_deserializing)] String, u8),
 }
 
-fn deserialize_some_other_variant<'de, D>(_: D) -> StdResult<(String, u8), D::Error>
-    where D: Deserializer<'de>,
-{
-    unimplemented!()
-}
-
 fn main() { }
