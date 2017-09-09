@@ -510,6 +510,8 @@ pub struct Variant {
     skip_deserializing: bool,
     skip_serializing: bool,
     other: bool,
+    serialize_with: Option<syn::Path>,
+    deserialize_with: Option<syn::Path>,
 }
 
 impl Variant {
@@ -520,6 +522,8 @@ impl Variant {
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
         let mut other = BoolAttr::none(cx, "other");
+        let mut serialize_with = Attr::none(cx, "serialize_with");
+        let mut deserialize_with = Attr::none(cx, "deserialize_with");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -569,6 +573,20 @@ impl Variant {
                         other.set_true();
                     }
 
+                    // Parse `#[serde(serialize_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            serialize_with.set(path);
+                        }
+                    }
+
+                    // Parse `#[serde(deserialize_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            deserialize_with.set(path);
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde variant attribute `{}`", meta_item.name()));
                     }
@@ -595,6 +613,8 @@ impl Variant {
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
             other: other.get(),
+            serialize_with: serialize_with.get(),
+            deserialize_with: deserialize_with.get(),
         }
     }
 
@@ -625,6 +645,14 @@ impl Variant {
 
     pub fn other(&self) -> bool {
         self.other
+    }
+
+    pub fn serialize_with(&self) -> Option<&syn::Path> {
+        self.serialize_with.as_ref()
+    }
+
+    pub fn deserialize_with(&self) -> Option<&syn::Path> {
+        self.deserialize_with.as_ref()
     }
 }
 

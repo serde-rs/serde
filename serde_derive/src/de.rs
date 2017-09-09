@@ -157,14 +157,17 @@ fn build_generics(cont: &Container) -> syn::Generics {
 // deserialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Deserialize` bound where T is the type of the field.
-fn needs_deserialize_bound(attrs: &attr::Field) -> bool {
-    !attrs.skip_deserializing() && attrs.deserialize_with().is_none() && attrs.de_bound().is_none()
+fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -> bool {
+    !field.skip_deserializing() &&
+    field.deserialize_with().is_none() &&
+    field.de_bound().is_none() &&
+    variant.map_or(true, |variant| variant.deserialize_with().is_none())
 }
 
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
-fn requires_default(attrs: &attr::Field) -> bool {
-    attrs.default() == &attr::Default::Default
+fn requires_default(field: &attr::Field, _variant: Option<&attr::Variant>) -> bool {
+    field.default() == &attr::Default::Default
 }
 
 // The union of lifetimes borrowed by each field of the container.
@@ -372,7 +375,7 @@ fn deserialize_seq(
                         quote!(try!(_serde::de::SeqAccess::next_element::<#field_ty>(&mut __seq)))
                     }
                     Some(path) => {
-                        let (wrapper, wrapper_ty) = wrap_deserialize_with(
+                        let (wrapper, wrapper_ty) = wrap_deserialize_field_with(
                             params, field.ty, path);
                         quote!({
                             #wrapper
@@ -428,7 +431,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
+            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
             quote!({
                 #wrapper
                 try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
@@ -1084,6 +1087,16 @@ fn deserialize_externally_tagged_variant(
     variant: &Variant,
     cattrs: &attr::Container,
 ) -> Fragment {
+    if let Some(path) = variant.attrs.deserialize_with() {
+        let (wrapper, wrapper_ty, unwrap_fn) =
+            wrap_deserialize_variant_with(params, &variant, path);
+        return quote_block! {
+            #wrapper
+            _serde::export::Result::map(
+                _serde::de::VariantAccess::newtype_variant::<#wrapper_ty>(__variant), #unwrap_fn)
+        };
+    }
+
     let variant_ident = &variant.ident;
 
     match variant.style {
@@ -1112,6 +1125,10 @@ fn deserialize_internally_tagged_variant(
     cattrs: &attr::Container,
     deserializer: Tokens,
 ) -> Fragment {
+    if variant.attrs.deserialize_with().is_some() {
+        return deserialize_untagged_variant(params, variant, cattrs, deserializer);
+    }
+
     let variant_ident = &variant.ident;
 
     match variant.style {
@@ -1137,6 +1154,16 @@ fn deserialize_untagged_variant(
     cattrs: &attr::Container,
     deserializer: Tokens,
 ) -> Fragment {
+    if let Some(path) = variant.attrs.deserialize_with() {
+        let (wrapper, wrapper_ty, unwrap_fn) =
+            wrap_deserialize_variant_with(params, &variant, path);
+        return quote_block! {
+            #wrapper
+            _serde::export::Result::map(
+                <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer), #unwrap_fn)
+        };
+    }
+
     let variant_ident = &variant.ident;
 
     match variant.style {
@@ -1198,7 +1225,7 @@ fn deserialize_externally_tagged_newtype_variant(
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
+            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
             quote_block! {
                 #wrapper
                 _serde::export::Result::map(
@@ -1226,7 +1253,7 @@ fn deserialize_untagged_newtype_variant(
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_with(params, field.ty, path);
+            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
             quote_block! {
                 #wrapper
                 _serde::export::Result::map(
@@ -1529,7 +1556,7 @@ fn deserialize_map(
                     }
                 }
                 Some(path) => {
-                    let (wrapper, wrapper_ty) = wrap_deserialize_with(
+                    let (wrapper, wrapper_ty) = wrap_deserialize_field_with(
                         params, field.ty, path);
                     quote!({
                         #wrapper
@@ -1662,7 +1689,7 @@ fn field_i(i: usize) -> Ident {
 /// in a trait to prevent it from accessing the internal `Deserialize` state.
 fn wrap_deserialize_with(
     params: &Parameters,
-    field_ty: &syn::Ty,
+    value_ty: Tokens,
     deserialize_with: &syn::Path,
 ) -> (Tokens, Tokens) {
     let this = &params.this;
@@ -1670,7 +1697,7 @@ fn wrap_deserialize_with(
 
     let wrapper = quote! {
         struct __DeserializeWith #de_impl_generics #where_clause {
-            value: #field_ty,
+            value: #value_ty,
             phantom: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&'de ()>,
         }
@@ -1691,6 +1718,68 @@ fn wrap_deserialize_with(
     let wrapper_ty = quote!(__DeserializeWith #de_ty_generics);
 
     (wrapper, wrapper_ty)
+}
+
+fn wrap_deserialize_field_with(
+    params: &Parameters,
+    field_ty: &syn::Ty,
+    deserialize_with: &syn::Path,
+) -> (Tokens, Tokens) {
+    wrap_deserialize_with(params, quote!(#field_ty), deserialize_with)
+}
+
+fn wrap_deserialize_variant_with(
+    params: &Parameters,
+    variant: &Variant,
+    deserialize_with: &syn::Path,
+) -> (Tokens, Tokens, Tokens) {
+    let this = &params.this;
+    let variant_ident = &variant.ident;
+
+    let field_tys = variant.fields.iter().map(|field| field.ty);
+    let (wrapper, wrapper_ty) =
+        wrap_deserialize_with(params, quote!((#(#field_tys),*)), deserialize_with);
+
+    let field_access = (0..variant.fields.len()).map(|n| Ident::new(format!("{}", n)));
+    let unwrap_fn = match variant.style {
+        Style::Struct => {
+            let field_idents = variant.fields.iter().map(|field| field.ident.as_ref().unwrap());
+            quote! {
+                {
+                    |__wrap| {
+                        #this::#variant_ident { #(#field_idents: __wrap.value.#field_access),* }
+                    }
+                }
+            }
+        }
+        Style::Tuple => {
+            quote! {
+                {
+                    |__wrap| {
+                        #this::#variant_ident(#(__wrap.value.#field_access),*)
+                    }
+                }
+            }
+        }
+        Style::Newtype => {
+            quote! {
+                {
+                    |__wrap| {
+                        #this::#variant_ident(__wrap.value)
+                    }
+                }
+            }
+        }
+        Style::Unit => {
+            quote! {
+                {
+                    |__wrap| { #this::#variant_ident }
+                }
+            }
+        }
+    };
+
+    (wrapper, wrapper_ty, unwrap_fn)
 }
 
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
