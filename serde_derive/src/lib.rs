@@ -22,7 +22,7 @@
 #![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]
 
 // The `quote!` macro requires deep recursion.
-#![recursion_limit = "192"]
+#![recursion_limit = "384"]
 
 extern crate syn;
 #[macro_use]
@@ -30,6 +30,7 @@ extern crate quote;
 
 extern crate serde_derive_internals as internals;
 
+extern crate proc_macro2;
 extern crate proc_macro;
 use proc_macro::TokenStream;
 
@@ -43,18 +44,18 @@ mod de;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
-    let input = syn::parse_derive_input(&input.to_string()).unwrap();
+    let input = syn::parse(input).unwrap();
     match ser::expand_derive_serialize(&input) {
-        Ok(expanded) => expanded.parse().unwrap(),
+        Ok(expanded) => proc_macro2::TokenStream::from(expanded).into(),
         Err(msg) => panic!(msg),
     }
 }
 
 #[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
-    let input = syn::parse_derive_input(&input.to_string()).unwrap();
+    let input = syn::parse(input).unwrap();
     match de::expand_derive_deserialize(&input) {
-        Ok(expanded) => expanded.parse().unwrap(),
+        Ok(expanded) => proc_macro2::TokenStream::from(expanded).into(),
         Err(msg) => panic!(msg),
     }
 }

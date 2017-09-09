@@ -6,8 +6,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use syn::{self, Ident};
+use proc_macro2::Term;
 use quote::{self, Tokens, ToTokens};
+use syn::{self, Ident};
+use syn::delimited::Delimited;
+use syn::Span;
 
 use bound;
 use fragment::{Fragment, Expr, Stmts, Match};
@@ -15,6 +18,7 @@ use internals::ast::{Body, Container, Field, Style, Variant};
 use internals::{self, attr};
 
 use std::collections::BTreeSet;
+use std::mem;
 
 pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
     let ctxt = internals::Ctxt::new();
@@ -24,7 +28,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
-    let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
+    let dummy_const = Ident::from(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
     let body = Stmts(deserialize_body(&cont, &params));
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
@@ -105,14 +109,15 @@ impl Parameters {
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Deserializer methods.
     fn type_name(&self) -> &str {
-        self.this.segments.last().unwrap().ident.as_ref()
+        self.this.segments.last().unwrap().item().ident.as_ref()
     }
 
     fn de_lifetime_def(&self) -> syn::LifetimeDef {
         syn::LifetimeDef {
             attrs: Vec::new(),
-            lifetime: syn::Lifetime::new("'de"),
+            lifetime: syn::Lifetime::new(Term::intern("'de"), Span::default()),
             bounds: self.borrowed.iter().cloned().collect(),
+            colon_token: None,
         }
     }
 }
@@ -164,7 +169,7 @@ fn needs_deserialize_bound(attrs: &attr::Field) -> bool {
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
 fn requires_default(attrs: &attr::Field) -> bool {
-    attrs.default() == &attr::Default::Default
+    *attrs.default() == attr::Default::Default
 }
 
 // The union of lifetimes borrowed by each field of the container.
@@ -1655,7 +1660,7 @@ fn deserialize_map(
 }
 
 fn field_i(i: usize) -> Ident {
-    Ident::new(format!("__field{}", i))
+    Ident::from(format!("__field{}", i))
 }
 
 /// This function wraps the expression in `#[serde(deserialize_with = "...")]`
@@ -1733,7 +1738,12 @@ struct DeImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        generics.lifetimes.insert(0, self.0.de_lifetime_def());
+        let mut lifetimes = Delimited::new();
+        lifetimes.push_first(self.0.de_lifetime_def());
+        for lifetime in mem::replace(&mut generics.lifetimes, Delimited::default()) {
+            lifetimes.push_default(lifetime.into_item());
+        }
+        generics.lifetimes = lifetimes;
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
     }
@@ -1744,9 +1754,13 @@ struct DeTyGenerics<'a>(&'a syn::Generics);
 impl<'a> ToTokens for DeTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.clone();
-        generics
-            .lifetimes
-            .insert(0, syn::LifetimeDef::new("'de"));
+        let lifetime = syn::Lifetime::new(Term::intern("'de"), Span::default());
+        let mut lifetimes = Delimited::new();
+        lifetimes.push_first(syn::LifetimeDef::new(lifetime));
+        for lifetime in mem::replace(&mut generics.lifetimes, Delimited::default()) {
+            lifetimes.push_default(lifetime.into_item());
+        }
+        generics.lifetimes = lifetimes;
         let (_, ty_generics, _) = generics.split_for_impl();
         ty_generics.to_tokens(tokens);
     }
