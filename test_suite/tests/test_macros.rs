@@ -1149,12 +1149,19 @@ fn test_rename_all() {
         SerializeMap {
             serialize: bool,
             serialize_seq: bool,
-        },
+        }
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     #[serde(rename_all = "PascalCase")]
     struct S {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
+    struct ScreamingKebab {
         serialize: bool,
         serialize_seq: bool,
     }
@@ -1217,5 +1224,20 @@ fn test_rename_all() {
             Token::Bool(true),
             Token::StructEnd,
         ],
+    );
+
+    assert_tokens(
+        &ScreamingKebab {
+             serialize: true,
+             serialize_seq: true,
+         },
+        &[
+            Token::Struct { name: "ScreamingKebab", len: 2 },
+            Token::Str("SERIALIZE"),
+            Token::Bool(true),
+            Token::Str("SERIALIZE-SEQ"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ]
     );
 }
