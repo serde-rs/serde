@@ -506,9 +506,16 @@ impl Serialize for net::IpAddr {
     where
         S: Serializer,
     {
-        match *self {
-            net::IpAddr::V4(ref a) => a.serialize(serializer),
-            net::IpAddr::V6(ref a) => a.serialize(serializer),
+        if serializer.is_human_readable() {
+            match *self {
+                net::IpAddr::V4(ref a) => a.serialize(serializer),
+                net::IpAddr::V6(ref a) => a.serialize(serializer),
+            }
+        } else {
+            match *self {
+                net::IpAddr::V4(ref a) => (0u8, a).serialize(serializer),
+                net::IpAddr::V6(ref a) => (1u8, a).serialize(serializer),
+            }
         }
     }
 }

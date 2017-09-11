@@ -1016,6 +1016,9 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// Some formats are not intended to be human readable. For these formats
     /// a type being serialized may opt to serialize into a more compact form.
+    ///
+    /// NOTE: Implementing this method and returning `false` is considered a breaking
+    /// change as it may alter how any given type tries to deserialize itself.
     fn is_human_readable(&self) -> bool { true }
 }
 
