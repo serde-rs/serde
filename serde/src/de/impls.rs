@@ -868,71 +868,19 @@ map_impl!(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-macro_rules! count {
-    () => {
-        0
-    };
-    ($first: expr $(,$rest: expr)*) => {
-        1 + count!($($rest),*)
-    }
-}
-
 #[cfg(feature = "std")]
 macro_rules! parse_ip_impl {
-    ($ty:ty; $($size: expr),*) => {
+    ($ty:ty; $size: expr) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
-                struct ParseVisitor;
-                impl<'de> Visitor<'de> for ParseVisitor {
-                    type Value = $ty;
-
-                    #[allow(unused_assignments)]
-                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        write!(formatter, "Expected bytes of length ")?;
-                        let mut i = 0;
-                        $(
-                            let sep = match i {
-                                0 => "",
-                                _ if i + 1 == count!($size) => " or ",
-                                _ => ", ",
-                            };
-                            write!(formatter, "{}{}", sep, $size)?;
-                            i += 1;
-                        )*
-                        Ok(())
-                    }
-
-                    fn visit_str<E>(self, value: &str) -> Result<$ty, E>
-                    where
-                        E: Error,
-                    {
-                        value.parse().map_err(Error::custom)
-                    }
-
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<$ty, E>
-                    where
-                        E: Error,
-                    {
-                        match value.len() {
-                            $(
-                                $size => {
-                                    let mut buffer = [0; $size];
-                                    buffer.copy_from_slice(value);
-                                    Ok(<$ty>::from(buffer))
-                                }
-                            )*
-                            _ => Err(Error::invalid_length(value.len(), &self)),
-                        }
-                    }
-                }
                 if deserializer.is_human_readable() {
                     let s = try!(String::deserialize(deserializer));
                     s.parse().map_err(Error::custom)
                 } else {
-                    deserializer.deserialize_bytes(ParseVisitor)
+                    <[u8; $size]>::deserialize(deserializer).map(<$ty>::from)
                 }
             }
         }
@@ -940,7 +888,40 @@ macro_rules! parse_ip_impl {
 }
 
 #[cfg(feature = "std")]
-parse_ip_impl!(net::IpAddr; 16, 4);
+impl<'de> Deserialize<'de> for net::IpAddr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let s = try!(String::deserialize(deserializer));
+            s.parse().map_err(Error::custom)
+        } else {
+            struct EnumVisitor;
+            impl<'de> Visitor<'de> for EnumVisitor {
+                type Value = net::IpAddr;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("a IpAddr")
+                }
+
+
+                fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+                where
+                    A: EnumAccess<'de>,
+                {
+                    match try!(data.variant()) {
+                        (0u32, v) => v.newtype_variant().map(net::IpAddr::V4),
+                        (1u32, v) => v.newtype_variant().map(net::IpAddr::V6),
+                        (_, _) => Err(Error::custom("Invalid IpAddr variant")),
+                    }
+                }
+            }
+            const VARIANTS: &[&str] = &["V4", "V6"];
+            deserializer.deserialize_enum("IpAddr", VARIANTS, EnumVisitor)
+        }
+    }
+}
 
 #[cfg(feature = "std")]
 parse_ip_impl!(net::Ipv4Addr; 4);

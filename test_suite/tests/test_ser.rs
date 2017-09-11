@@ -78,6 +78,19 @@ macro_rules! declare_tests {
     }
 }
 
+macro_rules! declare_non_human_readable_tests {
+    ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
+        $(
+            #[test]
+            fn $name() {
+                $(
+                    assert_ser_tokens_readable(&$value, $tokens, false);
+                )+
+            }
+        )+
+    }
+}
+
 declare_tests! {
     test_unit {
         () => &[Token::Unit],
@@ -394,6 +407,55 @@ declare_tests! {
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
+        ],
+    }
+}
+
+declare_non_human_readable_tests!{
+    test_non_human_readable_net_ipv4addr {
+        net::Ipv4Addr::from(*b"1234") => &seq![
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+        ],
+    }
+    test_non_human_readable_net_ipv6addr {
+        net::Ipv6Addr::from(*b"1234567890123456") => &seq![
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+        ],
+    }
+    test_non_human_readable_net_socketaddr {
+        net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd,
+        ],
+        net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd,
+        ],
+        net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd,
         ],
     }
 }

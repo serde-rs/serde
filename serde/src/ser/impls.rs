@@ -569,7 +569,7 @@ impl Serialize for net::SocketAddrV4 {
             const MAX_LEN: usize = 21;
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
-            (self.ip().octets(), self.port()).serialize(serializer)
+            (self.ip(), self.port()).serialize(serializer)
         }
     }
 }
@@ -585,7 +585,7 @@ impl Serialize for net::SocketAddrV6 {
             const MAX_LEN: usize = 47;
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
-            (self.ip().octets(), self.port()).serialize(serializer)
+            (self.ip(), self.port()).serialize(serializer)
         }
     }
 }

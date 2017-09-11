@@ -110,15 +110,15 @@ enum EnumSkipAll {
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_test {
-    ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
+    ($name:ident $readable: ident { $($value:expr => $tokens:expr,)+ }) => {
         #[test]
         fn $name() {
             $(
                 // Test ser/de roundtripping
-                assert_de_tokens(&$value, $tokens);
+                assert_de_tokens_readable(&$value, $tokens, $readable);
 
                 // Test that the tokens are ignorable
-                assert_de_tokens_ignore($tokens);
+                assert_de_tokens_ignore($tokens, true);
             )+
         }
     }
@@ -127,7 +127,7 @@ macro_rules! declare_test {
 macro_rules! declare_tests {
     ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
         $(
-            declare_test!($name { $($value => $tokens,)+ });
+            declare_test!($name true { $($value => $tokens,)+ });
         )+
     }
 }
@@ -143,7 +143,16 @@ macro_rules! declare_error_tests {
     }
 }
 
-fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
+macro_rules! declare_non_human_readable_tests {
+    ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
+        $(
+            declare_test!($name false { $($value => $tokens,)+ });
+        )+
+    }
+}
+
+
+fn assert_de_tokens_ignore(ignorable_tokens: &[Token], readable: bool) {
     #[derive(PartialEq, Debug, Deserialize)]
     struct IgnoreBase {
         a: i32,
@@ -163,7 +172,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
             .chain(vec![Token::MapEnd].into_iter())
             .collect();
 
-    let mut de = serde_test::Deserializer::new(&concated_tokens);
+    let mut de = serde_test::Deserializer::readable(&concated_tokens, readable);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
     assert_eq!(base, IgnoreBase { a: 1 });
 }
@@ -754,6 +763,70 @@ declare_tests! {
     }
 }
 
+declare_non_human_readable_tests!{
+    test_non_human_readable_net_ipv4addr {
+        net::Ipv4Addr::from(*b"1234") => &seq![
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd
+        ],
+    }
+    test_non_human_readable_net_ipv6addr {
+        net::Ipv6Addr::from(*b"1234567890123456") => &seq![
+            Token::Tuple { len: 4 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd
+        ],
+
+    }
+    test_non_human_readable_net_socketaddr {
+        net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
+            Token::Tuple { len: 2 },
+            Token::Enum { name: "IpAddr" },
+            Token::U32(1),
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+        net::SocketAddr::from((*b"1234", 1234)) => &seq![
+            Token::Tuple { len: 2 },
+            Token::Enum { name: "IpAddr" },
+            Token::U32(0),
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+        net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+        net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+    }
+}
+
 #[cfg(feature = "unstable")]
 declare_tests! {
     test_rc_dst {
@@ -795,7 +868,7 @@ fn test_osstring() {
     ];
 
     assert_de_tokens(&value, &tokens);
-    assert_de_tokens_ignore(&tokens);
+    assert_de_tokens_ignore(&tokens, true);
 }
 
 #[cfg(windows)]
@@ -815,7 +888,7 @@ fn test_osstring() {
     ];
 
     assert_de_tokens(&value, &tokens);
-    assert_de_tokens_ignore(&tokens);
+    assert_de_tokens_ignore(&tokens, true);
 }
 
 #[cfg(feature = "unstable")]
