@@ -911,13 +911,13 @@ impl<'de> Deserialize<'de> for net::IpAddr {
                     A: EnumAccess<'de>,
                 {
                     match try!(data.variant()) {
-                        (0u32, v) => v.newtype_variant().map(net::IpAddr::V4),
-                        (1u32, v) => v.newtype_variant().map(net::IpAddr::V6),
+                        (0_u32, v) => v.newtype_variant().map(net::IpAddr::V4),
+                        (1_u32, v) => v.newtype_variant().map(net::IpAddr::V6),
                         (_, _) => Err(Error::custom("Invalid IpAddr variant")),
                     }
                 }
             }
-            const VARIANTS: &[&str] = &["V4", "V6"];
+            const VARIANTS: &'static [&'static str] = &["V4", "V6"];
             deserializer.deserialize_enum("IpAddr", VARIANTS, EnumVisitor)
         }
     }
