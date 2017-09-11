@@ -513,8 +513,10 @@ impl Serialize for net::IpAddr {
             }
         } else {
             match *self {
-                net::IpAddr::V4(ref a) => (0u8, a).serialize(serializer),
-                net::IpAddr::V6(ref a) => (1u8, a).serialize(serializer),
+                net::IpAddr::V4(ref a) => 
+                    serializer.serialize_newtype_variant("IpAddr", 0, "V4", a),
+                net::IpAddr::V6(ref a) =>
+                    serializer.serialize_newtype_variant("IpAddr", 1, "V6", a),
             }
         }
     }
@@ -558,9 +560,18 @@ impl Serialize for net::SocketAddr {
     where
         S: Serializer,
     {
-        match *self {
-            net::SocketAddr::V4(ref addr) => addr.serialize(serializer),
-            net::SocketAddr::V6(ref addr) => addr.serialize(serializer),
+        if serializer.is_human_readable() {
+            match *self {
+                net::SocketAddr::V4(ref addr) => addr.serialize(serializer),
+                net::SocketAddr::V6(ref addr) => addr.serialize(serializer),
+            }
+        } else {
+            match *self {
+                net::SocketAddr::V4(ref addr) =>
+                    serializer.serialize_newtype_variant("SocketAddr", 0, "V4", addr),
+                net::SocketAddr::V6(ref addr) =>
+                    serializer.serialize_newtype_variant("SocketAddr", 1, "V6", addr),
+            }
         }
     }
 }
