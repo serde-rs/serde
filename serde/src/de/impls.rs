@@ -1007,7 +1007,7 @@ impl<'de> Deserialize<'de> for net::IpAddr {
             let s = try!(String::deserialize(deserializer));
             s.parse().map_err(Error::custom)
         } else {
-            use self::net::IpAddr;
+            use lib::net::IpAddr;
             deserialize_enum!{
                 IpAddr IpAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
                 "`V4` or `V6`",
@@ -1052,7 +1052,7 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
             let s = try!(String::deserialize(deserializer));
             s.parse().map_err(Error::custom)
         } else {
-            use self::net::SocketAddr;
+            use lib::net::SocketAddr;
             deserialize_enum!{
                 SocketAddr SocketAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
                 "`V4` or `V6`",
