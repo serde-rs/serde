@@ -887,13 +887,17 @@ macro_rules! parse_ip_impl {
     }
 }
 
-macro_rules! deserialize_enum {
-    ($name: ident $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* ) $deserializer: expr) => {
+macro_rules! variant_identifier {
+    (
+        $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* )
+        $expecting_message: expr,
+        $variants_name: ident
+    ) => {
         enum $name_kind {
             $( $variant ),*
         }
 
-        static VARIANTS: &'static [&'static str] = &[ $( stringify!($variant) ),*];
+        static $variants_name: &'static [&'static str] = &[ $( stringify!($variant) ),*];
 
         impl<'de> Deserialize<'de> for $name_kind {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -906,7 +910,7 @@ macro_rules! deserialize_enum {
                     type Value = $name_kind;
 
                     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("`V4` or `V6`")
+                        formatter.write_str($expecting_message)
                     }
 
                     fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
@@ -929,7 +933,7 @@ macro_rules! deserialize_enum {
                             $(
                                 stringify!($variant) => Ok($name_kind :: $variant),
                             )*
-                            _ => Err(Error::unknown_variant(value, VARIANTS)),
+                            _ => Err(Error::unknown_variant(value, $variants_name)),
                         }
                     }
 
@@ -943,7 +947,7 @@ macro_rules! deserialize_enum {
                             )*
                             _ => {
                                 match str::from_utf8(value) {
-                                    Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                    Ok(value) => Err(Error::unknown_variant(value, $variants_name)),
                                     Err(_) => Err(Error::invalid_value(Unexpected::Bytes(value), &self)),
                                 }
                             }
@@ -953,6 +957,20 @@ macro_rules! deserialize_enum {
 
                 deserializer.deserialize_identifier(KindVisitor)
             }
+        }
+    }
+}
+
+macro_rules! deserialize_enum {
+    (
+        $name: ident $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* )
+        $expecting_message: expr,
+        $deserializer: expr
+    ) => {
+        variant_identifier!{
+            $name_kind ( $($variant; $bytes; $index),* )
+            $expecting_message,
+            VARIANTS
         }
 
         struct EnumVisitor;
@@ -991,7 +1009,9 @@ impl<'de> Deserialize<'de> for net::IpAddr {
         } else {
             use self::net::IpAddr;
             deserialize_enum!{
-                IpAddr IpAddrKind (V4; b"V4"; 0, V6; b"V6"; 1) deserializer
+                IpAddr IpAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
+                "`V4` or `V6`",
+                deserializer
             }
         }
     }
@@ -1034,7 +1054,9 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
         } else {
             use self::net::SocketAddr;
             deserialize_enum!{
-                SocketAddr SocketAddrKind (V4; b"V4"; 0, V6; b"V6"; 1) deserializer
+                SocketAddr SocketAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
+                "`V4` or `V6`",
+                deserializer
             }
         }
     }
@@ -1129,70 +1151,10 @@ impl<'de> Deserialize<'de> for PathBuf {
 //    #[derive(Deserialize)]
 //    #[serde(variant_identifier)]
 #[cfg(all(feature = "std", any(unix, windows)))]
-enum OsStringKind {
-    Unix,
-    Windows,
-}
-
-#[cfg(all(feature = "std", any(unix, windows)))]
-static OSSTR_VARIANTS: &'static [&'static str] = &["Unix", "Windows"];
-
-#[cfg(all(feature = "std", any(unix, windows)))]
-impl<'de> Deserialize<'de> for OsStringKind {
-    fn deserialize<D>(deserializer: D) -> Result<OsStringKind, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct KindVisitor;
-
-        impl<'de> Visitor<'de> for KindVisitor {
-            type Value = OsStringKind;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("`Unix` or `Windows`")
-            }
-
-            fn visit_u32<E>(self, value: u32) -> Result<OsStringKind, E>
-            where
-                E: Error,
-            {
-                match value {
-                    0 => Ok(OsStringKind::Unix),
-                    1 => Ok(OsStringKind::Windows),
-                    _ => Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self),),
-                }
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<OsStringKind, E>
-            where
-                E: Error,
-            {
-                match value {
-                    "Unix" => Ok(OsStringKind::Unix),
-                    "Windows" => Ok(OsStringKind::Windows),
-                    _ => Err(Error::unknown_variant(value, OSSTR_VARIANTS)),
-                }
-            }
-
-            fn visit_bytes<E>(self, value: &[u8]) -> Result<OsStringKind, E>
-            where
-                E: Error,
-            {
-                match value {
-                    b"Unix" => Ok(OsStringKind::Unix),
-                    b"Windows" => Ok(OsStringKind::Windows),
-                    _ => {
-                        match str::from_utf8(value) {
-                            Ok(value) => Err(Error::unknown_variant(value, OSSTR_VARIANTS)),
-                            Err(_) => Err(Error::invalid_value(Unexpected::Bytes(value), &self)),
-                        }
-                    }
-                }
-            }
-        }
-
-        deserializer.deserialize_identifier(KindVisitor)
-    }
+variant_identifier!{
+    OsStringKind (Unix; b"Unix"; 0, Windows; b"Windows"; 1)
+    "`Unix` or `Windows`",
+    OSSTR_VARIANTS
 }
 
 #[cfg(all(feature = "std", any(unix, windows)))]
