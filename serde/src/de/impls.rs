@@ -887,6 +887,98 @@ macro_rules! parse_ip_impl {
     }
 }
 
+macro_rules! deserialize_enum {
+    ($name: ident $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* ) $deserializer: expr) => {
+        enum $name_kind {
+            $( $variant ),*
+        }
+
+        static VARIANTS: &'static [&'static str] = &[ $( stringify!($variant) ),*];
+
+        impl<'de> Deserialize<'de> for $name_kind {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct KindVisitor;
+
+                impl<'de> Visitor<'de> for KindVisitor {
+                    type Value = $name_kind;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`V4` or `V6`")
+                    }
+
+                    fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            $(
+                                $index => Ok($name_kind :: $variant),
+                            )*
+                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self),),
+                        }
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            $(
+                                stringify!($variant) => Ok($name_kind :: $variant),
+                            )*
+                            _ => Err(Error::unknown_variant(value, VARIANTS)),
+                        }
+                    }
+
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            $(
+                                $bytes => Ok($name_kind :: $variant),
+                            )*
+                            _ => {
+                                match str::from_utf8(value) {
+                                    Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                    Err(_) => Err(Error::invalid_value(Unexpected::Bytes(value), &self)),
+                                }
+                            }
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(KindVisitor)
+            }
+        }
+
+        struct EnumVisitor;
+        impl<'de> Visitor<'de> for EnumVisitor {
+            type Value = $name;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str(concat!("a ", stringify!($name)))
+            }
+
+
+            fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+            where
+                A: EnumAccess<'de>,
+            {
+                match try!(data.variant()) {
+                    $(
+                        ($name_kind :: $variant, v) => v.newtype_variant().map($name :: $variant),
+                    )*
+                }
+            }
+        }
+        $deserializer.deserialize_enum(stringify!($name), VARIANTS, EnumVisitor)
+    }
+}
+
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for net::IpAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -897,28 +989,10 @@ impl<'de> Deserialize<'de> for net::IpAddr {
             let s = try!(String::deserialize(deserializer));
             s.parse().map_err(Error::custom)
         } else {
-            struct EnumVisitor;
-            impl<'de> Visitor<'de> for EnumVisitor {
-                type Value = net::IpAddr;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("a IpAddr")
-                }
-
-
-                fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
-                where
-                    A: EnumAccess<'de>,
-                {
-                    match try!(data.variant()) {
-                        (0_u32, v) => v.newtype_variant().map(net::IpAddr::V4),
-                        (1_u32, v) => v.newtype_variant().map(net::IpAddr::V6),
-                        (_, _) => Err(Error::custom("Invalid IpAddr variant")),
-                    }
-                }
+            use self::net::IpAddr;
+            deserialize_enum!{
+                IpAddr IpAddrKind (V4; b"V4"; 0, V6; b"V6"; 1) deserializer
             }
-            const VARIANTS: &'static [&'static str] = &["V4", "V6"];
-            deserializer.deserialize_enum("IpAddr", VARIANTS, EnumVisitor)
         }
     }
 }
@@ -949,7 +1023,22 @@ macro_rules! parse_socket_impl {
 }
 
 #[cfg(feature = "std")]
-parse_socket_impl!(net::SocketAddr, net::SocketAddr::new);
+impl<'de> Deserialize<'de> for net::SocketAddr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let s = try!(String::deserialize(deserializer));
+            s.parse().map_err(Error::custom)
+        } else {
+            use self::net::SocketAddr;
+            deserialize_enum!{
+                SocketAddr SocketAddrKind (V4; b"V4"; 0, V6; b"V6"; 1) deserializer
+            }
+        }
+    }
+}
 
 #[cfg(feature = "std")]
 parse_socket_impl!(net::SocketAddrV4, net::SocketAddrV4::new);

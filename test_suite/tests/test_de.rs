@@ -781,9 +781,9 @@ declare_non_human_readable_tests!{
     }
     test_non_human_readable_net_socketaddr {
         net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
+            Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
+
             Token::Tuple { len: 2 },
-            Token::Enum { name: "IpAddr" },
-            Token::U32(1),
 
             Token::Tuple { len: 16 },
             seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
@@ -793,9 +793,9 @@ declare_non_human_readable_tests!{
             Token::TupleEnd
         ],
         net::SocketAddr::from((*b"1234", 1234)) => &seq![
+            Token::NewtypeVariant { name: "SocketAddr", variant: "V4" },
+
             Token::Tuple { len: 2 },
-            Token::Enum { name: "IpAddr" },
-            Token::U32(0),
 
             Token::Tuple { len: 4 },
             seq b"1234".iter().map(|&b| Token::U8(b)),
