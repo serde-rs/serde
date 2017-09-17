@@ -834,26 +834,43 @@ mod content {
         type Value = TaggedContent<'de, T>;
 
         fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            fmt.write_str("any value")
+            fmt.write_str("internally tagged enum")
         }
 
-        fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+        fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
         where
-            V: MapAccess<'de>,
+            S: SeqAccess<'de>,
+        {
+            let tag = match try!(seq.next_element()) {
+                Some(tag) => tag,
+                None => {
+                    return Err(de::Error::missing_field(self.tag_name));
+                }
+            };
+            let rest = de::value::SeqAccessDeserializer::new(seq);
+            Ok(TaggedContent {
+                tag: tag,
+                content: try!(Content::deserialize(rest)),
+            })
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+        where
+            M: MapAccess<'de>,
         {
             let mut tag = None;
-            let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
+            let mut vec = Vec::with_capacity(size_hint::cautious(map.size_hint()));
             while let Some(k) =
-                try!(visitor.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+                try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 match k {
                     TagOrContent::Tag => {
                         if tag.is_some() {
                             return Err(de::Error::duplicate_field(self.tag_name));
                         }
-                        tag = Some(try!(visitor.next_value()));
+                        tag = Some(try!(map.next_value()));
                     }
                     TagOrContent::Content(k) => {
-                        let v = try!(visitor.next_value());
+                        let v = try!(map.next_value());
                         vec.push((k, v));
                     }
                 }
@@ -1802,9 +1819,16 @@ mod content {
             write!(formatter, "unit variant {}::{}", self.type_name, self.variant_name)
         }
 
-        fn visit_map<V>(self, _: V) -> Result<(), V::Error>
+        fn visit_seq<S>(self, _: S) -> Result<(), S::Error>
         where
-            V: MapAccess<'de>,
+            S: SeqAccess<'de>,
+        {
+            Ok(())
+        }
+
+        fn visit_map<M>(self, _: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
         {
             Ok(())
         }
