@@ -591,11 +591,10 @@ fn test_internally_tagged_enum() {
     #[serde(tag = "type")]
     enum InternallyTagged {
         A { a: u8 },
-        B { b: u8 },
-        C,
-        D(BTreeMap<String, String>),
-        E(Newtype),
-        F(Struct),
+        B,
+        C(BTreeMap<String, String>),
+        D(Newtype),
+        E(Struct),
     }
 
     assert_tokens(
@@ -613,35 +612,62 @@ fn test_internally_tagged_enum() {
         ],
     );
 
-    assert_tokens(
-        &InternallyTagged::B { b: 2 },
+    assert_de_tokens(
+        &InternallyTagged::A { a: 1 },
         &[
-            Token::Struct { name: "InternallyTagged", len: 2 },
-
-            Token::Str("type"),
-            Token::Str("B"),
-
-            Token::Str("b"),
-            Token::U8(2),
-
-            Token::StructEnd,
+            Token::Seq { len: Some(2) },
+            Token::Str("A"),
+            Token::U8(1),
+            Token::SeqEnd,
         ],
     );
 
     assert_tokens(
-        &InternallyTagged::C,
+        &InternallyTagged::B,
         &[
             Token::Struct { name: "InternallyTagged", len: 1 },
 
             Token::Str("type"),
-            Token::Str("C"),
+            Token::Str("B"),
 
             Token::StructEnd,
         ],
     );
 
+    assert_de_tokens(
+        &InternallyTagged::B,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("B"),
+            Token::SeqEnd,
+        ],
+    );
+
     assert_tokens(
-        &InternallyTagged::D(BTreeMap::new()),
+        &InternallyTagged::C(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(1) },
+
+            Token::Str("type"),
+            Token::Str("C"),
+
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("C"),
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+            Token::SeqEnd,
+        ],
+        "invalid type: sequence, expected a map",
+    );
+
+    assert_tokens(
+        &InternallyTagged::D(Newtype(BTreeMap::new())),
         &[
             Token::Map { len: Some(1) },
 
@@ -653,29 +679,27 @@ fn test_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &InternallyTagged::E(Newtype(BTreeMap::new())),
-        &[
-            Token::Map { len: Some(1) },
-
-            Token::Str("type"),
-            Token::Str("E"),
-
-            Token::MapEnd,
-        ],
-    );
-
-    assert_tokens(
-        &InternallyTagged::F(Struct { f: 6 }),
+        &InternallyTagged::E(Struct { f: 6 }),
         &[
             Token::Struct { name: "Struct", len: 2 },
 
             Token::Str("type"),
-            Token::Str("F"),
+            Token::Str("E"),
 
             Token::Str("f"),
             Token::U8(6),
 
             Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::E(Struct { f: 6 }),
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("E"),
+            Token::U8(6),
+            Token::SeqEnd,
         ],
     );
 
@@ -693,7 +717,7 @@ fn test_internally_tagged_enum() {
 
             Token::MapEnd,
         ],
-        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`",
+        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
     );
 }
 

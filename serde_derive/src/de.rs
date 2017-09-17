@@ -222,7 +222,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
                 if fields.iter().any(|field| field.ident.is_none()) {
                     panic!("struct has unnamed fields");
                 }
-                deserialize_struct(None, params, fields, &cont.attrs, None)
+                deserialize_struct(None, params, fields, &cont.attrs, None, Untagged::No)
             }
             Body::Struct(Style::Tuple, ref fields) |
             Body::Struct(Style::Newtype, ref fields) => {
@@ -488,15 +488,20 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
     }
 }
 
+enum Untagged {
+    Yes,
+    No,
+}
+
 fn deserialize_struct(
     variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
+    untagged: Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
-    let is_untagged = deserializer.is_some();
 
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
@@ -559,18 +564,19 @@ fn deserialize_struct(
         quote!(mut __seq)
     };
 
-    let visit_seq = if is_untagged {
-        // untagged struct variants do not get a visit_seq method
-        None
-    } else {
-        Some(quote! {
-            #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
-            {
-                #visit_seq
-            }
-        })
+    // untagged struct variants do not get a visit_seq method
+    let visit_seq = match untagged {
+        Untagged::Yes => None,
+        Untagged::No => {
+            Some(quote! {
+                #[inline]
+                fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+                    where __A: _serde::de::SeqAccess<#delife>
+                {
+                    #visit_seq
+                }
+            })
+        }
     };
 
     quote_block! {
@@ -1148,7 +1154,7 @@ fn deserialize_externally_tagged_variant(
             deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
         }
         Style::Struct => {
-            deserialize_struct(Some(variant_ident), params, &variant.fields, cattrs, None)
+            deserialize_struct(Some(variant_ident), params, &variant.fields, cattrs, None, Untagged::No)
         }
     }
 }
@@ -1175,8 +1181,23 @@ fn deserialize_internally_tagged_variant(
                 _serde::export::Ok(#this::#variant_ident)
             }
         }
-        Style::Newtype | Style::Struct => {
-            deserialize_untagged_variant(params, variant, cattrs, deserializer)
+        Style::Newtype => {
+            deserialize_untagged_newtype_variant(
+                variant_ident,
+                params,
+                &variant.fields[0],
+                deserializer,
+            )
+        }
+        Style::Struct => {
+            deserialize_struct(
+                Some(variant_ident),
+                params,
+                &variant.fields,
+                cattrs,
+                Some(deserializer),
+                Untagged::No,
+            )
         }
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
@@ -1238,6 +1259,7 @@ fn deserialize_untagged_variant(
                 &variant.fields,
                 cattrs,
                 Some(deserializer),
+                Untagged::Yes,
             )
         }
     }
