@@ -52,6 +52,8 @@ impl<'de> Deserializer<'de> {
         Deserializer::readable(tokens, true)
     }
 
+    // Not public API
+    #[doc(hidden)]
     pub fn readable(tokens: &'de [Token], is_human_readable: bool) -> Self {
         Deserializer { tokens: tokens, is_human_readable: is_human_readable }
     }

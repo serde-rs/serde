@@ -24,6 +24,8 @@ impl<'a> Serializer<'a> {
         Serializer::readable(tokens, true)
     }
 
+    // Not public API
+    #[doc(hidden)]
     pub fn readable(tokens: &'a [Token], is_human_readable: bool) -> Self {
         Serializer { tokens: tokens, is_human_readable: is_human_readable }
     }
