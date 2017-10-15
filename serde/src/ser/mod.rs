@@ -1371,6 +1371,7 @@ pub trait Serializer: Sized {
     ///
     /// NOTE: Implementing this method and returning `false` is considered a breaking
     /// change as it may alter how any given type tries to serialize itself.
+    #[inline]
     fn is_human_readable(&self) -> bool { true }
 }
 

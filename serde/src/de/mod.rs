@@ -1019,6 +1019,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// NOTE: Implementing this method and returning `false` is considered a breaking
     /// change as it may alter how any given type tries to deserialize itself.
+    #[inline]
     fn is_human_readable(&self) -> bool { true }
 }
 
