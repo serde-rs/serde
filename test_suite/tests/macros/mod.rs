@@ -73,3 +73,29 @@ macro_rules! hashmap {
         }
     }
 }
+
+macro_rules! seq_impl {
+    (seq $first:expr,) => {
+        seq_impl!(seq $first)
+    };
+    ($first:expr,) => {
+        seq_impl!($first)
+    };
+    (seq $first:expr) => {
+        $first.into_iter()
+    };
+    ($first:expr) => {
+        Some($first).into_iter()
+    };
+    (seq $first:expr , $( $elem: tt)*) => {
+        $first.into_iter().chain(seq!( $($elem)* ))
+    };
+    ($first:expr , $($elem: tt)*) => {
+        Some($first).into_iter().chain(seq!( $($elem)* ))
+    }
+}
+macro_rules! seq {
+    ($($tt: tt)*) => {
+        seq_impl!($($tt)*).collect::<Vec<_>>()
+    };
+}

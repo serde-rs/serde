@@ -506,9 +506,18 @@ impl Serialize for net::IpAddr {
     where
         S: Serializer,
     {
-        match *self {
-            net::IpAddr::V4(ref a) => a.serialize(serializer),
-            net::IpAddr::V6(ref a) => a.serialize(serializer),
+        if serializer.is_human_readable() {
+            match *self {
+                net::IpAddr::V4(ref a) => a.serialize(serializer),
+                net::IpAddr::V6(ref a) => a.serialize(serializer),
+            }
+        } else {
+            match *self {
+                net::IpAddr::V4(ref a) => 
+                    serializer.serialize_newtype_variant("IpAddr", 0, "V4", a),
+                net::IpAddr::V6(ref a) =>
+                    serializer.serialize_newtype_variant("IpAddr", 1, "V6", a),
+            }
         }
     }
 }
@@ -519,9 +528,13 @@ impl Serialize for net::Ipv4Addr {
     where
         S: Serializer,
     {
-        /// "101.102.103.104".len()
-        const MAX_LEN: usize = 15;
-        serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        if serializer.is_human_readable() {
+            /// "101.102.103.104".len()
+            const MAX_LEN: usize = 15;
+            serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        } else {
+            self.octets().serialize(serializer)
+        }
     }
 }
 
@@ -531,9 +544,13 @@ impl Serialize for net::Ipv6Addr {
     where
         S: Serializer,
     {
-        /// "1000:1002:1003:1004:1005:1006:1007:1008".len()
-        const MAX_LEN: usize = 39;
-        serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        if serializer.is_human_readable() {
+            /// "1000:1002:1003:1004:1005:1006:1007:1008".len()
+            const MAX_LEN: usize = 39;
+            serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        } else {
+            self.octets().serialize(serializer)
+        }
     }
 }
 
@@ -543,9 +560,18 @@ impl Serialize for net::SocketAddr {
     where
         S: Serializer,
     {
-        match *self {
-            net::SocketAddr::V4(ref addr) => addr.serialize(serializer),
-            net::SocketAddr::V6(ref addr) => addr.serialize(serializer),
+        if serializer.is_human_readable() {
+            match *self {
+                net::SocketAddr::V4(ref addr) => addr.serialize(serializer),
+                net::SocketAddr::V6(ref addr) => addr.serialize(serializer),
+            }
+        } else {
+            match *self {
+                net::SocketAddr::V4(ref addr) =>
+                    serializer.serialize_newtype_variant("SocketAddr", 0, "V4", addr),
+                net::SocketAddr::V6(ref addr) =>
+                    serializer.serialize_newtype_variant("SocketAddr", 1, "V6", addr),
+            }
         }
     }
 }
@@ -556,9 +582,13 @@ impl Serialize for net::SocketAddrV4 {
     where
         S: Serializer,
     {
-        /// "101.102.103.104:65000".len()
-        const MAX_LEN: usize = 21;
-        serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        if serializer.is_human_readable() {
+            /// "101.102.103.104:65000".len()
+            const MAX_LEN: usize = 21;
+            serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        } else {
+            (self.ip(), self.port()).serialize(serializer)
+        }
     }
 }
 
@@ -568,9 +598,13 @@ impl Serialize for net::SocketAddrV6 {
     where
         S: Serializer,
     {
-        /// "[1000:1002:1003:1004:1005:1006:1007:1008]:65000".len()
-        const MAX_LEN: usize = 47;
-        serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        if serializer.is_human_readable() {
+            /// "[1000:1002:1003:1004:1005:1006:1007:1008]:65000".len()
+            const MAX_LEN: usize = 47;
+            serialize_display_bounded_length!(self, MAX_LEN, serializer)
+        } else {
+            (self.ip(), self.port()).serialize(serializer)
+        }
     }
 }
 
