@@ -1364,13 +1364,53 @@ pub trait Serializer: Sized {
     where
         T: Display;
 
-    /// Returns wheter the data format is human readable or not.
+    /// Determine whether `Serialize` implementations should serialize in
+    /// human-readable form.
     ///
-    /// Some formats are not intended to be human readable. For these formats
-    /// a type being serialized may opt to serialize into a more compact form.
+    /// Some types have a human-readable form that may be somewhat expensive to
+    /// construct, as well as a binary form that is compact and efficient.
+    /// Generally text-based formats like JSON and YAML will prefer to use the
+    /// human-readable one and binary formats like Bincode will prefer the
+    /// compact one.
     ///
-    /// NOTE: Implementing this method and returning `false` is considered a breaking
-    /// change as it may alter how any given type tries to serialize itself.
+    /// ```
+    /// # use std::fmt::{self, Display};
+    /// #
+    /// # struct Timestamp;
+    /// #
+    /// # impl Timestamp {
+    /// #     fn seconds_since_epoch(&self) -> u64 { unimplemented!() }
+    /// # }
+    /// #
+    /// # impl Display for Timestamp {
+    /// #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
+    /// impl Serialize for Timestamp {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         if serializer.is_human_readable() {
+    ///             // Serialize to a human-readable string "2015-05-15T17:01:00Z".
+    ///             self.to_string().serialize(serializer)
+    ///         } else {
+    ///             // Serialize to a compact binary representation.
+    ///             self.seconds_since_epoch().serialize(serializer)
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default implementation of this method returns `true`. Data formats
+    /// may override this to `false` to request a compact form for types that
+    /// support one. Note that modifying this method to change a format from
+    /// human-readable to compact or vice versa should be regarded as a breaking
+    /// change, as a value serialized in human-readable mode is not required to
+    /// deserialize from the same data in compact mode.
     #[inline]
     fn is_human_readable(&self) -> bool { true }
 }

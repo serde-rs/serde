@@ -1012,13 +1012,69 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
-    /// Returns whether the serialized data is human readable or not.
+    /// Determine whether `Deserialize` implementations should expect to
+    /// deserialize their human-readable form.
     ///
-    /// Some formats are not intended to be human readable. For these formats
-    /// a type being serialized may opt to serialize into a more compact form.
+    /// Some types have a human-readable form that may be somewhat expensive to
+    /// construct, as well as a binary form that is compact and efficient.
+    /// Generally text-based formats like JSON and YAML will prefer to use the
+    /// human-readable one and binary formats like Bincode will prefer the
+    /// compact one.
     ///
-    /// NOTE: Implementing this method and returning `false` is considered a breaking
-    /// change as it may alter how any given type tries to deserialize itself.
+    /// ```
+    /// # use std::ops::Add;
+    /// # use std::str::FromStr;
+    /// #
+    /// # struct Timestamp;
+    /// #
+    /// # impl FromStr for Timestamp {
+    /// #     type Err = String;
+    /// #     fn from_str(_: &str) -> Result<Self, Self::Err> {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// # struct Duration;
+    /// #
+    /// # impl Duration {
+    /// #     fn seconds(_: u64) -> Self { unimplemented!() }
+    /// # }
+    /// #
+    /// # impl Add<Duration> for () {
+    /// #     type Output = Timestamp;
+    /// #     fn add(self, _: Duration) -> Self::Output {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use serde::de::{self, Deserialize, Deserializer};
+    ///
+    /// impl<'de> Deserialize<'de> for Timestamp {
+    ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    ///         where D: Deserializer<'de>
+    ///     {
+    ///         if deserializer.is_human_readable() {
+    ///             // Deserialize from a human-readable string like "2015-05-15T17:01:00Z".
+    ///             let s = String::deserialize(deserializer)?;
+    ///             Timestamp::from_str(&s).map_err(de::Error::custom)
+    ///         } else {
+    /// # // Make it look like an associated constant but compile on older rustc.
+    /// # mod Timestamp { pub const EPOCH: () = (); }
+    ///             // Deserialize from a compact binary representation, seconds since
+    ///             // the Unix epoch.
+    ///             let n = u64::deserialize(deserializer)?;
+    ///             Ok(Timestamp::EPOCH + Duration::seconds(n))
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default implementation of this method returns `true`. Data formats
+    /// may override this to `false` to request a compact form for types that
+    /// support one. Note that modifying this method to change a format from
+    /// human-readable to compact or vice versa should be regarded as a breaking
+    /// change, as a value serialized in human-readable mode is not required to
+    /// deserialize from the same data in compact mode.
     #[inline]
     fn is_human_readable(&self) -> bool { true }
 }
