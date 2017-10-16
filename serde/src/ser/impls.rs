@@ -529,8 +529,8 @@ impl Serialize for net::Ipv4Addr {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            /// "101.102.103.104".len()
             const MAX_LEN: usize = 15;
+            debug_assert_eq!(MAX_LEN, "101.102.103.104".len());
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
             self.octets().serialize(serializer)
@@ -545,8 +545,8 @@ impl Serialize for net::Ipv6Addr {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            /// "1000:1002:1003:1004:1005:1006:1007:1008".len()
             const MAX_LEN: usize = 39;
+            debug_assert_eq!(MAX_LEN, "1001:1002:1003:1004:1005:1006:1007:1008".len());
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
             self.octets().serialize(serializer)
@@ -583,8 +583,8 @@ impl Serialize for net::SocketAddrV4 {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            /// "101.102.103.104:65000".len()
             const MAX_LEN: usize = 21;
+            debug_assert_eq!(MAX_LEN, "101.102.103.104:65000".len());
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
             (self.ip(), self.port()).serialize(serializer)
@@ -599,8 +599,8 @@ impl Serialize for net::SocketAddrV6 {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            /// "[1000:1002:1003:1004:1005:1006:1007:1008]:65000".len()
             const MAX_LEN: usize = 47;
+            debug_assert_eq!(MAX_LEN, "[1001:1002:1003:1004:1005:1006:1007:1008]:65000".len());
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
             (self.ip(), self.port()).serialize(serializer)
