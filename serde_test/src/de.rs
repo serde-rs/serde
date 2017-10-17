@@ -16,7 +16,7 @@ use token::Token;
 #[derive(Debug)]
 pub struct Deserializer<'de> {
     tokens: &'de [Token],
-    is_human_readable: bool,
+    is_human_readable: Option<bool>,
 }
 
 macro_rules! assert_next_token {
@@ -49,12 +49,12 @@ macro_rules! end_of_tokens {
 
 impl<'de> Deserializer<'de> {
     pub fn new(tokens: &'de [Token]) -> Self {
-        Deserializer::readable(tokens, true)
+        Deserializer::readable(tokens, None)
     }
 
     // Not public API
     #[doc(hidden)]
-    pub fn readable(tokens: &'de [Token], is_human_readable: bool) -> Self {
+    pub fn readable(tokens: &'de [Token], is_human_readable: Option<bool>) -> Self {
         Deserializer { tokens: tokens, is_human_readable: is_human_readable }
     }
 
@@ -373,7 +373,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     }
 
     fn is_human_readable(&self) -> bool {
-        self.is_human_readable
+        match self.is_human_readable {
+            Some(is) => is,
+            None => {
+                panic!("There is no serde_test API currently for testing types \
+                        that have different human-readable and compact \
+                        representation. See \
+                        https://github.com/serde-rs/serde/issues/1065.");
+            }
+        }
     }
 }
 

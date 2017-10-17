@@ -47,7 +47,7 @@ pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Serialize + Deserialize<'de> + PartialEq + Debug,
 {
-    assert_tokens_readable(value, tokens, true);
+    assert_tokens_readable(value, tokens, None);
 }
 
 // Not public API
@@ -55,7 +55,7 @@ where
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
 /// See: `assert_tokens`
-pub fn assert_tokens_readable<'de, T>(value: &T, tokens: &'de [Token], human_readable: bool)
+pub fn assert_tokens_readable<'de, T>(value: &T, tokens: &'de [Token], human_readable: Option<bool>)
 where
     T: Serialize + Deserialize<'de> + PartialEq + Debug,
 {
@@ -96,7 +96,7 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 where
     T: Serialize,
 {
-    assert_ser_tokens_readable(value, tokens, true)
+    assert_ser_tokens_readable(value, tokens, None)
 }
 
 // Not public API
@@ -104,7 +104,7 @@ where
 /// Asserts that `value` serializes to the given `tokens`.
 ///
 /// See: `assert_ser_tokens`
-pub fn assert_ser_tokens_readable<T>(value: &T, tokens: &[Token], human_readable: bool)
+pub fn assert_ser_tokens_readable<T>(value: &T, tokens: &[Token], human_readable: Option<bool>)
 where
     T: Serialize,
 {
@@ -207,12 +207,12 @@ pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
-    assert_de_tokens_readable(value, tokens, true)
+    assert_de_tokens_readable(value, tokens, None)
 }
 
 // Not public API
 #[doc(hidden)]
-pub fn assert_de_tokens_readable<'de, T>(value: &T, tokens: &'de [Token], human_readable: bool)
+pub fn assert_de_tokens_readable<'de, T>(value: &T, tokens: &'de [Token], human_readable: Option<bool>)
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {

@@ -115,7 +115,7 @@ macro_rules! declare_test {
         fn $name() {
             $(
                 // Test ser/de roundtripping
-                assert_de_tokens_readable(&$value, $tokens, $readable);
+                assert_de_tokens_readable(&$value, $tokens, Some($readable));
 
                 // Test that the tokens are ignorable
                 assert_de_tokens_ignore($tokens, true);
@@ -172,7 +172,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token], readable: bool) {
             .chain(vec![Token::MapEnd].into_iter())
             .collect();
 
-    let mut de = serde_test::Deserializer::readable(&concated_tokens, readable);
+    let mut de = serde_test::Deserializer::readable(&concated_tokens, Some(readable));
     let base = IgnoreBase::deserialize(&mut de).unwrap();
     assert_eq!(base, IgnoreBase { a: 1 });
 }
@@ -912,9 +912,10 @@ fn test_cstr() {
 #[cfg(feature = "unstable")]
 #[test]
 fn test_net_ipaddr() {
-    assert_de_tokens(
+    assert_de_tokens_readable(
         &"1.2.3.4".parse::<net::IpAddr>().unwrap(),
         &[Token::Str("1.2.3.4")],
+        Some(true),
     );
 }
 
@@ -1181,7 +1182,7 @@ impl<'de> serde::Deserialize<'de> for CompactBinary {
 
 #[test]
 fn test_human_readable() {
-    assert_de_tokens(
+    assert_de_tokens_readable(
         &CompactBinary((1, 2)),
         &[
             Token::Tuple { len: 2},
@@ -1189,10 +1190,11 @@ fn test_human_readable() {
             Token::U8(2),
             Token::TupleEnd,
         ],
+        Some(true),
     );
     assert_de_tokens_readable(
         &CompactBinary((1, 2)),
         &[Token::BorrowedBytes(&[1, 2])],
-        false,
+        Some(false),
     );
 }

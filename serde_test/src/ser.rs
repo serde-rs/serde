@@ -15,18 +15,18 @@ use token::Token;
 #[derive(Debug)]
 pub struct Serializer<'a> {
     tokens: &'a [Token],
-    is_human_readable: bool,
+    is_human_readable: Option<bool>,
 }
 
 impl<'a> Serializer<'a> {
     /// Creates the serializer.
     pub fn new(tokens: &'a [Token]) -> Self {
-        Serializer::readable(tokens, true)
+        Serializer::readable(tokens, None)
     }
 
     // Not public API
     #[doc(hidden)]
-    pub fn readable(tokens: &'a [Token], is_human_readable: bool) -> Self {
+    pub fn readable(tokens: &'a [Token], is_human_readable: Option<bool>) -> Self {
         Serializer { tokens: tokens, is_human_readable: is_human_readable }
     }
 
@@ -291,7 +291,15 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
     }
 
     fn is_human_readable(&self) -> bool {
-        self.is_human_readable
+        match self.is_human_readable {
+            Some(is) => is,
+            None => {
+                panic!("There is no serde_test API currently for testing types \
+                        that have different human-readable and compact \
+                        representation. See \
+                        https://github.com/serde-rs/serde/issues/1065.");
+            }
+        }
     }
 }
 

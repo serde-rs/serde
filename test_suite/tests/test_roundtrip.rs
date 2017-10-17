@@ -19,7 +19,7 @@ fn ip_addr_roundtrip() {
             seq b"1234".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd,
         ],
-        false,
+        Some(false),
     );
 }
 
@@ -40,6 +40,6 @@ fn socked_addr_roundtrip() {
             Token::U16(1234),
             Token::TupleEnd,
         ],
-        false,
+        Some(false),
     );
 }
