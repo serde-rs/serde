@@ -887,6 +887,7 @@ macro_rules! parse_ip_impl {
     }
 }
 
+#[cfg(feature = "std")]
 macro_rules! variant_identifier {
     (
         $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* )
@@ -961,6 +962,7 @@ macro_rules! variant_identifier {
     }
 }
 
+#[cfg(feature = "std")]
 macro_rules! deserialize_enum {
     (
         $name: ident $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* )
