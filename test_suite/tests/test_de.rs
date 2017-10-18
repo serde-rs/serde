@@ -109,25 +109,37 @@ enum EnumSkipAll {
 
 //////////////////////////////////////////////////////////////////////////
 
-macro_rules! declare_test {
-    ($name:ident $readable: ident { $($value:expr => $tokens:expr,)+ }) => {
-        #[test]
-        fn $name() {
-            $(
-                // Test ser/de roundtripping
-                assert_de_tokens_readable(&$value, $tokens, Some($readable));
-
-                // Test that the tokens are ignorable
-                assert_de_tokens_ignore($tokens);
-            )+
-        }
-    }
-}
-
 macro_rules! declare_tests {
+    (
+        readable: $readable:tt
+        $($name:ident { $($value:expr => $tokens:expr,)+ })+
+    ) => {
+        $(
+            #[test]
+            fn $name() {
+                $(
+                    // Test ser/de roundtripping
+                    assert_de_tokens_readable(&$value, $tokens, Some($readable));
+
+                    // Test that the tokens are ignorable
+                    assert_de_tokens_ignore($tokens);
+                )+
+            }
+        )+
+    };
+
     ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
         $(
-            declare_test!($name true { $($value => $tokens,)+ });
+            #[test]
+            fn $name() {
+                $(
+                    // Test ser/de roundtripping
+                    assert_de_tokens(&$value, $tokens);
+
+                    // Test that the tokens are ignorable
+                    assert_de_tokens_ignore($tokens);
+                )+
+            }
         )+
     }
 }
@@ -142,15 +154,6 @@ macro_rules! declare_error_tests {
         )+
     }
 }
-
-macro_rules! declare_non_human_readable_tests {
-    ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
-        $(
-            declare_test!($name false { $($value => $tokens,)+ });
-        )+
-    }
-}
-
 
 fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     #[derive(PartialEq, Debug, Deserialize)]
@@ -734,17 +737,6 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
-    test_net_ipv4addr {
-        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
-    }
-    test_net_ipv6addr {
-        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
-    }
-    test_net_socketaddr {
-        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
-    }
     test_path {
         Path::new("/usr/local/lib") => &[
             Token::BorrowedStr("/usr/local/lib"),
@@ -772,23 +764,50 @@ declare_tests! {
     }
 }
 
-declare_non_human_readable_tests!{
-    test_non_human_readable_net_ipv4addr {
+declare_tests! {
+    readable: true
+    test_net_ipv4addr_readable {
+        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_ipv6addr_readable {
+        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
+    }
+    test_net_ipaddr_readable {
+        "1.2.3.4".parse::<net::IpAddr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_socketaddr_readable {
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
+    }
+}
+
+declare_tests! {
+    readable: false
+    test_net_ipv4addr_compact {
         net::Ipv4Addr::from(*b"1234") => &seq![
             Token::Tuple { len: 4 },
             seq b"1234".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd
         ],
     }
-    test_non_human_readable_net_ipv6addr {
+    test_net_ipv6addr_compact {
         net::Ipv6Addr::from(*b"1234567890123456") => &seq![
             Token::Tuple { len: 4 },
             seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd
         ],
-
     }
-    test_non_human_readable_net_socketaddr {
+    test_net_ipaddr_compact {
+        net::IpAddr::from(*b"1234") => &seq![
+            Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd
+        ],
+    }
+    test_net_socketaddr_compact {
         net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
             Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
 
@@ -906,16 +925,6 @@ fn test_cstr() {
     assert_de_tokens::<Box<CStr>>(
         &CString::new("abc").unwrap().into_boxed_c_str(),
         &[Token::Bytes(b"abc")],
-    );
-}
-
-#[cfg(feature = "unstable")]
-#[test]
-fn test_net_ipaddr() {
-    assert_de_tokens_readable(
-        &"1.2.3.4".parse::<net::IpAddr>().unwrap(),
-        &[Token::Str("1.2.3.4")],
-        Some(true),
     );
 }
 
