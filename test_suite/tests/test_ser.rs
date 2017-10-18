@@ -548,26 +548,3 @@ fn test_enum_skipped() {
         "the enum variant Enum::SkippedMap cannot be serialized",
     );
 }
-
-struct CompactBinary(String);
-
-impl serde::Serialize for CompactBinary {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer
-    {
-        if serializer.is_human_readable() {
-            serializer.serialize_str(&self.0)
-        } else {
-            serializer.serialize_bytes(self.0.as_bytes())
-        }
-    }
-}
-
-#[test]
-fn test_human_readable() {
-    let value = CompactBinary("test".to_string());
-    assert_ser_tokens_readable(&value, &[Token::String("test")], Some(true));
-
-    assert_ser_tokens_readable(&value, &[Token::Bytes(b"test")], Some(false));
-}
