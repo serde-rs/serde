@@ -118,7 +118,7 @@ macro_rules! declare_test {
                 assert_de_tokens_readable(&$value, $tokens, Some($readable));
 
                 // Test that the tokens are ignorable
-                assert_de_tokens_ignore($tokens, true);
+                assert_de_tokens_ignore($tokens);
             )+
         }
     }
@@ -152,7 +152,7 @@ macro_rules! declare_non_human_readable_tests {
 }
 
 
-fn assert_de_tokens_ignore(ignorable_tokens: &[Token], readable: bool) {
+fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     #[derive(PartialEq, Debug, Deserialize)]
     struct IgnoreBase {
         a: i32,
@@ -172,7 +172,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token], readable: bool) {
             .chain(vec![Token::MapEnd].into_iter())
             .collect();
 
-    let mut de = serde_test::Deserializer::readable(&concated_tokens, Some(readable));
+    let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
     assert_eq!(base, IgnoreBase { a: 1 });
 }
@@ -877,7 +877,7 @@ fn test_osstring() {
     ];
 
     assert_de_tokens(&value, &tokens);
-    assert_de_tokens_ignore(&tokens, true);
+    assert_de_tokens_ignore(&tokens);
 }
 
 #[cfg(windows)]
@@ -897,7 +897,7 @@ fn test_osstring() {
     ];
 
     assert_de_tokens(&value, &tokens);
-    assert_de_tokens_ignore(&tokens, true);
+    assert_de_tokens_ignore(&tokens);
 }
 
 #[cfg(feature = "unstable")]
