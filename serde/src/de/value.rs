@@ -733,7 +733,7 @@ where
     T: IntoDeserializer<'de, E>,
     E: de::Error,
 {
-    type Deserializer = SeqDeserializer<<Vec<T> as IntoIterator>::IntoIter, E>;
+    type Deserializer = SeqDeserializer<<Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -746,7 +746,7 @@ where
     T: IntoDeserializer<'de, E> + Eq + Ord,
     E: de::Error,
 {
-    type Deserializer = SeqDeserializer<<BTreeSet<T> as IntoIterator>::IntoIter, E>;
+    type Deserializer = SeqDeserializer<<Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -760,7 +760,7 @@ where
     S: BuildHasher,
     E: de::Error,
 {
-    type Deserializer = SeqDeserializer<<HashSet<T, S> as IntoIterator>::IntoIter, E>;
+    type Deserializer = SeqDeserializer<<Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -1153,7 +1153,7 @@ where
     V: IntoDeserializer<'de, E>,
     E: de::Error,
 {
-    type Deserializer = MapDeserializer<'de, <BTreeMap<K, V> as IntoIterator>::IntoIter, E>;
+    type Deserializer = MapDeserializer<'de, <Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         MapDeserializer::new(self.into_iter())
@@ -1168,7 +1168,7 @@ where
     S: BuildHasher,
     E: de::Error,
 {
-    type Deserializer = MapDeserializer<'de, <HashMap<K, V, S> as IntoIterator>::IntoIter, E>;
+    type Deserializer = MapDeserializer<'de, <Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         MapDeserializer::new(self.into_iter())
