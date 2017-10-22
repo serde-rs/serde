@@ -8,8 +8,14 @@
 
 //! This crate provides Serde's two derive macros.
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #[macro_use]
+//! # extern crate serde_derive;
+//! #
 //! #[derive(Serialize, Deserialize)]
+//! # struct S;
+//! #
+//! # fn main() {}
 //! ```
 //!
 //! Please refer to [https://serde.rs/derive.html] for how to set this up.
