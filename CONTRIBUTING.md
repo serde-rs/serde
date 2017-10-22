@@ -1,45 +1,66 @@
 # Contributing to Serde
 
-Serde welcomes contribution from everyone. Here are the guidelines if you are
-thinking of helping us:
+Serde welcomes contribution from everyone in the form of suggestions, bug
+reports, pull requests, and feedback. This document gives some guidance if you
+are thinking of helping us.
 
-## Contributions
+Please reach out here in a GitHub issue or in the #serde IRC channel on
+[`irc.mozilla.org`] if we can do anything to help you contribute.
 
-Contributions to Serde or its dependencies should be made in the form of GitHub
-pull requests. Each pull request will be reviewed by a core contributor
-(someone with permission to land patches) and either landed in the main tree or
-given feedback for changes that would be required. All contributions should
-follow this format, even those from core contributors.
+[`irc.mozilla.org`]: https://wiki.mozilla.org/IRC
 
-Should you wish to work on an issue, please claim it first by commenting on
-the GitHub issue that you want to work on it. This is to prevent duplicated
-efforts from contributors on the same issue.
+## Submitting bug reports and feature requests
 
-## Pull Request Checklist
+Serde development is spread across lots of repositories, but this serde-rs/serde
+repository is always a safe choice for opening any issues related to Serde.
 
-- Branch from the master branch and, if needed, rebase to the current master
-  branch before submitting your pull request. If it doesn't merge cleanly with
-  master you may be asked to rebase your changes.
+When reporting a bug or asking for help, please include enough details so that
+the people helping you can reproduce the behavior you are seeing. For some tips
+on how to approach this, read about how to produce a [Minimal, Complete, and
+Verifiable example].
 
-- Commits should be as small as possible, while ensuring that each commit is
-  correct independently (i.e., each commit should compile and pass tests).
+[Minimal, Complete, and Verifiable example]: https://stackoverflow.com/help/mcve
 
-- If your patch is not getting reviewed or you need a specific person to review
-  it, you can @-reply a reviewer asking for a review in the pull request or a
-  comment, or you can ask for a review in `#serde` on `irc.mozilla.org`.
+When making a feature request, please make it clear what problem you intend to
+solve with the feature, any ideas for how Serde could support solving that
+problem, any possible alternatives, and any disadvantages.
 
-- Add tests relevant to the fixed bug or new feature.
+## Running the test suite
+
+We encourage you to check that the test suite passes locally before submitting a
+pull request with your changes. If anything does not pass, typically it will be
+easier to iterate and fix it locally than waiting for the CI servers to run
+tests for you.
+
+##### In the [`serde`] directory
+
+```sh
+# Test all the example code in Serde documentation
+cargo test
+```
+
+##### In the [`test_suite/deps`] directory
+
+```sh
+# This is a prerequisite for running the full test suite
+cargo clean && cargo update && cargo build
+```
+
+##### In the [`test_suite`] directory
+
+```sh
+# Run the full test suite, including tests of unstable functionality
+cargo test --features unstable
+```
+
+[`serde`]: https://github.com/serde-rs/serde/tree/master/serde
+[`test_suite/deps`]: https://github.com/serde-rs/serde/tree/master/test_suite/deps
+[`test_suite`]: https://github.com/serde-rs/serde/tree/master/test_suite
 
 ## Conduct
 
-In all Serde-related forums, we follow the [Rust Code of
-Conduct](https://www.rust-lang.org/conduct.html).  For escalation or moderation
-issues, please contact Erick (erick.tryzelaar@gmail.com) instead of the Rust
-moderation team.
+In all Serde-related forums, we follow the [Rust Code of Conduct]. For
+escalation or moderation issues please contact Erick (erick.tryzelaar@gmail.com)
+instead of the Rust moderation team.
 
-## Communication
-
-Beyond opening tickets on the
-[serde-rs/serde](https://github.com/serde-rs/serde) project, Serde contributors
-frequent the `#serde` channel on
-[`irc.mozilla.org`](https://wiki.mozilla.org/IRC).
+[Rust Code of Conduct]: https://www.rust-lang.org/conduct.html
