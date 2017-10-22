@@ -513,7 +513,7 @@ impl Serialize for net::IpAddr {
             }
         } else {
             match *self {
-                net::IpAddr::V4(ref a) => 
+                net::IpAddr::V4(ref a) =>
                     serializer.serialize_newtype_variant("IpAddr", 0, "V4", a),
                 net::IpAddr::V6(ref a) =>
                     serializer.serialize_newtype_variant("IpAddr", 1, "V6", a),
