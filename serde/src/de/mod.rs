@@ -1027,6 +1027,10 @@ pub trait Deserializer<'de>: Sized {
     /// #
     /// # struct Timestamp;
     /// #
+    /// # impl Timestamp {
+    /// #     const EPOCH: Timestamp = Timestamp;
+    /// # }
+    /// #
     /// # impl FromStr for Timestamp {
     /// #     type Err = String;
     /// #     fn from_str(_: &str) -> Result<Self, Self::Err> {
@@ -1040,7 +1044,7 @@ pub trait Deserializer<'de>: Sized {
     /// #     fn seconds(_: u64) -> Self { unimplemented!() }
     /// # }
     /// #
-    /// # impl Add<Duration> for () {
+    /// # impl Add<Duration> for Timestamp {
     /// #     type Output = Timestamp;
     /// #     fn add(self, _: Duration) -> Self::Output {
     /// #         unimplemented!()
@@ -1058,8 +1062,6 @@ pub trait Deserializer<'de>: Sized {
     ///             let s = String::deserialize(deserializer)?;
     ///             Timestamp::from_str(&s).map_err(de::Error::custom)
     ///         } else {
-    /// # // Make it look like an associated constant but compile on older rustc.
-    /// # mod Timestamp { pub const EPOCH: () = (); }
     ///             // Deserialize from a compact binary representation, seconds since
     ///             // the Unix epoch.
     ///             let n = u64::deserialize(deserializer)?;
