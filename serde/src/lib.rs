@@ -207,6 +207,8 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::io::Write;
     #[cfg(feature = "std")]
+    pub use std::num::Wrapping;
+    #[cfg(feature = "std")]
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
     pub use std::time::{Duration, SystemTime, UNIX_EPOCH};

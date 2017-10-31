@@ -668,9 +668,6 @@ impl Serialize for OsString {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-use std::num::Wrapping;
-
-#[cfg(feature = "std")]
 impl<T: Serialize> Serialize for Wrapping<T> {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
