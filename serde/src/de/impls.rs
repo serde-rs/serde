@@ -1830,12 +1830,13 @@ where
 
 #[cfg(feature = "std")]
 impl<'de, T> Deserialize<'de> for Wrapping<T>
-where 
-    T: Deserialize<'de> 
+where
+    T: Deserialize<'de>
 {
-    fn deserialize<D>(deserializer: D) -> Result<Wrapping<T>, D::Error> 
-        where D: Deserializer<'de>
+    fn deserialize<D>(deserializer: D) -> Result<Wrapping<T>, D::Error>
+    where
+        D: Deserializer<'de>,
     {
         Deserialize::deserialize(deserializer).map(Wrapping)
     }
-} 
+}

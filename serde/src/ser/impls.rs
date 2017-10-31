@@ -668,7 +668,10 @@ impl Serialize for OsString {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-impl<T: Serialize> Serialize for Wrapping<T> {
+impl<T> Serialize for Wrapping<T>
+where
+    T: Serialize,
+{
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
