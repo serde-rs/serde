@@ -16,6 +16,7 @@ use std::time::{Duration, UNIX_EPOCH};
 use std::ffi::CString;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::num::Wrapping;
 
 #[cfg(unix)]
 use std::str;
@@ -397,6 +398,11 @@ declare_tests! {
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
+        ],
+    }
+    test_wrapping {
+        Wrapping(1usize) => &[
+            Token::U64(1),
         ],
     }
 }

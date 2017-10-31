@@ -17,6 +17,7 @@ use std::default::Default;
 use std::ffi::{CString, OsString};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::num::Wrapping;
 
 #[cfg(feature = "unstable")]
 use std::ffi::CStr;
@@ -762,6 +763,14 @@ declare_tests! {
             Token::Bool(true),
         ],
     }
+    test_wrapping {
+        Wrapping(1usize) => &[
+            Token::U32(1),
+        ],
+        Wrapping(1usize) => &[
+            Token::U64(1),
+        ],
+    }
 }
 
 declare_tests! {
@@ -1168,5 +1177,11 @@ declare_error_tests! {
             Token::SeqEnd,
         ],
         "invalid type: sequence, expected unit struct UnitStruct",
+    }
+    test_wrapping_overflow<Wrapping<u16>> {
+        &[
+            Token::U32(65536),
+        ],
+        "invalid value: integer `65536`, expected u16",
     }
 }
