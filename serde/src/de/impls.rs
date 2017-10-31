@@ -1825,3 +1825,20 @@ where
         deserializer.deserialize_enum("Result", VARIANTS, ResultVisitor(PhantomData))
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(feature = "std")]
+use std::num::Wrapping;
+
+#[cfg(feature = "std")]
+impl<'de, T> Deserialize<'de> for Wrapping<T>
+where 
+    T: Deserialize<'de> 
+{
+    fn deserialize<D>(deserializer: D) -> Result<Wrapping<T>, D::Error> 
+        where D: Deserializer<'de>
+    {
+        Deserialize::deserialize(deserializer).map(Wrapping)
+    }
+} 
