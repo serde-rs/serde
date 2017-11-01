@@ -14,10 +14,6 @@
 
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
-// Clippy false positive
-// https://github.com/Manishearth/rust-clippy/issues/292
-#![cfg_attr(feature = "cargo-clippy", allow(needless_lifetimes))]
-
 #[macro_use]
 extern crate serde_derive;
 
