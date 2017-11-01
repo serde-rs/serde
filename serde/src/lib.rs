@@ -95,6 +95,7 @@
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(
     cast_lossless,
+    const_static_lifetime,
     doc_markdown,
     linkedlist,
     type_complexity,
