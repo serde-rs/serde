@@ -1180,7 +1180,7 @@ declare_error_tests! {
     }
     test_wrapping_overflow<Wrapping<u16>> {
         &[
-            Token::U32(65536),
+            Token::U32(65_536),
         ],
         "invalid value: integer `65536`, expected u16",
     }
