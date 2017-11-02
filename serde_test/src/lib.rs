@@ -164,6 +164,7 @@ mod ser;
 mod de;
 mod error;
 
+mod configure;
 mod token;
 mod assert;
 
