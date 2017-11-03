@@ -4,19 +4,85 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
                  SerializeTuple, SerializeTupleStruct, SerializeTupleVariant};
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Readable<T: ?Sized>(T);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Compact<T: ?Sized>(T);
 
-pub trait Configure {
-    fn readable(&self) -> Readable<&Self> {
+/// Trait which lets values mark wheter they should serialize or deserialize to or from their
+/// human-readable or compact representation.
+/// 
+/// ```
+/// extern crate serde;
+/// extern crate serde_test;
+/// 
+/// use serde::{Deserialize, Deserializer, Serialize, Serializer};
+/// use serde_test::{Configure, Token, assert_tokens};
+/// 
+/// #[derive(Debug, PartialEq)]
+/// struct Example(u8, u8);
+/// 
+/// impl Serialize for Example {
+///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+///         where S: Serializer,
+///     {
+///         if serializer.is_human_readable() {
+///             format!("{}.{}", self.0, self.1).serialize(serializer)
+///         } else {
+///             (self.0, self.1).serialize(serializer)
+///         }
+///     }
+/// }
+/// 
+/// impl<'de> Deserialize<'de> for Example {
+///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+///         where D: Deserializer<'de>,
+///     {
+///         use serde::de::Error;
+///         if deserializer.is_human_readable() {
+///             let s = String::deserialize(deserializer)?;
+///             let parts: Vec<_> = s.split('.').collect();
+///             Ok(Example(
+///                 parts[0].parse().map_err(D::Error::custom)?,
+///                 parts[1].parse().map_err(D::Error::custom)?,
+///             ))
+///         } else {
+///             let (x, y) = Deserialize::deserialize(deserializer)?;
+///             Ok(Example(x, y))
+///         }
+///     }
+/// }
+/// 
+/// fn main() {
+///     assert_tokens(
+///         &Example(1, 0).compact(),
+///         &[
+///             Token::Tuple { len: 2 },
+///             Token::U8(1),
+///             Token::U8(0),
+///             Token::TupleEnd,
+///         ],
+///     );
+///     assert_tokens(
+///         &Example(1, 0).readable(),
+///         &[
+///             Token::Str("1.0"),
+///         ],
+///     );
+/// }
+/// ```
+pub trait Configure : Sized {
+    /// Marks `self` as using `is_human_readable == true`
+    fn readable(self) -> Readable<Self> {
         Readable(self)
     }
-    fn compact(&self) -> Compact<&Self> {
+    /// Marks `self` as using `is_human_readable == false`
+    fn compact(self) -> Compact<Self> {
         Compact(self)
     }
 }
 
-impl<T: ?Sized> Configure for T {}
+impl<T> Configure for T {}
 
 impl<T: ?Sized> Serialize for Readable<T>
 where

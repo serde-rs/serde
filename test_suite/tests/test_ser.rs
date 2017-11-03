@@ -21,11 +21,8 @@ use std::num::Wrapping;
 #[cfg(unix)]
 use std::str;
 
-extern crate serde;
-
 extern crate serde_test;
-use self::serde_test::{Token, assert_ser_tokens, assert_ser_tokens_error,
-                       assert_ser_tokens_readable};
+use self::serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -54,28 +51,24 @@ enum Enum {
     One(i32),
     Seq(i32, i32),
     Map { a: i32, b: i32 },
-    #[serde(skip_serializing)]
-    SkippedUnit,
-    #[serde(skip_serializing)]
-    SkippedOne(i32),
-    #[serde(skip_serializing)]
-    SkippedSeq(i32, i32),
-    #[serde(skip_serializing)]
-    SkippedMap { _a: i32, _b: i32 },
+    #[serde(skip_serializing)] SkippedUnit,
+    #[serde(skip_serializing)] SkippedOne(i32),
+    #[serde(skip_serializing)] SkippedSeq(i32, i32),
+    #[serde(skip_serializing)] SkippedMap { _a: i32, _b: i32 },
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_tests {
     (
-        readable: $readable:tt
+        $readable:tt
         $($name:ident { $($value:expr => $tokens:expr,)+ })+
     ) => {
         $(
             #[test]
             fn $name() {
                 $(
-                    assert_ser_tokens_readable(&$value, $tokens, Some($readable));
+                    assert_ser_tokens(&$value.$readable(), $tokens);
                 )+
             }
         )+
@@ -408,7 +401,8 @@ declare_tests! {
 }
 
 declare_tests! {
-    readable: true
+    readable
+
     test_net_ipv4addr_readable {
         "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
     }
@@ -426,7 +420,8 @@ declare_tests! {
 }
 
 declare_tests! {
-    readable: false
+    compact
+
     test_net_ipv4addr_compact {
         net::Ipv4Addr::from(*b"1234") => &seq![
             Token::Tuple { len: 4 },
@@ -524,11 +519,7 @@ fn test_cannot_serialize_paths() {
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
 
-    assert_ser_tokens_error(
-        &path_buf,
-        &[],
-        "path contains invalid UTF-8 characters",
-    );
+    assert_ser_tokens_error(&path_buf, &[], "path contains invalid UTF-8 characters");
 }
 
 #[test]
