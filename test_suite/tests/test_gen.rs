@@ -511,6 +511,14 @@ fn test_gen() {
         Tuple(&'a str, &'static str),
         Newtype(&'static str),
     }
+
+    #[derive(Serialize, Deserialize)]
+    struct SkippedStaticStr {
+        #[serde(skip_deserializing)]
+        skipped: &'static str,
+        other: isize,
+    }
+    assert::<SkippedStaticStr>();
 }
 
 //////////////////////////////////////////////////////////////////////////
