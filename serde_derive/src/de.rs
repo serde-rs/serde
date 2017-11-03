@@ -203,7 +203,9 @@ impl BorrowedLifetimes {
 fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
     let mut lifetimes = BTreeSet::new();
     for field in cont.body.all_fields() {
-        lifetimes.extend(field.attrs.borrowed_lifetimes().iter().cloned());
+        if !field.attrs.skip_deserializing() {
+            lifetimes.extend(field.attrs.borrowed_lifetimes().iter().cloned());
+        }
     }
     if lifetimes.iter().any(|b| b.ident == "'static") {
         BorrowedLifetimes::Static
