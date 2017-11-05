@@ -116,6 +116,14 @@ where
             }
             visit::walk_path(self, path);
         }
+
+        // Type parameter should not be considered used by a macro path.
+        //
+        //     struct TypeMacro<T> {
+        //         mac: T!(),
+        //         marker: PhantomData<T>,
+        //     }
+        fn visit_mac(&mut self, _mac: &syn::Mac) {}
     }
 
     let all_ty_params: HashSet<_> = generics
