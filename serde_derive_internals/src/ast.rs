@@ -51,7 +51,7 @@ impl<'a> Container<'a> {
         let mut body = match item.body {
             syn::Body::Enum(ref variants) => Body::Enum(enum_from_ast(cx, variants)),
             syn::Body::Struct(ref variant_data) => {
-                let (style, fields) = struct_from_ast(cx, variant_data);
+                let (style, fields) = struct_from_ast(cx, variant_data, None);
                 Body::Struct(style, fields)
             }
         };
@@ -103,10 +103,11 @@ fn enum_from_ast<'a>(cx: &Ctxt, variants: &'a [syn::Variant]) -> Vec<Variant<'a>
         .iter()
         .map(
             |variant| {
-                let (style, fields) = struct_from_ast(cx, &variant.data);
+                let attrs = attr::Variant::from_ast(cx, variant);
+                let (style, fields) = struct_from_ast(cx, &variant.data, Some(&attrs));
                 Variant {
                     ident: variant.ident.clone(),
-                    attrs: attr::Variant::from_ast(cx, variant),
+                    attrs: attrs,
                     style: style,
                     fields: fields,
                 }
@@ -115,18 +116,18 @@ fn enum_from_ast<'a>(cx: &Ctxt, variants: &'a [syn::Variant]) -> Vec<Variant<'a>
         .collect()
 }
 
-fn struct_from_ast<'a>(cx: &Ctxt, data: &'a syn::VariantData) -> (Style, Vec<Field<'a>>) {
+fn struct_from_ast<'a>(cx: &Ctxt, data: &'a syn::VariantData, attrs: Option<&attr::Variant>) -> (Style, Vec<Field<'a>>) {
     match *data {
-        syn::VariantData::Struct(ref fields) => (Style::Struct, fields_from_ast(cx, fields)),
+        syn::VariantData::Struct(ref fields) => (Style::Struct, fields_from_ast(cx, fields, attrs)),
         syn::VariantData::Tuple(ref fields) if fields.len() == 1 => {
-            (Style::Newtype, fields_from_ast(cx, fields))
+            (Style::Newtype, fields_from_ast(cx, fields, attrs))
         }
-        syn::VariantData::Tuple(ref fields) => (Style::Tuple, fields_from_ast(cx, fields)),
+        syn::VariantData::Tuple(ref fields) => (Style::Tuple, fields_from_ast(cx, fields, attrs)),
         syn::VariantData::Unit => (Style::Unit, Vec::new()),
     }
 }
 
-fn fields_from_ast<'a>(cx: &Ctxt, fields: &'a [syn::Field]) -> Vec<Field<'a>> {
+fn fields_from_ast<'a>(cx: &Ctxt, fields: &'a [syn::Field], attrs: Option<&attr::Variant>) -> Vec<Field<'a>> {
     fields
         .iter()
         .enumerate()
@@ -134,7 +135,7 @@ fn fields_from_ast<'a>(cx: &Ctxt, fields: &'a [syn::Field]) -> Vec<Field<'a>> {
             |(i, field)| {
                 Field {
                     ident: field.ident.clone(),
-                    attrs: attr::Field::from_ast(cx, i, field),
+                    attrs: attr::Field::from_ast(cx, i, field, attrs),
                     ty: &field.ty,
                 }
             },
