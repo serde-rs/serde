@@ -357,6 +357,12 @@ fn test_gen() {
         s: Str<'a>,
     }
 
+    #[derive(Serialize, Deserialize)]
+    enum BorrowVariant<'a> {
+        #[serde(borrow, with = "StrDef")]
+        S(Str<'a>),
+    }
+
     mod vis {
         pub struct S;
 
