@@ -519,6 +519,17 @@ fn test_gen() {
         other: isize,
     }
     assert::<SkippedStaticStr>();
+
+    macro_rules! T {
+        () => { () }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct TypeMacro<T> {
+        mac: T!(),
+        marker: PhantomData<T>,
+    }
+    assert::<TypeMacro<X>>();
 }
 
 //////////////////////////////////////////////////////////////////////////
