@@ -98,6 +98,7 @@
     const_static_lifetime,
     doc_markdown,
     linkedlist,
+    needless_pass_by_value,
     type_complexity,
     unreadable_literal,
     zero_prefixed_literal,
