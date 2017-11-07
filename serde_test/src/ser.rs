@@ -40,25 +40,43 @@ impl<'a> Serializer<'a> {
 
 macro_rules! assert_next_token {
     ($ser:expr, $expected:ident) => {
-        assert_next_token!($ser, $expected, Token::$expected, true);
+        assert_next_token!($ser, stringify!($expected), Token::$expected, true);
     };
     ($ser:expr, $expected:ident($v:expr)) => {
-        assert_next_token!($ser, $expected, Token::$expected(v), v == $v);
+        assert_next_token!(
+            $ser,
+            format_args!("{}({:?})", stringify!($expected), $v),
+            Token::$expected(v),
+            v == $v
+        );
     };
     ($ser:expr, $expected:ident { $($k:ident),* }) => {
         let compare = ($($k,)*);
-        assert_next_token!($ser, $expected, Token::$expected { $($k),* }, ($($k,)*) == compare);
+        let field_format = || {
+            use std::fmt::Write;
+            let mut buffer = String::new();
+            $(
+                write!(&mut buffer, "{}: {:?}, ", stringify!($k), $k).unwrap();
+            )*
+            buffer
+        };
+        assert_next_token!(
+            $ser,
+            format_args!("{} {{ {}}}", stringify!($expected), field_format()),
+            Token::$expected { $($k),* },
+            ($($k,)*) == compare
+        );
     };
-    ($ser:expr, $expected:ident, $pat:pat, $guard:expr) => {
+    ($ser:expr, $expected:expr, $pat:pat, $guard:expr) => {
         match $ser.next_token() {
             Some($pat) if $guard => {}
             Some(other) => {
                 panic!("expected Token::{} but serialized as {}",
-                       stringify!($expected), other);
+                       $expected, other);
             }
             None => {
                 panic!("expected Token::{} after end of serialized tokens",
-                       stringify!($expected));
+                       $expected);
             }
         }
     };
