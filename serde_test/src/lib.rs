@@ -164,6 +164,7 @@
 #![cfg_attr(feature = "cargo-clippy", allow(
     missing_docs_in_private_items,
     stutter,
+    use_debug,
     use_self,
 ))]
 
