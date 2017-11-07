@@ -60,7 +60,6 @@ enum Unsupported {
     ByteArray,
     Optional,
     Unit,
-    UnitStruct,
     Sequence,
     Tuple,
     TupleStruct,
@@ -79,7 +78,6 @@ impl Display for Unsupported {
             Unsupported::ByteArray => formatter.write_str("a byte array"),
             Unsupported::Optional => formatter.write_str("an optional"),
             Unsupported::Unit => formatter.write_str("unit"),
-            Unsupported::UnitStruct => formatter.write_str("a unit struct"),
             Unsupported::Sequence => formatter.write_str("a sequence"),
             Unsupported::Tuple => formatter.write_str("a tuple"),
             Unsupported::TupleStruct => formatter.write_str("a tuple struct"),
@@ -199,7 +197,9 @@ where
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::UnitStruct))
+        let mut map = try!(self.delegate.serialize_map(Some(1)));
+        try!(map.serialize_entry(self.tag, self.variant_name));
+        map.end()
     }
 
     fn serialize_unit_variant(
