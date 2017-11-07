@@ -71,18 +71,18 @@ pub struct Compact<T: ?Sized>(T);
 ///     );
 /// }
 /// ```
-pub trait Configure : Sized {
+pub trait Configure {
     /// Marks `self` as using `is_human_readable == true`
-    fn readable(self) -> Readable<Self> {
+    fn readable(self) -> Readable<Self> where Self: Sized {
         Readable(self)
     }
     /// Marks `self` as using `is_human_readable == false`
-    fn compact(self) -> Compact<Self> {
+    fn compact(self) -> Compact<Self> where Self: Sized {
         Compact(self)
     }
 }
 
-impl<T> Configure for T {}
+impl<T: ?Sized> Configure for T {}
 
 impl<T: ?Sized> Serialize for Readable<T>
 where
