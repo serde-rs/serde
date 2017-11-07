@@ -157,6 +157,8 @@
 
 #![doc(html_root_url = "https://docs.rs/serde_test/1.0.18")]
 
+#![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
+
 #[macro_use]
 extern crate serde;
 
