@@ -89,6 +89,9 @@ struct Parameters {
 
     /// Type has a `serde(remote = "...")` attribute.
     is_remote: bool,
+
+    /// List of properties that are computed by methods.
+    method_properties: Option<Vec<(syn::Ident, syn::Path)>>,
 }
 
 impl Parameters {
@@ -106,12 +109,14 @@ impl Parameters {
         };
 
         let generics = build_generics(cont);
-
+        let method_properties = cont.attrs.method_properties().cloned();
+        
         Parameters {
             self_var: self_var,
             this: this,
             generics: generics,
             is_remote: is_remote,
+            method_properties: method_properties,
         }
     }
 
@@ -895,7 +900,7 @@ fn serialize_struct_visitor(
     func: Tokens,
     skip_func: Tokens,
 ) -> Vec<Tokens> {
-    fields
+    let mut fields: Vec<Tokens> = fields
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .map(
@@ -936,7 +941,25 @@ fn serialize_struct_visitor(
                 }
             },
         )
-        .collect()
+        .collect();
+
+        // If there are any method properties, add them to the list of fields.
+        if let Some(ref method_properties) = params.method_properties {
+            let iter = method_properties
+                .iter()
+                // ident is the chosen name for the property, path is the path to the method
+                // that should be called
+                // FIXME prevent duplicate keys
+                .map(|&(ref ident, ref path)| {
+                    let name = ident.to_string();
+                    quote! {
+                        try!(#func(&mut __serde_state, #name, &#path(self)));
+                    }
+                });
+            fields.extend(iter);
+        }
+
+        fields
 }
 
 fn wrap_serialize_field_with(

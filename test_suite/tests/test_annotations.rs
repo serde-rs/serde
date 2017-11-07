@@ -1184,3 +1184,64 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
 }
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(method_properties(data = "MethodPropertiesTest::as_string"))]
+struct MethodPropertiesTest {
+    dummy: i32,
+}
+
+impl MethodPropertiesTest {
+    #[allow(unused)]
+    pub fn as_string(&self) -> String {
+        format!("The value is {}", self.dummy)
+    }
+}
+
+#[test]
+fn test_method_properties() {
+    let value = MethodPropertiesTest { dummy: 32 };
+    assert_de_tokens::<MethodPropertiesTest>(&value,
+        &[
+            Token::Struct { name: "MethodPropertiesTest", len: 2 },
+            Token::Str("dummy"),
+            Token::I32(32),
+            Token::Str("data"),
+            Token::String("The value is 32"),
+            Token::StructEnd
+        ])
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(method_properties(data = "MethodPropertiesEnumTest::as_string"))]
+enum MethodPropertiesEnumTest {
+    Struct { value: i32 },
+    Tuple(i32),
+    Unit
+}
+
+impl MethodPropertiesEnumTest {
+    #[allow(unused)]
+    pub fn as_string(&self) -> String {
+        match *self {
+            MethodPropertiesEnumTest::Struct { value } => format!("StructVariant: {}", value),
+            MethodPropertiesEnumTest::Tuple(v) => format!("TupleVariant: {}", v),
+            MethodPropertiesEnumTest::Unit => "UnitVariant".to_string(),
+        }
+    }
+}
+
+#[test]
+fn test_method_properties_enum() {
+    let struct_variant = MethodPropertiesEnumTest::Struct { value: 32 };
+    // TODO why does this test fail when len of the StructVariant > 1?
+    assert_de_tokens(&struct_variant, 
+        &[
+            Token::StructVariant { name: "MethodPropertiesEnumTest", variant: "Struct", len: 1 },
+            Token::Str("value"),
+            Token::I32(32),
+            Token::Str("data"),
+            Token::String("StructVariant: 32"),
+            Token::StructVariantEnd,
+        ])
+}
