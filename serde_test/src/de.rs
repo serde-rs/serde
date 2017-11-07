@@ -100,7 +100,7 @@ impl<'de> Deserializer<'de> {
                 DeserializerSeqVisitor {
                     de: self,
                     len: len,
-                    end: end.clone(),
+                    end: end,
                 },
             )
         );
@@ -122,7 +122,7 @@ impl<'de> Deserializer<'de> {
                 DeserializerMapVisitor {
                     de: self,
                     len: len,
-                    end: end.clone(),
+                    end: end,
                 },
             )
         );
