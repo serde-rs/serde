@@ -17,13 +17,13 @@ pub struct Error {
 }
 
 impl ser::Error for Error {
-    fn custom<T: Display>(msg: T) -> Error {
+    fn custom<T: Display>(msg: T) -> Self {
         Error { msg: msg.to_string() }
     }
 }
 
 impl de::Error for Error {
-    fn custom<T: Display>(msg: T) -> Error {
+    fn custom<T: Display>(msg: T) -> Self {
         Error { msg: msg.to_string() }
     }
 }

@@ -157,8 +157,15 @@
 
 #![doc(html_root_url = "https://docs.rs/serde_test/1.0.18")]
 
-#![cfg_attr(feature = "cargo-clippy", deny(clippy))]
+#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+// Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
+// Whitelisted clippy_pedantic lints
+#![cfg_attr(feature = "cargo-clippy", allow(
+    missing_docs_in_private_items,
+    stutter,
+    use_self,
+))]
 
 #[macro_use]
 extern crate serde;
