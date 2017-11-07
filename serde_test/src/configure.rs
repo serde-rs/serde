@@ -9,8 +9,8 @@ pub struct Readable<T: ?Sized>(T);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Compact<T: ?Sized>(T);
 
-/// Trait which lets values mark whether they should serialize or deserialize to or from their
-/// human-readable or compact representation.
+/// Trait to determine whether a value is represented in human-readable or
+/// compact form.
 /// 
 /// ```
 /// extern crate serde;
