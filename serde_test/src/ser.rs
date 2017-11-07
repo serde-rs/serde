@@ -297,7 +297,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
 
     fn is_human_readable(&self) -> bool {
         panic!(
-            "Types which have different human-readable and compact representations\
+            "Types which have different human-readable and compact representations \
              must explicitly mark their test cases with `serde_test::Configure`"
         );
     }
