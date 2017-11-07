@@ -34,6 +34,9 @@ if [ -n "${CLIPPY}" ]; then
     cd "$DIR/serde_derive"
     cargo clippy -- -Dclippy
 
+    cd "$DIR/serde_test"
+    cargo clippy -- -Dclippy
+
     cd "$DIR/test_suite"
     cargo clippy --features unstable -- -Dclippy
 
