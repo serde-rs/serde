@@ -1267,3 +1267,48 @@ fn test_rename_all() {
         ]
     );
 }
+
+#[test]
+fn test_untagged_newtype_variant_containing_unit_struct_not_map() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Unit;
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum Message {
+        Unit(Unit),
+        Map(BTreeMap<String, String>),
+    }
+
+    assert_tokens(
+        &Message::Map(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_internally_tagged_newtype_variant_containing_unit_struct() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Info;
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "topic")]
+    enum Message {
+        Info(Info),
+    }
+
+    assert_tokens(
+        &Message::Info(Info),
+        &[
+            Token::Map { len: Some(1) },
+
+            Token::Str("topic"),
+            Token::Str("Info"),
+
+            Token::MapEnd,
+        ],
+    );
+}
