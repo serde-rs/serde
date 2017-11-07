@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use de::Deserializer;
 use ser::Serializer;
@@ -47,20 +47,8 @@ pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Serialize + Deserialize<'de> + PartialEq + Debug,
 {
-    assert_tokens_readable(value, tokens, None);
-}
-
-// Not public API
-#[doc(hidden)]
-/// Runs both `assert_ser_tokens` and `assert_de_tokens`.
-///
-/// See: `assert_tokens`
-pub fn assert_tokens_readable<'de, T>(value: &T, tokens: &'de [Token], human_readable: Option<bool>)
-where
-    T: Serialize + Deserialize<'de> + PartialEq + Debug,
-{
-    assert_ser_tokens_readable(value, tokens, human_readable);
-    assert_de_tokens_readable(value, tokens, human_readable);
+    assert_ser_tokens(value, tokens);
+    assert_de_tokens(value, tokens);
 }
 
 /// Asserts that `value` serializes to the given `tokens`.
@@ -96,19 +84,7 @@ pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 where
     T: Serialize,
 {
-    assert_ser_tokens_readable(value, tokens, None)
-}
-
-// Not public API
-#[doc(hidden)]
-/// Asserts that `value` serializes to the given `tokens`.
-///
-/// See: `assert_ser_tokens`
-pub fn assert_ser_tokens_readable<T>(value: &T, tokens: &[Token], human_readable: Option<bool>)
-where
-    T: Serialize,
-{
-    let mut ser = Serializer::readable(tokens, human_readable);
+    let mut ser = Serializer::new(tokens);
     match value.serialize(&mut ser) {
         Ok(_) => {}
         Err(err) => panic!("value failed to serialize: {}", err),
@@ -207,16 +183,7 @@ pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
-    assert_de_tokens_readable(value, tokens, None)
-}
-
-// Not public API
-#[doc(hidden)]
-pub fn assert_de_tokens_readable<'de, T>(value: &T, tokens: &'de [Token], human_readable: Option<bool>)
-where
-    T: Deserialize<'de> + PartialEq + Debug,
-{
-    let mut de = Deserializer::readable(tokens, human_readable);
+    let mut de = Deserializer::new(tokens);
     match T::deserialize(&mut de) {
         Ok(v) => assert_eq!(v, *value),
         Err(e) => panic!("tokens failed to deserialize: {}", e),

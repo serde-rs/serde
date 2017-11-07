@@ -29,7 +29,7 @@ extern crate fnv;
 use self::fnv::FnvHasher;
 
 extern crate serde_test;
-use self::serde_test::{Token, assert_de_tokens, assert_de_tokens_error, assert_de_tokens_readable};
+use self::serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
 
 #[macro_use]
 mod macros;
@@ -49,16 +49,14 @@ struct TupleStruct(i32, i32, i32);
 struct Struct {
     a: i32,
     b: i32,
-    #[serde(skip_deserializing)]
-    c: i32,
+    #[serde(skip_deserializing)] c: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructDenyUnknown {
     a: i32,
-    #[serde(skip_deserializing)]
-    b: i32,
+    #[serde(skip_deserializing)] b: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -79,15 +77,13 @@ impl Default for StructDefault<String> {
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct StructSkipAll {
-    #[serde(skip_deserializing)]
-    a: i32,
+    #[serde(skip_deserializing)] a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructSkipAllDenyUnknown {
-    #[serde(skip_deserializing)]
-    a: i32,
+    #[serde(skip_deserializing)] a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -112,7 +108,7 @@ enum EnumSkipAll {
 
 macro_rules! declare_tests {
     (
-        readable: $readable:tt
+        $readable:tt
         $($name:ident { $($value:expr => $tokens:expr,)+ })+
     ) => {
         $(
@@ -120,7 +116,7 @@ macro_rules! declare_tests {
             fn $name() {
                 $(
                     // Test ser/de roundtripping
-                    assert_de_tokens_readable(&$value, $tokens, Some($readable));
+                    assert_de_tokens(&$value.$readable(), $tokens);
 
                     // Test that the tokens are ignorable
                     assert_de_tokens_ignore($tokens);
@@ -168,13 +164,11 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         Token::Map { len: Some(2) },
         Token::Str("a"),
         Token::I32(1),
-
         Token::Str("ignored"),
-    ]
-            .into_iter()
-            .chain(ignorable_tokens.to_vec().into_iter())
-            .chain(vec![Token::MapEnd].into_iter())
-            .collect();
+    ].into_iter()
+        .chain(ignorable_tokens.to_vec().into_iter())
+        .chain(vec![Token::MapEnd].into_iter())
+        .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
@@ -774,7 +768,8 @@ declare_tests! {
 }
 
 declare_tests! {
-    readable: true
+    readable
+
     test_net_ipv4addr_readable {
         "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
     }
@@ -792,7 +787,8 @@ declare_tests! {
 }
 
 declare_tests! {
-    readable: false
+    compact
+
     test_net_ipv4addr_compact {
         net::Ipv4Addr::from(*b"1234") => &seq![
             Token::Tuple { len: 4 },

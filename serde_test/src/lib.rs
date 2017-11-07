@@ -164,16 +164,15 @@ mod ser;
 mod de;
 mod error;
 
+mod configure;
 mod token;
 mod assert;
 
 pub use token::Token;
-pub use assert::{assert_tokens, assert_ser_tokens, assert_ser_tokens_error,
-                 assert_de_tokens, assert_de_tokens_error};
+pub use assert::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
+                 assert_ser_tokens_error, assert_tokens};
 
-// Not public API.
-#[doc(hidden)]
-pub use assert::{assert_tokens_readable, assert_de_tokens_readable, assert_ser_tokens_readable};
+pub use configure::{Compact, Configure, Readable};
 
 // Not public API.
 #[doc(hidden)]

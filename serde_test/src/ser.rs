@@ -15,19 +15,12 @@ use token::Token;
 #[derive(Debug)]
 pub struct Serializer<'a> {
     tokens: &'a [Token],
-    is_human_readable: Option<bool>,
 }
 
 impl<'a> Serializer<'a> {
     /// Creates the serializer.
     pub fn new(tokens: &'a [Token]) -> Self {
-        Serializer::readable(tokens, None)
-    }
-
-    // Not public API
-    #[doc(hidden)]
-    pub fn readable(tokens: &'a [Token], is_human_readable: Option<bool>) -> Self {
-        Serializer { tokens: tokens, is_human_readable: is_human_readable }
+        Serializer { tokens: tokens }
     }
 
     /// Pulls the next token off of the serializer, ignoring it.
@@ -254,10 +247,16 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
             assert_next_token!(self, Str(variant));
             let len = Some(len);
             assert_next_token!(self, Seq { len });
-            Ok(Variant { ser: self, end: Token::SeqEnd })
+            Ok(Variant {
+                ser: self,
+                end: Token::SeqEnd,
+            })
         } else {
             assert_next_token!(self, TupleVariant { name, variant, len });
-            Ok(Variant { ser: self, end: Token::TupleVariantEnd })
+            Ok(Variant {
+                ser: self,
+                end: Token::TupleVariantEnd,
+            })
         }
     }
 
@@ -283,23 +282,24 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
             assert_next_token!(self, Str(variant));
             let len = Some(len);
             assert_next_token!(self, Map { len });
-            Ok(Variant { ser: self, end: Token::MapEnd })
+            Ok(Variant {
+                ser: self,
+                end: Token::MapEnd,
+            })
         } else {
             assert_next_token!(self, StructVariant { name, variant, len });
-            Ok(Variant { ser: self, end: Token::StructVariantEnd })
+            Ok(Variant {
+                ser: self,
+                end: Token::StructVariantEnd,
+            })
         }
     }
 
     fn is_human_readable(&self) -> bool {
-        match self.is_human_readable {
-            Some(is) => is,
-            None => {
-                panic!("There is no serde_test API currently for testing types \
-                        that have different human-readable and compact \
-                        representation. See \
-                        https://github.com/serde-rs/serde/issues/1065.");
-            }
-        }
+        panic!(
+            "Types which have different human-readable and compact representations\
+             must explicitly mark their test cases with `serde_test::Configure`"
+        );
     }
 }
 
