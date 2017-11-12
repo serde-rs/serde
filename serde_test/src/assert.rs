@@ -215,7 +215,7 @@ where
 ///
 /// assert_de_tokens_error::<S>(
 ///     &[
-///         Token::Struct { name: "S", len: 1 },
+///         Token::Struct { name: "S", len: 2 },
 ///         Token::Str("x"),
 ///     ],
 ///     "unknown field `x`, expected `a` or `b`",

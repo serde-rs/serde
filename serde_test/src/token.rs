@@ -425,6 +425,10 @@ pub enum Token {
 
     /// The header of a struct.
     ///
+    /// When testing deserialization, the `len` field must match the number of
+    /// fields that the struct expects to deserialize. This may be different
+    /// from the number of fields contained in the input tokens.
+    ///
     /// After this header are the fields of the struct, followed by `StructEnd`.
     ///
     /// ```rust
@@ -460,6 +464,10 @@ pub enum Token {
     StructEnd,
 
     /// The header of a struct variant of an enum.
+    ///
+    /// When testing deserialization, the `len` field must match the number of
+    /// fields that the struct variant expects to deserialize. This may be
+    /// different from the number of fields contained in the input tokens.
     ///
     /// After this header are the fields of the struct variant, followed by
     /// `StructVariantEnd`.
