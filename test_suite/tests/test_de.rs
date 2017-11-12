@@ -538,7 +538,7 @@ declare_tests! {
             Token::MapEnd,
         ],
         Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 3 },
+            Token::Struct { name: "Struct", len: 2 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -570,7 +570,7 @@ declare_tests! {
             Token::MapEnd,
         ],
         Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 3 },
+            Token::Struct { name: "Struct", len: 2 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -591,7 +591,7 @@ declare_tests! {
             Token::StructEnd,
         ],
         StructSkipAll { a: 0 } => &[
-            Token::Struct { name: "StructSkipAll", len: 1 },
+            Token::Struct { name: "StructSkipAll", len: 0 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -608,7 +608,7 @@ declare_tests! {
     }
     test_struct_default {
         StructDefault { a: 50, b: "overwritten".to_string() } => &[
-            Token::Struct { name: "StructDefault", len: 1 },
+            Token::Struct { name: "StructDefault", len: 2 },
                 Token::Str("a"),
                 Token::I32(50),
 
@@ -617,7 +617,7 @@ declare_tests! {
             Token::StructEnd,
         ],
         StructDefault { a: 100, b: "default".to_string() } => &[
-            Token::Struct { name: "StructDefault",  len: 0 },
+            Token::Struct { name: "StructDefault",  len: 2 },
             Token::StructEnd,
         ],
     }
@@ -954,7 +954,7 @@ fn test_cstr_internal_null_end() {
 declare_error_tests! {
     test_unknown_field<StructDenyUnknown> {
         &[
-            Token::Struct { name: "StructDenyUnknown", len: 2 },
+            Token::Struct { name: "StructDenyUnknown", len: 1 },
                 Token::Str("a"),
                 Token::I32(0),
 
@@ -964,14 +964,14 @@ declare_error_tests! {
     }
     test_skipped_field_is_unknown<StructDenyUnknown> {
         &[
-            Token::Struct { name: "StructDenyUnknown", len: 2 },
+            Token::Struct { name: "StructDenyUnknown", len: 1 },
                 Token::Str("b"),
         ],
         "unknown field `b`, expected `a`",
     }
     test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
         &[
-            Token::Struct { name: "StructSkipAllDenyUnknown", len: 1 },
+            Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
                 Token::Str("a"),
         ],
         "unknown field `a`, there are no fields",

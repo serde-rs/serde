@@ -786,10 +786,23 @@ fn test_adjacently_tagged_enum() {
     }
 
     // unit with no content
-    assert_tokens(
+    assert_ser_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
             Token::Struct { name: "AdjacentlyTagged", len: 1 },
+
+            Token::Str("t"),
+            Token::Str("Unit"),
+
+            Token::StructEnd,
+        ],
+    );
+
+    // unit with no content
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Unit"),
@@ -802,7 +815,7 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 1 },
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Unit"),
@@ -818,7 +831,7 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 1 },
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("c"),
             Token::Unit,
@@ -834,7 +847,7 @@ fn test_adjacently_tagged_enum() {
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 3 },
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("f"),
             Token::Unit,
@@ -975,7 +988,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
     assert_de_tokens(
         &AdjacentlyTagged::Unit,
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 2},
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Unit"),
@@ -989,7 +1002,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
 
     assert_de_tokens_error::<AdjacentlyTagged>(
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 3},
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("t"),
             Token::Str("Unit"),
@@ -1004,7 +1017,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
 
     assert_de_tokens_error::<AdjacentlyTagged>(
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 3},
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("h"),
         ],
@@ -1013,7 +1026,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
 
     assert_de_tokens_error::<AdjacentlyTagged>(
         &[
-            Token::Struct { name: "AdjacentlyTagged", len: 3},
+            Token::Struct { name: "AdjacentlyTagged", len: 2 },
 
             Token::Str("c"),
             Token::Unit,

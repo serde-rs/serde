@@ -135,7 +135,7 @@ fn test_default_struct() {
              a5: 123,
          },
         &[
-            Token::Struct { name: "DefaultStruct", len: 1 },
+            Token::Struct { name: "DefaultStruct", len: 3 },
 
             Token::Str("a1"),
             Token::I32(1),
@@ -309,7 +309,7 @@ fn test_elt_not_deserialize() {
              c: NotDeserializeStruct(123),
              e: NotDeserializeEnum::Trouble,
          },
-        &[Token::Struct { name: "ContainsNotDeserialize", len: 3 }, Token::StructEnd],
+        &[Token::Struct { name: "ContainsNotDeserialize", len: 1 }, Token::StructEnd],
     );
 }
 
@@ -331,7 +331,7 @@ fn test_ignore_unknown() {
              a5: 123,
          },
         &[
-            Token::Struct { name: "DefaultStruct", len: 5 },
+            Token::Struct { name: "DefaultStruct", len: 3 },
 
             Token::Str("whoops1"),
             Token::I32(2),
@@ -359,7 +359,7 @@ fn test_ignore_unknown() {
 
     assert_de_tokens_error::<DenyUnknown>(
         &[
-            Token::Struct { name: "DenyUnknown", len: 2 },
+            Token::Struct { name: "DenyUnknown", len: 1 },
 
             Token::Str("a1"),
             Token::I32(1),
