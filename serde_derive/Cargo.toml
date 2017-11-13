@@ -14,6 +14,10 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
 
+[features]
+default = []
+deserialize_from = []
+
 [lib]
 name = "serde_derive"
 proc-macro = true
