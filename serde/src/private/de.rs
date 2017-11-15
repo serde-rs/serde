@@ -1643,6 +1643,9 @@ mod content {
                 Some(&Content::Map(ref v)) => {
                     de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
                 }
+                Some(&Content::Seq(ref v)) => {
+                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
+                }
                 Some(other) => Err(de::Error::invalid_type(other.unexpected(), &"struct variant"),),
                 _ => Err(de::Error::invalid_type(de::Unexpected::UnitVariant, &"struct variant"),),
             }
