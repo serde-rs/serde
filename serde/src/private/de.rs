@@ -1105,7 +1105,7 @@ mod content {
                 u @ Content::U32(_) |
                 u @ Content::U64(_) => (u, None),
                 other => {
-                    return Err(de::Error::invalid_type(other.unexpected(), &"string or map"),);
+                    return Err(de::Error::invalid_type(other.unexpected(), &"string, uint, or map"),);
                 }
             };
 
@@ -1534,7 +1534,7 @@ mod content {
                 ref u @ Content::U32(_) |
                 ref u @ Content::U64(_) => (u, None),
                 ref other => {
-                    return Err(de::Error::invalid_type(other.unexpected(), &"string or map"),);
+                    return Err(de::Error::invalid_type(other.unexpected(), &"string, uint, or map"),);
                 }
             };
 
