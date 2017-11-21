@@ -1528,7 +1528,6 @@ mod content {
                     }
                     (variant, Some(value))
                 }
-
                 ref s @ Content::String(_) | ref s @ Content::Str(_) => (s, None),
                 ref u @ Content::U8(_) |
                 ref u @ Content::U16(_) |
