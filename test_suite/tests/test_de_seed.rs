@@ -304,12 +304,12 @@ where
                 right,
             } => {
                 let node = Rc::new(Node { data, left, right });
-                seed.insert(id, node.clone());
+                seed.insert(id, Rc::clone(&node));
                 Ok(Some(node))
             }
             Variant::Plain { data, left, right } => Ok(Some(Rc::new(Node { data, left, right }))),
             Variant::Reference(id) => match seed.get(&id) {
-                Some(rc) => Ok(Some(rc.clone())),
+                Some(rc) => Ok(Some(Rc::clone(rc))),
                 None => Err(Error::custom(format_args!("missing id {}", id))),
             },
         },
@@ -362,8 +362,8 @@ fn test_node_deserialize() {
     });
     let a = Rc::new(Node {
         data: 'a',
-        left: Some(b.clone()),
-        right: Some(b.clone()),
+        left: Some(Rc::clone(&b)),
+        right: Some(Rc::clone(&b)),
     });
     let map = HashMap::new();
     let mut seed = map;
