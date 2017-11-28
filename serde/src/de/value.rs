@@ -733,7 +733,7 @@ where
     T: IntoDeserializer<'de, E>,
     E: de::Error,
 {
-    type Deserializer = SeqDeserializer<<Vec<T> as IntoIterator>::IntoIter, E>;
+    type Deserializer = SeqDeserializer<<Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -746,7 +746,7 @@ where
     T: IntoDeserializer<'de, E> + Eq + Ord,
     E: de::Error,
 {
-    type Deserializer = SeqDeserializer<<BTreeSet<T> as IntoIterator>::IntoIter, E>;
+    type Deserializer = SeqDeserializer<<Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -754,12 +754,13 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<'de, T, E> IntoDeserializer<'de, E> for HashSet<T>
+impl<'de, T, S, E> IntoDeserializer<'de, E> for HashSet<T, S>
 where
     T: IntoDeserializer<'de, E> + Eq + Hash,
+    S: BuildHasher,
     E: de::Error,
 {
-    type Deserializer = SeqDeserializer<<HashSet<T> as IntoIterator>::IntoIter, E>;
+    type Deserializer = SeqDeserializer<<Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         SeqDeserializer::new(self.into_iter())
@@ -1152,7 +1153,7 @@ where
     V: IntoDeserializer<'de, E>,
     E: de::Error,
 {
-    type Deserializer = MapDeserializer<'de, <BTreeMap<K, V> as IntoIterator>::IntoIter, E>;
+    type Deserializer = MapDeserializer<'de, <Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         MapDeserializer::new(self.into_iter())
@@ -1160,13 +1161,14 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<'de, K, V, E> IntoDeserializer<'de, E> for HashMap<K, V>
+impl<'de, K, V, S, E> IntoDeserializer<'de, E> for HashMap<K, V, S>
 where
     K: IntoDeserializer<'de, E> + Eq + Hash,
     V: IntoDeserializer<'de, E>,
+    S: BuildHasher,
     E: de::Error,
 {
-    type Deserializer = MapDeserializer<'de, <HashMap<K, V> as IntoIterator>::IntoIter, E>;
+    type Deserializer = MapDeserializer<'de, <Self as IntoIterator>::IntoIter, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         MapDeserializer::new(self.into_iter())

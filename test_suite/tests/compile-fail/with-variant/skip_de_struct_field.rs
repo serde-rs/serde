@@ -9,17 +9,15 @@
 #[macro_use]
 extern crate serde_derive;
 
-mod remote {
-    pub struct S {
-        pub a: u8,
-        pub b: u8,
-    }
+#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+//~^ HELP: variant `Struct` cannot have both #[serde(deserialize_with)] and a field `f1` marked with #[serde(skip_deserializing)]
+enum Enum {
+    #[serde(deserialize_with = "deserialize_some_other_variant")]
+    Struct {
+        #[serde(skip_deserializing)]
+        f1: String,
+        f2: u8,
+    },
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "remote::S")]
-struct S {
-    a: u8, //~^^^ ERROR: missing field `b` in initializer of `remote::S`
-}
-
-fn main() {}
+fn main() { }

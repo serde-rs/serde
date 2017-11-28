@@ -6,11 +6,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
+
 #[macro_use]
 extern crate serde_derive;
 
 extern crate serde;
 use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
+use self::serde::de::{self, Unexpected};
 
 extern crate serde_test;
 use self::serde_test::{Token, assert_tokens, assert_ser_tokens, assert_de_tokens,
@@ -132,7 +135,7 @@ fn test_default_struct() {
              a5: 123,
          },
         &[
-            Token::Struct { name: "DefaultStruct", len: 1 },
+            Token::Struct { name: "DefaultStruct", len: 3 },
 
             Token::Str("a1"),
             Token::I32(1),
@@ -306,7 +309,7 @@ fn test_elt_not_deserialize() {
              c: NotDeserializeStruct(123),
              e: NotDeserializeEnum::Trouble,
          },
-        &[Token::Struct { name: "ContainsNotDeserialize", len: 3 }, Token::StructEnd],
+        &[Token::Struct { name: "ContainsNotDeserialize", len: 1 }, Token::StructEnd],
     );
 }
 
@@ -328,7 +331,7 @@ fn test_ignore_unknown() {
              a5: 123,
          },
         &[
-            Token::Struct { name: "DefaultStruct", len: 5 },
+            Token::Struct { name: "DefaultStruct", len: 3 },
 
             Token::Str("whoops1"),
             Token::I32(2),
@@ -356,7 +359,7 @@ fn test_ignore_unknown() {
 
     assert_de_tokens_error::<DenyUnknown>(
         &[
-            Token::Struct { name: "DenyUnknown", len: 2 },
+            Token::Struct { name: "DenyUnknown", len: 1 },
 
             Token::Str("a1"),
             Token::I32(1),
@@ -807,6 +810,145 @@ fn test_serialize_with_enum() {
             Token::Bool(true),
 
             Token::StructVariantEnd,
+        ],
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum WithVariant {
+    #[serde(serialize_with="serialize_unit_variant_as_i8")]
+    #[serde(deserialize_with="deserialize_i8_as_unit_variant")]
+    Unit,
+
+    #[serde(serialize_with="SerializeWith::serialize_with")]
+    #[serde(deserialize_with="DeserializeWith::deserialize_with")]
+    Newtype(i32),
+
+    #[serde(serialize_with="serialize_variant_as_string")]
+    #[serde(deserialize_with="deserialize_string_as_variant")]
+    Tuple(String, u8),
+
+    #[serde(serialize_with="serialize_variant_as_string")]
+    #[serde(deserialize_with="deserialize_string_as_variant")]
+    Struct {
+        f1: String,
+        f2: u8,
+    },
+}
+
+fn serialize_unit_variant_as_i8<S>(serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    serializer.serialize_i8(0)
+}
+
+fn deserialize_i8_as_unit_variant<'de, D>(deserializer: D) -> Result<(), D::Error>
+    where D: Deserializer<'de>,
+{
+    let n = i8::deserialize(deserializer)?;
+    match n {
+        0 => Ok(()),
+        _ => Err(de::Error::invalid_value(Unexpected::Signed(n as i64), &"0")),
+    }
+}
+
+fn serialize_variant_as_string<S>(f1: &str,
+                                  f2: &u8,
+                                  serializer: S)
+                                  -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    serializer.serialize_str(format!("{};{:?}", f1, f2).as_str())
+}
+
+fn deserialize_string_as_variant<'de, D>(deserializer: D) -> Result<(String, u8), D::Error>
+    where D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let mut pieces = s.split(';');
+    let f1 = match pieces.next() {
+        Some(x) => x,
+        None => return Err(de::Error::invalid_length(0, &"2")),
+    };
+    let f2 = match pieces.next() {
+        Some(x) => x,
+        None => return Err(de::Error::invalid_length(1, &"2")),
+    };
+    let f2 = match f2.parse() {
+        Ok(n) => n,
+        Err(_) => {
+            return Err(de::Error::invalid_value(Unexpected::Str(f2), &"an 8-bit signed integer"));
+        }
+    };
+    Ok((f1.into(), f2))
+}
+
+#[test]
+fn test_serialize_with_variant() {
+    assert_ser_tokens(
+        &WithVariant::Unit,
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Unit" },
+            Token::I8(0),
+        ],
+    );
+
+    assert_ser_tokens(
+        &WithVariant::Newtype(123),
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Newtype" },
+            Token::Bool(true),
+        ],
+    );
+
+    assert_ser_tokens(
+        &WithVariant::Tuple("hello".into(), 0),
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Tuple" },
+            Token::Str("hello;0"),
+        ],
+    );
+
+    assert_ser_tokens(
+        &WithVariant::Struct { f1: "world".into(), f2: 1 },
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Struct" },
+            Token::Str("world;1"),
+        ],
+    );
+}
+
+#[test]
+fn test_deserialize_with_variant() {
+    assert_de_tokens(
+        &WithVariant::Unit,
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Unit" },
+            Token::I8(0),
+        ],
+    );
+
+    assert_de_tokens(
+        &WithVariant::Newtype(123),
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Newtype" },
+            Token::Bool(true),
+        ],
+    );
+
+    assert_de_tokens(
+        &WithVariant::Tuple("hello".into(), 0),
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Tuple" },
+            Token::Str("hello;0"),
+        ],
+    );
+
+    assert_de_tokens(
+        &WithVariant::Struct { f1: "world".into(), f2: 1 },
+        &[
+            Token::NewtypeVariant { name: "WithVariant", variant: "Struct" },
+            Token::Str("world;1"),
         ],
     );
 }

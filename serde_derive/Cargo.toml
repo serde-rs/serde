@@ -22,3 +22,7 @@ proc-macro = true
 quote = "0.3.8"
 serde_derive_state_internals = { version = "=0.4.1", default-features = false, path = "../serde_derive_internals" }
 syn = { version = "0.11", features = ["visit"] }
+
+[dev-dependencies]
+serde = { version = "1.0", path = "../serde" }
+serde_derive = "1.0"

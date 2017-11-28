@@ -10,11 +10,9 @@
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
-#![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
+#![deny(warnings)]
 
-// Clippy false positive
-// https://github.com/Manishearth/rust-clippy/issues/292
-#![cfg_attr(feature = "cargo-clippy", allow(needless_lifetimes))]
+#![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
 #[macro_use]
 extern crate serde_derive;
@@ -359,6 +357,12 @@ fn test_gen() {
         s: Str<'a>,
     }
 
+    #[derive(Serialize, Deserialize)]
+    enum BorrowVariant<'a> {
+        #[serde(borrow, with = "StrDef")]
+        S(Str<'a>),
+    }
+
     mod vis {
         pub struct S;
 
@@ -373,6 +377,165 @@ fn test_gen() {
         #[serde(with = "vis::SDef")]
         s: vis::S,
     }
+
+    #[derive(Serialize, Deserialize)]
+    enum ExternallyTaggedVariantWith {
+        #[allow(dead_code)]
+        Normal { f1: String },
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Newtype(X),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Tuple(String, u8),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Struct {
+            f1: String,
+            f2: u8,
+        },
+
+        #[serde(serialize_with = "serialize_some_unit_variant")]
+        #[serde(deserialize_with = "deserialize_some_unit_variant")]
+        #[allow(dead_code)]
+        Unit,
+    }
+    assert_ser::<ExternallyTaggedVariantWith>();
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(tag = "t")]
+    enum InternallyTaggedVariantWith {
+        #[allow(dead_code)]
+        Normal { f1: String },
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Newtype(X),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Struct {
+            f1: String,
+            f2: u8,
+        },
+
+        #[serde(serialize_with = "serialize_some_unit_variant")]
+        #[serde(deserialize_with = "deserialize_some_unit_variant")]
+        #[allow(dead_code)]
+        Unit,
+    }
+    assert_ser::<InternallyTaggedVariantWith>();
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(tag = "t", content = "c")]
+    enum AdjacentlyTaggedVariantWith {
+        #[allow(dead_code)]
+        Normal { f1: String },
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Newtype(X),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Tuple(String, u8),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Struct {
+            f1: String,
+            f2: u8,
+        },
+
+        #[serde(serialize_with = "serialize_some_unit_variant")]
+        #[serde(deserialize_with = "deserialize_some_unit_variant")]
+        #[allow(dead_code)]
+        Unit,
+    }
+    assert_ser::<AdjacentlyTaggedVariantWith>();
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum UntaggedVariantWith {
+        #[allow(dead_code)]
+        Normal { f1: String },
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Newtype(X),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Tuple(String, u8),
+
+        #[serde(serialize_with = "serialize_some_other_variant")]
+        #[serde(deserialize_with = "deserialize_some_other_variant")]
+        #[allow(dead_code)]
+        Struct {
+            f1: String,
+            f2: u8,
+        },
+
+        #[serde(serialize_with = "serialize_some_unit_variant")]
+        #[serde(deserialize_with = "deserialize_some_unit_variant")]
+        #[allow(dead_code)]
+        Unit,
+    }
+    assert_ser::<UntaggedVariantWith>();
+
+    #[derive(Serialize, Deserialize)]
+    struct StaticStrStruct<'a> {
+        a: &'a str,
+        b: &'static str,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct StaticStrTupleStruct<'a>(&'a str, &'static str);
+
+    #[derive(Serialize, Deserialize)]
+    struct StaticStrNewtypeStruct(&'static str);
+
+    #[derive(Serialize, Deserialize)]
+    enum StaticStrEnum<'a> {
+        Struct {
+            a: &'a str,
+            b: &'static str,
+        },
+        Tuple(&'a str, &'static str),
+        Newtype(&'static str),
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct SkippedStaticStr {
+        #[serde(skip_deserializing)]
+        skipped: &'static str,
+        other: isize,
+    }
+    assert::<SkippedStaticStr>();
+
+    macro_rules! T {
+        () => { () }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct TypeMacro<T> {
+        mac: T!(),
+        marker: PhantomData<T>,
+    }
+    assert::<TypeMacro<X>>();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -414,3 +577,29 @@ impl DeserializeWith for X {
         unimplemented!()
     }
 }
+
+pub fn serialize_some_unit_variant<S>(_: S) -> StdResult<S::Ok, S::Error>
+    where S: Serializer,
+{
+    unimplemented!()
+}
+
+pub fn deserialize_some_unit_variant<'de, D>(_: D) -> StdResult<(), D::Error>
+    where D: Deserializer<'de>,
+{
+    unimplemented!()
+}
+
+pub fn serialize_some_other_variant<S>(_: &str, _: &u8, _: S) -> StdResult<S::Ok, S::Error>
+    where S: Serializer,
+{
+    unimplemented!()
+}
+
+pub fn deserialize_some_other_variant<'de, D>(_: D) -> StdResult<(String, u8), D::Error>
+    where D: Deserializer<'de>,
+{
+    unimplemented!()
+}
+
+pub fn is_zero(n: &u8) -> bool { *n == 0 }

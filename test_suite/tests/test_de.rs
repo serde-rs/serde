@@ -17,6 +17,7 @@ use std::default::Default;
 use std::ffi::{CString, OsString};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::num::Wrapping;
 
 #[cfg(feature = "unstable")]
 use std::ffi::CStr;
@@ -28,7 +29,7 @@ extern crate fnv;
 use self::fnv::FnvHasher;
 
 extern crate serde_test;
-use self::serde_test::{Token, assert_de_tokens, assert_de_tokens_error};
+use self::serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
 
 #[macro_use]
 mod macros;
@@ -48,16 +49,14 @@ struct TupleStruct(i32, i32, i32);
 struct Struct {
     a: i32,
     b: i32,
-    #[serde(skip_deserializing)]
-    c: i32,
+    #[serde(skip_deserializing)] c: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructDenyUnknown {
     a: i32,
-    #[serde(skip_deserializing)]
-    b: i32,
+    #[serde(skip_deserializing)] b: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -78,15 +77,13 @@ impl Default for StructDefault<String> {
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct StructSkipAll {
-    #[serde(skip_deserializing)]
-    a: i32,
+    #[serde(skip_deserializing)] a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructSkipAllDenyUnknown {
-    #[serde(skip_deserializing)]
-    a: i32,
+    #[serde(skip_deserializing)] a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -109,25 +106,37 @@ enum EnumSkipAll {
 
 //////////////////////////////////////////////////////////////////////////
 
-macro_rules! declare_test {
-    ($name:ident { $($value:expr => $tokens:expr,)+ }) => {
-        #[test]
-        fn $name() {
-            $(
-                // Test ser/de roundtripping
-                assert_de_tokens(&$value, $tokens);
-
-                // Test that the tokens are ignorable
-                assert_de_tokens_ignore($tokens);
-            )+
-        }
-    }
-}
-
 macro_rules! declare_tests {
+    (
+        $readable:tt
+        $($name:ident { $($value:expr => $tokens:expr,)+ })+
+    ) => {
+        $(
+            #[test]
+            fn $name() {
+                $(
+                    // Test ser/de roundtripping
+                    assert_de_tokens(&$value.$readable(), $tokens);
+
+                    // Test that the tokens are ignorable
+                    assert_de_tokens_ignore($tokens);
+                )+
+            }
+        )+
+    };
+
     ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
         $(
-            declare_test!($name { $($value => $tokens,)+ });
+            #[test]
+            fn $name() {
+                $(
+                    // Test ser/de roundtripping
+                    assert_de_tokens(&$value, $tokens);
+
+                    // Test that the tokens are ignorable
+                    assert_de_tokens_ignore($tokens);
+                )+
+            }
         )+
     }
 }
@@ -155,13 +164,11 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         Token::Map { len: Some(2) },
         Token::Str("a"),
         Token::I32(1),
-
         Token::Str("ignored"),
-    ]
-            .into_iter()
-            .chain(ignorable_tokens.to_vec().into_iter())
-            .chain(vec![Token::MapEnd].into_iter())
-            .collect();
+    ].into_iter()
+        .chain(ignorable_tokens.to_vec().into_iter())
+        .chain(vec![Token::MapEnd].into_iter())
+        .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
@@ -522,7 +529,16 @@ declare_tests! {
             Token::MapEnd,
         ],
         Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 3 },
+            Token::Map { len: Some(3) },
+                Token::U32(0),
+                Token::I32(1),
+
+                Token::U32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Struct { name: "Struct", len: 2 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -554,7 +570,7 @@ declare_tests! {
             Token::MapEnd,
         ],
         Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 3 },
+            Token::Struct { name: "Struct", len: 2 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -575,7 +591,7 @@ declare_tests! {
             Token::StructEnd,
         ],
         StructSkipAll { a: 0 } => &[
-            Token::Struct { name: "StructSkipAll", len: 1 },
+            Token::Struct { name: "StructSkipAll", len: 0 },
                 Token::Str("a"),
                 Token::I32(1),
 
@@ -592,7 +608,7 @@ declare_tests! {
     }
     test_struct_default {
         StructDefault { a: 50, b: "overwritten".to_string() } => &[
-            Token::Struct { name: "StructDefault", len: 1 },
+            Token::Struct { name: "StructDefault", len: 2 },
                 Token::Str("a"),
                 Token::I32(50),
 
@@ -601,7 +617,7 @@ declare_tests! {
             Token::StructEnd,
         ],
         StructDefault { a: 100, b: "default".to_string() } => &[
-            Token::Struct { name: "StructDefault",  len: 0 },
+            Token::Struct { name: "StructDefault",  len: 2 },
             Token::StructEnd,
         ],
     }
@@ -716,17 +732,6 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
-    test_net_ipv4addr {
-        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
-    }
-    test_net_ipv6addr {
-        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
-    }
-    test_net_socketaddr {
-        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
-    }
     test_path {
         Path::new("/usr/local/lib") => &[
             Token::BorrowedStr("/usr/local/lib"),
@@ -750,6 +755,107 @@ declare_tests! {
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
+        ],
+    }
+    test_wrapping {
+        Wrapping(1usize) => &[
+            Token::U32(1),
+        ],
+        Wrapping(1usize) => &[
+            Token::U64(1),
+        ],
+    }
+}
+
+declare_tests! {
+    readable
+
+    test_net_ipv4addr_readable {
+        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_ipv6addr_readable {
+        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
+    }
+    test_net_ipaddr_readable {
+        "1.2.3.4".parse::<net::IpAddr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_socketaddr_readable {
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
+    }
+}
+
+declare_tests! {
+    compact
+
+    test_net_ipv4addr_compact {
+        net::Ipv4Addr::from(*b"1234") => &seq![
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd
+        ],
+    }
+    test_net_ipv6addr_compact {
+        net::Ipv6Addr::from(*b"1234567890123456") => &seq![
+            Token::Tuple { len: 4 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd
+        ],
+    }
+    test_net_ipaddr_compact {
+        net::IpAddr::from(*b"1234") => &seq![
+            Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd
+        ],
+    }
+    test_net_socketaddr_compact {
+        net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
+            Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
+
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+        net::SocketAddr::from((*b"1234", 1234)) => &seq![
+            Token::NewtypeVariant { name: "SocketAddr", variant: "V4" },
+
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+        net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
+        ],
+        net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd
         ],
     }
 }
@@ -829,15 +935,6 @@ fn test_cstr() {
 
 #[cfg(feature = "unstable")]
 #[test]
-fn test_net_ipaddr() {
-    assert_de_tokens(
-        &"1.2.3.4".parse::<net::IpAddr>().unwrap(),
-        &[Token::Str("1.2.3.4")],
-    );
-}
-
-#[cfg(feature = "unstable")]
-#[test]
 fn test_cstr_internal_null() {
     assert_de_tokens_error::<Box<CStr>>(
         &[Token::Bytes(b"a\0c")],
@@ -857,7 +954,7 @@ fn test_cstr_internal_null_end() {
 declare_error_tests! {
     test_unknown_field<StructDenyUnknown> {
         &[
-            Token::Struct { name: "StructDenyUnknown", len: 2 },
+            Token::Struct { name: "StructDenyUnknown", len: 1 },
                 Token::Str("a"),
                 Token::I32(0),
 
@@ -867,14 +964,14 @@ declare_error_tests! {
     }
     test_skipped_field_is_unknown<StructDenyUnknown> {
         &[
-            Token::Struct { name: "StructDenyUnknown", len: 2 },
+            Token::Struct { name: "StructDenyUnknown", len: 1 },
                 Token::Str("b"),
         ],
         "unknown field `b`, expected `a`",
     }
     test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
         &[
-            Token::Struct { name: "StructSkipAllDenyUnknown", len: 1 },
+            Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
                 Token::Str("a"),
         ],
         "unknown field `a`, there are no fields",
@@ -1076,5 +1173,11 @@ declare_error_tests! {
             Token::SeqEnd,
         ],
         "invalid type: sequence, expected unit struct UnitStruct",
+    }
+    test_wrapping_overflow<Wrapping<u16>> {
+        &[
+            Token::U32(65_536),
+        ],
+        "invalid value: integer `65536`, expected u16",
     }
 }

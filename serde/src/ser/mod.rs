@@ -1363,6 +1363,56 @@ pub trait Serializer: Sized {
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Display;
+
+    /// Determine whether `Serialize` implementations should serialize in
+    /// human-readable form.
+    ///
+    /// Some types have a human-readable form that may be somewhat expensive to
+    /// construct, as well as a binary form that is compact and efficient.
+    /// Generally text-based formats like JSON and YAML will prefer to use the
+    /// human-readable one and binary formats like Bincode will prefer the
+    /// compact one.
+    ///
+    /// ```
+    /// # use std::fmt::{self, Display};
+    /// #
+    /// # struct Timestamp;
+    /// #
+    /// # impl Timestamp {
+    /// #     fn seconds_since_epoch(&self) -> u64 { unimplemented!() }
+    /// # }
+    /// #
+    /// # impl Display for Timestamp {
+    /// #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use serde::{Serialize, Serializer};
+    ///
+    /// impl Serialize for Timestamp {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///         where S: Serializer
+    ///     {
+    ///         if serializer.is_human_readable() {
+    ///             // Serialize to a human-readable string "2015-05-15T17:01:00Z".
+    ///             self.to_string().serialize(serializer)
+    ///         } else {
+    ///             // Serialize to a compact binary representation.
+    ///             self.seconds_since_epoch().serialize(serializer)
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default implementation of this method returns `true`. Data formats
+    /// may override this to `false` to request a compact form for types that
+    /// support one. Note that modifying this method to change a format from
+    /// human-readable to compact or vice versa should be regarded as a breaking
+    /// change, as a value serialized in human-readable mode is not required to
+    /// deserialize from the same data in compact mode.
+    #[inline]
+    fn is_human_readable(&self) -> bool { true }
 }
 
 /// Returned from `Serializer::serialize_seq`.
@@ -1727,6 +1777,13 @@ pub trait SerializeStruct {
     where
         T: Serialize;
 
+    /// Indicate that a struct field has been skipped.
+    #[inline]
+    fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
+        let _ = key;
+        Ok(())
+    }
+
     /// Finish serializing a struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
 }
@@ -1771,6 +1828,13 @@ pub trait SerializeStructVariant {
     ) -> Result<(), Self::Error>
     where
         T: Serialize;
+
+    /// Indicate that a struct variant field has been skipped.
+    #[inline]
+    fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
+        let _ = key;
+        Ok(())
+    }
 
     /// Finish serializing a struct variant.
     fn end(self) -> Result<Self::Ok, Self::Error>;

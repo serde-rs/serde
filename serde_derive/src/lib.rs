@@ -8,15 +8,21 @@
 
 //! This crate provides Serde's two derive macros.
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #[macro_use]
+//! # extern crate serde_derive;
+//! #
 //! #[derive(Serialize, Deserialize)]
+//! # struct S;
+//! #
+//! # fn main() {}
 //! ```
 //!
 //! Please refer to [https://serde.rs/derive.html] for how to set this up.
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.12")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.21")]
 
 #![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]

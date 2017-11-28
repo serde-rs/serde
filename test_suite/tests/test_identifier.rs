@@ -9,10 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-extern crate serde;
-
 extern crate serde_test;
-use serde_test::{Token, assert_de_tokens};
+use serde_test::{assert_de_tokens, Token};
 
 #[test]
 fn test_variant_identifier() {
@@ -23,7 +21,10 @@ fn test_variant_identifier() {
         Bbb,
     }
 
+    assert_de_tokens(&V::Aaa, &[Token::U8(0)]);
+    assert_de_tokens(&V::Aaa, &[Token::U16(0)]);
     assert_de_tokens(&V::Aaa, &[Token::U32(0)]);
+    assert_de_tokens(&V::Aaa, &[Token::U64(0)]);
     assert_de_tokens(&V::Aaa, &[Token::Str("Aaa")]);
     assert_de_tokens(&V::Aaa, &[Token::Bytes(b"Aaa")]);
 }
@@ -48,8 +49,7 @@ fn test_unit_fallthrough() {
     enum F {
         Aaa,
         Bbb,
-        #[serde(other)]
-        Other,
+        #[serde(other)] Other,
     }
 
     assert_de_tokens(&F::Other, &[Token::Str("x")]);

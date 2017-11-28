@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_state::de::DeserializeState;
 use serde_state::ser::{SerializeState, Unseeded};
 
@@ -240,7 +240,7 @@ where
 ///
 /// assert_de_tokens_error::<S>(
 ///     &[
-///         Token::Struct { name: "S", len: 1 },
+///         Token::Struct { name: "S", len: 2 },
 ///         Token::Str("x"),
 ///     ],
 ///     "unknown field `x`, expected `a` or `b`",

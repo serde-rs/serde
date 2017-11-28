@@ -19,8 +19,7 @@ mod remote {
 #[serde(remote = "remote::S")]
 struct S {
     //~^^^ ERROR: struct `remote::S` has no field named `b`
-    //~^^^^ ERROR: struct `remote::S` has no field named `b`
-    b: u8, //~^^^^^ ERROR: no field `b` on type `&remote::S`
+    b: u8, //~^^^^ ERROR: no field `b` on type `&remote::S`
 }
 
 fn main() {}

@@ -16,14 +16,13 @@ use std::time::{Duration, UNIX_EPOCH};
 use std::ffi::CString;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::num::Wrapping;
 
 #[cfg(unix)]
 use std::str;
 
-extern crate serde;
-
 extern crate serde_test;
-use self::serde_test::{Token, assert_ser_tokens, assert_ser_tokens_error};
+use self::serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -52,19 +51,29 @@ enum Enum {
     One(i32),
     Seq(i32, i32),
     Map { a: i32, b: i32 },
-    #[serde(skip_serializing)]
-    SkippedUnit,
-    #[serde(skip_serializing)]
-    SkippedOne(i32),
-    #[serde(skip_serializing)]
-    SkippedSeq(i32, i32),
-    #[serde(skip_serializing)]
-    SkippedMap { _a: i32, _b: i32 },
+    #[serde(skip_serializing)] SkippedUnit,
+    #[serde(skip_serializing)] SkippedOne(i32),
+    #[serde(skip_serializing)] SkippedSeq(i32, i32),
+    #[serde(skip_serializing)] SkippedMap { _a: i32, _b: i32 },
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_tests {
+    (
+        $readable:tt
+        $($name:ident { $($value:expr => $tokens:expr,)+ })+
+    ) => {
+        $(
+            #[test]
+            fn $name() {
+                $(
+                    assert_ser_tokens(&$value.$readable(), $tokens);
+                )+
+            }
+        )+
+    };
+
     ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
         $(
             #[test]
@@ -354,17 +363,6 @@ declare_tests! {
             Token::StructEnd,
         ],
     }
-    test_net_ipv4addr {
-        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
-    }
-    test_net_ipv6addr {
-        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
-    }
-    test_net_socketaddr {
-        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
-    }
     test_path {
         Path::new("/usr/local/lib") => &[
             Token::Str("/usr/local/lib"),
@@ -395,6 +393,92 @@ declare_tests! {
             Token::Bool(true),
         ],
     }
+    test_wrapping {
+        Wrapping(1usize) => &[
+            Token::U64(1),
+        ],
+    }
+}
+
+declare_tests! {
+    readable
+
+    test_net_ipv4addr_readable {
+        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_ipv6addr_readable {
+        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
+    }
+    test_net_ipaddr_readable {
+        "1.2.3.4".parse::<net::IpAddr>().unwrap() => &[Token::Str("1.2.3.4")],
+    }
+    test_net_socketaddr_readable {
+        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
+        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
+    }
+}
+
+declare_tests! {
+    compact
+
+    test_net_ipv4addr_compact {
+        net::Ipv4Addr::from(*b"1234") => &seq![
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+        ],
+    }
+    test_net_ipv6addr_compact {
+        net::Ipv6Addr::from(*b"1234567890123456") => &seq![
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+        ],
+    }
+    test_net_ipaddr_compact {
+        net::IpAddr::from(*b"1234") => &seq![
+            Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+        ],
+    }
+    test_net_socketaddr_compact {
+        net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
+            Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
+
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd,
+        ],
+        net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 4 },
+            seq b"1234".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd,
+        ],
+        net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0) => &seq![
+            Token::Tuple { len: 2 },
+
+            Token::Tuple { len: 16 },
+            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            Token::TupleEnd,
+
+            Token::U16(1234),
+            Token::TupleEnd,
+        ],
+    }
 }
 
 // Serde's implementation is not unstable, but the constructors are.
@@ -422,15 +506,6 @@ declare_tests! {
     }
 }
 
-#[cfg(feature = "unstable")]
-#[test]
-fn test_net_ipaddr() {
-    assert_ser_tokens(
-        &"1.2.3.4".parse::<net::IpAddr>().unwrap(),
-        &[Token::Str("1.2.3.4")],
-    );
-}
-
 #[test]
 #[cfg(unix)]
 fn test_cannot_serialize_paths() {
@@ -444,11 +519,7 @@ fn test_cannot_serialize_paths() {
     let mut path_buf = PathBuf::new();
     path_buf.push(path);
 
-    assert_ser_tokens_error(
-        &path_buf,
-        &[],
-        "path contains invalid UTF-8 characters",
-    );
+    assert_ser_tokens_error(&path_buf, &[], "path contains invalid UTF-8 characters");
 }
 
 #[test]

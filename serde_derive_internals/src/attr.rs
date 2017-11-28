@@ -564,6 +564,9 @@ pub struct Variant {
     skip_deserializing: bool,
     skip_serializing: bool,
     other: bool,
+    serialize_with: Option<syn::Path>,
+    deserialize_with: Option<syn::Path>,
+    borrow: Option<syn::MetaItem>,
 }
 
 impl Variant {
@@ -574,6 +577,9 @@ impl Variant {
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
         let mut other = BoolAttr::none(cx, "other");
+        let mut serialize_with = Attr::none(cx, "serialize_with");
+        let mut deserialize_with = Attr::none(cx, "deserialize_with");
+        let mut borrow = Attr::none(cx, "borrow");
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -623,6 +629,44 @@ impl Variant {
                         other.set_true();
                     }
 
+                    // Parse `#[serde(with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            let mut ser_path = path.clone();
+                            ser_path.segments.push("serialize".into());
+                            serialize_with.set(ser_path);
+                            let mut de_path = path;
+                            de_path.segments.push("deserialize".into());
+                            deserialize_with.set(de_path);
+                        }
+                    }
+
+                    // Parse `#[serde(serialize_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "serialize_with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            serialize_with.set(path);
+                        }
+                    }
+
+                    // Parse `#[serde(deserialize_with = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "deserialize_with" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            deserialize_with.set(path);
+                        }
+                    }
+
+                    // Defer `#[serde(borrow)]` and `#[serde(borrow = "'a + 'b")]`
+                    MetaItem(ref mi) if mi.name() == "borrow" => {
+                        match variant.data {
+                            syn::VariantData::Tuple(ref fields) if fields.len() == 1 => {
+                                borrow.set(mi.clone());
+                            }
+                            _ => {
+                                cx.error("#[serde(borrow)] may only be used on newtype variants");
+                            }
+                        }
+                    }
+
                     MetaItem(ref meta_item) => {
                         cx.error(format!("unknown serde variant attribute `{}`", meta_item.name()));
                     }
@@ -649,6 +693,9 @@ impl Variant {
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
             other: other.get(),
+            serialize_with: serialize_with.get(),
+            deserialize_with: deserialize_with.get(),
+            borrow: borrow.get(),
         }
     }
 
@@ -679,6 +726,14 @@ impl Variant {
 
     pub fn other(&self) -> bool {
         self.other
+    }
+
+    pub fn serialize_with(&self) -> Option<&syn::Path> {
+        self.serialize_with.as_ref()
+    }
+
+    pub fn deserialize_with(&self) -> Option<&syn::Path> {
+        self.deserialize_with.as_ref()
     }
 }
 
@@ -717,7 +772,7 @@ pub enum Default {
 
 impl Field {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_ast(cx: &Ctxt, index: usize, field: &syn::Field) -> Self {
+    pub fn from_ast(cx: &Ctxt, index: usize, field: &syn::Field, attrs: Option<&Variant>) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
@@ -740,7 +795,13 @@ impl Field {
             None => index.to_string(),
         };
 
-        for meta_items in field.attrs.iter().filter_map(get_serde_meta_items) {
+        let variant_borrow = attrs
+            .map(|variant| &variant.borrow)
+            .unwrap_or(&None)
+            .as_ref()
+            .map(|borrow| vec![MetaItem(borrow.clone())]);
+
+        for meta_items in field.attrs.iter().filter_map(get_serde_meta_items).chain(variant_borrow) {
             for meta_item in meta_items {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`

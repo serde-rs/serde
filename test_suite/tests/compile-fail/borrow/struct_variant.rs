@@ -9,17 +9,13 @@
 #[macro_use]
 extern crate serde_derive;
 
-mod remote {
-    pub struct S {
-        pub a: u8,
-        pub b: u8,
-    }
-}
+#[derive(Deserialize)]
+struct Str<'a>(&'a str);
 
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "remote::S")]
-struct S {
-    a: u8, //~^^^ ERROR: missing field `b` in initializer of `remote::S`
+#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+enum Test<'a> {
+    #[serde(borrow)] //~^^ HELP: #[serde(borrow)] may only be used on newtype variants
+    S { s: Str<'a> }
 }
 
 fn main() {}

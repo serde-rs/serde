@@ -79,7 +79,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.12")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.21")]
 
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -95,8 +95,10 @@
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(
     cast_lossless,
+    const_static_lifetime,
     doc_markdown,
     linkedlist,
+    needless_pass_by_value,
     type_complexity,
     unreadable_literal,
     zero_prefixed_literal,
@@ -206,6 +208,8 @@ mod lib {
     pub use std::hash::{Hash, BuildHasher};
     #[cfg(feature = "std")]
     pub use std::io::Write;
+    #[cfg(feature = "std")]
+    pub use std::num::Wrapping;
     #[cfg(feature = "std")]
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
