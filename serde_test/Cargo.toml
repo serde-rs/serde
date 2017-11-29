@@ -18,7 +18,7 @@ serde_state = { version = "0.4.1", path = "../serde_state" }
 [dev-dependencies]
 serde = { version = "1.0", features = ["rc"] }
 serde_derive = { version = "1.0" }
-serde_derive_state = { version = "0.4.1", path = "../serde_derive" }
+serde_derive_state = { version = "0.4.2", path = "../serde_derive" }
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }

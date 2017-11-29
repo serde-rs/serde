@@ -1,8 +1,8 @@
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_derive_state;
-extern crate serde;
 extern crate serde_state;
 extern crate serde_test;
 
@@ -11,13 +11,15 @@ use std::cell::Cell;
 use serde::Serialize;
 use serde_state::ser::{Seeded, SerializeState};
 
-use serde_test::{Token, assert_ser_tokens};
+use serde_test::{assert_ser_tokens, Token};
 
 #[derive(Serialize)]
 struct Inner;
 
-impl<T> SerializeState<T> for Inner where T: ::std::borrow::Borrow<Cell<i32>> {
-
+impl<T> SerializeState<T> for Inner
+where
+    T: ::std::borrow::Borrow<Cell<i32>>,
+{
     fn serialize_state<S>(&self, serializer: S, seed: &T) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -33,8 +35,7 @@ impl<T> SerializeState<T> for Inner where T: ::std::borrow::Borrow<Cell<i32>> {
 #[serde(ser_parameters = "S")]
 #[serde(bound(serialize = "S: ::std::borrow::Borrow<Cell<i32>>"))]
 struct SeedStruct {
-    #[serde(serialize_state)]
-    value: Inner,
+    #[serde(serialize_state)] value: Inner,
 }
 
 #[test]
@@ -48,10 +49,8 @@ fn test_serialize_state() {
                 name: "SeedStruct",
                 len: 1,
             },
-
             Token::Str("value"),
             Token::UnitStruct { name: "Inner" },
-
             Token::StructEnd,
         ],
     );
@@ -67,27 +66,20 @@ fn test_serialize_vec_seed() {
         &Seeded::new(&seed, &value[..]),
         &[
             Token::Seq { len: Some(2) },
-
             Token::Struct {
                 name: "SeedStruct",
                 len: 1,
             },
-
             Token::Str("value"),
             Token::UnitStruct { name: "Inner" },
-
             Token::StructEnd,
-
             Token::Struct {
                 name: "SeedStruct",
                 len: 1,
             },
-
             Token::Str("value"),
             Token::UnitStruct { name: "Inner" },
-
             Token::StructEnd,
-
             Token::SeqEnd,
         ],
     );
@@ -103,15 +95,12 @@ fn test_serialize_option_some_seed() {
         &Seeded::new(&seed, &value),
         &[
             Token::Some,
-
             Token::Struct {
                 name: "SeedStruct",
                 len: 1,
             },
-
             Token::Str("value"),
             Token::UnitStruct { name: "Inner" },
-
             Token::StructEnd,
         ],
     );
@@ -131,13 +120,9 @@ fn test_serialize_option_none_seed() {
 #[derive(SerializeState)]
 #[serde(serialize_state = "Cell<i32>")]
 enum SeedEnum {
-    A(
-        #[serde(serialize_state)]
-        Inner
-    ),
+    A(#[serde(serialize_state)] Inner),
     B {
-        #[serde(serialize_state)]
-        inner: Inner,
+        #[serde(serialize_state)] inner: Inner,
     },
 }
 
@@ -152,7 +137,6 @@ fn test_serialize_state_newtype_variant() {
                 name: "SeedEnum",
                 variant: "A",
             },
-
             Token::UnitStruct { name: "Inner" },
         ],
     );
@@ -172,10 +156,8 @@ fn test_serialize_state_newtype_variant2() {
                 variant: "B",
                 len: 1,
             },
-
             Token::Str("inner"),
             Token::UnitStruct { name: "Inner" },
-
             Token::StructVariantEnd,
         ],
     );
@@ -185,10 +167,7 @@ fn test_serialize_state_newtype_variant2() {
 
 #[derive(SerializeState)]
 #[serde(serialize_state = "Cell<i32>")]
-struct GenericNewtype<T>(
-    #[serde(serialize_state)]
-    T
-);
+struct GenericNewtype<T>(#[serde(serialize_state)] T);
 
 #[test]
 fn test_serialize_state_generic_newtype() {
@@ -200,7 +179,6 @@ fn test_serialize_state_generic_newtype() {
             Token::NewtypeStruct {
                 name: "GenericNewtype",
             },
-
             Token::UnitStruct { name: "Inner" },
         ],
     );
@@ -212,14 +190,8 @@ fn test_serialize_state_generic_newtype() {
 #[derive(SerializeState)]
 #[serde(serialize_state = "Cell<i32>")]
 enum GenericSeedEnum<T> {
-    A(
-        #[serde(serialize_state)]
-        T
-    ),
-    B {
-        #[serde(serialize_state)]
-        inner: T,
-    },
+    A(#[serde(serialize_state)] T),
+    B { #[serde(serialize_state)] inner: T },
 }
 
 #[test]
@@ -233,7 +205,6 @@ fn test_serialize_state_generic_newtype_variant() {
                 name: "GenericSeedEnum",
                 variant: "A",
             },
-
             Token::UnitStruct { name: "Inner" },
         ],
     );
@@ -251,13 +222,11 @@ fn test_serialize_state_generic_struct_variant() {
             Token::StructVariant {
                 name: "GenericSeedEnum",
                 variant: "B",
-                len: 1
+                len: 1,
             },
-
             Token::Str("inner"),
             Token::UnitStruct { name: "Inner" },
-
-            Token::StructVariantEnd
+            Token::StructVariantEnd,
         ],
     );
 
@@ -275,10 +244,8 @@ use serde::Serializer;
 #[serde(serialize_state = "RefCell<NodeToId>")]
 struct Node {
     data: char,
-    #[serde(serialize_state_with = "serialize_option_rc_seed")]
-    left: Option<Rc<Node>>,
-    #[serde(serialize_state_with = "serialize_option_rc_seed")]
-    right: Option<Rc<Node>>,
+    #[serde(serialize_state_with = "serialize_option_rc_seed")] left: Option<Rc<Node>>,
+    #[serde(serialize_state_with = "serialize_option_rc_seed")] right: Option<Rc<Node>>,
 }
 
 /// ```
@@ -291,34 +258,26 @@ struct Node {
 /// D   E
 /// ```
 fn example() -> Node {
-    let e = Rc::new(
-        Node {
-            data: 'E',
-            left: None,
-            right: None,
-        },
-    );
-    let d = Rc::new(
-        Node {
-            data: 'D',
-            left: None,
-            right: None,
-        },
-    );
-    let c = Rc::new(
-        Node {
-            data: 'C',
-            left: Some(d),
-            right: Some(e.clone()),
-        },
-    );
-    let b = Rc::new(
-        Node {
-            data: 'B',
-            left: Some(c.clone()),
-            right: Some(e),
-        },
-    );
+    let e = Rc::new(Node {
+        data: 'E',
+        left: None,
+        right: None,
+    });
+    let d = Rc::new(Node {
+        data: 'D',
+        left: None,
+        right: None,
+    });
+    let c = Rc::new(Node {
+        data: 'C',
+        left: Some(d),
+        right: Some(Rc::clone(&e)),
+    });
+    let b = Rc::new(Node {
+        data: 'B',
+        left: Some(Rc::clone(&c)),
+        right: Some(e),
+    });
     Node {
         data: 'A',
         left: Some(c),
@@ -328,60 +287,48 @@ fn example() -> Node {
 
 #[test]
 fn serialize_node_graph() {
-    let e = Rc::new(
-        Node {
-            data: 'E',
-            left: None,
-            right: None,
-        },
-    );
-    let d = Rc::new(
-        Node {
-            data: 'D',
-            left: Some(e.clone()),
-            right: None,
-        },
-    );
-    let c = Rc::new(
-        Node {
-            data: 'C',
-            left: Some(d.clone()),
-            right: Some(e.clone()),
-        },
-    );
+    let e = Rc::new(Node {
+        data: 'E',
+        left: None,
+        right: None,
+    });
+    let d = Rc::new(Node {
+        data: 'D',
+        left: Some(Rc::clone(&e)),
+        right: None,
+    });
+    let c = Rc::new(Node {
+        data: 'C',
+        left: Some(Rc::clone(&d)),
+        right: Some(Rc::clone(&e)),
+    });
 
     let seed = RefCell::default();
     assert_ser_tokens(
         &Tracked {
-             node: &c,
-             map: &seed,
-         },
+            node: &c,
+            map: &seed,
+        },
         &[
             Token::StructVariant {
                 name: "Node",
                 len: 3,
                 variant: "Plain",
             },
-
             Token::Str("data"),
             Token::Char('C'),
-
             Token::Str("left"),
             Token::Some,
-
             // D {
             Token::StructVariant {
                 name: "Node",
                 len: 4,
                 variant: "Marked",
             },
-
             Token::Str("id"),
             Token::U32(0),
-
             Token::Str("data"),
             Token::Char('D'),
-
             Token::Str("left"),
             Token::Some,
             // E {
@@ -390,35 +337,27 @@ fn serialize_node_graph() {
                 len: 4,
                 variant: "Marked",
             },
-
             Token::Str("id"),
             Token::U32(1),
-
             Token::Str("data"),
             Token::Char('E'),
-
             Token::Str("left"),
             Token::None,
-
             Token::Str("right"),
             Token::None,
-
             Token::StructVariantEnd,
             // E }
             Token::Str("right"),
             Token::None,
-
             Token::StructVariantEnd,
             // D }
             Token::Str("right"),
             Token::Some,
-
             Token::NewtypeVariant {
                 name: "Node",
                 variant: "Reference",
             },
             Token::U32(1),
-
             Token::StructVariantEnd,
         ],
     );
@@ -426,7 +365,7 @@ fn serialize_node_graph() {
 
 #[test]
 fn check_graph() {
-    let ref a = example();
+    let a = example();
     let b = a.right.as_ref().unwrap();
     let c = a.left.as_ref().unwrap();
     let d = c.left.as_ref().unwrap();
@@ -519,39 +458,31 @@ where
     enum NodeVariant<'a> {
         Plain {
             data: char,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")]
-            left: &'a Option<Rc<Node>>,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")]
-            right: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")] left: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")] right: &'a Option<Rc<Node>>,
         },
         Reference(Id),
         Marked {
             id: Id,
             data: char,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")]
-            left: &'a Option<Rc<Node>>,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")]
-            right: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")] left: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")] right: &'a Option<Rc<Node>>,
         },
     }
 
     let node = match node_to_id(map, self_) {
-        Lookup::Unique => {
-            NodeVariant::Plain {
-                data: self_.data,
-                left: &self_.left,
-                right: &self_.right,
-            }
-        }
+        Lookup::Unique => NodeVariant::Plain {
+            data: self_.data,
+            left: &self_.left,
+            right: &self_.right,
+        },
         Lookup::Found(id) => NodeVariant::Reference(id),
-        Lookup::Inserted(id) => {
-            NodeVariant::Marked {
-                id: id,
-                data: self_.data,
-                left: &self_.left,
-                right: &self_.right,
-            }
-        }
+        Lookup::Inserted(id) => NodeVariant::Marked {
+            id: id,
+            data: self_.data,
+            left: &self_.left,
+            right: &self_.right,
+        },
     };
     node.serialize_state(serializer, map)
 }
