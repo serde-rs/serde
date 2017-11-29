@@ -137,6 +137,8 @@ extern crate alloc;
 #[cfg(all(feature = "unstable", feature = "std"))]
 extern crate core;
 
+extern crate failure;
+
 /// A facade around all the types we need from the `std`, `core`, and `alloc`
 /// crates. This avoids elaborate import wrangling having to happen in every
 /// module.
@@ -198,7 +200,7 @@ mod lib {
     pub use alloc::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
-    pub use std::{error, net};
+    pub use std::net;
 
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};

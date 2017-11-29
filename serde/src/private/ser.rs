@@ -8,7 +8,9 @@
 
 use lib::*;
 
-use ser::{self, Serialize, Serializer, SerializeMap, SerializeStruct, Impossible};
+use failure::Fail;
+
+use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use self::content::{SerializeTupleVariantAsMapValue, SerializeStructVariantAsMapValue};
@@ -350,12 +352,7 @@ impl ser::Error for Error {
     }
 }
 
-#[cfg(feature = "std")]
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        unimplemented!()
-    }
-}
+impl Fail for Error {}
 
 impl Display for Error {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {

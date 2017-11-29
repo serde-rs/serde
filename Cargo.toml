@@ -6,3 +6,6 @@ members = [
     "serde_test",
     "test_suite",
 ]
+
+[patch.crates-io]
+failure = { git = "https://github.com/withoutboats/failure" }

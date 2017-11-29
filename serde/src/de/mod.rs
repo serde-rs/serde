@@ -121,6 +121,8 @@
 
 use lib::*;
 
+use failure::Fail;
+
 ////////////////////////////////////////////////////////////////////////////////
 
 pub mod value;
@@ -134,148 +136,138 @@ pub use self::ignored_any::IgnoredAny;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-macro_rules! declare_error_trait {
-    (Error: Sized $(+ $($supertrait:ident)::+)*) => {
-        /// The `Error` trait allows `Deserialize` implementations to create descriptive
-        /// error messages belonging to the `Deserializer` against which they are
-        /// currently running.
-        ///
-        /// Every `Deserializer` declares an `Error` type that encompasses both
-        /// general-purpose deserialization errors as well as errors specific to the
-        /// particular deserialization format. For example the `Error` type of
-        /// `serde_json` can represent errors like an invalid JSON escape sequence or an
-        /// unterminated string literal, in addition to the error cases that are part of
-        /// this trait.
-        ///
-        /// Most deserializers should only need to provide the `Error::custom` method
-        /// and inherit the default behavior for the other methods.
-        pub trait Error: Sized $(+ $($supertrait)::+)* {
-            /// Raised when there is general error when deserializing a type.
-            ///
-            /// The message should not be capitalized and should not end with a period.
-            ///
-            /// ```rust
-            /// # use std::str::FromStr;
-            /// #
-            /// # struct IpAddr;
-            /// #
-            /// # impl FromStr for IpAddr {
-            /// #     type Err = String;
-            /// #
-            /// #     fn from_str(_: &str) -> Result<Self, String> {
-            /// #         unimplemented!()
-            /// #     }
-            /// # }
-            /// #
-            /// use serde::de::{self, Deserialize, Deserializer};
-            ///
-            /// impl<'de> Deserialize<'de> for IpAddr {
-            ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            ///         where D: Deserializer<'de>
-            ///     {
-            ///         let s = try!(String::deserialize(deserializer));
-            ///         s.parse().map_err(de::Error::custom)
-            ///     }
-            /// }
-            /// ```
-            fn custom<T>(msg: T) -> Self
-            where
-                T: Display;
+/// The `Error` trait allows `Deserialize` implementations to create descriptive
+/// error messages belonging to the `Deserializer` against which they are
+/// currently running.
+///
+/// Every `Deserializer` declares an `Error` type that encompasses both
+/// general-purpose deserialization errors as well as errors specific to the
+/// particular deserialization format. For example the `Error` type of
+/// `serde_json` can represent errors like an invalid JSON escape sequence or an
+/// unterminated string literal, in addition to the error cases that are part of
+/// this trait.
+///
+/// Most deserializers should only need to provide the `Error::custom` method
+/// and inherit the default behavior for the other methods.
+pub trait Error: Sized + Fail {
+    /// Raised when there is general error when deserializing a type.
+    ///
+    /// The message should not be capitalized and should not end with a period.
+    ///
+    /// ```rust
+    /// # use std::str::FromStr;
+    /// #
+    /// # struct IpAddr;
+    /// #
+    /// # impl FromStr for IpAddr {
+    /// #     type Err = String;
+    /// #
+    /// #     fn from_str(_: &str) -> Result<Self, String> {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use serde::de::{self, Deserialize, Deserializer};
+    ///
+    /// impl<'de> Deserialize<'de> for IpAddr {
+    ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    ///         where D: Deserializer<'de>
+    ///     {
+    ///         let s = try!(String::deserialize(deserializer));
+    ///         s.parse().map_err(de::Error::custom)
+    ///     }
+    /// }
+    /// ```
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display;
 
-            /// Raised when a `Deserialize` receives a type different from what it was
-            /// expecting.
-            ///
-            /// The `unexp` argument provides information about what type was received.
-            /// This is the type that was present in the input file or other source data
-            /// of the Deserializer.
-            ///
-            /// The `exp` argument provides information about what type was being
-            /// expected. This is the type that is written in the program.
-            ///
-            /// For example if we try to deserialize a String out of a JSON file
-            /// containing an integer, the unexpected type is the integer and the
-            /// expected type is the string.
-            fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
-                Error::custom(format_args!("invalid type: {}, expected {}", unexp, exp))
-            }
+    /// Raised when a `Deserialize` receives a type different from what it was
+    /// expecting.
+    ///
+    /// The `unexp` argument provides information about what type was received.
+    /// This is the type that was present in the input file or other source data
+    /// of the Deserializer.
+    ///
+    /// The `exp` argument provides information about what type was being
+    /// expected. This is the type that is written in the program.
+    ///
+    /// For example if we try to deserialize a String out of a JSON file
+    /// containing an integer, the unexpected type is the integer and the
+    /// expected type is the string.
+    fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
+        Error::custom(format_args!("invalid type: {}, expected {}", unexp, exp))
+    }
 
-            /// Raised when a `Deserialize` receives a value of the right type but that
-            /// is wrong for some other reason.
-            ///
-            /// The `unexp` argument provides information about what value was received.
-            /// This is the value that was present in the input file or other source
-            /// data of the Deserializer.
-            ///
-            /// The `exp` argument provides information about what value was being
-            /// expected. This is the type that is written in the program.
-            ///
-            /// For example if we try to deserialize a String out of some binary data
-            /// that is not valid UTF-8, the unexpected value is the bytes and the
-            /// expected value is a string.
-            fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
-                Error::custom(format_args!("invalid value: {}, expected {}", unexp, exp))
-            }
+    /// Raised when a `Deserialize` receives a value of the right type but that
+    /// is wrong for some other reason.
+    ///
+    /// The `unexp` argument provides information about what value was received.
+    /// This is the value that was present in the input file or other source
+    /// data of the Deserializer.
+    ///
+    /// The `exp` argument provides information about what value was being
+    /// expected. This is the type that is written in the program.
+    ///
+    /// For example if we try to deserialize a String out of some binary data
+    /// that is not valid UTF-8, the unexpected value is the bytes and the
+    /// expected value is a string.
+    fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
+        Error::custom(format_args!("invalid value: {}, expected {}", unexp, exp))
+    }
 
-            /// Raised when deserializing a sequence or map and the input data contains
-            /// too many or too few elements.
-            ///
-            /// The `len` argument is the number of elements encountered. The sequence
-            /// or map may have expected more arguments or fewer arguments.
-            ///
-            /// The `exp` argument provides information about what data was being
-            /// expected. For example `exp` might say that a tuple of size 6 was
-            /// expected.
-            fn invalid_length(len: usize, exp: &Expected) -> Self {
-                Error::custom(format_args!("invalid length {}, expected {}", len, exp))
-            }
+    /// Raised when deserializing a sequence or map and the input data contains
+    /// too many or too few elements.
+    ///
+    /// The `len` argument is the number of elements encountered. The sequence
+    /// or map may have expected more arguments or fewer arguments.
+    ///
+    /// The `exp` argument provides information about what data was being
+    /// expected. For example `exp` might say that a tuple of size 6 was
+    /// expected.
+    fn invalid_length(len: usize, exp: &Expected) -> Self {
+        Error::custom(format_args!("invalid length {}, expected {}", len, exp))
+    }
 
-            /// Raised when a `Deserialize` enum type received a variant with an
-            /// unrecognized name.
-            fn unknown_variant(variant: &str, expected: &'static [&'static str]) -> Self {
-                if expected.is_empty() {
-                    Error::custom(format_args!("unknown variant `{}`, there are no variants",
-                                               variant))
-                } else {
-                    Error::custom(format_args!("unknown variant `{}`, expected {}",
-                                               variant,
-                                               OneOf { names: expected }))
-                }
-            }
-
-            /// Raised when a `Deserialize` struct type received a field with an
-            /// unrecognized name.
-            fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
-                if expected.is_empty() {
-                    Error::custom(format_args!("unknown field `{}`, there are no fields",
-                                               field))
-                } else {
-                    Error::custom(format_args!("unknown field `{}`, expected {}",
-                                               field,
-                                               OneOf { names: expected }))
-                }
-            }
-
-            /// Raised when a `Deserialize` struct type expected to receive a required
-            /// field with a particular name but that field was not present in the
-            /// input.
-            fn missing_field(field: &'static str) -> Self {
-                Error::custom(format_args!("missing field `{}`", field))
-            }
-
-            /// Raised when a `Deserialize` struct type received more than one of the
-            /// same field.
-            fn duplicate_field(field: &'static str) -> Self {
-                Error::custom(format_args!("duplicate field `{}`", field))
-            }
+    /// Raised when a `Deserialize` enum type received a variant with an
+    /// unrecognized name.
+    fn unknown_variant(variant: &str, expected: &'static [&'static str]) -> Self {
+        if expected.is_empty() {
+            Error::custom(format_args!("unknown variant `{}`, there are no variants",
+                                        variant))
+        } else {
+            Error::custom(format_args!("unknown variant `{}`, expected {}",
+                                        variant,
+                                        OneOf { names: expected }))
         }
     }
+
+    /// Raised when a `Deserialize` struct type received a field with an
+    /// unrecognized name.
+    fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
+        if expected.is_empty() {
+            Error::custom(format_args!("unknown field `{}`, there are no fields",
+                                        field))
+        } else {
+            Error::custom(format_args!("unknown field `{}`, expected {}",
+                                        field,
+                                        OneOf { names: expected }))
+        }
+    }
+
+    /// Raised when a `Deserialize` struct type expected to receive a required
+    /// field with a particular name but that field was not present in the
+    /// input.
+    fn missing_field(field: &'static str) -> Self {
+        Error::custom(format_args!("missing field `{}`", field))
+    }
+
+    /// Raised when a `Deserialize` struct type received more than one of the
+    /// same field.
+    fn duplicate_field(field: &'static str) -> Self {
+        Error::custom(format_args!("duplicate field `{}`", field))
+    }
 }
-
-#[cfg(feature = "std")]
-declare_error_trait!(Error: Sized + error::Error);
-
-#[cfg(not(feature = "std"))]
-declare_error_trait!(Error: Sized + Debug + Display);
 
 /// `Unexpected` represents an unexpected invocation of any one of the `Visitor`
 /// trait methods.
