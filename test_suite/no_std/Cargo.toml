@@ -9,3 +9,6 @@ serde = { path = "../../serde", default-features = false }
 serde_derive = { path = "../../serde_derive" }
 
 [workspace]
+
+[patch.crates-io]
+failure = { git = "https://github.com/withoutboats/failure" }
