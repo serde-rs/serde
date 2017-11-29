@@ -74,6 +74,9 @@ else
     cd "$DIR/serde"
     channel build --features rc
     channel build --no-default-features
+    cd "$DIR/serde_state"
+    channel build --features rc
+    channel build --no-default-features
     cd "$DIR/serde_test"
     channel build
     channel test
