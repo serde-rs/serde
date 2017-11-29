@@ -17,6 +17,7 @@ travis-ci = { repository = "serde-rs/serde" }
 appveyor = { repository = "serde-rs/serde" }
 
 [dependencies]
+failure = { version = "0.1", default-features = false }
 serde_derive = { version = "1.0", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
@@ -40,7 +41,7 @@ derive = ["serde_derive"]
 
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
 # Requires a dependency on the Rust standard library.
-std = []
+std = ["failure/std"]
 
 # Provide impls for types that require unstable functionality. For tracking and
 # discussion of unstable functionality please refer to this issue:
