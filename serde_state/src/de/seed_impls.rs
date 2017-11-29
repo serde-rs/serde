@@ -108,7 +108,9 @@ impl<'de, T, S> DeserializeState<'de, S> for PhantomData<T> {
     where
         D: Deserializer<'de>,
     {
-        let visitor = PhantomDataVisitor { marker: PhantomData };
+        let visitor = PhantomDataVisitor {
+            marker: PhantomData,
+        };
         deserializer.deserialize_unit_struct("PhantomData", visitor)
     }
 }
@@ -179,14 +181,21 @@ where
 
 /// `SeqSeedEx` implements `DeserializeSeed` for sequences whose elements implement
 /// `DeserializeState`
-pub struct SeqSeedEx<'seed, S, F, T: 'seed, U> where T: ?Sized {
+pub struct SeqSeedEx<'seed, S, F, T: 'seed, U>
+where
+    T: ?Sized,
+{
     seed: &'seed mut T,
     with_capacity: F,
     _marker: PhantomData<(S, U)>,
 }
 
-impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U>
-    where T: ?Sized
+impl<'seed, 'de, S, F, T, U> SeqSeedEx<'seed, S, F, T, U>
+where
+    T: ?Sized,
+    U: DeserializeState<'de, T>,
+    F: FnOnce(usize) -> S,
+    S: Extend<U>,
 {
     /// Constructs a new instance of `SeqSeedEx`
     pub fn new(seed: &'seed mut T, with_capacity: F) -> SeqSeedEx<'seed, S, F, T, U> {
@@ -195,6 +204,35 @@ impl<'seed, S, F, T, U> SeqSeedEx<'seed, S, F, T, U>
             with_capacity: with_capacity,
             _marker: PhantomData,
         }
+    }
+}
+
+
+impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
+where
+    T: ?Sized,
+    U: DeserializeState<'de, T>,
+    F: FnOnce(usize) -> S,
+    S: Extend<U>,
+{
+    type Value = S;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a sequence")
+    }
+
+    #[inline]
+    fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = (self.with_capacity)(size_hint::cautious(access.size_hint()));
+
+        while let Some(value) = try!(access.next_element_seed(Seed::new(&mut *&mut *self.seed))) {
+            values.extend(Some(value));
+        }
+
+        Ok(values)
     }
 }
 
@@ -211,34 +249,6 @@ where
     where
         D: Deserializer<'de>,
     {
-        impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
-        where
-            T: ?Sized,
-            U: DeserializeState<'de,
-                                T>,
-            F: FnOnce(usize) -> S,
-            S: Extend<U>,
-        {
-            type Value = S;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a sequence")
-            }
-
-            #[inline]
-            fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let mut values = (self.with_capacity)(size_hint::cautious(access.size_hint()));
-
-                while let Some(value) = try!(access.next_element_seed(Seed::new(&mut *&mut *self.seed))) {
-                    values.extend(Some(value));
-                }
-
-                Ok(values)
-            }
-        }
         deserializer.deserialize_seq(self)
     }
 }
@@ -346,7 +356,8 @@ seq_impl!(
     seq,
     LinkedList::new(),
     |_| LinkedList::new(),
-    LinkedList::push_back);
+    LinkedList::push_back
+);
 
 #[cfg(feature = "std")]
 seq_impl!(
@@ -357,12 +368,7 @@ seq_impl!(
     HashSet::insert);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(
-    Vec<T>,
-    seq,
-    Vec::new(),
-    Vec::with_capacity,
-    Vec::push);
+seq_impl!(Vec<T>, seq, Vec::new(), Vec::with_capacity, Vec::push);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
@@ -370,7 +376,8 @@ seq_impl!(
     seq,
     VecDeque::new(),
     VecDeque::with_capacity,
-    VecDeque::push_back);
+    VecDeque::push_back
+);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -381,7 +388,10 @@ struct ArrayVisitor<'seed, S: 'seed, A> {
 
 impl<'seed, S, A> ArrayVisitor<'seed, S, A> {
     fn new(seed: &'seed mut S) -> Self {
-        ArrayVisitor { seed: seed, marker: PhantomData }
+        ArrayVisitor {
+            seed: seed,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -819,7 +829,14 @@ where
         }
 
         const FIELDS: &'static [&'static str] = &["start", "end"];
-        deserializer.deserialize_struct("Range", FIELDS, RangeVisitor { seed: seed, phantom: PhantomData })
+        deserializer.deserialize_struct(
+            "Range",
+            FIELDS,
+            RangeVisitor {
+                seed: seed,
+                phantom: PhantomData,
+            },
+        )
     }
 }
 
@@ -838,8 +855,9 @@ where
         unsafe {
             let ptr = &value as *const T as *const u8;
             if slice::from_raw_parts(ptr, mem::size_of::<T>())
-                   .iter()
-                   .all(|&b| b == 0) {
+                .iter()
+                .all(|&b| b == 0)
+            {
                 return Err(Error::custom("expected a non-zero value"));
             }
             // Waiting for a safe way to construct NonZero<T>:
@@ -891,9 +909,10 @@ where
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),
-                            _ => {
-                                Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self),)
-                            }
+                            _ => Err(Error::invalid_value(
+                                Unexpected::Unsigned(value as u64),
+                                &self,
+                            )),
                         }
                     }
 
@@ -915,14 +934,12 @@ where
                         match value {
                             b"Ok" => Ok(Field::Ok),
                             b"Err" => Ok(Field::Err),
-                            _ => {
-                                match str::from_utf8(value) {
-                                    Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
-                                    Err(_) => {
-                                        Err(Error::invalid_value(Unexpected::Bytes(value), &self))
-                                    }
+                            _ => match str::from_utf8(value) {
+                                Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                Err(_) => {
+                                    Err(Error::invalid_value(Unexpected::Bytes(value), &self))
                                 }
-                            }
+                            },
                         }
                     }
                 }
@@ -933,7 +950,7 @@ where
 
         struct ResultVisitor<'seed, S: 'seed, T, E> {
             seed: &'seed mut S,
-            _marker: PhantomData<Result<T, E>>
+            _marker: PhantomData<Result<T, E>>,
         }
 
         impl<'de, 'seed, S, T, E> Visitor<'de> for ResultVisitor<'seed, S, T, E>
@@ -960,6 +977,13 @@ where
 
         const VARIANTS: &'static [&'static str] = &["Ok", "Err"];
 
-        deserializer.deserialize_enum("Result", VARIANTS, ResultVisitor { seed: seed, _marker: PhantomData })
+        deserializer.deserialize_enum(
+            "Result",
+            VARIANTS,
+            ResultVisitor {
+                seed: seed,
+                _marker: PhantomData,
+            },
+        )
     }
 }
