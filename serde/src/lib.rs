@@ -200,7 +200,7 @@ mod lib {
     pub use alloc::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
-    pub use std::{error, net};
+    pub use std::net;
 
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};

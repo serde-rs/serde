@@ -37,7 +37,9 @@
 
 use lib::*;
 
-use de::{self, IntoDeserializer, Expected, SeqAccess};
+use failure::Fail;
+
+use de::{self, Expected, IntoDeserializer, SeqAccess};
 use private::de::size_hint;
 use ser;
 use self::private::{First, Second};
@@ -96,12 +98,7 @@ impl Display for Error {
     }
 }
 
-#[cfg(feature = "std")]
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        &self.err
-    }
-}
+impl Fail for Error {}
 
 ////////////////////////////////////////////////////////////////////////////////
 
