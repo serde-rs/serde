@@ -352,8 +352,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         V: Visitor<'de>,
     {
         match self.peek_token() {
-            Token::Struct { .. } => {
-                assert_next_token!(self, Token::Struct { name: name, len: fields.len() });
+            Token::Struct { len: n, .. } => {
+                assert_next_token!(self, Token::Struct { name: name, len: n });
                 self.visit_map(Some(fields.len()), Token::StructEnd, visitor)
             }
             Token::Map { .. } => {
