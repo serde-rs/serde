@@ -23,6 +23,7 @@ use self::serde::de::{DeserializeOwned, Deserializer};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::option::Option as StdOption;
 use std::result::Result as StdResult;
 
 // Try to trip up the generated code if it fails to use fully qualified paths.
@@ -32,6 +33,12 @@ struct Result;
 struct Ok;
 #[allow(dead_code)]
 struct Err;
+#[allow(dead_code)]
+struct Option;
+#[allow(dead_code)]
+struct Some;
+#[allow(dead_code)]
+struct None;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -56,7 +63,7 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     struct WithRef<'a, T: 'a> {
         #[serde(skip_deserializing)]
-        t: Option<&'a T>,
+        t: StdOption<&'a T>,
         #[serde(serialize_with="ser_x", deserialize_with="de_x")]
         x: X,
     }
@@ -77,9 +84,9 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     struct NoBounds<T> {
         t: T,
-        option: Option<T>,
+        option: StdOption<T>,
         boxed: Box<T>,
-        option_boxed: Option<Box<T>>,
+        option_boxed: StdOption<Box<T>>,
     }
     assert::<NoBounds<i32>>();
 
@@ -175,8 +182,8 @@ fn test_gen() {
 
     #[derive(Serialize)]
     struct OptionStatic<'a> {
-        a: Option<&'a str>,
-        b: Option<&'static str>,
+        a: StdOption<&'a str>,
+        b: StdOption<&'static str>,
     }
     assert_ser::<OptionStatic>();
 

@@ -418,8 +418,8 @@ fn deserialize_seq(
                 };
                 let assign = quote! {
                     let #var = match #visit {
-                        Some(__value) => __value,
-                        None => {
+                        _serde::export::Some(__value) => __value,
+                        _serde::export::None => {
                             return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                         }
                     };
