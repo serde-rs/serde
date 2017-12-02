@@ -198,6 +198,7 @@ pub mod size_hint {
         helper(iter.size_hint())
     }
 
+    #[inline]
     pub fn cautious(hint: Option<usize>) -> usize {
         cmp::min(hint.unwrap_or(0), 4096)
     }
