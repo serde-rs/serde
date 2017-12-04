@@ -112,6 +112,7 @@ pub struct Container {
     from_type: Option<syn::Ty>,
     into_type: Option<syn::Ty>,
     remote: Option<syn::Path>,
+    finish_deserialize: Option<syn::Path>,
     identifier: Identifier,
 }
 
@@ -180,6 +181,7 @@ impl Container {
         let mut from_type = Attr::none(cx, "from");
         let mut into_type = Attr::none(cx, "into");
         let mut remote = Attr::none(cx, "remote");
+        let mut finish_deserialize = Attr::none(cx, "finish_deserialize");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
 
@@ -334,6 +336,13 @@ impl Container {
                         }
                     }
 
+                    // Parse `#[serde(finish_deserialize = "...")]`
+                    MetaItem(NameValue(ref name, ref lit)) if name == "finish_deserialize" => {
+                        if let Ok(path) = parse_lit_into_path(cx, name.as_ref(), lit) {
+                            finish_deserialize.set(path);
+                        }
+                    }
+
                     // Parse `#[serde(field_identifier)]`
                     MetaItem(Word(ref name)) if name == "field_identifier" => {
                         field_identifier.set_true();
@@ -370,6 +379,7 @@ impl Container {
             from_type: from_type.get(),
             into_type: into_type.get(),
             remote: remote.get(),
+            finish_deserialize: finish_deserialize.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
         }
     }
@@ -412,6 +422,10 @@ impl Container {
 
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
+    }
+
+    pub fn finish_deserialize(&self) -> Option<&syn::Path> {
+        self.finish_deserialize.as_ref()
     }
 
     pub fn identifier(&self) -> Identifier {

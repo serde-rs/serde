@@ -25,7 +25,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
-    let body = Stmts(deserialize_body(&cont, &params));
+    let body = Stmts(finish_deserialize(&cont, &params));
     let delife = params.borrowed.de_lifetime();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
@@ -242,6 +242,20 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
             }
             Body::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
+    }
+}
+
+fn finish_deserialize(cont: &Container, params: &Parameters) -> Fragment {
+    let body = deserialize_body(&cont, &params);
+    if let Some(path) = cont.attrs.finish_deserialize() {
+        let body = Expr(body);
+        quote_block!{
+          let mut __res = try!(#body);
+          try!(#path(&mut __res));
+          Ok(__res)
+        }
+    } else {
+        body
     }
 }
 
