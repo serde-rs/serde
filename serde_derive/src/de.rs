@@ -250,9 +250,7 @@ fn finish_deserialize(cont: &Container, params: &Parameters) -> Fragment {
     if let Some(path) = cont.attrs.finish_deserialize() {
         let body = Expr(body);
         quote_block!{
-          let mut __res = try!(#body);
-          try!(#path(&mut __res));
-          Ok(__res)
+          Ok(#path(try!(#body)))
         }
     } else {
         body
