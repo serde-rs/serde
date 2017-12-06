@@ -714,7 +714,13 @@ pub enum Default {
 
 impl Field {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
-    pub fn from_ast(cx: &Ctxt, index: usize, field: &syn::Field, attrs: Option<&Variant>) -> Self {
+    pub fn from_ast(
+        cx: &Ctxt,
+        index: usize,
+        field: &syn::Field,
+        attrs: Option<&Variant>,
+        container: &Container,
+    ) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
@@ -881,9 +887,10 @@ impl Field {
             }
         }
 
-        // Is skip_deserializing, initialize the field to Default::default()
-        // unless a different default is specified by `#[serde(default = "...")]`
-        if skip_deserializing.0.value.is_some() {
+        // Is skip_deserializing, initialize the field to Default::default() unless a different 
+        // default is specified by `#[serde(default = "...")]` on ourselves or our container (e.g. 
+        // the struct we are in).
+        if container.default == Default::None && skip_deserializing.0.value.is_some() {
             default.set_if_none(Default::Default);
         }
 
