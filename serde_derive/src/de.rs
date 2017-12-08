@@ -447,7 +447,30 @@ fn deserialize_seq(
         };
     }
 
+    let let_default = match *cattrs.default() {
+        attr::Default::Default => {
+            Some(
+                quote!(
+                    let __default: Self::Value = _serde::export::Default::default();
+                ),
+            )
+        }
+        attr::Default::Path(ref path) => {
+            Some(
+                quote!(
+                    let __default: Self::Value = #path();
+                ),
+            )
+        }
+        attr::Default::None => {
+            // We don't need the default value, to prevent an unused variable warning
+            // we'll leave the line empty.
+            None
+        }
+    };
+
     quote_block! {
+        #let_default
         #(#let_values)*
         _serde::export::Ok(#result)
     }
@@ -1701,15 +1724,15 @@ fn deserialize_map(
         attr::Default::Default => {
             Some(
                 quote!(
-                let __default: Self::Value = _serde::export::Default::default();
-            ),
+                    let __default: Self::Value = _serde::export::Default::default();
+                ),
             )
         }
         attr::Default::Path(ref path) => {
             Some(
                 quote!(
-                let __default: Self::Value = #path();
-            ),
+                    let __default: Self::Value = #path();
+                ),
             )
         }
         attr::Default::None => {
