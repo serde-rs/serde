@@ -719,7 +719,7 @@ impl Field {
         index: usize,
         field: &syn::Field,
         attrs: Option<&Variant>,
-        container: &Container,
+        container_default: &Default,
     ) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
@@ -890,7 +890,7 @@ impl Field {
         // Is skip_deserializing, initialize the field to Default::default() unless a different 
         // default is specified by `#[serde(default = "...")]` on ourselves or our container (e.g. 
         // the struct we are in).
-        if container.default == Default::None && skip_deserializing.0.value.is_some() {
+        if container_default == &Default::None && skip_deserializing.0.value.is_some() {
             default.set_if_none(Default::Default);
         }
 

@@ -451,15 +451,15 @@ fn deserialize_seq(
         attr::Default::Default => {
             Some(
                 quote!(
-                let __default: Self::Value = _serde::export::Default::default();
-            ),
+                    let __default: Self::Value = _serde::export::Default::default();
+                ),
             )
         }
         attr::Default::Path(ref path) => {
             Some(
                 quote!(
-                let __default: Self::Value = #path();
-            ),
+                    let __default: Self::Value = #path();
+                ),
             )
         }
         attr::Default::None => {
@@ -1724,15 +1724,15 @@ fn deserialize_map(
         attr::Default::Default => {
             Some(
                 quote!(
-                let __default: Self::Value = _serde::export::Default::default();
-            ),
+                    let __default: Self::Value = _serde::export::Default::default();
+                ),
             )
         }
         attr::Default::Path(ref path) => {
             Some(
                 quote!(
-                let __default: Self::Value = #path();
-            ),
+                    let __default: Self::Value = #path();
+                ),
             )
         }
         attr::Default::None => {
