@@ -11,17 +11,17 @@ pub struct Compact<T: ?Sized>(T);
 
 /// Trait to determine whether a value is represented in human-readable or
 /// compact form.
-/// 
+///
 /// ```
 /// extern crate serde;
 /// extern crate serde_test;
-/// 
+///
 /// use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// use serde_test::{Configure, Token, assert_tokens};
-/// 
+///
 /// #[derive(Debug, PartialEq)]
 /// struct Example(u8, u8);
-/// 
+///
 /// impl Serialize for Example {
 ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 ///         where S: Serializer,
@@ -33,7 +33,7 @@ pub struct Compact<T: ?Sized>(T);
 ///         }
 ///     }
 /// }
-/// 
+///
 /// impl<'de> Deserialize<'de> for Example {
 ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 ///         where D: Deserializer<'de>,
@@ -52,7 +52,7 @@ pub struct Compact<T: ?Sized>(T);
 ///         }
 ///     }
 /// }
-/// 
+///
 /// fn main() {
 ///     assert_tokens(
 ///         &Example(1, 0).compact(),
