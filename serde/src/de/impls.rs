@@ -485,7 +485,6 @@ forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 struct OptionVisitor<T> {
     marker: PhantomData<T>,
 }
-struct OptionFromVisitor<'a, T: 'a>(&'a mut Option<T>);
 
 impl<'de, T> Visitor<'de> for OptionVisitor<T>
 where
@@ -522,49 +521,6 @@ where
     }
 }
 
-impl<'a, 'de, T> Visitor<'de> for OptionFromVisitor<'a, T>
-where
-    T: Deserialize<'de>,
-{
-    type Value = ();
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("option")
-    }
-
-    #[inline]
-    fn visit_unit<E>(self) -> Result<(), E>
-    where
-        E: Error,
-    {
-        *self.0 = None;
-        Ok(())
-    }
-
-    #[inline]
-    fn visit_none<E>(self) -> Result<(), E>
-    where
-        E: Error,
-    {
-        *self.0 = None;
-        Ok(())
-    }
-
-    #[inline]
-    fn visit_some<D>(self, deserializer: D) -> Result<(), D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        // The some enum's repr is opaque, so we can't play cute tricks with
-        // its tag to build this in place unconditionally.
-        //
-        // FIXME: investigate whether branching on the old value being Some to
-        // deserialize_from the value is profitable (probably data-dependent?)
-        *self.0 = try!(T::deserialize(deserializer).map(Some));
-        Ok(())
-    }
-}
-
 impl<'de, T> Deserialize<'de> for Option<T>
 where
     T: Deserialize<'de>,
@@ -576,12 +532,11 @@ where
         deserializer.deserialize_option(OptionVisitor { marker: PhantomData })
     }
 
-    fn deserialize_from<D>(&mut self, deserializer: D) -> Result<(), D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_option(OptionFromVisitor(self))
-    }
+    // The Some variant's repr is opaque, so we can't play cute tricks with its
+    // tag to have deserialize_from build the content in place unconditionally.
+    //
+    // FIXME: investigate whether branching on the old value being Some to
+    // deserialize_from the value is profitable (probably data-dependent?)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
