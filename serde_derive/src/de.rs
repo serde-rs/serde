@@ -262,15 +262,19 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
 
 #[cfg(feature = "deserialize_from")]
 fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Fragment> {
+    // Only remote derives have getters, and we do not generate deserialize_from
+    // for remote derives.
+    assert!(!params.has_getter);
+
     if let (None, attr::Identifier::No) = (cont.attrs.from_type(), cont.attrs.identifier()) {
         match cont.body {
             Body::Enum(_) => None,
             Body::Struct(Style::Struct, ref fields) => {
-                deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No)
+                Some(deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No))
             }
             Body::Struct(Style::Tuple, ref fields) |
             Body::Struct(Style::Newtype, ref fields) => {
-                deserialize_from_tuple(None, params, fields, &cont.attrs, None)
+                Some(deserialize_from_tuple(None, params, fields, &cont.attrs, None))
             }
             Body::Struct(Style::Unit, _) => None,
         }
@@ -422,25 +426,15 @@ fn deserialize_from_tuple(
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
-) -> Option<Fragment> {
+) -> Fragment {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = split_with_de_lifetime(params,);
     let delife = params.borrowed.de_lifetime();
 
-    // If there are getters (implying private fields), construct the local type
-    // and use an `Into` conversion to get the remote type. If there are no
-    // getters then construct the target type directly.
-    let construct = if params.has_getter {
-        let local = &params.local;
-        quote!(#local)
-    } else {
-        quote!(#this)
-    };
-
     let is_enum = variant_ident.is_some();
     let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#construct::#variant_ident),
-        None => construct,
+        Some(variant_ident) => quote!(#this::#variant_ident),
+        None => quote!(#this),
     };
     let expecting = match variant_ident {
         Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
@@ -485,37 +479,34 @@ fn deserialize_from_tuple(
         quote!(mut __seq)
     };
 
-    if params.has_getter {
-        None
-    } else {
-        let de_from_impl_generics = de_impl_generics.with_dest();
-        let de_from_ty_generics = de_ty_generics.with_dest();
-        let dest_life = dest_lifetime();
-        Some(quote_block! {
-            struct __Visitor #de_from_impl_generics #where_clause {
-                dest: &#dest_life mut #this #ty_generics,
-                lifetime: _serde::export::PhantomData<&#delife ()>,
+    let de_from_impl_generics = de_impl_generics.with_dest();
+    let de_from_ty_generics = de_ty_generics.with_dest();
+    let dest_life = dest_lifetime();
+
+    quote_block! {
+        struct __Visitor #de_from_impl_generics #where_clause {
+            dest: &#dest_life mut #this #ty_generics,
+            lifetime: _serde::export::PhantomData<&#delife ()>,
+        }
+
+        impl #de_from_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_from_ty_generics #where_clause {
+            type Value = ();
+
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
-            impl #de_from_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_from_ty_generics #where_clause {
-                type Value = ();
+            #visit_newtype_struct
 
-                fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                    _serde::export::Formatter::write_str(formatter, #expecting)
-                }
-
-                #visit_newtype_struct
-
-                #[inline]
-                fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                    where __A: _serde::de::SeqAccess<#delife>
-                {
-                    #visit_seq
-                }
+            #[inline]
+            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+                where __A: _serde::de::SeqAccess<#delife>
+            {
+                #visit_seq
             }
+        }
 
-            #dispatch
-        })
+        #dispatch
     }
 }
 
@@ -707,30 +698,14 @@ fn deserialize_from_newtype_struct(
 
     // FIXME: can we reject this condition earlier so we don't have to handle it?
     // If there's conversions that we need to do, we can't do this properly.
-    if field.attrs.deserialize_with().is_some() || params.has_getter {
-        let value = match field.attrs.deserialize_with() {
-            None => {
-                let field_ty = &field.ty;
-                quote! {
-                    try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
-                }
-            }
-            Some(path) => {
-                let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                quote!({
-                    #wrapper
-                    try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
-                })
-            }
-        };
+    if let Some(path) = field.attrs.deserialize_with() {
+        let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+        let value = quote!({
+            #wrapper
+            try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
+        });
 
         let mut result = quote!(#type_path(#value));
-        if params.has_getter {
-            let this = &params.this;
-            result = quote! {
-                _serde::export::Into::<#this>::into(#result)
-            };
-        }
 
         quote! {
             #[inline]
@@ -884,7 +859,7 @@ fn deserialize_from_struct(
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
     untagged: Untagged,
-) -> Option<Fragment> {
+) -> Fragment {
     let is_enum = variant_ident.is_some();
 
     let this = &params.this;
@@ -951,43 +926,39 @@ fn deserialize_from_struct(
         }
     };
 
-    if params.has_getter {
-        None
-    } else {
-        let de_from_impl_generics = de_impl_generics.with_dest();
-        let de_from_ty_generics = de_ty_generics.with_dest();
-        let dest_life = dest_lifetime();
+    let de_from_impl_generics = de_impl_generics.with_dest();
+    let de_from_ty_generics = de_ty_generics.with_dest();
+    let dest_life = dest_lifetime();
 
-        Some(quote_block! {
-            #field_visitor
+    quote_block! {
+        #field_visitor
 
-            struct __Visitor #de_from_impl_generics #where_clause {
-                dest: &#dest_life mut #this #ty_generics,
-                lifetime: _serde::export::PhantomData<&#delife ()>,
+        struct __Visitor #de_from_impl_generics #where_clause {
+            dest: &#dest_life mut #this #ty_generics,
+            lifetime: _serde::export::PhantomData<&#delife ()>,
+        }
+
+        impl #de_from_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_from_ty_generics #where_clause {
+            type Value = ();
+
+            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(formatter, #expecting)
             }
 
-            impl #de_from_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_from_ty_generics #where_clause {
-                type Value = ();
+            #visit_seq
 
-                fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                    _serde::export::Formatter::write_str(formatter, #expecting)
-                }
-
-                #visit_seq
-
-                #[inline]
-                #[allow(unreachable_code)]
-                fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                    where __A: _serde::de::MapAccess<#delife>
-                {
-                    #visit_map
-                }
+            #[inline]
+            #[allow(unreachable_code)]
+            fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
+                where __A: _serde::de::MapAccess<#delife>
+            {
+                #visit_map
             }
+        }
 
-            #fields_stmt
+        #fields_stmt
 
-            #dispatch
-        })
+        #dispatch
     }
 }
 
