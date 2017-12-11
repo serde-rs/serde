@@ -520,12 +520,11 @@ pub trait Deserialize<'de>: Sized {
     /// If you manually implement this, your recursive deserializations should
     /// use `deserialize_from`.
     ///
-    /// TODO: example
-    ///
-    /// ```
-    /// // Something with a loop that returns on error.
-    ///
-    /// ```
+    /// This method is stable and an official public API, but hidden from the
+    /// documentation because it is almost never what newbies are looking for.
+    /// Showing it in rustdoc would cause it to be featured more prominently
+    /// than it deserves.
+    #[doc(hidden)]
     fn deserialize_from<D>(&mut self, deserializer: D) -> Result<(), D::Error>
         where D: Deserializer<'de>
     {
