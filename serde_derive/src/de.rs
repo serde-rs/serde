@@ -266,24 +266,23 @@ fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Fragme
     // for remote derives.
     assert!(!params.has_getter);
 
-    if cont.body.all_fields().all(|field| field.attrs.deserialize_with().is_some()) {
+    if cont.attrs.from_type().is_some()
+        || cont.attrs.identifier().is_some()
+        || cont.body.all_fields().all(|f| f.attrs.deserialize_with().is_some())
+    {
         return None;
     }
 
-    if let (None, attr::Identifier::No) = (cont.attrs.from_type(), cont.attrs.identifier()) {
-        match cont.body {
-            Body::Enum(_) => None,
-            Body::Struct(Style::Struct, ref fields) => {
-                Some(deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No))
-            }
-            Body::Struct(Style::Tuple, ref fields) |
-            Body::Struct(Style::Newtype, ref fields) => {
-                Some(deserialize_from_tuple(None, params, fields, &cont.attrs, None))
-            }
-            Body::Struct(Style::Unit, _) => None,
+    match cont.body {
+        Body::Enum(_) => None,
+        Body::Struct(Style::Struct, ref fields) => {
+            Some(deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No))
         }
-    }  else {
-        None
+        Body::Struct(Style::Tuple, ref fields) |
+        Body::Struct(Style::Newtype, ref fields) => {
+            Some(deserialize_from_tuple(None, params, fields, &cont.attrs, None))
+        }
+        Body::Struct(Style::Unit, _) => None,
     }
 }
 
