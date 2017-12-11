@@ -669,7 +669,7 @@ macro_rules! seq_impl {
 
 // Dummy impl of reserve
 #[cfg(any(feature = "std", feature = "alloc"))]
-fn nop_reserve<T, U>(_x: T, _y: U) { }
+fn nop_reserve<T>(_seq: T, _n: usize) {}
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
