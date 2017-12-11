@@ -40,18 +40,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
             }
         }
     } else {
-        let from_body = deserialize_from_body(&cont, &params);
-        let from_impl = from_body.map(|from_body| {
-            let from_body = Stmts(from_body);
-
-            quote! {
-                fn deserialize_from<__D>(&mut self, __deserializer: __D) -> _serde::export::Result<(), __D::Error>
-                    where __D: _serde::Deserializer<#delife>
-                {
-                    #from_body
-                }
-            }
-        });
+        let fn_deserialize_from = deserialize_from_body(&cont, &params);
 
         quote! {
             #[automatically_derived]
@@ -62,7 +51,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
                     #main_body
                 }
 
-                #from_impl
+                #fn_deserialize_from
             }
         }
     };
@@ -261,7 +250,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
 }
 
 #[cfg(feature = "deserialize_from")]
-fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Fragment> {
+fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Stmts> {
     // Only remote derives have getters, and we do not generate deserialize_from
     // for remote derives.
     assert!(!params.has_getter);
@@ -273,21 +262,35 @@ fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Fragme
         return None;
     }
 
-    match cont.body {
-        Body::Enum(_) => None,
+    let code = match cont.body {
         Body::Struct(Style::Struct, ref fields) => {
-            Some(deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No))
+            deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No)
         }
         Body::Struct(Style::Tuple, ref fields) |
         Body::Struct(Style::Newtype, ref fields) => {
-            Some(deserialize_from_tuple(None, params, fields, &cont.attrs, None))
+            deserialize_from_tuple(None, params, fields, &cont.attrs, None)
         }
-        Body::Struct(Style::Unit, _) => None,
-    }
+        Body::Enum(_) | Body::Struct(Style::Unit, _) => {
+            return None;
+        }
+    };
+
+    let delife = params.borrowed.de_lifetime();
+    let stmts = Stmts(code);
+
+    let fn_deserialize_from = quote_block! {
+        fn deserialize_from<__D>(&mut self, __deserializer: __D) -> _serde::export::Result<(), __D::Error>
+            where __D: _serde::Deserializer<#delife>
+        {
+            #stmts
+        }
+    };
+
+    Some(Stmts(fn_deserialize_from))
 }
 
 #[cfg(not(feature = "deserialize_from"))]
-fn deserialize_from_body(_cont: &Container, _params: &Parameters) -> Option<Fragment> {
+fn deserialize_from_body(_cont: &Container, _params: &Parameters) -> Option<Stmts> {
     None
 }
 
