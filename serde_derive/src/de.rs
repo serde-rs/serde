@@ -266,6 +266,10 @@ fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Fragme
     // for remote derives.
     assert!(!params.has_getter);
 
+    if cont.body.all_fields().all(|field| field.attrs.deserialize_with().is_some()) {
+        return None;
+    }
+
     if let (None, attr::Identifier::No) = (cont.attrs.from_type(), cont.attrs.identifier()) {
         match cont.body {
             Body::Enum(_) => None,
@@ -432,10 +436,6 @@ fn deserialize_from_tuple(
     let delife = params.borrowed.de_lifetime();
 
     let is_enum = variant_ident.is_some();
-    let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#this::#variant_ident),
-        None => quote!(#this),
-    };
     let expecting = match variant_ident {
         Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
         None => format!("tuple struct {}", params.type_name()),
@@ -444,7 +444,7 @@ fn deserialize_from_tuple(
     let nfields = fields.len();
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_from_newtype_struct(&type_path, params, &fields[0]))
+        Some(deserialize_from_newtype_struct(params, &fields[0]))
     } else {
         None
     };
@@ -690,41 +690,20 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
 
 #[cfg(feature = "deserialize_from")]
 fn deserialize_from_newtype_struct(
-    type_path: &Tokens,
     params: &Parameters,
     field: &Field
 ) -> Tokens {
+    // We do not generate deserialize_from if every field has a deserialize_with.
+    assert!(field.attrs.deserialize_with().is_none());
+
     let delife = params.borrowed.de_lifetime();
 
-    // FIXME: can we reject this condition earlier so we don't have to handle it?
-    // If there's conversions that we need to do, we can't do this properly.
-    if let Some(path) = field.attrs.deserialize_with() {
-        let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-        let value = quote!({
-            #wrapper
-            try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
-        });
-
-        let mut result = quote!(#type_path(#value));
-
-        quote! {
-            #[inline]
-            fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
-                where __E: _serde::Deserializer<#delife>
-            {
-                *self.dest = #result;
-                _serde::export::Ok(())
-            }
-        }
-    } else {
-        // No conversions, just recurse on the field.
-        quote! {
-            #[inline]
-            fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
-                where __E: _serde::Deserializer<#delife>
-            {
-                _serde::Deserialize::deserialize_from(&mut self.dest.0, __e)
-            }
+    quote! {
+        #[inline]
+        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
+            where __E: _serde::Deserializer<#delife>
+        {
+            _serde::Deserialize::deserialize_from(&mut self.dest.0, __e)
         }
     }
 }
