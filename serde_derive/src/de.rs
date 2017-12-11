@@ -25,7 +25,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
-    let main_body = Stmts(deserialize_body(&cont, &params));
+    let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
@@ -35,7 +35,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
                 #vis fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
                     where __D: _serde::Deserializer<#delife>
                 {
-                    #main_body
+                    #body
                 }
             }
         }
@@ -48,7 +48,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
                 fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
                     where __D: _serde::Deserializer<#delife>
                 {
-                    #main_body
+                    #body
                 }
 
                 #fn_deserialize_from
