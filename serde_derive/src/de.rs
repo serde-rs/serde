@@ -929,7 +929,6 @@ fn deserialize_from_struct(
             #visit_seq
 
             #[inline]
-            #[allow(unreachable_code)]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::MapAccess<#delife>
             {
@@ -2193,12 +2192,25 @@ fn deserialize_from_map(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(
             |&(field, ref name)| {
-                let missing_expr = Expr(expr_is_missing(&field, cattrs));
-                let field_name = &field.ident;
-                quote! {
-                    if !#name {
-                        self.dest.#field_name = #missing_expr;
-                    };
+                let missing_expr = expr_is_missing(&field, cattrs);
+                // If missing_expr unconditionally returns an error, don't try
+                // to assign its value to self.dest. Maybe this could be handled
+                // more elegantly.
+                if missing_expr.as_ref().as_str().starts_with("return ") {
+                    let missing_expr = Stmts(missing_expr);
+                    quote! {
+                        if !#name {
+                            #missing_expr;
+                        }
+                    }
+                } else {
+                    let field_name = &field.ident;
+                    let missing_expr = Expr(missing_expr);
+                    quote! {
+                        if !#name {
+                            self.dest.#field_name = #missing_expr;
+                        };
+                    }
                 }
             },
         );

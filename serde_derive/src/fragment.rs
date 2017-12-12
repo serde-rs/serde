@@ -73,3 +73,12 @@ impl ToTokens for Match {
         }
     }
 }
+
+impl AsRef<Tokens> for Fragment {
+    fn as_ref(&self) -> &Tokens {
+        match *self {
+            Fragment::Expr(ref expr) => expr,
+            Fragment::Block(ref block) => block,
+        }
+    }
+}
