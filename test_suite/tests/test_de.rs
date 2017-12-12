@@ -86,6 +86,12 @@ struct StructSkipDefault {
     #[serde(skip_deserializing)] a: i32,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructSkipDefaultGeneric<T> {
+    #[serde(skip_deserializing)] t: T,
+}
+
 impl Default for StructSkipDefault {
     fn default() -> Self {
         StructSkipDefault {

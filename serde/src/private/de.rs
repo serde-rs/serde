@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{Deserialize, Deserializer, IntoDeserializer, Error, Visitor};
+use de::{Deserialize, Deserializer, DeserializeSeed, IntoDeserializer, Error, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::Unexpected;
@@ -2007,5 +2007,22 @@ where
         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
         byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
         map struct enum identifier ignored_any
+    }
+}
+
+/// A DeserializeSeed helper for implementing deserialize_from Visitors.
+///
+/// Wraps a mutable reference and calls deserialize_from on it.
+pub struct DeserializeFromSeed<'a, T: 'a>(pub &'a mut T);
+
+impl<'a, 'de, T> DeserializeSeed<'de> for DeserializeFromSeed<'a, T>
+    where T: Deserialize<'de>,
+{
+    type Value = ();
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+       self.0.deserialize_from(deserializer)
     }
 }

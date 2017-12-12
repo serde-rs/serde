@@ -164,6 +164,15 @@ pub enum Identifier {
     Variant,
 }
 
+impl Identifier {
+    pub fn is_some(self) -> bool {
+        match self {
+            Identifier::No => false,
+            Identifier::Field | Identifier::Variant => true,
+        }
+    }
+}
+
 impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::DeriveInput) -> Self {

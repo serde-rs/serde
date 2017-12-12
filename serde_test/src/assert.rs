@@ -184,11 +184,27 @@ where
     T: Deserialize<'de> + PartialEq + Debug,
 {
     let mut de = Deserializer::new(tokens);
-    match T::deserialize(&mut de) {
-        Ok(v) => assert_eq!(v, *value),
+    let mut deserialized_val = match T::deserialize(&mut de) {
+        Ok(v) => {
+            assert_eq!(v, *value);
+            v
+        }
         Err(e) => panic!("tokens failed to deserialize: {}", e),
+    };
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
     }
 
+    // Do the same thing for deserialize_from. This isn't *great* because a no-op
+    // impl of deserialize_from can technically succeed here. Still, this should
+    // catch a lot of junk.
+    let mut de = Deserializer::new(tokens);
+    match deserialized_val.deserialize_from(&mut de) {
+        Ok(()) => {
+            assert_eq!(deserialized_val, *value);
+        }
+        Err(e) => panic!("tokens failed to deserialize_from: {}", e),
+    }
     if de.remaining() > 0 {
         panic!("{} remaining tokens", de.remaining());
     }
