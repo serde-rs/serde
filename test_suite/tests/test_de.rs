@@ -81,6 +81,20 @@ struct StructSkipAll {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructSkipDefault {
+    #[serde(skip_deserializing)] a: i32,
+}
+
+impl Default for StructSkipDefault {
+    fn default() -> Self {
+        StructSkipDefault {
+            a: 16,
+        }
+    }
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructSkipAllDenyUnknown {
     #[serde(skip_deserializing)] a: i32,
@@ -597,6 +611,12 @@ declare_tests! {
 
                 Token::Str("b"),
                 Token::I32(2),
+            Token::StructEnd,
+        ],
+    }
+    test_struct_skip_default {
+        StructSkipDefault { a: 16 } => &[
+            Token::Struct { name: "StructSkipDefault", len: 0 },
             Token::StructEnd,
         ],
     }
