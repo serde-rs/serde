@@ -673,7 +673,32 @@ fn deserialize_from_seq(
             }
         });
 
+    let this = &params.this;
+    let (_, ty_generics, _) = params.generics.split_for_impl();
+    let let_default = match *cattrs.default() {
+        attr::Default::Default => {
+            Some(
+                quote!(
+                    let __default: #this #ty_generics  = _serde::export::Default::default();
+                ),
+            )
+        }
+        attr::Default::Path(ref path) => {
+            Some(
+                quote!(
+                    let __default: #this #ty_generics  = #path();
+                ),
+            )
+        }
+        attr::Default::None => {
+            // We don't need the default value, to prevent an unused variable warning
+            // we'll leave the line empty.
+            None
+        }
+    };
+
     quote_block! {
+        #let_default
         #(#write_values)*
         _serde::export::Ok(())
     }
