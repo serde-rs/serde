@@ -616,17 +616,17 @@ fn deserialize_from_seq(
                     self.dest.#field_name = #default;
                 }
             } else {
-                let handle_none = quote! {
-                    if visit.is_none() {
-                        return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
-                    }
+                let return_invalid_length = quote! {
+                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                 };
                 let write = match field.attrs.deserialize_with() {
                     None => {
                         quote! {
-                            let visit = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                _serde::private::de::DeserializeFromSeed(&mut self.dest.#field_name)));
-                            #handle_none
+                            if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
+                                _serde::private::de::DeserializeFromSeed(&mut self.dest.#field_name)))
+                            {
+                                #return_invalid_length
+                            }
                         }
                     }
                     Some(path) => {
@@ -634,11 +634,14 @@ fn deserialize_from_seq(
                             params, field.ty, path);
                         quote!({
                             #wrapper
-                            let visit = _serde::export::Option::map(
-                                try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)),
-                                |__wrap| __wrap.value);
-                            #handle_none
-                            self.dest.#field_name = visit.unwrap();
+                            match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
+                                _serde::export::Some(__wrap) => {
+                                    self.dest.#field_name = __wrap.value;
+                                }
+                                _serde::export::None => {
+                                    #return_invalid_length
+                                }
+                            }
                         })
                     }
                 };
