@@ -15,7 +15,7 @@ use de::{Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, Va
 use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
-use private::de::DeserializeFromSeed;
+use private::de::InPlaceSeed;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use private::de::size_hint;
@@ -213,7 +213,7 @@ impl<'de> Deserialize<'de> for char {
 #[cfg(any(feature = "std", feature = "alloc"))]
 struct StringVisitor;
 #[cfg(any(feature = "std", feature = "alloc"))]
-struct StringFromVisitor<'a>(&'a mut String);
+struct StringInPlaceVisitor<'a>(&'a mut String);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de> Visitor<'de> for StringVisitor {
@@ -259,7 +259,7 @@ impl<'de> Visitor<'de> for StringVisitor {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de> Visitor<'de> for StringFromVisitor<'a> {
+impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
     type Value = ();
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -320,11 +320,11 @@ impl<'de> Deserialize<'de> for String {
         deserializer.deserialize_string(StringVisitor)
     }
 
-    fn deserialize_from<D>(&mut self, deserializer: D) -> Result<(), D::Error>
+    fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_string(StringFromVisitor(self))
+        deserializer.deserialize_string(StringInPlaceVisitor(place))
     }
 }
 
@@ -533,10 +533,10 @@ where
     }
 
     // The Some variant's repr is opaque, so we can't play cute tricks with its
-    // tag to have deserialize_from build the content in place unconditionally.
+    // tag to have deserialize_in_place build the content in place unconditionally.
     //
     // FIXME: investigate whether branching on the old value being Some to
-    // deserialize_from the value is profitable (probably data-dependent?)
+    // deserialize_in_place the value is profitable (probably data-dependent?)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -627,13 +627,13 @@ macro_rules! seq_impl {
                 deserializer.deserialize_seq(visitor)
             }
 
-            fn deserialize_from<D>(&mut self, deserializer: D) -> Result<(), D::Error>
+            fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
             where
                 D: Deserializer<'de>,
             {
-                struct SeqVisitor<'a, T: 'a $(, $typaram: 'a)*>(&'a mut $ty<T $(, $typaram)*>);
+                struct SeqInPlaceVisitor<'a, T: 'a $(, $typaram: 'a)*>(&'a mut $ty<T $(, $typaram)*>);
 
-                impl<'a, 'de, T $(, $typaram)*> Visitor<'de> for SeqVisitor<'a, T $(, $typaram)*>
+                impl<'a, 'de, T $(, $typaram)*> Visitor<'de> for SeqInPlaceVisitor<'a, T $(, $typaram)*>
                 where
                     T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
                     $($typaram: $bound1 $(+ $bound2)*,)*
@@ -661,7 +661,7 @@ macro_rules! seq_impl {
                     }
                 }
 
-                deserializer.deserialize_seq(SeqVisitor(self))
+                deserializer.deserialize_seq(SeqInPlaceVisitor(place))
             }
         }
     }
@@ -736,7 +736,7 @@ seq_impl!(
 struct ArrayVisitor<A> {
     marker: PhantomData<A>,
 }
-struct ArrayFromVisitor<'a, A: 'a>(&'a mut A);
+struct ArrayInPlaceVisitor<'a, A: 'a>(&'a mut A);
 
 impl<A> ArrayVisitor<A> {
     fn new() -> Self {
@@ -799,7 +799,7 @@ macro_rules! array_impls {
                 }
             }
 
-            impl<'a, 'de, T> Visitor<'de> for ArrayFromVisitor<'a, [T; $len]>
+            impl<'a, 'de, T> Visitor<'de> for ArrayInPlaceVisitor<'a, [T; $len]>
             where
                 T: Deserialize<'de>,
             {
@@ -816,7 +816,7 @@ macro_rules! array_impls {
                 {
                     let mut fail_idx = None;
                     for (idx, dest) in self.0[..].iter_mut().enumerate() {
-                        if try!(seq.next_element_seed(DeserializeFromSeed(dest))).is_none() {
+                        if try!(seq.next_element_seed(InPlaceSeed(dest))).is_none() {
                             fail_idx = Some(idx);
                             break;
                         }
@@ -839,11 +839,11 @@ macro_rules! array_impls {
                     deserializer.deserialize_tuple($len, ArrayVisitor::<[T; $len]>::new())
                 }
 
-                fn deserialize_from<D>(&mut self, deserializer: D) -> Result<(), D::Error>
+                fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
                 where
                     D: Deserializer<'de>,
                 {
-                    deserializer.deserialize_tuple($len, ArrayFromVisitor(self))
+                    deserializer.deserialize_tuple($len, ArrayInPlaceVisitor(place))
                 }
             }
         )+
@@ -928,13 +928,13 @@ macro_rules! tuple_impls {
                 }
 
                 #[inline]
-                fn deserialize_from<D>(&mut self, deserializer: D) -> Result<(), D::Error>
+                fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
                 where
                     D: Deserializer<'de>,
                 {
-                    struct TupleVisitor<'a, $($name: 'a,)+>(&'a mut ($($name,)+));
+                    struct TupleInPlaceVisitor<'a, $($name: 'a,)+>(&'a mut ($($name,)+));
 
-                    impl<'a, 'de, $($name: Deserialize<'de>),+> Visitor<'de> for TupleVisitor<'a, $($name,)+> {
+                    impl<'a, 'de, $($name: Deserialize<'de>),+> Visitor<'de> for TupleInPlaceVisitor<'a, $($name,)+> {
                         type Value = ();
 
                         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -948,7 +948,7 @@ macro_rules! tuple_impls {
                             A: SeqAccess<'de>,
                         {
                             $(
-                                if try!(seq.next_element_seed(DeserializeFromSeed(&mut (self.0).$n))).is_none() {
+                                if try!(seq.next_element_seed(InPlaceSeed(&mut (self.0).$n))).is_none() {
                                     return Err(Error::invalid_length($n, &self));
                                 }
                             )+
@@ -957,7 +957,7 @@ macro_rules! tuple_impls {
                         }
                     }
 
-                    deserializer.deserialize_tuple($len, TupleVisitor(self))
+                    deserializer.deserialize_tuple($len, TupleInPlaceVisitor(place))
                 }
             }
         )+

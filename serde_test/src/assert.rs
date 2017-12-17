@@ -195,15 +195,15 @@ where
         panic!("{} remaining tokens", de.remaining());
     }
 
-    // Do the same thing for deserialize_from. This isn't *great* because a no-op
-    // impl of deserialize_from can technically succeed here. Still, this should
-    // catch a lot of junk.
+    // Do the same thing for deserialize_in_place. This isn't *great* because a
+    // no-op impl of deserialize_in_place can technically succeed here. Still,
+    // this should catch a lot of junk.
     let mut de = Deserializer::new(tokens);
-    match deserialized_val.deserialize_from(&mut de) {
+    match T::deserialize_in_place(&mut de, &mut deserialized_val) {
         Ok(()) => {
             assert_eq!(deserialized_val, *value);
         }
-        Err(e) => panic!("tokens failed to deserialize_from: {}", e),
+        Err(e) => panic!("tokens failed to deserialize_in_place: {}", e),
     }
     if de.remaining() > 0 {
         panic!("{} remaining tokens", de.remaining());
