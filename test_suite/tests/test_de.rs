@@ -49,14 +49,16 @@ struct TupleStruct(i32, i32, i32);
 struct Struct {
     a: i32,
     b: i32,
-    #[serde(skip_deserializing)] c: i32,
+    #[serde(skip_deserializing)]
+    c: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructDenyUnknown {
     a: i32,
-    #[serde(skip_deserializing)] b: i32,
+    #[serde(skip_deserializing)]
+    b: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -77,19 +79,22 @@ impl Default for StructDefault<String> {
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct StructSkipAll {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(default)]
 struct StructSkipDefault {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(default)]
 struct StructSkipDefaultGeneric<T> {
-    #[serde(skip_deserializing)] t: T,
+    #[serde(skip_deserializing)]
+    t: T,
 }
 
 impl Default for StructSkipDefault {
@@ -101,7 +106,8 @@ impl Default for StructSkipDefault {
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructSkipAllDenyUnknown {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]

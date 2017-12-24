@@ -84,10 +84,14 @@ where
     E: MyDefault,
 {
     a1: A,
-    #[serde(default)] a2: B,
-    #[serde(default = "MyDefault::my_default")] a3: C,
-    #[serde(skip_deserializing)] a4: D,
-    #[serde(skip_deserializing, default = "MyDefault::my_default")] a5: E,
+    #[serde(default)]
+    a2: B,
+    #[serde(default = "MyDefault::my_default")]
+    a3: C,
+    #[serde(skip_deserializing)]
+    a4: D,
+    #[serde(skip_deserializing, default = "MyDefault::my_default")]
+    a5: E,
 }
 
 #[test]
@@ -147,10 +151,14 @@ where
 {
     Struct {
         a1: A,
-        #[serde(default)] a2: B,
-        #[serde(default = "MyDefault::my_default")] a3: C,
-        #[serde(skip_deserializing)] a4: D,
-        #[serde(skip_deserializing, default = "MyDefault::my_default")] a5: E,
+        #[serde(default)]
+        a2: B,
+        #[serde(default = "MyDefault::my_default")]
+        a3: C,
+        #[serde(skip_deserializing)]
+        a4: D,
+        #[serde(skip_deserializing, default = "MyDefault::my_default")]
+        a5: E,
     },
 }
 
@@ -217,7 +225,8 @@ impl MyDefault for NoStdDefault {
 
 #[derive(Debug, PartialEq, Deserialize)]
 struct ContainsNoStdDefault<A: MyDefault> {
-    #[serde(default = "MyDefault::my_default")] a: A,
+    #[serde(default = "MyDefault::my_default")]
+    a: A,
 }
 
 // Tests that a struct field does not need to implement std::default::Default if
@@ -287,10 +296,14 @@ impl MyDefault for NotDeserializeEnum {
 
 #[derive(Debug, PartialEq, Deserialize)]
 struct ContainsNotDeserialize<A, B, C: DeserializeWith, E: MyDefault> {
-    #[serde(skip_deserializing)] a: A,
-    #[serde(skip_deserializing, default)] b: B,
-    #[serde(deserialize_with = "DeserializeWith::deserialize_with", default)] c: C,
-    #[serde(skip_deserializing, default = "MyDefault::my_default")] e: E,
+    #[serde(skip_deserializing)]
+    a: A,
+    #[serde(skip_deserializing, default)]
+    b: B,
+    #[serde(deserialize_with = "DeserializeWith::deserialize_with", default)]
+    c: C,
+    #[serde(skip_deserializing, default = "MyDefault::my_default")]
+    e: E,
 }
 
 // Tests that a struct field does not need to implement Deserialize if it is
@@ -373,14 +386,16 @@ fn test_ignore_unknown() {
 #[serde(rename = "Superhero")]
 struct RenameStruct {
     a1: i32,
-    #[serde(rename = "a3")] a2: i32,
+    #[serde(rename = "a3")]
+    a2: i32,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename(serialize = "SuperheroSer", deserialize = "SuperheroDe"))]
 struct RenameStructSerializeDeserialize {
     a1: i32,
-    #[serde(rename(serialize = "a4", deserialize = "a5"))] a2: i32,
+    #[serde(rename(serialize = "a4", deserialize = "a5"))]
+    a2: i32,
 }
 
 #[test]
@@ -434,10 +449,17 @@ fn test_rename_struct() {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Superhero")]
 enum RenameEnum {
-    #[serde(rename = "bruce_wayne")] Batman,
-    #[serde(rename = "clark_kent")] Superman(i8),
-    #[serde(rename = "diana_prince")] WonderWoman(i8, i8),
-    #[serde(rename = "barry_allan")] Flash { #[serde(rename = "b")] a: i32 },
+    #[serde(rename = "bruce_wayne")]
+    Batman,
+    #[serde(rename = "clark_kent")]
+    Superman(i8),
+    #[serde(rename = "diana_prince")]
+    WonderWoman(i8, i8),
+    #[serde(rename = "barry_allan")]
+    Flash {
+        #[serde(rename = "b")]
+        a: i32,
+    },
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -548,8 +570,10 @@ where
     C: ShouldSkip,
 {
     a: &'a i8,
-    #[serde(skip_serializing)] b: B,
-    #[serde(skip_serializing_if = "ShouldSkip::should_skip")] c: C,
+    #[serde(skip_serializing)]
+    b: B,
+    #[serde(skip_serializing_if = "ShouldSkip::should_skip")]
+    c: C,
 }
 
 #[test]
@@ -591,7 +615,8 @@ fn test_skip_serializing_struct() {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct SkipStruct<B> {
     a: i8,
-    #[serde(skip)] b: B,
+    #[serde(skip)]
+    b: B,
 }
 
 #[test]
@@ -630,8 +655,10 @@ where
 {
     Struct {
         a: &'a i8,
-        #[serde(skip_serializing)] _b: B,
-        #[serde(skip_serializing_if = "ShouldSkip::should_skip")] c: C,
+        #[serde(skip_serializing)]
+        _b: B,
+        #[serde(skip_serializing_if = "ShouldSkip::should_skip")]
+        c: C,
     },
 }
 
@@ -697,9 +724,12 @@ where
     D: SerializeWith,
 {
     a: &'a Option<i8>,
-    #[serde(skip_serializing)] b: &'a B,
-    #[serde(skip_serializing)] c: Option<C>,
-    #[serde(serialize_with = "SerializeWith::serialize_with")] d: D,
+    #[serde(skip_serializing)]
+    b: &'a B,
+    #[serde(skip_serializing)]
+    c: Option<C>,
+    #[serde(serialize_with = "SerializeWith::serialize_with")]
+    d: D,
 }
 
 #[test]
@@ -733,7 +763,8 @@ where
     B: SerializeWith,
 {
     a: &'a i8,
-    #[serde(serialize_with = "SerializeWith::serialize_with")] b: B,
+    #[serde(serialize_with = "SerializeWith::serialize_with")]
+    b: B,
 }
 
 #[test]
@@ -777,7 +808,8 @@ where
 {
     Struct {
         a: &'a i8,
-        #[serde(serialize_with = "SerializeWith::serialize_with")] b: B,
+        #[serde(serialize_with = "SerializeWith::serialize_with")]
+        b: B,
     },
 }
 
@@ -993,7 +1025,8 @@ where
     B: DeserializeWith,
 {
     a: i8,
-    #[serde(deserialize_with = "DeserializeWith::deserialize_with")] b: B,
+    #[serde(deserialize_with = "DeserializeWith::deserialize_with")]
+    b: B,
 }
 
 #[test]
@@ -1036,7 +1069,8 @@ where
 {
     Struct {
         a: i8,
-        #[serde(deserialize_with = "DeserializeWith::deserialize_with")] b: B,
+        #[serde(deserialize_with = "DeserializeWith::deserialize_with")]
+        b: B,
     },
 }
 
@@ -1136,7 +1170,12 @@ fn test_missing_renamed_field_enum() {
 #[derive(Debug, PartialEq, Deserialize)]
 enum InvalidLengthEnum {
     A(i32, i32, i32),
-    B(#[serde(skip_deserializing)] i32, i32, i32),
+    B(
+        #[serde(skip_deserializing)]
+        i32,
+        i32,
+        i32,
+    ),
 }
 
 #[test]

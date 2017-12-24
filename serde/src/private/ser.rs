@@ -61,7 +61,8 @@ enum Unsupported {
     Sequence,
     Tuple,
     TupleStruct,
-    #[cfg(not(any(feature = "std", feature = "alloc")))] Enum,
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
+    Enum,
 }
 
 impl Display for Unsupported {

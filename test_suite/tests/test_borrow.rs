@@ -110,7 +110,8 @@ fn test_cow() {
     struct Cows<'a, 'b> {
         copied: Cow<'a, str>,
 
-        #[serde(borrow)] borrowed: Cow<'b, str>,
+        #[serde(borrow)]
+        borrowed: Cow<'b, str>,
     }
 
     let tokens = &[
@@ -145,7 +146,8 @@ fn test_lifetimes() {
     struct Cows<'a, 'b> {
         _copied: Cow<'a, str>,
 
-        #[serde(borrow)] _borrowed: Cow<'b, str>,
+        #[serde(borrow)]
+        _borrowed: Cow<'b, str>,
     }
 
     // Tests that `'de: 'a` is not required by the Deserialize impl.
@@ -158,7 +160,8 @@ fn test_lifetimes() {
 
     #[derive(Deserialize)]
     struct Wrap<'a, 'b> {
-        #[serde(borrow = "'b")] _cows: Cows<'a, 'b>,
+        #[serde(borrow = "'b")]
+        _cows: Cows<'a, 'b>,
     }
 
     // Tests that `'de: 'a` is not required by the Deserialize impl.
