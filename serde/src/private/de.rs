@@ -2010,12 +2010,12 @@ where
     }
 }
 
-/// A DeserializeSeed helper for implementing deserialize_from Visitors.
+/// A DeserializeSeed helper for implementing deserialize_in_place Visitors.
 ///
-/// Wraps a mutable reference and calls deserialize_from on it.
-pub struct DeserializeFromSeed<'a, T: 'a>(pub &'a mut T);
+/// Wraps a mutable reference and calls deserialize_in_place on it.
+pub struct InPlaceSeed<'a, T: 'a>(pub &'a mut T);
 
-impl<'a, 'de, T> DeserializeSeed<'de> for DeserializeFromSeed<'a, T>
+impl<'a, 'de, T> DeserializeSeed<'de> for InPlaceSeed<'a, T>
     where T: Deserialize<'de>,
 {
     type Value = ();
@@ -2023,6 +2023,6 @@ impl<'a, 'de, T> DeserializeSeed<'de> for DeserializeFromSeed<'a, T>
     where
         D: Deserializer<'de>,
     {
-       self.0.deserialize_from(deserializer)
+        T::deserialize_in_place(deserializer, self.0)
     }
 }

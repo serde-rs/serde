@@ -40,7 +40,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
             }
         }
     } else {
-        let fn_deserialize_from = deserialize_from_body(&cont, &params);
+        let fn_deserialize_in_place = deserialize_in_place_body(&cont, &params);
 
         quote! {
             #[automatically_derived]
@@ -51,7 +51,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
                     #body
                 }
 
-                #fn_deserialize_from
+                #fn_deserialize_in_place
             }
         }
     };
@@ -249,10 +249,10 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Stmts> {
-    // Only remote derives have getters, and we do not generate deserialize_from
-    // for remote derives.
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<Stmts> {
+    // Only remote derives have getters, and we do not generate
+    // deserialize_in_place for remote derives.
     assert!(!params.has_getter);
 
     if cont.attrs.from_type().is_some()
@@ -264,11 +264,11 @@ fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Stmts>
 
     let code = match cont.body {
         Body::Struct(Style::Struct, ref fields) => {
-            deserialize_from_struct(None, params, fields, &cont.attrs, None, Untagged::No)
+            deserialize_struct_in_place(None, params, fields, &cont.attrs, None, Untagged::No)
         }
         Body::Struct(Style::Tuple, ref fields) |
         Body::Struct(Style::Newtype, ref fields) => {
-            deserialize_from_tuple(None, params, fields, &cont.attrs, None)
+            deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
         }
         Body::Enum(_) | Body::Struct(Style::Unit, _) => {
             return None;
@@ -278,19 +278,19 @@ fn deserialize_from_body(cont: &Container, params: &Parameters) -> Option<Stmts>
     let delife = params.borrowed.de_lifetime();
     let stmts = Stmts(code);
 
-    let fn_deserialize_from = quote_block! {
-        fn deserialize_from<__D>(&mut self, __deserializer: __D) -> _serde::export::Result<(), __D::Error>
+    let fn_deserialize_in_place = quote_block! {
+        fn deserialize_in_place<__D>(__deserializer: __D, __place: &mut Self) -> _serde::export::Result<(), __D::Error>
             where __D: _serde::Deserializer<#delife>
         {
             #stmts
         }
     };
 
-    Some(Stmts(fn_deserialize_from))
+    Some(Stmts(fn_deserialize_in_place))
 }
 
-#[cfg(not(feature = "deserialize_from"))]
-fn deserialize_from_body(_cont: &Container, _params: &Parameters) -> Option<Stmts> {
+#[cfg(not(feature = "deserialize_in_place"))]
+fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<Stmts> {
     None
 }
 
@@ -425,8 +425,8 @@ fn deserialize_tuple(
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_tuple(
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_tuple_in_place(
     variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
@@ -446,16 +446,16 @@ fn deserialize_from_tuple(
     let nfields = fields.len();
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_from_newtype_struct(params, &fields[0]))
+        Some(deserialize_newtype_struct_in_place(params, &fields[0]))
     } else {
         None
     };
 
-    let visit_seq = Stmts(deserialize_from_seq(params, fields, cattrs));
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs));
 
     let visitor_expr = quote! {
         __Visitor {
-            dest: self,
+            place: __place,
             lifetime: _serde::export::PhantomData,
         }
     };
@@ -481,17 +481,17 @@ fn deserialize_from_tuple(
         quote!(mut __seq)
     };
 
-    let de_from_impl_generics = de_impl_generics.with_dest();
-    let de_from_ty_generics = de_ty_generics.with_dest();
-    let dest_life = dest_lifetime();
+    let in_place_impl_generics = de_impl_generics.in_place();
+    let in_place_ty_generics = de_ty_generics.in_place();
+    let place_life = place_lifetime();
 
     quote_block! {
-        struct __Visitor #de_from_impl_generics #where_clause {
-            dest: &#dest_life mut #this #ty_generics,
+        struct __Visitor #in_place_impl_generics #where_clause {
+            place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
         }
 
-        impl #de_from_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_from_ty_generics #where_clause {
+        impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
             type Value = ();
 
             fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
@@ -612,8 +612,8 @@ fn deserialize_seq(
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_seq(
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_seq_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -636,7 +636,7 @@ fn deserialize_from_seq(
             if field.attrs.skip_deserializing() {
                 let default = Expr(expr_is_missing(&field, cattrs));
                 quote! {
-                    self.dest.#field_name = #default;
+                    self.place.#field_name = #default;
                 }
             } else {
                 let return_invalid_length = quote! {
@@ -646,7 +646,7 @@ fn deserialize_from_seq(
                     None => {
                         quote! {
                             if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                _serde::private::de::DeserializeFromSeed(&mut self.dest.#field_name)))
+                                _serde::private::de::InPlaceSeed(&mut self.place.#field_name)))
                             {
                                 #return_invalid_length
                             }
@@ -659,7 +659,7 @@ fn deserialize_from_seq(
                             #wrapper
                             match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
                                 _serde::export::Some(__wrap) => {
-                                    self.dest.#field_name = __wrap.value;
+                                    self.place.#field_name = __wrap.value;
                                 }
                                 _serde::export::None => {
                                     #return_invalid_length
@@ -741,12 +741,12 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_newtype_struct(
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_newtype_struct_in_place(
     params: &Parameters,
     field: &Field
 ) -> Tokens {
-    // We do not generate deserialize_from if every field has a deserialize_with.
+    // We do not generate deserialize_in_place if every field has a deserialize_with.
     assert!(field.attrs.deserialize_with().is_none());
 
     let delife = params.borrowed.de_lifetime();
@@ -756,7 +756,7 @@ fn deserialize_from_newtype_struct(
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer<#delife>
         {
-            _serde::Deserialize::deserialize_from(&mut self.dest.0, __e)
+            _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
         }
     }
 }
@@ -883,8 +883,8 @@ fn deserialize_struct(
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_struct(
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_struct_in_place(
     variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
@@ -903,17 +903,17 @@ fn deserialize_from_struct(
         None => format!("struct {}", params.type_name()),
     };
 
-    let visit_seq = Stmts(deserialize_from_seq(params, fields, cattrs));
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs));
 
     let (field_visitor, fields_stmt, visit_map) =
-        deserialize_from_struct_visitor(params, fields, cattrs);
+        deserialize_struct_in_place_visitor(params, fields, cattrs);
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
     let visitor_expr = quote! {
         __Visitor {
-            dest: self,
+            place: __place,
             lifetime: _serde::export::PhantomData,
         }
     };
@@ -958,19 +958,19 @@ fn deserialize_from_struct(
         }
     };
 
-    let de_from_impl_generics = de_impl_generics.with_dest();
-    let de_from_ty_generics = de_ty_generics.with_dest();
-    let dest_life = dest_lifetime();
+    let in_place_impl_generics = de_impl_generics.in_place();
+    let in_place_ty_generics = de_ty_generics.in_place();
+    let place_life = place_lifetime();
 
     quote_block! {
         #field_visitor
 
-        struct __Visitor #de_from_impl_generics #where_clause {
-            dest: &#dest_life mut #this #ty_generics,
+        struct __Visitor #in_place_impl_generics #where_clause {
+            place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
         }
 
-        impl #de_from_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_from_ty_generics #where_clause {
+        impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
             type Value = ();
 
             fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
@@ -2121,8 +2121,8 @@ fn deserialize_map(
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_struct_visitor(
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_struct_in_place_visitor(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -2143,13 +2143,13 @@ fn deserialize_from_struct_visitor(
 
     let field_visitor = deserialize_generated_identifier(field_names_idents, cattrs, false);
 
-    let visit_map = deserialize_from_map(params, fields, cattrs);
+    let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
     (field_visitor, fields_stmt, visit_map)
 }
 
-#[cfg(feature = "deserialize_from")]
-fn deserialize_from_map(
+#[cfg(feature = "deserialize_in_place")]
+fn deserialize_map_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -2161,7 +2161,7 @@ fn deserialize_from_map(
         .map(|(i, field)| (field, field_i(i)))
         .collect();
 
-    // For deserialize_from, declare booleans for each field that will be deserialized.
+    // For deserialize_in_place, declare booleans for each field that will be deserialized.
     let let_flags = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
@@ -2183,7 +2183,7 @@ fn deserialize_from_map(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     quote! {
-                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::DeserializeFromSeed(&mut self.dest.#field_name)))
+                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#field_name)))
                     }
                 }
                 Some(path) => {
@@ -2191,7 +2191,7 @@ fn deserialize_from_map(
                         params, field.ty, path);
                     quote!({
                         #wrapper
-                        self.dest.#field_name = try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
+                        self.place.#field_name = try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
                     })
                 }
             };
@@ -2245,7 +2245,7 @@ fn deserialize_from_map(
             |&(field, ref name)| {
                 let missing_expr = expr_is_missing(&field, cattrs);
                 // If missing_expr unconditionally returns an error, don't try
-                // to assign its value to self.dest. Maybe this could be handled
+                // to assign its value to self.place. Maybe this could be handled
                 // more elegantly.
                 if missing_expr.as_ref().as_str().starts_with("return ") {
                     let missing_expr = Stmts(missing_expr);
@@ -2259,7 +2259,7 @@ fn deserialize_from_map(
                     let missing_expr = Expr(missing_expr);
                     quote! {
                         if !#name {
-                            self.dest.#field_name = #missing_expr;
+                            self.place.#field_name = #missing_expr;
                         };
                     }
                 }
@@ -2442,8 +2442,8 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
 }
 
 struct DeImplGenerics<'a>(&'a Parameters);
-#[cfg(feature = "deserialize_from")]
-struct DeFromImplGenerics<'a>(&'a Parameters);
+#[cfg(feature = "deserialize_in_place")]
+struct InPlaceImplGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
@@ -2456,20 +2456,20 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-impl<'a> ToTokens for DeFromImplGenerics<'a> {
+#[cfg(feature = "deserialize_in_place")]
+impl<'a> ToTokens for InPlaceImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
-        let dest_lifetime = dest_lifetime();
+        let place_lifetime = place_lifetime();
         let mut generics = self.0.generics.clone();
 
-        // Add lifetime for `&'dest mut Self, and `'a: 'dest`
+        // Add lifetime for `&'place mut Self, and `'a: 'place`
         for lifetime in &mut generics.lifetimes {
-            lifetime.bounds.push(dest_lifetime.lifetime.clone());
+            lifetime.bounds.push(place_lifetime.lifetime.clone());
         }
         for generic in &mut generics.ty_params {
-            generic.bounds.push(syn::TyParamBound::Region(dest_lifetime.lifetime.clone()));
+            generic.bounds.push(syn::TyParamBound::Region(place_lifetime.lifetime.clone()));
         }
-        generics.lifetimes.insert(0, dest_lifetime);
+        generics.lifetimes.insert(0, place_lifetime);
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.lifetimes.insert(0, de_lifetime);
         }
@@ -2478,16 +2478,16 @@ impl<'a> ToTokens for DeFromImplGenerics<'a> {
     }
 }
 
-#[cfg(feature = "deserialize_from")]
+#[cfg(feature = "deserialize_in_place")]
 impl<'a> DeImplGenerics<'a> {
-    fn with_dest(self) -> DeFromImplGenerics<'a> {
-        DeFromImplGenerics(self.0)
+    fn in_place(self) -> InPlaceImplGenerics<'a> {
+        InPlaceImplGenerics(self.0)
     }
 }
 
 struct DeTyGenerics<'a>(&'a Parameters);
-#[cfg(feature = "deserialize_from")]
-struct DeFromTyGenerics<'a>(&'a Parameters);
+#[cfg(feature = "deserialize_in_place")]
+struct InPlaceTyGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
@@ -2502,11 +2502,11 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-impl<'a> ToTokens for DeFromTyGenerics<'a> {
+#[cfg(feature = "deserialize_in_place")]
+impl<'a> ToTokens for InPlaceTyGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        generics.lifetimes.insert(0, dest_lifetime());
+        generics.lifetimes.insert(0, place_lifetime());
 
         if self.0.borrowed.de_lifetime_def().is_some() {
             generics
@@ -2518,16 +2518,16 @@ impl<'a> ToTokens for DeFromTyGenerics<'a> {
     }
 }
 
-#[cfg(feature = "deserialize_from")]
+#[cfg(feature = "deserialize_in_place")]
 impl<'a> DeTyGenerics<'a> {
-    fn with_dest(self) -> DeFromTyGenerics<'a> {
-        DeFromTyGenerics(self.0)
+    fn in_place(self) -> InPlaceTyGenerics<'a> {
+        InPlaceTyGenerics(self.0)
     }
 }
 
-#[cfg(feature = "deserialize_from")]
-fn dest_lifetime() -> syn::LifetimeDef {
-    syn::LifetimeDef::new("'dest")
+#[cfg(feature = "deserialize_in_place")]
+fn place_lifetime() -> syn::LifetimeDef {
+    syn::LifetimeDef::new("'place")
 }
 
 fn split_with_de_lifetime(params: &Parameters,)
