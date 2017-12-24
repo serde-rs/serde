@@ -464,7 +464,8 @@ impl Serialize for SystemTime {
         S: Serializer,
     {
         use super::SerializeStruct;
-        let duration_since_epoch = self.duration_since(UNIX_EPOCH).expect("SystemTime must be later than UNIX_EPOCH");
+        let duration_since_epoch = self.duration_since(UNIX_EPOCH)
+            .expect("SystemTime must be later than UNIX_EPOCH");
         let mut state = try!(serializer.serialize_struct("SystemTime", 2));
         try!(state.serialize_field("secs_since_epoch", &duration_since_epoch.as_secs()));
         try!(state.serialize_field("nanos_since_epoch", &duration_since_epoch.subsec_nanos()));
@@ -513,10 +514,12 @@ impl Serialize for net::IpAddr {
             }
         } else {
             match *self {
-                net::IpAddr::V4(ref a) =>
-                    serializer.serialize_newtype_variant("IpAddr", 0, "V4", a),
-                net::IpAddr::V6(ref a) =>
-                    serializer.serialize_newtype_variant("IpAddr", 1, "V6", a),
+                net::IpAddr::V4(ref a) => {
+                    serializer.serialize_newtype_variant("IpAddr", 0, "V4", a)
+                }
+                net::IpAddr::V6(ref a) => {
+                    serializer.serialize_newtype_variant("IpAddr", 1, "V6", a)
+                }
             }
         }
     }
@@ -567,10 +570,12 @@ impl Serialize for net::SocketAddr {
             }
         } else {
             match *self {
-                net::SocketAddr::V4(ref addr) =>
-                    serializer.serialize_newtype_variant("SocketAddr", 0, "V4", addr),
-                net::SocketAddr::V6(ref addr) =>
-                    serializer.serialize_newtype_variant("SocketAddr", 1, "V6", addr),
+                net::SocketAddr::V4(ref addr) => {
+                    serializer.serialize_newtype_variant("SocketAddr", 0, "V4", addr)
+                }
+                net::SocketAddr::V6(ref addr) => {
+                    serializer.serialize_newtype_variant("SocketAddr", 1, "V6", addr)
+                }
             }
         }
     }
@@ -600,7 +605,10 @@ impl Serialize for net::SocketAddrV6 {
     {
         if serializer.is_human_readable() {
             const MAX_LEN: usize = 47;
-            debug_assert_eq!(MAX_LEN, "[1001:1002:1003:1004:1005:1006:1007:1008]:65000".len());
+            debug_assert_eq!(
+                MAX_LEN,
+                "[1001:1002:1003:1004:1005:1006:1007:1008]:65000".len()
+            );
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
             (self.ip(), self.port()).serialize(serializer)

@@ -59,19 +59,15 @@ impl<'a> Container<'a> {
         };
 
         match body {
-            Body::Enum(ref mut variants) => {
-                for ref mut variant in variants {
-                    variant.attrs.rename_by_rule(attrs.rename_all());
-                    for ref mut field in &mut variant.fields {
-                        field.attrs.rename_by_rule(variant.attrs.rename_all());
-                    }
+            Body::Enum(ref mut variants) => for ref mut variant in variants {
+                variant.attrs.rename_by_rule(attrs.rename_all());
+                for ref mut field in &mut variant.fields {
+                    field.attrs.rename_by_rule(variant.attrs.rename_all());
                 }
-            }
-            Body::Struct(_, ref mut fields) => {
-                for field in fields {
-                    field.attrs.rename_by_rule(attrs.rename_all());
-                }
-            }
+            },
+            Body::Struct(_, ref mut fields) => for field in fields {
+                field.attrs.rename_by_rule(attrs.rename_all());
+            },
         }
 
         let item = Container {
@@ -128,16 +124,18 @@ fn struct_from_ast<'a>(
     container_default: &attr::Default,
 ) -> (Style, Vec<Field<'a>>) {
     match *data {
-        syn::VariantData::Struct(ref fields) => {
-            (Style::Struct, fields_from_ast(cx, fields, attrs, container_default))
-        }
+        syn::VariantData::Struct(ref fields) => (
+            Style::Struct,
+            fields_from_ast(cx, fields, attrs, container_default),
+        ),
         syn::VariantData::Tuple(ref fields) if fields.len() == 1 => (
             Style::Newtype,
             fields_from_ast(cx, fields, attrs, container_default),
         ),
-        syn::VariantData::Tuple(ref fields) => {
-            (Style::Tuple, fields_from_ast(cx, fields, attrs, container_default))
-        }
+        syn::VariantData::Tuple(ref fields) => (
+            Style::Tuple,
+            fields_from_ast(cx, fields, attrs, container_default),
+        ),
         syn::VariantData::Unit => (Style::Unit, Vec::new()),
     }
 }
@@ -151,14 +149,10 @@ fn fields_from_ast<'a>(
     fields
         .iter()
         .enumerate()
-        .map(
-            |(i, field)| {
-                Field {
-                    ident: field.ident.clone(),
-                    attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
-                    ty: &field.ty,
-                }
-            },
-        )
+        .map(|(i, field)| Field {
+            ident: field.ident.clone(),
+            attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
+            ty: &field.ty,
+        })
         .collect()
 }

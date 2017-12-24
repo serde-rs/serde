@@ -31,7 +31,7 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
             if cont.body.has_getter() && cont.attrs.remote().is_none() {
                 cx.error(
                     "#[serde(getter = \"...\")] can only be used in structs \
-                          that have #[serde(remote = \"...\")]",
+                     that have #[serde(remote = \"...\")]",
                 );
             }
         }
@@ -53,10 +53,13 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
     };
 
     for (i, variant) in variants.iter().enumerate() {
-        match (variant.style, cont.attrs.identifier(), variant.attrs.other()) {
+        match (
+            variant.style,
+            cont.attrs.identifier(),
+            variant.attrs.other(),
+        ) {
             // The `other` attribute may only be used in a field_identifier.
-            (_, Identifier::Variant, true) |
-            (_, Identifier::No, true) => {
+            (_, Identifier::Variant, true) | (_, Identifier::No, true) => {
                 cx.error("#[serde(other)] may only be used inside a field_identifier");
             }
 
@@ -109,42 +112,58 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     for variant in variants.iter() {
         if variant.attrs.serialize_with().is_some() {
             if variant.attrs.skip_serializing() {
-                cx.error(format!("variant `{}` cannot have both #[serde(serialize_with)] and \
-                                  #[serde(skip_serializing)]", variant.ident));
+                cx.error(format!(
+                    "variant `{}` cannot have both #[serde(serialize_with)] and \
+                     #[serde(skip_serializing)]",
+                    variant.ident
+                ));
             }
 
             for (i, field) in variant.fields.iter().enumerate() {
-                let ident = field.ident.as_ref().map_or_else(|| format!("{}", i),
-                                                             |ident| format!("`{}`", ident));
+                let ident = field
+                    .ident
+                    .as_ref()
+                    .map_or_else(|| format!("{}", i), |ident| format!("`{}`", ident));
 
                 if field.attrs.skip_serializing() {
-                    cx.error(format!("variant `{}` cannot have both #[serde(serialize_with)] and \
-                                      a field {} marked with #[serde(skip_serializing)]",
-                                     variant.ident, ident));
+                    cx.error(format!(
+                        "variant `{}` cannot have both #[serde(serialize_with)] and \
+                         a field {} marked with #[serde(skip_serializing)]",
+                        variant.ident, ident
+                    ));
                 }
 
                 if field.attrs.skip_serializing_if().is_some() {
-                    cx.error(format!("variant `{}` cannot have both #[serde(serialize_with)] and \
-                                      a field {} marked with #[serde(skip_serializing_if)]",
-                                     variant.ident, ident));
+                    cx.error(format!(
+                        "variant `{}` cannot have both #[serde(serialize_with)] and \
+                         a field {} marked with #[serde(skip_serializing_if)]",
+                        variant.ident, ident
+                    ));
                 }
             }
         }
 
         if variant.attrs.deserialize_with().is_some() {
             if variant.attrs.skip_deserializing() {
-                cx.error(format!("variant `{}` cannot have both #[serde(deserialize_with)] and \
-                                  #[serde(skip_deserializing)]", variant.ident));
+                cx.error(format!(
+                    "variant `{}` cannot have both #[serde(deserialize_with)] and \
+                     #[serde(skip_deserializing)]",
+                    variant.ident
+                ));
             }
 
             for (i, field) in variant.fields.iter().enumerate() {
                 if field.attrs.skip_deserializing() {
-                    let ident = field.ident.as_ref().map_or_else(|| format!("{}", i),
-                                                                 |ident| format!("`{}`", ident));
+                    let ident = field
+                        .ident
+                        .as_ref()
+                        .map_or_else(|| format!("{}", i), |ident| format!("`{}`", ident));
 
-                    cx.error(format!("variant `{}` cannot have both #[serde(deserialize_with)] \
-                                      and a field {} marked with #[serde(skip_deserializing)]",
-                                     variant.ident, ident));
+                    cx.error(format!(
+                        "variant `{}` cannot have both #[serde(deserialize_with)] \
+                         and a field {} marked with #[serde(skip_deserializing)]",
+                        variant.ident, ident
+                    ));
                 }
             }
         }

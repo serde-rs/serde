@@ -23,16 +23,14 @@
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.24")]
-
 #![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
 #![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]
-
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "192"]
 
-extern crate syn;
 #[macro_use]
 extern crate quote;
+extern crate syn;
 
 extern crate serde_derive_internals as internals;
 

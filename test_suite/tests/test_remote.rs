@@ -118,9 +118,7 @@ struct PrimitivePubDef(u8);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePriv")]
-struct NewtypePrivDef(
-    #[serde(getter = "remote::NewtypePriv::get", with = "UnitDef")] remote::Unit,
-);
+struct NewtypePrivDef(#[serde(getter = "remote::NewtypePriv::get", with = "UnitDef")] remote::Unit);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePub")]

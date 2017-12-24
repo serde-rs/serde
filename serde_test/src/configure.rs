@@ -73,11 +73,17 @@ pub struct Compact<T: ?Sized>(T);
 /// ```
 pub trait Configure {
     /// Marks `self` as using `is_human_readable == true`
-    fn readable(self) -> Readable<Self> where Self: Sized {
+    fn readable(self) -> Readable<Self>
+    where
+        Self: Sized,
+    {
         Readable(self)
     }
     /// Marks `self` as using `is_human_readable == false`
-    fn compact(self) -> Compact<Self> where Self: Sized {
+    fn compact(self) -> Compact<Self>
+    where
+        Self: Sized,
+    {
         Compact(self)
     }
 }
@@ -157,7 +163,6 @@ where
         self.0.deserialize(Compact(deserializer))
     }
 }
-
 
 macro_rules! forward_method {
     ($name: ident (self $(, $arg: ident : $arg_type: ty)* ) -> $return_type: ty) => {
@@ -455,8 +460,7 @@ macro_rules! impl_serializer {
 impl_serializer!(Readable, true);
 impl_serializer!(Compact, false);
 
-
-use serde::de::{Visitor, EnumAccess, VariantAccess, MapAccess, DeserializeSeed, SeqAccess, Error};
+use serde::de::{DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor};
 
 macro_rules! forward_deserialize_methods {
     ( $wrapper : ident ( $( $name: ident ),* ) ) => {
@@ -467,7 +471,6 @@ macro_rules! forward_deserialize_methods {
         )*
     };
 }
-
 
 macro_rules! impl_deserializer {
     ($wrapper : ident, $is_human_readable : expr) => {

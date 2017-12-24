@@ -52,7 +52,6 @@ impl<'de> Deserialize<'de> for () {
 
 struct BoolVisitor;
 
-
 impl<'de> Visitor<'de> for BoolVisitor {
     type Value = bool;
 
@@ -253,7 +252,10 @@ impl<'de> Visitor<'de> for StringVisitor {
     {
         match String::from_utf8(v) {
             Ok(s) => Ok(s),
-            Err(e) => Err(Error::invalid_value(Unexpected::Bytes(&e.into_bytes()), &self),),
+            Err(e) => Err(Error::invalid_value(
+                Unexpected::Bytes(&e.into_bytes()),
+                &self,
+            )),
         }
     }
 }
@@ -306,7 +308,10 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
                 *self.0 = s;
                 Ok(())
             }
-            Err(e) => Err(Error::invalid_value(Unexpected::Bytes(&e.into_bytes()), &self),),
+            Err(e) => Err(Error::invalid_value(
+                Unexpected::Bytes(&e.into_bytes()),
+                &self,
+            )),
         }
     }
 }
@@ -529,7 +534,9 @@ where
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_option(OptionVisitor { marker: PhantomData })
+        deserializer.deserialize_option(OptionVisitor {
+            marker: PhantomData,
+        })
     }
 
     // The Some variant's repr is opaque, so we can't play cute tricks with its
@@ -566,7 +573,9 @@ impl<'de, T> Deserialize<'de> for PhantomData<T> {
     where
         D: Deserializer<'de>,
     {
-        let visitor = PhantomDataVisitor { marker: PhantomData };
+        let visitor = PhantomDataVisitor {
+            marker: PhantomData,
+        };
         deserializer.deserialize_unit_struct("PhantomData", visitor)
     }
 }
@@ -699,7 +708,8 @@ seq_impl!(
     LinkedList::clear,
     LinkedList::new(),
     nop_reserve,
-    LinkedList::push_back);
+    LinkedList::push_back
+);
 
 #[cfg(feature = "std")]
 seq_impl!(
@@ -719,7 +729,8 @@ seq_impl!(
     Vec::clear,
     Vec::with_capacity(size_hint::cautious(seq.size_hint())),
     Vec::reserve,
-    Vec::push);
+    Vec::push
+);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
@@ -729,7 +740,8 @@ seq_impl!(
     VecDeque::clear,
     VecDeque::with_capacity(size_hint::cautious(seq.size_hint())),
     VecDeque::reserve,
-    VecDeque::push_back);
+    VecDeque::push_back
+);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -740,7 +752,9 @@ struct ArrayInPlaceVisitor<'a, A: 'a>(&'a mut A);
 
 impl<A> ArrayVisitor<A> {
     fn new() -> Self {
-        ArrayVisitor { marker: PhantomData }
+        ArrayVisitor {
+            marker: PhantomData,
+        }
     }
 }
 
@@ -1257,7 +1271,12 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
 parse_socket_impl!(net::SocketAddrV4, net::SocketAddrV4::new);
 
 #[cfg(feature = "std")]
-parse_socket_impl!(net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(ip, port, 0, 0));
+parse_socket_impl!(net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(
+    ip,
+    port,
+    0,
+    0
+));
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1368,7 +1387,9 @@ impl<'de> Visitor<'de> for OsStringVisitor {
 
         match try!(data.variant()) {
             (OsStringKind::Unix, v) => v.newtype_variant().map(OsString::from_vec),
-            (OsStringKind::Windows, _) => Err(Error::custom("cannot deserialize Windows OS string on Unix",),),
+            (OsStringKind::Windows, _) => Err(Error::custom(
+                "cannot deserialize Windows OS string on Unix",
+            )),
         }
     }
 
@@ -1380,11 +1401,11 @@ impl<'de> Visitor<'de> for OsStringVisitor {
         use std::os::windows::ffi::OsStringExt;
 
         match try!(data.variant()) {
-            (OsStringKind::Windows, v) => {
-                v.newtype_variant::<Vec<u16>>()
-                    .map(|vec| OsString::from_wide(&vec))
-            }
-            (OsStringKind::Unix, _) => Err(Error::custom("cannot deserialize Unix OS string on Windows",),),
+            (OsStringKind::Windows, v) => v.newtype_variant::<Vec<u16>>()
+                .map(|vec| OsString::from_wide(&vec)),
+            (OsStringKind::Unix, _) => Err(Error::custom(
+                "cannot deserialize Unix OS string on Windows",
+            )),
         }
     }
 }
@@ -1710,13 +1731,17 @@ impl<'de> Deserialize<'de> for SystemTime {
                     match key {
                         Field::Secs => {
                             if secs.is_some() {
-                                return Err(<A::Error as Error>::duplicate_field("secs_since_epoch"));
+                                return Err(<A::Error as Error>::duplicate_field(
+                                    "secs_since_epoch",
+                                ));
                             }
                             secs = Some(try!(map.next_value()));
                         }
                         Field::Nanos => {
                             if nanos.is_some() {
-                                return Err(<A::Error as Error>::duplicate_field("nanos_since_epoch"));
+                                return Err(<A::Error as Error>::duplicate_field(
+                                    "nanos_since_epoch",
+                                ));
                             }
                             nanos = Some(try!(map.next_value()));
                         }
@@ -1880,7 +1905,13 @@ where
         }
 
         const FIELDS: &'static [&'static str] = &["start", "end"];
-        deserializer.deserialize_struct("Range", FIELDS, RangeVisitor { phantom: PhantomData })
+        deserializer.deserialize_struct(
+            "Range",
+            FIELDS,
+            RangeVisitor {
+                phantom: PhantomData,
+            },
+        )
     }
 }
 
@@ -1945,9 +1976,10 @@ where
                         match value {
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),
-                            _ => {
-                                Err(Error::invalid_value(Unexpected::Unsigned(value as u64), &self),)
-                            }
+                            _ => Err(Error::invalid_value(
+                                Unexpected::Unsigned(value as u64),
+                                &self,
+                            )),
                         }
                     }
 
@@ -1969,14 +2001,12 @@ where
                         match value {
                             b"Ok" => Ok(Field::Ok),
                             b"Err" => Ok(Field::Err),
-                            _ => {
-                                match str::from_utf8(value) {
-                                    Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
-                                    Err(_) => {
-                                        Err(Error::invalid_value(Unexpected::Bytes(value), &self))
-                                    }
+                            _ => match str::from_utf8(value) {
+                                Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                Err(_) => {
+                                    Err(Error::invalid_value(Unexpected::Bytes(value), &self))
                                 }
-                            }
+                            },
                         }
                     }
                 }
@@ -2020,7 +2050,7 @@ where
 #[cfg(feature = "std")]
 impl<'de, T> Deserialize<'de> for Wrapping<T>
 where
-    T: Deserialize<'de>
+    T: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Wrapping<T>, D::Error>
     where

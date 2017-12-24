@@ -80,29 +80,20 @@
 
 // Serde types in rustdoc of other crates get linked to here.
 #![doc(html_root_url = "https://docs.rs/serde/1.0.24")]
-
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
-
 // Unstable functionality only if the user asks for it. For tracking and
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
-
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Whitelisted clippy lints
-#![cfg_attr(feature = "cargo-clippy", allow(
-    cast_lossless,
-    const_static_lifetime,
-    doc_markdown,
-    linkedlist,
-    needless_pass_by_value,
-    type_complexity,
-    unreadable_literal,
-    zero_prefixed_literal,
-))]
+#![cfg_attr(feature = "cargo-clippy",
+            allow(cast_lossless, const_static_lifetime, doc_markdown, linkedlist,
+                  needless_pass_by_value, type_complexity, unreadable_literal,
+                  zero_prefixed_literal))]
 // Whitelisted clippy_pedantic lints
 #![cfg_attr(feature = "cargo-clippy", allow(
 // integer and float ser/de requires these sorts of casts
@@ -125,7 +116,6 @@
     empty_enum,
     use_debug,
 ))]
-
 // Blacklisted Rust lints.
 #![deny(missing_docs, unused_imports)]
 
@@ -149,8 +139,8 @@ mod lib {
     }
 
     pub use self::core::{cmp, iter, mem, ops, slice, str};
-    pub use self::core::{i8, i16, i32, i64, isize};
-    pub use self::core::{u8, u16, u32, u64, usize};
+    pub use self::core::{isize, i16, i32, i64, i8};
+    pub use self::core::{usize, u16, u32, u64, u8};
     pub use self::core::{f32, f64};
 
     pub use self::core::cell::{Cell, RefCell};
@@ -193,9 +183,9 @@ mod lib {
     pub use alloc::arc::Arc;
 
     #[cfg(feature = "std")]
-    pub use std::collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
+    pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
     #[cfg(all(feature = "alloc", not(feature = "std")))]
-    pub use alloc::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
+    pub use alloc::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
     pub use std::{error, net};
@@ -203,9 +193,9 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};
     #[cfg(feature = "std")]
-    pub use std::ffi::{CString, CStr, OsString, OsStr};
+    pub use std::ffi::{CStr, CString, OsStr, OsString};
     #[cfg(feature = "std")]
-    pub use std::hash::{Hash, BuildHasher};
+    pub use std::hash::{BuildHasher, Hash};
     #[cfg(feature = "std")]
     pub use std::io::Write;
     #[cfg(feature = "std")]

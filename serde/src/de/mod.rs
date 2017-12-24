@@ -526,7 +526,8 @@ pub trait Deserialize<'de>: Sized {
     /// than it deserves.
     #[doc(hidden)]
     fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         // Default implementation just delegates to `deserialize` impl.
         *place = Deserialize::deserialize(deserializer)?;
@@ -1106,7 +1107,9 @@ pub trait Deserializer<'de>: Sized {
     /// change, as a value serialized in human-readable mode is not required to
     /// deserialize from the same data in compact mode.
     #[inline]
-    fn is_human_readable(&self) -> bool { true }
+    fn is_human_readable(&self) -> bool {
+        true
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

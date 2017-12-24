@@ -16,7 +16,9 @@ pub struct Ctxt {
 
 impl Ctxt {
     pub fn new() -> Self {
-        Ctxt { errors: RefCell::new(Some(Vec::new())) }
+        Ctxt {
+            errors: RefCell::new(Some(Vec::new())),
+        }
     }
 
     pub fn error<T: Display>(&self, msg: T) {

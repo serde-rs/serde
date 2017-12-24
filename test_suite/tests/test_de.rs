@@ -94,9 +94,7 @@ struct StructSkipDefaultGeneric<T> {
 
 impl Default for StructSkipDefault {
     fn default() -> Self {
-        StructSkipDefault {
-            a: 16,
-        }
+        StructSkipDefault { a: 16 }
     }
 }
 
@@ -114,7 +112,11 @@ enum Enum {
     Unit,
     Simple(i32),
     Seq(i32, i32, i32),
-    Map { a: i32, b: i32, c: i32 },
+    Map {
+        a: i32,
+        b: i32,
+        c: i32,
+    },
 }
 
 #[derive(PartialEq, Debug, Deserialize)]

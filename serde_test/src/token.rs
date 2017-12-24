@@ -232,7 +232,10 @@ pub enum Token {
     /// assert_tokens(&a, &[Token::UnitVariant { name: "E", variant: "A" }]);
     /// # }
     /// ```
-    UnitVariant { name: &'static str, variant: &'static str },
+    UnitVariant {
+        name: &'static str,
+        variant: &'static str,
+    },
 
     /// The header to a serialized newtype struct of the given name.
     ///
@@ -286,7 +289,10 @@ pub enum Token {
     /// ]);
     /// # }
     /// ```
-    NewtypeVariant { name: &'static str, variant: &'static str },
+    NewtypeVariant {
+        name: &'static str,
+        variant: &'static str,
+    },
 
     /// The header to a sequence.
     ///
@@ -391,7 +397,11 @@ pub enum Token {
     /// ]);
     /// # }
     /// ```
-    TupleVariant { name: &'static str, variant: &'static str, len: usize },
+    TupleVariant {
+        name: &'static str,
+        variant: &'static str,
+        len: usize,
+    },
 
     /// An indicator of the end of a tuple variant.
     TupleVariantEnd,
@@ -488,7 +498,11 @@ pub enum Token {
     /// ]);
     /// # }
     /// ```
-    StructVariant { name: &'static str, variant: &'static str, len: usize },
+    StructVariant {
+        name: &'static str,
+        variant: &'static str,
+        len: usize,
+    },
 
     /// An indicator of the end of a struct variant.
     StructVariantEnd,

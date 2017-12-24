@@ -1412,7 +1412,9 @@ pub trait Serializer: Sized {
     /// change, as a value serialized in human-readable mode is not required to
     /// deserialize from the same data in compact mode.
     #[inline]
-    fn is_human_readable(&self) -> bool { true }
+    fn is_human_readable(&self) -> bool {
+        true
+    }
 }
 
 /// Returned from `Serializer::serialize_seq`.

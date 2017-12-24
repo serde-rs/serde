@@ -27,14 +27,10 @@ pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
         ty_params: generics
             .ty_params
             .iter()
-            .map(
-                |ty_param| {
-                    syn::TyParam {
-                        default: None,
-                        ..ty_param.clone()
-                    }
-                },
-            )
+            .map(|ty_param| syn::TyParam {
+                default: None,
+                ..ty_param.clone()
+            })
             .collect(),
         ..generics.clone()
     }
@@ -137,17 +133,15 @@ where
         relevant_ty_params: HashSet::new(),
     };
     match cont.body {
-        Body::Enum(ref variants) => {
-            for variant in variants.iter() {
-                let relevant_fields = variant
-                    .fields
-                    .iter()
-                    .filter(|field| filter(&field.attrs, Some(&variant.attrs)));
-                for field in relevant_fields {
-                    visit::walk_ty(&mut visitor, field.ty);
-                }
+        Body::Enum(ref variants) => for variant in variants.iter() {
+            let relevant_fields = variant
+                .fields
+                .iter()
+                .filter(|field| filter(&field.attrs, Some(&variant.attrs)));
+            for field in relevant_fields {
+                visit::walk_ty(&mut visitor, field.ty);
             }
-        }
+        },
         Body::Struct(_, ref fields) => {
             for field in fields.iter().filter(|field| filter(&field.attrs, None)) {
                 visit::walk_ty(&mut visitor, field.ty);
@@ -160,27 +154,23 @@ where
         .iter()
         .map(|ty_param| ty_param.ident.clone())
         .filter(|id| visitor.relevant_ty_params.contains(id))
-        .map(
-            |id| {
-                syn::WherePredicate::BoundPredicate(
-                    syn::WhereBoundPredicate {
-                        bound_lifetimes: Vec::new(),
-                        // the type parameter that is being bounded e.g. T
-                        bounded_ty: syn::Ty::Path(None, id.into()),
-                        // the bound e.g. Serialize
-                        bounds: vec![
-                            syn::TyParamBound::Trait(
-                                syn::PolyTraitRef {
-                                    bound_lifetimes: Vec::new(),
-                                    trait_ref: bound.clone(),
-                                },
-                                syn::TraitBoundModifier::None,
-                            ),
-                        ],
-                    },
-                )
-            },
-        );
+        .map(|id| {
+            syn::WherePredicate::BoundPredicate(syn::WhereBoundPredicate {
+                bound_lifetimes: Vec::new(),
+                // the type parameter that is being bounded e.g. T
+                bounded_ty: syn::Ty::Path(None, id.into()),
+                // the bound e.g. Serialize
+                bounds: vec![
+                    syn::TyParamBound::Trait(
+                        syn::PolyTraitRef {
+                            bound_lifetimes: Vec::new(),
+                            trait_ref: bound.clone(),
+                        },
+                        syn::TraitBoundModifier::None,
+                    ),
+                ],
+            })
+        });
 
     let mut generics = generics.clone();
     generics.where_clause.predicates.extend(new_predicates);
@@ -196,25 +186,23 @@ pub fn with_self_bound(
     generics
         .where_clause
         .predicates
-        .push(
-            syn::WherePredicate::BoundPredicate(
-                syn::WhereBoundPredicate {
-                    bound_lifetimes: Vec::new(),
-                    // the type that is being bounded e.g. MyStruct<'a, T>
-                    bounded_ty: type_of_item(cont),
-                    // the bound e.g. Default
-                    bounds: vec![
-                        syn::TyParamBound::Trait(
-                            syn::PolyTraitRef {
-                                bound_lifetimes: Vec::new(),
-                                trait_ref: bound.clone(),
-                            },
-                            syn::TraitBoundModifier::None,
-                        ),
-                    ],
-                },
-            ),
-        );
+        .push(syn::WherePredicate::BoundPredicate(
+            syn::WhereBoundPredicate {
+                bound_lifetimes: Vec::new(),
+                // the type that is being bounded e.g. MyStruct<'a, T>
+                bounded_ty: type_of_item(cont),
+                // the bound e.g. Default
+                bounds: vec![
+                    syn::TyParamBound::Trait(
+                        syn::PolyTraitRef {
+                            bound_lifetimes: Vec::new(),
+                            trait_ref: bound.clone(),
+                        },
+                        syn::TraitBoundModifier::None,
+                    ),
+                ],
+            },
+        ));
     generics
 }
 
@@ -231,15 +219,11 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
             .push(syn::TyParamBound::Region(syn::Lifetime::new(lifetime)));
     }
 
-    generics
-        .lifetimes
-        .push(
-            syn::LifetimeDef {
-                attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(lifetime),
-                bounds: Vec::new(),
-            },
-        );
+    generics.lifetimes.push(syn::LifetimeDef {
+        attrs: Vec::new(),
+        lifetime: syn::Lifetime::new(lifetime),
+        bounds: Vec::new(),
+    });
 
     generics
 }

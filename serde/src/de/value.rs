@@ -37,7 +37,7 @@
 
 use lib::*;
 
-use de::{self, IntoDeserializer, Expected, SeqAccess};
+use de::{self, Expected, IntoDeserializer, SeqAccess};
 use private::de::size_hint;
 use ser;
 use self::private::{First, Second};
@@ -62,7 +62,9 @@ impl de::Error for Error {
     where
         T: Display,
     {
-        Error { err: msg.to_string().into_boxed_str() }
+        Error {
+            err: msg.to_string().into_boxed_str(),
+        }
     }
 
     #[cfg(not(any(feature = "std", feature = "alloc")))]
@@ -112,7 +114,9 @@ where
     type Deserializer = UnitDeserializer<E>;
 
     fn into_deserializer(self) -> UnitDeserializer<E> {
-        UnitDeserializer { marker: PhantomData }
+        UnitDeserializer {
+            marker: PhantomData,
+        }
     }
 }
 
@@ -658,7 +662,10 @@ where
         } else {
             // First argument is the number of elements in the data, second
             // argument is the number of elements expected by the Deserialize.
-            Err(de::Error::invalid_length(self.count + remaining, &ExpectedInSeq(self.count)),)
+            Err(de::Error::invalid_length(
+                self.count + remaining,
+                &ExpectedInSeq(self.count),
+            ))
         }
     }
 }
@@ -852,7 +859,10 @@ where
         } else {
             // First argument is the number of elements in the data, second
             // argument is the number of elements expected by the Deserialize.
-            Err(de::Error::invalid_length(self.count + remaining, &ExpectedInMap(self.count)),)
+            Err(de::Error::invalid_length(
+                self.count + remaining,
+                &ExpectedInMap(self.count),
+            ))
         }
     }
 }
@@ -901,11 +911,7 @@ where
         Ok(value)
     }
 
-    fn deserialize_tuple<V>(
-        self,
-        len: usize,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -1223,7 +1229,12 @@ mod private {
     }
 
     pub fn unit_only<T, E>(t: T) -> (T, UnitOnly<E>) {
-        (t, UnitOnly { marker: PhantomData })
+        (
+            t,
+            UnitOnly {
+                marker: PhantomData,
+            },
+        )
     }
 
     impl<'de, E> de::VariantAccess<'de> for UnitOnly<E>
@@ -1240,14 +1251,20 @@ mod private {
         where
             T: de::DeserializeSeed<'de>,
         {
-            Err(de::Error::invalid_type(Unexpected::UnitVariant, &"newtype variant"),)
+            Err(de::Error::invalid_type(
+                Unexpected::UnitVariant,
+                &"newtype variant",
+            ))
         }
 
         fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
         {
-            Err(de::Error::invalid_type(Unexpected::UnitVariant, &"tuple variant"),)
+            Err(de::Error::invalid_type(
+                Unexpected::UnitVariant,
+                &"tuple variant",
+            ))
         }
 
         fn struct_variant<V>(
@@ -1258,7 +1275,10 @@ mod private {
         where
             V: de::Visitor<'de>,
         {
-            Err(de::Error::invalid_type(Unexpected::UnitVariant, &"struct variant"),)
+            Err(de::Error::invalid_type(
+                Unexpected::UnitVariant,
+                &"struct variant",
+            ))
         }
     }
 
