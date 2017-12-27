@@ -548,11 +548,11 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct PhantomDataVisitor<T> {
+struct PhantomDataVisitor<T: ?Sized> {
     marker: PhantomData<T>,
 }
 
-impl<'de, T> Visitor<'de> for PhantomDataVisitor<T> {
+impl<'de, T: ?Sized> Visitor<'de> for PhantomDataVisitor<T> {
     type Value = PhantomData<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -568,7 +568,7 @@ impl<'de, T> Visitor<'de> for PhantomDataVisitor<T> {
     }
 }
 
-impl<'de, T> Deserialize<'de> for PhantomData<T> {
+impl<'de, T: ?Sized> Deserialize<'de> for PhantomData<T> {
     fn deserialize<D>(deserializer: D) -> Result<PhantomData<T>, D::Error>
     where
         D: Deserializer<'de>,

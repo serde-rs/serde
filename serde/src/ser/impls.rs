@@ -111,7 +111,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T> Serialize for PhantomData<T> {
+impl<T: ?Sized> Serialize for PhantomData<T> {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
