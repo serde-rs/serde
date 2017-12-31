@@ -20,6 +20,8 @@ pub enum RenameRule {
     None,
     /// Rename direct children to "lowercase" style.
     LowerCase,
+    /// Rename direct children to "UPPERCASE" style.
+    UPPERCASE,
     /// Rename direct children to "PascalCase" style, as typically used for enum variants.
     PascalCase,
     /// Rename direct children to "camelCase" style.
@@ -39,6 +41,7 @@ impl RenameRule {
         match *self {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
+            UPPERCASE => variant.to_ascii_uppercase(),
             CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
             SnakeCase => {
                 let mut snake = String::new();
@@ -61,6 +64,7 @@ impl RenameRule {
     pub fn apply_to_field(&self, field: &str) -> String {
         match *self {
             None | LowerCase | SnakeCase => field.to_owned(),
+            UPPERCASE => field.to_ascii_uppercase(),
             PascalCase => {
                 let mut pascal = String::new();
                 let mut capitalize = true;
@@ -93,6 +97,7 @@ impl FromStr for RenameRule {
     fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
         match rename_all_str {
             "lowercase" => Ok(LowerCase),
+            "UPPERCASE" => Ok(UPPERCASE),
             "PascalCase" => Ok(PascalCase),
             "camelCase" => Ok(CamelCase),
             "snake_case" => Ok(SnakeCase),
@@ -106,10 +111,11 @@ impl FromStr for RenameRule {
 
 #[test]
 fn rename_variants() {
-    for &(original, lower, camel, snake, screaming, kebab, screaming_kebab) in &[
+    for &(original, lower, upper, camel, snake, screaming, kebab, screaming_kebab) in &[
         (
             "Outcome",
             "outcome",
+            "OUTCOME",
             "outcome",
             "outcome",
             "OUTCOME",
@@ -119,17 +125,19 @@ fn rename_variants() {
         (
             "VeryTasty",
             "verytasty",
+            "VERYTASTY",
             "veryTasty",
             "very_tasty",
             "VERY_TASTY",
             "very-tasty",
             "VERY-TASTY",
         ),
-        ("A", "a", "a", "a", "A", "a", "A"),
-        ("Z42", "z42", "z42", "z42", "Z42", "z42", "Z42"),
+        ("A", "a", "A", "a", "a", "A", "a", "A"),
+        ("Z42", "z42", "Z42", "z42", "z42", "Z42", "z42", "Z42"),
     ] {
         assert_eq!(None.apply_to_variant(original), original);
         assert_eq!(LowerCase.apply_to_variant(original), lower);
+        assert_eq!(UPPERCASE.apply_to_variant(original), upper);
         assert_eq!(PascalCase.apply_to_variant(original), original);
         assert_eq!(CamelCase.apply_to_variant(original), camel);
         assert_eq!(SnakeCase.apply_to_variant(original), snake);
@@ -144,9 +152,10 @@ fn rename_variants() {
 
 #[test]
 fn rename_fields() {
-    for &(original, pascal, camel, screaming, kebab, screaming_kebab) in &[
+    for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab) in &[
         (
             "outcome",
+            "OUTCOME",
             "Outcome",
             "outcome",
             "OUTCOME",
@@ -155,16 +164,18 @@ fn rename_fields() {
         ),
         (
             "very_tasty",
+            "VERY_TASTY",
             "VeryTasty",
             "veryTasty",
             "VERY_TASTY",
             "very-tasty",
             "VERY-TASTY",
         ),
-        ("a", "A", "a", "A", "a", "A"),
-        ("z42", "Z42", "z42", "Z42", "z42", "Z42"),
+        ("a", "A", "A", "a", "A", "a", "A"),
+        ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
     ] {
         assert_eq!(None.apply_to_field(original), original);
+        assert_eq!(UPPERCASE.apply_to_field(original), upper);
         assert_eq!(PascalCase.apply_to_field(original), pascal);
         assert_eq!(CamelCase.apply_to_field(original), camel);
         assert_eq!(SnakeCase.apply_to_field(original), original);
