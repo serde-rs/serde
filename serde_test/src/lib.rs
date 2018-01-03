@@ -53,7 +53,7 @@
 //! # use serde::ser::{Serialize, Serializer, SerializeMap};
 //! # use serde::de::{Deserialize, Deserializer, Visitor, MapAccess};
 //! #
-//! # // Dumb immitation of LinkedHashMap.
+//! # // Dumb imitation of LinkedHashMap.
 //! # #[derive(PartialEq, Debug)]
 //! # struct LinkedHashMap<K, V>(Vec<(K, V)>);
 //! #
