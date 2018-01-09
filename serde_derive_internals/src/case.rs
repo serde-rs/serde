@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 use self::RenameRule::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum RenameRule {
     /// Don't apply a default rename rule.
     None,
