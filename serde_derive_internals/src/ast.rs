@@ -51,10 +51,10 @@ impl<'a> Container<'a> {
 
         let mut data = match item.data {
             syn::Data::Enum(ref data) => {
-                Data::Enum(enum_from_ast(cx, &data.variants, &attrs.default()))
+                Data::Enum(enum_from_ast(cx, &data.variants, attrs.default()))
             }
             syn::Data::Struct(ref data) => {
-                let (style, fields) = struct_from_ast(cx, &data.fields, None, &attrs.default());
+                let (style, fields) = struct_from_ast(cx, &data.fields, None, attrs.default());
                 Data::Struct(style, fields)
             }
             syn::Data::Union(_) => {
@@ -63,9 +63,9 @@ impl<'a> Container<'a> {
         };
 
         match data {
-            Data::Enum(ref mut variants) => for ref mut variant in variants {
+            Data::Enum(ref mut variants) => for variant in variants {
                 variant.attrs.rename_by_rule(attrs.rename_all());
-                for ref mut field in &mut variant.fields {
+                for field in &mut variant.fields {
                     field.attrs.rename_by_rule(variant.attrs.rename_all());
                 }
             },
@@ -75,7 +75,7 @@ impl<'a> Container<'a> {
         }
 
         let item = Container {
-            ident: item.ident.clone(),
+            ident: item.ident,
             attrs: attrs,
             data: data,
             generics: &item.generics,
@@ -112,7 +112,7 @@ fn enum_from_ast<'a>(
             let (style, fields) =
                 struct_from_ast(cx, &variant.fields, Some(&attrs), container_default);
             Variant {
-                ident: variant.ident.clone(),
+                ident: variant.ident,
                 attrs: attrs,
                 style: style,
                 fields: fields,
@@ -154,7 +154,7 @@ fn fields_from_ast<'a>(
         .iter()
         .enumerate()
         .map(|(i, field)| Field {
-            ident: field.ident.clone(),
+            ident: field.ident,
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
         })

@@ -221,8 +221,8 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
 }
 
 fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if let Some(from_type) = cont.attrs.from_type() {
-        deserialize_from(from_type)
+    if let Some(type_from) = cont.attrs.type_from() {
+        deserialize_from(type_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match cont.data {
             Data::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
@@ -256,7 +256,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     // deserialize_in_place for remote derives.
     assert!(!params.has_getter);
 
-    if cont.attrs.from_type().is_some() || cont.attrs.identifier().is_some()
+    if cont.attrs.type_from().is_some() || cont.attrs.identifier().is_some()
         || cont.data
             .all_fields()
             .all(|f| f.attrs.deserialize_with().is_some())
@@ -295,10 +295,10 @@ fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<
     None
 }
 
-fn deserialize_from(from_type: &syn::Type) -> Fragment {
+fn deserialize_from(type_from: &syn::Type) -> Fragment {
     quote_block! {
         _serde::export::Result::map(
-            <#from_type as _serde::Deserialize>::deserialize(__deserializer),
+            <#type_from as _serde::Deserialize>::deserialize(__deserializer),
             _serde::export::From::from)
     }
 }

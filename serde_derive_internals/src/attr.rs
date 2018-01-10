@@ -108,8 +108,8 @@ pub struct Container {
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
-    from_type: Option<syn::Type>,
-    into_type: Option<syn::Type>,
+    type_from: Option<syn::Type>,
+    type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
 }
@@ -184,8 +184,8 @@ impl Container {
         let mut untagged = BoolAttr::none(cx, "untagged");
         let mut internal_tag = Attr::none(cx, "tag");
         let mut content = Attr::none(cx, "content");
-        let mut from_type = Attr::none(cx, "from");
-        let mut into_type = Attr::none(cx, "into");
+        let mut type_from = Attr::none(cx, "from");
+        let mut type_into = Attr::none(cx, "into");
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
@@ -314,14 +314,14 @@ impl Container {
                     // Parse `#[serde(from = "Type")]
                     Meta(NameValue(ref m)) if m.ident == "from" => {
                         if let Ok(from_ty) = parse_lit_into_ty(cx, m.ident.as_ref(), &m.lit) {
-                            from_type.set_opt(Some(from_ty));
+                            type_from.set_opt(Some(from_ty));
                         }
                     }
 
                     // Parse `#[serde(into = "Type")]
                     Meta(NameValue(ref m)) if m.ident == "into" => {
                         if let Ok(into_ty) = parse_lit_into_ty(cx, m.ident.as_ref(), &m.lit) {
-                            into_type.set_opt(Some(into_ty));
+                            type_into.set_opt(Some(into_ty));
                         }
                     }
 
@@ -366,11 +366,11 @@ impl Container {
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: decide_tag(cx, item, untagged, internal_tag, content),
-            from_type: from_type.get(),
-            into_type: into_type.get(),
+            tag: decide_tag(cx, item, &untagged, internal_tag, content),
+            type_from: type_from.get(),
+            type_into: type_into.get(),
             remote: remote.get(),
-            identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
+            identifier: decide_identifier(cx, item, &field_identifier, &variant_identifier),
         }
     }
 
@@ -402,12 +402,12 @@ impl Container {
         &self.tag
     }
 
-    pub fn from_type(&self) -> Option<&syn::Type> {
-        self.from_type.as_ref()
+    pub fn type_from(&self) -> Option<&syn::Type> {
+        self.type_from.as_ref()
     }
 
-    pub fn into_type(&self) -> Option<&syn::Type> {
-        self.into_type.as_ref()
+    pub fn type_into(&self) -> Option<&syn::Type> {
+        self.type_into.as_ref()
     }
 
     pub fn remote(&self) -> Option<&syn::Path> {
@@ -422,7 +422,7 @@ impl Container {
 fn decide_tag(
     cx: &Ctxt,
     item: &syn::DeriveInput,
-    untagged: BoolAttr,
+    untagged: &BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
 ) -> EnumTag {
@@ -475,8 +475,8 @@ fn decide_tag(
 fn decide_identifier(
     cx: &Ctxt,
     item: &syn::DeriveInput,
-    field_identifier: BoolAttr,
-    variant_identifier: BoolAttr,
+    field_identifier: &BoolAttr,
+    variant_identifier: &BoolAttr,
 ) -> Identifier {
     match (&item.data, field_identifier.get(), variant_identifier.get()) {
         (_, false, false) => Identifier::No,
@@ -1144,7 +1144,7 @@ fn parse_lit_into_lifetimes(
     if let Ok(BorrowedLifetimes(lifetimes)) = syn::parse_str(&string) {
         let mut set = BTreeSet::new();
         for lifetime in lifetimes {
-            if !set.insert(lifetime.clone()) {
+            if !set.insert(lifetime) {
                 cx.error(format!("duplicate borrowed lifetime `{}`", lifetime));
             }
         }

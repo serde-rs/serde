@@ -153,8 +153,8 @@ fn needs_serialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -
 }
 
 fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if let Some(into_type) = cont.attrs.into_type() {
-        serialize_into(params, into_type)
+    if let Some(type_into) = cont.attrs.type_into() {
+        serialize_into(params, type_into)
     } else {
         match cont.data {
             Data::Enum(ref variants) => serialize_enum(params, variants, &cont.attrs),
@@ -178,11 +178,11 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
     }
 }
 
-fn serialize_into(params: &Parameters, into_type: &syn::Type) -> Fragment {
+fn serialize_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
     let self_var = &params.self_var;
     quote_block! {
         _serde::Serialize::serialize(
-            &_serde::export::Into::<#into_type>::into(_serde::export::Clone::clone(#self_var)),
+            &_serde::export::Into::<#type_into>::into(_serde::export::Clone::clone(#self_var)),
             __serializer)
     }
 }
