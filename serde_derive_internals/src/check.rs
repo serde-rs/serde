@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use ast::{Body, Container, Style};
+use ast::{Data, Container, Style};
 use attr::Identifier;
 use Ctxt;
 
@@ -21,14 +21,14 @@ pub fn check(cx: &Ctxt, cont: &Container) {
 /// Getters are only allowed inside structs (not enums) with the `remote`
 /// attribute.
 fn check_getter(cx: &Ctxt, cont: &Container) {
-    match cont.body {
-        Body::Enum(_) => {
-            if cont.body.has_getter() {
+    match cont.data {
+        Data::Enum(_) => {
+            if cont.data.has_getter() {
                 cx.error("#[serde(getter = \"...\")] is not allowed in an enum");
             }
         }
-        Body::Struct(_, _) => {
-            if cont.body.has_getter() && cont.attrs.remote().is_none() {
+        Data::Struct(_, _) => {
+            if cont.data.has_getter() && cont.attrs.remote().is_none() {
                 cx.error(
                     "#[serde(getter = \"...\")] can only be used in structs \
                      that have #[serde(remote = \"...\")]",
@@ -45,9 +45,9 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
 /// `field_identifier` all but possibly one variant must be unit variants. The
 /// last variant may be a newtype variant which is an implicit "other" case.
 fn check_identifier(cx: &Ctxt, cont: &Container) {
-    let variants = match cont.body {
-        Body::Enum(ref variants) => variants,
-        Body::Struct(_, _) => {
+    let variants = match cont.data {
+        Data::Enum(ref variants) => variants,
+        Data::Struct(_, _) => {
             return;
         }
     };
@@ -102,9 +102,9 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
 /// Skip-(de)serializing attributes are not allowed on variants marked
 /// (de)serialize_with.
 fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
-    let variants = match cont.body {
-        Body::Enum(ref variants) => variants,
-        Body::Struct(_, _) => {
+    let variants = match cont.data {
+        Data::Enum(ref variants) => variants,
+        Data::Struct(_, _) => {
             return;
         }
     };

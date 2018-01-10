@@ -8,9 +8,8 @@
 
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.19.0")]
 
-extern crate syn;
 #[macro_use]
-extern crate synom;
+extern crate syn;
 
 pub mod ast;
 pub mod attr;

@@ -6,12 +6,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use syn::{self, Ident};
-use quote::{self, ToTokens, Tokens};
+use syn::{self, Ident, Member};
+use syn::punctuated::Punctuated;
+use quote::{ToTokens, Tokens};
+use proc_macro2::{Literal, Span, Term};
 
 use bound;
 use fragment::{Expr, Fragment, Match, Stmts};
-use internals::ast::{Body, Container, Field, Style, Variant};
+use internals::ast::{Data, Container, Field, Style, Variant};
 use internals::{self, attr};
 
 use std::collections::BTreeSet;
@@ -24,7 +26,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
-    let dummy_const = Ident::new(format!("_IMPL_DESERIALIZE_FOR_{}", ident));
+    let dummy_const = Ident::new(&format!("_IMPL_DESERIALIZE_FOR_{}", ident), Span::def_site());
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
 
@@ -96,7 +98,7 @@ impl Parameters {
         };
         let borrowed = borrowed_lifetimes(cont);
         let generics = build_generics(cont, &borrowed);
-        let has_getter = cont.body.has_getter();
+        let has_getter = cont.data.has_getter();
 
         Parameters {
             local: local,
@@ -110,7 +112,7 @@ impl Parameters {
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Deserializer methods.
     fn type_name(&self) -> &str {
-        self.this.segments.last().unwrap().ident.as_ref()
+        self.this.segments.last().unwrap().value().ident.as_ref()
     }
 }
 
@@ -127,7 +129,7 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
         None => {
             let generics = match *cont.attrs.default() {
                 attr::Default::Default => {
-                    bound::with_self_bound(cont, &generics, &path!(_serde::export::Default))
+                    bound::with_self_bound(cont, &generics, &parse_quote!(_serde::export::Default))
                 }
                 attr::Default::None | attr::Default::Path(_) => generics,
             };
@@ -137,14 +139,14 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
                 cont,
                 &generics,
                 needs_deserialize_bound,
-                &path!(_serde::Deserialize<#delife>),
+                &parse_quote!(_serde::Deserialize<#delife>),
             );
 
             bound::with_bound(
                 cont,
                 &generics,
                 requires_default,
-                &path!(_serde::export::Default),
+                &parse_quote!(_serde::export::Default),
             )
         }
     }
@@ -162,7 +164,11 @@ fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>)
 // Fields with a `default` attribute (not `default=...`), and fields with a
 // `skip_deserializing` attribute that do not also have `default=...`.
 fn requires_default(field: &attr::Field, _variant: Option<&attr::Variant>) -> bool {
-    field.default() == &attr::Default::Default
+    if let attr::Default::Default = *field.default() {
+        true
+    } else {
+        false
+    }
 }
 
 enum BorrowedLifetimes {
@@ -173,8 +179,8 @@ enum BorrowedLifetimes {
 impl BorrowedLifetimes {
     fn de_lifetime(&self) -> syn::Lifetime {
         match *self {
-            BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new("'de"),
-            BorrowedLifetimes::Static => syn::Lifetime::new("'static"),
+            BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new(Term::intern("'de"), Span::def_site()),
+            BorrowedLifetimes::Static => syn::Lifetime::new(Term::intern("'static"), Span::def_site()),
         }
     }
 
@@ -182,7 +188,8 @@ impl BorrowedLifetimes {
         match *self {
             BorrowedLifetimes::Borrowed(ref bounds) => Some(syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new("'de"),
+                lifetime: syn::Lifetime::new(Term::intern("'de"), Span::def_site()),
+                colon_token: None,
                 bounds: bounds.iter().cloned().collect(),
             }),
             BorrowedLifetimes::Static => None,
@@ -201,12 +208,12 @@ impl BorrowedLifetimes {
 // and we use plain `'static` instead of `'de`.
 fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
     let mut lifetimes = BTreeSet::new();
-    for field in cont.body.all_fields() {
+    for field in cont.data.all_fields() {
         if !field.attrs.skip_deserializing() {
             lifetimes.extend(field.attrs.borrowed_lifetimes().iter().cloned());
         }
     }
-    if lifetimes.iter().any(|b| b.ident == "'static") {
+    if lifetimes.iter().any(|b| b.to_string() == "'static") {
         BorrowedLifetimes::Static
     } else {
         BorrowedLifetimes::Borrowed(lifetimes)
@@ -217,28 +224,28 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     if let Some(from_type) = cont.attrs.from_type() {
         deserialize_from(from_type)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
-        match cont.body {
-            Body::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
-            Body::Struct(Style::Struct, ref fields) => {
+        match cont.data {
+            Data::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
+            Data::Struct(Style::Struct, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_none()) {
                     panic!("struct has unnamed fields");
                 }
                 deserialize_struct(None, params, fields, &cont.attrs, None, Untagged::No)
             }
-            Body::Struct(Style::Tuple, ref fields) | Body::Struct(Style::Newtype, ref fields) => {
+            Data::Struct(Style::Tuple, ref fields) | Data::Struct(Style::Newtype, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_some()) {
                     panic!("tuple struct has named fields");
                 }
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
             }
-            Body::Struct(Style::Unit, _) => deserialize_unit_struct(params, &cont.attrs),
+            Data::Struct(Style::Unit, _) => deserialize_unit_struct(params, &cont.attrs),
         }
     } else {
-        match cont.body {
-            Body::Enum(ref variants) => {
+        match cont.data {
+            Data::Enum(ref variants) => {
                 deserialize_custom_identifier(params, variants, &cont.attrs)
             }
-            Body::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
+            Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
     }
 }
@@ -250,21 +257,21 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     assert!(!params.has_getter);
 
     if cont.attrs.from_type().is_some() || cont.attrs.identifier().is_some()
-        || cont.body
+        || cont.data
             .all_fields()
             .all(|f| f.attrs.deserialize_with().is_some())
     {
         return None;
     }
 
-    let code = match cont.body {
-        Body::Struct(Style::Struct, ref fields) => {
+    let code = match cont.data {
+        Data::Struct(Style::Struct, ref fields) => {
             deserialize_struct_in_place(None, params, fields, &cont.attrs, None, Untagged::No)
         }
-        Body::Struct(Style::Tuple, ref fields) | Body::Struct(Style::Newtype, ref fields) => {
+        Data::Struct(Style::Tuple, ref fields) | Data::Struct(Style::Newtype, ref fields) => {
             deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
         }
-        Body::Enum(_) | Body::Struct(Style::Unit, _) => {
+        Data::Enum(_) | Data::Struct(Style::Unit, _) => {
             return None;
         }
     };
@@ -288,7 +295,7 @@ fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<
     None
 }
 
-fn deserialize_from(from_type: &syn::Ty) -> Fragment {
+fn deserialize_from(from_type: &syn::Type) -> Fragment {
     quote_block! {
         _serde::export::Result::map(
             <#from_type as _serde::Deserialize>::deserialize(__deserializer),
@@ -616,8 +623,8 @@ fn deserialize_seq_in_place(
             // If there's no field name, assume we're a tuple-struct and use a numeric index
             let field_name = field
                 .ident
-                .clone()
-                .unwrap_or_else(|| Ident::new(field_index.to_string()));
+                .map(Member::Named)
+                .unwrap_or_else(|| Member::Unnamed(field_index.into()));
 
             if field.attrs.skip_deserializing() {
                 let default = Expr(expr_is_missing(&field, cattrs));
@@ -1824,7 +1831,7 @@ fn deserialize_identifier(
     fallthrough: Option<Tokens>,
 ) -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
-    let field_bytes = fields.iter().map(|&(ref name, _)| quote::ByteStr(name));
+    let field_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
 
     let constructors: &Vec<_> = &fields
         .iter()
@@ -2203,7 +2210,7 @@ fn deserialize_map_in_place(
             // If missing_expr unconditionally returns an error, don't try
             // to assign its value to self.place. Maybe this could be handled
             // more elegantly.
-            if missing_expr.as_ref().as_str().starts_with("return ") {
+            if missing_expr.as_ref().into_tokens().to_string().starts_with("return ") {
                 let missing_expr = Stmts(missing_expr);
                 quote! {
                     if !#name {
@@ -2252,7 +2259,7 @@ fn deserialize_map_in_place(
 }
 
 fn field_i(i: usize) -> Ident {
-    Ident::new(format!("__field{}", i))
+    Ident::new(&format!("__field{}", i), Span::def_site())
 }
 
 /// This function wraps the expression in `#[serde(deserialize_with = "...")]`
@@ -2294,7 +2301,7 @@ fn wrap_deserialize_with(
 
 fn wrap_deserialize_field_with(
     params: &Parameters,
-    field_ty: &syn::Ty,
+    field_ty: &syn::Type,
     deserialize_with: &syn::Path,
 ) -> (Tokens, Tokens) {
     wrap_deserialize_with(params, quote!(#field_ty), deserialize_with)
@@ -2312,7 +2319,7 @@ fn wrap_deserialize_variant_with(
     let (wrapper, wrapper_ty) =
         wrap_deserialize_with(params, quote!((#(#field_tys),*)), deserialize_with);
 
-    let field_access = (0..variant.fields.len()).map(|n| Ident::new(format!("{}", n)));
+    let field_access = (0..variant.fields.len()).map(|n| Member::Unnamed(n.into()));
     let unwrap_fn = match variant.style {
         Style::Struct => {
             let field_idents = variant
@@ -2385,7 +2392,10 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
-            generics.lifetimes.insert(0, de_lifetime);
+            generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
+                .into_iter()
+                .chain(generics.params)
+                .collect();
         }
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
@@ -2399,17 +2409,27 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
         let mut generics = self.0.generics.clone();
 
         // Add lifetime for `&'place mut Self, and `'a: 'place`
-        for lifetime in &mut generics.lifetimes {
-            lifetime.bounds.push(place_lifetime.lifetime.clone());
+        for param in &mut generics.params {
+            match *param {
+                syn::GenericParam::Lifetime(ref mut param) => {
+                    param.bounds.push(place_lifetime.lifetime.clone());
+                }
+                syn::GenericParam::Type(ref mut param) => {
+                    param.bounds
+                        .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime.clone()));
+                }
+                syn::GenericParam::Const(_) => {}
+            }
         }
-        for generic in &mut generics.ty_params {
-            generic
-                .bounds
-                .push(syn::TyParamBound::Region(place_lifetime.lifetime.clone()));
-        }
-        generics.lifetimes.insert(0, place_lifetime);
+        generics.params = Some(syn::GenericParam::Lifetime(place_lifetime))
+            .into_iter()
+            .chain(generics.params)
+            .collect();
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
-            generics.lifetimes.insert(0, de_lifetime);
+            generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
+                .into_iter()
+                .chain(generics.params)
+                .collect();
         }
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
@@ -2423,15 +2443,24 @@ impl<'a> DeImplGenerics<'a> {
     }
 }
 
-struct DeTyGenerics<'a>(&'a Parameters);
+struct DeTypeGenerics<'a>(&'a Parameters);
 #[cfg(feature = "deserialize_in_place")]
-struct InPlaceTyGenerics<'a>(&'a Parameters);
+struct InPlaceTypeGenerics<'a>(&'a Parameters);
 
-impl<'a> ToTokens for DeTyGenerics<'a> {
+impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
         if self.0.borrowed.de_lifetime_def().is_some() {
-            generics.lifetimes.insert(0, syn::LifetimeDef::new("'de"));
+            let def = syn::LifetimeDef {
+                attrs: Vec::new(),
+                lifetime: syn::Lifetime::new(Term::intern("'de"), Span::def_site()),
+                colon_token: None,
+                bounds: Punctuated::new(),
+            };
+            generics.params = Some(syn::GenericParam::Lifetime(def))
+                .into_iter()
+                .chain(generics.params)
+                .collect();
         }
         let (_, ty_generics, _) = generics.split_for_impl();
         ty_generics.to_tokens(tokens);
@@ -2439,13 +2468,25 @@ impl<'a> ToTokens for DeTyGenerics<'a> {
 }
 
 #[cfg(feature = "deserialize_in_place")]
-impl<'a> ToTokens for InPlaceTyGenerics<'a> {
+impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.generics.clone();
-        generics.lifetimes.insert(0, place_lifetime());
+        generics.params = Some(syn::GenericParam::Lifetime(place_lifetime()))
+            .into_iter()
+            .chain(generics.params)
+            .collect();
 
         if self.0.borrowed.de_lifetime_def().is_some() {
-            generics.lifetimes.insert(0, syn::LifetimeDef::new("'de"));
+            let def = syn::LifetimeDef {
+                attrs: Vec::new(),
+                lifetime: syn::Lifetime::new(Term::intern("'de"), Span::def_site()),
+                colon_token: None,
+                bounds: Punctuated::new(),
+            };
+            generics.params = Some(syn::GenericParam::Lifetime(def))
+                .into_iter()
+                .chain(generics.params)
+                .collect();
         }
         let (_, ty_generics, _) = generics.split_for_impl();
         ty_generics.to_tokens(tokens);
@@ -2453,27 +2494,32 @@ impl<'a> ToTokens for InPlaceTyGenerics<'a> {
 }
 
 #[cfg(feature = "deserialize_in_place")]
-impl<'a> DeTyGenerics<'a> {
-    fn in_place(self) -> InPlaceTyGenerics<'a> {
-        InPlaceTyGenerics(self.0)
+impl<'a> DeTypeGenerics<'a> {
+    fn in_place(self) -> InPlaceTypeGenerics<'a> {
+        InPlaceTypeGenerics(self.0)
     }
 }
 
 #[cfg(feature = "deserialize_in_place")]
 fn place_lifetime() -> syn::LifetimeDef {
-    syn::LifetimeDef::new("'place")
+    syn::LifetimeDef {
+        attrs: Vec::new(),
+        lifetime: syn::Lifetime::new(Term::intern("'place"), Span::def_site()),
+        colon_token: None,
+        bounds: Punctuated::new(),
+    }
 }
 
 fn split_with_de_lifetime(
     params: &Parameters,
 ) -> (
     DeImplGenerics,
-    DeTyGenerics,
-    syn::TyGenerics,
-    &syn::WhereClause,
+    DeTypeGenerics,
+    syn::TypeGenerics,
+    Option<&syn::WhereClause>,
 ) {
     let de_impl_generics = DeImplGenerics(&params);
-    let de_ty_generics = DeTyGenerics(&params);
+    let de_ty_generics = DeTypeGenerics(&params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
 }
