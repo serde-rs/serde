@@ -12,6 +12,7 @@ readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
+proc-macro2 = "0.2"
 syn = { version = "0.12", default-features = false, features = ["derive", "parsing", "clone-impls"] }
 
 [badges]

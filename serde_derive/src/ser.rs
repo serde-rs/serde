@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use syn::{self, Ident, Member};
+use syn::{self, Ident, Index, Member};
 use quote::Tokens;
 use proc_macro2::Span;
 
@@ -31,9 +31,10 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
+        let fun = quote_spanned!(Span::call_site()=> serialize);
         quote! {
             impl #impl_generics #ident #ty_generics #where_clause {
-                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                #vis fn #fun<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body
@@ -202,7 +203,10 @@ fn serialize_newtype_struct(
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
 
-    let mut field_expr = get_member(params, field, &Member::Unnamed(0.into()));
+    let mut field_expr = get_member(params, field, &Member::Unnamed(Index {
+        index: 0,
+        span: Span::call_site(),
+    }));
     if let Some(path) = field.attrs.serialize_with() {
         field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
     }
@@ -817,7 +821,10 @@ fn serialize_tuple_struct_visitor(
                 let id = Ident::new(&format!("__field{}", i), Span::def_site());
                 quote!(#id)
             } else {
-                get_member(params, field, &Member::Unnamed(i.into()))
+                get_member(params, field, &Member::Unnamed(Index {
+                    index: i as u32,
+                    span: Span::call_site(),
+                }))
             };
 
             let skip = field
@@ -940,7 +947,10 @@ fn wrap_serialize_with(
     };
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
-    let field_access = (0..field_exprs.len()).map(|n| Member::Unnamed(n.into()));
+    let field_access = (0..field_exprs.len()).map(|n| Member::Unnamed(Index {
+        index: n as u32,
+        span: Span::call_site(),
+    }));
 
     quote!({
         struct __SerializeWith #wrapper_impl_generics #where_clause {
@@ -981,11 +991,12 @@ fn get_member(params: &Parameters, field: &Field, member: &Member) -> Tokens {
     let self_var = &params.self_var;
     match (params.is_remote, field.attrs.getter()) {
         (false, None) => {
-            quote!(&#self_var.#member)
+            quote_spanned!(Span::call_site()=> &#self_var.#member)
         }
         (true, None) => {
+            let inner = quote_spanned!(Span::call_site()=> &#self_var.#member);
             let ty = field.ty;
-            quote!(_serde::private::ser::constrain::<#ty>(&#self_var.#member))
+            quote!(_serde::private::ser::constrain::<#ty>(#inner))
         }
         (true, Some(getter)) => {
             let ty = field.ty;
