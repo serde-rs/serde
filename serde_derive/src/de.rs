@@ -91,10 +91,10 @@ struct Parameters {
 
 impl Parameters {
     fn new(cont: &Container) -> Self {
-        let local = cont.ident.clone();
+        let local = cont.ident;
         let this = match cont.attrs.remote() {
             Some(remote) => remote.clone(),
-            None => cont.ident.clone().into(),
+            None => cont.ident.into(),
         };
         let borrowed = borrowed_lifetimes(cont);
         let generics = build_generics(cont, &borrowed);
@@ -230,7 +230,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
                 if fields.iter().any(|field| field.ident.is_none()) {
                     panic!("struct has unnamed fields");
                 }
-                deserialize_struct(None, params, fields, &cont.attrs, None, Untagged::No)
+                deserialize_struct(None, params, fields, &cont.attrs, None, &Untagged::No)
             }
             Data::Struct(Style::Tuple, ref fields) | Data::Struct(Style::Newtype, ref fields) => {
                 if fields.iter().any(|field| field.ident.is_some()) {
@@ -266,7 +266,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match cont.data {
         Data::Struct(Style::Struct, ref fields) => {
-            deserialize_struct_in_place(None, params, fields, &cont.attrs, None, Untagged::No)
+            deserialize_struct_in_place(None, params, fields, &cont.attrs, None)
         }
         Data::Struct(Style::Tuple, ref fields) | Data::Struct(Style::Newtype, ref fields) => {
             deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
@@ -529,7 +529,7 @@ fn deserialize_seq(
     let mut index_in_seq = 0usize;
     let let_values = vars.clone().zip(fields).map(|(var, field)| {
         if field.attrs.skip_deserializing() {
-            let default = Expr(expr_is_missing(&field, cattrs));
+            let default = Expr(expr_is_missing(field, cattrs));
             quote! {
                 let #var = #default;
             }
@@ -627,7 +627,7 @@ fn deserialize_seq_in_place(
                 .unwrap_or_else(|| Member::Unnamed(field_index.into()));
 
             if field.attrs.skip_deserializing() {
-                let default = Expr(expr_is_missing(&field, cattrs));
+                let default = Expr(expr_is_missing(field, cattrs));
                 quote! {
                     self.place.#field_name = #default;
                 }
@@ -754,7 +754,7 @@ fn deserialize_struct(
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
-    untagged: Untagged,
+    untagged: &Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
 
@@ -785,7 +785,7 @@ fn deserialize_struct(
     let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs));
 
     let (field_visitor, fields_stmt, visit_map) =
-        deserialize_struct_visitor(type_path, params, fields, cattrs);
+        deserialize_struct_visitor(&type_path, params, fields, cattrs);
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
@@ -819,7 +819,7 @@ fn deserialize_struct(
     };
 
     // untagged struct variants do not get a visit_seq method
-    let visit_seq = match untagged {
+    let visit_seq = match *untagged {
         Untagged::Yes => None,
         Untagged::No => Some(quote! {
             #[inline]
@@ -869,7 +869,6 @@ fn deserialize_struct_in_place(
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
-    untagged: Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
 
@@ -919,17 +918,13 @@ fn deserialize_struct_in_place(
         quote!(mut __seq)
     };
 
-    // untagged struct variants do not get a visit_seq method
-    let visit_seq = match untagged {
-        Untagged::Yes => None,
-        Untagged::No => Some(quote! {
-            #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
-            {
-                #visit_seq
-            }
-        }),
+    let visit_seq = quote! {
+        #[inline]
+        fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            where __A: _serde::de::SeqAccess<#delife>
+        {
+            #visit_seq
+        }
     };
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -1014,7 +1009,7 @@ fn deserialize_externally_tagged_enum(
     };
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
-        variant_names_idents,
+        &variant_names_idents,
         cattrs,
         true,
     ));
@@ -1113,7 +1108,7 @@ fn deserialize_internally_tagged_enum(
     };
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
-        variant_names_idents,
+        &variant_names_idents,
         cattrs,
         true,
     ));
@@ -1182,12 +1177,12 @@ fn deserialize_adjacently_tagged_enum(
     };
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
-        variant_names_idents,
+        &variant_names_idents,
         cattrs,
         true,
     ));
 
-    let ref variant_arms: Vec<_> = variants
+    let variant_arms: &Vec<_> = &variants
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
@@ -1495,7 +1490,7 @@ fn deserialize_externally_tagged_variant(
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
         let (wrapper, wrapper_ty, unwrap_fn) =
-            wrap_deserialize_variant_with(params, &variant, path);
+            wrap_deserialize_variant_with(params, variant, path);
         return quote_block! {
             #wrapper
             _serde::export::Result::map(
@@ -1525,7 +1520,7 @@ fn deserialize_externally_tagged_variant(
             &variant.fields,
             cattrs,
             None,
-            Untagged::No,
+            &Untagged::No,
         ),
     }
 }
@@ -1556,7 +1551,7 @@ fn deserialize_internally_tagged_variant(
             variant_ident,
             params,
             &variant.fields[0],
-            deserializer,
+            &deserializer,
         ),
         Style::Struct => deserialize_struct(
             Some(variant_ident),
@@ -1564,7 +1559,7 @@ fn deserialize_internally_tagged_variant(
             &variant.fields,
             cattrs,
             Some(deserializer),
-            Untagged::No,
+            &Untagged::No,
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
@@ -1578,7 +1573,7 @@ fn deserialize_untagged_variant(
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
         let (wrapper, wrapper_ty, unwrap_fn) =
-            wrap_deserialize_variant_with(params, &variant, path);
+            wrap_deserialize_variant_with(params, variant, path);
         return quote_block! {
             #wrapper
             _serde::export::Result::map(
@@ -1606,7 +1601,7 @@ fn deserialize_untagged_variant(
             variant_ident,
             params,
             &variant.fields[0],
-            deserializer,
+            &deserializer,
         ),
         Style::Tuple => deserialize_tuple(
             Some(variant_ident),
@@ -1621,7 +1616,7 @@ fn deserialize_untagged_variant(
             &variant.fields,
             cattrs,
             Some(deserializer),
-            Untagged::Yes,
+            &Untagged::Yes,
         ),
     }
 }
@@ -1657,7 +1652,7 @@ fn deserialize_untagged_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
-    deserializer: Tokens,
+    deserializer: &Tokens,
 ) -> Fragment {
     let this = &params.this;
     match field.attrs.deserialize_with() {
@@ -1682,7 +1677,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: Vec<(String, Ident)>,
+    fields: &[(String, Ident)],
     cattrs: &attr::Container,
     is_variant: bool,
 ) -> Fragment {
@@ -1698,8 +1693,8 @@ fn deserialize_generated_identifier(
     };
 
     let visitor_impl = Stmts(deserialize_identifier(
-        this,
-        &fields,
+        &this,
+        fields,
         is_variant,
         fallthrough,
     ));
@@ -1771,7 +1766,7 @@ fn deserialize_custom_identifier(
         .map(|variant| {
             (
                 variant.attrs.name().deserialize_name(),
-                variant.ident.clone(),
+                variant.ident,
             )
         })
         .collect();
@@ -1796,7 +1791,7 @@ fn deserialize_custom_identifier(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
     let visitor_impl = Stmts(deserialize_identifier(
-        this.clone(),
+        &this,
         &names_idents,
         is_variant,
         fallthrough,
@@ -1825,7 +1820,7 @@ fn deserialize_custom_identifier(
 }
 
 fn deserialize_identifier(
-    this: Tokens,
+    this: &Tokens,
     fields: &[(String, Ident)],
     is_variant: bool,
     fallthrough: Option<Tokens>,
@@ -1919,7 +1914,7 @@ fn deserialize_identifier(
 }
 
 fn deserialize_struct_visitor(
-    struct_path: Tokens,
+    struct_path: &Tokens,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -1938,7 +1933,7 @@ fn deserialize_struct_visitor(
         }
     };
 
-    let field_visitor = deserialize_generated_identifier(field_names_idents, cattrs, false);
+    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false);
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
@@ -1946,7 +1941,7 @@ fn deserialize_struct_visitor(
 }
 
 fn deserialize_map(
-    struct_path: Tokens,
+    struct_path: &Tokens,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -2034,7 +2029,7 @@ fn deserialize_map(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
-            let missing_expr = Match(expr_is_missing(&field, cattrs));
+            let missing_expr = Match(expr_is_missing(field, cattrs));
 
             quote! {
                 let #name = match #name {
@@ -2045,9 +2040,9 @@ fn deserialize_map(
         });
 
     let result = fields_names.iter().map(|&(field, ref name)| {
-        let ident = field.ident.clone().expect("struct contains unnamed fields");
+        let ident = field.ident.expect("struct contains unnamed fields");
         if field.attrs.skip_deserializing() {
-            let value = Expr(expr_is_missing(&field, cattrs));
+            let value = Expr(expr_is_missing(field, cattrs));
             quote!(#ident: #value)
         } else {
             quote!(#ident: #name)
@@ -2109,7 +2104,7 @@ fn deserialize_struct_in_place_visitor(
         }
     };
 
-    let field_visitor = deserialize_generated_identifier(field_names_idents, cattrs, false);
+    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false);
 
     let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
@@ -2206,7 +2201,7 @@ fn deserialize_map_in_place(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
-            let missing_expr = expr_is_missing(&field, cattrs);
+            let missing_expr = expr_is_missing(field, cattrs);
             // If missing_expr unconditionally returns an error, don't try
             // to assign its value to self.place. Maybe this could be handled
             // more elegantly.
@@ -2266,7 +2261,7 @@ fn field_i(i: usize) -> Ident {
 /// in a trait to prevent it from accessing the internal `Deserialize` state.
 fn wrap_deserialize_with(
     params: &Parameters,
-    value_ty: Tokens,
+    value_ty: &Tokens,
     deserialize_with: &syn::Path,
 ) -> (Tokens, Tokens) {
     let this = &params.this;
@@ -2304,7 +2299,7 @@ fn wrap_deserialize_field_with(
     field_ty: &syn::Type,
     deserialize_with: &syn::Path,
 ) -> (Tokens, Tokens) {
-    wrap_deserialize_with(params, quote!(#field_ty), deserialize_with)
+    wrap_deserialize_with(params, &quote!(#field_ty), deserialize_with)
 }
 
 fn wrap_deserialize_variant_with(
@@ -2317,7 +2312,7 @@ fn wrap_deserialize_variant_with(
 
     let field_tys = variant.fields.iter().map(|field| field.ty);
     let (wrapper, wrapper_ty) =
-        wrap_deserialize_with(params, quote!((#(#field_tys),*)), deserialize_with);
+        wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
 
     let field_access = (0..variant.fields.len()).map(|n| Member::Unnamed(n.into()));
     let unwrap_fn = match variant.style {
@@ -2412,11 +2407,11 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
         for param in &mut generics.params {
             match *param {
                 syn::GenericParam::Lifetime(ref mut param) => {
-                    param.bounds.push(place_lifetime.lifetime.clone());
+                    param.bounds.push(place_lifetime.lifetime);
                 }
                 syn::GenericParam::Type(ref mut param) => {
                     param.bounds
-                        .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime.clone()));
+                        .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime));
                 }
                 syn::GenericParam::Const(_) => {}
             }
@@ -2518,8 +2513,8 @@ fn split_with_de_lifetime(
     syn::TypeGenerics,
     Option<&syn::WhereClause>,
 ) {
-    let de_impl_generics = DeImplGenerics(&params);
-    let de_ty_generics = DeTypeGenerics(&params);
+    let de_impl_generics = DeImplGenerics(params);
+    let de_ty_generics = DeTypeGenerics(params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
 }

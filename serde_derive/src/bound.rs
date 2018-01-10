@@ -125,7 +125,7 @@ where
                 }
             }
             if path.leading_colon.is_none() && path.segments.len() == 1 {
-                let id = path.segments[0].ident.clone();
+                let id = path.segments[0].ident;
                 if self.all_ty_params.contains(&id) {
                     self.relevant_ty_params.insert(id);
                 }
@@ -289,7 +289,7 @@ fn type_of_item(cont: &Container) -> syn::Type {
             leading_colon: None,
             segments: vec![
                 syn::PathSegment {
-                    ident: cont.ident.clone(),
+                    ident: cont.ident,
                     arguments: syn::PathArguments::AngleBracketed(
                         syn::AngleBracketedGenericArguments {
                             colon2_token: None,
