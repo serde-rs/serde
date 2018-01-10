@@ -31,9 +31,10 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
+        let fun = quote_spanned!(Span::call_site()=> serialize);
         quote! {
             impl #impl_generics #ident #ty_generics #where_clause {
-                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                #vis fn #fun<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body
@@ -990,11 +991,12 @@ fn get_member(params: &Parameters, field: &Field, member: &Member) -> Tokens {
     let self_var = &params.self_var;
     match (params.is_remote, field.attrs.getter()) {
         (false, None) => {
-            quote!(&#self_var.#member)
+            quote_spanned!(Span::call_site()=> &#self_var.#member)
         }
         (true, None) => {
+            let inner = quote_spanned!(Span::call_site()=> &#self_var.#member);
             let ty = field.ty;
-            quote!(_serde::private::ser::constrain::<#ty>(&#self_var.#member))
+            quote!(_serde::private::ser::constrain::<#ty>(#inner))
         }
         (true, Some(getter)) => {
             let ty = field.ty;

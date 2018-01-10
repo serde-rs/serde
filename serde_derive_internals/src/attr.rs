@@ -913,10 +913,24 @@ impl Field {
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
             if is_cow(&field.ty, is_str) {
-                let path = syn::parse_str("_serde::private::de::borrow_cow_str").unwrap();
+                let mut path = syn::Path {
+                    leading_colon: None,
+                    segments: Punctuated::new(),
+                };
+                path.segments.push(Ident::new("_serde", Span::def_site()).into());
+                path.segments.push(Ident::new("private", Span::def_site()).into());
+                path.segments.push(Ident::new("de", Span::def_site()).into());
+                path.segments.push(Ident::new("borrow_cow_str", Span::def_site()).into());
                 deserialize_with.set_if_none(path);
             } else if is_cow(&field.ty, is_slice_u8) {
-                let path = syn::parse_str("_serde::private::de::borrow_cow_bytes").unwrap();
+                let mut path = syn::Path {
+                    leading_colon: None,
+                    segments: Punctuated::new(),
+                };
+                path.segments.push(Ident::new("_serde", Span::def_site()).into());
+                path.segments.push(Ident::new("private", Span::def_site()).into());
+                path.segments.push(Ident::new("de", Span::def_site()).into());
+                path.segments.push(Ident::new("borrow_cow_bytes", Span::def_site()).into());
                 deserialize_with.set_if_none(path);
             }
         } else if is_rptr(&field.ty, is_str) || is_rptr(&field.ty, is_slice_u8) {
