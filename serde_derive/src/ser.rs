@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use syn::{self, Ident, Member};
+use syn::{self, Ident, Index, Member};
 use quote::Tokens;
 use proc_macro2::Span;
 
@@ -202,7 +202,10 @@ fn serialize_newtype_struct(
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
 
-    let mut field_expr = get_member(params, field, &Member::Unnamed(0.into()));
+    let mut field_expr = get_member(params, field, &Member::Unnamed(Index {
+        index: 0,
+        span: Span::call_site(),
+    }));
     if let Some(path) = field.attrs.serialize_with() {
         field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
     }
@@ -817,7 +820,10 @@ fn serialize_tuple_struct_visitor(
                 let id = Ident::new(&format!("__field{}", i), Span::def_site());
                 quote!(#id)
             } else {
-                get_member(params, field, &Member::Unnamed(i.into()))
+                get_member(params, field, &Member::Unnamed(Index {
+                    index: i as u32,
+                    span: Span::call_site(),
+                }))
             };
 
             let skip = field
@@ -940,7 +946,10 @@ fn wrap_serialize_with(
     };
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
-    let field_access = (0..field_exprs.len()).map(|n| Member::Unnamed(n.into()));
+    let field_access = (0..field_exprs.len()).map(|n| Member::Unnamed(Index {
+        index: n as u32,
+        span: Span::call_site(),
+    }));
 
     quote!({
         struct __SerializeWith #wrapper_impl_generics #where_clause {

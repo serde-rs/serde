@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use syn::{self, Ident, Member};
+use syn::{self, Ident, Index, Member};
 use syn::punctuated::Punctuated;
 use quote::{ToTokens, Tokens};
 use proc_macro2::{Literal, Span, Term};
@@ -624,7 +624,10 @@ fn deserialize_seq_in_place(
             let field_name = field
                 .ident
                 .map(Member::Named)
-                .unwrap_or_else(|| Member::Unnamed(field_index.into()));
+                .unwrap_or_else(|| Member::Unnamed(Index {
+                    index: field_index as u32,
+                    span: Span::call_site(),
+                }));
 
             if field.attrs.skip_deserializing() {
                 let default = Expr(expr_is_missing(field, cattrs));
@@ -2314,7 +2317,10 @@ fn wrap_deserialize_variant_with(
     let (wrapper, wrapper_ty) =
         wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
 
-    let field_access = (0..variant.fields.len()).map(|n| Member::Unnamed(n.into()));
+    let field_access = (0..variant.fields.len()).map(|n| Member::Unnamed(Index {
+        index: n as u32,
+        span: Span::call_site(),
+    }));
     let unwrap_fn = match variant.style {
         Style::Struct => {
             let field_idents = variant
