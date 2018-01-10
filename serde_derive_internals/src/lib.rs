@@ -12,6 +12,8 @@
 #[macro_use]
 extern crate syn;
 
+extern crate proc_macro2;
+
 pub mod ast;
 pub mod attr;
 

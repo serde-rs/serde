@@ -8,12 +8,14 @@
 
 use Ctxt;
 use syn;
+use syn::Ident;
 use syn::Meta::{List, NameValue, Word};
 use syn::NestedMeta::{Literal, Meta};
 use syn::punctuated::Punctuated;
 use syn::synom::Synom;
 use std::collections::BTreeSet;
 use std::str::FromStr;
+use proc_macro2::Span;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -577,10 +579,10 @@ impl Variant {
                     Meta(NameValue(ref m)) if m.ident == "with" => {
                         if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.segments.push("serialize".into());
+                            ser_path.segments.push(Ident::new("serialize", Span::call_site()).into());
                             serialize_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.segments.push("deserialize".into());
+                            de_path.segments.push(Ident::new("deserialize", Span::call_site()).into());
                             deserialize_with.set(de_path);
                         }
                     }
@@ -819,10 +821,10 @@ impl Field {
                     Meta(NameValue(ref m)) if m.ident == "with" => {
                         if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.segments.push("serialize".into());
+                            ser_path.segments.push(Ident::new("serialize", Span::call_site()).into());
                             serialize_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.segments.push("deserialize".into());
+                            de_path.segments.push(Ident::new("deserialize", Span::call_site()).into());
                             deserialize_with.set(de_path);
                         }
                     }
