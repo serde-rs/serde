@@ -12,10 +12,10 @@ use syn::Ident;
 use syn::Meta::{List, NameValue, Word};
 use syn::NestedMeta::{Literal, Meta};
 use syn::punctuated::Punctuated;
-use syn::synom::Synom;
+use syn::synom::{Synom, ParseError};
 use std::collections::BTreeSet;
 use std::str::FromStr;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream, TokenNode, TokenTree};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -197,29 +197,29 @@ impl Container {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            ser_name.set(s.clone());
-                            de_name.set(s);
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            ser_name.set(s.value());
+                            de_name.set(s.value());
                         }
                     }
 
                     // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     Meta(List(ref m)) if m.ident == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            ser_name.set_opt(ser);
-                            de_name.set_opt(de);
+                            ser_name.set_opt(ser.map(syn::LitStr::value));
+                            de_name.set_opt(de.map(syn::LitStr::value));
                         }
                     }
 
                     // Parse `#[serde(rename_all = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "rename_all" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            match RenameRule::from_str(&s) {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            match RenameRule::from_str(&s.value()) {
                                 Ok(rename_rule) => rename_all.set(rename_rule),
                                 Err(()) => cx.error(format!(
                                     "unknown rename rule for #[serde(rename_all \
                                      = {:?})]",
-                                    s
+                                    s.value()
                                 )),
                             }
                         }
@@ -286,10 +286,10 @@ impl Container {
 
                     // Parse `#[serde(tag = "type")]`
                     Meta(NameValue(ref m)) if m.ident == "tag" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
                             match item.data {
                                 syn::Data::Enum(_) => {
-                                    internal_tag.set(s);
+                                    internal_tag.set(s.value());
                                 }
                                 syn::Data::Struct(_) | syn::Data::Union(_) => {
                                     cx.error("#[serde(tag = \"...\")] can only be used on enums")
@@ -300,10 +300,10 @@ impl Container {
 
                     // Parse `#[serde(content = "c")]`
                     Meta(NameValue(ref m)) if m.ident == "content" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
                             match item.data {
                                 syn::Data::Enum(_) => {
-                                    content.set(s);
+                                    content.set(s.value());
                                 }
                                 syn::Data::Struct(_) | syn::Data::Union(_) => cx.error(
                                     "#[serde(content = \"...\")] can only be used on \
@@ -532,29 +532,29 @@ impl Variant {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            ser_name.set(s.clone());
-                            de_name.set(s);
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            ser_name.set(s.value());
+                            de_name.set(s.value());
                         }
                     }
 
                     // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     Meta(List(ref m)) if m.ident == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            ser_name.set_opt(ser);
-                            de_name.set_opt(de);
+                            ser_name.set_opt(ser.map(syn::LitStr::value));
+                            de_name.set_opt(de.map(syn::LitStr::value));
                         }
                     }
 
                     // Parse `#[serde(rename_all = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "rename_all" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            match RenameRule::from_str(&s) {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            match RenameRule::from_str(&s.value()) {
                                 Ok(rename_rule) => rename_all.set(rename_rule),
                                 Err(()) => cx.error(format!(
                                     "unknown rename rule for #[serde(rename_all \
                                      = {:?})]",
-                                    s
+                                    s.value()
                                 )),
                             }
                         }
@@ -754,17 +754,17 @@ impl Field {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_string_from_lit(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            ser_name.set(s.clone());
-                            de_name.set(s);
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            ser_name.set(s.value());
+                            de_name.set(s.value());
                         }
                     }
 
                     // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     Meta(List(ref m)) if m.ident == "rename" => {
                         if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            ser_name.set_opt(ser);
-                            de_name.set_opt(de);
+                            ser_name.set_opt(ser.map(syn::LitStr::value));
+                            de_name.set_opt(de.map(syn::LitStr::value));
                         }
                     }
 
@@ -1019,14 +1019,15 @@ impl Field {
 
 type SerAndDe<T> = (Option<T>, Option<T>);
 
-fn get_ser_and_de<T, F>(
+fn get_ser_and_de<'a, T, F>(
     cx: &Ctxt,
     attr_name: &'static str,
-    metas: &Punctuated<syn::NestedMeta, Token![,]>,
+    metas: &'a Punctuated<syn::NestedMeta, Token![,]>,
     f: F,
 ) -> Result<SerAndDe<T>, ()>
 where
-    F: Fn(&Ctxt, &str, &str, &syn::Lit) -> Result<T, ()>,
+    T: 'a,
+    F: Fn(&Ctxt, &str, &str, &'a syn::Lit) -> Result<T, ()>,
 {
     let mut ser_meta = Attr::none(cx, attr_name);
     let mut de_meta = Attr::none(cx, attr_name);
@@ -1059,8 +1060,8 @@ where
     Ok((ser_meta.get(), de_meta.get()))
 }
 
-fn get_renames(cx: &Ctxt, items: &Punctuated<syn::NestedMeta, Token![,]>) -> Result<SerAndDe<String>, ()> {
-    get_ser_and_de(cx, "rename", items, get_string_from_lit)
+fn get_renames<'a>(cx: &Ctxt, items: &'a Punctuated<syn::NestedMeta, Token![,]>) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
+    get_ser_and_de(cx, "rename", items, get_lit_str)
 }
 
 fn get_where_predicates(
@@ -1084,14 +1085,14 @@ pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMeta
     }
 }
 
-fn get_string_from_lit(
+fn get_lit_str<'a>(
     cx: &Ctxt,
     attr_name: &str,
     meta_item_name: &str,
-    lit: &syn::Lit,
-) -> Result<String, ()> {
+    lit: &'a syn::Lit,
+) -> Result<&'a syn::LitStr, ()> {
     if let syn::Lit::Str(ref lit) = *lit {
-        Ok(lit.value())
+        Ok(lit)
     } else {
         cx.error(format!(
             "expected serde {} attribute to be a string: `{} = \"...\"`",
@@ -1102,8 +1103,8 @@ fn get_string_from_lit(
 }
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Path, ()> {
-    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
-    syn::parse_str(&string).map_err(|_| cx.error(format!("failed to parse path: {:?}", string)))
+    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    parse_lit_str(string).map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
 }
 
 fn parse_lit_into_where(
@@ -1112,25 +1113,25 @@ fn parse_lit_into_where(
     meta_item_name: &str,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
-    let string = try!(get_string_from_lit(cx, attr_name, meta_item_name, lit));
-    if string.is_empty() {
+    let string = try!(get_lit_str(cx, attr_name, meta_item_name, lit));
+    if string.value().is_empty() {
         return Ok(Vec::new());
     }
 
-    let where_string = format!("where {}", string);
+    let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span);
 
-    syn::parse_str::<syn::WhereClause>(&where_string)
+    parse_lit_str::<syn::WhereClause>(&where_string)
         .map(|wh| wh.predicates.into_iter().collect())
         .map_err(|err| cx.error(err))
 }
 
 fn parse_lit_into_ty(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Type, ()> {
-    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
+    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
 
-    syn::parse_str(&string).map_err(|_| {
+    parse_lit_str(string).map_err(|_| {
         cx.error(format!(
             "failed to parse type: {} = {:?}",
-            attr_name, string
+            attr_name, string.value()
         ))
     })
 }
@@ -1142,8 +1143,8 @@ fn parse_lit_into_lifetimes(
     attr_name: &str,
     lit: &syn::Lit,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
-    let string = try!(get_string_from_lit(cx, attr_name, attr_name, lit));
-    if string.is_empty() {
+    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    if string.value().is_empty() {
         cx.error("at least one lifetime must be borrowed");
         return Err(());
     }
@@ -1157,7 +1158,7 @@ fn parse_lit_into_lifetimes(
         ));
     }
 
-    if let Ok(BorrowedLifetimes(lifetimes)) = syn::parse_str(&string) {
+    if let Ok(BorrowedLifetimes(lifetimes)) = parse_lit_str(string) {
         let mut set = BTreeSet::new();
         for lifetime in lifetimes {
             if !set.insert(lifetime) {
@@ -1166,7 +1167,7 @@ fn parse_lit_into_lifetimes(
         }
         return Ok(set);
     }
-    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string)))
+    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string.value())))
 }
 
 // Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
@@ -1348,5 +1349,34 @@ fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
         | syn::Type::Infer(_)
         | syn::Type::Macro(_)
         | syn::Type::Verbatim(_) => {}
+    }
+}
+
+fn parse_lit_str<T>(s: &syn::LitStr) -> Result<T, ParseError>
+where
+    T: Synom,
+{
+    let tokens = try!(spanned_tokens(s));
+    syn::parse2(tokens)
+}
+
+fn spanned_tokens(s: &syn::LitStr) -> Result<TokenStream, ParseError> {
+    let stream = try!(syn::parse_str(&s.value()));
+    Ok(respan_token_stream(stream, s.span))
+}
+
+fn respan_token_stream(stream: TokenStream, span: Span) -> TokenStream {
+    stream.into_iter().map(|token| respan_token_tree(token, span)).collect()
+}
+
+fn respan_token_tree(token: TokenTree, span: Span) -> TokenTree {
+    TokenTree {
+        span: span,
+        kind: match token.kind {
+            TokenNode::Group(delimiter, nested) => {
+                TokenNode::Group(delimiter, respan_token_stream(nested, span))
+            }
+            other => other,
+        },
     }
 }
