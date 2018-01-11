@@ -8,6 +8,7 @@
 
 use syn::{self, Ident, Index, Member};
 use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 use quote::{ToTokens, Tokens};
 use proc_macro2::{Literal, Span, Term};
 
@@ -538,7 +539,9 @@ fn deserialize_seq(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
-                    quote!(try!(_serde::de::SeqAccess::next_element::<#field_ty>(&mut __seq)))
+                    let span = Span::def_site().located_at(field.original.span());
+                    let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
+                    quote!(try!(#func(&mut __seq)))
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
@@ -1984,8 +1987,10 @@ fn deserialize_map(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
+                    let span = Span::def_site().located_at(field.original.span());
+                    let func = quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
                     quote! {
-                        try!(_serde::de::MapAccess::next_value::<#field_ty>(&mut __map))
+                        try!(#func(&mut __map))
                     }
                 }
                 Some(path) => {
@@ -2382,8 +2387,10 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     let name = field.attrs.name().deserialize_name();
     match field.attrs.deserialize_with() {
         None => {
+            let span = Span::def_site().located_at(field.original.span());
+            let func = quote_spanned!(span=> _serde::private::de::missing_field);
             quote_expr! {
-                try!(_serde::private::de::missing_field(#name))
+                try!(#func(#name))
             }
         }
         Some(_) => {
