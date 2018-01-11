@@ -35,6 +35,7 @@ pub struct Field<'a> {
     pub ident: Option<syn::Ident>,
     pub attrs: attr::Field,
     pub ty: &'a syn::Type,
+    pub original: &'a syn::Field,
 }
 
 #[derive(Copy, Clone)]
@@ -157,6 +158,7 @@ fn fields_from_ast<'a>(
             ident: field.ident,
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
+            original: &field,
         })
         .collect()
 }

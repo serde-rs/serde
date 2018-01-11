@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use syn::{self, Ident, Index, Member};
+use syn::spanned::Spanned;
 use quote::Tokens;
 use proc_macro2::Span;
 
@@ -211,8 +212,10 @@ fn serialize_newtype_struct(
         field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
     }
 
+    let span = Span::def_site().located_at(field.original.span());
+    let func = quote_spanned!(span=> _serde::Serializer::serialize_newtype_struct);
     quote_expr! {
-        _serde::Serializer::serialize_newtype_struct(__serializer, #type_name, #field_expr)
+        #func(__serializer, #type_name, #field_expr)
     }
 }
 
@@ -225,7 +228,7 @@ fn serialize_tuple_struct(
         fields,
         params,
         false,
-        &quote!(_serde::ser::SerializeTupleStruct::serialize_field),
+        &TupleTrait::SerializeTupleStruct,
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -246,8 +249,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         fields,
         params,
         false,
-        &quote!(_serde::ser::SerializeStruct::serialize_field),
-        &quote!(_serde::ser::SerializeStruct::skip_field),
+        &StructTrait::SerializeStruct,
     );
 
     let type_name = cattrs.name().serialize_name();
@@ -670,14 +672,12 @@ fn serialize_tuple_variant(
     params: &Parameters,
     fields: &[Field],
 ) -> Fragment {
-    let method = match context {
-        TupleVariant::ExternallyTagged { .. } => {
-            quote!(_serde::ser::SerializeTupleVariant::serialize_field)
-        }
-        TupleVariant::Untagged => quote!(_serde::ser::SerializeTuple::serialize_element),
+    let tuple_trait = match context {
+        TupleVariant::ExternallyTagged { .. } => TupleTrait::SerializeTupleVariant,
+        TupleVariant::Untagged => TupleTrait::SerializeTuple,
     };
 
-    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &method);
+    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &tuple_trait);
 
     let len = serialize_stmts.len();
     let let_mut = mut_if(len > 0);
@@ -729,18 +729,16 @@ fn serialize_struct_variant<'a>(
     fields: &[Field],
     name: &str,
 ) -> Fragment {
-    let (method, skip_method) = match context {
+    let struct_trait = match context {
         StructVariant::ExternallyTagged { .. } => (
-            quote!(_serde::ser::SerializeStructVariant::serialize_field),
-            quote!(_serde::ser::SerializeStructVariant::skip_field),
+            StructTrait::SerializeStructVariant
         ),
         StructVariant::InternallyTagged { .. } | StructVariant::Untagged => (
-            quote!(_serde::ser::SerializeStruct::serialize_field),
-            quote!(_serde::ser::SerializeStruct::skip_field),
+            StructTrait::SerializeStruct
         ),
     };
 
-    let serialize_fields = serialize_struct_visitor(fields, params, true, &method, &skip_method);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait);
 
     let mut serialized_fields = fields
         .iter()
@@ -811,7 +809,7 @@ fn serialize_tuple_struct_visitor(
     fields: &[Field],
     params: &Parameters,
     is_enum: bool,
-    func: &Tokens,
+    tuple_trait: &TupleTrait,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -836,6 +834,8 @@ fn serialize_tuple_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
+            let span = Span::def_site().located_at(field.original.span());
+            let func = tuple_trait.serialize_element(span);
             let ser = quote! {
                 try!(#func(&mut __serde_state, #field_expr));
             };
@@ -852,8 +852,7 @@ fn serialize_struct_visitor(
     fields: &[Field],
     params: &Parameters,
     is_enum: bool,
-    func: &Tokens,
-    skip_func: &Tokens,
+    struct_trait: &StructTrait,
 ) -> Vec<Tokens> {
     fields
         .iter()
@@ -877,6 +876,8 @@ fn serialize_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
+            let span = Span::def_site().located_at(field.original.span());
+            let func = struct_trait.serialize_field(span);
             let ser = quote! {
                 try!(#func(&mut __serde_state, #key_expr, #field_expr));
             };
@@ -884,6 +885,7 @@ fn serialize_struct_visitor(
             match skip {
                 None => ser,
                 Some(skip) => {
+                    let skip_func = struct_trait.skip_field(span);
                     quote! {
                         if !#skip {
                             #ser
@@ -1004,6 +1006,57 @@ fn get_member(params: &Parameters, field: &Field, member: &Member) -> Tokens {
         }
         (false, Some(_)) => {
             unreachable!("getter is only allowed for remote impls");
+        }
+    }
+}
+
+enum StructTrait {
+    SerializeStruct,
+    SerializeStructVariant,
+}
+
+impl StructTrait {
+    fn serialize_field(&self, span: Span) -> Tokens {
+        match *self {
+            StructTrait::SerializeStruct => {
+                quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)
+            }
+            StructTrait::SerializeStructVariant => {
+                quote_spanned!(span=> _serde::ser::SerializeStructVariant::serialize_field)
+            }
+        }
+    }
+
+    fn skip_field(&self, span: Span) -> Tokens {
+        match *self {
+            StructTrait::SerializeStruct => {
+                quote_spanned!(span=> _serde::ser::SerializeStruct::skip_field)
+            }
+            StructTrait::SerializeStructVariant => {
+                quote_spanned!(span=> _serde::ser::SerializeStructVariant::skip_field)
+            }
+        }
+    }
+}
+
+enum TupleTrait {
+    SerializeTuple,
+    SerializeTupleStruct,
+    SerializeTupleVariant,
+}
+
+impl TupleTrait {
+    fn serialize_element(&self, span: Span) -> Tokens {
+        match *self {
+            TupleTrait::SerializeTuple => {
+                quote_spanned!(span=> _serde::ser::SerializeTuple::serialize_element)
+            }
+            TupleTrait::SerializeTupleStruct => {
+                quote_spanned!(span=> _serde::ser::SerializeTupleStruct::serialize_field)
+            }
+            TupleTrait::SerializeTupleVariant => {
+                quote_spanned!(span=> _serde::ser::SerializeTupleVariant::serialize_field)
+            }
         }
     }
 }
