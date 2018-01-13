@@ -9,6 +9,9 @@
 #![feature(lang_items, start, compiler_builtins_lib)]
 #![no_std]
 
+// https://github.com/rust-lang/rust/issues/47311
+#![cfg_attr(feature = "cargo-clippy", allow(double_parens))]
+
 extern crate libc;
 extern crate compiler_builtins;
 
