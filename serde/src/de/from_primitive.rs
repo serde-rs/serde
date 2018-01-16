@@ -10,7 +10,7 @@ use lib::*;
 
 macro_rules! int_to_int {
     ($dst:ident, $n:ident) => (
-        if $dst::MIN as i64 <= $n as i64 && $n as i64 <= $dst::MAX as i64 {
+        if $dst::min_value() as i64 <= $n as i64 && $n as i64 <= $dst::max_value() as i64 {
             Some($n as $dst)
         } else {
             None
@@ -20,7 +20,7 @@ macro_rules! int_to_int {
 
 macro_rules! int_to_uint {
     ($dst:ident, $n:ident) => (
-        if 0 <= $n && $n as u64 <= $dst::MAX as u64 {
+        if 0 <= $n && $n as u64 <= $dst::max_value() as u64 {
             Some($n as $dst)
         } else {
             None
@@ -30,7 +30,7 @@ macro_rules! int_to_uint {
 
 macro_rules! uint_to {
     ($dst:ident, $n:ident) => (
-        if $n as u64 <= $dst::MAX as u64 {
+        if $n as u64 <= $dst::max_value() as u64 {
             Some($n as $dst)
         } else {
             None
