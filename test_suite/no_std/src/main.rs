@@ -10,6 +10,7 @@
 #![no_std]
 
 // https://github.com/rust-lang/rust/issues/47311
+#![allow(unused_parens)]
 #![cfg_attr(feature = "cargo-clippy", allow(double_parens))]
 
 extern crate libc;
