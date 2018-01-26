@@ -104,6 +104,7 @@
 // simplifies some macros
     invalid_upcast_comparisons,
 // things are often more readable this way
+    decimal_literal_representation,
     option_unwrap_used,
     result_unwrap_used,
     shadow_reuse,
