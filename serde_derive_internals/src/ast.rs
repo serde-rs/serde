@@ -158,7 +158,7 @@ fn fields_from_ast<'a>(
             ident: field.ident,
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
-            original: &field,
+            original: field,
         })
         .collect()
 }

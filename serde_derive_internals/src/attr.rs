@@ -1167,7 +1167,9 @@ fn parse_lit_into_lifetimes(
         }
         return Ok(set);
     }
-    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string.value())))
+
+    cx.error(format!("failed to parse borrowed lifetimes: {:?}", string.value()));
+    Err(())
 }
 
 // Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
@@ -1289,7 +1291,8 @@ fn borrowable_lifetimes(
     let mut lifetimes = BTreeSet::new();
     collect_lifetimes(ty, &mut lifetimes);
     if lifetimes.is_empty() {
-        Err(cx.error(format!("field `{}` has no lifetimes to borrow", name)))
+        cx.error(format!("field `{}` has no lifetimes to borrow", name));
+        Err(())
     } else {
         Ok(lifetimes)
     }
