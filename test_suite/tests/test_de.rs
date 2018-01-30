@@ -8,7 +8,7 @@
 
 // https://github.com/rust-lang/rust/issues/47311
 #![allow(unused_parens)]
-#![cfg_attr(feature = "cargo-clippy", allow(double_parens))]
+#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation, double_parens))]
 
 #[macro_use]
 extern crate serde_derive;
