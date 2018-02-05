@@ -112,7 +112,9 @@
     stutter,
     use_self,
 // not practical
+    many_single_char_names,
     missing_docs_in_private_items,
+    similar_names,
 // alternative is not stable
     empty_enum,
     use_debug,
