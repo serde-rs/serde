@@ -84,6 +84,16 @@ about Serde. If IRC is not your thing or you don't get a good response, we are
 happy to respond to [GitHub issues](https://github.com/serde-rs/serde/issues/new)
 as well.
 
+## no-std
+Serde has a feature named std enabled by default. 
+In order to to use Serde in a no_std context the std feature has to be disabled.
+To do that add the following to your Cargo.toml:
+
+```
+[dependencies]
+serde = { version = "1.0.27", default-features = false }
+```
+
 ## License
 
 Serde is licensed under either of
