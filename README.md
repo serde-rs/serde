@@ -85,7 +85,7 @@ happy to respond to [GitHub issues](https://github.com/serde-rs/serde/issues/new
 as well.
 
 ## no-std
-Serde has a feature named std enabled by default. 
+Serde has a feature named std enabled by default.
 In order to to use Serde in a no_std context the std feature has to be disabled.
 To do that add the following to your Cargo.toml:
 
@@ -93,6 +93,14 @@ To do that add the following to your Cargo.toml:
 [dependencies]
 serde = { version = "1.0.27", default-features = false }
 ```
+
+Also, note that this implies that there is no memory allocator enabled by
+default. Therefore, if you have access to heap memory and want to use modules
+from the standard library such as String, Vec or similar you need to explicitly
+define which memory allocator to use. There are a number of different memory
+allocators available for that, for example
+[alloc](https://doc.rust-lang.org/nightly/alloc/index.html) that the standard
+library in Rust is using.
 
 ## License
 
