@@ -23,8 +23,8 @@
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.27")]
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
-#![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]
+#![cfg_attr(feature = "cargo-clippy", allow(enum_variant_names, redundant_field_names,
+                                            too_many_arguments, used_underscore_binding))]
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "256"]
 

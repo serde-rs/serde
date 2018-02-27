@@ -92,8 +92,8 @@
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy",
             allow(cast_lossless, const_static_lifetime, doc_markdown, linkedlist,
-                  needless_pass_by_value, type_complexity, unreadable_literal,
-                  zero_prefixed_literal))]
+                  needless_pass_by_value, redundant_field_names, type_complexity,
+                  unreadable_literal, zero_prefixed_literal))]
 // Whitelisted clippy_pedantic lints
 #![cfg_attr(feature = "cargo-clippy", allow(
 // integer and float ser/de requires these sorts of casts

@@ -7,7 +7,8 @@
 // except according to those terms.
 
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.19.0")]
-#![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity, doc_markdown, match_same_arms))]
+#![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity, doc_markdown, match_same_arms,
+                                            redundant_field_names))]
 
 #[macro_use]
 extern crate syn;

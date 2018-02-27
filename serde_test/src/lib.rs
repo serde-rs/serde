@@ -161,7 +161,8 @@
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
 // Whitelisted clippy_pedantic lints
 #![cfg_attr(feature = "cargo-clippy",
-            allow(missing_docs_in_private_items, stutter, use_debug, use_self))]
+            allow(empty_line_after_outer_attr, missing_docs_in_private_items,
+                  redundant_field_names, stutter, use_debug, use_self))]
 
 #[macro_use]
 extern crate serde;
