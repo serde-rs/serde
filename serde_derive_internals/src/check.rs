@@ -209,7 +209,7 @@ fn check_internally_tagged_variant_name_conflict(
                     }
                 }
             },
-            _ => {},
+            Style::Unit | Style::Newtype | Style::Tuple => {},
         }
     }
 }
