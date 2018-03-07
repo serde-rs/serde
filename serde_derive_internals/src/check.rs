@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use ast::{Data, Container, Style};
-use attr::Identifier;
+use attr::{Identifier, EnumTag};
 use Ctxt;
 
 /// Cross-cutting checks that require looking at more than a single attrs
@@ -16,6 +16,7 @@ pub fn check(cx: &Ctxt, cont: &Container) {
     check_getter(cx, cont);
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
+    check_internally_tagged_variant_name_conflict(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -166,6 +167,49 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                     ));
                 }
             }
+        }
+    }
+}
+
+fn check_internally_tagged_variant_name_conflict(
+    cx: &Ctxt,
+    cont: &Container,
+) {
+    let variants = match cont.data {
+        Data::Enum(ref variants) => variants,
+        Data::Struct(_, _) => return,
+    };
+
+    let tag = match *cont.attrs.tag() {
+        EnumTag::Internal { ref tag } => tag.as_str(),
+        EnumTag::External | EnumTag::Adjacent { .. } | EnumTag::None => return,
+    };
+
+    let diagnose_conflict = || {
+        let message = format!(
+            "variant field name `{}` conflicts with internal tag",
+            tag
+        );
+        cx.error(message);
+    };
+
+    for variant in variants {
+        match variant.style {
+            Style::Struct => {
+                for field in &variant.fields {
+                    let check_ser = !field.attrs.skip_serializing();
+                    let check_de = !field.attrs.skip_deserializing();
+                    let name = field.attrs.name();
+                    let ser_name = name.serialize_name();
+                    let de_name = name.deserialize_name();
+
+                    if check_ser && ser_name == tag || check_de && de_name == tag {
+                        diagnose_conflict();
+                        return;
+                    }
+                }
+            },
+            _ => {},
         }
     }
 }
