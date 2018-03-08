@@ -229,7 +229,7 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
 
     if type_tag == content_tag {
         let message = format!(
-            "Enum tags `{}` for type and content conflict with each other",
+            "enum tags `{}` for type and content conflict with each other",
             type_tag
         );
         cx.error(message);
