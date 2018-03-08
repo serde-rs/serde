@@ -16,7 +16,7 @@ pub fn check(cx: &Ctxt, cont: &Container) {
     check_getter(cx, cont);
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
-    check_internally_tagged_variant_name_conflict(cx, cont);
+    check_internal_tag_field_name_conflict(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -171,7 +171,11 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     }
 }
 
-fn check_internally_tagged_variant_name_conflict(
+/// The tag of an internally-tagged struct variant must not be
+/// the same as either one of its fields, as this would result in
+/// duplicate keys in the serialized output and/or ambiguity in
+/// the to-be-deserialized input.
+fn check_internal_tag_field_name_conflict(
     cx: &Ctxt,
     cont: &Container,
 ) {
