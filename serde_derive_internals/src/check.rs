@@ -17,6 +17,7 @@ pub fn check(cx: &Ctxt, cont: &Container) {
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
+    check_adjacent_tag_conflict(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -215,5 +216,22 @@ fn check_internal_tag_field_name_conflict(
             },
             Style::Unit | Style::Newtype | Style::Tuple => {},
         }
+    }
+}
+
+/// In the case of adjacently-tagged enums, the type and the
+/// contents tag must differ, for the same reason.
+fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
+    let (type_tag, content_tag) = match *cont.attrs.tag() {
+        EnumTag::Adjacent { ref tag, ref content } => (tag, content),
+        EnumTag::Internal { .. } | EnumTag::External | EnumTag::None => return,
+    };
+
+    if type_tag == content_tag {
+        let message = format!(
+            "Enum tags `{}` for type and content conflict with each other",
+            type_tag
+        );
+        cx.error(message);
     }
 }
