@@ -566,16 +566,14 @@ fn deserialize_seq(
         }
     });
 
-    // FIXME: parentheses around field values are because of
-    // https://github.com/rust-lang/rust/issues/47311
     let mut result = if is_struct {
         let names = fields.iter().map(|f| &f.ident);
         quote_spanned! {Span::call_site()=>
-            #type_path { #( #names: (#vars) ),* }
+            #type_path { #( #names: #vars ),* }
         }
     } else {
         quote_spanned! {Span::call_site()=>
-            #type_path ( #((#vars)),* )
+            #type_path ( #(#vars),* )
         }
     };
 
@@ -718,9 +716,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
         }
     };
 
-    // FIXME: parentheses around field values are because of
-    // https://github.com/rust-lang/rust/issues/47311
-    let mut result = quote_spanned!(Span::call_site()=> #type_path((#value)));
+    let mut result = quote_spanned!(Span::call_site()=> #type_path(#value));
     if params.has_getter {
         let this = &params.this;
         result = quote! {
@@ -2054,15 +2050,13 @@ fn deserialize_map(
             }
         });
 
-    // FIXME: parentheses around field values are because of
-    // https://github.com/rust-lang/rust/issues/47311
     let result = fields_names.iter().map(|&(field, ref name)| {
         let ident = field.ident.expect("struct contains unnamed fields");
         if field.attrs.skip_deserializing() {
             let value = Expr(expr_is_missing(field, cattrs));
-            quote_spanned!(Span::call_site()=> #ident: (#value))
+            quote_spanned!(Span::call_site()=> #ident: #value)
         } else {
-            quote_spanned!(Span::call_site()=> #ident: (#name))
+            quote_spanned!(Span::call_site()=> #ident: #name)
         }
     });
 

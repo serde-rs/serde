@@ -6,9 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-// https://github.com/rust-lang/rust/issues/47311
-#![allow(unused_parens)]
-#![cfg_attr(feature = "cargo-clippy", allow(double_parens, redundant_field_names))]
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
 
 #[macro_use]
 extern crate serde_derive;

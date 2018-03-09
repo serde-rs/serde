@@ -13,10 +13,6 @@
 #![deny(warnings)]
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
-// https://github.com/rust-lang/rust/issues/47311
-#![allow(unused_parens)]
-#![cfg_attr(feature = "cargo-clippy", allow(double_parens))]
-
 #[macro_use]
 extern crate serde_derive;
 
