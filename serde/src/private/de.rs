@@ -188,7 +188,7 @@ where
         }
     }
 
-    deserializer.deserialize_str(CowBytesVisitor)
+    deserializer.deserialize_bytes(CowBytesVisitor)
 }
 
 pub mod size_hint {
