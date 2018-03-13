@@ -8,6 +8,7 @@
 
 use std::fmt::Display;
 use std::cell::RefCell;
+use std::thread;
 
 #[derive(Default)]
 pub struct Ctxt {
@@ -48,7 +49,7 @@ impl Ctxt {
 
 impl Drop for Ctxt {
     fn drop(&mut self) {
-        if self.errors.borrow().is_some() {
+        if !thread::panicking() && self.errors.borrow().is_some() {
             panic!("forgot to check for errors");
         }
     }
