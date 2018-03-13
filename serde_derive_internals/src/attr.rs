@@ -936,7 +936,7 @@ impl Field {
         } else if is_rptr(&field.ty, is_str) || is_rptr(&field.ty, is_slice_u8) {
             // Types &str and &[u8] are always implicitly borrowed. No need for
             // a #[serde(borrow)].
-            borrowed_lifetimes = borrowable_lifetimes(cx, &ident, &field.ty).unwrap();
+            collect_lifetimes(&field.ty, &mut borrowed_lifetimes);
         }
 
         let ser_name = ser_name.get();
