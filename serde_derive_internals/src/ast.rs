@@ -63,6 +63,7 @@ impl<'a> Container<'a> {
             }
         };
 
+        let mut found_collect_field = false;
         match data {
             Data::Enum(ref mut variants) => for variant in variants {
                 variant.attrs.rename_by_rule(attrs.rename_all());
@@ -71,8 +72,18 @@ impl<'a> Container<'a> {
                 }
             },
             Data::Struct(_, ref mut fields) => for field in fields {
+                if field.ident.is_some() && field.ident.as_ref() == attrs.collect_unknown_fields_into() {
+                    field.attrs.mark_as_collect_field();
+                    found_collect_field = true;
+                }
                 field.attrs.rename_by_rule(attrs.rename_all());
             },
+        }
+
+        if attrs.collect_unknown_fields_into().is_some() && !found_collect_field {
+            cx.error(format!("collect_unknown_fields_into was defined but target \
+                             field `{}` does not exist",
+                             attrs.collect_unknown_fields_into().unwrap()));
         }
 
         let item = Container {
