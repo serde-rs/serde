@@ -1709,16 +1709,16 @@ fn deserialize_generated_identifier(
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
 
-    let (ignore_variant, fallthrough) = if is_variant || cattrs.deny_unknown_fields() {
-        (None, None)
+    let (ignore_variant, fallthrough, want_value) = if is_variant || cattrs.deny_unknown_fields() {
+        (None, None, false)
     } else if cattrs.unknown_fields_into().is_some() {
         let ignore_variant = quote!(__other(String),);
         let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value.to_string())));
-        (Some(ignore_variant), Some(fallthrough))
+        (Some(ignore_variant), Some(fallthrough), true)
     } else {
         let ignore_variant = quote!(__ignore,);
         let fallthrough = quote!(_serde::export::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
+        (Some(ignore_variant), Some(fallthrough), false)
     };
 
     let visitor_impl = Stmts(deserialize_identifier(
@@ -1727,6 +1727,7 @@ fn deserialize_generated_identifier(
         is_variant,
         fallthrough,
         struct_as_map_mode,
+        want_value,
     ));
 
     quote_block! {
@@ -1826,6 +1827,7 @@ fn deserialize_custom_identifier(
         is_variant,
         fallthrough,
         false,
+        false,
     ));
 
     quote_block! {
@@ -1856,6 +1858,7 @@ fn deserialize_identifier(
     is_variant: bool,
     fallthrough: Option<Tokens>,
     struct_as_map_mode: bool,
+    want_value: bool
 ) -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
     let field_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
@@ -1894,7 +1897,7 @@ fn deserialize_identifier(
         })
     };
 
-    let bytes_to_str = if fallthrough.is_some() && !struct_as_map_mode {
+    let bytes_to_str = if fallthrough.is_some() && !want_value {
         None
     } else {
         let conversion = quote! {
