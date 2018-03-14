@@ -66,6 +66,10 @@ impl<'c, T> Attr<'c, T> {
     fn get(self) -> Option<T> {
         self.value
     }
+
+    fn is_set(&self) -> bool {
+        self.value.is_some()
+    }
 }
 
 struct BoolAttr<'c>(Attr<'c, ()>);
@@ -105,6 +109,7 @@ impl Name {
 pub struct Container {
     name: Name,
     deny_unknown_fields: bool,
+    collect_unknown_fields_into: Option<syn::Ident>,
     default: Default,
     rename_all: RenameRule,
     ser_bound: Option<Vec<syn::WherePredicate>>,
@@ -179,6 +184,7 @@ impl Container {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
+        let mut collect_unknown_fields_into = Attr::none(cx, "collect_unknown_fields_into");
         let mut default = Attr::none(cx, "default");
         let mut rename_all = Attr::none(cx, "rename_all");
         let mut ser_bound = Attr::none(cx, "bound");
@@ -228,6 +234,19 @@ impl Container {
                     // Parse `#[serde(deny_unknown_fields)]`
                     Meta(Word(word)) if word == "deny_unknown_fields" => {
                         deny_unknown_fields.set_true();
+                        if collect_unknown_fields_into.is_set() {
+                            cx.error("#[serde(deny_unknown_fields)] cannot be combined with #[serde(collect_unknown_fields_into)]")
+                        }
+                    }
+
+                    // Parse `#[serde(collect_unknown_fields_into = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "collect_unknown_fields_into" => {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            collect_unknown_fields_into.set(Ident::new(&s.value(), Span::call_site()).into());
+                            if deny_unknown_fields.get() {
+                                cx.error("#[serde(deny_unknown_fields)] cannot be combined with #[serde(collect_unknown_fields_into)]")
+                            }
+                        }
                     }
 
                     // Parse `#[serde(default)]`
@@ -364,6 +383,7 @@ impl Container {
                 deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
             },
             deny_unknown_fields: deny_unknown_fields.get(),
+            collect_unknown_fields_into: collect_unknown_fields_into.get(),
             default: default.get().unwrap_or(Default::None),
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
@@ -386,6 +406,10 @@ impl Container {
 
     pub fn deny_unknown_fields(&self) -> bool {
         self.deny_unknown_fields
+    }
+
+    pub fn collect_unknown_fields_into(&self) -> Option<&syn::Ident> {
+        self.collect_unknown_fields_into.as_ref()
     }
 
     pub fn default(&self) -> &Default {
@@ -699,6 +723,7 @@ pub struct Field {
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::Path>,
+    collect_field: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -960,6 +985,7 @@ impl Field {
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
+            collect_field: false,
         }
     }
 
@@ -976,12 +1002,20 @@ impl Field {
         }
     }
 
+    pub fn mark_as_collect_field(&mut self) {
+        self.collect_field = true;
+    }
+
+    pub fn is_collect_field(&self) -> bool {
+        self.collect_field
+    }
+
     pub fn skip_serializing(&self) -> bool {
-        self.skip_serializing
+        self.skip_serializing || self.collect_field
     }
 
     pub fn skip_deserializing(&self) -> bool {
-        self.skip_deserializing
+        self.skip_deserializing || self.collect_field
     }
 
     pub fn skip_serializing_if(&self) -> Option<&syn::Path> {

@@ -259,6 +259,22 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
+    let collect_field = fields
+        .iter()
+        .filter(|&field| field.attrs.is_collect_field())
+        .next()
+        .map(|field| {
+            let ident = &field.ident;
+            quote! {
+                for (ref __key, ref __value) in &self.#ident {
+                    try!(_serde::ser::SerializeStruct::serialize_field(
+                        &mut __serde_state,
+                        unsafe { ::std::mem::transmute(__key.as_str()) },
+                        __value));
+                }
+            }
+        });
+
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
     let len = serialized_fields
@@ -275,6 +291,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
         #(#serialize_fields)*
+        #collect_field
         _serde::ser::SerializeStruct::end(__serde_state)
     }
 }

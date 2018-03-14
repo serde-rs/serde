@@ -1693,12 +1693,16 @@ fn deserialize_generated_identifier(
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
 
-    let (ignore_variant, fallthrough) = if is_variant || cattrs.deny_unknown_fields() {
-        (None, None)
+    let (ignore_variant, fallthrough, need_value) = if is_variant || cattrs.deny_unknown_fields() {
+        (None, None, true)
+    } else if cattrs.collect_unknown_fields_into().is_some() {
+        let ignore_variant = quote!(__other(String),);
+        let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value.to_string())));
+        (Some(ignore_variant), Some(fallthrough), true)
     } else {
         let ignore_variant = quote!(__ignore,);
         let fallthrough = quote!(_serde::export::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
+        (Some(ignore_variant), Some(fallthrough), false)
     };
 
     let visitor_impl = Stmts(deserialize_identifier(
@@ -1706,6 +1710,7 @@ fn deserialize_generated_identifier(
         fields,
         is_variant,
         fallthrough,
+        need_value
     ));
 
     quote_block! {
@@ -1799,11 +1804,13 @@ fn deserialize_custom_identifier(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let need_value = fallthrough.is_none();
     let visitor_impl = Stmts(deserialize_identifier(
         &this,
         &names_idents,
         is_variant,
         fallthrough,
+        need_value,
     ));
 
     quote_block! {
@@ -1833,6 +1840,7 @@ fn deserialize_identifier(
     fields: &[(String, Ident)],
     is_variant: bool,
     fallthrough: Option<Tokens>,
+    need_value: bool,
 ) -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
     let field_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
@@ -1867,7 +1875,7 @@ fn deserialize_identifier(
         }
     };
 
-    let bytes_to_str = if fallthrough.is_some() {
+    let bytes_to_str = if !need_value {
         None
     } else {
         let conversion = quote! {
@@ -1973,6 +1981,19 @@ fn deserialize_map(
             }
         });
 
+    // If we have a collect into, we also need a container that can
+    // hold the data we accumulate.
+    let mut let_collect = None;
+    for &(field, _) in fields_names.iter() {
+        if field.attrs.is_collect_field() {
+            let field_ty = &field.ty;
+            let_collect = Some(quote! {
+                let mut __collect: #field_ty = Default::default();
+            });
+            break;
+        }
+    }
+
     // Match arms to extract a value for a field.
     let value_arms = fields_names
         .iter()
@@ -2010,6 +2031,12 @@ fn deserialize_map(
     // Visit ignored values to consume them
     let ignored_arm = if cattrs.deny_unknown_fields() {
         None
+    } else if cattrs.collect_unknown_fields_into().is_some() {
+        Some(quote! {
+            __Field::__other(__name) => {
+                __collect.extend(_serde::export::once((__name, try!(_serde::de::MapAccess::next_value(&mut __map)))));
+            }
+        })
     } else {
         Some(quote! {
             _ => { let _ = try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map)); }
@@ -2052,7 +2079,9 @@ fn deserialize_map(
 
     let result = fields_names.iter().map(|&(field, ref name)| {
         let ident = field.ident.expect("struct contains unnamed fields");
-        if field.attrs.skip_deserializing() {
+        if field.attrs.is_collect_field() {
+            quote_spanned!(Span::call_site()=> #ident: __collect)
+        } else if field.attrs.skip_deserializing() {
             let value = Expr(expr_is_missing(field, cattrs));
             quote_spanned!(Span::call_site()=> #ident: #value)
         } else {
@@ -2084,6 +2113,7 @@ fn deserialize_map(
 
     quote_block! {
         #(#let_values)*
+        #let_collect
 
         #match_keys
 
