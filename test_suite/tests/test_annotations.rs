@@ -12,6 +12,7 @@
 extern crate serde_derive;
 
 extern crate serde;
+use std::collections::HashMap;
 use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use self::serde::de::{self, Unexpected};
 
@@ -92,6 +93,14 @@ where
     a4: D,
     #[serde(skip_deserializing, default = "MyDefault::my_default")]
     a5: E,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(repr="map", unknown_fields_into="extra")]
+struct CollectOther {
+    a: u32,
+    b: u32,
+    extra: HashMap<String, u32>,
 }
 
 #[test]
@@ -1266,4 +1275,36 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)), &[Token::None]);
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
+}
+
+#[test]
+fn test_collect_other() {
+    let mut extra = HashMap::new();
+    extra.insert("c".into(), 3);
+    assert_de_tokens(
+        &CollectOther { a: 1, b: 2, extra: extra.clone() },
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::U32(2),
+            Token::Str("c"),
+            Token::U32(3),
+            Token::MapEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &CollectOther { a: 1, b: 2, extra },
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::U32(2),
+            Token::Str("c"),
+            Token::U32(3),
+            Token::MapEnd,
+        ],
+    );
 }
