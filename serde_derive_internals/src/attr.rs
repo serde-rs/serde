@@ -15,6 +15,7 @@ use syn::punctuated::Punctuated;
 use syn::synom::{Synom, ParseError};
 use std::collections::BTreeSet;
 use std::str::FromStr;
+use std::fmt;
 use proc_macro2::{Span, TokenStream, TokenNode, TokenTree};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
@@ -27,6 +28,7 @@ use proc_macro2::{Span, TokenStream, TokenNode, TokenTree};
 
 pub use case::RenameRule;
 
+#[derive(Copy, Clone)]
 struct Attr<'c, T> {
     cx: &'c Ctxt,
     name: &'static str,
@@ -66,6 +68,10 @@ impl<'c, T> Attr<'c, T> {
     fn get(self) -> Option<T> {
         self.value
     }
+
+    fn is_set(&self) -> bool {
+        self.value.is_some()
+    }
 }
 
 struct BoolAttr<'c>(Attr<'c, ()>);
@@ -101,6 +107,35 @@ impl Name {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum ContainerRepr {
+    Auto,
+    Struct,
+    Map,
+}
+
+impl fmt::Display for ContainerRepr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", match *self {
+            ContainerRepr::Auto => "auto",
+            ContainerRepr::Struct => "struct",
+            ContainerRepr::Map => "map",
+        })
+    }
+}
+
+impl FromStr for ContainerRepr {
+    type Err = ();
+    fn from_str(s: &str) -> Result<ContainerRepr, ()> {
+        match s {
+            "auto" => Ok(ContainerRepr::Auto),
+            "struct" => Ok(ContainerRepr::Struct),
+            "map" => Ok(ContainerRepr::Map),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Represents container (e.g. struct) attribute information
 pub struct Container {
     name: Name,
@@ -114,6 +149,8 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    repr: ContainerRepr,
+    unknown_fields_into: Option<syn::Ident>,
 }
 
 /// Styles of representing an enum.
@@ -191,6 +228,8 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
+        let mut repr = Attr::none(cx, "repr");
+        let mut unknown_fields_into = Attr::none(cx, "unknown_fields_into");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -228,6 +267,31 @@ impl Container {
                     // Parse `#[serde(deny_unknown_fields)]`
                     Meta(Word(word)) if word == "deny_unknown_fields" => {
                         deny_unknown_fields.set_true();
+                        if unknown_fields_into.is_set() {
+                            cx.error("#[serde(deny_unknown_fields)] cannot be combined \
+                                     with #[serde(unknown_fields_into)]");
+                        }
+                    }
+
+                    // Parse `#[serde(unknown_fields_into = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "unknown_fields_into" => {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            unknown_fields_into.set(Ident::new(&s.value(), Span::call_site()).into());
+                            if deny_unknown_fields.get() {
+                                cx.error("#[serde(deny_unknown_fields)] cannot be combined \
+                                         with #[serde(unknown_fields_into)]");
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(repr = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "repr" => {
+                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
+                            match ContainerRepr::from_str(&s.value()) {
+                                Ok(value) => repr.set(value),
+                                Err(()) => cx.error(format!("unknown value for #[serde(repr = {})]", s.value()))
+                            }
+                        }
                     }
 
                     // Parse `#[serde(default)]`
@@ -358,6 +422,10 @@ impl Container {
             }
         }
 
+        if unknown_fields_into.get().is_some() && repr.get() != Some(ContainerRepr::Map) {
+            cx.error("#[serde(unknown_fields_into)] requires repr=\"map\"");
+        }
+
         Container {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
@@ -373,6 +441,8 @@ impl Container {
             type_into: type_into.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, &field_identifier, &variant_identifier),
+            repr: repr.get().unwrap_or(ContainerRepr::Auto),
+            unknown_fields_into: unknown_fields_into.get(),
         }
     }
 
@@ -418,6 +488,14 @@ impl Container {
 
     pub fn identifier(&self) -> Identifier {
         self.identifier
+    }
+
+    pub fn repr(&self) -> ContainerRepr {
+        self.repr
+    }
+
+    pub fn unknown_fields_into(&self) -> Option<&syn::Ident> {
+        self.unknown_fields_into.as_ref()
     }
 }
 
@@ -699,6 +777,7 @@ pub struct Field {
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::ExprPath>,
+    collection_field: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -970,11 +1049,16 @@ impl Field {
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
+            collection_field: false,
         }
     }
 
     pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    pub fn mark_as_collection_field(&mut self) {
+        self.collection_field = true;
     }
 
     pub fn rename_by_rule(&mut self, rule: &RenameRule) {
@@ -987,11 +1071,15 @@ impl Field {
     }
 
     pub fn skip_serializing(&self) -> bool {
-        self.skip_serializing
+        self.skip_serializing || self.collection_field
     }
 
     pub fn skip_deserializing(&self) -> bool {
-        self.skip_deserializing
+        self.skip_deserializing || self.collection_field
+    }
+
+    pub fn collection_field(&self) -> bool {
+        self.collection_field
     }
 
     pub fn skip_serializing_if(&self) -> Option<&syn::ExprPath> {
