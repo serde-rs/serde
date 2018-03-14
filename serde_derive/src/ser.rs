@@ -266,7 +266,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         .map(|field| {
             let ident = &field.ident;
             quote! {
-                for (ref __key, ref __value) in self.#ident.iter() {
+                for (ref __key, ref __value) in &self.#ident {
                     try!(_serde::ser::SerializeStruct::serialize_field(
                         &mut __serde_state,
                         unsafe { ::std::mem::transmute(__key.as_str()) },
