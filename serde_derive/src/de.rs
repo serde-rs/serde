@@ -2122,7 +2122,7 @@ fn deserialize_map(
     let result = fields_names.iter().map(|&(field, ref name)| {
         let ident = field.ident.expect("struct contains unnamed fields");
         if field.attrs.collection_field() {
-            quote_spanned!(Span::call_site()=> #ident: __collect)
+            quote_spanned!(Span::def_site()=> #ident: __collect)
         } else if field.attrs.skip_deserializing() {
             let value = Expr(expr_is_missing(field, cattrs));
             quote_spanned!(Span::call_site()=> #ident: #value)
