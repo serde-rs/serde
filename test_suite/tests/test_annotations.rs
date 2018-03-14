@@ -1295,7 +1295,7 @@ fn test_collect_other() {
         ],
     );
     assert_ser_tokens(
-        &CollectOther { a: 1, b: 2, extra: extra },
+        &CollectOther { a: 1, b: 2, extra },
         &[
             Token::Map { len: None },
             Token::Str("a"),
