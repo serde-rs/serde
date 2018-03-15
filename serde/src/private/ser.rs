@@ -1050,16 +1050,16 @@ where
 impl<'a, M> Serializer for FlatMapSerializer<'a, M>
     where M: SerializeMap + 'a
 {
-    type Ok = M::Ok;
+    type Ok = ();
     type Error = M::Error;
 
-    type SerializeSeq = Impossible<M::Ok, M::Error>;
-    type SerializeTuple = Impossible<M::Ok, M::Error>;
-    type SerializeTupleStruct = Impossible<M::Ok, M::Error>;
+    type SerializeSeq = Impossible<Self::Ok, M::Error>;
+    type SerializeTuple = Impossible<Self::Ok, M::Error>;
+    type SerializeTupleStruct = Impossible<Self::Ok, M::Error>;
     type SerializeMap = FlatMapSerializeMap<'a, M>;
     type SerializeStruct = FlatMapSerializeStruct<'a, M>;
-    type SerializeTupleVariant = Impossible<M::Ok, M::Error>;
-    type SerializeStructVariant = Impossible<M::Ok, M::Error>;
+    type SerializeTupleVariant = Impossible<Self::Ok, M::Error>;
+    type SerializeStructVariant = Impossible<Self::Ok, M::Error>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Boolean))
@@ -1226,7 +1226,7 @@ pub struct FlatMapSerializeMap<'a, M: 'a>(&'a mut M);
 impl<'a, M> ser::SerializeMap for FlatMapSerializeMap<'a, M>
     where M: SerializeMap + 'a
 {
-    type Ok = M::Ok;
+    type Ok = ();
     type Error = M::Error;
 
     fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
@@ -1243,8 +1243,8 @@ impl<'a, M> ser::SerializeMap for FlatMapSerializeMap<'a, M>
         self.0.serialize_value(value)
     }
 
-    fn end(self) -> Result<M::Ok, Self::Error> {
-        self.0.end()
+    fn end(self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
 
@@ -1255,7 +1255,7 @@ pub struct FlatMapSerializeStruct<'a, M: 'a>(&'a mut M);
 impl<'a, M> ser::SerializeStruct for FlatMapSerializeStruct<'a, M>
     where M: SerializeMap + 'a
 {
-    type Ok = M::Ok;
+    type Ok = ();
     type Error = M::Error;
 
     fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
@@ -1265,7 +1265,7 @@ impl<'a, M> ser::SerializeStruct for FlatMapSerializeStruct<'a, M>
         self.0.serialize_entry(key, value)
     }
 
-    fn end(self) -> Result<M::Ok, Self::Error> {
-        self.0.end()
+    fn end(self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
