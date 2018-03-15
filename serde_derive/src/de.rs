@@ -2122,7 +2122,7 @@ fn deserialize_map(
             let field_ty = field.ty;
             quote! {
                 let #name: #field_ty = try!(_serde::de::Deserialize::deserialize(
-                    _serde::private::de::FlatMapDeserializer::new(
+                    _serde::private::de::FlatMapDeserializer(
                         &mut __collect,
                         _serde::export::PhantomData)));
             }
