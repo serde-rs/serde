@@ -1709,12 +1709,12 @@ fn deserialize_generated_identifier(
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
 
-    let (ignore_variant, fallthrough, want_value) = if is_variant || cattrs.deny_unknown_fields() {
-        (None, None, false)
-    } else if cattrs.has_flatten() {
+    let (ignore_variant, fallthrough, want_value) = if cattrs.has_flatten() {
         let ignore_variant = quote!(__other(String),);
         let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value.to_string())));
         (Some(ignore_variant), Some(fallthrough), true)
+    } else if is_variant || cattrs.deny_unknown_fields() {
+        (None, None, false)
     } else {
         let ignore_variant = quote!(__ignore,);
         let fallthrough = quote!(_serde::export::Ok(__Field::__ignore));
@@ -2026,7 +2026,7 @@ fn deserialize_map(
     // Collect contents for flatten fields into a buffer
     let let_collect = if cattrs.has_flatten() {
         Some(quote! {
-            let mut __collect = Vec::<_serde::private::de::Content>::new();
+            let mut __collect = Vec::<(String, _serde::private::de::Content)>::new();
         })
     } else {
         None
@@ -2067,14 +2067,14 @@ fn deserialize_map(
         });
 
     // Visit ignored values to consume them
-    let ignored_arm = if cattrs.deny_unknown_fields() {
-        None
-    } else if cattrs.has_flatten() {
+    let ignored_arm = if cattrs.has_flatten() {
         Some(quote! {
             __Field::__other(__name) => {
                 __collect.push((__name, try!(_serde::de::MapAccess::next_value(&mut __map))));
             }
         })
+    } else if cattrs.deny_unknown_fields() {
+        None
     } else {
         Some(quote! {
             _ => { let _ = try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map)); }
@@ -2128,11 +2128,11 @@ fn deserialize_map(
             }
         });
 
-    let collected_deny_unknown_fields = if cattrs.deny_unknown_fields() {
+    let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
         Some(quote! {
             if let Some((__key, _)) = __collect.into_iter().next() {
                 return _serde::export::Err(
-                    _serde::de::Error::unknown_field_in_flattened_structure(__key));
+                    _serde::de::Error::unknown_field_in_flattened_structure(&__key));
             }
         })
     } else {
