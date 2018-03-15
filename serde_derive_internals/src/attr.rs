@@ -243,7 +243,7 @@ impl Container {
 
                     // Parse `#[serde(default = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "default" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             match item.data {
                                 syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Named(_), .. }) => {
                                     default.set(Default::Path(path));
@@ -510,8 +510,8 @@ pub struct Variant {
     skip_deserializing: bool,
     skip_serializing: bool,
     other: bool,
-    serialize_with: Option<syn::Path>,
-    deserialize_with: Option<syn::Path>,
+    serialize_with: Option<syn::ExprPath>,
+    deserialize_with: Option<syn::ExprPath>,
     borrow: Option<syn::Meta>,
 }
 
@@ -577,26 +577,26 @@ impl Variant {
 
                     // Parse `#[serde(with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.segments.push(Ident::new("serialize", Span::call_site()).into());
+                            ser_path.path.segments.push(Ident::new("serialize", Span::call_site()).into());
                             serialize_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.segments.push(Ident::new("deserialize", Span::call_site()).into());
+                            de_path.path.segments.push(Ident::new("deserialize", Span::call_site()).into());
                             deserialize_with.set(de_path);
                         }
                     }
 
                     // Parse `#[serde(serialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "serialize_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             serialize_with.set(path);
                         }
                     }
 
                     // Parse `#[serde(deserialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "deserialize_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             deserialize_with.set(path);
                         }
                     }
@@ -675,11 +675,11 @@ impl Variant {
         self.other
     }
 
-    pub fn serialize_with(&self) -> Option<&syn::Path> {
+    pub fn serialize_with(&self) -> Option<&syn::ExprPath> {
         self.serialize_with.as_ref()
     }
 
-    pub fn deserialize_with(&self) -> Option<&syn::Path> {
+    pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
         self.deserialize_with.as_ref()
     }
 }
@@ -691,14 +691,14 @@ pub struct Field {
     de_renamed: bool,
     skip_serializing: bool,
     skip_deserializing: bool,
-    skip_serializing_if: Option<syn::Path>,
+    skip_serializing_if: Option<syn::ExprPath>,
     default: Default,
-    serialize_with: Option<syn::Path>,
-    deserialize_with: Option<syn::Path>,
+    serialize_with: Option<syn::ExprPath>,
+    deserialize_with: Option<syn::ExprPath>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
-    getter: Option<syn::Path>,
+    getter: Option<syn::ExprPath>,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -708,7 +708,7 @@ pub enum Default {
     /// The default is given by `std::default::Default::default()`.
     Default,
     /// The default is given by this function.
-    Path(syn::Path),
+    Path(syn::ExprPath),
 }
 
 impl Field {
@@ -775,7 +775,7 @@ impl Field {
 
                     // Parse `#[serde(default = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "default" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             default.set(Default::Path(path));
                         }
                     }
@@ -798,33 +798,33 @@ impl Field {
 
                     // Parse `#[serde(skip_serializing_if = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "skip_serializing_if" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             skip_serializing_if.set(path);
                         }
                     }
 
                     // Parse `#[serde(serialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "serialize_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             serialize_with.set(path);
                         }
                     }
 
                     // Parse `#[serde(deserialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "deserialize_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             deserialize_with.set(path);
                         }
                     }
 
                     // Parse `#[serde(with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.segments.push(Ident::new("serialize", Span::call_site()).into());
+                            ser_path.path.segments.push(Ident::new("serialize", Span::call_site()).into());
                             serialize_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.segments.push(Ident::new("deserialize", Span::call_site()).into());
+                            de_path.path.segments.push(Ident::new("deserialize", Span::call_site()).into());
                             deserialize_with.set(de_path);
                         }
                     }
@@ -873,7 +873,7 @@ impl Field {
 
                     // Parse `#[serde(getter = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "getter" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             getter.set(path);
                         }
                     }
@@ -921,7 +921,12 @@ impl Field {
                 path.segments.push(Ident::new("private", Span::def_site()).into());
                 path.segments.push(Ident::new("de", Span::def_site()).into());
                 path.segments.push(Ident::new("borrow_cow_str", Span::def_site()).into());
-                deserialize_with.set_if_none(path);
+                let expr = syn::ExprPath {
+                    attrs: Vec::new(),
+                    qself: None,
+                    path: path,
+                };
+                deserialize_with.set_if_none(expr);
             } else if is_cow(&field.ty, is_slice_u8) {
                 let mut path = syn::Path {
                     leading_colon: None,
@@ -931,7 +936,12 @@ impl Field {
                 path.segments.push(Ident::new("private", Span::def_site()).into());
                 path.segments.push(Ident::new("de", Span::def_site()).into());
                 path.segments.push(Ident::new("borrow_cow_bytes", Span::def_site()).into());
-                deserialize_with.set_if_none(path);
+                let expr = syn::ExprPath {
+                    attrs: Vec::new(),
+                    qself: None,
+                    path: path,
+                };
+                deserialize_with.set_if_none(expr);
             }
         } else if is_rptr(&field.ty, is_str) || is_rptr(&field.ty, is_slice_u8) {
             // Types &str and &[u8] are always implicitly borrowed. No need for
@@ -984,7 +994,7 @@ impl Field {
         self.skip_deserializing
     }
 
-    pub fn skip_serializing_if(&self) -> Option<&syn::Path> {
+    pub fn skip_serializing_if(&self) -> Option<&syn::ExprPath> {
         self.skip_serializing_if.as_ref()
     }
 
@@ -992,11 +1002,11 @@ impl Field {
         &self.default
     }
 
-    pub fn serialize_with(&self) -> Option<&syn::Path> {
+    pub fn serialize_with(&self) -> Option<&syn::ExprPath> {
         self.serialize_with.as_ref()
     }
 
-    pub fn deserialize_with(&self) -> Option<&syn::Path> {
+    pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
         self.deserialize_with.as_ref()
     }
 
@@ -1012,7 +1022,7 @@ impl Field {
         &self.borrowed_lifetimes
     }
 
-    pub fn getter(&self) -> Option<&syn::Path> {
+    pub fn getter(&self) -> Option<&syn::ExprPath> {
         self.getter.as_ref()
     }
 }
@@ -1103,6 +1113,11 @@ fn get_lit_str<'a>(
 }
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Path, ()> {
+    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    parse_lit_str(string).map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
+}
+
+fn parse_lit_into_expr_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::ExprPath, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
     parse_lit_str(string).map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
 }

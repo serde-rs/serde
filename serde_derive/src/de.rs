@@ -2273,7 +2273,7 @@ fn field_i(i: usize) -> Ident {
 fn wrap_deserialize_with(
     params: &Parameters,
     value_ty: &Tokens,
-    deserialize_with: &syn::Path,
+    deserialize_with: &syn::ExprPath,
 ) -> (Tokens, Tokens) {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -2308,7 +2308,7 @@ fn wrap_deserialize_with(
 fn wrap_deserialize_field_with(
     params: &Parameters,
     field_ty: &syn::Type,
-    deserialize_with: &syn::Path,
+    deserialize_with: &syn::ExprPath,
 ) -> (Tokens, Tokens) {
     wrap_deserialize_with(params, &quote!(#field_ty), deserialize_with)
 }
@@ -2316,7 +2316,7 @@ fn wrap_deserialize_field_with(
 fn wrap_deserialize_variant_with(
     params: &Parameters,
     variant: &Variant,
-    deserialize_with: &syn::Path,
+    deserialize_with: &syn::ExprPath,
 ) -> (Tokens, Tokens, Tokens) {
     let this = &params.this;
     let variant_ident = &variant.ident;

@@ -528,6 +528,13 @@ fn test_gen() {
         marker: PhantomData<T>,
     }
     assert::<TypeMacro<X>>();
+
+    #[derive(Serialize)]
+    struct BigArray {
+        #[serde(serialize_with = "<[_]>::serialize")]
+        array: [u8; 256],
+    }
+    assert_ser::<BigArray>();
 }
 
 //////////////////////////////////////////////////////////////////////////

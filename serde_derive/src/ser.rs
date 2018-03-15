@@ -902,7 +902,7 @@ fn serialize_struct_visitor(
 fn wrap_serialize_field_with(
     params: &Parameters,
     field_ty: &syn::Type,
-    serialize_with: &syn::Path,
+    serialize_with: &syn::ExprPath,
     field_expr: &Tokens,
 ) -> Tokens {
     wrap_serialize_with(params, serialize_with, &[field_ty], &[quote!(#field_expr)])
@@ -910,7 +910,7 @@ fn wrap_serialize_field_with(
 
 fn wrap_serialize_variant_with(
     params: &Parameters,
-    serialize_with: &syn::Path,
+    serialize_with: &syn::ExprPath,
     variant: &Variant,
 ) -> Tokens {
     let field_tys: Vec<_> = variant.fields.iter().map(|field| field.ty).collect();
@@ -935,7 +935,7 @@ fn wrap_serialize_variant_with(
 
 fn wrap_serialize_with(
     params: &Parameters,
-    serialize_with: &syn::Path,
+    serialize_with: &syn::ExprPath,
     field_tys: &[&syn::Type],
     field_exprs: &[Tokens],
 ) -> Tokens {
