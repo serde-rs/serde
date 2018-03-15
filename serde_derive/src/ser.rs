@@ -286,7 +286,7 @@ fn serialize_struct_as_struct(params: &Parameters, fields: &[Field], cattrs: &at
     }
 }
 
-fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
+fn serialize_struct_as_map(params: &Parameters, fields: &[Field], _cattrs: &attr::Container) -> Fragment {
     let serialize_fields = serialize_struct_visitor(
         fields,
         params,
@@ -299,28 +299,13 @@ fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr:
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
-    let mut collect_extra = None;
-    if cattrs.unknown_fields_into().is_some() {
-        if let Some(field) = fields
-            .iter()
-            .filter(|field| field.attrs.collection_field())
-            .next()
-        {
-            let ident = &field.ident;
-            collect_extra = Some(quote! {
-                for (ref __key, ref __value) in &self.#ident {
-                    try!(_serde::ser::SerializeMap::serialize_entry(
-                        &mut __serde_state,
-                        __key,
-                        __value));
-                }
-            });
-        }
-    }
-
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = if collect_extra.is_some() {
+    let has_flatten = fields
+        .iter()
+        .any(|field| field.attrs.flatten());
+
+    let len = if has_flatten {
         quote!(None)
     } else {
         let len = serialized_fields
@@ -339,7 +324,6 @@ fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr:
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_map(__serializer, #len));
         #(#serialize_fields)*
-        #collect_extra
         _serde::ser::SerializeMap::end(__serde_state)
     }
 }
@@ -924,6 +908,7 @@ fn serialize_struct_visitor(
         .filter(|&field| !field.attrs.skip_serializing())
         .map(|field| {
             let field_ident = field.ident.expect("struct has unnamed field");
+
             let mut field_expr = if is_enum {
                 quote!(#field_ident)
             } else {
@@ -942,9 +927,15 @@ fn serialize_struct_visitor(
             }
 
             let span = Span::def_site().located_at(field.original.span());
-            let func = struct_trait.serialize_field(span);
-            let ser = quote! {
-                try!(#func(&mut __serde_state, #key_expr, #field_expr));
+            let ser = if field.attrs.flatten() {
+                quote! {
+                    try!((#field_expr).serialize(_serde::private::ser::FlatSerializer(&mut __serde_state)));
+                }
+            } else {
+                let func = struct_trait.serialize_field(span);
+                quote! {
+                    try!(#func(&mut __serde_state, #key_expr, #field_expr));
+                }
             };
 
             match skip {
