@@ -925,7 +925,7 @@ fn serialize_struct_visitor(
             let span = Span::def_site().located_at(field.original.span());
             let ser = if field.attrs.flatten() {
                 quote! {
-                    try!((#field_expr).serialize(_serde::private::ser::FlatSerializer(&mut __serde_state)));
+                    try!((#field_expr).serialize(_serde::private::ser::FlatSerializer::new(&mut __serde_state)));
                 }
             } else {
                 let func = struct_trait.serialize_field(span);

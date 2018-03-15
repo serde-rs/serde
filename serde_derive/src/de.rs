@@ -1711,7 +1711,7 @@ fn deserialize_generated_identifier(
 
     let (ignore_variant, fallthrough, want_value) = if is_variant || cattrs.deny_unknown_fields() {
         (None, None, false)
-    } else if cattrs.unknown_fields_into().is_some() {
+    } else if cattrs.has_flatten() {
         let ignore_variant = quote!(__other(String),);
         let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value.to_string())));
         (Some(ignore_variant), Some(fallthrough), true)
@@ -2023,18 +2023,14 @@ fn deserialize_map(
             }
         });
 
-    // If we have a collect into, we also need a container that can
-    // hold the data we accumulate.
-    let mut let_collect = None;
-    for &(field, _) in fields_names.iter() {
-        if field.attrs.collection_field() {
-            let field_ty = &field.ty;
-            let_collect = Some(quote! {
-                let mut __collect: #field_ty = Default::default();
-            });
-            break;
-        }
-    }
+    // Collect contents for flatten fields into a buffer
+    let let_collect = if cattrs.has_flatten() {
+        Some(quote! {
+            let mut __collect = Vec::<_serde::private::de::Content>::new();
+        })
+    } else {
+        None
+    };
 
     // Match arms to extract a value for a field.
     let value_arms = fields_names
@@ -2073,10 +2069,10 @@ fn deserialize_map(
     // Visit ignored values to consume them
     let ignored_arm = if cattrs.deny_unknown_fields() {
         None
-    } else if cattrs.unknown_fields_into().is_some() {
+    } else if cattrs.has_flatten() {
         Some(quote! {
             __Field::__other(__name) => {
-                __collect.extend(_serde::export::once((__name, try!(_serde::de::MapAccess::next_value(&mut __map)))));
+                __collect.push((__name, try!(_serde::de::MapAccess::next_value(&mut __map))));
             }
         })
     } else {
@@ -2119,11 +2115,33 @@ fn deserialize_map(
             }
         });
 
+    let extract_collected = fields_names
+        .iter()
+        .filter(|&&(field, _)| field.attrs.flatten())
+        .map(|&(field, ref name)| {
+            let field_ty = field.ty;
+            quote! {
+                let #name: #field_ty = try!(_serde::de::Deserialize::deserialize(
+                    _serde::private::de::FlatMapDeserializer::new(
+                        &mut __collect,
+                        _serde::export::PhantomData)));
+            }
+        });
+
+    let collected_deny_unknown_fields = if cattrs.deny_unknown_fields() {
+        Some(quote! {
+            if let Some((__key, _)) = __collect.into_iter().next() {
+                return _serde::export::Err(
+                    _serde::de::Error::unknown_field_in_flattened_structure(__key));
+            }
+        })
+    } else {
+        None
+    };
+
     let result = fields_names.iter().map(|&(field, ref name)| {
         let ident = field.ident.expect("struct contains unnamed fields");
-        if field.attrs.collection_field() {
-            quote_spanned!(Span::def_site()=> #ident: __collect)
-        } else if field.attrs.skip_deserializing() {
+        if field.attrs.skip_deserializing() && !field.attrs.flatten() {
             let value = Expr(expr_is_missing(field, cattrs));
             quote_spanned!(Span::call_site()=> #ident: #value)
         } else {
@@ -2163,6 +2181,10 @@ fn deserialize_map(
         #let_default
 
         #(#extract_values)*
+
+        #(#extract_collected)*
+
+        #collected_deny_unknown_fields
 
         _serde::export::Ok(#result)
     }
