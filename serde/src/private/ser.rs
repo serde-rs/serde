@@ -1032,12 +1032,12 @@ mod content {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapSerializer<M>(M);
+pub struct FlatMapSerializer<'a, M: 'a>(pub &'a mut M);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<M> FlatMapSerializer<M>
+impl<'a, M> FlatMapSerializer<'a, M>
 where
-    M: SerializeMap
+    M: SerializeMap + 'a
 {
     fn bad_type(self, what: Unsupported) -> M::Error {
         ser::Error::custom(format_args!(
@@ -1047,8 +1047,8 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<M> Serializer for FlatMapSerializer<M>
-    where M: SerializeMap
+impl<'a, M> Serializer for FlatMapSerializer<'a, M>
+    where M: SerializeMap + 'a
 {
     type Ok = M::Ok;
     type Error = M::Error;
@@ -1056,8 +1056,8 @@ impl<M> Serializer for FlatMapSerializer<M>
     type SerializeSeq = Impossible<M::Ok, M::Error>;
     type SerializeTuple = Impossible<M::Ok, M::Error>;
     type SerializeTupleStruct = Impossible<M::Ok, M::Error>;
-    type SerializeMap = FlatMapSerializeMap<M>;
-    type SerializeStruct = FlatMapSerializeStruct<M>;
+    type SerializeMap = FlatMapSerializeMap<'a, M>;
+    type SerializeStruct = FlatMapSerializeStruct<'a, M>;
     type SerializeTupleVariant = Impossible<M::Ok, M::Error>;
     type SerializeStructVariant = Impossible<M::Ok, M::Error>;
 
@@ -1220,11 +1220,11 @@ impl<M> Serializer for FlatMapSerializer<M>
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapSerializeMap<M>(M);
+pub struct FlatMapSerializeMap<'a, M: 'a>(&'a mut M);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<M> ser::SerializeMap for FlatMapSerializeMap<M>
-    where M: SerializeMap
+impl<'a, M> ser::SerializeMap for FlatMapSerializeMap<'a, M>
+    where M: SerializeMap + 'a
 {
     type Ok = M::Ok;
     type Error = M::Error;
@@ -1249,11 +1249,11 @@ impl<M> ser::SerializeMap for FlatMapSerializeMap<M>
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapSerializeStruct<M>(M);
+pub struct FlatMapSerializeStruct<'a, M: 'a>(&'a mut M);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<M> ser::SerializeStruct for FlatMapSerializeStruct<M>
-    where M: SerializeMap
+impl<'a, M> ser::SerializeStruct for FlatMapSerializeStruct<'a, M>
+    where M: SerializeMap + 'a
 {
     type Ok = M::Ok;
     type Error = M::Error;
