@@ -63,7 +63,7 @@ impl<'a> Container<'a> {
             }
         };
 
-        let mut have_collection_field = false;
+        let mut has_flatten = false;
         match data {
             Data::Enum(ref mut variants) => for variant in variants {
                 variant.attrs.rename_by_rule(attrs.rename_all());
@@ -72,18 +72,17 @@ impl<'a> Container<'a> {
                 }
             },
             Data::Struct(_, ref mut fields) => for field in fields {
-                if field.ident.is_some() && field.ident.as_ref() == attrs.unknown_fields_into() {
-                    field.attrs.mark_as_collection_field();
-                    have_collection_field = true;
+                if field.attrs.flatten() {
+                    has_flatten = true;
                 }
                 field.attrs.rename_by_rule(attrs.rename_all());
             },
         }
 
-        if attrs.unknown_fields_into().is_some() && !have_collection_field {
-            cx.error(format!("#[serde(unknown_fields_into)] was defined but target \
-                             field `{}` does not exist",
-                             attrs.unknown_fields_into().unwrap()));
+        if has_flatten && attrs.repr() != attr::ContainerRepr::Map {
+            cx.error(format!("#[serde(flatten)] requires \
+                              #[serde(repr = \"map\")] on the container, but \
+                              found #[serde(repr = \"{}\")]", attrs.repr()));
         }
 
         let item = Container {

@@ -68,10 +68,6 @@ impl<'c, T> Attr<'c, T> {
     fn get(self) -> Option<T> {
         self.value
     }
-
-    fn is_set(&self) -> bool {
-        self.value.is_some()
-    }
 }
 
 struct BoolAttr<'c>(Attr<'c, ()>);
@@ -150,7 +146,6 @@ pub struct Container {
     remote: Option<syn::Path>,
     identifier: Identifier,
     repr: ContainerRepr,
-    unknown_fields_into: Option<syn::Ident>,
 }
 
 /// Styles of representing an enum.
@@ -229,7 +224,6 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
         let mut repr = Attr::none(cx, "repr");
-        let mut unknown_fields_into = Attr::none(cx, "unknown_fields_into");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -267,21 +261,6 @@ impl Container {
                     // Parse `#[serde(deny_unknown_fields)]`
                     Meta(Word(word)) if word == "deny_unknown_fields" => {
                         deny_unknown_fields.set_true();
-                        if unknown_fields_into.is_set() {
-                            cx.error("#[serde(deny_unknown_fields)] cannot be combined \
-                                     with #[serde(unknown_fields_into)]");
-                        }
-                    }
-
-                    // Parse `#[serde(unknown_fields_into = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "unknown_fields_into" => {
-                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            unknown_fields_into.set(Ident::new(&s.value(), Span::call_site()).into());
-                            if deny_unknown_fields.get() {
-                                cx.error("#[serde(deny_unknown_fields)] cannot be combined \
-                                         with #[serde(unknown_fields_into)]");
-                            }
-                        }
                     }
 
                     // Parse `#[serde(repr = "foo")]`
@@ -422,10 +401,6 @@ impl Container {
             }
         }
 
-        if unknown_fields_into.get().is_some() && repr.get() != Some(ContainerRepr::Map) {
-            cx.error("#[serde(unknown_fields_into)] requires repr=\"map\"");
-        }
-
         Container {
             name: Name {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
@@ -442,7 +417,6 @@ impl Container {
             remote: remote.get(),
             identifier: decide_identifier(cx, item, &field_identifier, &variant_identifier),
             repr: repr.get().unwrap_or(ContainerRepr::Auto),
-            unknown_fields_into: unknown_fields_into.get(),
         }
     }
 
@@ -492,10 +466,6 @@ impl Container {
 
     pub fn repr(&self) -> ContainerRepr {
         self.repr
-    }
-
-    pub fn unknown_fields_into(&self) -> Option<&syn::Ident> {
-        self.unknown_fields_into.as_ref()
     }
 }
 
@@ -778,6 +748,7 @@ pub struct Field {
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::ExprPath>,
     collection_field: bool,
+    flatten: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -811,6 +782,7 @@ impl Field {
         let mut de_bound = Attr::none(cx, "bound");
         let mut borrowed_lifetimes = Attr::none(cx, "borrow");
         let mut getter = Attr::none(cx, "getter");
+        let mut flatten = BoolAttr::none(cx, "flatten");
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
@@ -957,6 +929,11 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(skip_deserializing)]`
+                    Meta(Word(word)) if word == "flatten" => {
+                        flatten.set_true();
+                    }
+
                     Meta(ref meta_item) => {
                         cx.error(format!(
                             "unknown serde field attribute `{}`",
@@ -1049,16 +1026,12 @@ impl Field {
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
-            collection_field: false,
+            flatten: flatten.get(),
         }
     }
 
     pub fn name(&self) -> &Name {
         &self.name
-    }
-
-    pub fn mark_as_collection_field(&mut self) {
-        self.collection_field = true;
     }
 
     pub fn rename_by_rule(&mut self, rule: &RenameRule) {
@@ -1071,15 +1044,11 @@ impl Field {
     }
 
     pub fn skip_serializing(&self) -> bool {
-        self.skip_serializing || self.collection_field
+        self.skip_serializing
     }
 
     pub fn skip_deserializing(&self) -> bool {
-        self.skip_deserializing || self.collection_field
-    }
-
-    pub fn collection_field(&self) -> bool {
-        self.collection_field
+        self.skip_deserializing || self.flatten
     }
 
     pub fn skip_serializing_if(&self) -> Option<&syn::ExprPath> {
@@ -1112,6 +1081,10 @@ impl Field {
 
     pub fn getter(&self) -> Option<&syn::ExprPath> {
         self.getter.as_ref()
+    }
+
+    pub fn flatten(&self) -> bool {
+        self.flatten
     }
 }
 
