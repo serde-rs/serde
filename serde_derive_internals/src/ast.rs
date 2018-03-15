@@ -48,7 +48,7 @@ pub enum Style {
 
 impl<'a> Container<'a> {
     pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput) -> Container<'a> {
-        let attrs = attr::Container::from_ast(cx, item);
+        let mut attrs = attr::Container::from_ast(cx, item);
 
         let mut data = match item.data {
             syn::Data::Enum(ref data) => {
@@ -83,6 +83,10 @@ impl<'a> Container<'a> {
             cx.error(format!("#[serde(flatten)] requires \
                               #[serde(repr = \"map\")] on the container, but \
                               found #[serde(repr = \"{}\")]", attrs.repr()));
+        }
+
+        if has_flatten {
+            attrs.mark_has_flatten();
         }
 
         let item = Container {

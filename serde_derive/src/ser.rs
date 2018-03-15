@@ -286,7 +286,7 @@ fn serialize_struct_as_struct(params: &Parameters, fields: &[Field], cattrs: &at
     }
 }
 
-fn serialize_struct_as_map(params: &Parameters, fields: &[Field], _cattrs: &attr::Container) -> Fragment {
+fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
     let serialize_fields = serialize_struct_visitor(
         fields,
         params,
@@ -301,11 +301,7 @@ fn serialize_struct_as_map(params: &Parameters, fields: &[Field], _cattrs: &attr
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let has_flatten = fields
-        .iter()
-        .any(|field| field.attrs.flatten());
-
-    let len = if has_flatten {
+    let len = if cattrs.has_flatten() {
         quote!(None)
     } else {
         let len = serialized_fields

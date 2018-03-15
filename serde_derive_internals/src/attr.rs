@@ -146,6 +146,7 @@ pub struct Container {
     remote: Option<syn::Path>,
     identifier: Identifier,
     repr: ContainerRepr,
+    has_flatten: bool,
 }
 
 /// Styles of representing an enum.
@@ -417,6 +418,7 @@ impl Container {
             remote: remote.get(),
             identifier: decide_identifier(cx, item, &field_identifier, &variant_identifier),
             repr: repr.get().unwrap_or(ContainerRepr::Auto),
+            has_flatten: false,
         }
     }
 
@@ -466,6 +468,14 @@ impl Container {
 
     pub fn repr(&self) -> ContainerRepr {
         self.repr
+    }
+
+    pub fn has_flatten(&self) -> bool {
+        self.has_flatten
+    }
+
+    pub fn mark_has_flatten(&mut self) {
+        self.has_flatten = true;
     }
 }
 
