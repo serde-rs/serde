@@ -2087,7 +2087,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
     where
         V: Visitor<'de>,
     {
-        Err(Error::custom("can only flatten structs, maps and basic enums"))
+        Err(Error::custom("can only flatten structs, maps and struct enum variants"))
     }
 
     fn deserialize_enum<V>(
