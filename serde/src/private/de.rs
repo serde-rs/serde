@@ -2109,7 +2109,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
                         continue;
                     }
                 }
-                None => return Err(Error::custom(format!(
+                None => return Err(Error::custom(format_args!(
                     "no variant of enum {} not found in flattened data",
                     name
                 )))
