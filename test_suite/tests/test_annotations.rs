@@ -96,12 +96,33 @@ where
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(repr="map")]
+#[serde(repr = "map")]
 struct CollectOther {
     a: u32,
     b: u32,
     #[serde(flatten)]
     extra: HashMap<String, u32>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(repr = "map")]
+struct ChangeRequest {
+    #[serde(flatten)]
+    data: ChangeAction,
+    #[serde(flatten)]
+    extra: HashMap<String, String>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ChangeAction {
+    AppendInteger {
+        value: u32
+    },
+    InsertInteger {
+        index: u32,
+        value: u32
+    },
 }
 
 #[test]
@@ -1306,6 +1327,51 @@ fn test_collect_other() {
             Token::Str("c"),
             Token::U32(3),
             Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_struct_enum() {
+    let mut extra = HashMap::new();
+    extra.insert("extra_key".into(), "extra value".into());
+    let change_request = ChangeRequest {
+        data: ChangeAction::InsertInteger {
+            index: 0,
+            value: 42
+        },
+        extra: extra,
+    };
+    assert_de_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("insert_integer"),
+            Token::Map { len: None },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::MapEnd,
+            Token::Str("extra_key"),
+            Token::String("extra value".into()),
+            Token::MapEnd
+        ],
+    );
+    assert_ser_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("insert_integer"),
+            Token::Struct { len: 2, name: "insert_integer" },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::StructEnd,
+            Token::Str("extra_key"),
+            Token::String("extra value".into()),
+            Token::MapEnd
         ],
     );
 }

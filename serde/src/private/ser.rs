@@ -11,7 +11,12 @@ use lib::*;
 use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use self::content::{SerializeStructVariantAsMapValue, SerializeTupleVariantAsMapValue};
+use self::content::{
+    SerializeStructVariantAsMapValue,
+    SerializeTupleVariantAsMapValue,
+    ContentSerializer,
+    Content,
+};
 
 /// Used to check that serde(getter) attributes return the expected type.
 /// Not public API.
@@ -461,7 +466,7 @@ mod content {
     }
 
     #[derive(Debug)]
-    enum Content {
+    pub enum Content {
         Bool(bool),
 
         U8(u8),
@@ -586,12 +591,12 @@ mod content {
         }
     }
 
-    struct ContentSerializer<E> {
+    pub struct ContentSerializer<E> {
         error: PhantomData<E>,
     }
 
     impl<E> ContentSerializer<E> {
-        fn new() -> Self {
+        pub fn new() -> Self {
             ContentSerializer { error: PhantomData }
         }
     }
@@ -806,7 +811,7 @@ mod content {
         }
     }
 
-    struct SerializeSeq<E> {
+    pub struct SerializeSeq<E> {
         elements: Vec<Content>,
         error: PhantomData<E>,
     }
@@ -832,7 +837,7 @@ mod content {
         }
     }
 
-    struct SerializeTuple<E> {
+    pub struct SerializeTuple<E> {
         elements: Vec<Content>,
         error: PhantomData<E>,
     }
@@ -858,7 +863,7 @@ mod content {
         }
     }
 
-    struct SerializeTupleStruct<E> {
+    pub struct SerializeTupleStruct<E> {
         name: &'static str,
         fields: Vec<Content>,
         error: PhantomData<E>,
@@ -885,7 +890,7 @@ mod content {
         }
     }
 
-    struct SerializeTupleVariant<E> {
+    pub struct SerializeTupleVariant<E> {
         name: &'static str,
         variant_index: u32,
         variant: &'static str,
@@ -919,7 +924,7 @@ mod content {
         }
     }
 
-    struct SerializeMap<E> {
+    pub struct SerializeMap<E> {
         entries: Vec<(Content, Content)>,
         key: Option<Content>,
         error: PhantomData<E>,
@@ -969,7 +974,7 @@ mod content {
         }
     }
 
-    struct SerializeStruct<E> {
+    pub struct SerializeStruct<E> {
         name: &'static str,
         fields: Vec<(&'static str, Content)>,
         error: PhantomData<E>,
@@ -996,7 +1001,7 @@ mod content {
         }
     }
 
-    struct SerializeStructVariant<E> {
+    pub struct SerializeStructVariant<E> {
         name: &'static str,
         variant_index: u32,
         variant: &'static str,
@@ -1059,7 +1064,7 @@ impl<'a, M> Serializer for FlatMapSerializer<'a, M>
     type SerializeMap = FlatMapSerializeMap<'a, M>;
     type SerializeStruct = FlatMapSerializeStruct<'a, M>;
     type SerializeTupleVariant = Impossible<Self::Ok, M::Error>;
-    type SerializeStructVariant = Impossible<Self::Ok, M::Error>;
+    type SerializeStructVariant = FlatMapSerializeStructVariantAsMapValue<'a, M>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Boolean))
@@ -1212,10 +1217,11 @@ impl<'a, M> Serializer for FlatMapSerializer<'a, M>
         self,
         _: &'static str,
         _: u32,
-        _: &'static str,
+        inner_variant: &'static str,
         _: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
-        Err(self.bad_type(Unsupported::Enum))
+        try!(self.0.serialize_key(inner_variant));
+        Ok(FlatMapSerializeStructVariantAsMapValue::new(self.0, inner_variant))
     }
 }
 
@@ -1266,6 +1272,47 @@ impl<'a, M> ser::SerializeStruct for FlatMapSerializeStruct<'a, M>
     }
 
     fn end(self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializeStructVariantAsMapValue<'a, M: 'a> {
+    map: &'a mut M,
+    name: &'static str,
+    fields: Vec<(&'static str, Content)>,
+}
+
+impl<'a, M> FlatMapSerializeStructVariantAsMapValue<'a, M>
+    where M: SerializeMap + 'a
+{
+    fn new(map: &'a mut M, name: &'static str) -> FlatMapSerializeStructVariantAsMapValue<'a, M> {
+        FlatMapSerializeStructVariantAsMapValue {
+            map: map,
+            name: name,
+            fields: Vec::new(),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> ser::SerializeStructVariant for FlatMapSerializeStructVariantAsMapValue<'a, M>
+    where M: SerializeMap + 'a
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
+        self.fields.push((key, value));
+        Ok(())
+    }
+
+    fn end(self) -> Result<(), Self::Error> {
+        try!(self.map.serialize_value(&Content::Struct(self.name, self.fields)));
         Ok(())
     }
 }
