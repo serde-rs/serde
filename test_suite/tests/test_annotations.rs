@@ -1354,7 +1354,7 @@ fn test_flatten_struct_enum() {
             index: 0,
             value: 42
         },
-        extra: extra,
+        extra,
     };
     assert_de_tokens(
         &change_request,
@@ -1368,7 +1368,7 @@ fn test_flatten_struct_enum() {
             Token::U32(42),
             Token::MapEnd,
             Token::Str("extra_key"),
-            Token::String("extra value".into()),
+            Token::Str("extra value"),
             Token::MapEnd
         ],
     );
@@ -1384,7 +1384,7 @@ fn test_flatten_struct_enum() {
             Token::U32(42),
             Token::StructEnd,
             Token::Str("extra_key"),
-            Token::String("extra value".into()),
+            Token::Str("extra value"),
             Token::MapEnd
         ],
     );
