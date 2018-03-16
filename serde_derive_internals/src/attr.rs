@@ -757,7 +757,6 @@ pub struct Field {
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::ExprPath>,
-    collection_field: bool,
     flatten: bool,
 }
 
