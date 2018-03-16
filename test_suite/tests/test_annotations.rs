@@ -96,10 +96,11 @@ where
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(repr="map", unknown_fields_into="extra")]
+#[serde(repr="map")]
 struct CollectOther {
     a: u32,
     b: u32,
+    #[serde(flatten)]
     extra: HashMap<String, u32>,
 }
 
