@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
+use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor, MapAccess};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::Unexpected;
@@ -2060,5 +2060,119 @@ where
         D: Deserializer<'de>,
     {
         T::deserialize_in_place(deserializer, self.0)
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
+    pub &'a mut Vec<Option<(String, Content<'de>)>>,
+    pub PhantomData<E>
+);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
+    where E: Error
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        Err(Error::custom("can only deserialize structs and maps in flatten mode"))
+    }
+
+    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(FlatMapAccess::new(self.0.iter_mut(), None))
+    }
+
+    fn deserialize_struct<V>(
+        self,
+        _: &'static str,
+        fields: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(FlatMapAccess::new(self.0.iter_mut(), Some(fields)))
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct enum identifier ignored_any
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapAccess<'a, 'de: 'a, E> {
+    iter: slice::IterMut<'a, Option<(String, Content<'de>)>>,
+    pending_content: Option<Content<'de>>,
+    fields: Option<&'static [&'static str]>,
+    _marker: PhantomData<E>,
+}
+
+impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
+    fn new(
+        iter: slice::IterMut<'a, Option<(String, Content<'de>)>>,
+        fields: Option<&'static [&'static str]>
+    ) -> FlatMapAccess<'a, 'de, E> {
+        FlatMapAccess {
+            iter: iter,
+            pending_content: None,
+            fields: fields,
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
+    where E: Error
+{
+    type Error = E;
+
+    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        loop {
+            let item = match self.iter.next() {
+                Some(item) => {
+                    if item.is_some() {
+                        item
+                    } else {
+                        continue;
+                    }
+                }
+                None => return Ok(None)
+            };
+
+            if match self.fields {
+                None => false,
+                Some(fields) if fields.contains(&item.as_ref().unwrap().0.as_str()) => false,
+                _ => true
+            } {
+                continue;
+            }
+
+            let (key, content) = item.take().unwrap();
+            self.pending_content = Some(content);
+            return seed.deserialize(ContentDeserializer::new(Content::String(key))).map(Some);
+        }
+    }
+
+    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        match self.pending_content.take() {
+            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+            None => Err(Error::custom("value is missing")),
+        }
     }
 }

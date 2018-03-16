@@ -2026,7 +2026,7 @@ fn deserialize_map(
     // Collect contents for flatten fields into a buffer
     let let_collect = if cattrs.has_flatten() {
         Some(quote! {
-            let mut __collect = Vec::<(String, _serde::private::de::Content)>::new();
+            let mut __collect = Vec::<Option<(String, _serde::private::de::Content)>>::new();
         })
     } else {
         None
@@ -2070,7 +2070,7 @@ fn deserialize_map(
     let ignored_arm = if cattrs.has_flatten() {
         Some(quote! {
             __Field::__other(__name) => {
-                __collect.push((__name, try!(_serde::de::MapAccess::next_value(&mut __map))));
+                __collect.push(Some((__name, try!(_serde::de::MapAccess::next_value(&mut __map)))));
             }
         })
     } else if cattrs.deny_unknown_fields() {
@@ -2130,7 +2130,7 @@ fn deserialize_map(
 
     let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
         Some(quote! {
-            if let Some((__key, _)) = __collect.into_iter().next() {
+            if let Some(Some((__key, _))) = __collect.into_iter().filter(|x| x.is_some()).next() {
                 return _serde::export::Err(
                     _serde::de::Error::unknown_field_in_flattened_structure(&__key));
             }
