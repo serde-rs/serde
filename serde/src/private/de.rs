@@ -17,7 +17,7 @@ use de::Unexpected;
 pub use self::content::{Content, ContentDeserializer, ContentRefDeserializer,
                         InternallyTaggedUnitVisitor, TagContentOtherField,
                         TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor,
-                        TaggedContentVisitor, UntaggedUnitVisitor};
+                        TaggedContentVisitor, UntaggedUnitVisitor, EnumDeserializer};
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -1118,11 +1118,7 @@ mod content {
                 }
             };
 
-            visitor.visit_enum(EnumDeserializer {
-                variant: variant,
-                value: value,
-                err: PhantomData,
-            })
+            visitor.visit_enum(EnumDeserializer::new(variant, value))
         }
 
         fn deserialize_unit_struct<V>(
@@ -1170,13 +1166,25 @@ mod content {
         }
     }
 
-    struct EnumDeserializer<'de, E>
+    pub struct EnumDeserializer<'de, E>
     where
         E: de::Error,
     {
         variant: Content<'de>,
         value: Option<Content<'de>>,
         err: PhantomData<E>,
+    }
+
+    impl<'de, E> EnumDeserializer<'de, E>
+        where E: de::Error
+    {
+        pub fn new(variant: Content<'de>, value: Option<Content<'de>>) -> EnumDeserializer<'de, E> {
+            EnumDeserializer {
+                variant: variant,
+                value: value,
+                err: PhantomData,
+            }
+        }
     }
 
     impl<'de, E> de::EnumAccess<'de> for EnumDeserializer<'de, E>
@@ -1199,7 +1207,7 @@ mod content {
         }
     }
 
-    struct VariantDeserializer<'de, E>
+    pub struct VariantDeserializer<'de, E>
     where
         E: de::Error,
     {
@@ -2075,11 +2083,45 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
 {
     type Error = E;
 
-    fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(Error::custom("can only deserialize structs and maps in flatten mode"))
+        Err(Error::custom("can only flatten structs, maps and basic enums"))
+    }
+
+    fn deserialize_enum<V>(
+        self,
+        name: &'static str,
+        variants: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let mut iter = self.0.iter_mut();
+        loop {
+            let item = match iter.next() {
+                Some(item) => {
+                    if item.is_some() {
+                        item
+                    } else {
+                        continue;
+                    }
+                }
+                None => return Err(Error::custom(format!(
+                    "no variant of enum {} not found in flattened data",
+                    name
+                )))
+            };
+
+            if !variants.contains(&item.as_ref().unwrap().0.as_str()) {
+                continue;
+            }
+
+            let (key, value) = item.take().unwrap();
+            return visitor.visit_enum(EnumDeserializer::new(Content::String(key), Some(value)));
+        }
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2104,7 +2146,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
         byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct enum identifier ignored_any
+        tuple_struct identifier ignored_any
     }
 }
 
