@@ -1283,6 +1283,7 @@ pub struct FlatMapSerializeStructVariantAsMapValue<'a, M: 'a> {
     fields: Vec<(&'static str, Content)>,
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> FlatMapSerializeStructVariantAsMapValue<'a, M>
     where M: SerializeMap + 'a
 {

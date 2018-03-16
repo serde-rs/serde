@@ -2158,6 +2158,7 @@ pub struct FlatMapAccess<'a, 'de: 'a, E> {
     _marker: PhantomData<E>,
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
     fn new(
         iter: slice::IterMut<'a, Option<(String, Content<'de>)>>,
