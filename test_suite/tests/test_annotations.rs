@@ -106,19 +106,33 @@ struct CollectOther {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(repr = "map")]
-struct ChangeRequest {
+struct FlattenStructEnumWrapper {
     #[serde(flatten)]
-    data: ChangeAction,
+    data: FlattenStructEnum,
     #[serde(flatten)]
     extra: HashMap<String, String>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-enum ChangeAction {
-    AppendInteger {
+enum FlattenStructEnum {
+    InsertInteger {
+        index: u32,
         value: u32
     },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(repr = "map")]
+struct FlattenStructTagContentEnumWrapper {
+    outer: u32,
+    #[serde(flatten)]
+    data: FlattenStructTagContentEnum,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type", content = "value")]
+enum FlattenStructTagContentEnum {
     InsertInteger {
         index: u32,
         value: u32
@@ -1335,8 +1349,8 @@ fn test_collect_other() {
 fn test_flatten_struct_enum() {
     let mut extra = HashMap::new();
     extra.insert("extra_key".into(), "extra value".into());
-    let change_request = ChangeRequest {
-        data: ChangeAction::InsertInteger {
+    let change_request = FlattenStructEnumWrapper {
+        data: FlattenStructEnum::InsertInteger {
             index: 0,
             value: 42
         },
@@ -1372,6 +1386,53 @@ fn test_flatten_struct_enum() {
             Token::Str("extra_key"),
             Token::String("extra value".into()),
             Token::MapEnd
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_struct_tag_content_enum() {
+    let change_request = FlattenStructTagContentEnumWrapper {
+        outer: 42,
+        data: FlattenStructTagContentEnum::InsertInteger {
+            index: 0,
+            value: 42
+        },
+    };
+    assert_de_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("insert_integer"),
+            Token::Str("value"),
+            Token::Map { len: None },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("insert_integer"),
+            Token::Str("value"),
+            Token::Struct { len: 2, name: "insert_integer" },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::StructEnd,
+            Token::MapEnd,
         ],
     );
 }
