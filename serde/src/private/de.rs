@@ -8,10 +8,10 @@
 
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor, MapAccess};
+use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::Unexpected;
+use de::{Unexpected, MapAccess};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{Content, ContentDeserializer, ContentRefDeserializer,
