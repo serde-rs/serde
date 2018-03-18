@@ -17,8 +17,8 @@ use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use self::serde::de::{self, Unexpected};
 
 extern crate serde_test;
-use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens,
-                       Token};
+use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
+                       assert_ser_tokens_error, assert_tokens, Token};
 
 trait MyDefault: Sized {
     fn my_default() -> Self;
@@ -1634,5 +1634,39 @@ fn test_complex_flatten() {
             Token::U32(4),
             Token::MapEnd,
         ],
+    );
+}
+
+#[test]
+fn test_flatten_unsupported_type() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Outer {
+        outer: String,
+        #[serde(flatten)]
+        inner: String,
+    }
+
+    assert_ser_tokens_error(
+        &Outer {
+            outer: "foo".into(),
+            inner: "bar".into(),
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::Str("foo"),
+        ],
+        "can only flatten structs and maps (got a string)",
+    );
+    assert_de_tokens_error::<Outer>(
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::Str("foo"),
+            Token::Str("a"),
+            Token::Str("b"),
+            Token::MapEnd
+        ],
+        "can only flatten structs and maps",
     );
 }

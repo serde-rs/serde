@@ -1043,9 +1043,7 @@ where
     M: SerializeMap + 'a
 {
     fn bad_type(self, what: Unsupported) -> M::Error {
-        ser::Error::custom(format_args!(
-            "cannot flatten serialize {} values", what
-        ))
+        ser::Error::custom(format_args!("can only flatten structs and maps (got {})", what))
     }
 }
 
