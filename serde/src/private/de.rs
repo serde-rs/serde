@@ -269,6 +269,14 @@ mod content {
     }
 
     impl<'de> Content<'de> {
+        pub fn as_str(&self) -> Option<&str> {
+            match *self {
+                Content::Str(x) => Some(x),
+                Content::String(ref x) => Some(x.as_str()),
+                _ => None,
+            }
+        }
+
         fn unexpected(&self) -> Unexpected {
             match *self {
                 Content::Bool(b) => Unexpected::Bool(b),
@@ -2073,7 +2081,7 @@ where
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
-    pub &'a mut Vec<Option<(String, Content<'de>)>>,
+    pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
     pub PhantomData<E>
 );
 
@@ -2100,28 +2108,23 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         V: Visitor<'de>,
     {
         let mut iter = self.0.iter_mut();
-        loop {
-            let item = match iter.next() {
-                Some(item) => {
-                    if item.is_some() {
-                        item
-                    } else {
-                        continue;
-                    }
-                }
-                None => return Err(Error::custom(format_args!(
-                    "no variant of enum {} not found in flattened data",
-                    name
-                )))
-            };
-
-            if !variants.contains(&item.as_ref().unwrap().0.as_str()) {
+        while let Some(item) = iter.next() {
+            if item.is_none() || !item.as_ref().unwrap().0.as_str()
+               .map(|x| variants.contains(&x)).unwrap_or(false) {
                 continue;
             }
 
             let (key, value) = item.take().unwrap();
-            return visitor.visit_enum(EnumDeserializer::new(Content::String(key), Some(value)));
+            return visitor.visit_enum(EnumDeserializer::new(
+                key,
+                Some(value)
+            ));
         }
+
+        Err(Error::custom(format_args!(
+            "no variant of enum {} not found in flattened data",
+            name
+        )))
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2163,7 +2166,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapAccess<'a, 'de: 'a, E> {
-    iter: slice::IterMut<'a, Option<(String, Content<'de>)>>,
+    iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<Content<'de>>,
     fields: Option<&'static [&'static str]>,
     _marker: PhantomData<E>,
@@ -2172,7 +2175,7 @@ pub struct FlatMapAccess<'a, 'de: 'a, E> {
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
     fn new(
-        iter: slice::IterMut<'a, Option<(String, Content<'de>)>>,
+        iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
         fields: Option<&'static [&'static str]>
     ) -> FlatMapAccess<'a, 'de, E> {
         FlatMapAccess {
@@ -2194,30 +2197,27 @@ impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
     where
         T: DeserializeSeed<'de>,
     {
-        loop {
-            let item = match self.iter.next() {
-                Some(item) => {
-                    if item.is_some() {
-                        item
-                    } else {
-                        continue;
-                    }
-                }
-                None => return Ok(None)
+        while let Some(item) = self.iter.next() {
+            if item.is_none() {
+                continue;
             };
 
-            if match self.fields {
-                None => false,
-                Some(fields) if fields.contains(&item.as_ref().unwrap().0.as_str()) => false,
-                _ => true
-            } {
+            if !item.as_ref().unwrap().0.as_str()
+                .map(|key| {
+                    match self.fields {
+                        None => true,
+                        Some(fields) if fields.contains(&key) => true,
+                        _ => false
+                    }
+                }).unwrap_or(true) {
                 continue;
             }
 
             let (key, content) = item.take().unwrap();
             self.pending_content = Some(content);
-            return seed.deserialize(ContentDeserializer::new(Content::String(key))).map(Some);
+            return seed.deserialize(ContentDeserializer::new(key)).map(Some);
         }
+        Ok(None)
     }
 
     fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
