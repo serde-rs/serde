@@ -255,13 +255,6 @@ macro_rules! declare_error_trait {
                 }
             }
 
-            /// Raised when a `Deserialize` struct type recieved a field with an
-            /// unrecognized name but the names are not actually known because of
-            /// flattening.
-            fn unknown_field_in_flattened_structure(field: &str) -> Self {
-                Error::custom(format_args!("unknown field `{}`", field))
-            }
-
             /// Raised when a `Deserialize` struct type expected to receive a required
             /// field with a particular name but that field was not present in the
             /// input.

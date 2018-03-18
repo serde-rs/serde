@@ -1493,3 +1493,41 @@ fn test_flatten_struct_tag_content_enum_newtype() {
         ],
     );
 }
+
+#[test]
+fn test_unknown_field_in_flatten() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(repr = "map", deny_unknown_fields)]
+    struct Outer {
+        dummy: String,
+        #[serde(flatten)]
+        inner: Inner,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Inner {
+        foo: HashMap<String, u32>,
+    }
+
+    assert_de_tokens_error::<Outer>(
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 1,
+            },
+            Token::Str("dummy"),
+            Token::Str("23"),
+            Token::Str("foo"),
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::U32(2),
+            Token::MapEnd,
+            Token::Str("bar"),
+            Token::U32(23),
+            Token::StructEnd,
+        ],
+        "unknown field `bar`",
+    );
+}
