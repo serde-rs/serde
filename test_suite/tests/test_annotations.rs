@@ -1670,3 +1670,30 @@ fn test_flatten_unsupported_type() {
         "can only flatten structs and maps",
     );
 }
+
+#[test]
+fn test_non_string_keys() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct TestStruct {
+        name: String,
+        age: u32,
+        #[serde(flatten)]
+        mapping: HashMap<u32, u32>,
+    }
+
+    let mut mapping = HashMap::new();
+    mapping.insert(0, 42);
+    assert_tokens(
+        &TestStruct { name: "peter".into(), age: 3, mapping },
+        &[
+            Token::Map { len: None },
+            Token::Str("name"),
+            Token::Str("peter"),
+            Token::Str("age"),
+            Token::U32(3),
+            Token::U32(0),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+}

@@ -1716,8 +1716,7 @@ fn deserialize_generated_identifier(
 
     let (ignore_variant, fallthrough) = if cattrs.has_flatten() {
         let ignore_variant = quote!(__other(_serde::private::de::Content<'de>),);
-        let fallthrough = quote!(_serde::export::Ok(__Field::__other(
-            _serde::private::de::Content::String(__value.to_string()))));
+        let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
     } else if is_variant || cattrs.deny_unknown_fields() {
         (None, None)
@@ -1887,8 +1886,86 @@ fn deserialize_identifier(
 
     let variant_indices = 0u64..;
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
-    let visit_index = if collect_other_fields {
-        None
+    let visit_other = if collect_other_fields {
+        Some(quote! {
+            fn visit_bool<__E>(self, __value: bool) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::Bool(__value)))
+            }
+
+            fn visit_i8<__E>(self, __value: i8) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::I8(__value)))
+            }
+
+            fn visit_i16<__E>(self, __value: i16) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::I16(__value)))
+            }
+
+            fn visit_i32<__E>(self, __value: i32) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::I32(__value)))
+            }
+
+            fn visit_i64<__E>(self, __value: i64) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::I64(__value)))
+            }
+
+            fn visit_u8<__E>(self, __value: u8) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::U8(__value)))
+            }
+
+            fn visit_u16<__E>(self, __value: u16) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::U16(__value)))
+            }
+
+            fn visit_u32<__E>(self, __value: u32) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::U32(__value)))
+            }
+
+            fn visit_u64<__E>(self, __value: u64) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::U64(__value)))
+            }
+
+            fn visit_f32<__E>(self, __value: f32) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::F32(__value)))
+            }
+
+            fn visit_f64<__E>(self, __value: f64) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::F64(__value)))
+            }
+
+            fn visit_char<__E>(self, __value: char) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::Char(__value)))
+            }
+
+            fn visit_unit<__E>(self) -> Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                Ok(__Field::__other(_serde::private::de::Content::Unit))
+            }
+        })
     } else {
         Some(quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
@@ -1906,13 +1983,25 @@ fn deserialize_identifier(
         })
     };
 
-    let bytes_to_str = if fallthrough.is_some() && !collect_other_fields {
+    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
         None
     } else {
-        let conversion = quote! {
+        Some(quote! {
             let __value = &_serde::export::from_utf8_lossy(__value);
-        };
-        Some(conversion)
+        })
+    };
+
+    let (value_as_str_content, value_as_bytes_content) = if !collect_other_fields {
+        (None, None)
+    } else {
+        (
+            Some(quote! {
+                let __value = _serde::private::de::Content::String(__value.to_string());
+            }),
+            Some(quote! {
+                let __value = _serde::private::de::Content::ByteBuf(__value.to_vec());
+            })
+        )
     };
 
     let fallthrough_arm = if let Some(fallthrough) = fallthrough {
@@ -1932,7 +2021,7 @@ fn deserialize_identifier(
             _serde::export::Formatter::write_str(formatter, #expecting)
         }
 
-        #visit_index
+        #visit_other
 
         fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
             where __E: _serde::de::Error
@@ -1941,7 +2030,10 @@ fn deserialize_identifier(
                 #(
                     #field_strs => _serde::export::Ok(#constructors),
                 )*
-                _ => #fallthrough_arm
+                _ => {
+                    #value_as_str_content
+                    #fallthrough_arm
+                }
             }
         }
 
@@ -1954,6 +2046,7 @@ fn deserialize_identifier(
                 )*
                 _ => {
                     #bytes_to_str
+                    #value_as_bytes_content
                     #fallthrough_arm
                 }
             }
