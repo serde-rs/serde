@@ -79,12 +79,6 @@ impl<'a> Container<'a> {
             },
         }
 
-        if has_flatten && attrs.repr() != attr::ContainerRepr::Map {
-            cx.error(format!("#[serde(flatten)] requires \
-                              #[serde(repr = \"map\")] on the container, but \
-                              found #[serde(repr = \"{}\")]", attrs.repr()));
-        }
-
         if has_flatten {
             attrs.mark_has_flatten();
         }

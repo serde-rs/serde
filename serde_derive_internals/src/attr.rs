@@ -15,7 +15,6 @@ use syn::punctuated::Punctuated;
 use syn::synom::{Synom, ParseError};
 use std::collections::BTreeSet;
 use std::str::FromStr;
-use std::fmt;
 use proc_macro2::{Span, TokenStream, TokenNode, TokenTree};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
@@ -103,35 +102,6 @@ impl Name {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum ContainerRepr {
-    Auto,
-    Struct,
-    Map,
-}
-
-impl fmt::Display for ContainerRepr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match *self {
-            ContainerRepr::Auto => "auto",
-            ContainerRepr::Struct => "struct",
-            ContainerRepr::Map => "map",
-        })
-    }
-}
-
-impl FromStr for ContainerRepr {
-    type Err = ();
-    fn from_str(s: &str) -> Result<ContainerRepr, ()> {
-        match s {
-            "auto" => Ok(ContainerRepr::Auto),
-            "struct" => Ok(ContainerRepr::Struct),
-            "map" => Ok(ContainerRepr::Map),
-            _ => Err(()),
-        }
-    }
-}
-
 /// Represents container (e.g. struct) attribute information
 pub struct Container {
     name: Name,
@@ -145,7 +115,6 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
-    repr: ContainerRepr,
     has_flatten: bool,
 }
 
@@ -224,7 +193,6 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut repr = Attr::none(cx, "repr");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -262,16 +230,6 @@ impl Container {
                     // Parse `#[serde(deny_unknown_fields)]`
                     Meta(Word(word)) if word == "deny_unknown_fields" => {
                         deny_unknown_fields.set_true();
-                    }
-
-                    // Parse `#[serde(repr = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "repr" => {
-                        if let Ok(s) = get_lit_str(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit) {
-                            match ContainerRepr::from_str(&s.value()) {
-                                Ok(value) => repr.set(value),
-                                Err(()) => cx.error(format!("unknown value for #[serde(repr = {})]", s.value()))
-                            }
-                        }
                     }
 
                     // Parse `#[serde(default)]`
@@ -417,7 +375,6 @@ impl Container {
             type_into: type_into.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, &field_identifier, &variant_identifier),
-            repr: repr.get().unwrap_or(ContainerRepr::Auto),
             has_flatten: false,
         }
     }
@@ -464,10 +421,6 @@ impl Container {
 
     pub fn identifier(&self) -> Identifier {
         self.identifier
-    }
-
-    pub fn repr(&self) -> ContainerRepr {
-        self.repr
     }
 
     pub fn has_flatten(&self) -> bool {

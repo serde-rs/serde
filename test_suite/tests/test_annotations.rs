@@ -96,7 +96,6 @@ where
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(repr = "map")]
 struct CollectOther {
     a: u32,
     b: u32,
@@ -105,7 +104,6 @@ struct CollectOther {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(repr = "map")]
 struct FlattenStructEnumWrapper {
     #[serde(flatten)]
     data: FlattenStructEnum,
@@ -123,7 +121,6 @@ enum FlattenStructEnum {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(repr = "map")]
 struct FlattenStructTagContentEnumWrapper {
     outer: u32,
     #[serde(flatten)]
@@ -1497,7 +1494,7 @@ fn test_flatten_struct_tag_content_enum_newtype() {
 #[test]
 fn test_unknown_field_in_flatten() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(repr = "map", deny_unknown_fields)]
+    #[serde(deny_unknown_fields)]
     struct Outer {
         dummy: String,
         #[serde(flatten)]

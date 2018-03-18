@@ -770,10 +770,7 @@ fn deserialize_struct(
     untagged: &Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
-    let as_map = deserializer.is_none() && !is_enum && match cattrs.repr() {
-        attr::ContainerRepr::Struct | attr::ContainerRepr::Auto => false,
-        attr::ContainerRepr::Map => true,
-    };
+    let as_map = deserializer.is_none() && !is_enum && cattrs.has_flatten();
 
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -896,10 +893,7 @@ fn deserialize_struct_in_place(
     deserializer: Option<Tokens>,
 ) -> Option<Fragment> {
     let is_enum = variant_ident.is_some();
-    let as_map = deserializer.is_none() && !is_enum && match cattrs.repr() {
-        attr::ContainerRepr::Struct | attr::ContainerRepr::Auto => false,
-        attr::ContainerRepr::Map => true,
-    };
+    let as_map = deserializer.is_none() && !is_enum && cattrs.has_flatten();
 
     // for now we do not support in_place deserialization for structs that
     // are represented as map.
