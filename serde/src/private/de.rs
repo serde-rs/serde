@@ -2107,10 +2107,9 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
     where
         V: Visitor<'de>,
     {
-        let mut iter = self.0.iter_mut();
-        while let Some(item) = iter.next() {
+        for item in self.0.iter_mut() {
             if item.is_none() || !item.as_ref().unwrap().0.as_str()
-               .map(|x| variants.contains(&x)).unwrap_or(false) {
+               .map_or(false, |x| variants.contains(&x)) {
                 continue;
             }
 
@@ -2198,24 +2197,20 @@ impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
         T: DeserializeSeed<'de>,
     {
         while let Some(item) = self.iter.next() {
-            if item.is_none() {
-                continue;
-            };
-
-            if !item.as_ref().unwrap().0.as_str()
-                .map(|key| {
+            let use_item = item.is_some() && item.as_ref().unwrap().0.as_str()
+                .map_or(self.fields.is_none(), |key| {
                     match self.fields {
                         None => true,
                         Some(fields) if fields.contains(&key) => true,
                         _ => false
                     }
-                }).unwrap_or(true) {
-                continue;
-            }
+                });
 
-            let (key, content) = item.take().unwrap();
-            self.pending_content = Some(content);
-            return seed.deserialize(ContentDeserializer::new(key)).map(Some);
+            if use_item {
+                let (key, content) = item.take().unwrap();
+                self.pending_content = Some(content);
+                return seed.deserialize(ContentDeserializer::new(key)).map(Some);
+            }
         }
         Ok(None)
     }
