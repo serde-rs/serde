@@ -1528,3 +1528,111 @@ fn test_unknown_field_in_flatten() {
         "unknown field `bar`",
     );
 }
+
+#[test]
+fn test_complex_flatten() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Outer {
+        y: u32,
+        #[serde(flatten)]
+        first: First,
+        #[serde(flatten)]
+        second: Second,
+        z: u32
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct First {
+        a: u32,
+        b: bool,
+        c: Vec<String>,
+        d: String,
+        e: Option<u64>,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Second {
+        f: u32,
+    }
+
+    assert_de_tokens(
+        &Outer {
+            y: 0,
+            first: First {
+                a: 1,
+                b: true,
+                c: vec!["a".into(), "b".into()],
+                d: "c".into(),
+                e: Some(2),
+            },
+            second: Second {
+                f: 3
+            },
+            z: 4
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("y"),
+            Token::U32(0),
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::Bool(true),
+            Token::Str("c"),
+            Token::Seq { len: Some(2) },
+            Token::Str("a"),
+            Token::Str("b"),
+            Token::SeqEnd,
+            Token::Str("d"),
+            Token::Str("c"),
+            Token::Str("e"),
+            Token::U64(2),
+            Token::Str("f"),
+            Token::U32(3),
+            Token::Str("z"),
+            Token::U32(4),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &Outer {
+            y: 0,
+            first: First {
+                a: 1,
+                b: true,
+                c: vec!["a".into(), "b".into()],
+                d: "c".into(),
+                e: Some(2),
+            },
+            second: Second {
+                f: 3
+            },
+            z: 4
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("y"),
+            Token::U32(0),
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::Bool(true),
+            Token::Str("c"),
+            Token::Seq { len: Some(2) },
+            Token::Str("a"),
+            Token::Str("b"),
+            Token::SeqEnd,
+            Token::Str("d"),
+            Token::Str("c"),
+            Token::Str("e"),
+            Token::Some,
+            Token::U64(2),
+            Token::Str("f"),
+            Token::U32(3),
+            Token::Str("z"),
+            Token::U32(4),
+            Token::MapEnd,
+        ],
+    );
+}
