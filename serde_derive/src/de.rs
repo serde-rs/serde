@@ -268,7 +268,11 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match cont.data {
         Data::Struct(Style::Struct, ref fields) => {
-            deserialize_struct_in_place(None, params, fields, &cont.attrs, None)
+            if let Some(code) = deserialize_struct_in_place(None, params, fields, &cont.attrs, None) {
+                code
+            } else {
+                return None;
+            }
         }
         Data::Struct(Style::Tuple, ref fields) | Data::Struct(Style::Newtype, ref fields) => {
             deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
@@ -890,12 +894,18 @@ fn deserialize_struct_in_place(
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<Tokens>,
-) -> Fragment {
+) -> Option<Fragment> {
     let is_enum = variant_ident.is_some();
     let as_map = deserializer.is_none() && !is_enum && match cattrs.repr() {
         attr::ContainerRepr::Struct | attr::ContainerRepr::Auto => false,
         attr::ContainerRepr::Map => true,
     };
+
+    // for now we do not support in_place deserialization for structs that
+    // are represented as map.
+    if as_map {
+        return None;
+    }
 
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -909,11 +919,8 @@ fn deserialize_struct_in_place(
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs));
 
-    let (field_visitor, fields_stmt, visit_map) = if as_map {
-        deserialize_struct_as_map_in_place_visitor(params, fields, cattrs)
-    } else {
-        deserialize_struct_as_struct_in_place_visitor(params, fields, cattrs)
-    };
+    let (field_visitor, fields_stmt, visit_map) = deserialize_struct_as_struct_in_place_visitor(
+        params, fields, cattrs);
 
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = fields_stmt.map(Stmts);
@@ -933,10 +940,6 @@ fn deserialize_struct_in_place(
         quote! {
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
-    } else if as_map {
-        quote! {
-            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
-        }
     } else {
         let type_name = cattrs.name().deserialize_name();
         quote! {
@@ -951,24 +954,20 @@ fn deserialize_struct_in_place(
         quote!(mut __seq)
     };
 
-    let visit_seq = if as_map {
-        None
-    } else {
-        Some(quote! {
-            #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
-            {
-                #visit_seq
-            }
-        })
+    let visit_seq = quote! {
+        #[inline]
+        fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            where __A: _serde::de::SeqAccess<#delife>
+        {
+            #visit_seq
+        }
     };
 
     let in_place_impl_generics = de_impl_generics.in_place();
     let in_place_ty_generics = de_ty_generics.in_place();
     let place_life = place_lifetime();
 
-    quote_block! {
+    Some(quote_block! {
         #field_visitor
 
         struct __Visitor #in_place_impl_generics #where_clause {
@@ -996,7 +995,7 @@ fn deserialize_struct_in_place(
         #fields_stmt
 
         #dispatch
-    }
+    })
 }
 
 fn deserialize_enum(
@@ -2231,26 +2230,6 @@ fn deserialize_struct_as_struct_in_place_visitor(
     let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
     (field_visitor, Some(fields_stmt), visit_map)
-}
-
-#[cfg(feature = "deserialize_in_place")]
-fn deserialize_struct_as_map_in_place_visitor(
-    params: &Parameters,
-    fields: &[Field],
-    cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>, Fragment) {
-    let field_names_idents: Vec<_> = fields
-        .iter()
-        .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
-        .collect();
-
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, true);
-
-    let visit_map = deserialize_map_in_place(params, fields, cattrs);
-
-    (field_visitor, None, visit_map)
 }
 
 #[cfg(feature = "deserialize_in_place")]
