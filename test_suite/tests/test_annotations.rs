@@ -127,8 +127,11 @@ enum FlattenStructEnum {
 struct FlattenStructTagContentEnumWrapper {
     outer: u32,
     #[serde(flatten)]
-    data: FlattenStructTagContentEnum,
+    data: FlattenStructTagContentEnumNewtype,
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
@@ -1394,10 +1397,12 @@ fn test_flatten_struct_enum() {
 fn test_flatten_struct_tag_content_enum() {
     let change_request = FlattenStructTagContentEnumWrapper {
         outer: 42,
-        data: FlattenStructTagContentEnum::InsertInteger {
-            index: 0,
-            value: 42
-        },
+        data: FlattenStructTagContentEnumNewtype(
+            FlattenStructTagContentEnum::InsertInteger {
+                index: 0,
+                value: 42
+            }
+        ),
     };
     assert_de_tokens(
         &change_request,

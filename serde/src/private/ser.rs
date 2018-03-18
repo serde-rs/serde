@@ -64,7 +64,6 @@ enum Unsupported {
     Optional,
     Unit,
     UnitStruct,
-    NewtypeStruct,
     Sequence,
     Tuple,
     TupleStruct,
@@ -83,7 +82,6 @@ impl Display for Unsupported {
             Unsupported::Optional => formatter.write_str("an optional"),
             Unsupported::Unit => formatter.write_str("unit"),
             Unsupported::UnitStruct => formatter.write_str("unit struct"),
-            Unsupported::NewtypeStruct => formatter.write_str("newtype struct"),
             Unsupported::Sequence => formatter.write_str("a sequence"),
             Unsupported::Tuple => formatter.write_str("a tuple"),
             Unsupported::TupleStruct => formatter.write_str("a tuple struct"),
@@ -1153,13 +1151,12 @@ impl<'a, M> Serializer for FlatMapSerializer<'a, M>
     fn serialize_newtype_struct<T: ?Sized>(
         self,
         _: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: Serialize,
     {
-        // TODO: can we do better here?
-        Err(self.bad_type(Unsupported::NewtypeStruct))
+        value.serialize(self)
     }
 
     fn serialize_newtype_variant<T: ?Sized>(

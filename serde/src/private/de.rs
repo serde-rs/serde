@@ -2143,10 +2143,21 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         visitor.visit_map(FlatMapAccess::new(self.0.iter_mut(), Some(fields)))
     }
 
+    fn deserialize_newtype_struct<V>(
+        self,
+        _name: &str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_newtype_struct(self)
+    }
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-        byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct identifier ignored_any
+        byte_buf option unit unit_struct seq tuple tuple_struct identifier
+        ignored_any
     }
 }
 
