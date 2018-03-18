@@ -140,6 +140,12 @@ enum FlattenStructTagContentEnum {
         index: u32,
         value: u32
     },
+    NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FlattenStructTagContentEnumNewtypeVariant {
+    value: u32,
 }
 
 #[test]
@@ -1436,6 +1442,52 @@ fn test_flatten_struct_tag_content_enum() {
             Token::U32(0),
             Token::Str("value"),
             Token::U32(42),
+            Token::StructEnd,
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_struct_tag_content_enum_newtype() {
+    let change_request = FlattenStructTagContentEnumWrapper {
+        outer: 42,
+        data: FlattenStructTagContentEnumNewtype(
+            FlattenStructTagContentEnum::NewtypeVariant(
+                FlattenStructTagContentEnumNewtypeVariant {
+                    value: 23
+                }
+            )
+        ),
+    };
+    assert_de_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("newtype_variant"),
+            Token::Str("value"),
+            Token::Map { len: None },
+            Token::Str("value"),
+            Token::U32(23),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("newtype_variant"),
+            Token::Str("value"),
+            Token::Struct { len: 1, name: "FlattenStructTagContentEnumNewtypeVariant" },
+            Token::Str("value"),
+            Token::U32(23),
             Token::StructEnd,
             Token::MapEnd,
         ],

@@ -1164,12 +1164,12 @@ impl<'a, M> Serializer for FlatMapSerializer<'a, M>
         _: &'static str,
         _: u32,
         _: &'static str,
-        _: &T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: Serialize,
     {
-        Err(self.bad_type(Unsupported::Enum))
+        value.serialize(self)
     }
 
     fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
