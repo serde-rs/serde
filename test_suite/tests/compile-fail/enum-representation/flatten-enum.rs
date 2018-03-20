@@ -10,7 +10,7 @@
 extern crate serde_derive;
 
 #[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: #[serde(flatten] is not supported on enums
+//~^ HELP: unknown serde variant attribute `flatten`
 enum Foo {
     #[serde(flatten)]
     Foo {
