@@ -2108,16 +2108,18 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         V: Visitor<'de>,
     {
         for item in self.0.iter_mut() {
-            if item.is_none() || !item.as_ref().unwrap().0.as_str()
-               .map_or(false, |x| variants.contains(&x)) {
-                continue;
-            }
+            let use_item = match *item {
+                None => false,
+                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x))
+            };
 
-            let (key, value) = item.take().unwrap();
-            return visitor.visit_enum(EnumDeserializer::new(
-                key,
-                Some(value)
-            ));
+            if use_item {
+                let (key, value) = item.take().unwrap();
+                return visitor.visit_enum(EnumDeserializer::new(
+                    key,
+                    Some(value)
+                ));
+            }
         }
 
         Err(Error::custom(format_args!(
@@ -2197,14 +2199,18 @@ impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
         T: DeserializeSeed<'de>,
     {
         while let Some(item) = self.iter.next() {
-            let use_item = item.is_some() && item.as_ref().unwrap().0.as_str()
-                .map_or(self.fields.is_none(), |key| {
-                    match self.fields {
-                        None => true,
-                        Some(fields) if fields.contains(&key) => true,
-                        _ => false
-                    }
-                });
+            let use_item = match *item {
+                None => false,
+                Some((ref c, _)) => {
+                    c.as_str().map_or(self.fields.is_none(), |key| {
+                        match self.fields {
+                            None => true,
+                            Some(fields) if fields.contains(&key) => true,
+                            _ => false
+                        }
+                    })
+                }
+            };
 
             if use_item {
                 let (key, content) = item.take().unwrap();
