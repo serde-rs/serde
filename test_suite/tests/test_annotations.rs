@@ -1763,3 +1763,37 @@ fn test_lifetime_propagation_for_flatten() {
         ],
     );
 }
+
+#[test]
+fn test_flatten_enum_newtype() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(flatten)]
+        flat: E,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum E {
+        Q(HashMap<String, String>),
+    }
+
+    let e = E::Q({
+        let mut map = HashMap::new();
+        map.insert("k".to_owned(), "v".to_owned());
+        map
+    });
+    let s = S { flat: e };
+
+    assert_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("Q"),
+            Token::Map { len: Some(1) },
+            Token::Str("k"),
+            Token::Str("v"),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+}

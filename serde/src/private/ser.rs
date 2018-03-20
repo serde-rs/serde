@@ -1161,13 +1161,14 @@ impl<'a, M> Serializer for FlatMapSerializer<'a, M>
         self,
         _: &'static str,
         _: u32,
-        _: &'static str,
+        variant: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: Serialize,
     {
-        value.serialize(self)
+        try!(self.0.serialize_key(variant));
+        self.0.serialize_value(value)
     }
 
     fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
