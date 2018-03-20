@@ -272,7 +272,7 @@ mod content {
         pub fn as_str(&self) -> Option<&str> {
             match *self {
                 Content::Str(x) => Some(x),
-                Content::String(ref x) => Some(x.as_str()),
+                Content::String(ref x) => Some(x),
                 _ => None,
             }
         }
