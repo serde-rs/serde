@@ -1684,3 +1684,82 @@ fn test_non_string_keys() {
         ],
     );
 }
+
+#[test]
+fn test_lifetime_propagation_for_flatten() {
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct A<T> {
+        #[serde(flatten)]
+        t: T,
+    }
+
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct B<'a> {
+        #[serde(flatten, borrow)]
+        t: HashMap<&'a str, u32>,
+    }
+
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct C<'a> {
+        #[serde(flatten, borrow)]
+        t: HashMap<&'a [u8], u32>,
+    }
+
+    let mut owned_map = HashMap::new();
+    owned_map.insert("x".to_string(), 42u32);
+    assert_tokens(
+        &A { t: owned_map },
+        &[
+            Token::Map { len: None },
+            Token::Str("x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    let mut borrowed_map = HashMap::new();
+    borrowed_map.insert("x", 42u32);
+    assert_ser_tokens(
+        &B { t: borrowed_map.clone() },
+        &[
+            Token::Map { len: None },
+            Token::BorrowedStr("x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &B { t: borrowed_map },
+        &[
+            Token::Map { len: None },
+            Token::BorrowedStr("x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    let mut borrowed_map = HashMap::new();
+    borrowed_map.insert(&b"x"[..], 42u32);
+    assert_ser_tokens(
+        &C { t: borrowed_map.clone() },
+        &[
+            Token::Map { len: None },
+            Token::Seq { len: Some(1) },
+            Token::U8(120),
+            Token::SeqEnd,
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &C { t: borrowed_map },
+        &[
+            Token::Map { len: None },
+            Token::BorrowedBytes(b"x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+}

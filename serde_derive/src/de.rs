@@ -1875,7 +1875,9 @@ fn deserialize_identifier(
     collect_other_fields: bool
 ) -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
+    let field_borrowed_strs = fields.iter().map(|&(ref name, _)| name);
     let field_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
+    let field_borrowed_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
 
     let constructors: &Vec<_> = &fields
         .iter()
@@ -1997,15 +1999,22 @@ fn deserialize_identifier(
         })
     };
 
-    let (value_as_str_content, value_as_bytes_content) = if !collect_other_fields {
-        (None, None)
+    let (value_as_str_content, value_as_borrowed_str_content,
+         value_as_bytes_content, value_as_borrowed_bytes_content) = if !collect_other_fields {
+        (None, None, None, None)
     } else {
         (
             Some(quote! {
                 let __value = _serde::private::de::Content::String(__value.to_string());
             }),
             Some(quote! {
+                let __value = _serde::private::de::Content::Str(__value);
+            }),
+            Some(quote! {
                 let __value = _serde::private::de::Content::ByteBuf(__value.to_vec());
+            }),
+            Some(quote! {
+                let __value = _serde::private::de::Content::Bytes(__value);
             })
         )
     };
@@ -2038,6 +2047,35 @@ fn deserialize_identifier(
                 )*
                 _ => {
                     #value_as_str_content
+                    #fallthrough_arm
+                }
+            }
+        }
+
+        fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
+            where __E: _serde::de::Error
+        {
+            match __value {
+                #(
+                    #field_borrowed_strs => _serde::export::Ok(#constructors),
+                )*
+                _ => {
+                    #value_as_borrowed_str_content
+                    #fallthrough_arm
+                }
+            }
+        }
+
+        fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
+            where __E: _serde::de::Error
+        {
+            match __value {
+                #(
+                    #field_borrowed_bytes => _serde::export::Ok(#constructors),
+                )*
+                _ => {
+                    #bytes_to_str
+                    #value_as_borrowed_bytes_content
                     #fallthrough_arm
                 }
             }
