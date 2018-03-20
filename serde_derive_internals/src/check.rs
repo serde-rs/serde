@@ -14,6 +14,7 @@ use Ctxt;
 /// object. Simpler checks should happen when parsing and building the attrs.
 pub fn check(cx: &Ctxt, cont: &Container) {
     check_getter(cx, cont);
+    check_flatten(cx, cont);
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
@@ -35,6 +36,40 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
                     "#[serde(getter = \"...\")] can only be used in structs \
                      that have #[serde(remote = \"...\")]",
                 );
+            }
+        }
+    }
+}
+
+/// Flattening has some restrictions we can test.
+fn check_flatten(cx: &Ctxt, cont: &Container) {
+    match cont.data {
+        Data::Enum(_) => {
+            if cont.attrs.has_flatten() {
+                cx.error("#[serde(flatten)] is not allowed in an enum");
+            }
+        }
+        Data::Struct(_, _) => {
+            for field in cont.data.all_fields() {
+                if !field.attrs.flatten() {
+                    continue;
+                }
+                if field.attrs.skip_serializing() {
+                    cx.error(
+                        "#[serde(flatten] can not be combined with \
+                         #[serde(skip_serializing)]"
+                    );
+                } else if field.attrs.skip_serializing_if().is_some() {
+                    cx.error(
+                        "#[serde(flatten] can not be combined with \
+                         #[serde(skip_serializing_if = \"...\")]"
+                    );
+                } else if field.attrs.skip_deserializing() {
+                    cx.error(
+                        "#[serde(flatten] can not be combined with \
+                         #[serde(skip_deserializing)]"
+                    );
+                }
             }
         }
     }
