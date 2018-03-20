@@ -63,6 +63,7 @@ enum Unsupported {
     ByteArray,
     Optional,
     Unit,
+    #[cfg(any(feature = "std", feature = "alloc"))]
     UnitStruct,
     Sequence,
     Tuple,
@@ -81,6 +82,7 @@ impl Display for Unsupported {
             Unsupported::ByteArray => formatter.write_str("a byte array"),
             Unsupported::Optional => formatter.write_str("an optional"),
             Unsupported::Unit => formatter.write_str("unit"),
+            #[cfg(any(feature = "std", feature = "alloc"))]
             Unsupported::UnitStruct => formatter.write_str("unit struct"),
             Unsupported::Sequence => formatter.write_str("a sequence"),
             Unsupported::Tuple => formatter.write_str("a tuple"),
