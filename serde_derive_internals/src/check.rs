@@ -46,7 +46,7 @@ fn check_flatten(cx: &Ctxt, cont: &Container) {
     match cont.data {
         Data::Enum(_) => {
             if cont.attrs.has_flatten() {
-                cx.error("#[serde(flatten)] is not allowed in an enum");
+                cx.error("#[serde(flatten)] is not supported on enums");
             }
         }
         Data::Struct(_, _) => {
