@@ -1323,20 +1323,7 @@ fn test_from_into_traits() {
 fn test_collect_other() {
     let mut extra = HashMap::new();
     extra.insert("c".into(), 3);
-    assert_de_tokens(
-        &CollectOther { a: 1, b: 2, extra: extra.clone() },
-        &[
-            Token::Map { len: None },
-            Token::Str("a"),
-            Token::U32(1),
-            Token::Str("b"),
-            Token::U32(2),
-            Token::Str("c"),
-            Token::U32(3),
-            Token::MapEnd,
-        ],
-    );
-    assert_ser_tokens(
+    assert_tokens(
         &CollectOther { a: 1, b: 2, extra },
         &[
             Token::Map { len: None },
