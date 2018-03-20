@@ -349,6 +349,8 @@ fn deserialize_tuple(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
+    debug_assert!(!cattrs.has_flatten());
+
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
@@ -444,6 +446,8 @@ fn deserialize_tuple_in_place(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
+    debug_assert!(!cattrs.has_flatten());
+
     let is_enum = variant_ident.is_some();
     let expecting = match variant_ident {
         Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
@@ -525,6 +529,8 @@ fn deserialize_seq(
     cattrs: &attr::Container,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
+
+    // XXX: do we need an error for flattening here?
 
     let deserialized_count = fields
         .iter()
@@ -616,6 +622,8 @@ fn deserialize_seq_in_place(
     cattrs: &attr::Container,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
+
+    // XXX: do we need an error for flattening here?
 
     let deserialized_count = fields
         .iter()
@@ -831,7 +839,7 @@ fn deserialize_struct(
         }
     };
 
-    let all_skipped = !cattrs.has_flatten() && fields.iter().all(|field| field.attrs.skip_deserializing());
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
     let visitor_var = if all_skipped {
         quote!(_)
     } else {
@@ -939,7 +947,7 @@ fn deserialize_struct_in_place(
         }
     };
 
-    let all_skipped = !cattrs.has_flatten() && fields.iter().all(|field| field.attrs.skip_deserializing());
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
     let visitor_var = if all_skipped {
         quote!(_)
     } else {
@@ -2058,6 +2066,8 @@ fn deserialize_struct_as_struct_visitor(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> (Fragment, Option<Fragment>, Fragment) {
+    debug_assert!(!cattrs.has_flatten());
+
     let field_names_idents: Vec<_> = fields
         .iter()
         .enumerate()
@@ -2088,7 +2098,7 @@ fn deserialize_struct_as_map_visitor(
     let field_names_idents: Vec<_> = fields
         .iter()
         .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing())
+        .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
         .collect();
 
@@ -2115,7 +2125,7 @@ fn deserialize_map(
     // Declare each field that will be deserialized.
     let let_values = fields_names
         .iter()
-        .filter(|&&(field, _)| !field.attrs.skip_deserializing())
+        .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|&(field, ref name)| {
             let field_ty = &field.ty;
             quote! {
@@ -2138,7 +2148,7 @@ fn deserialize_map(
     // Match arms to extract a value for a field.
     let value_arms = fields_names
         .iter()
-        .filter(|&&(field, _)| !field.attrs.skip_deserializing())
+        .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
 
@@ -2186,7 +2196,7 @@ fn deserialize_map(
         })
     };
 
-    let all_skipped = !cattrs.has_flatten() && fields.iter().all(|field| field.attrs.skip_deserializing());
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
@@ -2208,7 +2218,7 @@ fn deserialize_map(
 
     let extract_values = fields_names
         .iter()
-        .filter(|&&(field, _)| !field.attrs.skip_deserializing())
+        .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|&(field, ref name)| {
             let missing_expr = Match(expr_is_missing(field, cattrs));
 
@@ -2251,7 +2261,7 @@ fn deserialize_map(
 
     let result = fields_names.iter().map(|&(field, ref name)| {
         let ident = field.ident.expect("struct contains unnamed fields");
-        if field.attrs.skip_deserializing() && !field.attrs.flatten() {
+        if field.attrs.skip_deserializing() {
             let value = Expr(expr_is_missing(field, cattrs));
             quote_spanned!(Span::call_site()=> #ident: #value)
         } else {
@@ -2306,6 +2316,8 @@ fn deserialize_struct_as_struct_in_place_visitor(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> (Fragment, Option<Fragment>, Fragment) {
+    debug_assert!(!cattrs.has_flatten());
+
     let field_names_idents: Vec<_> = fields
         .iter()
         .enumerate()
@@ -2333,6 +2345,8 @@ fn deserialize_map_in_place(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
+    debug_assert!(!cattrs.has_flatten());
+
     // Create the field names for the fields.
     let fields_names: Vec<_> = fields
         .iter()

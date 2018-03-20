@@ -1010,7 +1010,7 @@ impl Field {
     }
 
     pub fn skip_deserializing(&self) -> bool {
-        self.skip_deserializing || self.flatten
+        self.skip_deserializing
     }
 
     pub fn skip_serializing_if(&self) -> Option<&syn::ExprPath> {
