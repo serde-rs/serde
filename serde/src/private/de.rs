@@ -2108,6 +2108,9 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         V: Visitor<'de>,
     {
         for item in self.0.iter_mut() {
+            // items in the vector are nulled out when used.  So we can only use
+            // an item if it's still filled in and if the field is one we care
+            // about.
             let use_item = match *item {
                 None => false,
                 Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x))
@@ -2199,6 +2202,9 @@ impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
         T: DeserializeSeed<'de>,
     {
         while let Some(item) = self.iter.next() {
+            // items in the vector are nulled out when used.  So we can only use
+            // an item if it's still filled in and if the field is one we care
+            // about.  In case we do not know which fields we want, we take them all.
             let use_item = match *item {
                 None => false,
                 Some((ref c, _)) => {
