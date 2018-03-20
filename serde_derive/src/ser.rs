@@ -303,7 +303,7 @@ fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr:
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
     let len = if cattrs.has_flatten() {
-        quote!(None)
+        quote!(_serde::export::None)
     } else {
         let len = serialized_fields
             .map(|field| match field.attrs.skip_serializing_if() {
@@ -315,7 +315,7 @@ fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr:
                 }
             })
             .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
-        quote!(Some(#len))
+        quote!(_serde::export::Some(#len))
     };
 
     quote_block! {
@@ -926,7 +926,7 @@ fn serialize_struct_visitor(
             let span = Span::def_site().located_at(field.original.span());
             let ser = if field.attrs.flatten() {
                 quote! {
-                    try!((#field_expr).serialize(_serde::private::ser::FlatMapSerializer(&mut __serde_state)));
+                    try!(_serde::Serialize::serialize(&#field_expr, _serde::private::ser::FlatMapSerializer(&mut __serde_state)));
                 }
             } else {
                 let func = struct_trait.serialize_field(span);

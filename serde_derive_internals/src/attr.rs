@@ -891,7 +891,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(skip_deserializing)]`
+                    // Parse `#[serde(flatten)]`
                     Meta(Word(word)) if word == "flatten" => {
                         flatten.set_true();
                     }
