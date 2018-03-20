@@ -770,7 +770,6 @@ fn deserialize_struct(
     untagged: &Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
-    let as_map = deserializer.is_none() && !is_enum && cattrs.has_flatten();
 
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -798,7 +797,7 @@ fn deserialize_struct(
 
     let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs));
 
-    let (field_visitor, fields_stmt, visit_map) = if as_map {
+    let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
         deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
     } else {
         deserialize_struct_as_struct_visitor(&type_path, params, fields, cattrs)
@@ -821,7 +820,7 @@ fn deserialize_struct(
         quote! {
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
-    } else if as_map {
+    } else if cattrs.has_flatten() {
         quote! {
             _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
         }
@@ -842,7 +841,7 @@ fn deserialize_struct(
     // untagged struct variants do not get a visit_seq method.  The same applies to structs that
     // only have a map representation.
     let visit_seq = match *untagged {
-        Untagged::No if !as_map => Some(quote! {
+        Untagged::No if !cattrs.has_flatten() => Some(quote! {
             #[inline]
             fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
                 where __A: _serde::de::SeqAccess<#delife>
@@ -893,11 +892,10 @@ fn deserialize_struct_in_place(
     deserializer: Option<Tokens>,
 ) -> Option<Fragment> {
     let is_enum = variant_ident.is_some();
-    let as_map = deserializer.is_none() && !is_enum && cattrs.has_flatten();
 
     // for now we do not support in_place deserialization for structs that
     // are represented as map.
-    if as_map {
+    if cattrs.has_flatten() {
         return None;
     }
 
