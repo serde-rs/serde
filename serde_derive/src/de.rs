@@ -2491,7 +2491,9 @@ fn deserialize_map_in_place(
 
     let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
         Some(quote! {
-            if let Some(Some((__key, _))) = __collect.into_iter().filter(|x| x.is_some()).next() {
+            if let _serde::export::Some(_serde::export::Some((__key, _))) =
+                __collect.into_iter().filter(|x| x.is_some()).next()
+            {
                 return _serde::export::Err(
                     _serde::de::Error::custom(format_args!("unknown field `{}`", &__key)));
             }
