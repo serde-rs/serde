@@ -11,13 +11,13 @@ use lib::*;
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::Unexpected;
+use de::{Unexpected, MapAccess};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{Content, ContentDeserializer, ContentRefDeserializer,
                         InternallyTaggedUnitVisitor, TagContentOtherField,
                         TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor,
-                        TaggedContentVisitor, UntaggedUnitVisitor};
+                        TaggedContentVisitor, UntaggedUnitVisitor, EnumDeserializer};
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -269,6 +269,14 @@ mod content {
     }
 
     impl<'de> Content<'de> {
+        pub fn as_str(&self) -> Option<&str> {
+            match *self {
+                Content::Str(x) => Some(x),
+                Content::String(ref x) => Some(x),
+                _ => None,
+            }
+        }
+
         fn unexpected(&self) -> Unexpected {
             match *self {
                 Content::Bool(b) => Unexpected::Bool(b),
@@ -1118,11 +1126,7 @@ mod content {
                 }
             };
 
-            visitor.visit_enum(EnumDeserializer {
-                variant: variant,
-                value: value,
-                err: PhantomData,
-            })
+            visitor.visit_enum(EnumDeserializer::new(variant, value))
         }
 
         fn deserialize_unit_struct<V>(
@@ -1170,13 +1174,25 @@ mod content {
         }
     }
 
-    struct EnumDeserializer<'de, E>
+    pub struct EnumDeserializer<'de, E>
     where
         E: de::Error,
     {
         variant: Content<'de>,
         value: Option<Content<'de>>,
         err: PhantomData<E>,
+    }
+
+    impl<'de, E> EnumDeserializer<'de, E>
+        where E: de::Error
+    {
+        pub fn new(variant: Content<'de>, value: Option<Content<'de>>) -> EnumDeserializer<'de, E> {
+            EnumDeserializer {
+                variant: variant,
+                value: value,
+                err: PhantomData,
+            }
+        }
     }
 
     impl<'de, E> de::EnumAccess<'de> for EnumDeserializer<'de, E>
@@ -1199,7 +1215,7 @@ mod content {
         }
     }
 
-    struct VariantDeserializer<'de, E>
+    pub struct VariantDeserializer<'de, E>
     where
         E: de::Error,
     {
@@ -2060,5 +2076,164 @@ where
         D: Deserializer<'de>,
     {
         T::deserialize_in_place(deserializer, self.0)
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
+    pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
+    pub PhantomData<E>
+);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
+    where E: Error
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, _: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        Err(Error::custom("can only flatten structs and maps"))
+    }
+
+    fn deserialize_enum<V>(
+        self,
+        name: &'static str,
+        variants: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        for item in self.0.iter_mut() {
+            // items in the vector are nulled out when used.  So we can only use
+            // an item if it's still filled in and if the field is one we care
+            // about.
+            let use_item = match *item {
+                None => false,
+                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x))
+            };
+
+            if use_item {
+                let (key, value) = item.take().unwrap();
+                return visitor.visit_enum(EnumDeserializer::new(
+                    key,
+                    Some(value)
+                ));
+            }
+        }
+
+        Err(Error::custom(format_args!(
+            "no variant of enum {} not found in flattened data",
+            name
+        )))
+    }
+
+    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(FlatMapAccess::new(self.0.iter_mut(), None))
+    }
+
+    fn deserialize_struct<V>(
+        self,
+        _: &'static str,
+        fields: &'static [&'static str],
+        visitor: V
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(FlatMapAccess::new(self.0.iter_mut(), Some(fields)))
+    }
+
+    fn deserialize_newtype_struct<V>(
+        self,
+        _name: &str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_newtype_struct(self)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+        byte_buf option unit unit_struct seq tuple tuple_struct identifier
+        ignored_any
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapAccess<'a, 'de: 'a, E> {
+    iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
+    pending_content: Option<Content<'de>>,
+    fields: Option<&'static [&'static str]>,
+    _marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
+    fn new(
+        iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
+        fields: Option<&'static [&'static str]>
+    ) -> FlatMapAccess<'a, 'de, E> {
+        FlatMapAccess {
+            iter: iter,
+            pending_content: None,
+            fields: fields,
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
+    where E: Error
+{
+    type Error = E;
+
+    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        while let Some(item) = self.iter.next() {
+            // items in the vector are nulled out when used.  So we can only use
+            // an item if it's still filled in and if the field is one we care
+            // about.  In case we do not know which fields we want, we take them all.
+            let use_item = match *item {
+                None => false,
+                Some((ref c, _)) => {
+                    c.as_str().map_or(self.fields.is_none(), |key| {
+                        match self.fields {
+                            None => true,
+                            Some(fields) if fields.contains(&key) => true,
+                            _ => false
+                        }
+                    })
+                }
+            };
+
+            if use_item {
+                let (key, content) = item.take().unwrap();
+                self.pending_content = Some(content);
+                return seed.deserialize(ContentDeserializer::new(key)).map(Some);
+            }
+        }
+        Ok(None)
+    }
+
+    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        match self.pending_content.take() {
+            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+            None => Err(Error::custom("value is missing")),
+        }
     }
 }

@@ -27,6 +27,7 @@ use proc_macro2::{Span, TokenStream, TokenNode, TokenTree};
 
 pub use case::RenameRule;
 
+#[derive(Copy, Clone)]
 struct Attr<'c, T> {
     cx: &'c Ctxt,
     name: &'static str,
@@ -114,6 +115,7 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    has_flatten: bool,
 }
 
 /// Styles of representing an enum.
@@ -373,6 +375,7 @@ impl Container {
             type_into: type_into.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, &field_identifier, &variant_identifier),
+            has_flatten: false,
         }
     }
 
@@ -418,6 +421,14 @@ impl Container {
 
     pub fn identifier(&self) -> Identifier {
         self.identifier
+    }
+
+    pub fn has_flatten(&self) -> bool {
+        self.has_flatten
+    }
+
+    pub fn mark_has_flatten(&mut self) {
+        self.has_flatten = true;
     }
 }
 
@@ -699,6 +710,7 @@ pub struct Field {
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::ExprPath>,
+    flatten: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -732,6 +744,7 @@ impl Field {
         let mut de_bound = Attr::none(cx, "bound");
         let mut borrowed_lifetimes = Attr::none(cx, "borrow");
         let mut getter = Attr::none(cx, "getter");
+        let mut flatten = BoolAttr::none(cx, "flatten");
 
         let ident = match field.ident {
             Some(ref ident) => ident.to_string(),
@@ -878,6 +891,11 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(flatten)]`
+                    Meta(Word(word)) if word == "flatten" => {
+                        flatten.set_true();
+                    }
+
                     Meta(ref meta_item) => {
                         cx.error(format!(
                             "unknown serde field attribute `{}`",
@@ -970,6 +988,7 @@ impl Field {
             de_bound: de_bound.get(),
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
+            flatten: flatten.get(),
         }
     }
 
@@ -1024,6 +1043,10 @@ impl Field {
 
     pub fn getter(&self) -> Option<&syn::ExprPath> {
         self.getter.as_ref()
+    }
+
+    pub fn flatten(&self) -> bool {
+        self.flatten
     }
 }
 

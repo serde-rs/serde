@@ -48,7 +48,7 @@ pub enum Style {
 
 impl<'a> Container<'a> {
     pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput) -> Container<'a> {
-        let attrs = attr::Container::from_ast(cx, item);
+        let mut attrs = attr::Container::from_ast(cx, item);
 
         let mut data = match item.data {
             syn::Data::Enum(ref data) => {
@@ -63,6 +63,7 @@ impl<'a> Container<'a> {
             }
         };
 
+        let mut has_flatten = false;
         match data {
             Data::Enum(ref mut variants) => for variant in variants {
                 variant.attrs.rename_by_rule(attrs.rename_all());
@@ -71,8 +72,15 @@ impl<'a> Container<'a> {
                 }
             },
             Data::Struct(_, ref mut fields) => for field in fields {
+                if field.attrs.flatten() {
+                    has_flatten = true;
+                }
                 field.attrs.rename_by_rule(attrs.rename_all());
             },
+        }
+
+        if has_flatten {
+            attrs.mark_has_flatten();
         }
 
         let item = Container {

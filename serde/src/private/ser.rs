@@ -11,7 +11,12 @@ use lib::*;
 use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use self::content::{SerializeStructVariantAsMapValue, SerializeTupleVariantAsMapValue};
+use self::content::{
+    SerializeStructVariantAsMapValue,
+    SerializeTupleVariantAsMapValue,
+    ContentSerializer,
+    Content,
+};
 
 /// Used to check that serde(getter) attributes return the expected type.
 /// Not public API.
@@ -58,10 +63,11 @@ enum Unsupported {
     ByteArray,
     Optional,
     Unit,
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    UnitStruct,
     Sequence,
     Tuple,
     TupleStruct,
-    #[cfg(not(any(feature = "std", feature = "alloc")))]
     Enum,
 }
 
@@ -76,10 +82,11 @@ impl Display for Unsupported {
             Unsupported::ByteArray => formatter.write_str("a byte array"),
             Unsupported::Optional => formatter.write_str("an optional"),
             Unsupported::Unit => formatter.write_str("unit"),
+            #[cfg(any(feature = "std", feature = "alloc"))]
+            Unsupported::UnitStruct => formatter.write_str("unit struct"),
             Unsupported::Sequence => formatter.write_str("a sequence"),
             Unsupported::Tuple => formatter.write_str("a tuple"),
             Unsupported::TupleStruct => formatter.write_str("a tuple struct"),
-            #[cfg(not(any(feature = "std", feature = "alloc")))]
             Unsupported::Enum => formatter.write_str("an enum"),
         }
     }
@@ -459,7 +466,7 @@ mod content {
     }
 
     #[derive(Debug)]
-    enum Content {
+    pub enum Content {
         Bool(bool),
 
         U8(u8),
@@ -584,12 +591,12 @@ mod content {
         }
     }
 
-    struct ContentSerializer<E> {
+    pub struct ContentSerializer<E> {
         error: PhantomData<E>,
     }
 
     impl<E> ContentSerializer<E> {
-        fn new() -> Self {
+        pub fn new() -> Self {
             ContentSerializer { error: PhantomData }
         }
     }
@@ -804,7 +811,7 @@ mod content {
         }
     }
 
-    struct SerializeSeq<E> {
+    pub struct SerializeSeq<E> {
         elements: Vec<Content>,
         error: PhantomData<E>,
     }
@@ -830,7 +837,7 @@ mod content {
         }
     }
 
-    struct SerializeTuple<E> {
+    pub struct SerializeTuple<E> {
         elements: Vec<Content>,
         error: PhantomData<E>,
     }
@@ -856,7 +863,7 @@ mod content {
         }
     }
 
-    struct SerializeTupleStruct<E> {
+    pub struct SerializeTupleStruct<E> {
         name: &'static str,
         fields: Vec<Content>,
         error: PhantomData<E>,
@@ -883,7 +890,7 @@ mod content {
         }
     }
 
-    struct SerializeTupleVariant<E> {
+    pub struct SerializeTupleVariant<E> {
         name: &'static str,
         variant_index: u32,
         variant: &'static str,
@@ -917,7 +924,7 @@ mod content {
         }
     }
 
-    struct SerializeMap<E> {
+    pub struct SerializeMap<E> {
         entries: Vec<(Content, Content)>,
         key: Option<Content>,
         error: PhantomData<E>,
@@ -967,7 +974,7 @@ mod content {
         }
     }
 
-    struct SerializeStruct<E> {
+    pub struct SerializeStruct<E> {
         name: &'static str,
         fields: Vec<(&'static str, Content)>,
         error: PhantomData<E>,
@@ -994,7 +1001,7 @@ mod content {
         }
     }
 
-    struct SerializeStructVariant<E> {
+    pub struct SerializeStructVariant<E> {
         name: &'static str,
         variant_index: u32,
         variant: &'static str,
@@ -1026,5 +1033,285 @@ mod content {
                 self.fields,
             ))
         }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializer<'a, M: 'a>(pub &'a mut M);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> FlatMapSerializer<'a, M>
+where
+    M: SerializeMap + 'a
+{
+    fn bad_type(self, what: Unsupported) -> M::Error {
+        ser::Error::custom(format_args!("can only flatten structs and maps (got {})", what))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> Serializer for FlatMapSerializer<'a, M>
+    where M: SerializeMap + 'a
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    type SerializeSeq = Impossible<Self::Ok, M::Error>;
+    type SerializeTuple = Impossible<Self::Ok, M::Error>;
+    type SerializeTupleStruct = Impossible<Self::Ok, M::Error>;
+    type SerializeMap = FlatMapSerializeMap<'a, M>;
+    type SerializeStruct = FlatMapSerializeStruct<'a, M>;
+    type SerializeTupleVariant = Impossible<Self::Ok, M::Error>;
+    type SerializeStructVariant = FlatMapSerializeStructVariantAsMapValue<'a, M>;
+
+    fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Boolean))
+    }
+
+    fn serialize_i8(self, _: i8) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_i16(self, _: i16) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_i32(self, _: i32) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_i64(self, _: i64) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_u8(self, _: u8) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_u16(self, _: u16) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_u32(self, _: u32) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_u64(self, _: u64) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_f32(self, _: f32) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Float))
+    }
+
+    fn serialize_f64(self, _: f64) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Float))
+    }
+
+    fn serialize_char(self, _: char) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Char))
+    }
+
+    fn serialize_str(self, _: &str) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::String))
+    }
+
+    fn serialize_bytes(self, _: &[u8]) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::ByteArray))
+    }
+
+    fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Optional))
+    }
+
+    fn serialize_some<T: ?Sized>(self, _: &T) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize,
+    {
+        Err(self.bad_type(Unsupported::Optional))
+    }
+
+    fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Unit))
+    }
+
+    fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::UnitStruct))
+    }
+
+    fn serialize_unit_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Enum))
+    }
+
+    fn serialize_newtype_struct<T: ?Sized>(
+        self,
+        _: &'static str,
+        value: &T,
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize,
+    {
+        value.serialize(self)
+    }
+
+    fn serialize_newtype_variant<T: ?Sized>(
+        self,
+        _: &'static str,
+        _: u32,
+        variant: &'static str,
+        value: &T,
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize,
+    {
+        try!(self.0.serialize_key(variant));
+        self.0.serialize_value(value)
+    }
+
+    fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        Err(self.bad_type(Unsupported::Sequence))
+    }
+
+    fn serialize_tuple(self, _: usize) -> Result<Self::SerializeTuple, Self::Error> {
+        Err(self.bad_type(Unsupported::Tuple))
+    }
+
+    fn serialize_tuple_struct(
+        self,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeTupleStruct, Self::Error> {
+        Err(self.bad_type(Unsupported::TupleStruct))
+    }
+
+    fn serialize_tuple_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        Err(self.bad_type(Unsupported::Enum))
+    }
+
+    fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        Ok(FlatMapSerializeMap(self.0))
+    }
+
+    fn serialize_struct(
+        self,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
+        Ok(FlatMapSerializeStruct(self.0))
+    }
+
+    fn serialize_struct_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        inner_variant: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        try!(self.0.serialize_key(inner_variant));
+        Ok(FlatMapSerializeStructVariantAsMapValue::new(self.0, inner_variant))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializeMap<'a, M: 'a>(&'a mut M);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> ser::SerializeMap for FlatMapSerializeMap<'a, M>
+    where M: SerializeMap + 'a
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        self.0.serialize_key(key)
+    }
+
+    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        self.0.serialize_value(value)
+    }
+
+    fn end(self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializeStruct<'a, M: 'a>(&'a mut M);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> ser::SerializeStruct for FlatMapSerializeStruct<'a, M>
+    where M: SerializeMap + 'a
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        self.0.serialize_entry(key, value)
+    }
+
+    fn end(self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializeStructVariantAsMapValue<'a, M: 'a> {
+    map: &'a mut M,
+    name: &'static str,
+    fields: Vec<(&'static str, Content)>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> FlatMapSerializeStructVariantAsMapValue<'a, M>
+    where M: SerializeMap + 'a
+{
+    fn new(map: &'a mut M, name: &'static str) -> FlatMapSerializeStructVariantAsMapValue<'a, M> {
+        FlatMapSerializeStructVariantAsMapValue {
+            map: map,
+            name: name,
+            fields: Vec::new(),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> ser::SerializeStructVariant for FlatMapSerializeStructVariantAsMapValue<'a, M>
+    where M: SerializeMap + 'a
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
+        self.fields.push((key, value));
+        Ok(())
+    }
+
+    fn end(self) -> Result<(), Self::Error> {
+        try!(self.map.serialize_value(&Content::Struct(self.name, self.fields)));
+        Ok(())
     }
 }

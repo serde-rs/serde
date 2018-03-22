@@ -245,6 +245,14 @@ fn serialize_tuple_struct(
 fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
     assert!(fields.len() as u64 <= u64::from(u32::MAX));
 
+    if cattrs.has_flatten() {
+        serialize_struct_as_map(params, fields, cattrs)
+    } else {
+        serialize_struct_as_struct(params, fields, cattrs)
+    }
+}
+
+fn serialize_struct_as_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
     let serialize_fields = serialize_struct_visitor(
         fields,
         params,
@@ -276,6 +284,44 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
         #(#serialize_fields)*
         _serde::ser::SerializeStruct::end(__serde_state)
+    }
+}
+
+fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
+    let serialize_fields = serialize_struct_visitor(
+        fields,
+        params,
+        false,
+        &StructTrait::SerializeMap,
+    );
+
+    let mut serialized_fields = fields
+        .iter()
+        .filter(|&field| !field.attrs.skip_serializing())
+        .peekable();
+
+    let let_mut = mut_if(serialized_fields.peek().is_some());
+
+    let len = if cattrs.has_flatten() {
+        quote!(_serde::export::None)
+    } else {
+        let len = serialized_fields
+            .map(|field| match field.attrs.skip_serializing_if() {
+                None => quote!(1),
+                Some(path) => {
+                    let ident = field.ident.expect("struct has unnamed fields");
+                    let field_expr = get_member(params, field, &Member::Named(ident));
+                    quote!(if #path(#field_expr) { 0 } else { 1 })
+                }
+            })
+            .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        quote!(_serde::export::Some(#len))
+    };
+
+    quote_block! {
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_map(__serializer, #len));
+        #(#serialize_fields)*
+        _serde::ser::SerializeMap::end(__serde_state)
     }
 }
 
@@ -859,6 +905,7 @@ fn serialize_struct_visitor(
         .filter(|&field| !field.attrs.skip_serializing())
         .map(|field| {
             let field_ident = field.ident.expect("struct has unnamed field");
+
             let mut field_expr = if is_enum {
                 quote!(#field_ident)
             } else {
@@ -877,20 +924,33 @@ fn serialize_struct_visitor(
             }
 
             let span = Span::def_site().located_at(field.original.span());
-            let func = struct_trait.serialize_field(span);
-            let ser = quote! {
-                try!(#func(&mut __serde_state, #key_expr, #field_expr));
+            let ser = if field.attrs.flatten() {
+                quote! {
+                    try!(_serde::Serialize::serialize(&#field_expr, _serde::private::ser::FlatMapSerializer(&mut __serde_state)));
+                }
+            } else {
+                let func = struct_trait.serialize_field(span);
+                quote! {
+                    try!(#func(&mut __serde_state, #key_expr, #field_expr));
+                }
             };
 
             match skip {
                 None => ser,
                 Some(skip) => {
-                    let skip_func = struct_trait.skip_field(span);
-                    quote! {
-                        if !#skip {
-                            #ser
-                        } else {
-                            try!(#skip_func(&mut __serde_state, #key_expr));
+                    if let Some(skip_func) = struct_trait.skip_field(span) {
+                        quote! {
+                            if !#skip {
+                                #ser
+                            } else {
+                                try!(#skip_func(&mut __serde_state, #key_expr));
+                            }
+                        }
+                    } else {
+                        quote! {
+                            if !#skip {
+                                #ser
+                            }
                         }
                     }
                 }
@@ -1011,6 +1071,7 @@ fn get_member(params: &Parameters, field: &Field, member: &Member) -> Tokens {
 }
 
 enum StructTrait {
+    SerializeMap,
     SerializeStruct,
     SerializeStructVariant,
 }
@@ -1018,6 +1079,9 @@ enum StructTrait {
 impl StructTrait {
     fn serialize_field(&self, span: Span) -> Tokens {
         match *self {
+            StructTrait::SerializeMap => {
+                quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry)
+            }
             StructTrait::SerializeStruct => {
                 quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)
             }
@@ -1027,14 +1091,15 @@ impl StructTrait {
         }
     }
 
-    fn skip_field(&self, span: Span) -> Tokens {
+    fn skip_field(&self, span: Span) -> Option<Tokens> {
         match *self {
-            StructTrait::SerializeStruct => {
+            StructTrait::SerializeMap => None,
+            StructTrait::SerializeStruct => Some({
                 quote_spanned!(span=> _serde::ser::SerializeStruct::skip_field)
-            }
-            StructTrait::SerializeStructVariant => {
+            }),
+            StructTrait::SerializeStructVariant => Some({
                 quote_spanned!(span=> _serde::ser::SerializeStructVariant::skip_field)
-            }
+            })
         }
     }
 }

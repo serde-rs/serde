@@ -26,7 +26,7 @@
 #![cfg_attr(feature = "cargo-clippy", allow(enum_variant_names, redundant_field_names,
                                             too_many_arguments, used_underscore_binding))]
 // The `quote!` macro requires deep recursion.
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 #[macro_use]
 extern crate quote;

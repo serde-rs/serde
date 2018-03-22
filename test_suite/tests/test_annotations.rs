@@ -12,12 +12,13 @@
 extern crate serde_derive;
 
 extern crate serde;
+use std::collections::HashMap;
 use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use self::serde::de::{self, Unexpected};
 
 extern crate serde_test;
-use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens,
-                       Token};
+use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
+                       assert_ser_tokens_error, assert_tokens, Token};
 
 trait MyDefault: Sized {
     fn my_default() -> Self;
@@ -92,6 +93,56 @@ where
     a4: D,
     #[serde(skip_deserializing, default = "MyDefault::my_default")]
     a5: E,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct CollectOther {
+    a: u32,
+    b: u32,
+    #[serde(flatten)]
+    extra: HashMap<String, u32>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FlattenStructEnumWrapper {
+    #[serde(flatten)]
+    data: FlattenStructEnum,
+    #[serde(flatten)]
+    extra: HashMap<String, String>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum FlattenStructEnum {
+    InsertInteger {
+        index: u32,
+        value: u32
+    },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FlattenStructTagContentEnumWrapper {
+    outer: u32,
+    #[serde(flatten)]
+    data: FlattenStructTagContentEnumNewtype,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type", content = "value")]
+enum FlattenStructTagContentEnum {
+    InsertInteger {
+        index: u32,
+        value: u32
+    },
+    NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FlattenStructTagContentEnumNewtypeVariant {
+    value: u32,
 }
 
 #[test]
@@ -1266,4 +1317,483 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)), &[Token::None]);
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
+}
+
+#[test]
+fn test_collect_other() {
+    let mut extra = HashMap::new();
+    extra.insert("c".into(), 3);
+    assert_tokens(
+        &CollectOther { a: 1, b: 2, extra },
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::U32(2),
+            Token::Str("c"),
+            Token::U32(3),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_struct_enum() {
+    let mut extra = HashMap::new();
+    extra.insert("extra_key".into(), "extra value".into());
+    let change_request = FlattenStructEnumWrapper {
+        data: FlattenStructEnum::InsertInteger {
+            index: 0,
+            value: 42
+        },
+        extra,
+    };
+    assert_de_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("insert_integer"),
+            Token::Map { len: None },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::MapEnd,
+            Token::Str("extra_key"),
+            Token::Str("extra value"),
+            Token::MapEnd
+        ],
+    );
+    assert_ser_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("insert_integer"),
+            Token::Struct { len: 2, name: "insert_integer" },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::StructEnd,
+            Token::Str("extra_key"),
+            Token::Str("extra value"),
+            Token::MapEnd
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_struct_tag_content_enum() {
+    let change_request = FlattenStructTagContentEnumWrapper {
+        outer: 42,
+        data: FlattenStructTagContentEnumNewtype(
+            FlattenStructTagContentEnum::InsertInteger {
+                index: 0,
+                value: 42
+            }
+        ),
+    };
+    assert_de_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("insert_integer"),
+            Token::Str("value"),
+            Token::Map { len: None },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("insert_integer"),
+            Token::Str("value"),
+            Token::Struct { len: 2, name: "insert_integer" },
+            Token::Str("index"),
+            Token::U32(0),
+            Token::Str("value"),
+            Token::U32(42),
+            Token::StructEnd,
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_struct_tag_content_enum_newtype() {
+    let change_request = FlattenStructTagContentEnumWrapper {
+        outer: 42,
+        data: FlattenStructTagContentEnumNewtype(
+            FlattenStructTagContentEnum::NewtypeVariant(
+                FlattenStructTagContentEnumNewtypeVariant {
+                    value: 23
+                }
+            )
+        ),
+    };
+    assert_de_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("newtype_variant"),
+            Token::Str("value"),
+            Token::Map { len: None },
+            Token::Str("value"),
+            Token::U32(23),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &change_request,
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::U32(42),
+            Token::Str("type"),
+            Token::Str("newtype_variant"),
+            Token::Str("value"),
+            Token::Struct { len: 1, name: "FlattenStructTagContentEnumNewtypeVariant" },
+            Token::Str("value"),
+            Token::U32(23),
+            Token::StructEnd,
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_unknown_field_in_flatten() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Outer {
+        dummy: String,
+        #[serde(flatten)]
+        inner: Inner,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Inner {
+        foo: HashMap<String, u32>,
+    }
+
+    assert_de_tokens_error::<Outer>(
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 1,
+            },
+            Token::Str("dummy"),
+            Token::Str("23"),
+            Token::Str("foo"),
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::U32(2),
+            Token::MapEnd,
+            Token::Str("bar"),
+            Token::U32(23),
+            Token::StructEnd,
+        ],
+        "unknown field `bar`",
+    );
+}
+
+#[test]
+fn test_complex_flatten() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Outer {
+        y: u32,
+        #[serde(flatten)]
+        first: First,
+        #[serde(flatten)]
+        second: Second,
+        z: u32
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct First {
+        a: u32,
+        b: bool,
+        c: Vec<String>,
+        d: String,
+        e: Option<u64>,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Second {
+        f: u32,
+    }
+
+    assert_de_tokens(
+        &Outer {
+            y: 0,
+            first: First {
+                a: 1,
+                b: true,
+                c: vec!["a".into(), "b".into()],
+                d: "c".into(),
+                e: Some(2),
+            },
+            second: Second {
+                f: 3
+            },
+            z: 4
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("y"),
+            Token::U32(0),
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::Bool(true),
+            Token::Str("c"),
+            Token::Seq { len: Some(2) },
+            Token::Str("a"),
+            Token::Str("b"),
+            Token::SeqEnd,
+            Token::Str("d"),
+            Token::Str("c"),
+            Token::Str("e"),
+            Token::U64(2),
+            Token::Str("f"),
+            Token::U32(3),
+            Token::Str("z"),
+            Token::U32(4),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &Outer {
+            y: 0,
+            first: First {
+                a: 1,
+                b: true,
+                c: vec!["a".into(), "b".into()],
+                d: "c".into(),
+                e: Some(2),
+            },
+            second: Second {
+                f: 3
+            },
+            z: 4
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("y"),
+            Token::U32(0),
+            Token::Str("a"),
+            Token::U32(1),
+            Token::Str("b"),
+            Token::Bool(true),
+            Token::Str("c"),
+            Token::Seq { len: Some(2) },
+            Token::Str("a"),
+            Token::Str("b"),
+            Token::SeqEnd,
+            Token::Str("d"),
+            Token::Str("c"),
+            Token::Str("e"),
+            Token::Some,
+            Token::U64(2),
+            Token::Str("f"),
+            Token::U32(3),
+            Token::Str("z"),
+            Token::U32(4),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_unsupported_type() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Outer {
+        outer: String,
+        #[serde(flatten)]
+        inner: String,
+    }
+
+    assert_ser_tokens_error(
+        &Outer {
+            outer: "foo".into(),
+            inner: "bar".into(),
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::Str("foo"),
+        ],
+        "can only flatten structs and maps (got a string)",
+    );
+    assert_de_tokens_error::<Outer>(
+        &[
+            Token::Map { len: None },
+            Token::Str("outer"),
+            Token::Str("foo"),
+            Token::Str("a"),
+            Token::Str("b"),
+            Token::MapEnd
+        ],
+        "can only flatten structs and maps",
+    );
+}
+
+#[test]
+fn test_non_string_keys() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct TestStruct {
+        name: String,
+        age: u32,
+        #[serde(flatten)]
+        mapping: HashMap<u32, u32>,
+    }
+
+    let mut mapping = HashMap::new();
+    mapping.insert(0, 42);
+    assert_tokens(
+        &TestStruct { name: "peter".into(), age: 3, mapping },
+        &[
+            Token::Map { len: None },
+            Token::Str("name"),
+            Token::Str("peter"),
+            Token::Str("age"),
+            Token::U32(3),
+            Token::U32(0),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_lifetime_propagation_for_flatten() {
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct A<T> {
+        #[serde(flatten)]
+        t: T,
+    }
+
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct B<'a> {
+        #[serde(flatten, borrow)]
+        t: HashMap<&'a str, u32>,
+    }
+
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct C<'a> {
+        #[serde(flatten, borrow)]
+        t: HashMap<&'a [u8], u32>,
+    }
+
+    let mut owned_map = HashMap::new();
+    owned_map.insert("x".to_string(), 42u32);
+    assert_tokens(
+        &A { t: owned_map },
+        &[
+            Token::Map { len: None },
+            Token::Str("x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    let mut borrowed_map = HashMap::new();
+    borrowed_map.insert("x", 42u32);
+    assert_ser_tokens(
+        &B { t: borrowed_map.clone() },
+        &[
+            Token::Map { len: None },
+            Token::BorrowedStr("x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &B { t: borrowed_map },
+        &[
+            Token::Map { len: None },
+            Token::BorrowedStr("x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    let mut borrowed_map = HashMap::new();
+    borrowed_map.insert(&b"x"[..], 42u32);
+    assert_ser_tokens(
+        &C { t: borrowed_map.clone() },
+        &[
+            Token::Map { len: None },
+            Token::Seq { len: Some(1) },
+            Token::U8(120),
+            Token::SeqEnd,
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &C { t: borrowed_map },
+        &[
+            Token::Map { len: None },
+            Token::BorrowedBytes(b"x"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_enum_newtype() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(flatten)]
+        flat: E,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum E {
+        Q(HashMap<String, String>),
+    }
+
+    let e = E::Q({
+        let mut map = HashMap::new();
+        map.insert("k".to_owned(), "v".to_owned());
+        map
+    });
+    let s = S { flat: e };
+
+    assert_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("Q"),
+            Token::Map { len: Some(1) },
+            Token::Str("k"),
+            Token::Str("v"),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
 }
