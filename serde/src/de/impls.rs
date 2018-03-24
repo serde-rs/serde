@@ -1918,6 +1918,7 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
+#[allow(deprecated)]
 impl<'de, T> Deserialize<'de> for NonZero<T>
 where
     T: Deserialize<'de> + Zeroable,
@@ -1932,6 +1933,39 @@ where
             None => Err(Error::custom("expected a non-zero value")),
         }
     }
+}
+
+macro_rules! nonzero_integers {
+    ( @ $( $T: ty, )+ ) => {
+        $(
+            #[cfg(feature = "unstable")]
+            impl<'de> Deserialize<'de> for $T {
+                fn deserialize<D>(deserializer: D) -> Result<$T, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    let value = try!(Deserialize::deserialize(deserializer));
+                    match <$T>::new(value) {
+                        Some(nonzero) => Ok(nonzero),
+                        None => Err(Error::custom("expected a non-zero value")),
+                    }
+                }
+            }
+        )+
+    };
+    ( $( $T: ident, )+ ) => {
+        nonzero_integers!(@ $(::lib::num::$T,)+ );
+    }
+}
+
+nonzero_integers! {
+    // Not including signed NonZeroI* since they might be removed
+    NonZeroU8,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    // FIXME: https://github.com/serde-rs/serde/issues/1136 NonZeroU128,
+    NonZeroUsize,
 }
 
 ////////////////////////////////////////////////////////////////////////////////

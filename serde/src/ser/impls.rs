@@ -351,6 +351,7 @@ deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwne
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
+#[allow(deprecated)]
 impl<T> Serialize for NonZero<T>
 where
     T: Serialize + Zeroable + Clone,
@@ -361,6 +362,32 @@ where
     {
         self.clone().get().serialize(serializer)
     }
+}
+
+macro_rules! nonzero_integers {
+    ( $( $T: ident, )+ ) => {
+        $(
+            #[cfg(feature = "unstable")]
+            impl Serialize for ::lib::num::$T {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: Serializer,
+                {
+                    self.get().serialize(serializer)
+                }
+            }
+        )+
+    }
+}
+
+nonzero_integers! {
+    // Not including signed NonZeroI* since they might be removed
+    NonZeroU8,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    // FIXME: https://github.com/serde-rs/serde/issues/1136 NonZeroU128,
+    NonZeroUsize,
 }
 
 impl<T> Serialize for Cell<T>
