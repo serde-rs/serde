@@ -215,7 +215,7 @@ mod lib {
     pub use core::nonzero::{NonZero, Zeroable};
 
     #[cfg(feature = "unstable")]
-    pub use core::num;
+    pub use core::num::{NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroUsize};
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -368,7 +368,7 @@ macro_rules! nonzero_integers {
     ( $( $T: ident, )+ ) => {
         $(
             #[cfg(feature = "unstable")]
-            impl Serialize for ::lib::num::$T {
+            impl Serialize for $T {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
                     S: Serializer,

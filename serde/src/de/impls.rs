@@ -1936,7 +1936,7 @@ where
 }
 
 macro_rules! nonzero_integers {
-    ( @ $( $T: ty, )+ ) => {
+    ( $( $T: ty, )+ ) => {
         $(
             #[cfg(feature = "unstable")]
             impl<'de> Deserialize<'de> for $T {
@@ -1953,9 +1953,6 @@ macro_rules! nonzero_integers {
             }
         )+
     };
-    ( $( $T: ident, )+ ) => {
-        nonzero_integers!(@ $(::lib::num::$T,)+ );
-    }
 }
 
 nonzero_integers! {
