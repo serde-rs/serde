@@ -45,7 +45,7 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
 fn check_flatten(cx: &Ctxt, cont: &Container) {
     match cont.data {
         Data::Enum(_) => {
-            debug_assert!(!cont.attrs.has_flatten());
+            assert!(!cont.attrs.has_flatten());
         }
         Data::Struct(_, _) => {
             for field in cont.data.all_fields() {

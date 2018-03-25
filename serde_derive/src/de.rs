@@ -349,7 +349,7 @@ fn deserialize_tuple(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    debug_assert!(!cattrs.has_flatten());
+    assert!(!cattrs.has_flatten());
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -446,7 +446,7 @@ fn deserialize_tuple_in_place(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    debug_assert!(!cattrs.has_flatten());
+    assert!(!cattrs.has_flatten());
 
     let is_enum = variant_ident.is_some();
     let expecting = match variant_ident {
@@ -2104,7 +2104,7 @@ fn deserialize_struct_as_struct_visitor(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> (Fragment, Option<Fragment>, Fragment) {
-    debug_assert!(!cattrs.has_flatten());
+    assert!(!cattrs.has_flatten());
 
     let field_names_idents: Vec<_> = fields
         .iter()
@@ -2354,7 +2354,7 @@ fn deserialize_struct_as_struct_in_place_visitor(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> (Fragment, Option<Fragment>, Fragment) {
-    debug_assert!(!cattrs.has_flatten());
+    assert!(!cattrs.has_flatten());
 
     let field_names_idents: Vec<_> = fields
         .iter()
@@ -2383,7 +2383,7 @@ fn deserialize_map_in_place(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    debug_assert!(!cattrs.has_flatten());
+    assert!(!cattrs.has_flatten());
 
     // Create the field names for the fields.
     let fields_names: Vec<_> = fields
