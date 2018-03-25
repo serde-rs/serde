@@ -211,7 +211,11 @@ mod lib {
     pub use std::sync::{Mutex, RwLock};
 
     #[cfg(feature = "unstable")]
+    #[allow(deprecated)]
     pub use core::nonzero::{NonZero, Zeroable};
+
+    #[cfg(feature = "unstable")]
+    pub use core::num;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
