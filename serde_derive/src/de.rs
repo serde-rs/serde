@@ -923,7 +923,7 @@ fn deserialize_struct_in_place(
         params, fields, cattrs);
 
     let field_visitor = Stmts(field_visitor);
-    let fields_stmt = fields_stmt.map(Stmts);
+    let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
     let visitor_expr = quote! {
@@ -2353,7 +2353,7 @@ fn deserialize_struct_as_struct_in_place_visitor(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>, Fragment) {
+) -> (Fragment, Fragment, Fragment) {
     assert!(!cattrs.has_flatten());
 
     let field_names_idents: Vec<_> = fields
@@ -2374,7 +2374,7 @@ fn deserialize_struct_as_struct_in_place_visitor(
 
     let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
-    (field_visitor, Some(fields_stmt), visit_map)
+    (field_visitor, fields_stmt, visit_map)
 }
 
 #[cfg(feature = "deserialize_in_place")]
