@@ -2402,18 +2402,6 @@ fn deserialize_map_in_place(
             }
         });
 
-    // Collect contents for flatten fields into a buffer
-    let let_collect = if cattrs.has_flatten() {
-        Some(quote! {
-            let mut __collect = Vec::<Option<(
-                _serde::private::de::Content,
-                _serde::private::de::Content
-            )>>::new();
-        })
-    } else {
-        None
-    };
-
     // Match arms to extract a value for a field.
     let value_arms_from = fields_names
         .iter()
@@ -2448,13 +2436,7 @@ fn deserialize_map_in_place(
         });
 
     // Visit ignored values to consume them
-    let ignored_arm = if cattrs.has_flatten() {
-        Some(quote! {
-            __Field::__other(__name) => {
-                __collect.push(Some((__name, try!(_serde::de::MapAccess::next_value(&mut __map)))));
-            }
-        })
-    } else if cattrs.deny_unknown_fields() {
+    let ignored_arm = if cattrs.deny_unknown_fields() {
         None
     } else {
         Some(quote! {
@@ -2462,7 +2444,7 @@ fn deserialize_map_in_place(
         })
     };
 
-    let all_skipped = !cattrs.has_flatten() && fields.iter().all(|field| field.attrs.skip_deserializing());
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
 
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
@@ -2526,46 +2508,14 @@ fn deserialize_map_in_place(
         }
     };
 
-    let extract_collected = fields_names
-        .iter()
-        .filter(|&&(field, _)| field.attrs.flatten())
-        .map(|&(field, ref name)| {
-            let field_ty = field.ty;
-            quote! {
-                let #name: #field_ty = try!(_serde::de::Deserialize::deserialize(
-                    _serde::private::de::FlatMapDeserializer(
-                        &mut __collect,
-                        _serde::export::PhantomData)));
-            }
-        });
-
-    let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
-        Some(quote! {
-            if let _serde::export::Some(_serde::export::Some((__key, _))) =
-                __collect.into_iter().filter(|x| x.is_some()).next()
-            {
-                return _serde::export::Err(
-                    _serde::de::Error::custom(format_args!("unknown field `{}`", &__key)));
-            }
-        })
-    } else {
-        None
-    };
-
     quote_block! {
         #(#let_flags)*
-
-        #let_collect
 
         #match_keys
 
         #let_default
 
         #(#check_flags)*
-
-        #(#extract_collected)*
-
-        #collected_deny_unknown_fields
 
         _serde::export::Ok(())
     }
