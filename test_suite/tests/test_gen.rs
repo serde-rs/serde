@@ -386,6 +386,10 @@ fn test_gen() {
     }
 
     #[derive(Serialize, Deserialize)]
+    #[serde(remote = "Self")]
+    struct RemoteSelf;
+
+    #[derive(Serialize, Deserialize)]
     enum ExternallyTaggedVariantWith {
         #[allow(dead_code)]
         Normal { f1: String },
