@@ -332,7 +332,11 @@ impl Container {
                     // Parse `#[serde(remote = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "remote" => {
                         if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
-                            remote.set(path);
+                            if is_primitive_path(&path, "Self") {
+                                remote.set(item.ident.into());
+                            } else {
+                                remote.set(path);
+                            }
                         }
                     }
 
@@ -1291,27 +1295,30 @@ fn is_rptr(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
 }
 
 fn is_str(ty: &syn::Type) -> bool {
-    is_primitive_path(ty, "str")
+    is_primitive_type(ty, "str")
 }
 
 fn is_slice_u8(ty: &syn::Type) -> bool {
     match *ty {
-        syn::Type::Slice(ref ty) => is_primitive_path(&ty.elem, "u8"),
+        syn::Type::Slice(ref ty) => is_primitive_type(&ty.elem, "u8"),
         _ => false,
     }
 }
 
-fn is_primitive_path(ty: &syn::Type, primitive: &str) -> bool {
+fn is_primitive_type(ty: &syn::Type, primitive: &str) -> bool {
     match *ty {
         syn::Type::Path(ref ty) => {
-            ty.qself.is_none()
-                && ty.path.leading_colon.is_none()
-                && ty.path.segments.len() == 1
-                && ty.path.segments[0].ident == primitive
-                && ty.path.segments[0].arguments.is_empty()
+            ty.qself.is_none() && is_primitive_path(&ty.path, primitive)
         }
         _ => false,
     }
+}
+
+fn is_primitive_path(path: &syn::Path, primitive: &str) -> bool {
+    path.leading_colon.is_none()
+        && path.segments.len() == 1
+        && path.segments[0].ident == primitive
+        && path.segments[0].arguments.is_empty()
 }
 
 // All lifetimes that this type could borrow from a Deserializer.
