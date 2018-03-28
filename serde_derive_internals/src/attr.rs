@@ -939,10 +939,10 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
-                path.segments.push(Ident::new("_serde", Span::def_site()).into());
-                path.segments.push(Ident::new("private", Span::def_site()).into());
-                path.segments.push(Ident::new("de", Span::def_site()).into());
-                path.segments.push(Ident::new("borrow_cow_str", Span::def_site()).into());
+                path.segments.push(Ident::new("_serde", Span::call_site()).into());
+                path.segments.push(Ident::new("private", Span::call_site()).into());
+                path.segments.push(Ident::new("de", Span::call_site()).into());
+                path.segments.push(Ident::new("borrow_cow_str", Span::call_site()).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -954,10 +954,10 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
-                path.segments.push(Ident::new("_serde", Span::def_site()).into());
-                path.segments.push(Ident::new("private", Span::def_site()).into());
-                path.segments.push(Ident::new("de", Span::def_site()).into());
-                path.segments.push(Ident::new("borrow_cow_bytes", Span::def_site()).into());
+                path.segments.push(Ident::new("_serde", Span::call_site()).into());
+                path.segments.push(Ident::new("private", Span::call_site()).into());
+                path.segments.push(Ident::new("de", Span::call_site()).into());
+                path.segments.push(Ident::new("borrow_cow_bytes", Span::call_site()).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
