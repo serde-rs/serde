@@ -1,9 +1,11 @@
-# Serde &emsp; [![Build Status]][travis] [![Latest Version]][crates.io]
+# Serde &emsp; [![Build Status]][travis] [![Latest Version]][crates.io] [![Rustc Version 1.13+]][rustc]
 
 [Build Status]: https://api.travis-ci.org/serde-rs/serde.svg?branch=master
 [travis]: https://travis-ci.org/serde-rs/serde
 [Latest Version]: https://img.shields.io/crates/v/serde.svg
 [crates.io]: https://crates.io/crates/serde
+[Rustc Version 1.13+]: https://img.shields.io/badge/rustc-1.13+-bc71d0.svg
+[rustc]: https://blog.rust-lang.org/2016/11/10/Rust-1.13.html
 
 **Serde is a framework for *ser*ializing and *de*serializing Rust data structures efficiently and generically.**
 
