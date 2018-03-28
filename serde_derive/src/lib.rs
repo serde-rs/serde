@@ -41,6 +41,14 @@ extern crate proc_macro2;
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 
+// Quote's default is def_site but it appears call_site is likely to stabilize
+// before def_site. Thus we try to use only call_site.
+macro_rules! quote {
+    ($($tt:tt)*) => {
+        quote_spanned!($crate::proc_macro2::Span::call_site()=> $($tt)*)
+    }
+}
+
 #[macro_use]
 mod bound;
 #[macro_use]

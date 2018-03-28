@@ -249,7 +249,7 @@ pub fn with_self_bound(
 }
 
 pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Generics {
-    let bound = syn::Lifetime::new(Term::intern(lifetime), Span::def_site());
+    let bound = syn::Lifetime::new(Term::intern(lifetime), Span::call_site());
     let def = syn::LifetimeDef {
         attrs: Vec::new(),
         lifetime: bound,

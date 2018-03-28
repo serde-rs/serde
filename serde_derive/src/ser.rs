@@ -27,7 +27,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
-    let dummy_const = Ident::new(&format!("_IMPL_SERIALIZE_FOR_{}", ident), Span::def_site());
+    let dummy_const = Ident::new(&format!("_IMPL_SERIALIZE_FOR_{}", ident), Span::call_site());
     let body = Stmts(serialize_body(&cont, &params));
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
@@ -98,9 +98,9 @@ impl Parameters {
     fn new(cont: &Container) -> Self {
         let is_remote = cont.attrs.remote().is_some();
         let self_var = if is_remote {
-            Ident::new("__self", Span::def_site())
+            Ident::new("__self", Span::call_site())
         } else {
-            Ident::new("self", Span::def_site())
+            Ident::new("self", Span::call_site())
         };
 
         let this = match cont.attrs.remote() {
@@ -212,7 +212,7 @@ fn serialize_newtype_struct(
         field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
     }
 
-    let span = Span::def_site().located_at(field.original.span());
+    let span = Span::call_site().located_at(field.original.span());
     let func = quote_spanned!(span=> _serde::Serializer::serialize_newtype_struct);
     quote_expr! {
         #func(__serializer, #type_name, #field_expr)
@@ -386,7 +386,7 @@ fn serialize_variant(
             }
             Style::Tuple => {
                 let field_names =
-                    (0..variant.fields.len()).map(|i| Ident::new(&format!("__field{}", i), Span::def_site()));
+                    (0..variant.fields.len()).map(|i| Ident::new(&format!("__field{}", i), Span::call_site()));
                 quote! {
                     #this::#variant_ident(#(ref #field_names),*)
                 }
@@ -619,9 +619,9 @@ fn serialize_adjacently_tagged_variant(
                 unreachable!()
             }
         }
-        Style::Newtype => vec![Ident::new("__field0", Span::def_site())],
+        Style::Newtype => vec![Ident::new("__field0", Span::call_site())],
         Style::Tuple => (0..variant.fields.len())
-            .map(|i| Ident::new(&format!("__field{}", i), Span::def_site()))
+            .map(|i| Ident::new(&format!("__field{}", i), Span::call_site()))
             .collect(),
         Style::Struct => variant
             .fields
@@ -862,7 +862,7 @@ fn serialize_tuple_struct_visitor(
         .enumerate()
         .map(|(i, field)| {
             let mut field_expr = if is_enum {
-                let id = Ident::new(&format!("__field{}", i), Span::def_site());
+                let id = Ident::new(&format!("__field{}", i), Span::call_site());
                 quote!(#id)
             } else {
                 get_member(params, field, &Member::Unnamed(Index {
@@ -880,7 +880,7 @@ fn serialize_tuple_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = Span::def_site().located_at(field.original.span());
+            let span = Span::call_site().located_at(field.original.span());
             let func = tuple_trait.serialize_element(span);
             let ser = quote! {
                 try!(#func(&mut __serde_state, #field_expr));
@@ -923,7 +923,7 @@ fn serialize_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = Span::def_site().located_at(field.original.span());
+            let span = Span::call_site().located_at(field.original.span());
             let ser = if field.attrs.flatten() {
                 quote! {
                     try!(_serde::Serialize::serialize(&#field_expr, _serde::private::ser::FlatMapSerializer(&mut __serde_state)));
@@ -981,7 +981,7 @@ fn wrap_serialize_variant_with(
         .map(|(i, field)| {
             let id = field
                 .ident
-                .unwrap_or_else(|| Ident::new(&format!("__field{}", i), Span::def_site()));
+                .unwrap_or_else(|| Ident::new(&format!("__field{}", i), Span::call_site()));
             quote!(#id)
         })
         .collect();
