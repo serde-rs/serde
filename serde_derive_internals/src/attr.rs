@@ -15,7 +15,7 @@ use syn::punctuated::Punctuated;
 use syn::synom::{Synom, ParseError};
 use std::collections::BTreeSet;
 use std::str::FromStr;
-use proc_macro2::{Span, TokenStream, TokenNode, TokenTree};
+use proc_macro2::{Span, TokenStream, TokenTree, Group};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -1160,7 +1160,7 @@ fn parse_lit_into_where(
         return Ok(Vec::new());
     }
 
-    let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span);
+    let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span());
 
     parse_lit_str::<syn::WhereClause>(&where_string)
         .map(|wh| wh.predicates.into_iter().collect())
@@ -1410,21 +1410,17 @@ where
 
 fn spanned_tokens(s: &syn::LitStr) -> Result<TokenStream, ParseError> {
     let stream = try!(syn::parse_str(&s.value()));
-    Ok(respan_token_stream(stream, s.span))
+    Ok(respan_token_stream(stream, s.span()))
 }
 
 fn respan_token_stream(stream: TokenStream, span: Span) -> TokenStream {
     stream.into_iter().map(|token| respan_token_tree(token, span)).collect()
 }
 
-fn respan_token_tree(token: TokenTree, span: Span) -> TokenTree {
-    TokenTree {
-        span: span,
-        kind: match token.kind {
-            TokenNode::Group(delimiter, nested) => {
-                TokenNode::Group(delimiter, respan_token_stream(nested, span))
-            }
-            other => other,
-        },
+fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
+    if let TokenTree::Group(ref mut g) = token {
+        *g = Group::new(g.delimiter(), respan_token_stream(g.stream().clone(), span));
     }
+    token.set_span(span);
+    token
 }
