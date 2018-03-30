@@ -320,8 +320,12 @@ map_impl!(HashMap<K: Eq + Hash, V, H: BuildHasher>);
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! deref_impl {
-    ($($desc:tt)+) => {
-        impl $($desc)+ {
+    (
+        $(#[doc = $doc:tt])*
+        <$($desc:tt)+
+    ) => {
+        $(#[doc = $doc])*
+        impl <$($desc)+ {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -340,10 +344,30 @@ deref_impl!(<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize);
 deref_impl!(<T: ?Sized> Serialize for Box<T> where T: Serialize);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T: ?Sized> Serialize for Rc<T> where T: Serialize);
+deref_impl! {
+    /// This impl requires the [`"rc"`] Cargo feature of Serde.
+    ///
+    /// Serializing a data structure containing `Rc` will serialize a copy of
+    /// the contents of the `Rc` each time the `Rc` is referenced within the
+    /// data structure. Serialization will not attempt to deduplicate these
+    /// repeated data.
+    ///
+    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    <T: ?Sized> Serialize for Rc<T> where T: Serialize
+}
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T: ?Sized> Serialize for Arc<T> where T: Serialize);
+deref_impl! {
+    /// This impl requires the [`"rc"`] Cargo feature of Serde.
+    ///
+    /// Serializing a data structure containing `Arc` will serialize a copy of
+    /// the contents of the `Arc` each time the `Arc` is referenced within the
+    /// data structure. Serialization will not attempt to deduplicate these
+    /// repeated data.
+    ///
+    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    <T: ?Sized> Serialize for Arc<T> where T: Serialize
+}
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);
