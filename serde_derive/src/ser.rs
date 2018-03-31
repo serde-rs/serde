@@ -212,7 +212,7 @@ fn serialize_newtype_struct(
         field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
     }
 
-    let span = Span::call_site().located_at(field.original.span());
+    let span = field.original.span();
     let func = quote_spanned!(span=> _serde::Serializer::serialize_newtype_struct);
     quote_expr! {
         #func(__serializer, #type_name, #field_expr)
@@ -880,7 +880,7 @@ fn serialize_tuple_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = Span::call_site().located_at(field.original.span());
+            let span = field.original.span();
             let func = tuple_trait.serialize_element(span);
             let ser = quote! {
                 try!(#func(&mut __serde_state, #field_expr));
@@ -923,7 +923,7 @@ fn serialize_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = Span::call_site().located_at(field.original.span());
+            let span = field.original.span();
             let ser = if field.attrs.flatten() {
                 quote! {
                     try!(_serde::Serialize::serialize(&#field_expr, _serde::private::ser::FlatMapSerializer(&mut __serde_state)));

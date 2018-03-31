@@ -10,7 +10,7 @@ use syn::{self, Ident, Index, Member};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use quote::{ToTokens, Tokens};
-use proc_macro2::{Literal, Span, Term};
+use proc_macro2::{Literal, Span};
 
 use bound;
 use fragment::{Expr, Fragment, Match, Stmts};
@@ -181,8 +181,8 @@ enum BorrowedLifetimes {
 impl BorrowedLifetimes {
     fn de_lifetime(&self) -> syn::Lifetime {
         match *self {
-            BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new(Term::intern("'de"), Span::call_site()),
-            BorrowedLifetimes::Static => syn::Lifetime::new(Term::intern("'static"), Span::call_site()),
+            BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new("'de", Span::call_site()),
+            BorrowedLifetimes::Static => syn::Lifetime::new("'static", Span::call_site()),
         }
     }
 
@@ -190,7 +190,7 @@ impl BorrowedLifetimes {
         match *self {
             BorrowedLifetimes::Borrowed(ref bounds) => Some(syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(Term::intern("'de"), Span::call_site()),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
                 bounds: bounds.iter().cloned().collect(),
             }),
@@ -549,7 +549,7 @@ fn deserialize_seq(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
-                    let span = Span::call_site().located_at(field.original.span());
+                    let span = field.original.span();
                     let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
                     quote!(try!(#func(&mut __seq)))
                 }
@@ -2193,7 +2193,7 @@ fn deserialize_map(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
-                    let span = Span::call_site().located_at(field.original.span());
+                    let span = field.original.span();
                     let func = quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
                     quote! {
                         try!(#func(&mut __map))
@@ -2638,7 +2638,7 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     let name = field.attrs.name().deserialize_name();
     match field.attrs.deserialize_with() {
         None => {
-            let span = Span::call_site().located_at(field.original.span());
+            let span = field.original.span();
             let func = quote_spanned!(span=> _serde::private::de::missing_field);
             quote_expr! {
                 try!(#func(#name))
@@ -2721,7 +2721,7 @@ impl<'a> ToTokens for DeTypeGenerics<'a> {
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(Term::intern("'de"), Span::call_site()),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
                 bounds: Punctuated::new(),
             };
@@ -2747,7 +2747,7 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(Term::intern("'de"), Span::call_site()),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
                 bounds: Punctuated::new(),
             };
@@ -2772,7 +2772,7 @@ impl<'a> DeTypeGenerics<'a> {
 fn place_lifetime() -> syn::LifetimeDef {
     syn::LifetimeDef {
         attrs: Vec::new(),
-        lifetime: syn::Lifetime::new(Term::intern("'place"), Span::call_site()),
+        lifetime: syn::Lifetime::new("'place", Span::call_site()),
         colon_token: None,
         bounds: Punctuated::new(),
     }
