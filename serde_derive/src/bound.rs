@@ -192,6 +192,7 @@ where
                 // the bound e.g. Serialize
                 bounds: vec![
                     syn::TypeParamBound::Trait(syn::TraitBound {
+                        paren_token: None,
                         modifier: syn::TraitBoundModifier::None,
                         lifetimes: None,
                         path: bound.clone(),
@@ -239,6 +240,7 @@ pub fn with_self_bound(
             // the bound e.g. Default
             bounds: vec![
                 syn::TypeParamBound::Trait(syn::TraitBound {
+                    paren_token: None,
                     modifier: syn::TraitBoundModifier::None,
                     lifetimes: None,
                     path: bound.clone(),
