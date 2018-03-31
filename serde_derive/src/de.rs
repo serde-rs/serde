@@ -549,7 +549,7 @@ fn deserialize_seq(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
-                    let span = Span::call_site().located_at(field.original.span());
+                    let span = field.original.span();
                     let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
                     quote!(try!(#func(&mut __seq)))
                 }
@@ -2193,7 +2193,7 @@ fn deserialize_map(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = &field.ty;
-                    let span = Span::call_site().located_at(field.original.span());
+                    let span = field.original.span();
                     let func = quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
                     quote! {
                         try!(#func(&mut __map))
@@ -2638,7 +2638,7 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     let name = field.attrs.name().deserialize_name();
     match field.attrs.deserialize_with() {
         None => {
-            let span = Span::call_site().located_at(field.original.span());
+            let span = field.original.span();
             let func = quote_spanned!(span=> _serde::private::de::missing_field);
             quote_expr! {
                 try!(#func(#name))
