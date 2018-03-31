@@ -6,8 +6,3 @@ members = [
     "serde_test",
     "test_suite",
 ]
-
-[patch.crates-io]
-proc-macro2 = { git = 'https://github.com/alexcrichton/proc-macro2', branch = 'v3' }
-quote = { git = 'https://github.com/alexcrichton/quote', branch = 'v3' }
-syn = { git = 'https://github.com/alexcrichton/syn', branch = 'v3' }
