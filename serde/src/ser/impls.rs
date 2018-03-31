@@ -545,11 +545,9 @@ macro_rules! serialize_display_bounded_length {
         // write! only provides fmt::Formatter to Display implementations, which
         // has methods write_str and write_char but no method to write arbitrary
         // bytes. Therefore `written` must be valid UTF-8.
-        let written_str = unsafe {
-            str::from_utf8_unchecked(written)
-        };
+        let written_str = unsafe { str::from_utf8_unchecked(written) };
         $serializer.serialize_str(written_str)
-    }}
+    }};
 }
 
 #[cfg(feature = "std")]

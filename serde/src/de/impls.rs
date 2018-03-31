@@ -1077,7 +1077,7 @@ map_impl!(
 
 #[cfg(feature = "std")]
 macro_rules! parse_ip_impl {
-    ($ty:ty; $size: expr) => {
+    ($ty:ty; $size:expr) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1091,7 +1091,7 @@ macro_rules! parse_ip_impl {
                 }
             }
         }
-    }
+    };
 }
 
 #[cfg(feature = "std")]
@@ -1234,7 +1234,7 @@ parse_ip_impl!(net::Ipv6Addr; 16);
 
 #[cfg(feature = "std")]
 macro_rules! parse_socket_impl {
-    ($ty:ty, $new: expr) => {
+    ($ty:ty, $new:expr) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1248,7 +1248,7 @@ macro_rules! parse_socket_impl {
                 }
             }
         }
-    }
+    };
 }
 
 #[cfg(feature = "std")]
@@ -1494,7 +1494,7 @@ macro_rules! box_forwarded_impl {
                 Box::deserialize(deserializer).map(Into::into)
             }
         }
-    }
+    };
 }
 
 #[cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc")))]

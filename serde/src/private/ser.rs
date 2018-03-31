@@ -11,12 +11,8 @@ use lib::*;
 use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use self::content::{
-    SerializeStructVariantAsMapValue,
-    SerializeTupleVariantAsMapValue,
-    ContentSerializer,
-    Content,
-};
+use self::content::{Content, ContentSerializer, SerializeStructVariantAsMapValue,
+                    SerializeTupleVariantAsMapValue};
 
 /// Used to check that serde(getter) attributes return the expected type.
 /// Not public API.
@@ -1042,16 +1038,20 @@ pub struct FlatMapSerializer<'a, M: 'a>(pub &'a mut M);
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> FlatMapSerializer<'a, M>
 where
-    M: SerializeMap + 'a
+    M: SerializeMap + 'a,
 {
     fn bad_type(self, what: Unsupported) -> M::Error {
-        ser::Error::custom(format_args!("can only flatten structs and maps (got {})", what))
+        ser::Error::custom(format_args!(
+            "can only flatten structs and maps (got {})",
+            what
+        ))
     }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> Serializer for FlatMapSerializer<'a, M>
-    where M: SerializeMap + 'a
+where
+    M: SerializeMap + 'a,
 {
     type Ok = ();
     type Error = M::Error;
@@ -1219,7 +1219,10 @@ impl<'a, M> Serializer for FlatMapSerializer<'a, M>
         _: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         try!(self.0.serialize_key(inner_variant));
-        Ok(FlatMapSerializeStructVariantAsMapValue::new(self.0, inner_variant))
+        Ok(FlatMapSerializeStructVariantAsMapValue::new(
+            self.0,
+            inner_variant,
+        ))
     }
 }
 
@@ -1228,7 +1231,8 @@ pub struct FlatMapSerializeMap<'a, M: 'a>(&'a mut M);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> ser::SerializeMap for FlatMapSerializeMap<'a, M>
-    where M: SerializeMap + 'a
+where
+    M: SerializeMap + 'a,
 {
     type Ok = ();
     type Error = M::Error;
@@ -1257,12 +1261,17 @@ pub struct FlatMapSerializeStruct<'a, M: 'a>(&'a mut M);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> ser::SerializeStruct for FlatMapSerializeStruct<'a, M>
-    where M: SerializeMap + 'a
+where
+    M: SerializeMap + 'a,
 {
     type Ok = ();
     type Error = M::Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+    fn serialize_field<T: ?Sized>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
         T: Serialize,
     {
@@ -1283,7 +1292,8 @@ pub struct FlatMapSerializeStructVariantAsMapValue<'a, M: 'a> {
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> FlatMapSerializeStructVariantAsMapValue<'a, M>
-    where M: SerializeMap + 'a
+where
+    M: SerializeMap + 'a,
 {
     fn new(map: &'a mut M, name: &'static str) -> FlatMapSerializeStructVariantAsMapValue<'a, M> {
         FlatMapSerializeStructVariantAsMapValue {
@@ -1296,12 +1306,17 @@ impl<'a, M> FlatMapSerializeStructVariantAsMapValue<'a, M>
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, M> ser::SerializeStructVariant for FlatMapSerializeStructVariantAsMapValue<'a, M>
-    where M: SerializeMap + 'a
+where
+    M: SerializeMap + 'a,
 {
     type Ok = ();
     type Error = M::Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+    fn serialize_field<T: ?Sized>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
         T: Serialize,
     {
@@ -1311,7 +1326,10 @@ impl<'a, M> ser::SerializeStructVariant for FlatMapSerializeStructVariantAsMapVa
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        try!(self.map.serialize_value(&Content::Struct(self.name, self.fields)));
+        try!(
+            self.map
+                .serialize_value(&Content::Struct(self.name, self.fields))
+        );
         Ok(())
     }
 }

@@ -37,10 +37,10 @@
 
 use lib::*;
 
+use self::private::{First, Second};
 use de::{self, Expected, IntoDeserializer, SeqAccess};
 use private::de::size_hint;
 use ser;
-use self::private::{First, Second};
 
 ////////////////////////////////////////////////////////////////////////////////
 

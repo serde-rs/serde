@@ -135,16 +135,16 @@ extern crate core;
 /// module.
 mod lib {
     mod core {
-        #[cfg(feature = "std")]
-        pub use std::*;
         #[cfg(not(feature = "std"))]
         pub use core::*;
+        #[cfg(feature = "std")]
+        pub use std::*;
     }
 
     pub use self::core::{cmp, iter, mem, ops, slice, str};
+    pub use self::core::{f32, f64};
     pub use self::core::{isize, i16, i32, i64, i8};
     pub use self::core::{usize, u16, u32, u64, u8};
-    pub use self::core::{f32, f64};
 
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
@@ -155,40 +155,40 @@ mod lib {
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
 
-    #[cfg(feature = "std")]
-    pub use std::borrow::{Cow, ToOwned};
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::borrow::{Cow, ToOwned};
-
     #[cfg(feature = "std")]
-    pub use std::string::String;
+    pub use std::borrow::{Cow, ToOwned};
+
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::string::{String, ToString};
-
     #[cfg(feature = "std")]
-    pub use std::vec::Vec;
+    pub use std::string::String;
+
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::vec::Vec;
-
     #[cfg(feature = "std")]
-    pub use std::boxed::Box;
+    pub use std::vec::Vec;
+
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::boxed::Box;
+    #[cfg(feature = "std")]
+    pub use std::boxed::Box;
 
-    #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::rc::Rc;
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
     pub use alloc::rc::Rc;
-
     #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::sync::Arc;
+    pub use std::rc::Rc;
+
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
     pub use alloc::arc::Arc;
+    #[cfg(all(feature = "rc", feature = "std"))]
+    pub use std::sync::Arc;
 
-    #[cfg(feature = "std")]
-    pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
+    #[cfg(feature = "std")]
+    pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
     pub use std::{error, net};
@@ -206,16 +206,16 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
-    pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
-    #[cfg(feature = "std")]
     pub use std::sync::{Mutex, RwLock};
+    #[cfg(feature = "std")]
+    pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     #[cfg(feature = "unstable")]
     #[allow(deprecated)]
     pub use core::nonzero::{NonZero, Zeroable};
 
     #[cfg(feature = "unstable")]
-    pub use core::num::{NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroUsize};
+    pub use core::num::{NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -223,13 +223,13 @@ mod lib {
 #[macro_use]
 mod macros;
 
-pub mod ser;
 pub mod de;
+pub mod ser;
 
 #[doc(inline)]
-pub use ser::{Serialize, Serializer};
-#[doc(inline)]
 pub use de::{Deserialize, Deserializer};
+#[doc(inline)]
+pub use ser::{Serialize, Serializer};
 
 // Generated code uses these to support no_std. Not public API.
 #[doc(hidden)]

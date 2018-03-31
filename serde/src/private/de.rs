@@ -11,13 +11,13 @@ use lib::*;
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{Unexpected, MapAccess};
+use de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub use self::content::{Content, ContentDeserializer, ContentRefDeserializer,
+pub use self::content::{Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
                         InternallyTaggedUnitVisitor, TagContentOtherField,
                         TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor,
-                        TaggedContentVisitor, UntaggedUnitVisitor, EnumDeserializer};
+                        TaggedContentVisitor, UntaggedUnitVisitor};
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -228,9 +228,9 @@ mod content {
 
     use lib::*;
 
+    use super::size_hint;
     use de::{self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, MapAccess, SeqAccess,
              Unexpected, Visitor};
-    use super::size_hint;
 
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.
@@ -1184,7 +1184,8 @@ mod content {
     }
 
     impl<'de, E> EnumDeserializer<'de, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         pub fn new(variant: Content<'de>, value: Option<Content<'de>>) -> EnumDeserializer<'de, E> {
             EnumDeserializer {
@@ -2082,12 +2083,13 @@ where
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
     pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
-    pub PhantomData<E>
+    pub PhantomData<E>,
 );
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
-    where E: Error
+where
+    E: Error,
 {
     type Error = E;
 
@@ -2102,7 +2104,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         self,
         name: &'static str,
         variants: &'static [&'static str],
-        visitor: V
+        visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
@@ -2113,15 +2115,12 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
             // about.
             let use_item = match *item {
                 None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x))
+                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x)),
             };
 
             if use_item {
                 let (key, value) = item.take().unwrap();
-                return visitor.visit_enum(EnumDeserializer::new(
-                    key,
-                    Some(value)
-                ));
+                return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
             }
         }
 
@@ -2142,7 +2141,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         self,
         _: &'static str,
         fields: &'static [&'static str],
-        visitor: V
+        visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
@@ -2150,11 +2149,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
         visitor.visit_map(FlatMapAccess::new(self.0.iter_mut(), Some(fields)))
     }
 
-    fn deserialize_newtype_struct<V>(
-        self,
-        _name: &str,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
@@ -2180,7 +2175,7 @@ pub struct FlatMapAccess<'a, 'de: 'a, E> {
 impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
     fn new(
         iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
-        fields: Option<&'static [&'static str]>
+        fields: Option<&'static [&'static str]>,
     ) -> FlatMapAccess<'a, 'de, E> {
         FlatMapAccess {
             iter: iter,
@@ -2193,7 +2188,8 @@ impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
-    where E: Error
+where
+    E: Error,
 {
     type Error = E;
 
@@ -2208,13 +2204,12 @@ impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
             let use_item = match *item {
                 None => false,
                 Some((ref c, _)) => {
-                    c.as_str().map_or(self.fields.is_none(), |key| {
-                        match self.fields {
+                    c.as_str()
+                        .map_or(self.fields.is_none(), |key| match self.fields {
                             None => true,
                             Some(fields) if fields.contains(&key) => true,
-                            _ => false
-                        }
-                    })
+                            _ => false,
+                        })
                 }
             };
 
