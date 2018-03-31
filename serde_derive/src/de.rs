@@ -10,7 +10,7 @@ use syn::{self, Ident, Index, Member};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use quote::{ToTokens, Tokens};
-use proc_macro2::{Literal, Span, Term};
+use proc_macro2::{Literal, Span};
 
 use bound;
 use fragment::{Expr, Fragment, Match, Stmts};
@@ -181,8 +181,8 @@ enum BorrowedLifetimes {
 impl BorrowedLifetimes {
     fn de_lifetime(&self) -> syn::Lifetime {
         match *self {
-            BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new(Term::new("'de", Span::call_site())),
-            BorrowedLifetimes::Static => syn::Lifetime::new(Term::new("'static", Span::call_site())),
+            BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new("'de", Span::call_site()),
+            BorrowedLifetimes::Static => syn::Lifetime::new("'static", Span::call_site()),
         }
     }
 
@@ -190,7 +190,7 @@ impl BorrowedLifetimes {
         match *self {
             BorrowedLifetimes::Borrowed(ref bounds) => Some(syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(Term::new("'de", Span::call_site())),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
                 bounds: bounds.iter().cloned().collect(),
             }),
@@ -2721,7 +2721,7 @@ impl<'a> ToTokens for DeTypeGenerics<'a> {
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(Term::new("'de", Span::call_site())),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
                 bounds: Punctuated::new(),
             };
@@ -2747,7 +2747,7 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
                 attrs: Vec::new(),
-                lifetime: syn::Lifetime::new(Term::new("'de", Span::call_site())),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
                 bounds: Punctuated::new(),
             };
@@ -2772,7 +2772,7 @@ impl<'a> DeTypeGenerics<'a> {
 fn place_lifetime() -> syn::LifetimeDef {
     syn::LifetimeDef {
         attrs: Vec::new(),
-        lifetime: syn::Lifetime::new(Term::new("'place", Span::call_site())),
+        lifetime: syn::Lifetime::new("'place", Span::call_site()),
         colon_token: None,
         bounds: Punctuated::new(),
     }

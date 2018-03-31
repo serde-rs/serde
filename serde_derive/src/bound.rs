@@ -14,7 +14,7 @@ use syn::punctuated::Punctuated;
 use internals::ast::{Data, Container};
 use internals::attr;
 
-use proc_macro2::{Span, Term};
+use proc_macro2::Span;
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
@@ -251,7 +251,7 @@ pub fn with_self_bound(
 }
 
 pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Generics {
-    let bound = syn::Lifetime::new(Term::new(lifetime, Span::call_site()));
+    let bound = syn::Lifetime::new(lifetime, Span::call_site());
     let def = syn::LifetimeDef {
         attrs: Vec::new(),
         lifetime: bound,
