@@ -44,15 +44,7 @@ pub fn with_where_predicates(
     predicates: &[syn::WherePredicate],
 ) -> syn::Generics {
     let mut generics = generics.clone();
-    if generics.where_clause.is_none() {
-        generics.where_clause = Some(syn::WhereClause {
-            where_token: Default::default(),
-            predicates: Punctuated::new(),
-        });
-    }
-    generics.where_clause
-        .as_mut()
-        .unwrap()
+    generics.make_where_clause()
         .predicates
         .extend(predicates.into_iter().cloned());
     generics
@@ -72,15 +64,7 @@ where
         .flat_map(|predicates| predicates.to_vec());
 
     let mut generics = generics.clone();
-    if generics.where_clause.is_none() {
-        generics.where_clause = Some(syn::WhereClause {
-            where_token: Default::default(),
-            predicates: Punctuated::new(),
-        });
-    }
-    generics.where_clause
-        .as_mut()
-        .unwrap()
+    generics.make_where_clause()
         .predicates
         .extend(predicates);
     generics
@@ -202,15 +186,7 @@ where
         });
 
     let mut generics = generics.clone();
-    if generics.where_clause.is_none() {
-        generics.where_clause = Some(syn::WhereClause {
-            where_token: Default::default(),
-            predicates: Punctuated::new(),
-        });
-    }
-    generics.where_clause
-        .as_mut()
-        .unwrap()
+    generics.make_where_clause()
         .predicates
         .extend(new_predicates);
     generics
@@ -222,15 +198,7 @@ pub fn with_self_bound(
     bound: &syn::Path,
 ) -> syn::Generics {
     let mut generics = generics.clone();
-    if generics.where_clause.is_none() {
-        generics.where_clause = Some(syn::WhereClause {
-            where_token: Default::default(),
-            predicates: Punctuated::new(),
-        });
-    }
-    generics.where_clause
-        .as_mut()
-        .unwrap()
+    generics.make_where_clause()
         .predicates
         .push(syn::WherePredicate::Type(syn::PredicateType {
             lifetimes: None,
