@@ -47,10 +47,19 @@ fn check_flatten(cx: &Ctxt, cont: &Container) {
         Data::Enum(_) => {
             assert!(!cont.attrs.has_flatten());
         }
-        Data::Struct(_, _) => {
+        Data::Struct(style, _) => {
             for field in cont.data.all_fields() {
                 if !field.attrs.flatten() {
                     continue;
+                }
+                match style {
+                    Style::Tuple => {
+                        cx.error("#[serde(flatten)] cannot be used on tuple structs");
+                    }
+                    Style::Newtype => {
+                        cx.error("#[serde(flatten)] cannot be used on newtype structs");
+                    }
+                    _ => {}
                 }
                 if field.attrs.skip_serializing() {
                     cx.error(
