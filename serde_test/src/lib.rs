@@ -53,7 +53,7 @@
 //! # use serde::ser::{Serialize, Serializer, SerializeMap};
 //! # use serde::de::{Deserialize, Deserializer, Visitor, MapAccess};
 //! #
-//! # // Dumb immitation of LinkedHashMap.
+//! # // Dumb imitation of LinkedHashMap.
 //! # #[derive(PartialEq, Debug)]
 //! # struct LinkedHashMap<K, V>(Vec<(K, V)>);
 //! #
@@ -155,18 +155,14 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.21")]
-
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.37")]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
 // Whitelisted clippy_pedantic lints
-#![cfg_attr(feature = "cargo-clippy", allow(
-    missing_docs_in_private_items,
-    stutter,
-    use_debug,
-    use_self,
-))]
+#![cfg_attr(feature = "cargo-clippy",
+            allow(empty_line_after_outer_attr, missing_docs_in_private_items,
+                  redundant_field_names, stutter, use_debug, use_self))]
 
 #[macro_use]
 extern crate serde;

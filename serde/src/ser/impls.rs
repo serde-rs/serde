@@ -111,7 +111,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T> Serialize for PhantomData<T> {
+impl<T: ?Sized> Serialize for PhantomData<T> {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -320,8 +320,12 @@ map_impl!(HashMap<K: Eq + Hash, V, H: BuildHasher>);
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! deref_impl {
-    ($($desc:tt)+) => {
-        impl $($desc)+ {
+    (
+        $(#[doc = $doc:tt])*
+        <$($desc:tt)+
+    ) => {
+        $(#[doc = $doc])*
+        impl <$($desc)+ {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -340,10 +344,30 @@ deref_impl!(<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize);
 deref_impl!(<T: ?Sized> Serialize for Box<T> where T: Serialize);
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T: ?Sized> Serialize for Rc<T> where T: Serialize);
+deref_impl! {
+    /// This impl requires the [`"rc"`] Cargo feature of Serde.
+    ///
+    /// Serializing a data structure containing `Rc` will serialize a copy of
+    /// the contents of the `Rc` each time the `Rc` is referenced within the
+    /// data structure. Serialization will not attempt to deduplicate these
+    /// repeated data.
+    ///
+    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    <T: ?Sized> Serialize for Rc<T> where T: Serialize
+}
 
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-deref_impl!(<T: ?Sized> Serialize for Arc<T> where T: Serialize);
+deref_impl! {
+    /// This impl requires the [`"rc"`] Cargo feature of Serde.
+    ///
+    /// Serializing a data structure containing `Arc` will serialize a copy of
+    /// the contents of the `Arc` each time the `Arc` is referenced within the
+    /// data structure. Serialization will not attempt to deduplicate these
+    /// repeated data.
+    ///
+    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    <T: ?Sized> Serialize for Arc<T> where T: Serialize
+}
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);
@@ -351,6 +375,7 @@ deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwne
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "unstable")]
+#[allow(deprecated)]
 impl<T> Serialize for NonZero<T>
 where
     T: Serialize + Zeroable + Clone,
@@ -361,6 +386,32 @@ where
     {
         self.clone().get().serialize(serializer)
     }
+}
+
+macro_rules! nonzero_integers {
+    ( $( $T: ident, )+ ) => {
+        $(
+            #[cfg(feature = "unstable")]
+            impl Serialize for $T {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: Serializer,
+                {
+                    self.get().serialize(serializer)
+                }
+            }
+        )+
+    }
+}
+
+nonzero_integers! {
+    // Not including signed NonZeroI* since they might be removed
+    NonZeroU8,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    // FIXME: https://github.com/serde-rs/serde/issues/1136 NonZeroU128,
+    NonZeroUsize,
 }
 
 impl<T> Serialize for Cell<T>
@@ -464,7 +515,8 @@ impl Serialize for SystemTime {
         S: Serializer,
     {
         use super::SerializeStruct;
-        let duration_since_epoch = self.duration_since(UNIX_EPOCH).expect("SystemTime must be later than UNIX_EPOCH");
+        let duration_since_epoch = self.duration_since(UNIX_EPOCH)
+            .expect("SystemTime must be later than UNIX_EPOCH");
         let mut state = try!(serializer.serialize_struct("SystemTime", 2));
         try!(state.serialize_field("secs_since_epoch", &duration_since_epoch.as_secs()));
         try!(state.serialize_field("nanos_since_epoch", &duration_since_epoch.subsec_nanos()));
@@ -493,11 +545,9 @@ macro_rules! serialize_display_bounded_length {
         // write! only provides fmt::Formatter to Display implementations, which
         // has methods write_str and write_char but no method to write arbitrary
         // bytes. Therefore `written` must be valid UTF-8.
-        let written_str = unsafe {
-            str::from_utf8_unchecked(written)
-        };
+        let written_str = unsafe { str::from_utf8_unchecked(written) };
         $serializer.serialize_str(written_str)
-    }}
+    }};
 }
 
 #[cfg(feature = "std")]
@@ -513,10 +563,12 @@ impl Serialize for net::IpAddr {
             }
         } else {
             match *self {
-                net::IpAddr::V4(ref a) =>
-                    serializer.serialize_newtype_variant("IpAddr", 0, "V4", a),
-                net::IpAddr::V6(ref a) =>
-                    serializer.serialize_newtype_variant("IpAddr", 1, "V6", a),
+                net::IpAddr::V4(ref a) => {
+                    serializer.serialize_newtype_variant("IpAddr", 0, "V4", a)
+                }
+                net::IpAddr::V6(ref a) => {
+                    serializer.serialize_newtype_variant("IpAddr", 1, "V6", a)
+                }
             }
         }
     }
@@ -567,10 +619,12 @@ impl Serialize for net::SocketAddr {
             }
         } else {
             match *self {
-                net::SocketAddr::V4(ref addr) =>
-                    serializer.serialize_newtype_variant("SocketAddr", 0, "V4", addr),
-                net::SocketAddr::V6(ref addr) =>
-                    serializer.serialize_newtype_variant("SocketAddr", 1, "V6", addr),
+                net::SocketAddr::V4(ref addr) => {
+                    serializer.serialize_newtype_variant("SocketAddr", 0, "V4", addr)
+                }
+                net::SocketAddr::V6(ref addr) => {
+                    serializer.serialize_newtype_variant("SocketAddr", 1, "V6", addr)
+                }
             }
         }
     }
@@ -600,7 +654,10 @@ impl Serialize for net::SocketAddrV6 {
     {
         if serializer.is_human_readable() {
             const MAX_LEN: usize = 47;
-            debug_assert_eq!(MAX_LEN, "[1001:1002:1003:1004:1005:1006:1007:1008]:65000".len());
+            debug_assert_eq!(
+                MAX_LEN,
+                "[1001:1002:1003:1004:1005:1006:1007:1008]:65000".len()
+            );
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
             (self.ip(), self.port()).serialize(serializer)

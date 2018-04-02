@@ -50,11 +50,21 @@ enum Enum {
     Unit,
     One(i32),
     Seq(i32, i32),
-    Map { a: i32, b: i32 },
-    #[serde(skip_serializing)] SkippedUnit,
-    #[serde(skip_serializing)] SkippedOne(i32),
-    #[serde(skip_serializing)] SkippedSeq(i32, i32),
-    #[serde(skip_serializing)] SkippedMap { _a: i32, _b: i32 },
+    Map {
+        a: i32,
+        b: i32,
+    },
+    #[serde(skip_serializing)]
+    SkippedUnit,
+    #[serde(skip_serializing)]
+    SkippedOne(i32),
+    #[serde(skip_serializing)]
+    SkippedSeq(i32, i32),
+    #[serde(skip_serializing)]
+    SkippedMap {
+        _a: i32,
+        _b: i32,
+    },
 }
 
 //////////////////////////////////////////////////////////////////////////

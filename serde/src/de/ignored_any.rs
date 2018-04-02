@@ -8,7 +8,7 @@
 
 use lib::*;
 
-use de::{Deserialize, Deserializer, Visitor, SeqAccess, MapAccess, Error};
+use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
 /// An efficient way of discarding data from a deserializer.
 ///

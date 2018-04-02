@@ -13,6 +13,8 @@ use de::{DeserializeSeed, Deserializer, IntoDeserializer, Error, Visitor};
 #[cfg(any(feature = "std", feature = "collections"))]
 use de::Unexpected;
 
+pub use serde::private::de::InPlaceSeed;
+
 #[cfg(any(feature = "std", feature = "collections"))]
 pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer,
                         TaggedContentVisitor, TagOrContentField, TagOrContentFieldVisitor,

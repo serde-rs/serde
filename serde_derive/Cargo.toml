@@ -14,14 +14,19 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
 
+[features]
+default = []
+deserialize_in_place = []
+
 [lib]
 name = "serde_derive_state"
 proc-macro = true
 
 [dependencies]
-quote = "0.3.8"
+proc-macro2 = "0.3"
+quote = "0.5"
 serde_derive_state_internals = { version = "=0.4.3", default-features = false, path = "../serde_derive_internals" }
-syn = { version = "0.11", features = ["visit"] }
+syn = { version = "0.13", features = ["visit"] }
 
 [dev-dependencies]
 serde = { version = "1.0", path = "../serde" }

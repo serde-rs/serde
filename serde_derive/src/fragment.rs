@@ -6,7 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use quote::{Tokens, ToTokens};
+use quote::{ToTokens, Tokens};
+use syn::token;
 
 pub enum Fragment {
     /// Tokens that can be used as an expression.
@@ -36,9 +37,7 @@ impl ToTokens for Expr {
         match self.0 {
             Fragment::Expr(ref expr) => expr.to_tokens(out),
             Fragment::Block(ref block) => {
-                out.append("{");
-                block.to_tokens(out);
-                out.append("}");
+                token::Brace::default().surround(out, |out| block.to_tokens(out));
             }
         }
     }
@@ -63,13 +62,20 @@ impl ToTokens for Match {
         match self.0 {
             Fragment::Expr(ref expr) => {
                 expr.to_tokens(out);
-                out.append(",");
+                <Token![,]>::default().to_tokens(out);
             }
             Fragment::Block(ref block) => {
-                out.append("{");
-                block.to_tokens(out);
-                out.append("}");
+                token::Brace::default().surround(out, |out| block.to_tokens(out));
             }
+        }
+    }
+}
+
+impl AsRef<Tokens> for Fragment {
+    fn as_ref(&self) -> &Tokens {
+        match *self {
+            Fragment::Expr(ref expr) => expr,
+            Fragment::Block(ref block) => block,
         }
     }
 }

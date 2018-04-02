@@ -98,7 +98,8 @@
 //!    - Path
 //!    - PathBuf
 //!    - Range\<T\>
-//!    - NonZero\<T\> (unstable)
+//!    - NonZero\<T\> (unstable, deprecated)
+//!    - num::NonZero* (unstable)
 //!  - **Net types**:
 //!    - IpAddr
 //!    - Ipv4Addr
@@ -504,6 +505,35 @@ pub trait Deserialize<'de>: Sized {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>;
+
+    /// Deserializes a value into `self` from the given Deserializer.
+    ///
+    /// The purpose of this method is to allow the deserializer to reuse
+    /// resources and avoid copies. As such, if this method returns an error,
+    /// `self` will be in an indeterminate state where some parts of the struct
+    /// have been overwritten. Although whatever state that is will be
+    /// memory-safe.
+    ///
+    /// This is generally useful when repeatedly deserializing values that
+    /// are processed one at a time, where the value of `self` doesn't matter
+    /// when the next deserialization occurs.
+    ///
+    /// If you manually implement this, your recursive deserializations should
+    /// use `deserialize_in_place`.
+    ///
+    /// This method is stable and an official public API, but hidden from the
+    /// documentation because it is almost never what newbies are looking for.
+    /// Showing it in rustdoc would cause it to be featured more prominently
+    /// than it deserves.
+    #[doc(hidden)]
+    fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Default implementation just delegates to `deserialize` impl.
+        *place = Deserialize::deserialize(deserializer)?;
+        Ok(())
+    }
 }
 
 /// A data structure that can be deserialized without borrowing any data from
@@ -1078,7 +1108,9 @@ pub trait Deserializer<'de>: Sized {
     /// change, as a value serialized in human-readable mode is not required to
     /// deserialize from the same data in compact mode.
     #[inline]
-    fn is_human_readable(&self) -> bool { true }
+    fn is_human_readable(&self) -> bool {
+        true
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

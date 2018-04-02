@@ -22,22 +22,32 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.21")]
-
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
-#![cfg_attr(feature = "cargo-clippy", allow(used_underscore_binding))]
-
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.37")]
+#![cfg_attr(feature = "cargo-clippy", allow(enum_variant_names, redundant_field_names,
+                                            too_many_arguments, used_underscore_binding))]
 // The `quote!` macro requires deep recursion.
-#![recursion_limit = "192"]
+#![recursion_limit = "512"]
 
-extern crate syn;
 #[macro_use]
 extern crate quote;
+#[macro_use]
+extern crate syn;
 
 extern crate serde_derive_state_internals as internals;
 
 extern crate proc_macro;
+extern crate proc_macro2;
+
 use proc_macro::TokenStream;
+use syn::DeriveInput;
+
+// Quote's default is def_site but it appears call_site is likely to stabilize
+// before def_site. Thus we try to use only call_site.
+macro_rules! quote {
+    ($($tt:tt)*) => {
+        quote_spanned!($crate::proc_macro2::Span::call_site()=> $($tt)*)
+    }
+}
 
 #[macro_use]
 mod bound;
@@ -49,18 +59,18 @@ mod de;
 
 #[proc_macro_derive(SerializeState, attributes(serde))]
 pub fn derive_serialize_state(input: TokenStream) -> TokenStream {
-    let input = syn::parse_derive_input(&input.to_string()).unwrap();
+    let input: DeriveInput = syn::parse(input).unwrap();
     match ser::expand_derive_serialize(&input, true) {
-        Ok(expanded) => expanded.parse().unwrap(),
+        Ok(expanded) => expanded.into(),
         Err(msg) => panic!(msg),
     }
 }
 
 #[proc_macro_derive(DeserializeState, attributes(serde))]
 pub fn derive_deserialize_state(input: TokenStream) -> TokenStream {
-    let input = syn::parse_derive_input(&input.to_string()).unwrap();
+    let input: DeriveInput = syn::parse(input).unwrap();
     match de::expand_derive_deserialize(&input, true) {
-        Ok(expanded) => expanded.parse().unwrap(),
+        Ok(expanded) => expanded.into(),
         Err(msg) => panic!(msg),
     }
 }

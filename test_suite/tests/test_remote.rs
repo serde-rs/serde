@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -85,23 +87,32 @@ mod remote {
 
 #[derive(Serialize, Deserialize)]
 struct Test {
-    #[serde(with = "UnitDef")] unit: remote::Unit,
+    #[serde(with = "UnitDef")]
+    unit: remote::Unit,
 
-    #[serde(with = "PrimitivePrivDef")] primitive_priv: remote::PrimitivePriv,
+    #[serde(with = "PrimitivePrivDef")]
+    primitive_priv: remote::PrimitivePriv,
 
-    #[serde(with = "PrimitivePubDef")] primitive_pub: remote::PrimitivePub,
+    #[serde(with = "PrimitivePubDef")]
+    primitive_pub: remote::PrimitivePub,
 
-    #[serde(with = "NewtypePrivDef")] newtype_priv: remote::NewtypePriv,
+    #[serde(with = "NewtypePrivDef")]
+    newtype_priv: remote::NewtypePriv,
 
-    #[serde(with = "NewtypePubDef")] newtype_pub: remote::NewtypePub,
+    #[serde(with = "NewtypePubDef")]
+    newtype_pub: remote::NewtypePub,
 
-    #[serde(with = "TuplePrivDef")] tuple_priv: remote::TuplePriv,
+    #[serde(with = "TuplePrivDef")]
+    tuple_priv: remote::TuplePriv,
 
-    #[serde(with = "TuplePubDef")] tuple_pub: remote::TuplePub,
+    #[serde(with = "TuplePubDef")]
+    tuple_pub: remote::TuplePub,
 
-    #[serde(with = "StructPrivDef")] struct_priv: remote::StructPriv,
+    #[serde(with = "StructPrivDef")]
+    struct_priv: remote::StructPriv,
 
-    #[serde(with = "StructPubDef")] struct_pub: remote::StructPub,
+    #[serde(with = "StructPubDef")]
+    struct_pub: remote::StructPub,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -110,7 +121,10 @@ struct UnitDef;
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::PrimitivePriv")]
-struct PrimitivePrivDef(#[serde(getter = "remote::PrimitivePriv::get")] u8);
+struct PrimitivePrivDef(
+    #[serde(getter = "remote::PrimitivePriv::get")]
+    u8,
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::PrimitivePub")]
@@ -119,28 +133,39 @@ struct PrimitivePubDef(u8);
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePriv")]
 struct NewtypePrivDef(
-    #[serde(getter = "remote::NewtypePriv::get", with = "UnitDef")] remote::Unit,
+    #[serde(getter = "remote::NewtypePriv::get", with = "UnitDef")]
+    remote::Unit,
 );
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePub")]
-struct NewtypePubDef(#[serde(with = "UnitDef")] remote::Unit);
+struct NewtypePubDef(
+    #[serde(with = "UnitDef")]
+    remote::Unit,
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::TuplePriv")]
 struct TuplePrivDef(
-    #[serde(getter = "remote::TuplePriv::first")] u8,
-    #[serde(getter = "remote::TuplePriv::second", with = "UnitDef")] remote::Unit,
+    #[serde(getter = "remote::TuplePriv::first")]
+    u8,
+    #[serde(getter = "remote::TuplePriv::second", with = "UnitDef")]
+    remote::Unit,
 );
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::TuplePub")]
-struct TuplePubDef(u8, #[serde(with = "UnitDef")] remote::Unit);
+struct TuplePubDef(
+    u8,
+    #[serde(with = "UnitDef")]
+    remote::Unit,
+);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructPriv")]
 struct StructPrivDef {
-    #[serde(getter = "remote::StructPriv::a")] a: u8,
+    #[serde(getter = "remote::StructPriv::a")]
+    a: u8,
 
     #[serde(getter = "remote::StructPriv::b")]
     #[serde(with = "UnitDef")]
@@ -150,7 +175,8 @@ struct StructPrivDef {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructPub")]
 struct StructPubDef {
-    #[allow(dead_code)] a: u8,
+    #[allow(dead_code)]
+    a: u8,
 
     #[allow(dead_code)]
     #[serde(with = "UnitDef")]

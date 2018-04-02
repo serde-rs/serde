@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -49,14 +51,16 @@ struct TupleStruct(i32, i32, i32);
 struct Struct {
     a: i32,
     b: i32,
-    #[serde(skip_deserializing)] c: i32,
+    #[serde(skip_deserializing)]
+    c: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructDenyUnknown {
     a: i32,
-    #[serde(skip_deserializing)] b: i32,
+    #[serde(skip_deserializing)]
+    b: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -77,13 +81,35 @@ impl Default for StructDefault<String> {
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct StructSkipAll {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructSkipDefault {
+    #[serde(skip_deserializing)]
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructSkipDefaultGeneric<T> {
+    #[serde(skip_deserializing)]
+    t: T,
+}
+
+impl Default for StructSkipDefault {
+    fn default() -> Self {
+        StructSkipDefault { a: 16 }
+    }
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructSkipAllDenyUnknown {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -94,7 +120,11 @@ enum Enum {
     Unit,
     Simple(i32),
     Seq(i32, i32, i32),
-    Map { a: i32, b: i32, c: i32 },
+    Map {
+        a: i32,
+        b: i32,
+        c: i32,
+    },
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -597,6 +627,12 @@ declare_tests! {
 
                 Token::Str("b"),
                 Token::I32(2),
+            Token::StructEnd,
+        ],
+    }
+    test_struct_skip_default {
+        StructSkipDefault { a: 16 } => &[
+            Token::Struct { name: "StructSkipDefault", len: 0 },
             Token::StructEnd,
         ],
     }

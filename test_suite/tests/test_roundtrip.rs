@@ -30,7 +30,7 @@ fn ip_addr_roundtrip() {
 }
 
 #[test]
-fn socked_addr_roundtrip() {
+fn socket_addr_roundtrip() {
     assert_tokens(
         &net::SocketAddr::from((*b"1234567890123456", 1234)).compact(),
         &seq![

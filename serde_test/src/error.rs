@@ -9,7 +9,7 @@
 use std::error;
 use std::fmt::{self, Display};
 
-use serde::{ser, de};
+use serde::{de, ser};
 
 #[derive(Clone, Debug)]
 pub struct Error {
@@ -18,13 +18,17 @@ pub struct Error {
 
 impl ser::Error for Error {
     fn custom<T: Display>(msg: T) -> Self {
-        Error { msg: msg.to_string() }
+        Error {
+            msg: msg.to_string(),
+        }
     }
 }
 
 impl de::Error for Error {
     fn custom<T: Display>(msg: T) -> Self {
-        Error { msg: msg.to_string() }
+        Error {
+            msg: msg.to_string(),
+        }
     }
 }
 

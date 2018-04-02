@@ -13,7 +13,7 @@ extern crate serde;
 use serde::{Deserialize, Deserializer};
 
 extern crate serde_test;
-use serde_test::{Token, assert_de_tokens, assert_de_tokens_error};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 
 use std::borrow::Cow;
 
@@ -87,18 +87,18 @@ fn test_struct() {
 
     assert_de_tokens(
         &Borrowing {
-             bs: "str",
-             bb: b"bytes",
-         },
+            bs: "str",
+            bb: b"bytes",
+        },
         &[
-            Token::Struct { name: "Borrowing", len: 2 },
-
+            Token::Struct {
+                name: "Borrowing",
+                len: 2,
+            },
             Token::BorrowedStr("bs"),
             Token::BorrowedStr("str"),
-
             Token::BorrowedStr("bb"),
             Token::BorrowedBytes(b"bytes"),
-
             Token::StructEnd,
         ],
     );
@@ -115,14 +115,14 @@ fn test_cow() {
     }
 
     let tokens = &[
-        Token::Struct { name: "Cows", len: 2 },
-
+        Token::Struct {
+            name: "Cows",
+            len: 2,
+        },
         Token::Str("copied"),
         Token::BorrowedStr("copied"),
-
         Token::Str("borrowed"),
         Token::BorrowedStr("borrowed"),
-
         Token::StructEnd,
     ];
 
