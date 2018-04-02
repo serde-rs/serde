@@ -47,10 +47,15 @@ deserialize_impl! {
     isize,
     f32,
     f64,
-    String,
     (),
     bool
 }
+
+#[cfg(any(feature = "std", feature = "collections"))]
+deserialize_impl! {
+    String
+}
+
 
 macro_rules! forwarded_impl {
     (( $($id: ident),* ), $ty: ty, $func: expr) => {

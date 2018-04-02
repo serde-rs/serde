@@ -44,9 +44,13 @@ serialize_impl! {
     isize,
     f32,
     f64,
-    String,
     (),
     bool
+}
+
+#[cfg(any(feature = "std", feature = "collections"))]
+serialize_impl!{
+    String
 }
 
 impl<T, Seed: ?Sized> SerializeState<Seed> for Option<T>
@@ -110,7 +114,7 @@ where
     }
 }
 
-
+#[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! seq_impl {
     ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)* >) => {
         impl<T, Seed $(, $typaram)*> SerializeState<Seed> for $ty<T $(, $typaram)*>
@@ -213,6 +217,7 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "collections"))]
 macro_rules! map_impl {
     ($ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)* >) => {
         impl<K, V, Seed $(, $typaram)*> SerializeState<Seed> for $ty<K, V $(, $typaram)*>

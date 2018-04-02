@@ -347,6 +347,7 @@ where
 #[derive(Debug)]
 pub struct Error;
 
+#[cfg(feature = "std")]
 impl ser::Error for Error {
     fn custom<T>(_: T) -> Self
     where
