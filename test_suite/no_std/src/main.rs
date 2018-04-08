@@ -18,15 +18,17 @@ fn start(_argc: isize, _argv: *const *const u8) -> isize {
 
 #[lang = "eh_personality"]
 #[no_mangle]
-pub extern fn rust_eh_personality() {}
+pub extern "C" fn rust_eh_personality() {}
 
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
-                               _file: &'static str,
-                               _line: u32) -> ! {
+pub extern "C" fn rust_begin_panic(
+    _msg: core::fmt::Arguments,
+    _file: &'static str,
+    _line: u32,
+) -> ! {
     unsafe {
-        libc::abort()
+        libc::abort();
     }
 }
 
@@ -45,7 +47,9 @@ struct Newtype(u8);
 struct Tuple(u8, u8);
 
 #[derive(Serialize, Deserialize)]
-struct Struct { f: u8 }
+struct Struct {
+    f: u8,
+}
 
 #[derive(Serialize, Deserialize)]
 enum Enum {
