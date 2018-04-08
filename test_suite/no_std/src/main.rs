@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![feature(lang_items, start, compiler_builtins_lib)]
+#![feature(lang_items, start)]
 #![no_std]
 
 extern crate libc;
