@@ -131,8 +131,13 @@ fn build_generics(cont: &Container) -> syn::Generics {
     let generics = bound::without_defaults(cont.generics);
 
     let trait_bound = parse_quote!(_serde::Serialize);
-    let generics =
-        bound::with_where_predicates_from_fields(cont, &generics, &trait_bound, attr::Field::ser_bound, attr::Field::serialize_with);
+    let generics = bound::with_where_predicates_from_fields(
+        cont,
+        &generics,
+        &trait_bound,
+        attr::Field::ser_bound,
+        |field| field.serialize_with().is_none() && !field.skip_serializing()
+    );
 
     match cont.attrs.ser_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),

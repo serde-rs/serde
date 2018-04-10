@@ -55,21 +55,22 @@ pub fn with_where_predicates_from_fields<F, W>(
     generics: &syn::Generics,
     trait_bound: &syn::Path,
     from_field: F,
-    where_ty: W,
+    gen_bound_where: W,
 ) -> syn::Generics
 where
     F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
-    W: for<'a> Fn(&attr::Field) -> Option<&syn::ExprPath>,
+    W: for<'a> Fn(&attr::Field) -> bool,
 {
     let predicates = cont.data
         .all_fields()
         .flat_map(|field| {
-            let field_bound: Option<syn::WherePredicate> = match where_ty(&field.attrs) {
-                Some(_) => None,
-                None => {
+            let field_bound: Option<syn::WherePredicate> = match gen_bound_where(&field.attrs) {
+                true => {
                     let field_ty = field.ty;
-                    Some(parse_quote!(#field_ty: #trait_bound))
-                }
+                    let predicate: syn::WherePredicate = parse_quote!(#field_ty: #trait_bound);
+                    Some(predicate)
+                },
+                false => None
             };
             field_bound.into_iter().chain(from_field(&field.attrs).into_iter().flat_map(|predicates| predicates.to_vec()))
         });

@@ -126,7 +126,13 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
 
     let delife = borrowed.de_lifetime();
     let de_bound = parse_quote!(_serde::Deserialize<#delife>);
-    let generics = bound::with_where_predicates_from_fields(cont, &generics, &de_bound, attr::Field::de_bound, attr::Field::deserialize_with);
+    let generics = bound::with_where_predicates_from_fields(
+        cont,
+        &generics,
+        &de_bound,
+        attr::Field::de_bound,
+        |field| field.deserialize_with().is_none() && !field.skip_deserializing()
+    );
 
     match cont.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
