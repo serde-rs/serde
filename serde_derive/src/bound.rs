@@ -50,18 +50,29 @@ pub fn with_where_predicates(
     generics
 }
 
-pub fn with_where_predicates_from_fields<F>(
+pub fn with_where_predicates_from_fields<F, W>(
     cont: &Container,
     generics: &syn::Generics,
+    trait_bound: &syn::Path,
     from_field: F,
+    where_ty: W,
 ) -> syn::Generics
 where
     F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
+    W: for<'a> Fn(&attr::Field) -> Option<&syn::ExprPath>,
 {
     let predicates = cont.data
         .all_fields()
-        .flat_map(|field| from_field(&field.attrs))
-        .flat_map(|predicates| predicates.to_vec());
+        .flat_map(|field| {
+            let field_bound: Option<syn::WherePredicate> = match where_ty(&field.attrs) {
+                Some(_) => None,
+                None => {
+                    let field_ty = field.ty;
+                    Some(parse_quote!(#field_ty: #trait_bound))
+                }
+            };
+            field_bound.into_iter().chain(from_field(&field.attrs).into_iter().flat_map(|predicates| predicates.to_vec()))
+        });
 
     let mut generics = generics.clone();
     generics.make_where_clause()
