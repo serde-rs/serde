@@ -64,13 +64,18 @@ where
     let predicates = cont.data
         .all_fields()
         .flat_map(|field| {
-            let field_bound: Option<syn::WherePredicate> = match gen_bound_where(&field.attrs) {
-                true => {
-                    let field_ty = field.ty;
-                    let predicate: syn::WherePredicate = parse_quote!(#field_ty: #trait_bound);
-                    Some(predicate)
+            let field_ty = field.ty;
+            let field_bound: Option<syn::WherePredicate> = match (field_ty, gen_bound_where(&field.attrs)) {
+                (&syn::Type::Path(ref ty_path), true) => match (ty_path.path.segments.first(), generics.params.first()) {
+                    (Some(syn::punctuated::Pair::Punctuated(ref t, _)), Some(syn::punctuated::Pair::End(&syn::GenericParam::Type(ref generic_ty))))
+                        if generic_ty.ident == t.ident =>
+                    {
+                        let predicate: syn::WherePredicate = parse_quote!(#field_ty: #trait_bound);
+                        Some(predicate)
+                    },
+                    _ => None
                 },
-                false => None
+                (_, _) => None
             };
             field_bound.into_iter().chain(from_field(&field.attrs).into_iter().flat_map(|predicates| predicates.to_vec()))
         });
