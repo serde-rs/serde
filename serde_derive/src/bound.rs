@@ -65,18 +65,19 @@ where
         .all_fields()
         .flat_map(|field| {
             let field_ty = field.ty;
-            let matching_generic = |t: &syn::PathSegment, g| match g {
-                &syn::GenericParam::Type(ref generic_ty)
+            let matching_generic = |t: &syn::PathSegment, g: &syn::GenericParam| match *g {
+                syn::GenericParam::Type(ref generic_ty)
                     if generic_ty.ident == t.ident => true,
                 _ => false
             };
 
             let mut field_bound: Option<syn::WherePredicate> = None;
-            if let &syn::Type::Path(ref ty_path) = field_ty {
+            if let syn::Type::Path(ref ty_path) = *field_ty {
                 field_bound = match (gen_bound_where(&field.attrs), ty_path.path.segments.first()) {
-                    (true, Some(syn::punctuated::Pair::Punctuated(ref t, _)))
-                        if generics.params.iter().fold(false, |b, g| b || matching_generic(t, g))
-                        => Some(parse_quote!(#field_ty: #trait_bound)),
+                    (true, Some(syn::punctuated::Pair::Punctuated(ref t, _))) =>
+                        if generics.params.iter().any(|g| matching_generic(t, g)) {
+                            Some(parse_quote!(#field_ty: #trait_bound))
+                        } else {None},
                     (_, _) => None
                 };
             }
