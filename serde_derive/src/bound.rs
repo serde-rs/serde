@@ -59,24 +59,27 @@ pub fn with_where_predicates_from_fields<F, W>(
 ) -> syn::Generics
 where
     F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
-    W: for<'a> Fn(&attr::Field) -> bool,
+    W: Fn(&attr::Field) -> bool,
 {
     let predicates = cont.data
         .all_fields()
         .flat_map(|field| {
             let field_ty = field.ty;
-            let field_bound: Option<syn::WherePredicate> = match (field_ty, gen_bound_where(&field.attrs)) {
-                (&syn::Type::Path(ref ty_path), true) => match (ty_path.path.segments.first(), generics.params.first()) {
-                    (Some(syn::punctuated::Pair::Punctuated(ref t, _)), Some(syn::punctuated::Pair::End(&syn::GenericParam::Type(ref generic_ty))))
-                        if generic_ty.ident == t.ident =>
-                    {
-                        let predicate: syn::WherePredicate = parse_quote!(#field_ty: #trait_bound);
-                        Some(predicate)
-                    },
-                    _ => None
-                },
-                (_, _) => None
+            let matching_generic = |t: &syn::PathSegment, g| match g {
+                &syn::GenericParam::Type(ref generic_ty)
+                    if generic_ty.ident == t.ident => true,
+                _ => false
             };
+
+            let mut field_bound: Option<syn::WherePredicate> = None;
+            if let &syn::Type::Path(ref ty_path) = field_ty {
+                field_bound = match (gen_bound_where(&field.attrs), ty_path.path.segments.first()) {
+                    (true, Some(syn::punctuated::Pair::Punctuated(ref t, _)))
+                        if generics.params.iter().fold(false, |b, g| b || matching_generic(t, g))
+                        => Some(parse_quote!(#field_ty: #trait_bound)),
+                    (_, _) => None
+                };
+            }
             field_bound.into_iter().chain(from_field(&field.attrs).into_iter().flat_map(|predicates| predicates.to_vec()))
         });
 

@@ -555,6 +555,14 @@ fn test_gen() {
     }
 
     assert::<AssocDerive<NoSerdeImpl>>();
+
+    #[derive(Serialize, Deserialize)]
+    struct AssocDeriveMulti<S, T: AssocSerde> {
+        s: S,
+        assoc: T::Assoc,
+    }
+
+    assert::<AssocDeriveMulti<i32, NoSerdeImpl>>();
 }
 
 //////////////////////////////////////////////////////////////////////////
