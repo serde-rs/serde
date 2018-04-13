@@ -1894,7 +1894,7 @@ fn deserialize_identifier(
     let variant_indices = 0u64..;
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
-        Some(quote! {
+        quote! {
             fn visit_bool<__E>(self, __value: bool) -> Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
@@ -1972,9 +1972,9 @@ fn deserialize_identifier(
             {
                 Ok(__Field::__other(_serde::private::de::Content::Unit))
             }
-        })
+        }
     } else {
-        Some(quote! {
+        quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
@@ -1987,7 +1987,7 @@ fn deserialize_identifier(
                                 &#fallthrough_msg))
                 }
             }
-        })
+        }
     };
 
     let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
