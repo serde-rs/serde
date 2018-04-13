@@ -2600,36 +2600,28 @@ fn wrap_deserialize_variant_with(
     let unwrap_fn = match variant.style {
         Style::Struct if variant.fields.len() == 1 => {
             let field_ident = variant.fields[0].ident.unwrap();
-            quote!({
-                |__wrap| {
-                    #this::#variant_ident { #field_ident: __wrap.value }
-                }
-            })
+            quote! {
+                |__wrap| #this::#variant_ident { #field_ident: __wrap.value }
+            }
         }
         Style::Struct => {
             let field_idents = variant
                 .fields
                 .iter()
                 .map(|field| field.ident.as_ref().unwrap());
-            quote!({
-                |__wrap| {
-                    #this::#variant_ident { #(#field_idents: __wrap.value.#field_access),* }
-                }
-            })
+            quote! {
+                |__wrap| #this::#variant_ident { #(#field_idents: __wrap.value.#field_access),* }
+            }
         }
-        Style::Tuple => quote!({
-            |__wrap| {
-                #this::#variant_ident(#(__wrap.value.#field_access),*)
-            }
-        }),
-        Style::Newtype => quote!({
-            |__wrap| {
-                #this::#variant_ident(__wrap.value)
-            }
-        }),
-        Style::Unit => quote!({
-            |__wrap| { #this::#variant_ident }
-        }),
+        Style::Tuple => quote! {
+            |__wrap| #this::#variant_ident(#(__wrap.value.#field_access),*)
+        },
+        Style::Newtype => quote! {
+            |__wrap| #this::#variant_ident(__wrap.value)
+        },
+        Style::Unit => quote! {
+            |__wrap| #this::#variant_ident
+        },
     };
 
     (wrapper, wrapper_ty, unwrap_fn)
