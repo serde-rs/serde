@@ -1891,6 +1891,50 @@ fn deserialize_identifier(
 
     let index_expecting = if is_variant { "variant" } else { "field" };
 
+    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
+        None
+    } else {
+        Some(quote! {
+            let __value = &_serde::export::from_utf8_lossy(__value);
+        })
+    };
+
+    let (
+        value_as_str_content,
+        value_as_borrowed_str_content,
+        value_as_bytes_content,
+        value_as_borrowed_bytes_content,
+    ) = if !collect_other_fields {
+        (None, None, None, None)
+    } else {
+        (
+            Some(quote! {
+                let __value = _serde::private::de::Content::String(__value.to_string());
+            }),
+            Some(quote! {
+                let __value = _serde::private::de::Content::Str(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::private::de::Content::ByteBuf(__value.to_vec());
+            }),
+            Some(quote! {
+                let __value = _serde::private::de::Content::Bytes(__value);
+            }),
+        )
+    };
+
+    let fallthrough_arm = if let Some(fallthrough) = fallthrough {
+        fallthrough
+    } else if is_variant {
+        quote! {
+            _serde::export::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
+        }
+    } else {
+        quote! {
+            _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS))
+        }
+    };
+
     let variant_indices = 0u64..;
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
@@ -1972,6 +2016,35 @@ fn deserialize_identifier(
             {
                 Ok(__Field::__other(_serde::private::de::Content::Unit))
             }
+
+            fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                match __value {
+                    #(
+                        #field_borrowed_strs => _serde::export::Ok(#constructors),
+                    )*
+                    _ => {
+                        #value_as_borrowed_str_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+
+            fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+            {
+                match __value {
+                    #(
+                        #field_borrowed_bytes => _serde::export::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_borrowed_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
         }
     } else {
         quote! {
@@ -1987,50 +2060,6 @@ fn deserialize_identifier(
                                 &#fallthrough_msg))
                 }
             }
-        }
-    };
-
-    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
-        None
-    } else {
-        Some(quote! {
-            let __value = &_serde::export::from_utf8_lossy(__value);
-        })
-    };
-
-    let (
-        value_as_str_content,
-        value_as_borrowed_str_content,
-        value_as_bytes_content,
-        value_as_borrowed_bytes_content,
-    ) = if !collect_other_fields {
-        (None, None, None, None)
-    } else {
-        (
-            Some(quote! {
-                let __value = _serde::private::de::Content::String(__value.to_string());
-            }),
-            Some(quote! {
-                let __value = _serde::private::de::Content::Str(__value);
-            }),
-            Some(quote! {
-                let __value = _serde::private::de::Content::ByteBuf(__value.to_vec());
-            }),
-            Some(quote! {
-                let __value = _serde::private::de::Content::Bytes(__value);
-            }),
-        )
-    };
-
-    let fallthrough_arm = if let Some(fallthrough) = fallthrough {
-        fallthrough
-    } else if is_variant {
-        quote! {
-            _serde::export::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
-        }
-    } else {
-        quote! {
-            _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS))
         }
     };
 
@@ -2050,35 +2079,6 @@ fn deserialize_identifier(
                 )*
                 _ => {
                     #value_as_str_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
-        fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
-            where __E: _serde::de::Error
-        {
-            match __value {
-                #(
-                    #field_borrowed_strs => _serde::export::Ok(#constructors),
-                )*
-                _ => {
-                    #value_as_borrowed_str_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
-        fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
-            where __E: _serde::de::Error
-        {
-            match __value {
-                #(
-                    #field_borrowed_bytes => _serde::export::Ok(#constructors),
-                )*
-                _ => {
-                    #bytes_to_str
-                    #value_as_borrowed_bytes_content
                     #fallthrough_arm
                 }
             }
