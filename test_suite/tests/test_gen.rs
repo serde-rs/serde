@@ -391,9 +391,6 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     enum ExternallyTaggedVariantWith {
-        #[allow(dead_code)]
-        Normal { f1: String },
-
         #[serde(serialize_with = "ser_x")]
         #[serde(deserialize_with = "de_x")]
         #[allow(dead_code)]
@@ -403,6 +400,11 @@ fn test_gen() {
         #[serde(deserialize_with = "deserialize_some_other_variant")]
         #[allow(dead_code)]
         Tuple(String, u8),
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Struct1 { x: X },
 
         #[serde(serialize_with = "serialize_some_other_variant")]
         #[serde(deserialize_with = "deserialize_some_other_variant")]
@@ -419,13 +421,15 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(tag = "t")]
     enum InternallyTaggedVariantWith {
-        #[allow(dead_code)]
-        Normal { f1: String },
-
         #[serde(serialize_with = "ser_x")]
         #[serde(deserialize_with = "de_x")]
         #[allow(dead_code)]
         Newtype(X),
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Struct1 { x: X },
 
         #[serde(serialize_with = "serialize_some_other_variant")]
         #[serde(deserialize_with = "deserialize_some_other_variant")]
@@ -442,9 +446,6 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(tag = "t", content = "c")]
     enum AdjacentlyTaggedVariantWith {
-        #[allow(dead_code)]
-        Normal { f1: String },
-
         #[serde(serialize_with = "ser_x")]
         #[serde(deserialize_with = "de_x")]
         #[allow(dead_code)]
@@ -454,6 +455,11 @@ fn test_gen() {
         #[serde(deserialize_with = "deserialize_some_other_variant")]
         #[allow(dead_code)]
         Tuple(String, u8),
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Struct1 { x: X },
 
         #[serde(serialize_with = "serialize_some_other_variant")]
         #[serde(deserialize_with = "deserialize_some_other_variant")]
@@ -470,9 +476,6 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(untagged)]
     enum UntaggedVariantWith {
-        #[allow(dead_code)]
-        Normal { f1: String },
-
         #[serde(serialize_with = "ser_x")]
         #[serde(deserialize_with = "de_x")]
         #[allow(dead_code)]
@@ -482,6 +485,11 @@ fn test_gen() {
         #[serde(deserialize_with = "deserialize_some_other_variant")]
         #[allow(dead_code)]
         Tuple(String, u8),
+
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        #[allow(dead_code)]
+        Struct1 { x: X },
 
         #[serde(serialize_with = "serialize_some_other_variant")]
         #[serde(deserialize_with = "deserialize_some_other_variant")]

@@ -2598,6 +2598,14 @@ fn wrap_deserialize_variant_with(
         })
     });
     let unwrap_fn = match variant.style {
+        Style::Struct if variant.fields.len() == 1 => {
+            let field_ident = variant.fields[0].ident.unwrap();
+            quote!({
+                |__wrap| {
+                    #this::#variant_ident { #field_ident: __wrap.value }
+                }
+            })
+        }
         Style::Struct => {
             let field_idents = variant
                 .fields
