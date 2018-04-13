@@ -116,11 +116,11 @@ where
     struct FindTyParams {
         // Set of all generic type parameters on the current struct (A, B, C in
         // the example). Initialized up front.
-        all_ty_params: HashSet<syn::Ident>,
+        all_type_params: HashSet<syn::Ident>,
         // Set of generic type parameters used in fields for which filter
         // returns true (A and B in the example). Filled in as the visitor sees
         // them.
-        relevant_ty_params: HashSet<syn::Ident>,
+        relevant_type_params: HashSet<syn::Ident>,
     }
     impl<'ast> visit::Visit<'ast> for FindTyParams {
         fn visit_path(&mut self, path: &syn::Path) {
@@ -133,8 +133,8 @@ where
             }
             if path.leading_colon.is_none() && path.segments.len() == 1 {
                 let id = path.segments[0].ident;
-                if self.all_ty_params.contains(&id) {
-                    self.relevant_ty_params.insert(id);
+                if self.all_type_params.contains(&id) {
+                    self.relevant_type_params.insert(id);
                 }
             }
             visit::visit_path(self, path);
@@ -149,13 +149,13 @@ where
         fn visit_macro(&mut self, _mac: &syn::Macro) {}
     }
 
-    let all_ty_params = generics.type_params()
+    let all_type_params = generics.type_params()
         .map(|param| param.ident)
         .collect();
 
     let mut visitor = FindTyParams {
-        all_ty_params: all_ty_params,
-        relevant_ty_params: HashSet::new(),
+        all_type_params: all_type_params,
+        relevant_type_params: HashSet::new(),
     };
     match cont.data {
         Data::Enum(ref variants) => for variant in variants.iter() {
@@ -176,7 +176,7 @@ where
 
     let new_predicates = generics.type_params()
         .map(|param| param.ident)
-        .filter(|id| visitor.relevant_ty_params.contains(id))
+        .filter(|id| visitor.relevant_type_params.contains(id))
         .map(|id| {
             syn::WherePredicate::Type(syn::PredicateType {
                 lifetimes: None,
