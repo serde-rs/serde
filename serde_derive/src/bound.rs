@@ -51,14 +51,11 @@ pub fn with_where_predicates(
     generics
 }
 
-pub fn with_where_predicates_from_fields<F>(
+pub fn with_where_predicates_from_fields(
     cont: &Container,
     generics: &syn::Generics,
-    from_field: F,
-) -> syn::Generics
-where
-    F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
-{
+    from_field: fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
+) -> syn::Generics {
     let predicates = cont.data
         .all_fields()
         .flat_map(|field| from_field(&field.attrs))
@@ -82,15 +79,12 @@ where
 //         #[serde(skip_serializing)]
 //         c: C,
 //     }
-pub fn with_bound<F>(
+pub fn with_bound(
     cont: &Container,
     generics: &syn::Generics,
-    filter: F,
+    filter: fn(&attr::Field, Option<&attr::Variant>) -> bool,
     bound: &syn::Path,
-) -> syn::Generics
-where
-    F: Fn(&attr::Field, Option<&attr::Variant>) -> bool,
-{
+) -> syn::Generics {
     struct FindTyParams<'ast> {
         // Set of all generic type parameters on the current struct (A, B, C in
         // the example). Initialized up front.
