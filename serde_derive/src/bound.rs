@@ -50,18 +50,39 @@ pub fn with_where_predicates(
     generics
 }
 
-pub fn with_where_predicates_from_fields<F>(
+pub fn with_where_predicates_from_fields<F, W>(
     cont: &Container,
     generics: &syn::Generics,
+    trait_bound: &syn::Path,
     from_field: F,
+    gen_bound_where: W,
 ) -> syn::Generics
 where
     F: Fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
+    W: Fn(&attr::Field) -> bool,
 {
     let predicates = cont.data
         .all_fields()
-        .flat_map(|field| from_field(&field.attrs))
-        .flat_map(|predicates| predicates.to_vec());
+        .flat_map(|field| {
+            let field_ty = field.ty;
+            let matching_generic = |t: &syn::PathSegment, g: &syn::GenericParam| match *g {
+                syn::GenericParam::Type(ref generic_ty)
+                    if generic_ty.ident == t.ident => true,
+                _ => false
+            };
+
+            let mut field_bound: Option<syn::WherePredicate> = None;
+            if let syn::Type::Path(ref ty_path) = *field_ty {
+                field_bound = match (gen_bound_where(&field.attrs), ty_path.path.segments.first()) {
+                    (true, Some(syn::punctuated::Pair::Punctuated(ref t, _))) =>
+                        if generics.params.iter().any(|g| matching_generic(t, g)) {
+                            Some(parse_quote!(#field_ty: #trait_bound))
+                        } else {None},
+                    (_, _) => None
+                };
+            }
+            field_bound.into_iter().chain(from_field(&field.attrs).into_iter().flat_map(|predicates| predicates.to_vec()))
+        });
 
     let mut generics = generics.clone();
     generics.make_where_clause()

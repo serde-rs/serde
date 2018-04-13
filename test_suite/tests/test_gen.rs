@@ -539,6 +539,30 @@ fn test_gen() {
         array: [u8; 256],
     }
     assert_ser::<BigArray>();
+
+    trait AssocSerde {
+        type Assoc;
+    }
+
+    struct NoSerdeImpl;
+    impl AssocSerde for NoSerdeImpl {
+        type Assoc = u32;
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct AssocDerive<T: AssocSerde> {
+        assoc: T::Assoc
+    }
+
+    assert::<AssocDerive<NoSerdeImpl>>();
+
+    #[derive(Serialize, Deserialize)]
+    struct AssocDeriveMulti<S, T: AssocSerde> {
+        s: S,
+        assoc: T::Assoc,
+    }
+
+    assert::<AssocDeriveMulti<i32, NoSerdeImpl>>();
 }
 
 //////////////////////////////////////////////////////////////////////////
