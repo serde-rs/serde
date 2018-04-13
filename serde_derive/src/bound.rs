@@ -149,13 +149,8 @@ where
         fn visit_macro(&mut self, _mac: &syn::Macro) {}
     }
 
-    let all_ty_params: HashSet<_> = generics
-        .params
-        .iter()
-        .filter_map(|param| match *param {
-            syn::GenericParam::Type(ref param) => Some(param.ident),
-            _ => None,
-        })
+    let all_ty_params = generics.type_params()
+        .map(|param| param.ident)
         .collect();
 
     let mut visitor = FindTyParams {
@@ -179,13 +174,8 @@ where
         }
     }
 
-    let new_predicates = generics
-        .params
-        .iter()
-        .filter_map(|param| match *param {
-            syn::GenericParam::Type(ref param) => Some(param.ident),
-            _ => None,
-        })
+    let new_predicates = generics.type_params()
+        .map(|param| param.ident)
         .filter(|id| visitor.relevant_ty_params.contains(id))
         .map(|id| {
             syn::WherePredicate::Type(syn::PredicateType {
