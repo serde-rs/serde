@@ -325,8 +325,8 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
         impl<'de> _serde::de::Visitor<'de> for __Visitor {
             type Value = #this;
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             #[inline]
@@ -419,8 +419,8 @@ fn deserialize_tuple(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_newtype_struct
@@ -507,8 +507,8 @@ fn deserialize_tuple_in_place(
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
             type Value = ();
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_newtype_struct
@@ -875,8 +875,8 @@ fn deserialize_struct(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_seq
@@ -982,8 +982,8 @@ fn deserialize_struct_in_place(
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
             type Value = ();
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_seq
@@ -1104,8 +1104,8 @@ fn deserialize_externally_tagged_enum(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             fn visit_enum<__A>(self, __data: __A) -> _serde::export::Result<Self::Value, __A::Error>
@@ -1375,8 +1375,8 @@ fn deserialize_adjacently_tagged_enum(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, #expecting)
             }
 
             fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
@@ -2064,8 +2064,8 @@ fn deserialize_identifier(
     };
 
     quote_block! {
-        fn expecting(&self, formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-            _serde::export::Formatter::write_str(formatter, #expecting)
+        fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+            _serde::export::Formatter::write_str(__formatter, #expecting)
         }
 
         #visit_other
