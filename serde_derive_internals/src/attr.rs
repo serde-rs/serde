@@ -6,16 +6,16 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use Ctxt;
+use proc_macro2::{Group, Span, TokenStream, TokenTree};
+use std::collections::BTreeSet;
+use std::str::FromStr;
 use syn;
+use syn::punctuated::Punctuated;
+use syn::synom::{ParseError, Synom};
 use syn::Ident;
 use syn::Meta::{List, NameValue, Word};
 use syn::NestedMeta::{Literal, Meta};
-use syn::punctuated::Punctuated;
-use syn::synom::{Synom, ParseError};
-use std::collections::BTreeSet;
-use std::str::FromStr;
-use proc_macro2::{Span, TokenStream, TokenTree, Group};
+use Ctxt;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -234,7 +234,10 @@ impl Container {
 
                     // Parse `#[serde(default)]`
                     Meta(Word(word)) if word == "default" => match item.data {
-                        syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Named(_), .. }) => {
+                        syn::Data::Struct(syn::DataStruct {
+                            fields: syn::Fields::Named(_),
+                            ..
+                        }) => {
                             default.set(Default::Default);
                         }
                         _ => cx.error(
@@ -247,7 +250,10 @@ impl Container {
                     Meta(NameValue(ref m)) if m.ident == "default" => {
                         if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             match item.data {
-                                syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Named(_), .. }) => {
+                                syn::Data::Struct(syn::DataStruct {
+                                    fields: syn::Fields::Named(_),
+                                    ..
+                                }) => {
                                     default.set(Default::Path(path));
                                 }
                                 _ => cx.error(
@@ -503,13 +509,11 @@ fn decide_identifier(
         }
         (&syn::Data::Enum(_), true, false) => Identifier::Field,
         (&syn::Data::Enum(_), false, true) => Identifier::Variant,
-        (&syn::Data::Struct(_), true, false)
-        | (&syn::Data::Union(_), true, false) => {
+        (&syn::Data::Struct(_), true, false) | (&syn::Data::Union(_), true, false) => {
             cx.error("`field_identifier` can only be used on an enum");
             Identifier::No
         }
-        (&syn::Data::Struct(_), false, true)
-        | (&syn::Data::Union(_), false, true) => {
+        (&syn::Data::Struct(_), false, true) | (&syn::Data::Union(_), false, true) => {
             cx.error("`variant_identifier` can only be used on an enum");
             Identifier::No
         }
@@ -594,10 +598,16 @@ impl Variant {
                     Meta(NameValue(ref m)) if m.ident == "with" => {
                         if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.path.segments.push(Ident::new("serialize", Span::call_site()).into());
+                            ser_path
+                                .path
+                                .segments
+                                .push(Ident::new("serialize", Span::call_site()).into());
                             serialize_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.path.segments.push(Ident::new("deserialize", Span::call_site()).into());
+                            de_path
+                                .path
+                                .segments
+                                .push(Ident::new("deserialize", Span::call_site()).into());
                             deserialize_with.set(de_path);
                         }
                     }
@@ -838,10 +848,16 @@ impl Field {
                     Meta(NameValue(ref m)) if m.ident == "with" => {
                         if let Ok(path) = parse_lit_into_expr_path(cx, m.ident.as_ref(), &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.path.segments.push(Ident::new("serialize", Span::call_site()).into());
+                            ser_path
+                                .path
+                                .segments
+                                .push(Ident::new("serialize", Span::call_site()).into());
                             serialize_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.path.segments.push(Ident::new("deserialize", Span::call_site()).into());
+                            de_path
+                                .path
+                                .segments
+                                .push(Ident::new("deserialize", Span::call_site()).into());
                             deserialize_with.set(de_path);
                         }
                     }
@@ -873,7 +889,9 @@ impl Field {
 
                     // Parse `#[serde(borrow = "'a + 'b")]`
                     Meta(NameValue(ref m)) if m.ident == "borrow" => {
-                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(lifetimes) =
+                            parse_lit_into_lifetimes(cx, m.ident.as_ref(), &m.lit)
+                        {
                             if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
                                 for lifetime in &lifetimes {
                                     if !borrowable.contains(lifetime) {
@@ -939,10 +957,14 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
-                path.segments.push(Ident::new("_serde", Span::call_site()).into());
-                path.segments.push(Ident::new("private", Span::call_site()).into());
-                path.segments.push(Ident::new("de", Span::call_site()).into());
-                path.segments.push(Ident::new("borrow_cow_str", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("_serde", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("private", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("de", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("borrow_cow_str", Span::call_site()).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -954,10 +976,14 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
-                path.segments.push(Ident::new("_serde", Span::call_site()).into());
-                path.segments.push(Ident::new("private", Span::call_site()).into());
-                path.segments.push(Ident::new("de", Span::call_site()).into());
-                path.segments.push(Ident::new("borrow_cow_bytes", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("_serde", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("private", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("de", Span::call_site()).into());
+                path.segments
+                    .push(Ident::new("borrow_cow_bytes", Span::call_site()).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -1097,7 +1123,10 @@ where
     Ok((ser_meta.get(), de_meta.get()))
 }
 
-fn get_renames<'a>(cx: &Ctxt, items: &'a Punctuated<syn::NestedMeta, Token![,]>) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
+fn get_renames<'a>(
+    cx: &Ctxt,
+    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
     get_ser_and_de(cx, "rename", items, get_lit_str)
 }
 
@@ -1141,12 +1170,18 @@ fn get_lit_str<'a>(
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
-    parse_lit_str(string).map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
+    parse_lit_str(string)
+        .map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
 }
 
-fn parse_lit_into_expr_path(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::ExprPath, ()> {
+fn parse_lit_into_expr_path(
+    cx: &Ctxt,
+    attr_name: &str,
+    lit: &syn::Lit,
+) -> Result<syn::ExprPath, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
-    parse_lit_str(string).map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
+    parse_lit_str(string)
+        .map_err(|_| cx.error(format!("failed to parse path: {:?}", string.value())))
 }
 
 fn parse_lit_into_where(
@@ -1173,7 +1208,8 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: &str, lit: &syn::Lit) -> Result<syn::
     parse_lit_str(string).map_err(|_| {
         cx.error(format!(
             "failed to parse type: {} = {:?}",
-            attr_name, string.value()
+            attr_name,
+            string.value()
         ))
     })
 }
@@ -1210,7 +1246,10 @@ fn parse_lit_into_lifetimes(
         return Ok(set);
     }
 
-    cx.error(format!("failed to parse borrowed lifetimes: {:?}", string.value()));
+    cx.error(format!(
+        "failed to parse borrowed lifetimes: {:?}",
+        string.value()
+    ));
     Err(())
 }
 
@@ -1255,14 +1294,10 @@ fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
             return false;
         }
     };
-    seg.ident == "Cow"
-        && args.len() == 2
-        && match (&args[0], &args[1]) {
-            (&syn::GenericArgument::Lifetime(_), &syn::GenericArgument::Type(ref arg)) => {
-                elem(arg)
-            }
-            _ => false,
-        }
+    seg.ident == "Cow" && args.len() == 2 && match (&args[0], &args[1]) {
+        (&syn::GenericArgument::Lifetime(_), &syn::GenericArgument::Type(ref arg)) => elem(arg),
+        _ => false,
+    }
 }
 
 // Whether the type looks like it might be `&T` where elem="T". This can have
@@ -1287,9 +1322,7 @@ fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
 //     }
 fn is_rptr(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
     match *ty {
-        syn::Type::Reference(ref ty) => {
-            ty.mutability.is_none() && elem(&ty.elem)
-        }
+        syn::Type::Reference(ref ty) => ty.mutability.is_none() && elem(&ty.elem),
         _ => false,
     }
 }
@@ -1307,17 +1340,13 @@ fn is_slice_u8(ty: &syn::Type) -> bool {
 
 fn is_primitive_type(ty: &syn::Type, primitive: &str) -> bool {
     match *ty {
-        syn::Type::Path(ref ty) => {
-            ty.qself.is_none() && is_primitive_path(&ty.path, primitive)
-        }
+        syn::Type::Path(ref ty) => ty.qself.is_none() && is_primitive_path(&ty.path, primitive),
         _ => false,
     }
 }
 
 fn is_primitive_path(path: &syn::Path, primitive: &str) -> bool {
-    path.leading_colon.is_none()
-        && path.segments.len() == 1
-        && path.segments[0].ident == primitive
+    path.leading_colon.is_none() && path.segments.len() == 1 && path.segments[0].ident == primitive
         && path.segments[0].arguments.is_empty()
 }
 
@@ -1414,7 +1443,10 @@ fn spanned_tokens(s: &syn::LitStr) -> Result<TokenStream, ParseError> {
 }
 
 fn respan_token_stream(stream: TokenStream, span: Span) -> TokenStream {
-    stream.into_iter().map(|token| respan_token_tree(token, span)).collect()
+    stream
+        .into_iter()
+        .map(|token| respan_token_tree(token, span))
+        .collect()
 }
 
 fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {

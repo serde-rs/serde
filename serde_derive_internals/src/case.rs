@@ -113,14 +113,7 @@ impl FromStr for RenameRule {
 fn rename_variants() {
     for &(original, lower, upper, camel, snake, screaming, kebab, screaming_kebab) in &[
         (
-            "Outcome",
-            "outcome",
-            "OUTCOME",
-            "outcome",
-            "outcome",
-            "OUTCOME",
-            "outcome",
-            "OUTCOME",
+            "Outcome", "outcome", "OUTCOME", "outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
         ),
         (
             "VeryTasty",
@@ -154,13 +147,7 @@ fn rename_variants() {
 fn rename_fields() {
     for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab) in &[
         (
-            "outcome",
-            "OUTCOME",
-            "Outcome",
-            "outcome",
-            "OUTCOME",
-            "outcome",
-            "OUTCOME",
+            "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
         ),
         (
             "very_tasty",

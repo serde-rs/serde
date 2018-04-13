@@ -6,15 +6,15 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use syn::{self, Ident, Index, Member};
+use proc_macro2::{Literal, Span};
+use quote::{ToTokens, Tokens};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use quote::{ToTokens, Tokens};
-use proc_macro2::{Literal, Span};
+use syn::{self, Ident, Index, Member};
 
 use bound;
 use fragment::{Expr, Fragment, Match, Stmts};
-use internals::ast::{Data, Container, Field, Style, Variant};
+use internals::ast::{Container, Data, Field, Style, Variant};
 use internals::{self, attr};
 
 use std::collections::BTreeSet;
@@ -27,7 +27,10 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
-    let dummy_const = Ident::new(&format!("_IMPL_DESERIALIZE_FOR_{}", ident), Span::call_site());
+    let dummy_const = Ident::new(
+        &format!("_IMPL_DESERIALIZE_FOR_{}", ident),
+        Span::call_site(),
+    );
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
 
@@ -268,7 +271,8 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match cont.data {
         Data::Struct(Style::Struct, ref fields) => {
-            if let Some(code) = deserialize_struct_in_place(None, params, fields, &cont.attrs, None) {
+            if let Some(code) = deserialize_struct_in_place(None, params, fields, &cont.attrs, None)
+            {
                 code
             } else {
                 return None;
@@ -550,7 +554,8 @@ fn deserialize_seq(
                 None => {
                     let field_ty = &field.ty;
                     let span = field.original.span();
-                    let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
+                    let func =
+                        quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
                     quote!(try!(#func(&mut __seq)))
                 }
                 Some(path) => {
@@ -637,13 +642,12 @@ fn deserialize_seq_in_place(
         .enumerate()
         .map(|(field_index, (_, field))| {
             // If there's no field name, assume we're a tuple-struct and use a numeric index
-            let field_name = field
-                .ident
-                .map(Member::Named)
-                .unwrap_or_else(|| Member::Unnamed(Index {
+            let field_name = field.ident.map(Member::Named).unwrap_or_else(|| {
+                Member::Unnamed(Index {
                     index: field_index as u32,
                     span: Span::call_site(),
-                }));
+                })
+            });
 
             let dot = quote_spanned!(Span::call_site()=> .);
             if field.attrs.skip_deserializing() {
@@ -919,8 +923,8 @@ fn deserialize_struct_in_place(
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs));
 
-    let (field_visitor, fields_stmt, visit_map) = deserialize_struct_as_struct_in_place_visitor(
-        params, fields, cattrs);
+    let (field_visitor, fields_stmt, visit_map) =
+        deserialize_struct_as_struct_in_place_visitor(params, fields, cattrs);
 
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = Stmts(fields_stmt);
@@ -1059,9 +1063,7 @@ fn deserialize_externally_tagged_enum(
             let variant_name = field_i(i);
 
             let block = Match(deserialize_externally_tagged_variant(
-                params,
-                variant,
-                cattrs,
+                params, variant, cattrs,
             ));
 
             quote! {
@@ -1161,9 +1163,9 @@ fn deserialize_internally_tagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote!(
+                quote! {
                     _serde::private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)
-                ),
+                },
             ));
 
             quote! {
@@ -1525,8 +1527,7 @@ fn deserialize_externally_tagged_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
-        let (wrapper, wrapper_ty, unwrap_fn) =
-            wrap_deserialize_variant_with(params, variant, path);
+        let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
         return quote_block! {
             #wrapper
             _serde::export::Result::map(
@@ -1608,8 +1609,7 @@ fn deserialize_untagged_variant(
     deserializer: Tokens,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
-        let (wrapper, wrapper_ty, unwrap_fn) =
-            wrap_deserialize_variant_with(params, variant, path);
+        let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
         return quote_block! {
             #wrapper
             _serde::export::Result::map(
@@ -1715,7 +1715,7 @@ fn deserialize_untagged_newtype_variant(
 fn deserialize_generated_identifier(
     fields: &[(String, Ident)],
     cattrs: &attr::Container,
-    is_variant: bool
+    is_variant: bool,
 ) -> Fragment {
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
@@ -1810,12 +1810,7 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| {
-            (
-                variant.attrs.name().deserialize_name(),
-                variant.ident,
-            )
-        })
+        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident))
         .collect();
 
     let names = names_idents.iter().map(|&(ref name, _)| name);
@@ -1872,12 +1867,16 @@ fn deserialize_identifier(
     fields: &[(String, Ident)],
     is_variant: bool,
     fallthrough: Option<Tokens>,
-    collect_other_fields: bool
+    collect_other_fields: bool,
 ) -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
     let field_borrowed_strs = fields.iter().map(|&(ref name, _)| name);
-    let field_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
-    let field_borrowed_bytes = fields.iter().map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
+    let field_bytes = fields
+        .iter()
+        .map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
+    let field_borrowed_bytes = fields
+        .iter()
+        .map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
 
     let constructors: &Vec<_> = &fields
         .iter()
@@ -1999,8 +1998,12 @@ fn deserialize_identifier(
         })
     };
 
-    let (value_as_str_content, value_as_borrowed_str_content,
-         value_as_bytes_content, value_as_borrowed_bytes_content) = if !collect_other_fields {
+    let (
+        value_as_str_content,
+        value_as_borrowed_str_content,
+        value_as_bytes_content,
+        value_as_borrowed_bytes_content,
+    ) = if !collect_other_fields {
         (None, None, None, None)
     } else {
         (
@@ -2015,7 +2018,7 @@ fn deserialize_identifier(
             }),
             Some(quote! {
                 let __value = _serde::private::de::Content::Bytes(__value);
-            })
+            }),
         )
     };
 
@@ -2194,7 +2197,8 @@ fn deserialize_map(
                 None => {
                     let field_ty = &field.ty;
                     let span = field.original.span();
-                    let func = quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
+                    let func =
+                        quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
                     quote! {
                         try!(#func(&mut __map))
                     }
@@ -2473,7 +2477,12 @@ fn deserialize_map_in_place(
             // If missing_expr unconditionally returns an error, don't try
             // to assign its value to self.place. Maybe this could be handled
             // more elegantly.
-            if missing_expr.as_ref().into_tokens().to_string().starts_with("return ") {
+            if missing_expr
+                .as_ref()
+                .into_tokens()
+                .to_string()
+                .starts_with("return ")
+            {
                 let missing_expr = Stmts(missing_expr);
                 quote! {
                     if !#name {
@@ -2582,10 +2591,12 @@ fn wrap_deserialize_variant_with(
     let (wrapper, wrapper_ty) =
         wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
 
-    let field_access = (0..variant.fields.len()).map(|n| Member::Unnamed(Index {
-        index: n as u32,
-        span: Span::call_site(),
-    }));
+    let field_access = (0..variant.fields.len()).map(|n| {
+        Member::Unnamed(Index {
+            index: n as u32,
+            span: Span::call_site(),
+        })
+    });
     let unwrap_fn = match variant.style {
         Style::Struct => {
             let field_idents = variant
@@ -2683,7 +2694,8 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
                     param.bounds.push(place_lifetime.lifetime);
                 }
                 syn::GenericParam::Type(ref mut param) => {
-                    param.bounds
+                    param
+                        .bounds
                         .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime));
                 }
                 syn::GenericParam::Const(_) => {}

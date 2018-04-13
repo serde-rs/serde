@@ -6,9 +6,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 use serde::de::{self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess,
                 SeqAccess, VariantAccess, Visitor};
-use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 
 use error::Error;
 use token::Token;
@@ -22,28 +22,28 @@ macro_rules! assert_next_token {
     ($de:expr, $expected:expr) => {
         match $de.next_token_opt() {
             Some(token) if token == $expected => {}
-            Some(other) => {
-                panic!("expected Token::{} but deserialization wants Token::{}",
-                       other, $expected)
-            }
-            None => {
-                panic!("end of tokens but deserialization wants Token::{}",
-                       $expected)
-            }
+            Some(other) => panic!(
+                "expected Token::{} but deserialization wants Token::{}",
+                other, $expected
+            ),
+            None => panic!(
+                "end of tokens but deserialization wants Token::{}",
+                $expected
+            ),
         }
-    }
+    };
 }
 
 macro_rules! unexpected {
     ($token:expr) => {
         panic!("deserialization did not expect this token: {}", $token)
-    }
+    };
 }
 
 macro_rules! end_of_tokens {
     () => {
         panic!("ran out of tokens to deserialize")
-    }
+    };
 }
 
 impl<'de> Deserializer<'de> {

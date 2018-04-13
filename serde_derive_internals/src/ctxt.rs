@@ -6,8 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::fmt::Display;
 use std::cell::RefCell;
+use std::fmt::Display;
 use std::thread;
 
 #[derive(Default)]

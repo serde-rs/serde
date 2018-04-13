@@ -160,24 +160,28 @@
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
 // Whitelisted clippy_pedantic lints
-#![cfg_attr(feature = "cargo-clippy",
-            allow(empty_line_after_outer_attr, missing_docs_in_private_items,
-                  redundant_field_names, stutter, use_debug, use_self))]
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        empty_line_after_outer_attr, missing_docs_in_private_items, redundant_field_names, stutter,
+        use_debug, use_self
+    )
+)]
 
 #[macro_use]
 extern crate serde;
 
-mod ser;
 mod de;
 mod error;
+mod ser;
 
+mod assert;
 mod configure;
 mod token;
-mod assert;
 
-pub use token::Token;
 pub use assert::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
                  assert_ser_tokens_error, assert_tokens};
+pub use token::Token;
 
 pub use configure::{Compact, Configure, Readable};
 

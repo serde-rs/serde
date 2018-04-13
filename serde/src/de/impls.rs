@@ -1276,10 +1276,7 @@ parse_socket_impl!(net::SocketAddrV4, net::SocketAddrV4::new);
 
 #[cfg(feature = "std")]
 parse_socket_impl!(net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(
-    ip,
-    port,
-    0,
-    0
+    ip, port, 0, 0
 ));
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -6,8 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use ast::{Data, Container, Style};
-use attr::{Identifier, EnumTag};
+use ast::{Container, Data, Style};
+use attr::{EnumTag, Identifier};
 use Ctxt;
 
 /// Cross-cutting checks that require looking at more than a single attrs
@@ -66,17 +66,17 @@ fn check_flatten(cx: &Ctxt, cont: &Container) {
                 if field.attrs.skip_serializing() {
                     cx.error(
                         "#[serde(flatten] can not be combined with \
-                         #[serde(skip_serializing)]"
+                         #[serde(skip_serializing)]",
                     );
                 } else if field.attrs.skip_serializing_if().is_some() {
                     cx.error(
                         "#[serde(flatten] can not be combined with \
-                         #[serde(skip_serializing_if = \"...\")]"
+                         #[serde(skip_serializing_if = \"...\")]",
                     );
                 } else if field.attrs.skip_deserializing() {
                     cx.error(
                         "#[serde(flatten] can not be combined with \
-                         #[serde(skip_deserializing)]"
+                         #[serde(skip_deserializing)]",
                     );
                 }
             }
@@ -220,10 +220,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
 /// the same as either one of its fields, as this would result in
 /// duplicate keys in the serialized output and/or ambiguity in
 /// the to-be-deserialized input.
-fn check_internal_tag_field_name_conflict(
-    cx: &Ctxt,
-    cont: &Container,
-) {
+fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
     let variants = match cont.data {
         Data::Enum(ref variants) => variants,
         Data::Struct(_, _) => return,
@@ -235,10 +232,7 @@ fn check_internal_tag_field_name_conflict(
     };
 
     let diagnose_conflict = || {
-        let message = format!(
-            "variant field name `{}` conflicts with internal tag",
-            tag
-        );
+        let message = format!("variant field name `{}` conflicts with internal tag", tag);
         cx.error(message);
     };
 
@@ -257,8 +251,8 @@ fn check_internal_tag_field_name_conflict(
                         return;
                     }
                 }
-            },
-            Style::Unit | Style::Newtype | Style::Tuple => {},
+            }
+            Style::Unit | Style::Newtype | Style::Tuple => {}
         }
     }
 }
@@ -267,7 +261,10 @@ fn check_internal_tag_field_name_conflict(
 /// contents tag must differ, for the same reason.
 fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
     let (type_tag, content_tag) = match *cont.attrs.tag() {
-        EnumTag::Adjacent { ref tag, ref content } => (tag, content),
+        EnumTag::Adjacent {
+            ref tag,
+            ref content,
+        } => (tag, content),
         EnumTag::Internal { .. } | EnumTag::External | EnumTag::None => return,
     };
 
