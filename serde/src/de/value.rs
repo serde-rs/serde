@@ -652,11 +652,8 @@ where
 {
     /// Check for remaining elements after passing a `SeqDeserializer` to
     /// `Visitor::visit_seq`.
-    pub fn end(mut self) -> Result<(), E> {
-        let mut remaining = 0;
-        while self.iter.next().is_some() {
-            remaining += 1;
-        }
+    pub fn end(self) -> Result<(), E> {
+        let remaining = self.iter.count();
         if remaining == 0 {
             Ok(())
         } else {
@@ -849,11 +846,8 @@ where
 {
     /// Check for remaining elements after passing a `MapDeserializer` to
     /// `Visitor::visit_map`.
-    pub fn end(mut self) -> Result<(), E> {
-        let mut remaining = 0;
-        while self.iter.next().is_some() {
-            remaining += 1;
-        }
+    pub fn end(self) -> Result<(), E> {
+        let remaining = self.iter.count();
         if remaining == 0 {
             Ok(())
         } else {
