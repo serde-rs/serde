@@ -13,7 +13,11 @@
 #[macro_use]
 extern crate serde_derive;
 
+extern crate serde;
 extern crate serde_test;
+
+mod bytes;
+
 use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens,
                        Token};
 
@@ -780,6 +784,158 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_bytes() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTagged {
+        String {
+            string: String,
+        },
+        Bytes {
+            #[serde(with = "bytes")]
+            bytes: Vec<u8>,
+        },
+    }
+
+    assert_de_tokens(
+        &InternallyTagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "String",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("String"),
+            Token::Str("string"),
+            Token::Str("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "String",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("String"),
+            Token::Str("string"),
+            Token::String("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "String",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("String"),
+            Token::Str("string"),
+            Token::Bytes(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "String",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("String"),
+            Token::Str("string"),
+            Token::ByteBuf(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Bytes",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Bytes"),
+            Token::Str("bytes"),
+            Token::Str("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Bytes",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Bytes"),
+            Token::Str("bytes"),
+            Token::String("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Bytes",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Bytes"),
+            Token::Str("bytes"),
+            Token::Bytes(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Bytes",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Bytes"),
+            Token::Str("bytes"),
+            Token::ByteBuf(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Bytes",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Bytes"),
+            Token::Str("bytes"),
+            Token::Seq { len: Some(1) },
+            Token::U8(0),
+            Token::SeqEnd,
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_internally_tagged_struct_variant_containing_unit_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     pub enum Level {
@@ -1242,6 +1398,140 @@ fn test_enum_in_untagged_enum() {
             Token::Str("f"),
             Token::U8(1),
             Token::StructVariantEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_untagged_bytes() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(untagged)]
+    enum Untagged {
+        String {
+            string: String,
+        },
+        Bytes {
+            #[serde(with = "bytes")]
+            bytes: Vec<u8>,
+        },
+    }
+
+    assert_de_tokens(
+        &Untagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("string"),
+            Token::Str("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("string"),
+            Token::String("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("string"),
+            Token::Bytes(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::String { string: "\0".to_owned() },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("string"),
+            Token::ByteBuf(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("bytes"),
+            Token::Str("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("bytes"),
+            Token::String("\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("bytes"),
+            Token::Bytes(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("bytes"),
+            Token::ByteBuf(b"\0"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Untagged::Bytes { bytes: vec![0] },
+        &[
+            Token::Struct {
+                name: "Untagged",
+                len: 1,
+            },
+            Token::Str("bytes"),
+            Token::Seq { len: Some(1) },
+            Token::U8(0),
+            Token::SeqEnd,
+            Token::StructEnd,
         ],
     );
 }

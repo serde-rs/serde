@@ -1245,6 +1245,8 @@ mod content {
             match self.content {
                 Content::String(v) => visitor.visit_string(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
+                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
+                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1261,8 +1263,11 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
+                Content::String(v) => visitor.visit_string(v),
+                Content::Str(v) => visitor.visit_borrowed_str(v),
                 Content::ByteBuf(v) => visitor.visit_byte_buf(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                Content::Seq(v) => visit_content_seq(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1966,6 +1971,8 @@ mod content {
             match *self.content {
                 Content::String(ref v) => visitor.visit_str(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
+                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
+                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1982,8 +1989,11 @@ mod content {
             V: Visitor<'de>,
         {
             match *self.content {
+                Content::String(ref v) => visitor.visit_str(v),
+                Content::Str(v) => visitor.visit_borrowed_str(v),
                 Content::ByteBuf(ref v) => visitor.visit_bytes(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
