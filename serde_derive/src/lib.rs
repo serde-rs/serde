@@ -22,7 +22,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.40")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.41")]
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(enum_variant_names, redundant_field_names, too_many_arguments, used_underscore_binding)
