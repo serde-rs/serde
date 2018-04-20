@@ -1021,6 +1021,23 @@ mod content {
         fn invalid_type(self, exp: &Expected) -> E {
             de::Error::invalid_type(self.content.unexpected(), exp)
         }
+
+        fn deserialize_integer<V>(self, visitor: V) -> Result<V::Value, E>
+        where
+            V: Visitor<'de>,
+        {
+            match self.content {
+                Content::U8(v) => visitor.visit_u8(v),
+                Content::U16(v) => visitor.visit_u16(v),
+                Content::U32(v) => visitor.visit_u32(v),
+                Content::U64(v) => visitor.visit_u64(v),
+                Content::I8(v) => visitor.visit_i8(v),
+                Content::I16(v) => visitor.visit_i16(v),
+                Content::I32(v) => visitor.visit_i32(v),
+                Content::I64(v) => visitor.visit_i64(v),
+                _ => Err(self.invalid_type(&visitor)),
+            }
+        }
     }
 
     fn visit_content_seq<'de, V, E>(content: Vec<Content<'de>>, visitor: V) -> Result<V::Value, E>
@@ -1104,94 +1121,56 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1746,6 +1725,23 @@ mod content {
         fn invalid_type(self, exp: &Expected) -> E {
             de::Error::invalid_type(self.content.unexpected(), exp)
         }
+
+        fn deserialize_integer<V>(self, visitor: V) -> Result<V::Value, E>
+        where
+            V: Visitor<'de>,
+        {
+            match *self.content {
+                Content::U8(v) => visitor.visit_u8(v),
+                Content::U16(v) => visitor.visit_u16(v),
+                Content::U32(v) => visitor.visit_u32(v),
+                Content::U64(v) => visitor.visit_u64(v),
+                Content::I8(v) => visitor.visit_i8(v),
+                Content::I16(v) => visitor.visit_i16(v),
+                Content::I32(v) => visitor.visit_i32(v),
+                Content::I64(v) => visitor.visit_i64(v),
+                _ => Err(self.invalid_type(&visitor)),
+            }
+        }
     }
 
     fn visit_content_seq_ref<'a, 'de, V, E>(
@@ -1837,94 +1833,56 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
+            self.deserialize_integer(visitor)
         }
 
         fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
