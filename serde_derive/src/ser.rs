@@ -15,6 +15,7 @@ use bound;
 use fragment::{Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
 use internals::{attr, Ctxt};
+use try;
 
 use std::u32;
 
@@ -55,10 +56,12 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
         }
     };
 
+    let try_replacement = try::replacement();
     let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             extern crate serde as _serde;
+            #try_replacement
             #impl_block
         };
     };
