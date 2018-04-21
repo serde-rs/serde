@@ -596,9 +596,15 @@ fn serialize_adjacently_tagged_variant(
                     field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
                 }
 
-                quote_expr! {
-                    _serde::Serialize::serialize(#field_expr, __serializer)
-                }
+                return quote_block! {
+                    let mut __struct = try!(_serde::Serializer::serialize_struct(
+                        __serializer, #type_name, 2));
+                    try!(_serde::ser::SerializeStruct::serialize_field(
+                        &mut __struct, #tag, #variant_name));
+                    try!(_serde::ser::SerializeStruct::serialize_field(
+                        &mut __struct, #content, #field_expr));
+                    _serde::ser::SerializeStruct::end(__struct)
+                };
             }
             Style::Tuple => {
                 serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
