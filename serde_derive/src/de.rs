@@ -735,7 +735,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
         }
     };
 
-    let mut result = quote_spanned!(Span::call_site()=> #type_path(#value));
+    let mut result = quote_spanned!(Span::call_site()=> #type_path(__field0));
     if params.has_getter {
         let this = &params.this;
         result = quote! {
@@ -748,6 +748,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer<#delife>
         {
+            let __field0 = #value;
             _serde::export::Ok(#result)
         }
     }
