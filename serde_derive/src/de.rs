@@ -37,10 +37,9 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
-        let fun = quote_spanned!(Span::call_site()=> deserialize);
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
-                #vis fn #fun<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
+                #vis fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
                     where __D: _serde::Deserializer<#delife>
                 {
                     #body
@@ -586,11 +585,11 @@ fn deserialize_seq(
 
     let mut result = if is_struct {
         let names = fields.iter().map(|f| &f.ident);
-        quote_spanned! {Span::call_site()=>
+        quote! {
             #type_path { #( #names: #vars ),* }
         }
     } else {
-        quote_spanned! {Span::call_site()=>
+        quote! {
             #type_path ( #(#vars),* )
         }
     };
@@ -652,11 +651,10 @@ fn deserialize_seq_in_place(
                 })
             });
 
-            let dot = quote_spanned!(Span::call_site()=> .);
             if field.attrs.skip_deserializing() {
                 let default = Expr(expr_is_missing(field, cattrs));
                 quote! {
-                    self.place #dot #field_name = #default;
+                    self.place.#field_name = #default;
                 }
             } else {
                 let return_invalid_length = quote! {
@@ -666,7 +664,7 @@ fn deserialize_seq_in_place(
                     None => {
                         quote! {
                             if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                _serde::private::de::InPlaceSeed(&mut self.place #dot #field_name)))
+                                _serde::private::de::InPlaceSeed(&mut self.place.#field_name)))
                             {
                                 #return_invalid_length
                             }
@@ -679,7 +677,7 @@ fn deserialize_seq_in_place(
                             #wrapper
                             match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
                                 _serde::export::Some(__wrap) => {
-                                    self.place #dot #field_name = __wrap.value;
+                                    self.place.#field_name = __wrap.value;
                                 }
                                 _serde::export::None => {
                                     #return_invalid_length
@@ -735,7 +733,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
         }
     };
 
-    let mut result = quote_spanned!(Span::call_site()=> #type_path(__field0));
+    let mut result = quote!(#type_path(__field0));
     if params.has_getter {
         let this = &params.this;
         result = quote! {
@@ -761,13 +759,12 @@ fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> To
 
     let delife = params.borrowed.de_lifetime();
 
-    let elem = quote_spanned!(Span::call_site()=> .0);
     quote! {
         #[inline]
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer<#delife>
         {
-            _serde::Deserialize::deserialize_in_place(__e, &mut self.place #elem)
+            _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
         }
     }
 }
@@ -2309,9 +2306,9 @@ fn deserialize_map(
         let ident = field.ident.expect("struct contains unnamed fields");
         if field.attrs.skip_deserializing() {
             let value = Expr(expr_is_missing(field, cattrs));
-            quote_spanned!(Span::call_site()=> #ident: #value)
+            quote!(#ident: #value)
         } else {
-            quote_spanned!(Span::call_site()=> #ident: #name)
+            quote!(#ident: #name)
         }
     });
 
@@ -2329,7 +2326,7 @@ fn deserialize_map(
         }
     };
 
-    let mut result = quote_spanned!(Span::call_site()=> #struct_path { #(#result),* });
+    let mut result = quote!(#struct_path { #(#result),* });
     if params.has_getter {
         let this = &params.this;
         result = quote! {
