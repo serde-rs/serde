@@ -58,6 +58,7 @@ type ErrorImpl = ();
 
 impl de::Error for Error {
     #[cfg(any(feature = "std", feature = "alloc"))]
+    #[cold]
     fn custom<T>(msg: T) -> Self
     where
         T: Display,
@@ -68,6 +69,7 @@ impl de::Error for Error {
     }
 
     #[cfg(not(any(feature = "std", feature = "alloc")))]
+    #[cold]
     fn custom<T>(msg: T) -> Self
     where
         T: Display,
@@ -78,6 +80,7 @@ impl de::Error for Error {
 }
 
 impl ser::Error for Error {
+    #[cold]
     fn custom<T>(msg: T) -> Self
     where
         T: Display,

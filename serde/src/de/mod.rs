@@ -196,6 +196,7 @@ macro_rules! declare_error_trait {
             /// For example if we try to deserialize a String out of a JSON file
             /// containing an integer, the unexpected type is the integer and the
             /// expected type is the string.
+            #[cold]
             fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
                 Error::custom(format_args!("invalid type: {}, expected {}", unexp, exp))
             }
@@ -213,6 +214,7 @@ macro_rules! declare_error_trait {
             /// For example if we try to deserialize a String out of some binary data
             /// that is not valid UTF-8, the unexpected value is the bytes and the
             /// expected value is a string.
+            #[cold]
             fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
                 Error::custom(format_args!("invalid value: {}, expected {}", unexp, exp))
             }
@@ -226,12 +228,14 @@ macro_rules! declare_error_trait {
             /// The `exp` argument provides information about what data was being
             /// expected. For example `exp` might say that a tuple of size 6 was
             /// expected.
+            #[cold]
             fn invalid_length(len: usize, exp: &Expected) -> Self {
                 Error::custom(format_args!("invalid length {}, expected {}", len, exp))
             }
 
             /// Raised when a `Deserialize` enum type received a variant with an
             /// unrecognized name.
+            #[cold]
             fn unknown_variant(variant: &str, expected: &'static [&'static str]) -> Self {
                 if expected.is_empty() {
                     Error::custom(format_args!("unknown variant `{}`, there are no variants",
@@ -245,6 +249,7 @@ macro_rules! declare_error_trait {
 
             /// Raised when a `Deserialize` struct type received a field with an
             /// unrecognized name.
+            #[cold]
             fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
                 if expected.is_empty() {
                     Error::custom(format_args!("unknown field `{}`, there are no fields",
@@ -259,12 +264,14 @@ macro_rules! declare_error_trait {
             /// Raised when a `Deserialize` struct type expected to receive a required
             /// field with a particular name but that field was not present in the
             /// input.
+            #[cold]
             fn missing_field(field: &'static str) -> Self {
                 Error::custom(format_args!("missing field `{}`", field))
             }
 
             /// Raised when a `Deserialize` struct type received more than one of the
             /// same field.
+            #[cold]
             fn duplicate_field(field: &'static str) -> Self {
                 Error::custom(format_args!("duplicate field `{}`", field))
             }
