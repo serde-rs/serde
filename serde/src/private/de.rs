@@ -277,6 +277,7 @@ mod content {
             }
         }
 
+        #[cold]
         fn unexpected(&self) -> Unexpected {
             match *self {
                 Content::Bool(b) => Unexpected::Bool(b),
