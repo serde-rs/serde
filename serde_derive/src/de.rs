@@ -1626,12 +1626,13 @@ fn deserialize_untagged_variant(
             let type_name = params.type_name();
             let variant_name = variant.ident.as_ref();
             quote_expr! {
-                _serde::export::Result::map(
-                    _serde::Deserializer::deserialize_any(
-                        #deserializer,
-                        _serde::private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
-                    ),
-                    |()| #this::#variant_ident)
+                match _serde::Deserializer::deserialize_any(
+                    #deserializer,
+                    _serde::private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
+                ) {
+                    _serde::export::Ok(()) => _serde::export::Ok(#this::#variant_ident),
+                    _serde::export::Err(__err) => _serde::export::Err(__err),
+                }
             }
         }
         Style::Newtype => deserialize_untagged_newtype_variant(
