@@ -58,6 +58,7 @@ mod fragment;
 
 mod de;
 mod ser;
+mod try;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
