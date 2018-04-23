@@ -1310,7 +1310,12 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            visitor.visit_newtype_struct(self)
+            match self.content {
+                Content::Newtype(v) => {
+                    visitor.visit_newtype_struct(ContentDeserializer::new(*v))
+                }
+                _ => visitor.visit_newtype_struct(self),
+            }
         }
 
         fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2001,7 +2006,12 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            visitor.visit_newtype_struct(self)
+            match *self.content {
+                Content::Newtype(ref v) => {
+                    visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
+                }
+                _ => visitor.visit_newtype_struct(self),
+            }
         }
 
         fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>

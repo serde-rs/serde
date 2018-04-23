@@ -447,6 +447,54 @@ fn test_generic_newtype_struct() {
 }
 
 #[test]
+fn test_untagged_newtype_struct() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum E {
+        Newtype(GenericNewTypeStruct<u32>),
+        Null,
+    }
+
+    assert_tokens(
+        &E::Newtype(GenericNewTypeStruct(5u32)),
+        &[
+            Token::NewtypeStruct {
+                name: "GenericNewTypeStruct",
+            },
+            Token::U32(5),
+        ],
+    );
+}
+
+#[test]
+fn test_adjacently_tagged_newtype_struct() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "t", content = "c")]
+    enum E {
+        Newtype(GenericNewTypeStruct<u32>),
+        Null,
+    }
+
+    assert_de_tokens(
+        &E::Newtype(GenericNewTypeStruct(5u32)),
+        &[
+            Token::Struct {
+                name: "E",
+                len: 2,
+            },
+            Token::Str("c"),
+            Token::NewtypeStruct {
+                name: "GenericNewTypeStruct",
+            },
+            Token::U32(5),
+            Token::Str("t"),
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_generic_tuple_struct() {
     assert_tokens(
         &GenericTupleStruct(5u32, 6u32),
