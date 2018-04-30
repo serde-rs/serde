@@ -10,8 +10,8 @@
 extern crate serde_derive;
 
 extern crate serde;
-use serde::Deserialize;
 use serde::de::{value, IntoDeserializer};
+use serde::Deserialize;
 
 #[test]
 fn test_u32_to_enum() {

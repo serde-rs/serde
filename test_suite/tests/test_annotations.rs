@@ -12,9 +12,9 @@
 extern crate serde_derive;
 
 extern crate serde;
-use std::collections::HashMap;
-use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use self::serde::de::{self, Unexpected};
+use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashMap;
 
 extern crate serde_test;
 use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
@@ -114,10 +114,7 @@ struct FlattenStructEnumWrapper {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum FlattenStructEnum {
-    InsertInteger {
-        index: u32,
-        value: u32
-    },
+    InsertInteger { index: u32, value: u32 },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -133,10 +130,7 @@ struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
 enum FlattenStructTagContentEnum {
-    InsertInteger {
-        index: u32,
-        value: u32
-    },
+    InsertInteger { index: u32, value: u32 },
     NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
 }
 
@@ -529,12 +523,10 @@ enum RenameEnumSerializeDeserialize<A> {
 fn test_rename_enum() {
     assert_tokens(
         &RenameEnum::Batman,
-        &[
-            Token::UnitVariant {
-                name: "Superhero",
-                variant: "bruce_wayne",
-            },
-        ],
+        &[Token::UnitVariant {
+            name: "Superhero",
+            variant: "bruce_wayne",
+        }],
     );
 
     assert_tokens(
@@ -1221,12 +1213,7 @@ fn test_missing_renamed_field_enum() {
 #[derive(Debug, PartialEq, Deserialize)]
 enum InvalidLengthEnum {
     A(i32, i32, i32),
-    B(
-        #[serde(skip_deserializing)]
-        i32,
-        i32,
-        i32,
-    ),
+    B(#[serde(skip_deserializing)] i32, i32, i32),
 }
 
 #[test]
@@ -1345,7 +1332,7 @@ fn test_flatten_struct_enum() {
     let change_request = FlattenStructEnumWrapper {
         data: FlattenStructEnum::InsertInteger {
             index: 0,
-            value: 42
+            value: 42,
         },
         extra,
     };
@@ -1362,7 +1349,7 @@ fn test_flatten_struct_enum() {
             Token::MapEnd,
             Token::Str("extra_key"),
             Token::Str("extra value"),
-            Token::MapEnd
+            Token::MapEnd,
         ],
     );
     assert_ser_tokens(
@@ -1370,7 +1357,10 @@ fn test_flatten_struct_enum() {
         &[
             Token::Map { len: None },
             Token::Str("insert_integer"),
-            Token::Struct { len: 2, name: "insert_integer" },
+            Token::Struct {
+                len: 2,
+                name: "insert_integer",
+            },
             Token::Str("index"),
             Token::U32(0),
             Token::Str("value"),
@@ -1378,7 +1368,7 @@ fn test_flatten_struct_enum() {
             Token::StructEnd,
             Token::Str("extra_key"),
             Token::Str("extra value"),
-            Token::MapEnd
+            Token::MapEnd,
         ],
     );
 }
@@ -1387,12 +1377,10 @@ fn test_flatten_struct_enum() {
 fn test_flatten_struct_tag_content_enum() {
     let change_request = FlattenStructTagContentEnumWrapper {
         outer: 42,
-        data: FlattenStructTagContentEnumNewtype(
-            FlattenStructTagContentEnum::InsertInteger {
-                index: 0,
-                value: 42
-            }
-        ),
+        data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::InsertInteger {
+            index: 0,
+            value: 42,
+        }),
     };
     assert_de_tokens(
         &change_request,
@@ -1421,7 +1409,10 @@ fn test_flatten_struct_tag_content_enum() {
             Token::Str("type"),
             Token::Str("insert_integer"),
             Token::Str("value"),
-            Token::Struct { len: 2, name: "insert_integer" },
+            Token::Struct {
+                len: 2,
+                name: "insert_integer",
+            },
             Token::Str("index"),
             Token::U32(0),
             Token::Str("value"),
@@ -1436,13 +1427,9 @@ fn test_flatten_struct_tag_content_enum() {
 fn test_flatten_struct_tag_content_enum_newtype() {
     let change_request = FlattenStructTagContentEnumWrapper {
         outer: 42,
-        data: FlattenStructTagContentEnumNewtype(
-            FlattenStructTagContentEnum::NewtypeVariant(
-                FlattenStructTagContentEnumNewtypeVariant {
-                    value: 23
-                }
-            )
-        ),
+        data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::NewtypeVariant(
+            FlattenStructTagContentEnumNewtypeVariant { value: 23 },
+        )),
     };
     assert_de_tokens(
         &change_request,
@@ -1469,7 +1456,10 @@ fn test_flatten_struct_tag_content_enum_newtype() {
             Token::Str("type"),
             Token::Str("newtype_variant"),
             Token::Str("value"),
-            Token::Struct { len: 1, name: "FlattenStructTagContentEnumNewtypeVariant" },
+            Token::Struct {
+                len: 1,
+                name: "FlattenStructTagContentEnumNewtypeVariant",
+            },
             Token::Str("value"),
             Token::U32(23),
             Token::StructEnd,
@@ -1525,7 +1515,7 @@ fn test_complex_flatten() {
         first: First,
         #[serde(flatten)]
         second: Second,
-        z: u32
+        z: u32,
     }
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -1552,10 +1542,8 @@ fn test_complex_flatten() {
                 d: "c".into(),
                 e: Some(2),
             },
-            second: Second {
-                f: 3
-            },
-            z: 4
+            second: Second { f: 3 },
+            z: 4,
         },
         &[
             Token::Map { len: None },
@@ -1592,10 +1580,8 @@ fn test_complex_flatten() {
                 d: "c".into(),
                 e: Some(2),
             },
-            second: Second {
-                f: 3
-            },
-            z: 4
+            second: Second { f: 3 },
+            z: 4,
         },
         &[
             Token::Map { len: None },
@@ -1652,7 +1638,7 @@ fn test_flatten_unsupported_type() {
             Token::Str("foo"),
             Token::Str("a"),
             Token::Str("b"),
-            Token::MapEnd
+            Token::MapEnd,
         ],
         "can only flatten structs and maps",
     );
@@ -1671,7 +1657,11 @@ fn test_non_string_keys() {
     let mut mapping = HashMap::new();
     mapping.insert(0, 42);
     assert_tokens(
-        &TestStruct { name: "peter".into(), age: 3, mapping },
+        &TestStruct {
+            name: "peter".into(),
+            age: 3,
+            mapping,
+        },
         &[
             Token::Map { len: None },
             Token::Str("name"),
@@ -1720,7 +1710,9 @@ fn test_lifetime_propagation_for_flatten() {
     let mut borrowed_map = HashMap::new();
     borrowed_map.insert("x", 42u32);
     assert_ser_tokens(
-        &B { t: borrowed_map.clone() },
+        &B {
+            t: borrowed_map.clone(),
+        },
         &[
             Token::Map { len: None },
             Token::BorrowedStr("x"),
@@ -1742,7 +1734,9 @@ fn test_lifetime_propagation_for_flatten() {
     let mut borrowed_map = HashMap::new();
     borrowed_map.insert(&b"x"[..], 42u32);
     assert_ser_tokens(
-        &C { t: borrowed_map.clone() },
+        &C {
+            t: borrowed_map.clone(),
+        },
         &[
             Token::Map { len: None },
             Token::Seq { len: Some(1) },

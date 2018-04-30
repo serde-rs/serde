@@ -7,7 +7,6 @@
 // except according to those terms.
 
 #![deny(trivial_numeric_casts)]
-
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
 
 #[macro_use]
@@ -226,12 +225,10 @@ fn test_de_named_map() {
 fn test_ser_enum_unit() {
     assert_ser_tokens(
         &SerEnum::Unit::<u32, u32, u32>,
-        &[
-            Token::UnitVariant {
-                name: "SerEnum",
-                variant: "Unit",
-            },
-        ],
+        &[Token::UnitVariant {
+            name: "SerEnum",
+            variant: "Unit",
+        }],
     );
 }
 
@@ -296,12 +293,10 @@ fn test_ser_enum_map() {
 fn test_de_enum_unit() {
     assert_tokens(
         &DeEnum::Unit::<u32, u32, u32>,
-        &[
-            Token::UnitVariant {
-                name: "DeEnum",
-                variant: "Unit",
-            },
-        ],
+        &[Token::UnitVariant {
+            name: "DeEnum",
+            variant: "Unit",
+        }],
     );
 }
 
@@ -478,10 +473,7 @@ fn test_adjacently_tagged_newtype_struct() {
     assert_de_tokens(
         &E::Newtype(GenericNewTypeStruct(5u32)),
         &[
-            Token::Struct {
-                name: "E",
-                len: 2,
-            },
+            Token::Struct { name: "E", len: 2 },
             Token::Str("c"),
             Token::NewtypeStruct {
                 name: "GenericNewTypeStruct",
@@ -514,12 +506,10 @@ fn test_generic_tuple_struct() {
 fn test_generic_enum_unit() {
     assert_tokens(
         &GenericEnum::Unit::<u32, u32>,
-        &[
-            Token::UnitVariant {
-                name: "GenericEnum",
-                variant: "Unit",
-            },
-        ],
+        &[Token::UnitVariant {
+            name: "GenericEnum",
+            variant: "Unit",
+        }],
     );
 }
 
@@ -846,7 +836,9 @@ fn test_internally_tagged_bytes() {
     }
 
     assert_de_tokens(
-        &InternallyTagged::String { string: "\0".to_owned() },
+        &InternallyTagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "String",
@@ -861,7 +853,9 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::String { string: "\0".to_owned() },
+        &InternallyTagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "String",
@@ -876,7 +870,9 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::String { string: "\0".to_owned() },
+        &InternallyTagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "String",
@@ -891,7 +887,9 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::String { string: "\0".to_owned() },
+        &InternallyTagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "String",
@@ -1402,12 +1400,10 @@ fn test_enum_in_untagged_enum() {
 
     assert_tokens(
         &Outer::Inner(Inner::Unit),
-        &[
-            Token::UnitVariant {
-                name: "Inner",
-                variant: "Unit",
-            },
-        ],
+        &[Token::UnitVariant {
+            name: "Inner",
+            variant: "Unit",
+        }],
     );
 
     assert_tokens(
@@ -1465,7 +1461,9 @@ fn test_untagged_bytes() {
     }
 
     assert_de_tokens(
-        &Untagged::String { string: "\0".to_owned() },
+        &Untagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1478,7 +1476,9 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::String { string: "\0".to_owned() },
+        &Untagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1491,7 +1491,9 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::String { string: "\0".to_owned() },
+        &Untagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1504,7 +1506,9 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::String { string: "\0".to_owned() },
+        &Untagged::String {
+            string: "\0".to_owned(),
+        },
         &[
             Token::Struct {
                 name: "Untagged",

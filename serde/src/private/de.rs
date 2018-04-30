@@ -1311,9 +1311,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
-                Content::Newtype(v) => {
-                    visitor.visit_newtype_struct(ContentDeserializer::new(*v))
-                }
+                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
                 _ => visitor.visit_newtype_struct(self),
             }
         }

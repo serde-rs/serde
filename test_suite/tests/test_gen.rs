@@ -17,8 +17,8 @@
 extern crate serde_derive;
 
 extern crate serde;
-use self::serde::ser::{Serialize, Serializer};
 use self::serde::de::{DeserializeOwned, Deserializer};
+use self::serde::ser::{Serialize, Serializer};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -92,14 +92,10 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     enum EnumWith<T> {
         Unit,
-        Newtype(
-            #[serde(serialize_with = "ser_x", deserialize_with = "de_x")]
-            X,
-        ),
+        Newtype(#[serde(serialize_with = "ser_x", deserialize_with = "de_x")] X),
         Tuple(
             T,
-            #[serde(serialize_with = "ser_x", deserialize_with = "de_x")]
-            X,
+            #[serde(serialize_with = "ser_x", deserialize_with = "de_x")] X,
         ),
         Struct {
             t: T,
@@ -122,17 +118,13 @@ fn test_gen() {
     assert_ser::<MultipleRef<i32>>();
 
     #[derive(Serialize, Deserialize)]
-    struct Newtype(
-        #[serde(serialize_with = "ser_x", deserialize_with = "de_x")]
-        X,
-    );
+    struct Newtype(#[serde(serialize_with = "ser_x", deserialize_with = "de_x")] X);
     assert::<Newtype>();
 
     #[derive(Serialize, Deserialize)]
     struct Tuple<T>(
         T,
-        #[serde(serialize_with = "ser_x", deserialize_with = "de_x")]
-        X,
+        #[serde(serialize_with = "ser_x", deserialize_with = "de_x")] X,
     );
     assert::<Tuple<i32>>();
 
@@ -191,12 +183,16 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(bound = "D: SerializeWith + DeserializeWith")]
     struct WithTraits1<D, E> {
-        #[serde(serialize_with = "SerializeWith::serialize_with",
-                deserialize_with = "DeserializeWith::deserialize_with")]
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with",
+            deserialize_with = "DeserializeWith::deserialize_with"
+        )]
         d: D,
-        #[serde(serialize_with = "SerializeWith::serialize_with",
-                deserialize_with = "DeserializeWith::deserialize_with",
-                bound = "E: SerializeWith + DeserializeWith")]
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with",
+            deserialize_with = "DeserializeWith::deserialize_with",
+            bound = "E: SerializeWith + DeserializeWith"
+        )]
         e: E,
     }
     assert::<WithTraits1<X, X>>();
@@ -204,13 +200,18 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(bound(serialize = "D: SerializeWith", deserialize = "D: DeserializeWith"))]
     struct WithTraits2<D, E> {
-        #[serde(serialize_with = "SerializeWith::serialize_with",
-                deserialize_with = "DeserializeWith::deserialize_with")]
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with",
+            deserialize_with = "DeserializeWith::deserialize_with"
+        )]
         d: D,
-        #[serde(serialize_with = "SerializeWith::serialize_with",
-                bound(serialize = "E: SerializeWith"))]
-        #[serde(deserialize_with = "DeserializeWith::deserialize_with",
-                bound(deserialize = "E: DeserializeWith"))]
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with", bound(serialize = "E: SerializeWith")
+        )]
+        #[serde(
+            deserialize_with = "DeserializeWith::deserialize_with",
+            bound(deserialize = "E: DeserializeWith")
+        )]
         e: E,
     }
     assert::<WithTraits2<X, X>>();
@@ -270,17 +271,11 @@ fn test_gen() {
     struct EmptyTupleDenyUnknown();
 
     #[derive(Serialize, Deserialize)]
-    struct TupleSkipAll(
-        #[serde(skip_deserializing)]
-        u8,
-    );
+    struct TupleSkipAll(#[serde(skip_deserializing)] u8);
 
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct TupleSkipAllDenyUnknown(
-        #[serde(skip_deserializing)]
-        u8,
-    );
+    struct TupleSkipAllDenyUnknown(#[serde(skip_deserializing)] u8);
 
     #[derive(Serialize, Deserialize)]
     enum EmptyEnum {}
@@ -305,10 +300,7 @@ fn test_gen() {
             #[serde(skip_deserializing)]
             f: u8,
         },
-        TupleSkip(
-            #[serde(skip_deserializing)]
-            u8,
-        ),
+        TupleSkip(#[serde(skip_deserializing)] u8),
     }
 
     #[cfg(feature = "unstable")]
@@ -321,10 +313,7 @@ fn test_gen() {
             #[serde(skip_deserializing)]
             f: u8,
         },
-        TupleSkip(
-            #[serde(skip_deserializing)]
-            u8,
-        ),
+        TupleSkip(#[serde(skip_deserializing)] u8),
     }
 
     #[derive(Serialize, Deserialize)]
@@ -531,7 +520,9 @@ fn test_gen() {
     assert::<SkippedStaticStr>();
 
     macro_rules! T {
-        () => { () }
+        () => {
+            ()
+        };
     }
 
     #[derive(Serialize, Deserialize)]
@@ -559,7 +550,7 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     struct AssocDerive<T: AssocSerde> {
-        assoc: T::Assoc
+        assoc: T::Assoc,
     }
 
     assert::<AssocDerive<NoSerdeImpl>>();

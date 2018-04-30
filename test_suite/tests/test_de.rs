@@ -12,14 +12,14 @@
 extern crate serde_derive;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::net;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, UNIX_EPOCH};
 use std::default::Default;
 use std::ffi::{CString, OsString};
+use std::net;
+use std::num::Wrapping;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::num::Wrapping;
+use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(feature = "unstable")]
 use std::ffi::CStr;

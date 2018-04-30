@@ -1,5 +1,5 @@
-use quote::Tokens;
 use proc_macro2::{Op, Spacing};
+use quote::Tokens;
 
 // None of our generated code requires the `From::from` error conversion
 // performed by the standard library's `try!` macro. With this simplified macro
