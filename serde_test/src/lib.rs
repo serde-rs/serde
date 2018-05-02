@@ -155,7 +155,7 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.44")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.45")]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Whitelisted clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
