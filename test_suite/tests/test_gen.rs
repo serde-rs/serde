@@ -493,6 +493,13 @@ fn test_gen() {
     assert_ser::<UntaggedVariantWith>();
 
     #[derive(Serialize, Deserialize)]
+    struct FlattenWith {
+        #[serde(flatten, serialize_with = "ser_x", deserialize_with = "de_x")]
+        x: X,
+    }
+    assert::<FlattenWith>();
+
+    #[derive(Serialize, Deserialize)]
     struct StaticStrStruct<'a> {
         a: &'a str,
         b: &'static str,

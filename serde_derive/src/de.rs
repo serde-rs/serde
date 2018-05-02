@@ -2279,8 +2279,12 @@ fn deserialize_map(
         .filter(|&&(field, _)| field.attrs.flatten())
         .map(|&(field, ref name)| {
             let field_ty = field.ty;
+            let func = match field.attrs.deserialize_with() {
+                None => quote!(_serde::de::Deserialize::deserialize),
+                Some(path) => quote!(#path),
+            };
             quote! {
-                let #name: #field_ty = try!(_serde::de::Deserialize::deserialize(
+                let #name: #field_ty = try!(#func(
                     _serde::private::de::FlatMapDeserializer(
                         &mut __collect,
                         _serde::export::PhantomData)));
