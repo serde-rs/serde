@@ -160,10 +160,8 @@ struct StructPrivDef {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructPub")]
 struct StructPubDef {
-    #[allow(dead_code)]
     a: u8,
 
-    #[allow(dead_code)]
     #[serde(with = "UnitDef")]
     b: remote::Unit,
 }

@@ -16,6 +16,7 @@ use bound;
 use fragment::{Expr, Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
 use internals::{self, attr};
+use pretend;
 use try;
 
 use std::collections::BTreeSet;
@@ -37,11 +38,13 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
+        let used = pretend::pretend_used(&cont);
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
                     where __D: _serde::Deserializer<#delife>
                 {
+                    #used
                     #body
                 }
             }
