@@ -87,4 +87,10 @@ else
     channel build --no-default-features
     cd "$DIR/serde_test"
     channel build
+
+    CHANNEL=1.15.0
+    cd "$DIR"
+    cargo clean
+    cd "$DIR/serde_derive"
+    channel build
 fi
