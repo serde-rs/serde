@@ -49,6 +49,7 @@ mod bound;
 mod fragment;
 
 mod de;
+mod pretend;
 mod ser;
 mod try;
 

@@ -333,9 +333,7 @@ fn test_gen() {
     #[derive(Serialize, Deserialize)]
     #[serde(untagged, remote = "Or")]
     enum OrDef<A, B> {
-        #[allow(dead_code)]
         A(A),
-        #[allow(dead_code)]
         B(B),
     }
 
