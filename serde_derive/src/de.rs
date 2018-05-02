@@ -1941,82 +1941,82 @@ fn deserialize_identifier(
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
         quote! {
-            fn visit_bool<__E>(self, __value: bool) -> Result<Self::Value, __E>
+            fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::Bool(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Bool(__value)))
             }
 
-            fn visit_i8<__E>(self, __value: i8) -> Result<Self::Value, __E>
+            fn visit_i8<__E>(self, __value: i8) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::I8(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I8(__value)))
             }
 
-            fn visit_i16<__E>(self, __value: i16) -> Result<Self::Value, __E>
+            fn visit_i16<__E>(self, __value: i16) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::I16(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I16(__value)))
             }
 
-            fn visit_i32<__E>(self, __value: i32) -> Result<Self::Value, __E>
+            fn visit_i32<__E>(self, __value: i32) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::I32(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I32(__value)))
             }
 
-            fn visit_i64<__E>(self, __value: i64) -> Result<Self::Value, __E>
+            fn visit_i64<__E>(self, __value: i64) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::I64(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I64(__value)))
             }
 
-            fn visit_u8<__E>(self, __value: u8) -> Result<Self::Value, __E>
+            fn visit_u8<__E>(self, __value: u8) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::U8(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U8(__value)))
             }
 
-            fn visit_u16<__E>(self, __value: u16) -> Result<Self::Value, __E>
+            fn visit_u16<__E>(self, __value: u16) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::U16(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U16(__value)))
             }
 
-            fn visit_u32<__E>(self, __value: u32) -> Result<Self::Value, __E>
+            fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::U32(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U32(__value)))
             }
 
-            fn visit_u64<__E>(self, __value: u64) -> Result<Self::Value, __E>
+            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::U64(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U64(__value)))
             }
 
-            fn visit_f32<__E>(self, __value: f32) -> Result<Self::Value, __E>
+            fn visit_f32<__E>(self, __value: f32) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::F32(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::F32(__value)))
             }
 
-            fn visit_f64<__E>(self, __value: f64) -> Result<Self::Value, __E>
+            fn visit_f64<__E>(self, __value: f64) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::F64(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::F64(__value)))
             }
 
-            fn visit_char<__E>(self, __value: char) -> Result<Self::Value, __E>
+            fn visit_char<__E>(self, __value: char) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::Char(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Char(__value)))
             }
 
-            fn visit_unit<__E>(self) -> Result<Self::Value, __E>
+            fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
             {
-                Ok(__Field::__other(_serde::private::de::Content::Unit))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Unit))
             }
 
             fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
@@ -2179,7 +2179,7 @@ fn deserialize_map(
     // Collect contents for flatten fields into a buffer
     let let_collect = if cattrs.has_flatten() {
         Some(quote! {
-            let mut __collect = Vec::<Option<(
+            let mut __collect = _serde::export::Vec::<_serde::export::Option<(
                 _serde::private::de::Content,
                 _serde::private::de::Content
             )>>::new();
@@ -2227,7 +2227,7 @@ fn deserialize_map(
     let ignored_arm = if cattrs.has_flatten() {
         Some(quote! {
             __Field::__other(__name) => {
-                __collect.push(Some((
+                __collect.push(_serde::export::Some((
                     __name,
                     try!(_serde::de::MapAccess::next_value(&mut __map)))));
             }
@@ -2289,8 +2289,8 @@ fn deserialize_map(
 
     let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
         Some(quote! {
-            if let Some(Some((__key, _))) = __collect.into_iter().filter(|x| x.is_some()).next() {
-                if let Some(__key) = __key.as_str() {
+            if let _serde::export::Some(_serde::export::Some((__key, _))) = __collect.into_iter().filter(|x| x.is_some()).next() {
+                if let _serde::export::Some(__key) = __key.as_str() {
                     return _serde::export::Err(
                         _serde::de::Error::custom(format_args!("unknown field `{}`", &__key)));
                 } else {

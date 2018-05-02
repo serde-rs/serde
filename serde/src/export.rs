@@ -16,6 +16,9 @@ pub use lib::result::Result::{self, Err, Ok};
 
 pub use self::string::from_utf8_lossy;
 
+#[cfg(any(feature = "alloc", feature = "std"))]
+pub use lib::Vec;
+
 mod string {
     use lib::*;
 
