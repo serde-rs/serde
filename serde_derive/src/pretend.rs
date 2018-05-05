@@ -107,7 +107,7 @@ fn pretend_variants_used(cont: &Container) -> Tokens {
 
     let cases = variants.iter().map(|variant| {
         let variant_ident = variant.ident;
-        let ref placeholders = (0..variant.fields.len())
+        let placeholders = &(0..variant.fields.len())
             .map(|i| Ident::new(&format!("__v{}", i), Span::call_site()))
             .collect::<Vec<_>>();
 
