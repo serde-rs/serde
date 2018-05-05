@@ -1694,9 +1694,9 @@ fn deserialize_untagged_newtype_variant(
     deserializer: &Tokens,
 ) -> Fragment {
     let this = &params.this;
+    let field_ty = field.ty;
     match field.attrs.deserialize_with() {
         None => {
-            let field_ty = &field.ty;
             quote_expr! {
                 _serde::export::Result::map(
                     <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
@@ -1704,12 +1704,11 @@ fn deserialize_untagged_newtype_variant(
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
             quote_block! {
-                #wrapper
-                _serde::export::Result::map(
-                    <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer),
-                    |__wrapper| #this::#variant_ident(__wrapper.value))
+                let __value: #field_ty = _serde::export::Result::map(
+                    #path(#deserializer),
+                    #this::#variant_ident);
+                __value
             }
         }
     }
