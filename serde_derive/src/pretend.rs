@@ -54,18 +54,17 @@ fn pretend_fields_used(cont: &Container) -> Tokens {
     let (_, ty_generics, _) = cont.generics.split_for_impl();
 
     let patterns = match cont.data {
-        Data::Enum(ref variants) => {
-            variants.iter()
-                .filter_map(|variant| match variant.style {
-                    Style::Struct => {
-                        let variant_ident = variant.ident;
-                        let pat = struct_pattern(&variant.fields);
-                        Some(quote!(#type_ident::#variant_ident #pat))
-                    }
-                    _ => None,
-                })
-                .collect::<Vec<_>>()
-        }
+        Data::Enum(ref variants) => variants
+            .iter()
+            .filter_map(|variant| match variant.style {
+                Style::Struct => {
+                    let variant_ident = variant.ident;
+                    let pat = struct_pattern(&variant.fields);
+                    Some(quote!(#type_ident::#variant_ident #pat))
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>(),
         Data::Struct(Style::Struct, ref fields) => {
             let pat = struct_pattern(fields);
             vec![quote!(#type_ident #pat)]
@@ -106,40 +105,37 @@ fn pretend_variants_used(cont: &Container) -> Tokens {
     let (_, ty_generics, _) = cont.generics.split_for_impl();
     let turbofish = ty_generics.as_turbofish();
 
-    let cases = variants.iter()
-        .map(|variant| {
-            let variant_ident = variant.ident;
-            let ref placeholders = (0..variant.fields.len())
-                .map(|i| Ident::new(&format!("__v{}", i), Span::call_site()))
-                .collect::<Vec<_>>();
+    let cases = variants.iter().map(|variant| {
+        let variant_ident = variant.ident;
+        let ref placeholders = (0..variant.fields.len())
+            .map(|i| Ident::new(&format!("__v{}", i), Span::call_site()))
+            .collect::<Vec<_>>();
 
-            let pat = match variant.style {
-                Style::Struct => {
-                    let names = variant.fields.iter().map(|field| field.ident);
-                    quote!({ #(#names: #placeholders),* })
-                }
-                Style::Tuple | Style::Newtype => {
-                    quote!(( #(#placeholders),* ))
-                }
-                Style::Unit => quote!(),
-            };
-
-            quote! {
-                match _serde::export::None {
-                    _serde::export::Some((#(#placeholders,)*)) => {
-                        let _ = #type_ident::#variant_ident #turbofish #pat;
-                    }
-                    _ => {}
-                }
+        let pat = match variant.style {
+            Style::Struct => {
+                let names = variant.fields.iter().map(|field| field.ident);
+                quote!({ #(#names: #placeholders),* })
             }
-        });
+            Style::Tuple | Style::Newtype => quote!(( #(#placeholders),* )),
+            Style::Unit => quote!(),
+        };
+
+        quote! {
+            match _serde::export::None {
+                _serde::export::Some((#(#placeholders,)*)) => {
+                    let _ = #type_ident::#variant_ident #turbofish #pat;
+                }
+                _ => {}
+            }
+        }
+    });
 
     quote!(#(#cases)*)
 }
 
 fn struct_pattern(fields: &[Field]) -> Tokens {
     let names = fields.iter().map(|field| field.ident);
-    let placeholders = (0..fields.len())
-        .map(|i| Ident::new(&format!("__v{}", i), Span::call_site()));
+    let placeholders =
+        (0..fields.len()).map(|i| Ident::new(&format!("__v{}", i), Span::call_site()));
     quote!({ #(#names: ref #placeholders),* })
 }
