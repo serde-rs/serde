@@ -26,7 +26,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
     let cont = Container::from_ast(&ctxt, input);
     try!(ctxt.check());
 
-    let ident = &cont.ident;
+    let ident = cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let dummy_const = Ident::new(
@@ -347,7 +347,7 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
 }
 
 fn deserialize_tuple(
-    variant_ident: Option<&syn::Ident>,
+    variant_ident: Option<syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -364,7 +364,7 @@ fn deserialize_tuple(
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
     let construct = if params.has_getter {
-        let local = &params.local;
+        let local = params.local;
         quote!(#local)
     } else {
         quote!(#this)
@@ -444,7 +444,7 @@ fn deserialize_tuple(
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_tuple_in_place(
-    variant_ident: Option<&syn::Ident>,
+    variant_ident: Option<syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -557,7 +557,7 @@ fn deserialize_seq(
         } else {
             let visit = match field.attrs.deserialize_with() {
                 None => {
-                    let field_ty = &field.ty;
+                    let field_ty = field.ty;
                     let span = field.original.span();
                     let func =
                         quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
@@ -776,7 +776,7 @@ enum Untagged {
 }
 
 fn deserialize_struct(
-    variant_ident: Option<&syn::Ident>,
+    variant_ident: Option<syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -794,7 +794,7 @@ fn deserialize_struct(
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
     let construct = if params.has_getter {
-        let local = &params.local;
+        let local = params.local;
         quote!(#local)
     } else {
         quote!(#this)
@@ -899,7 +899,7 @@ fn deserialize_struct(
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_struct_in_place(
-    variant_ident: Option<&syn::Ident>,
+    variant_ident: Option<syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -1285,7 +1285,7 @@ fn deserialize_adjacently_tagged_enum(
             .filter(|&(_, variant)| !variant.attrs.skip_deserializing() && is_unit(variant))
             .map(|(i, variant)| {
                 let variant_index = field_i(i);
-                let variant_ident = &variant.ident;
+                let variant_ident = variant.ident;
                 quote! {
                     __Field::#variant_index => _serde::export::Ok(#this::#variant_ident),
                 }
@@ -1537,7 +1537,7 @@ fn deserialize_externally_tagged_variant(
         };
     }
 
-    let variant_ident = &variant.ident;
+    let variant_ident = variant.ident;
 
     match variant.style {
         Style::Unit => {
@@ -1574,7 +1574,7 @@ fn deserialize_internally_tagged_variant(
         return deserialize_untagged_variant(params, variant, cattrs, deserializer);
     }
 
-    let variant_ident = &variant.ident;
+    let variant_ident = variant.ident;
 
     match variant.style {
         Style::Unit => {
@@ -1619,7 +1619,7 @@ fn deserialize_untagged_variant(
         };
     }
 
-    let variant_ident = &variant.ident;
+    let variant_ident = variant.ident;
 
     match variant.style {
         Style::Unit => {
@@ -1661,14 +1661,14 @@ fn deserialize_untagged_variant(
 }
 
 fn deserialize_externally_tagged_newtype_variant(
-    variant_ident: &syn::Ident,
+    variant_ident: syn::Ident,
     params: &Parameters,
     field: &Field,
 ) -> Fragment {
     let this = &params.this;
     match field.attrs.deserialize_with() {
         None => {
-            let field_ty = &field.ty;
+            let field_ty = field.ty;
             quote_expr! {
                 _serde::export::Result::map(
                     _serde::de::VariantAccess::newtype_variant::<#field_ty>(__variant),
@@ -1688,7 +1688,7 @@ fn deserialize_externally_tagged_newtype_variant(
 }
 
 fn deserialize_untagged_newtype_variant(
-    variant_ident: &syn::Ident,
+    variant_ident: syn::Ident,
     params: &Parameters,
     field: &Field,
     deserializer: &Tokens,
@@ -1789,7 +1789,7 @@ fn deserialize_custom_identifier(
     let this = quote!(#this);
 
     let (ordinary, fallthrough) = if let Some(last) = variants.last() {
-        let last_ident = &last.ident;
+        let last_ident = last.ident;
         if last.attrs.other() {
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::export::Ok(#this::#last_ident));
@@ -2170,7 +2170,7 @@ fn deserialize_map(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|&(field, ref name)| {
-            let field_ty = &field.ty;
+            let field_ty = field.ty;
             quote! {
                 let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
             }
@@ -2197,7 +2197,7 @@ fn deserialize_map(
 
             let visit = match field.attrs.deserialize_with() {
                 None => {
-                    let field_ty = &field.ty;
+                    let field_ty = field.ty;
                     let span = field.original.span();
                     let func =
                         quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
@@ -2418,7 +2418,7 @@ fn deserialize_map_in_place(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
-            let field_name = &field.ident;
+            let field_name = field.ident;
 
             let visit = match field.attrs.deserialize_with() {
                 None => {
@@ -2496,7 +2496,7 @@ fn deserialize_map_in_place(
                     }
                 }
             } else {
-                let field_name = &field.ident;
+                let field_name = field.ident;
                 let missing_expr = Expr(missing_expr);
                 quote! {
                     if !#name {
@@ -2591,7 +2591,7 @@ fn wrap_deserialize_variant_with(
     deserialize_with: &syn::ExprPath,
 ) -> (Tokens, Tokens, Tokens) {
     let this = &params.this;
-    let variant_ident = &variant.ident;
+    let variant_ident = variant.ident;
 
     let field_tys = variant.fields.iter().map(|field| field.ty);
     let (wrapper, wrapper_ty) =
@@ -2646,7 +2646,7 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
 
     match *cattrs.default() {
         attr::Default::Default | attr::Default::Path(_) => {
-            let ident = &field.ident;
+            let ident = field.ident;
             return quote_expr!(__default.#ident);
         }
         attr::Default::None => { /* below */ }

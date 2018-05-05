@@ -26,7 +26,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
-    let ident = &cont.ident;
+    let ident = cont.ident;
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let dummy_const = Ident::new(&format!("_IMPL_SERIALIZE_FOR_{}", ident), Span::call_site());
@@ -186,7 +186,7 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
 }
 
 fn serialize_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
-    let self_var = &params.self_var;
+    let self_var = params.self_var;
     quote_block! {
         _serde::Serialize::serialize(
             &_serde::export::Into::<#type_into>::into(_serde::export::Clone::clone(#self_var)),
@@ -333,7 +333,7 @@ fn serialize_struct_as_map(
 fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Container) -> Fragment {
     assert!(variants.len() as u64 <= u64::from(u32::MAX));
 
-    let self_var = &params.self_var;
+    let self_var = params.self_var;
 
     let arms: Vec<_> = variants
         .iter()
@@ -1065,7 +1065,7 @@ fn mut_if(is_mut: bool) -> Option<Tokens> {
 }
 
 fn get_member(params: &Parameters, field: &Field, member: &Member) -> Tokens {
-    let self_var = &params.self_var;
+    let self_var = params.self_var;
     match (params.is_remote, field.attrs.getter()) {
         (false, None) => quote!(&#self_var.#member),
         (true, None) => {
