@@ -17,8 +17,10 @@ use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 
 extern crate serde_test;
-use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
-                       assert_ser_tokens_error, assert_tokens, Token};
+use self::serde_test::{
+    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
+    assert_tokens, Token,
+};
 
 trait MyDefault: Sized {
     fn my_default() -> Self;

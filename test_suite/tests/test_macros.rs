@@ -17,8 +17,9 @@ extern crate serde_test;
 
 mod bytes;
 
-use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens,
-                       Token};
+use self::serde_test::{
+    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
+};
 
 use std::collections::BTreeMap;
 use std::marker::PhantomData;

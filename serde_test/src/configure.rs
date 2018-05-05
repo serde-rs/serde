@@ -1,7 +1,9 @@
 use std::fmt;
 
-use serde::ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
-                 SerializeTuple, SerializeTupleStruct, SerializeTupleVariant};
+use serde::ser::{
+    SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
+    SerializeTupleStruct, SerializeTupleVariant,
+};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]

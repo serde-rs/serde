@@ -179,8 +179,10 @@ mod assert;
 mod configure;
 mod token;
 
-pub use assert::{assert_de_tokens, assert_de_tokens_error, assert_ser_tokens,
-                 assert_ser_tokens_error, assert_tokens};
+pub use assert::{
+    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
+    assert_tokens,
+};
 pub use token::Token;
 
 pub use configure::{Compact, Configure, Readable};

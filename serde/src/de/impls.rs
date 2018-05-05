@@ -8,8 +8,9 @@
 
 use lib::*;
 
-use de::{Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess,
-         Visitor};
+use de::{
+    Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
+};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::MapAccess;

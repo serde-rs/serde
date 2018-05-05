@@ -14,10 +14,11 @@ use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Vi
 use de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub use self::content::{Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
-                        InternallyTaggedUnitVisitor, TagContentOtherField,
-                        TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor,
-                        TaggedContentVisitor, UntaggedUnitVisitor};
+pub use self::content::{
+    Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
+    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
+    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+};
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -229,8 +230,10 @@ mod content {
     use lib::*;
 
     use super::size_hint;
-    use de::{self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, MapAccess,
-             SeqAccess, Unexpected, Visitor};
+    use de::{
+        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, MapAccess,
+        SeqAccess, Unexpected, Visitor,
+    };
 
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.

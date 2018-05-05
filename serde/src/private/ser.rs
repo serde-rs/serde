@@ -11,8 +11,9 @@ use lib::*;
 use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use self::content::{Content, ContentSerializer, SerializeStructVariantAsMapValue,
-                    SerializeTupleVariantAsMapValue};
+use self::content::{
+    Content, ContentSerializer, SerializeStructVariantAsMapValue, SerializeTupleVariantAsMapValue,
+};
 
 /// Used to check that serde(getter) attributes return the expected type.
 /// Not public API.
