@@ -719,20 +719,18 @@ fn deserialize_seq_in_place(
 
 fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &Field) -> Tokens {
     let delife = params.borrowed.de_lifetime();
+    let field_ty = field.ty;
 
     let value = match field.attrs.deserialize_with() {
         None => {
-            let field_ty = &field.ty;
             quote! {
                 try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
             }
         }
         Some(path) => {
-            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-            quote!({
-                #wrapper
-                try!(<#wrapper_ty as _serde::Deserialize>::deserialize(__e)).value
-            })
+            quote! {
+                try!(#path(__e))
+            }
         }
     };
 
@@ -749,7 +747,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
             where __E: _serde::Deserializer<#delife>
         {
-            let __field0 = #value;
+            let __field0: #field_ty = #value;
             _serde::export::Ok(#result)
         }
     }
