@@ -1793,3 +1793,49 @@ fn test_flatten_enum_newtype() {
         ],
     );
 }
+
+#[test]
+fn test_flatten_internally_tagged() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(flatten)]
+        x: X,
+        #[serde(flatten)]
+        y: Y,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "typeX")]
+    enum X {
+        A { a: i32 },
+        B { b: i32 },
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "typeY")]
+    enum Y {
+        C { c: i32 },
+        D { d: i32 },
+    }
+
+    let s = S {
+        x: X::B { b: 1 },
+        y: Y::D { d: 2 },
+    };
+
+    assert_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("typeX"),
+            Token::Str("B"),
+            Token::Str("b"),
+            Token::I32(1),
+            Token::Str("typeY"),
+            Token::Str("D"),
+            Token::Str("d"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+    );
+}

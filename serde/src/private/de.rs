@@ -2715,6 +2715,20 @@ where
         byte_buf option unit unit_struct seq tuple tuple_struct identifier
         ignored_any
     }
+
+    fn private_deserialize_internally_tagged_enum<V>(
+        self,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(FlatInternallyTaggedAccess {
+            iter: self.0.iter_mut(),
+            pending: None,
+            _marker: PhantomData,
+        })
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2783,6 +2797,47 @@ where
         match self.pending_content.take() {
             Some(value) => seed.deserialize(ContentDeserializer::new(value)),
             None => Err(Error::custom("value is missing")),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatInternallyTaggedAccess<'a, 'de: 'a, E> {
+    iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
+    pending: Option<&'a Content<'de>>,
+    _marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> MapAccess<'de> for FlatInternallyTaggedAccess<'a, 'de, E>
+where
+    E: Error,
+{
+    type Error = E;
+
+    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        while let Some(item) = self.iter.next() {
+            // Do not take(), instead borrow this entry. The internally tagged
+            // enum does its own buffering so we can't tell whether this entry
+            // is going to be consumed. Borrowing here leaves the entry
+            // available for later flattened fields.
+            let (ref key, ref content) = *item.as_ref().unwrap();
+            self.pending = Some(content);
+            return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
+        }
+        Ok(None)
+    }
+
+    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        match self.pending.take() {
+            Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+            None => panic!("value is missing"),
         }
     }
 }
