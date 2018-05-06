@@ -2719,15 +2719,13 @@ where
     fn private_deserialize_internally_tagged_enum<V>(
         self,
         visitor: V,
-        tag: &'static str,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
         visitor.visit_map(FlatInternallyTaggedAccess {
             iter: self.0.iter_mut(),
-            pending: Pending::None,
-            tag: tag,
+            pending: None,
             _marker: PhantomData,
         })
     }
@@ -2806,16 +2804,8 @@ where
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatInternallyTaggedAccess<'a, 'de: 'a, E> {
     iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
-    pending: Pending<'a, 'de>,
-    tag: &'static str,
+    pending: Option<&'a Content<'de>>,
     _marker: PhantomData<E>,
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-enum Pending<'a, 'de: 'a> {
-    Content(Content<'de>),
-    ContentRef(&'a Content<'de>),
-    None,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2830,32 +2820,13 @@ where
         T: DeserializeSeed<'de>,
     {
         while let Some(item) = self.iter.next() {
-            let is_tag = match *item {
-                Some((ref key, _)) => key.as_str().map_or(false, |key| key == self.tag),
-                None => continue,
-            };
-
-            let ret = if is_tag {
-                let (key, content) = item.take().unwrap();
-                self.pending = Pending::Content(content);
-
-                // Could use `ContentDeserializer::new(key)` here but we prefer
-                // to avoid instantiating `seed.deserialize` twice with
-                // different Deserializer type parameters. The visitor that
-                // decides which variant we are looking at does not benefit from
-                // having ownership of this string.
-                seed.deserialize(ContentRefDeserializer::new(&key))
-            } else {
-                // Do not take(), instead borrow this entry. The internally
-                // tagged enum does its own buffering so we can't tell whether
-                // this entry is going to be consumed. Borrowing here leaves the
-                // entry available for later flattened fields.
-                let (ref key, ref content) = *item.as_ref().unwrap();
-                self.pending = Pending::ContentRef(content);
-                seed.deserialize(ContentRefDeserializer::new(key))
-            };
-
-            return ret.map(Some);
+            // Do not take(), instead borrow this entry. The internally tagged
+            // enum does its own buffering so we can't tell whether this entry
+            // is going to be consumed. Borrowing here leaves the entry
+            // available for later flattened fields.
+            let (ref key, ref content) = *item.as_ref().unwrap();
+            self.pending = Some(content);
+            return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
         }
         Ok(None)
     }
@@ -2864,18 +2835,9 @@ where
     where
         T: DeserializeSeed<'de>,
     {
-        match mem::replace(&mut self.pending, Pending::None) {
-            Pending::Content(value) => {
-                // Could use `ContentDeserializer::new(value)` here but we
-                // prefer to avoid instantiating `seed.deserialize` twice with
-                // different Deserializer type parameters. Flatten and internal
-                // tagging are both relatively slow at runtime anyway so the
-                // improvement in compile time is more important here than
-                // potentially saving some string copies.
-                seed.deserialize(ContentRefDeserializer::new(&value))
-            }
-            Pending::ContentRef(value) => seed.deserialize(ContentRefDeserializer::new(value)),
-            Pending::None => panic!("value is missing"),
+        match self.pending.take() {
+            Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+            None => panic!("value is missing"),
         }
     }
 }

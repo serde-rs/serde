@@ -1195,8 +1195,7 @@ fn deserialize_internally_tagged_enum(
 
         let __tagged = try!(_serde::Deserializer::private_deserialize_internally_tagged_enum(
             __deserializer,
-            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag),
-            #tag));
+            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag)));
 
         match __tagged.tag {
             #(#variant_arms)*
