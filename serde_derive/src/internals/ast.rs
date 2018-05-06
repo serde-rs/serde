@@ -6,11 +6,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use attr;
-use check;
+use internals::attr;
+use internals::check;
+use internals::Ctxt;
 use syn;
 use syn::punctuated::Punctuated;
-use Ctxt;
 
 pub struct Container<'a> {
     pub ident: syn::Ident,

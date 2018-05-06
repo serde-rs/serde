@@ -6,6 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use internals::Ctxt;
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
 use std::collections::BTreeSet;
 use std::str::FromStr;
@@ -15,7 +16,6 @@ use syn::synom::{ParseError, Synom};
 use syn::Ident;
 use syn::Meta::{List, NameValue, Word};
 use syn::NestedMeta::{Literal, Meta};
-use Ctxt;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -25,7 +25,7 @@ use Ctxt;
 // user will see errors simultaneously for all bad attributes in the crate
 // rather than just the first.
 
-pub use case::RenameRule;
+pub use internals::case::RenameRule;
 
 #[derive(Copy, Clone)]
 struct Attr<'c, T> {
@@ -167,6 +167,7 @@ pub enum Identifier {
 }
 
 impl Identifier {
+    #[cfg(feature = "deserialize_in_place")]
     pub fn is_some(self) -> bool {
         match self {
             Identifier::No => false,

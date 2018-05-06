@@ -17,11 +17,7 @@ extern crate syn;
 
 extern crate proc_macro2;
 
-pub mod ast;
-pub mod attr;
+#[path = "src/mod.rs"]
+mod internals;
 
-mod ctxt;
-pub use ctxt::Ctxt;
-
-mod case;
-mod check;
+pub use internals::*;
