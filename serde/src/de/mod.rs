@@ -1936,9 +1936,11 @@ pub trait VariantAccess<'de>: Sized {
     /// #         T: DeserializeSeed<'de>,
     /// #     { unimplemented!() }
     /// #
-    /// fn tuple_variant<V>(self,
-    ///                         _len: usize,
-    ///                         _visitor: V) -> Result<V::Value, Self::Error>
+    /// fn tuple_variant<V>(
+    ///     self,
+    ///     _len: usize,
+    ///     _visitor: V,
+    /// ) -> Result<V::Value, Self::Error>
     /// where
     ///     V: Visitor<'de>,
     /// {
@@ -1986,9 +1988,11 @@ pub trait VariantAccess<'de>: Sized {
     /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// #
-    /// fn struct_variant<V>(self,
-    ///                          _fields: &'static [&'static str],
-    ///                          _visitor: V) -> Result<V::Value, Self::Error>
+    /// fn struct_variant<V>(
+    ///     self,
+    ///     _fields: &'static [&'static str],
+    ///     _visitor: V,
+    /// ) -> Result<V::Value, Self::Error>
     /// where
     ///     V: Visitor<'de>,
     /// {
