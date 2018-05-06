@@ -6,9 +6,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use ast::{Container, Data, Style};
-use attr::{EnumTag, Identifier};
-use Ctxt;
+use internals::ast::{Container, Data, Style};
+use internals::attr::{EnumTag, Identifier};
+use internals::Ctxt;
 
 /// Cross-cutting checks that require looking at more than a single attrs
 /// object. Simpler checks should happen when parsing and building the attrs.

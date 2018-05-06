@@ -9,7 +9,10 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde_derive_internals/"
 keywords = ["serde", "serialization"]
 readme = "README.md"
-include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["Cargo.toml", "lib.rs", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+
+[lib]
+path = "lib.rs"
 
 [dependencies]
 proc-macro2 = "0.3"
