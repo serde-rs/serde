@@ -1132,6 +1132,20 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    // Not public API.
+    #[doc(hidden)]
+    fn private_deserialize_internally_tagged_enum<V>(
+        self,
+        visitor: V,
+        tag: &'static str,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let _ = tag;
+        self.deserialize_any(visitor)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
