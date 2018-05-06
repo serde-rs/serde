@@ -172,7 +172,8 @@ macro_rules! declare_error_trait {
             ///
             /// impl<'de> Deserialize<'de> for IpAddr {
             ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            ///         where D: Deserializer<'de>
+            ///     where
+            ///         D: Deserializer<'de>,
             ///     {
             ///         let s = try!(String::deserialize(deserializer));
             ///         s.parse().map_err(de::Error::custom)
@@ -306,7 +307,8 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// #     }
 /// #
 /// fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-///     where E: de::Error
+/// where
+///     E: de::Error,
 /// {
 ///     Err(de::Error::invalid_type(Unexpected::Bool(v), &self))
 /// }
@@ -430,7 +432,8 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// #     }
 /// #
 /// fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-///     where E: de::Error
+/// where
+///     E: de::Error,
 /// {
 ///     Err(de::Error::invalid_type(Unexpected::Bool(v), &self))
 /// }
@@ -443,7 +446,8 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// # use serde::de::{self, Unexpected};
 /// #
 /// # fn example<E>() -> Result<(), E>
-/// #     where E: de::Error
+/// # where
+/// #     E: de::Error,
 /// # {
 /// #     let v = true;
 /// return Err(de::Error::invalid_type(Unexpected::Bool(v), &"a negative integer"));
@@ -557,11 +561,13 @@ pub trait Deserialize<'de>: Sized {
 /// #
 /// # trait Ignore {
 /// fn from_str<'a, T>(s: &'a str) -> Result<T>
-///     where T: Deserialize<'a>;
+/// where
+///     T: Deserialize<'a>;
 ///
 /// fn from_reader<R, T>(rdr: R) -> Result<T>
-///     where R: Read,
-///           T: DeserializeOwned;
+/// where
+///     R: Read,
+///     T: DeserializeOwned;
 /// # }
 /// ```
 pub trait DeserializeOwned: for<'de> Deserialize<'de> {}
@@ -637,7 +643,8 @@ where
 /// struct ExtendVec<'a, T: 'a>(&'a mut Vec<T>);
 ///
 /// impl<'de, 'a, T> DeserializeSeed<'de> for ExtendVec<'a, T>
-///     where T: Deserialize<'de>
+/// where
+///     T: Deserialize<'de>,
 /// {
 ///     // The return type of the `deserialize` method. This implementation
 ///     // appends onto an existing vector but does not create any new data
@@ -645,14 +652,16 @@ where
 ///     type Value = ();
 ///
 ///     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-///         where D: Deserializer<'de>
+///     where
+///         D: Deserializer<'de>,
 ///     {
 ///         // Visitor implementation that will walk an inner array of the JSON
 ///         // input.
 ///         struct ExtendVecVisitor<'a, T: 'a>(&'a mut Vec<T>);
 ///
 ///         impl<'de, 'a, T> Visitor<'de> for ExtendVecVisitor<'a, T>
-///             where T: Deserialize<'de>
+///         where
+///             T: Deserialize<'de>,
 ///         {
 ///             type Value = ();
 ///
@@ -661,7 +670,8 @@ where
 ///             }
 ///
 ///             fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
-///                 where A: SeqAccess<'de>
+///             where
+///                 A: SeqAccess<'de>,
 ///             {
 ///                 // Visit each element in the inner array and push it onto
 ///                 // the existing vector.
@@ -680,7 +690,8 @@ where
 /// struct FlattenedVecVisitor<T>(PhantomData<T>);
 ///
 /// impl<'de, T> Visitor<'de> for FlattenedVecVisitor<T>
-///     where T: Deserialize<'de>
+/// where
+///     T: Deserialize<'de>,
 /// {
 ///     // This Visitor constructs a single Vec<T> to hold the flattened
 ///     // contents of the inner arrays.
@@ -691,7 +702,8 @@ where
 ///     }
 ///
 ///     fn visit_seq<A>(self, mut seq: A) -> Result<Vec<T>, A::Error>
-///         where A: SeqAccess<'de>
+///     where
+///         A: SeqAccess<'de>,
 ///     {
 ///         // Create a single Vec to hold the flattened contents.
 ///         let mut vec = Vec::new();
@@ -707,7 +719,8 @@ where
 /// }
 ///
 /// # fn example<'de, D>(deserializer: D) -> Result<(), D::Error>
-/// #     where D: Deserializer<'de>
+/// # where
+/// #     D: Deserializer<'de>,
 /// # {
 /// let visitor = FlattenedVecVisitor(PhantomData);
 /// let flattened: Vec<u64> = deserializer.deserialize_seq(visitor)?;
@@ -1092,7 +1105,8 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// impl<'de> Deserialize<'de> for Timestamp {
     ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    ///         where D: Deserializer<'de>
+    ///     where
+    ///         D: Deserializer<'de>,
     ///     {
     ///         if deserializer.is_human_readable() {
     ///             // Deserialize from a human-readable string like "2015-05-15T17:01:00Z".
@@ -1143,7 +1157,8 @@ pub trait Deserializer<'de>: Sized {
 ///     }
 ///
 ///     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-///         where E: de::Error
+///     where
+///         E: de::Error,
 ///     {
 ///         if s.len() >= self.min {
 ///             Ok(s.to_owned())
@@ -1823,15 +1838,18 @@ pub trait VariantAccess<'de>: Sized {
     /// }
     /// #
     /// #     fn newtype_variant_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
-    /// #         where T: DeserializeSeed<'de>
+    /// #     where
+    /// #         T: DeserializeSeed<'de>,
     /// #     { unimplemented!() }
     /// #
     /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
-    /// #         where V: Visitor<'de>
+    /// #     where
+    /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// #
     /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
-    /// #         where V: Visitor<'de>
+    /// #     where
+    /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// # }
     /// ```
@@ -1858,7 +1876,8 @@ pub trait VariantAccess<'de>: Sized {
     /// #     }
     /// #
     /// fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
-    ///     where T: DeserializeSeed<'de>
+    /// where
+    ///     T: DeserializeSeed<'de>,
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
     ///     let unexp = Unexpected::UnitVariant;
@@ -1866,11 +1885,13 @@ pub trait VariantAccess<'de>: Sized {
     /// }
     /// #
     /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
-    /// #         where V: Visitor<'de>
+    /// #     where
+    /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// #
     /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
-    /// #         where V: Visitor<'de>
+    /// #     where
+    /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// # }
     /// ```
@@ -1911,13 +1932,15 @@ pub trait VariantAccess<'de>: Sized {
     /// #     }
     /// #
     /// #     fn newtype_variant_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
-    /// #         where T: DeserializeSeed<'de>
+    /// #     where
+    /// #         T: DeserializeSeed<'de>,
     /// #     { unimplemented!() }
     /// #
     /// fn tuple_variant<V>(self,
     ///                         _len: usize,
     ///                         _visitor: V) -> Result<V::Value, Self::Error>
-    ///     where V: Visitor<'de>
+    /// where
+    ///     V: Visitor<'de>,
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
     ///     let unexp = Unexpected::UnitVariant;
@@ -1925,7 +1948,8 @@ pub trait VariantAccess<'de>: Sized {
     /// }
     /// #
     /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
-    /// #         where V: Visitor<'de>
+    /// #     where
+    /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// # }
     /// ```
@@ -1953,17 +1977,20 @@ pub trait VariantAccess<'de>: Sized {
     /// #     }
     /// #
     /// #     fn newtype_variant_seed<T>(self, _: T) -> Result<T::Value, Self::Error>
-    /// #         where T: DeserializeSeed<'de>
+    /// #     where
+    /// #         T: DeserializeSeed<'de>,
     /// #     { unimplemented!() }
     /// #
     /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
-    /// #         where V: Visitor<'de>
+    /// #     where
+    /// #         V: Visitor<'de>,
     /// #     { unimplemented!() }
     /// #
     /// fn struct_variant<V>(self,
     ///                          _fields: &'static [&'static str],
     ///                          _visitor: V) -> Result<V::Value, Self::Error>
-    ///     where V: Visitor<'de>
+    /// where
+    ///     V: Visitor<'de>,
     /// {
     ///     // What the data actually contained; suppose it is a unit variant.
     ///     let unexp = Unexpected::UnitVariant;

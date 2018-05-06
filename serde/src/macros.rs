@@ -31,14 +31,16 @@
 /// #     type Error = value::Error;
 /// #
 /// #     fn deserialize_any<V>(self, _: V) -> Result<V::Value, Self::Error>
-/// #         where V: Visitor<'de>
+/// #     where
+/// #         V: Visitor<'de>,
 /// #     {
 /// #         unimplemented!()
 /// #     }
 /// #
 /// #[inline]
 /// fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-///     where V: Visitor<'de>
+/// where
+///     V: Visitor<'de>,
 /// {
 ///     self.deserialize_any(visitor)
 /// }
@@ -69,7 +71,8 @@
 /// #   type Error = value::Error;
 /// #
 ///     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-///         where V: Visitor<'de>
+///     where
+///         V: Visitor<'de>,
 ///     {
 ///         /* ... */
 /// #       let _ = visitor;
@@ -105,7 +108,8 @@
 /// #     type Error = value::Error;
 /// #
 /// #     fn deserialize_any<W>(self, visitor: W) -> Result<W::Value, Self::Error>
-/// #         where W: Visitor<'q>
+/// #     where
+/// #         W: Visitor<'q>,
 /// #     {
 /// #         unimplemented!()
 /// #     }
