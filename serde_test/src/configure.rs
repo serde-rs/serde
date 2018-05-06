@@ -26,7 +26,8 @@ pub struct Compact<T: ?Sized>(T);
 ///
 /// impl Serialize for Example {
 ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-///         where S: Serializer,
+///     where
+///         S: Serializer,
 ///     {
 ///         if serializer.is_human_readable() {
 ///             format!("{}.{}", self.0, self.1).serialize(serializer)
@@ -38,7 +39,8 @@ pub struct Compact<T: ?Sized>(T);
 ///
 /// impl<'de> Deserialize<'de> for Example {
 ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-///         where D: Deserializer<'de>,
+///     where
+///         D: Deserializer<'de>,
 ///     {
 ///         use serde::de::Error;
 ///         if deserializer.is_human_readable() {
@@ -478,7 +480,10 @@ use serde::de::{DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, Varian
 macro_rules! forward_deserialize_methods {
     ( $wrapper : ident ( $( $name: ident ),* ) ) => {
         $(
-            fn $name<V>(self, visitor: V) -> Result<V::Value, D::Error> where V: Visitor<'de> {
+            fn $name<V>(self, visitor: V) -> Result<V::Value, D::Error>
+            where
+                V: Visitor<'de>,
+            {
                 (self.0).$name($wrapper(visitor))
             }
         )*

@@ -68,11 +68,13 @@
 //! # }
 //! #
 //! # impl<K, V> Serialize for LinkedHashMap<K, V>
-//! #     where K: Serialize,
-//! #           V: Serialize
+//! # where
+//! #     K: Serialize,
+//! #     V: Serialize,
 //! # {
 //! #     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//! #         where S: Serializer
+//! #     where
+//! #         S: Serializer,
 //! #     {
 //! #         let mut map = serializer.serialize_map(Some(self.0.len()))?;
 //! #         for &(ref k, ref v) in &self.0 {
@@ -85,8 +87,9 @@
 //! # struct LinkedHashMapVisitor<K, V>(PhantomData<(K, V)>);
 //! #
 //! # impl<'de, K, V> Visitor<'de> for LinkedHashMapVisitor<K, V>
-//! #     where K: Deserialize<'de>,
-//! #           V: Deserialize<'de>
+//! # where
+//! #     K: Deserialize<'de>,
+//! #     V: Deserialize<'de>,
 //! # {
 //! #     type Value = LinkedHashMap<K, V>;
 //! #
@@ -95,7 +98,8 @@
 //! #     }
 //! #
 //! #     fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
-//! #         where M: MapAccess<'de>
+//! #     where
+//! #         M: MapAccess<'de>,
 //! #     {
 //! #         let mut map = LinkedHashMap::new();
 //! #         while let Some((key, value)) = access.next_entry()? {
@@ -106,11 +110,13 @@
 //! # }
 //! #
 //! # impl<'de, K, V> Deserialize<'de> for LinkedHashMap<K, V>
-//! #     where K: Deserialize<'de>,
-//! #           V: Deserialize<'de>
+//! # where
+//! #     K: Deserialize<'de>,
+//! #     V: Deserialize<'de>,
 //! # {
 //! #     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//! #         where D: Deserializer<'de>
+//! #     where
+//! #         D: Deserializer<'de>,
 //! #     {
 //! #         deserializer.deserialize_map(LinkedHashMapVisitor(PhantomData))
 //! #     }
