@@ -38,7 +38,8 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
         quote! {
             impl #impl_generics #ident #ty_generics #where_clause {
                 #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                    where __S: _serde::Serializer
+                where
+                    __S: _serde::Serializer,
                 {
                     #used
                     #body
@@ -50,7 +51,8 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, Strin
             #[automatically_derived]
             impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
                 fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                    where __S: _serde::Serializer
+                where
+                    __S: _serde::Serializer,
                 {
                     #body
                 }
@@ -658,7 +660,8 @@ fn serialize_adjacently_tagged_variant(
 
         impl #wrapper_impl_generics _serde::Serialize for __AdjacentlyTagged #wrapper_ty_generics #where_clause {
             fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                where __S: _serde::Serializer
+            where
+                __S: _serde::Serializer,
             {
                 let (#(#fields_ident,)*) = self.data;
                 #inner
@@ -1037,7 +1040,8 @@ fn wrap_serialize_with(
 
         impl #wrapper_impl_generics _serde::Serialize for __SerializeWith #wrapper_ty_generics #where_clause {
             fn serialize<__S>(&self, __s: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                where __S: _serde::Serializer
+            where
+                __S: _serde::Serializer,
             {
                 #serialize_with(#(self.values.#field_access, )* __s)
             }

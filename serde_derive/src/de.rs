@@ -42,7 +42,8 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
-                    where __D: _serde::Deserializer<#delife>
+                where
+                    __D: _serde::Deserializer<#delife>,
                 {
                     #used
                     #body
@@ -56,7 +57,8 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
             #[automatically_derived]
             impl #de_impl_generics _serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
                 fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
-                    where __D: _serde::Deserializer<#delife>
+                where
+                    __D: _serde::Deserializer<#delife>,
                 {
                     #body
                 }
@@ -296,7 +298,8 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let fn_deserialize_in_place = quote_block! {
         fn deserialize_in_place<__D>(__deserializer: __D, __place: &mut Self) -> _serde::export::Result<(), __D::Error>
-            where __D: _serde::Deserializer<#delife>
+        where
+            __D: _serde::Deserializer<#delife>,
         {
             #stmts
         }
@@ -336,7 +339,8 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
 
             #[inline]
             fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(#this)
             }
@@ -432,7 +436,8 @@ fn deserialize_tuple(
 
             #[inline]
             fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
             {
                 #visit_seq
             }
@@ -520,7 +525,8 @@ fn deserialize_tuple_in_place(
 
             #[inline]
             fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
             {
                 #visit_seq
             }
@@ -745,7 +751,8 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
     quote! {
         #[inline]
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
-            where __E: _serde::Deserializer<#delife>
+        where
+            __E: _serde::Deserializer<#delife>,
         {
             let __field0: #field_ty = #value;
             _serde::export::Ok(#result)
@@ -763,7 +770,8 @@ fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> To
     quote! {
         #[inline]
         fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
-            where __E: _serde::Deserializer<#delife>
+        where
+            __E: _serde::Deserializer<#delife>,
         {
             _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
         }
@@ -858,7 +866,8 @@ fn deserialize_struct(
         Untagged::No if !cattrs.has_flatten() => Some(quote! {
             #[inline]
             fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
             {
                 #visit_seq
             }
@@ -885,7 +894,8 @@ fn deserialize_struct(
 
             #[inline]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::MapAccess<#delife>
+            where
+                __A: _serde::de::MapAccess<#delife>,
             {
                 #visit_map
             }
@@ -963,7 +973,8 @@ fn deserialize_struct_in_place(
     let visit_seq = quote! {
         #[inline]
         fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
-            where __A: _serde::de::SeqAccess<#delife>
+        where
+            __A: _serde::de::SeqAccess<#delife>,
         {
             #visit_seq
         }
@@ -992,7 +1003,8 @@ fn deserialize_struct_in_place(
 
             #[inline]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::MapAccess<#delife>
+            where
+                __A: _serde::de::MapAccess<#delife>,
             {
                 #visit_map
             }
@@ -1111,7 +1123,8 @@ fn deserialize_externally_tagged_enum(
             }
 
             fn visit_enum<__A>(self, __data: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::EnumAccess<#delife>
+            where
+                __A: _serde::de::EnumAccess<#delife>,
             {
                 #match_variant
             }
@@ -1361,7 +1374,8 @@ fn deserialize_adjacently_tagged_enum(
             type Value = #this #ty_generics;
 
             fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
-                where __D: _serde::Deserializer<#delife>
+            where
+                __D: _serde::Deserializer<#delife>,
             {
                 match self.field {
                     #(#variant_arms)*
@@ -1382,7 +1396,8 @@ fn deserialize_adjacently_tagged_enum(
             }
 
             fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::MapAccess<#delife>
+            where
+                __A: _serde::de::MapAccess<#delife>,
             {
                 // Visit the first relevant key.
                 match #next_relevant_key {
@@ -1446,7 +1461,8 @@ fn deserialize_adjacently_tagged_enum(
             }
 
             fn visit_seq<__A>(self, mut __seq: __A) -> _serde::export::Result<Self::Value, __A::Error>
-                where __A: _serde::de::SeqAccess<#delife>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
             {
                 // Visit the first element - the tag.
                 match try!(_serde::de::SeqAccess::next_element(&mut __seq)) {
@@ -1766,7 +1782,8 @@ fn deserialize_generated_identifier(
         impl<'de> _serde::Deserialize<'de> for __Field #lifetime {
             #[inline]
             fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
-                where __D: _serde::Deserializer<'de>
+            where
+                __D: _serde::Deserializer<'de>,
             {
                 _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
             }
@@ -1942,85 +1959,99 @@ fn deserialize_identifier(
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::Bool(__value)))
             }
 
             fn visit_i8<__E>(self, __value: i8) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::I8(__value)))
             }
 
             fn visit_i16<__E>(self, __value: i16) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::I16(__value)))
             }
 
             fn visit_i32<__E>(self, __value: i32) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::I32(__value)))
             }
 
             fn visit_i64<__E>(self, __value: i64) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::I64(__value)))
             }
 
             fn visit_u8<__E>(self, __value: u8) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::U8(__value)))
             }
 
             fn visit_u16<__E>(self, __value: u16) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::U16(__value)))
             }
 
             fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::U32(__value)))
             }
 
             fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::U64(__value)))
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::F32(__value)))
             }
 
             fn visit_f64<__E>(self, __value: f64) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::F64(__value)))
             }
 
             fn visit_char<__E>(self, __value: char) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::Char(__value)))
             }
 
             fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::Unit))
             }
 
             fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 match __value {
                     #(
@@ -2034,7 +2065,8 @@ fn deserialize_identifier(
             }
 
             fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 match __value {
                     #(
@@ -2051,7 +2083,8 @@ fn deserialize_identifier(
     } else {
         quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
+            where
+                __E: _serde::de::Error,
             {
                 match __value {
                     #(
@@ -2073,7 +2106,8 @@ fn deserialize_identifier(
         #visit_other
 
         fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
-            where __E: _serde::de::Error
+        where
+            __E: _serde::de::Error,
         {
             match __value {
                 #(
@@ -2087,7 +2121,8 @@ fn deserialize_identifier(
         }
 
         fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
-            where __E: _serde::de::Error
+        where
+            __E: _serde::de::Error,
         {
             match __value {
                 #(
@@ -2561,7 +2596,8 @@ fn wrap_deserialize_with(
 
         impl #de_impl_generics _serde::Deserialize<#delife> for __DeserializeWith #de_ty_generics #where_clause {
             fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
-                where __D: _serde::Deserializer<#delife>
+            where
+                __D: _serde::Deserializer<#delife>,
             {
                 _serde::export::Ok(__DeserializeWith {
                     value: try!(#deserialize_with(__deserializer)),
