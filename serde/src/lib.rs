@@ -179,14 +179,14 @@ mod lib {
     pub use std::boxed::Box;
 
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-    pub use alloc::rc::Rc;
+    pub use alloc::rc::{Rc, Weak as RcWeak};
     #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::rc::Rc;
+    pub use std::rc::{Rc, Weak as RcWeak};
 
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-    pub use alloc::arc::Arc;
+    pub use alloc::arc::{Arc, Weak as ArcWeak};
     #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::sync::Arc;
+    pub use std::sync::{Arc, Weak as ArcWeak};
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};

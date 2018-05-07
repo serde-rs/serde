@@ -1474,6 +1474,44 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// This impl requires the [`"rc"`] Cargo feature of Serde. The resulting
+/// `Weak<T>` has a reference count of 0 and cannot be upgraded.
+///
+/// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+impl<'de, T: ?Sized> Deserialize<'de> for RcWeak<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        try!(Option::<T>::deserialize(deserializer));
+        Ok(RcWeak::new())
+    }
+}
+
+/// This impl requires the [`"rc"`] Cargo feature of Serde. The resulting
+/// `Weak<T>` has a reference count of 0 and cannot be upgraded.
+///
+/// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+impl<'de, T: ?Sized> Deserialize<'de> for ArcWeak<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        try!(Option::<T>::deserialize(deserializer));
+        Ok(ArcWeak::new())
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 #[cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc")))]
 macro_rules! box_forwarded_impl {
     (
