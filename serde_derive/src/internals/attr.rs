@@ -738,6 +738,16 @@ pub enum Default {
     Path(syn::ExprPath),
 }
 
+impl Default {
+    #[cfg(feature = "deserialize_in_place")]
+    pub fn is_none(&self) -> bool {
+        match *self {
+            Default::None => true,
+            Default::Default | Default::Path(_) => false,
+        }
+    }
+}
+
 impl Field {
     /// Extract out the `#[serde(...)]` attributes from a struct field.
     pub fn from_ast(

@@ -2539,13 +2539,9 @@ fn deserialize_map_in_place(
         .map(|&(field, ref name)| {
             let missing_expr = expr_is_missing(field, cattrs);
             // If missing_expr unconditionally returns an error, don't try
-            // to assign its value to self.place. Maybe this could be handled
-            // more elegantly.
-            if missing_expr
-                .as_ref()
-                .into_tokens()
-                .to_string()
-                .starts_with("return ")
+            // to assign its value to self.place.
+            if field.attrs.default().is_none() && cattrs.default().is_none()
+                && field.attrs.deserialize_with().is_some()
             {
                 let missing_expr = Stmts(missing_expr);
                 quote! {
