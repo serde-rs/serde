@@ -777,7 +777,7 @@ impl Field {
         };
 
         let variant_borrow = attrs
-            .map_or(None, |variant| variant.borrow.as_ref())
+            .and_then(|variant| variant.borrow.as_ref())
             .map(|borrow| vec![Meta(borrow.clone())]);
 
         for meta_items in field
