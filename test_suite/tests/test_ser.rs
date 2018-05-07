@@ -11,11 +11,12 @@ extern crate serde_derive;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::CString;
+use std::mem;
 use std::net;
 use std::num::Wrapping;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
-use std::sync::Arc;
+use std::rc::{Rc, Weak as RcWeak};
+use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
@@ -398,9 +399,39 @@ declare_tests! {
             Token::Bool(true),
         ],
     }
+    test_rc_weak_some {
+        {
+            let rc = Rc::new(true);
+            mem::forget(rc.clone());
+            Rc::downgrade(&rc)
+        } => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_rc_weak_none {
+        RcWeak::<bool>::new() => &[
+            Token::None,
+        ],
+    }
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
+        ],
+    }
+    test_arc_weak_some {
+        {
+            let arc = Arc::new(true);
+            mem::forget(arc.clone());
+            Arc::downgrade(&arc)
+        } => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_arc_weak_none {
+        ArcWeak::<bool>::new() => &[
+            Token::None,
         ],
     }
     test_wrapping {

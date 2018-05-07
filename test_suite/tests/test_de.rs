@@ -17,15 +17,15 @@ use std::ffi::{CString, OsString};
 use std::net;
 use std::num::Wrapping;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
-use std::sync::Arc;
+use std::rc::{Rc, Weak as RcWeak};
+use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(feature = "unstable")]
 use std::ffi::CStr;
 
 extern crate serde;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -179,6 +179,27 @@ macro_rules! declare_error_tests {
                 assert_de_tokens_error::<$target>($tokens, $expected);
             }
         )+
+    }
+}
+
+#[derive(Debug)]
+struct SkipPartialEq<T>(T);
+
+impl<'de, T> Deserialize<'de> for SkipPartialEq<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize(deserializer).map(SkipPartialEq)
+    }
+}
+
+impl<T> PartialEq for SkipPartialEq<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
     }
 }
 
@@ -788,9 +809,31 @@ declare_tests! {
             Token::Bool(true),
         ],
     }
+    test_rc_weak_some {
+        SkipPartialEq(RcWeak::<bool>::new()) => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_rc_weak_none {
+        SkipPartialEq(RcWeak::<bool>::new()) => &[
+            Token::None,
+        ],
+    }
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
+        ],
+    }
+    test_arc_weak_some {
+        SkipPartialEq(ArcWeak::<bool>::new()) => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_arc_weak_none {
+        SkipPartialEq(ArcWeak::<bool>::new()) => &[
+            Token::None,
         ],
     }
     test_wrapping {
