@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use internals::ast::{Container, Data, Style};
+use internals::ast::{Container, Data, Field, Style};
 use internals::attr::{EnumTag, Identifier};
 use internals::Ctxt;
 
@@ -44,43 +44,49 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
 /// Flattening has some restrictions we can test.
 fn check_flatten(cx: &Ctxt, cont: &Container) {
     match cont.data {
-        Data::Enum(_) => {
-            if cont.attrs.has_flatten() {
-                cx.error("#[serde(flatten)] cannot be used within enums");
-            }
-        }
-        Data::Struct(style, _) => {
-            for field in cont.data.all_fields() {
-                if !field.attrs.flatten() {
-                    continue;
-                }
-                match style {
-                    Style::Tuple => {
-                        cx.error("#[serde(flatten)] cannot be used on tuple structs");
-                    }
-                    Style::Newtype => {
-                        cx.error("#[serde(flatten)] cannot be used on newtype structs");
-                    }
-                    _ => {}
-                }
-                if field.attrs.skip_serializing() {
-                    cx.error(
-                        "#[serde(flatten] can not be combined with \
-                         #[serde(skip_serializing)]",
-                    );
-                } else if field.attrs.skip_serializing_if().is_some() {
-                    cx.error(
-                        "#[serde(flatten] can not be combined with \
-                         #[serde(skip_serializing_if = \"...\")]",
-                    );
-                } else if field.attrs.skip_deserializing() {
-                    cx.error(
-                        "#[serde(flatten] can not be combined with \
-                         #[serde(skip_deserializing)]",
-                    );
+        Data::Enum(ref variants) => {
+            for variant in variants {
+                for field in &variant.fields {
+                    check_flatten_field(cx, variant.style, field);
                 }
             }
         }
+        Data::Struct(style, ref fields) => {
+            for field in fields {
+                check_flatten_field(cx, style, field);
+            }
+        }
+    }
+}
+
+fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
+    if !field.attrs.flatten() {
+        return;
+    }
+    match style {
+        Style::Tuple => {
+            cx.error("#[serde(flatten)] cannot be used on tuple structs");
+        }
+        Style::Newtype => {
+            cx.error("#[serde(flatten)] cannot be used on newtype structs");
+        }
+        _ => {}
+    }
+    if field.attrs.skip_serializing() {
+        cx.error(
+            "#[serde(flatten] can not be combined with \
+             #[serde(skip_serializing)]",
+        );
+    } else if field.attrs.skip_serializing_if().is_some() {
+        cx.error(
+            "#[serde(flatten] can not be combined with \
+             #[serde(skip_serializing_if = \"...\")]",
+        );
+    } else if field.attrs.skip_deserializing() {
+        cx.error(
+            "#[serde(flatten] can not be combined with \
+             #[serde(skip_deserializing)]",
+        );
     }
 }
 

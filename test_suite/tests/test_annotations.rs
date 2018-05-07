@@ -1839,3 +1839,158 @@ fn test_flatten_internally_tagged() {
         ],
     );
 }
+
+#[test]
+fn test_externally_tagged_enum_containing_flatten() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Data {
+        A {
+            a: i32,
+            #[serde(flatten)]
+            flat: Flat,
+        }
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Flat {
+        b: i32,
+    }
+
+    let data = Data::A {
+        a: 0,
+        flat: Flat {
+            b: 0,
+        }
+    };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::NewtypeVariant { name: "Data", variant: "A" },
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_internally_tagged_enum_containing_flatten() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A {
+            a: i32,
+            #[serde(flatten)]
+            flat: Flat,
+        }
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Flat {
+        b: i32,
+    }
+
+    let data = Data::A {
+        a: 0,
+        flat: Flat {
+            b: 0,
+        }
+    };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("a"),
+            Token::I32(0),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_adjacently_tagged_enum_containing_flatten() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t", content = "c")]
+    enum Data {
+        A {
+            a: i32,
+            #[serde(flatten)]
+            flat: Flat,
+        }
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Flat {
+        b: i32,
+    }
+
+    let data = Data::A {
+        a: 0,
+        flat: Flat {
+            b: 0,
+        }
+    };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Struct { name: "Data", len: 2 },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("c"),
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_untagged_enum_containing_flatten() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(untagged)]
+    enum Data {
+        A {
+            a: i32,
+            #[serde(flatten)]
+            flat: Flat,
+        }
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Flat {
+        b: i32,
+    }
+
+    let data = Data::A {
+        a: 0,
+        flat: Flat {
+            b: 0,
+        }
+    };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}

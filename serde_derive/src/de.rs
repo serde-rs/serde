@@ -838,6 +838,10 @@ fn deserialize_struct(
         quote! {
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
         }
+    } else if is_enum && cattrs.has_flatten() {
+        quote! {
+            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
+        }
     } else if is_enum {
         quote! {
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
@@ -875,6 +879,23 @@ fn deserialize_struct(
         _ => None,
     };
 
+    let visitor_seed = if is_enum && cattrs.has_flatten() {
+        Some(quote! {
+            impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
+                type Value = #this #ty_generics;
+
+                fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+                where
+                    __D: _serde::Deserializer<'de>,
+                {
+                    _serde::Deserializer::deserialize_map(__deserializer, self)
+                }
+            }
+        })
+    } else {
+        None
+    };
+
     quote_block! {
         #field_visitor
 
@@ -900,6 +921,8 @@ fn deserialize_struct(
                 #visit_map
             }
         }
+
+        #visitor_seed
 
         #fields_stmt
 
@@ -1738,7 +1761,7 @@ fn deserialize_generated_identifier(
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();
 
-    let (ignore_variant, fallthrough) = if cattrs.has_flatten() {
+    let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
         let ignore_variant = quote!(__other(_serde::private::de::Content<'de>),);
         let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
@@ -1755,10 +1778,10 @@ fn deserialize_generated_identifier(
         fields,
         is_variant,
         fallthrough,
-        cattrs.has_flatten(),
+        !is_variant && cattrs.has_flatten(),
     ));
 
-    let lifetime = if cattrs.has_flatten() {
+    let lifetime = if !is_variant && cattrs.has_flatten() {
         Some(quote!(<'de>))
     } else {
         None
