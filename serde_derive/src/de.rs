@@ -553,7 +553,7 @@ fn deserialize_seq(
         .count();
     let expecting = format!("tuple of {} elements", deserialized_count);
 
-    let mut index_in_seq = 0usize;
+    let mut index_in_seq = 0_usize;
     let let_values = vars.clone().zip(fields).map(|(var, field)| {
         if field.attrs.skip_deserializing() {
             let default = Expr(expr_is_missing(field, cattrs));
@@ -1946,9 +1946,7 @@ fn deserialize_identifier(
         value_as_borrowed_str_content,
         value_as_bytes_content,
         value_as_borrowed_bytes_content,
-    ) = if !collect_other_fields {
-        (None, None, None, None)
-    } else {
+    ) = if collect_other_fields {
         (
             Some(quote! {
                 let __value = _serde::private::de::Content::String(__value.to_string());
@@ -1963,6 +1961,8 @@ fn deserialize_identifier(
                 let __value = _serde::private::de::Content::Bytes(__value);
             }),
         )
+    } else {
+        (None, None, None, None)
     };
 
     let fallthrough_arm = if let Some(fallthrough) = fallthrough {
@@ -1977,7 +1977,7 @@ fn deserialize_identifier(
         }
     };
 
-    let variant_indices = 0u64..;
+    let variant_indices = 0_u64..;
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
         quote! {

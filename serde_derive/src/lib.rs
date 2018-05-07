@@ -23,9 +23,22 @@
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.48")]
+#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+// Whitelisted clippy lints
 #![cfg_attr(
     feature = "cargo-clippy",
-    allow(enum_variant_names, redundant_field_names, too_many_arguments, used_underscore_binding)
+    allow(
+        enum_variant_names, redundant_field_names, too_many_arguments, used_underscore_binding,
+        cyclomatic_complexity
+    )
+)]
+// Whitelisted clippy_pedantic lints
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        items_after_statements, doc_markdown, stutter, similar_names, use_self, single_match_else,
+        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation
+    )
 )]
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "512"]

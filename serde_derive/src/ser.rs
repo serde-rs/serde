@@ -18,8 +18,6 @@ use internals::{attr, Ctxt};
 use pretend;
 use try;
 
-use std::u32;
-
 pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
@@ -250,7 +248,7 @@ fn serialize_tuple_struct(
 }
 
 fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
-    assert!(fields.len() as u64 <= u64::from(u32::MAX));
+    assert!(fields.len() as u64 <= u64::from(u32::max_value()));
 
     if cattrs.has_flatten() {
         serialize_struct_as_map(params, fields, cattrs)
@@ -333,7 +331,7 @@ fn serialize_struct_as_map(
 }
 
 fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Container) -> Fragment {
-    assert!(variants.len() as u64 <= u64::from(u32::MAX));
+    assert!(variants.len() as u64 <= u64::from(u32::max_value()));
 
     let self_var = params.self_var;
 
