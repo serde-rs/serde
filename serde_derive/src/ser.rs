@@ -645,7 +645,7 @@ fn serialize_adjacently_tagged_variant(
 
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
-    let wrapper_generics = if let Style::Unit = variant.style {
+    let wrapper_generics = if fields_ident.is_empty() {
         params.generics.clone()
     } else {
         bound::with_lifetime_bound(&params.generics, "'__a")

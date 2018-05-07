@@ -567,6 +567,17 @@ fn test_gen() {
     }
 
     assert::<AssocDeriveMulti<i32, NoSerdeImpl>>();
+
+    #[derive(Serialize)]
+    #[serde(tag = "t", content = "c")]
+    enum EmptyAdjacentlyTagged {
+        #[allow(dead_code)]
+        Struct {},
+        #[allow(dead_code)]
+        Tuple(),
+    }
+
+    assert_ser::<EmptyAdjacentlyTagged>();
 }
 
 //////////////////////////////////////////////////////////////////////////
