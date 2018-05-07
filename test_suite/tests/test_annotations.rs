@@ -1848,7 +1848,7 @@ fn test_externally_tagged_enum_containing_flatten() {
             a: i32,
             #[serde(flatten)]
             flat: Flat,
-        }
+        },
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -1858,15 +1858,16 @@ fn test_externally_tagged_enum_containing_flatten() {
 
     let data = Data::A {
         a: 0,
-        flat: Flat {
-            b: 0,
-        }
+        flat: Flat { b: 0 },
     };
 
     assert_tokens(
         &data,
         &[
-            Token::NewtypeVariant { name: "Data", variant: "A" },
+            Token::NewtypeVariant {
+                name: "Data",
+                variant: "A",
+            },
             Token::Map { len: None },
             Token::Str("a"),
             Token::I32(0),
@@ -1886,7 +1887,7 @@ fn test_internally_tagged_enum_containing_flatten() {
             a: i32,
             #[serde(flatten)]
             flat: Flat,
-        }
+        },
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -1896,9 +1897,7 @@ fn test_internally_tagged_enum_containing_flatten() {
 
     let data = Data::A {
         a: 0,
-        flat: Flat {
-            b: 0,
-        }
+        flat: Flat { b: 0 },
     };
 
     assert_tokens(
@@ -1925,7 +1924,7 @@ fn test_adjacently_tagged_enum_containing_flatten() {
             a: i32,
             #[serde(flatten)]
             flat: Flat,
-        }
+        },
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -1935,15 +1934,16 @@ fn test_adjacently_tagged_enum_containing_flatten() {
 
     let data = Data::A {
         a: 0,
-        flat: Flat {
-            b: 0,
-        }
+        flat: Flat { b: 0 },
     };
 
     assert_tokens(
         &data,
         &[
-            Token::Struct { name: "Data", len: 2 },
+            Token::Struct {
+                name: "Data",
+                len: 2,
+            },
             Token::Str("t"),
             Token::Str("A"),
             Token::Str("c"),
@@ -1967,7 +1967,7 @@ fn test_untagged_enum_containing_flatten() {
             a: i32,
             #[serde(flatten)]
             flat: Flat,
-        }
+        },
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -1977,9 +1977,7 @@ fn test_untagged_enum_containing_flatten() {
 
     let data = Data::A {
         a: 0,
-        flat: Flat {
-            b: 0,
-        }
+        flat: Flat { b: 0 },
     };
 
     assert_tokens(
