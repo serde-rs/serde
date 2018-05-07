@@ -578,6 +578,16 @@ fn test_gen() {
     }
 
     assert_ser::<EmptyAdjacentlyTagged>();
+
+    mod restricted {
+        mod inner {
+            #[derive(Serialize, Deserialize)]
+            struct Restricted {
+                pub(super) a: usize,
+                pub(in super::inner) b: usize,
+            }
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
