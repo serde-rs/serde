@@ -32,7 +32,7 @@ impl<'de> Visitor<'de> for UnitVisitor {
         formatter.write_str("unit")
     }
 
-    fn visit_unit<E>(self) -> Result<(), E>
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -41,7 +41,7 @@ impl<'de> Visitor<'de> for UnitVisitor {
 }
 
 impl<'de> Deserialize<'de> for () {
-    fn deserialize<D>(deserializer: D) -> Result<(), D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -60,7 +60,7 @@ impl<'de> Visitor<'de> for BoolVisitor {
         formatter.write_str("a boolean")
     }
 
-    fn visit_bool<E>(self, v: bool) -> Result<bool, E>
+    fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -69,7 +69,7 @@ impl<'de> Visitor<'de> for BoolVisitor {
 }
 
 impl<'de> Deserialize<'de> for bool {
-    fn deserialize<D>(deserializer: D) -> Result<bool, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -110,7 +110,7 @@ macro_rules! impl_deserialize_num {
     ($ty:ident, $method:ident, $($visit:ident),*) => {
         impl<'de> Deserialize<'de> for $ty {
             #[inline]
-            fn deserialize<D>(deserializer: D) -> Result<$ty, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -178,7 +178,7 @@ impl<'de> Visitor<'de> for CharVisitor {
     }
 
     #[inline]
-    fn visit_char<E>(self, v: char) -> Result<char, E>
+    fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -186,7 +186,7 @@ impl<'de> Visitor<'de> for CharVisitor {
     }
 
     #[inline]
-    fn visit_str<E>(self, v: &str) -> Result<char, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -200,7 +200,7 @@ impl<'de> Visitor<'de> for CharVisitor {
 
 impl<'de> Deserialize<'de> for char {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<char, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -223,21 +223,21 @@ impl<'de> Visitor<'de> for StringVisitor {
         formatter.write_str("a string")
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<String, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
         Ok(v.to_owned())
     }
 
-    fn visit_string<E>(self, v: String) -> Result<String, E>
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: Error,
     {
         Ok(v)
     }
 
-    fn visit_bytes<E>(self, v: &[u8]) -> Result<String, E>
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -247,7 +247,7 @@ impl<'de> Visitor<'de> for StringVisitor {
         }
     }
 
-    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<String, E>
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -269,7 +269,7 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
         formatter.write_str("a string")
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<(), E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -278,7 +278,7 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
         Ok(())
     }
 
-    fn visit_string<E>(self, v: String) -> Result<(), E>
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -286,7 +286,7 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
         Ok(())
     }
 
-    fn visit_bytes<E>(self, v: &[u8]) -> Result<(), E>
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -300,7 +300,7 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
         }
     }
 
-    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<(), E>
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -319,7 +319,7 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de> Deserialize<'de> for String {
-    fn deserialize<D>(deserializer: D) -> Result<String, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -417,7 +417,7 @@ impl<'de> Visitor<'de> for CStringVisitor {
         formatter.write_str("byte array")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<CString, A::Error>
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,
     {
@@ -431,28 +431,28 @@ impl<'de> Visitor<'de> for CStringVisitor {
         CString::new(values).map_err(Error::custom)
     }
 
-    fn visit_bytes<E>(self, v: &[u8]) -> Result<CString, E>
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
     where
         E: Error,
     {
         CString::new(v).map_err(Error::custom)
     }
 
-    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<CString, E>
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
     where
         E: Error,
     {
         CString::new(v).map_err(Error::custom)
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<CString, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
         CString::new(v).map_err(Error::custom)
     }
 
-    fn visit_string<E>(self, v: String) -> Result<CString, E>
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -462,7 +462,7 @@ impl<'de> Visitor<'de> for CStringVisitor {
 
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for CString {
-    fn deserialize<D>(deserializer: D) -> Result<CString, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -507,7 +507,7 @@ where
     }
 
     #[inline]
-    fn visit_unit<E>(self) -> Result<Option<T>, E>
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -515,7 +515,7 @@ where
     }
 
     #[inline]
-    fn visit_none<E>(self) -> Result<Option<T>, E>
+    fn visit_none<E>(self) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -523,7 +523,7 @@ where
     }
 
     #[inline]
-    fn visit_some<D>(self, deserializer: D) -> Result<Option<T>, D::Error>
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -535,7 +535,7 @@ impl<'de, T> Deserialize<'de> for Option<T>
 where
     T: Deserialize<'de>,
 {
-    fn deserialize<D>(deserializer: D) -> Result<Option<T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -565,7 +565,7 @@ impl<'de, T: ?Sized> Visitor<'de> for PhantomDataVisitor<T> {
     }
 
     #[inline]
-    fn visit_unit<E>(self) -> Result<PhantomData<T>, E>
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -574,7 +574,7 @@ impl<'de, T: ?Sized> Visitor<'de> for PhantomDataVisitor<T> {
 }
 
 impl<'de, T: ?Sized> Deserialize<'de> for PhantomData<T> {
-    fn deserialize<D>(deserializer: D) -> Result<PhantomData<T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -659,7 +659,7 @@ macro_rules! seq_impl {
                     }
 
                     #[inline]
-                    fn visit_seq<A>(mut self, mut $access: A) -> Result<(), A::Error>
+                    fn visit_seq<A>(mut self, mut $access: A) -> Result<Self::Value, A::Error>
                     where
                         A: SeqAccess<'de>,
                     {
@@ -771,7 +771,7 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
     }
 
     #[inline]
-    fn visit_seq<A>(self, _: A) -> Result<[T; 0], A::Error>
+    fn visit_seq<A>(self, _: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,
     {
@@ -781,7 +781,7 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
 
 // Does not require T: Deserialize<'de>.
 impl<'de, T> Deserialize<'de> for [T; 0] {
-    fn deserialize<D>(deserializer: D) -> Result<[T; 0], D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -803,7 +803,7 @@ macro_rules! array_impls {
                 }
 
                 #[inline]
-                fn visit_seq<A>(self, mut seq: A) -> Result<[T; $len], A::Error>
+                fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
                 where
                     A: SeqAccess<'de>,
                 {
@@ -829,7 +829,7 @@ macro_rules! array_impls {
                 }
 
                 #[inline]
-                fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
+                fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
                 where
                     A: SeqAccess<'de>,
                 {
@@ -851,7 +851,7 @@ macro_rules! array_impls {
             where
                 T: Deserialize<'de>,
             {
-                fn deserialize<D>(deserializer: D) -> Result<[T; $len], D::Error>
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
                     D: Deserializer<'de>,
                 {
@@ -911,7 +911,7 @@ macro_rules! tuple_impls {
         $(
             impl<'de, $($name: Deserialize<'de>),+> Deserialize<'de> for ($($name,)+) {
                 #[inline]
-                fn deserialize<D>(deserializer: D) -> Result<($($name,)+), D::Error>
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
                     D: Deserializer<'de>,
                 {
@@ -928,7 +928,7 @@ macro_rules! tuple_impls {
 
                         #[inline]
                         #[allow(non_snake_case)]
-                        fn visit_seq<A>(self, mut seq: A) -> Result<($($name,)+), A::Error>
+                        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
                         where
                             A: SeqAccess<'de>,
                         {
@@ -962,7 +962,7 @@ macro_rules! tuple_impls {
 
                         #[inline]
                         #[allow(non_snake_case)]
-                        fn visit_seq<A>(self, mut seq:                                                                      A) -> Result<(), A::Error>
+                        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
                         where
                             A: SeqAccess<'de>,
                         {
@@ -1331,14 +1331,14 @@ impl<'de> Visitor<'de> for PathBufVisitor {
         formatter.write_str("path string")
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<PathBuf, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
         Ok(From::from(v))
     }
 
-    fn visit_string<E>(self, v: String) -> Result<PathBuf, E>
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: Error,
     {
@@ -1348,7 +1348,7 @@ impl<'de> Visitor<'de> for PathBufVisitor {
 
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for PathBuf {
-    fn deserialize<D>(deserializer: D) -> Result<PathBuf, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1381,7 +1381,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
     }
 
     #[cfg(unix)]
-    fn visit_enum<A>(self, data: A) -> Result<OsString, A::Error>
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
         A: EnumAccess<'de>,
     {
@@ -1396,7 +1396,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
     }
 
     #[cfg(windows)]
-    fn visit_enum<A>(self, data: A) -> Result<OsString, A::Error>
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
         A: EnumAccess<'de>,
     {
@@ -1414,7 +1414,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
 
 #[cfg(all(feature = "std", any(unix, windows)))]
 impl<'de> Deserialize<'de> for OsString {
-    fn deserialize<D>(deserializer: D) -> Result<OsString, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1464,7 +1464,7 @@ where
     T::Owned: Deserialize<'de>,
 {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Cow<'a, T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1525,7 +1525,7 @@ impl<'de, T> Deserialize<'de> for Cell<T>
 where
     T: Deserialize<'de> + Copy,
 {
-    fn deserialize<D>(deserializer: D) -> Result<Cell<T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1567,7 +1567,7 @@ impl<'de> Deserialize<'de> for Duration {
         };
 
         impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -1580,7 +1580,7 @@ impl<'de> Deserialize<'de> for Duration {
                         formatter.write_str("`secs` or `nanos`")
                     }
 
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -1591,7 +1591,7 @@ impl<'de> Deserialize<'de> for Duration {
                         }
                     }
 
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -1619,7 +1619,7 @@ impl<'de> Deserialize<'de> for Duration {
                 formatter.write_str("struct Duration")
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Duration, A::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: SeqAccess<'de>,
             {
@@ -1638,7 +1638,7 @@ impl<'de> Deserialize<'de> for Duration {
                 Ok(Duration::new(secs, nanos))
             }
 
-            fn visit_map<A>(self, mut map: A) -> Result<Duration, A::Error>
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
             {
@@ -1692,7 +1692,7 @@ impl<'de> Deserialize<'de> for SystemTime {
         };
 
         impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -1705,7 +1705,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                         formatter.write_str("`secs_since_epoch` or `nanos_since_epoch`")
                     }
 
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -1716,7 +1716,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                         }
                     }
 
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -1744,7 +1744,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                 formatter.write_str("struct SystemTime")
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Duration, A::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: SeqAccess<'de>,
             {
@@ -1763,7 +1763,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                 Ok(Duration::new(secs, nanos))
             }
 
-            fn visit_map<A>(self, mut map: A) -> Result<Duration, A::Error>
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
             {
@@ -1836,7 +1836,7 @@ where
         };
 
         impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -1849,7 +1849,7 @@ where
                         formatter.write_str("`start` or `end`")
                     }
 
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -1860,7 +1860,7 @@ where
                         }
                     }
 
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -1893,7 +1893,7 @@ where
                 formatter.write_str("struct Range")
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<ops::Range<Idx>, A::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: SeqAccess<'de>,
             {
@@ -1912,7 +1912,7 @@ where
                 Ok(start..end)
             }
 
-            fn visit_map<A>(self, mut map: A) -> Result<ops::Range<Idx>, A::Error>
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
             {
@@ -1965,7 +1965,7 @@ impl<'de, T> Deserialize<'de> for NonZero<T>
 where
     T: Deserialize<'de> + Zeroable,
 {
-    fn deserialize<D>(deserializer: D) -> Result<NonZero<T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1982,7 +1982,7 @@ macro_rules! nonzero_integers {
         $(
             #[cfg(feature = "unstable")]
             impl<'de> Deserialize<'de> for $T {
-                fn deserialize<D>(deserializer: D) -> Result<$T, D::Error>
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
                     D: Deserializer<'de>,
                 {
@@ -2014,7 +2014,7 @@ where
     T: Deserialize<'de>,
     E: Deserialize<'de>,
 {
-    fn deserialize<D>(deserializer: D) -> Result<Result<T, E>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -2029,7 +2029,7 @@ where
 
         impl<'de> Deserialize<'de> for Field {
             #[inline]
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
@@ -2042,7 +2042,7 @@ where
                         formatter.write_str("`Ok` or `Err`")
                     }
 
-                    fn visit_u32<E>(self, value: u32) -> Result<Field, E>
+                    fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -2056,7 +2056,7 @@ where
                         }
                     }
 
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -2067,7 +2067,7 @@ where
                         }
                     }
 
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Field, E>
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
                     where
                         E: Error,
                     {
@@ -2101,7 +2101,7 @@ where
                 formatter.write_str("enum Result")
             }
 
-            fn visit_enum<A>(self, data: A) -> Result<Result<T, E>, A::Error>
+            fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
             where
                 A: EnumAccess<'de>,
             {
@@ -2125,7 +2125,7 @@ impl<'de, T> Deserialize<'de> for Wrapping<T>
 where
     T: Deserialize<'de>,
 {
-    fn deserialize<D>(deserializer: D) -> Result<Wrapping<T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
