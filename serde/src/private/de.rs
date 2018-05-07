@@ -2819,16 +2819,18 @@ where
     where
         T: DeserializeSeed<'de>,
     {
-        while let Some(item) = self.iter.next() {
-            // Do not take(), instead borrow this entry. The internally tagged
-            // enum does its own buffering so we can't tell whether this entry
-            // is going to be consumed. Borrowing here leaves the entry
-            // available for later flattened fields.
-            let (ref key, ref content) = *item.as_ref().unwrap();
-            self.pending = Some(content);
-            return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
+        match self.iter.next() {
+            Some(item) => {
+                // Do not take(), instead borrow this entry. The internally tagged
+                // enum does its own buffering so we can't tell whether this entry
+                // is going to be consumed. Borrowing here leaves the entry
+                // available for later flattened fields.
+                let (ref key, ref content) = *item.as_ref().unwrap();
+                self.pending = Some(content);
+                seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
+            }
+            None => Ok(None),
         }
-        Ok(None)
     }
 
     fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
