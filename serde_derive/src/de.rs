@@ -15,15 +15,16 @@ use syn::{self, Ident, Index, Member};
 use bound;
 use fragment::{Expr, Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{self, attr};
+use internals::{attr, Ctxt};
 use pretend;
 use try;
 
 use std::collections::BTreeSet;
 
 pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
-    let ctxt = internals::Ctxt::new();
+    let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
+    precondition(&ctxt, &cont);
     try!(ctxt.check());
 
     let ident = cont.ident;
@@ -78,6 +79,16 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
         };
     };
     Ok(generated)
+}
+
+fn precondition(cx: &Ctxt, cont: &Container) {
+    if let Data::Struct(_, ref fields) = cont.data {
+        if let Some(last) = fields.last() {
+            if let syn::Type::Slice(_) = *last.ty {
+                cx.error("cannot deserialize a dynamically sized struct");
+            }
+        }
+    }
 }
 
 struct Parameters {
