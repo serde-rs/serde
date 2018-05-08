@@ -657,6 +657,44 @@ fn test_skip_serializing_struct() {
     );
 }
 
+#[derive(Debug, PartialEq, Serialize)]
+struct SkipSerializingTupleStruct<'a, B, C>(
+    &'a i8,
+    #[serde(skip_serializing)] B,
+    #[serde(skip_serializing_if = "ShouldSkip::should_skip")] C,
+)
+where
+    C: ShouldSkip;
+
+#[test]
+fn test_skip_serializing_tuple_struct() {
+    let a = 1;
+    assert_ser_tokens(
+        &SkipSerializingTupleStruct(&a, 2, 3),
+        &[
+            Token::TupleStruct {
+                name: "SkipSerializingTupleStruct",
+                len: 2,
+            },
+            Token::I8(1),
+            Token::I32(3),
+            Token::TupleStructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &SkipSerializingTupleStruct(&a, 2, 123),
+        &[
+            Token::TupleStruct {
+                name: "SkipSerializingTupleStruct",
+                len: 2,
+            },
+            Token::I8(1),
+            Token::TupleStructEnd,
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct SkipStruct<B> {
     a: i8,
@@ -705,6 +743,11 @@ where
         #[serde(skip_serializing_if = "ShouldSkip::should_skip")]
         c: C,
     },
+    Tuple(
+        &'a i8,
+        #[serde(skip_serializing)] B,
+        #[serde(skip_serializing_if = "ShouldSkip::should_skip")] C,
+    ),
 }
 
 #[test]
@@ -741,6 +784,33 @@ fn test_skip_serializing_enum() {
             Token::Str("a"),
             Token::I8(1),
             Token::StructVariantEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &SkipSerializingEnum::Tuple(&a, 2, 3),
+        &[
+            Token::TupleVariant {
+                name: "SkipSerializingEnum",
+                variant: "Tuple",
+                len: 2,
+            },
+            Token::I8(1),
+            Token::I32(3),
+            Token::TupleVariantEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &SkipSerializingEnum::Tuple(&a, 2, 123),
+        &[
+            Token::TupleVariant {
+                name: "SkipSerializingEnum",
+                variant: "Tuple",
+                len: 2,
+            },
+            Token::I8(1),
+            Token::TupleVariantEnd,
         ],
     );
 }

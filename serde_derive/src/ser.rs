@@ -966,6 +966,7 @@ fn serialize_tuple_struct_visitor(
     fields
         .iter()
         .enumerate()
+        .filter(|&(_, ref field)| !field.attrs.skip_serializing())
         .map(|(i, field)| {
             let mut field_expr = if is_enum {
                 let id = Ident::new(&format!("__field{}", i), Span::call_site());
