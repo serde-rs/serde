@@ -580,6 +580,12 @@ impl Variant {
                         }
                     }
 
+                    // Parse `#[serde(skip)]`
+                    Meta(Word(word)) if word == "skip" => {
+                        skip_serializing.set_true();
+                        skip_deserializing.set_true();
+                    }
+
                     // Parse `#[serde(skip_deserializing)]`
                     Meta(Word(word)) if word == "skip_deserializing" => {
                         skip_deserializing.set_true();
