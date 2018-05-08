@@ -1300,7 +1300,7 @@ fn test_invalid_length_enum() {
             Token::I32(1),
             Token::TupleVariantEnd,
         ],
-        "invalid length 1, expected tuple of 3 elements",
+        "invalid length 1, expected tuple variant InvalidLengthEnum::A with 3 elements",
     );
     assert_de_tokens_error::<InvalidLengthEnum>(
         &[
@@ -1312,7 +1312,7 @@ fn test_invalid_length_enum() {
             Token::I32(1),
             Token::TupleVariantEnd,
         ],
-        "invalid length 1, expected tuple of 2 elements",
+        "invalid length 1, expected tuple variant InvalidLengthEnum::B with 2 elements",
     );
 }
 

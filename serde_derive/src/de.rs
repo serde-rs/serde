@@ -427,7 +427,9 @@ fn deserialize_tuple(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, false, cattrs));
+    let visit_seq = Stmts(deserialize_seq(
+        &type_path, params, fields, false, cattrs, &expecting,
+    ));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -511,7 +513,7 @@ fn deserialize_tuple_in_place(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs));
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -577,6 +579,7 @@ fn deserialize_seq(
     fields: &[Field],
     is_struct: bool,
     cattrs: &attr::Container,
+    expecting: &str,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -586,7 +589,11 @@ fn deserialize_seq(
         .iter()
         .filter(|field| !field.attrs.skip_deserializing())
         .count();
-    let expecting = format!("tuple of {} elements", deserialized_count);
+    let expecting = if deserialized_count == 1 {
+        format!("{} with 1 element", expecting)
+    } else {
+        format!("{} with {} elements", expecting, deserialized_count)
+    };
 
     let mut index_in_seq = 0_usize;
     let let_values = vars.clone().zip(fields).map(|(var, field)| {
@@ -671,6 +678,7 @@ fn deserialize_seq_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
+    expecting: &str,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -680,7 +688,11 @@ fn deserialize_seq_in_place(
         .iter()
         .filter(|field| !field.attrs.skip_deserializing())
         .count();
-    let expecting = format!("tuple of {} elements", deserialized_count);
+    let expecting = if deserialized_count == 1 {
+        format!("{} with 1 element", expecting)
+    } else {
+        format!("{} with {} elements", expecting, deserialized_count)
+    };
 
     let mut index_in_seq = 0usize;
     let write_values = vars.clone()
@@ -852,7 +864,7 @@ fn deserialize_struct(
         None => format!("struct {}", params.type_name()),
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs));
+    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs, &expecting));
 
     let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
         deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
@@ -991,7 +1003,7 @@ fn deserialize_struct_in_place(
         None => format!("struct {}", params.type_name()),
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs));
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
 
     let (field_visitor, fields_stmt, visit_map) =
         deserialize_struct_as_struct_in_place_visitor(params, fields, cattrs);
