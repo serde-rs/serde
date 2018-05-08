@@ -191,13 +191,17 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
     }
 }
 
-// Fields with a `skip_deserializing` or `deserialize_with` attribute are not
-// deserialized by us so we do not generate a bound. Fields with a `bound`
-// attribute specify their own bound so we do not generate one. All other fields
-// may need a `T: Deserialize` bound where T is the type of the field.
+// Fields with a `skip_deserializing` or `deserialize_with` attribute, or which
+// belong to a variant with a `skip_deserializing` or `deserialize_with`
+// attribute, are not deserialized by us so we do not generate a bound. Fields
+// with a `bound` attribute specify their own bound so we do not generate one.
+// All other fields may need a `T: Deserialize` bound where T is the type of the
+// field.
 fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -> bool {
     !field.skip_deserializing() && field.deserialize_with().is_none() && field.de_bound().is_none()
-        && variant.map_or(true, |variant| variant.deserialize_with().is_none())
+        && variant.map_or(true, |variant| {
+            !variant.skip_deserializing() && variant.deserialize_with().is_none()
+        })
 }
 
 // Fields with a `default` attribute (not `default=...`), and fields with a

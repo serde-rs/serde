@@ -592,6 +592,16 @@ fn test_gen() {
     #[derive(Deserialize)]
     #[serde(tag = "t", content = "c")]
     enum AdjacentlyTaggedVoid {}
+
+    #[derive(Serialize, Deserialize)]
+    enum SkippedVariant<T> {
+        #[serde(skip)]
+        #[allow(dead_code)]
+        T(T),
+        Unit,
+    }
+
+    assert::<SkippedVariant<X>>();
 }
 
 //////////////////////////////////////////////////////////////////////////
