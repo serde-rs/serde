@@ -527,6 +527,8 @@ pub struct Variant {
     ser_renamed: bool,
     de_renamed: bool,
     rename_all: RenameRule,
+    ser_bound: Option<Vec<syn::WherePredicate>>,
+    de_bound: Option<Vec<syn::WherePredicate>>,
     skip_deserializing: bool,
     skip_serializing: bool,
     other: bool,
@@ -542,6 +544,8 @@ impl Variant {
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
+        let mut ser_bound = Attr::none(cx, "bound");
+        let mut de_bound = Attr::none(cx, "bound");
         let mut other = BoolAttr::none(cx, "other");
         let mut serialize_with = Attr::none(cx, "serialize_with");
         let mut deserialize_with = Attr::none(cx, "deserialize_with");
@@ -599,6 +603,24 @@ impl Variant {
                     // Parse `#[serde(other)]`
                     Meta(Word(word)) if word == "other" => {
                         other.set_true();
+                    }
+
+                    // Parse `#[serde(bound = "D: Serialize")]`
+                    Meta(NameValue(ref m)) if m.ident == "bound" => {
+                        if let Ok(where_predicates) =
+                            parse_lit_into_where(cx, m.ident.as_ref(), m.ident.as_ref(), &m.lit)
+                        {
+                            ser_bound.set(where_predicates.clone());
+                            de_bound.set(where_predicates);
+                        }
+                    }
+
+                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
+                    Meta(List(ref m)) if m.ident == "bound" => {
+                        if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
+                            ser_bound.set_opt(ser);
+                            de_bound.set_opt(de);
+                        }
                     }
 
                     // Parse `#[serde(with = "...")]`
@@ -669,6 +691,8 @@ impl Variant {
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
+            ser_bound: ser_bound.get(),
+            de_bound: de_bound.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
             other: other.get(),
@@ -693,6 +717,14 @@ impl Variant {
 
     pub fn rename_all(&self) -> &RenameRule {
         &self.rename_all
+    }
+
+    pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
+        self.ser_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn de_bound(&self) -> Option<&[syn::WherePredicate]> {
+        self.de_bound.as_ref().map(|vec| &vec[..])
     }
 
     pub fn skip_deserializing(&self) -> bool {

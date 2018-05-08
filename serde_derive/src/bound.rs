@@ -65,6 +65,28 @@ pub fn with_where_predicates_from_fields(
     generics
 }
 
+pub fn with_where_predicates_from_variants(
+    cont: &Container,
+    generics: &syn::Generics,
+    from_variant: fn(&attr::Variant) -> Option<&[syn::WherePredicate]>,
+) -> syn::Generics {
+    let variants = match cont.data {
+        Data::Enum(ref variants) => variants,
+        Data::Struct(_, _) => {
+            return generics.clone();
+        }
+    };
+
+    let predicates = variants
+        .iter()
+        .flat_map(|variant| from_variant(&variant.attrs))
+        .flat_map(|predicates| predicates.to_vec());
+
+    let mut generics = generics.clone();
+    generics.make_where_clause().predicates.extend(predicates);
+    generics
+}
+
 // Puts the given bound on any generic type parameters that are used in fields
 // for which filter returns true.
 //

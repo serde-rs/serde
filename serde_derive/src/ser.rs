@@ -138,6 +138,9 @@ fn build_generics(cont: &Container) -> syn::Generics {
     let generics =
         bound::with_where_predicates_from_fields(cont, &generics, attr::Field::ser_bound);
 
+    let generics =
+        bound::with_where_predicates_from_variants(cont, &generics, attr::Variant::ser_bound);
+
     match cont.attrs.ser_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => bound::with_bound(
@@ -158,6 +161,7 @@ fn needs_serialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -
     !field.skip_serializing() && field.serialize_with().is_none() && field.ser_bound().is_none()
         && variant.map_or(true, |variant| {
             !variant.skip_serializing() && variant.serialize_with().is_none()
+                && variant.ser_bound().is_none()
         })
 }
 

@@ -217,6 +217,42 @@ fn test_gen() {
     assert::<WithTraits2<X, X>>();
 
     #[derive(Serialize, Deserialize)]
+    #[serde(bound = "D: SerializeWith + DeserializeWith")]
+    enum VariantWithTraits1<D, E> {
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with",
+            deserialize_with = "DeserializeWith::deserialize_with"
+        )]
+        D(D),
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with",
+            deserialize_with = "DeserializeWith::deserialize_with",
+            bound = "E: SerializeWith + DeserializeWith"
+        )]
+        E(E),
+    }
+    assert::<VariantWithTraits1<X, X>>();
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(bound(serialize = "D: SerializeWith", deserialize = "D: DeserializeWith"))]
+    enum VariantWithTraits2<D, E> {
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with",
+            deserialize_with = "DeserializeWith::deserialize_with"
+        )]
+        D(D),
+        #[serde(
+            serialize_with = "SerializeWith::serialize_with", bound(serialize = "E: SerializeWith")
+        )]
+        #[serde(
+            deserialize_with = "DeserializeWith::deserialize_with",
+            bound(deserialize = "E: DeserializeWith")
+        )]
+        E(E),
+    }
+    assert::<VariantWithTraits2<X, X>>();
+
+    #[derive(Serialize, Deserialize)]
     struct CowStr<'a>(Cow<'a, str>);
     assert::<CowStr>();
 

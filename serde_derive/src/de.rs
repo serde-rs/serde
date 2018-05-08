@@ -163,6 +163,9 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
 
     let generics = bound::with_where_predicates_from_fields(cont, &generics, attr::Field::de_bound);
 
+    let generics =
+        bound::with_where_predicates_from_variants(cont, &generics, attr::Variant::de_bound);
+
     match cont.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => {
@@ -201,6 +204,7 @@ fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>)
     !field.skip_deserializing() && field.deserialize_with().is_none() && field.de_bound().is_none()
         && variant.map_or(true, |variant| {
             !variant.skip_deserializing() && variant.deserialize_with().is_none()
+                && variant.de_bound().is_none()
         })
 }
 
