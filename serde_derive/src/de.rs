@@ -82,10 +82,26 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, Str
 }
 
 fn precondition(cx: &Ctxt, cont: &Container) {
+    precondition_sized(cx, cont);
+    precondition_no_de_lifetime(cx, cont);
+}
+
+fn precondition_sized(cx: &Ctxt, cont: &Container) {
     if let Data::Struct(_, ref fields) = cont.data {
         if let Some(last) = fields.last() {
             if let syn::Type::Slice(_) = *last.ty {
                 cx.error("cannot deserialize a dynamically sized struct");
+            }
+        }
+    }
+}
+
+fn precondition_no_de_lifetime(cx: &Ctxt, cont: &Container) {
+    if let BorrowedLifetimes::Borrowed(_) = borrowed_lifetimes(cont) {
+        for param in cont.generics.lifetimes() {
+            if param.lifetime.to_string() == "'de" {
+                cx.error("cannot deserialize when there is a lifetime parameter called 'de");
+                return;
             }
         }
     }
