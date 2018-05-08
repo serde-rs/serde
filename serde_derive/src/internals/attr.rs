@@ -1038,7 +1038,7 @@ impl Field {
                 };
                 deserialize_with.set_if_none(expr);
             }
-        } else if is_rptr(&field.ty, is_str) || is_rptr(&field.ty, is_slice_u8) {
+        } else if is_implicitly_borrowed(&field.ty) {
             // Types &str and &[u8] are always implicitly borrowed. No need for
             // a #[serde(borrow)].
             collect_lifetimes(&field.ty, &mut borrowed_lifetimes);
@@ -1300,6 +1300,14 @@ fn parse_lit_into_lifetimes(
     Err(())
 }
 
+fn is_implicitly_borrowed(ty: &syn::Type) -> bool {
+    is_implicitly_borrowed_reference(ty) || is_option(ty, is_implicitly_borrowed_reference)
+}
+
+fn is_implicitly_borrowed_reference(ty: &syn::Type) -> bool {
+    is_reference(ty, is_str) || is_reference(ty, is_slice_u8)
+}
+
 // Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
 // This can have false negatives and false positives.
 //
@@ -1347,6 +1355,31 @@ fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
     }
 }
 
+fn is_option(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
+    let path = match *ty {
+        syn::Type::Path(ref ty) => &ty.path,
+        _ => {
+            return false;
+        }
+    };
+    let seg = match path.segments.last() {
+        Some(seg) => seg.into_value(),
+        None => {
+            return false;
+        }
+    };
+    let args = match seg.arguments {
+        syn::PathArguments::AngleBracketed(ref bracketed) => &bracketed.args,
+        _ => {
+            return false;
+        }
+    };
+    seg.ident == "Option" && args.len() == 1 && match args[0] {
+        syn::GenericArgument::Type(ref arg) => elem(arg),
+        _ => false,
+    }
+}
+
 // Whether the type looks like it might be `&T` where elem="T". This can have
 // false negatives and false positives.
 //
@@ -1367,7 +1400,7 @@ fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
 //     struct S<'a> {
 //         r: &'a str,
 //     }
-fn is_rptr(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
+fn is_reference(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
     match *ty {
         syn::Type::Reference(ref ty) => ty.mutability.is_none() && elem(&ty.elem),
         _ => false,
