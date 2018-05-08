@@ -1393,6 +1393,21 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let finish_content_then_tag = if variant_arms.is_empty() {
+        quote! {
+            match try!(_serde::de::MapAccess::next_value::<__Field>(&mut __map)) {}
+        }
+    } else {
+        quote! {
+            let __ret = try!(match try!(_serde::de::MapAccess::next_value(&mut __map)) {
+                // Deserialize the buffered content now that we know the variant.
+                #(#variant_arms)*
+            });
+            // Visit remaining keys, looking for duplicates.
+            #visit_remaining_keys
+        }
+    };
+
     quote_block! {
         #variant_visitor
 
@@ -1469,13 +1484,7 @@ fn deserialize_adjacently_tagged_enum(
                             // Second key is the tag.
                             _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
                                 let __deserializer = _serde::private::de::ContentDeserializer::<__A::Error>::new(__content);
-                                // Parse the tag.
-                                let __ret = try!(match try!(_serde::de::MapAccess::next_value(&mut __map)) {
-                                    // Deserialize the buffered content now that we know the variant.
-                                    #(#variant_arms)*
-                                });
-                                // Visit remaining keys, looking for duplicates.
-                                #visit_remaining_keys
+                                #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
                             _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {

@@ -588,6 +588,10 @@ fn test_gen() {
             }
         }
     }
+
+    #[derive(Deserialize)]
+    #[serde(tag = "t", content = "c")]
+    enum AdjacentlyTaggedVoid {}
 }
 
 //////////////////////////////////////////////////////////////////////////
