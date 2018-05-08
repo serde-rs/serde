@@ -687,7 +687,7 @@ fn test_skip_serializing_tuple_struct() {
         &[
             Token::TupleStruct {
                 name: "SkipSerializingTupleStruct",
-                len: 2,
+                len: 1,
             },
             Token::I8(1),
             Token::TupleStructEnd,
@@ -807,7 +807,7 @@ fn test_skip_serializing_enum() {
             Token::TupleVariant {
                 name: "SkipSerializingEnum",
                 variant: "Tuple",
-                len: 2,
+                len: 1,
             },
             Token::I8(1),
             Token::TupleVariantEnd,

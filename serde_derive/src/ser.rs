@@ -243,8 +243,25 @@ fn serialize_tuple_struct(
         serialize_tuple_struct_visitor(fields, params, false, &TupleTrait::SerializeTupleStruct);
 
     let type_name = cattrs.name().serialize_name();
-    let len = serialize_stmts.len();
-    let let_mut = mut_if(len > 0);
+
+    let mut serialized_fields = fields
+        .iter()
+        .enumerate()
+        .filter(|&(_, ref field)| !field.attrs.skip_serializing())
+        .peekable();
+
+    let let_mut = mut_if(serialized_fields.peek().is_some());
+
+    let len = serialized_fields
+        .map(|(i, field)| match field.attrs.skip_serializing_if() {
+            None => quote!(1),
+            Some(path) => {
+                let index = syn::Index { index: i as u32, span: Span::call_site() };
+                let field_expr = get_member(params, field, &Member::Unnamed(index));
+                quote!(if #path(#field_expr) { 0 } else { 1 })
+            }
+        })
+        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(__serializer, #type_name, #len));
@@ -743,8 +760,23 @@ fn serialize_tuple_variant(
 
     let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &tuple_trait);
 
-    let len = serialize_stmts.len();
-    let let_mut = mut_if(len > 0);
+    let mut serialized_fields = fields
+        .iter()
+        .enumerate()
+        .filter(|&(_, ref field)| !field.attrs.skip_serializing())
+        .peekable();
+
+    let let_mut = mut_if(serialized_fields.peek().is_some());
+
+    let len = serialized_fields
+        .map(|(i, field)| match field.attrs.skip_serializing_if() {
+            None => quote!(1),
+            Some(path) => {
+                let field_expr = Ident::new(&format!("__field{}", i), Span::call_site());
+                quote!(if #path(#field_expr) { 0 } else { 1 })
+            }
+        })
+        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     match context {
         TupleVariant::ExternallyTagged {
