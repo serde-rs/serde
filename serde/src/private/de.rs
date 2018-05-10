@@ -2641,17 +2641,47 @@ pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
 );
 
 #[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> FlatMapDeserializer<'a, 'de, E>
+where
+    E: Error,
+{
+    fn deserialize_other<V>(self, _: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+    {
+        Err(Error::custom("can only flatten structs and maps"))
+    }
+}
+
+macro_rules! forward_to_deserialize_other {
+    ($($func:ident ( $($arg:ty),* ))*) => {
+        $(
+            fn $func<V>(self, $(_: $arg,)* visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_other(visitor)
+            }
+        )*
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
 where
     E: Error,
 {
     type Error = E;
 
-    fn deserialize_any<V>(self, _: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(Error::custom("can only flatten structs and maps"))
+        visitor.visit_map(FlatInternallyTaggedAccess {
+            iter: self.0.iter_mut(),
+            pending: None,
+            _marker: PhantomData,
+        })
     }
 
     fn deserialize_enum<V>(
@@ -2710,24 +2740,31 @@ where
         visitor.visit_newtype_struct(self)
     }
 
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-        byte_buf option unit unit_struct seq tuple tuple_struct identifier
-        ignored_any
-    }
-
-    fn private_deserialize_internally_tagged_enum<V>(
-        self,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_map(FlatInternallyTaggedAccess {
-            iter: self.0.iter_mut(),
-            pending: None,
-            _marker: PhantomData,
-        })
+    forward_to_deserialize_other! {
+        deserialize_bool()
+        deserialize_i8()
+        deserialize_i16()
+        deserialize_i32()
+        deserialize_i64()
+        deserialize_u8()
+        deserialize_u16()
+        deserialize_u32()
+        deserialize_u64()
+        deserialize_f32()
+        deserialize_f64()
+        deserialize_char()
+        deserialize_str()
+        deserialize_string()
+        deserialize_bytes()
+        deserialize_byte_buf()
+        deserialize_option()
+        deserialize_unit()
+        deserialize_unit_struct(&'static str)
+        deserialize_seq()
+        deserialize_tuple(usize)
+        deserialize_tuple_struct(&'static str, usize)
+        deserialize_identifier()
+        deserialize_ignored_any()
     }
 }
 

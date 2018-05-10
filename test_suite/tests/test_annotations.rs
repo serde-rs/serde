@@ -2062,3 +2062,36 @@ fn test_untagged_enum_containing_flatten() {
         ],
     );
 }
+
+#[test]
+fn test_flatten_untagged_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Outer {
+        #[serde(flatten)]
+        inner: Inner,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(untagged)]
+    enum Inner {
+        Variant {
+            a: i32,
+        },
+    }
+
+    let data = Outer {
+        inner: Inner::Variant {
+            a: 0,
+        }
+    };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
