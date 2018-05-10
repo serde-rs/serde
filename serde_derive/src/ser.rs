@@ -256,7 +256,10 @@ fn serialize_tuple_struct(
         .map(|(i, field)| match field.attrs.skip_serializing_if() {
             None => quote!(1),
             Some(path) => {
-                let index = syn::Index { index: i as u32, span: Span::call_site() };
+                let index = syn::Index {
+                    index: i as u32,
+                    span: Span::call_site(),
+                };
                 let field_expr = get_member(params, field, &Member::Unnamed(index));
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }

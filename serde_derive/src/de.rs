@@ -864,7 +864,9 @@ fn deserialize_struct(
         None => format!("struct {}", params.type_name()),
     };
 
-    let visit_seq = Stmts(deserialize_seq(&type_path, params, fields, true, cattrs, &expecting));
+    let visit_seq = Stmts(deserialize_seq(
+        &type_path, params, fields, true, cattrs, &expecting,
+    ));
 
     let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
         deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
