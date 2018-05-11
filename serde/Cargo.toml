@@ -61,8 +61,3 @@ alloc = ["unstable"]
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = []
-
-# Get serde_derive picked up by the Integer 32 playground. Not public API.
-#
-#    http://play.integer32.com/
-playground = ["serde_derive"]
