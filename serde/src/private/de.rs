@@ -276,6 +276,8 @@ mod content {
             match *self {
                 Content::Str(x) => Some(x),
                 Content::String(ref x) => Some(x),
+                Content::Bytes(x) => str::from_utf8(x).ok(),
+                Content::ByteBuf(ref x) => str::from_utf8(x).ok(),
                 _ => None,
             }
         }
@@ -1423,6 +1425,8 @@ mod content {
             match self.content {
                 Content::String(v) => visitor.visit_string(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
+                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
+                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2123,6 +2127,8 @@ mod content {
             match *self.content {
                 Content::String(ref v) => visitor.visit_str(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
+                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
+                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
