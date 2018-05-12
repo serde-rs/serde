@@ -2645,10 +2645,7 @@ impl<'a, 'de, E> FlatMapDeserializer<'a, 'de, E>
 where
     E: Error,
 {
-    fn deserialize_other<V>(self, _: V) -> Result<V::Value, E>
-    where
-        V: Visitor<'de>,
-    {
+    fn deserialize_other<V>() -> Result<V, E> {
         Err(Error::custom("can only flatten structs and maps"))
     }
 }
@@ -2657,11 +2654,11 @@ where
 macro_rules! forward_to_deserialize_other {
     ($($func:ident ( $($arg:ty),* ))*) => {
         $(
-            fn $func<V>(self, $(_: $arg,)* visitor: V) -> Result<V::Value, Self::Error>
+            fn $func<V>(self, $(_: $arg,)* _visitor: V) -> Result<V::Value, Self::Error>
             where
                 V: Visitor<'de>,
             {
-                self.deserialize_other(visitor)
+                Self::deserialize_other()
             }
         )*
     }
@@ -2741,6 +2738,16 @@ where
         visitor.visit_newtype_struct(self)
     }
 
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        match visitor.__private_visit_untagged_option(self) {
+            Ok(value) => Ok(value),
+            Err(()) => Self::deserialize_other(),
+        }
+    }
+
     forward_to_deserialize_other! {
         deserialize_bool()
         deserialize_i8()
@@ -2758,7 +2765,6 @@ where
         deserialize_string()
         deserialize_bytes()
         deserialize_byte_buf()
-        deserialize_option()
         deserialize_unit()
         deserialize_unit_struct(&'static str)
         deserialize_seq()
