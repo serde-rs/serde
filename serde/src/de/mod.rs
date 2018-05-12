@@ -1529,6 +1529,15 @@ pub trait Visitor<'de>: Sized {
         let _ = data;
         Err(Error::invalid_type(Unexpected::Enum, &self))
     }
+
+    // Used when deserializing a flattened Option field. Not public API.
+    #[doc(hidden)]
+    fn __private_visit_untagged_option<D>(self, _: D) -> Result<Self::Value, ()>
+    where
+        D: Deserializer<'de>,
+    {
+        Err(())
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

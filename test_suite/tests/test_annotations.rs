@@ -2095,3 +2095,84 @@ fn test_flatten_untagged_enum() {
         ],
     );
 }
+
+#[test]
+fn test_flatten_option() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Outer {
+        #[serde(flatten)]
+        inner1: Option<Inner1>,
+        #[serde(flatten)]
+        inner2: Option<Inner2>,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Inner1 {
+        inner1: i32,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Inner2 {
+        inner2: i32,
+    }
+
+    assert_tokens(
+        &Outer {
+            inner1: Some(Inner1 {
+                inner1: 1,
+            }),
+            inner2: Some(Inner2 {
+                inner2: 2,
+            }),
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("inner1"),
+            Token::I32(1),
+            Token::Str("inner2"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &Outer {
+            inner1: Some(Inner1 {
+                inner1: 1,
+            }),
+            inner2: None,
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("inner1"),
+            Token::I32(1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &Outer {
+            inner1: None,
+            inner2: Some(Inner2 {
+                inner2: 2,
+            }),
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("inner2"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &Outer {
+            inner1: None,
+            inner2: None,
+        },
+        &[
+            Token::Map { len: None },
+            Token::MapEnd,
+        ],
+    );
+}

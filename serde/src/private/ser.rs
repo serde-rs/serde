@@ -1122,14 +1122,14 @@ where
     }
 
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Optional))
+        Ok(())
     }
 
-    fn serialize_some<T: ?Sized>(self, _: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: Serialize,
     {
-        Err(self.bad_type(Unsupported::Optional))
+        value.serialize(self)
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
