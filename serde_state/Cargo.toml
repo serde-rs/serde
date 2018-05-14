@@ -59,14 +59,6 @@ unstable = []
 #    https://doc.rust-lang.org/alloc/
 alloc = ["unstable"]
 
-# Provide impls for collection types like String and Cow<T>. This is a subset of
-# std but may be enabled without depending on all of std.
-#
-# Requires a dependency on the unstable collections library:
-#
-#    https://doc.rust-lang.org/collections/
-collections = ["alloc"]
-
 # Opt into impls for Rc<T> and Arc<T>. Serializing and deserializing these types
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
