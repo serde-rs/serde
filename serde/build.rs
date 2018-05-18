@@ -33,6 +33,8 @@ fn main() {
         Err(_) => return,
     };
 
+    // 128-bit integers stabilized in Rust 1.26:
+    // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
     if minor >= 26 {
         println!("cargo:rustc-cfg=integer128");
     }
