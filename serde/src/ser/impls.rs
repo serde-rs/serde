@@ -44,6 +44,11 @@ primitive_impl!(f32, serialize_f32);
 primitive_impl!(f64, serialize_f64);
 primitive_impl!(char, serialize_char);
 
+serde_if_integer128! {
+    primitive_impl!(i128, serialize_i128);
+    primitive_impl!(u128, serialize_u128);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Serialize for str {
