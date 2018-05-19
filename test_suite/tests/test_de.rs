@@ -259,6 +259,27 @@ declare_tests! {
         0f32 => &[Token::F32(0.)],
         0f64 => &[Token::F64(0.)],
     }
+    test_small_int_to_128 {
+        1i128 => &[Token::I8(1)],
+        1i128 => &[Token::I16(1)],
+        1i128 => &[Token::I32(1)],
+        1i128 => &[Token::I64(1)],
+
+        1i128 => &[Token::U8(1)],
+        1i128 => &[Token::U16(1)],
+        1i128 => &[Token::U32(1)],
+        1i128 => &[Token::U64(1)],
+
+        1u128 => &[Token::I8(1)],
+        1u128 => &[Token::I16(1)],
+        1u128 => &[Token::I32(1)],
+        1u128 => &[Token::I64(1)],
+
+        1u128 => &[Token::U8(1)],
+        1u128 => &[Token::U16(1)],
+        1u128 => &[Token::U32(1)],
+        1u128 => &[Token::U64(1)],
+    }
     test_char {
         'a' => &[Token::Char('a')],
         'a' => &[Token::Str("a")],
