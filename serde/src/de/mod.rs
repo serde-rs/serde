@@ -52,8 +52,8 @@
 //!
 //!  - **Primitive types**:
 //!    - bool
-//!    - i8, i16, i32, i64, isize
-//!    - u8, u16, u32, u64, usize
+//!    - i8, i16, i32, i64, i128, isize
+//!    - u8, u16, u32, u64, u128, usize
 //!    - f32, f64
 //!    - char
 //!  - **Compound types**:
@@ -757,7 +757,7 @@ where
 /// Serde.
 ///
 /// The role of this trait is to define the deserialization half of the Serde
-/// data model, which is a way to categorize every Rust data type into one of 27
+/// data model, which is a way to categorize every Rust data type into one of 29
 /// possible types. Each method of the `Serializer` trait corresponds to one of
 /// the types of the data model.
 ///
@@ -767,10 +767,10 @@ where
 ///
 /// The types that make up the Serde data model are:
 ///
-///  - **12 primitive types**
+///  - **14 primitive types**
 ///    - bool
-///    - i8, i16, i32, i64
-///    - u8, u16, u32, u64
+///    - i8, i16, i32, i64, i128
+///    - u8, u16, u32, u64, u128
 ///    - f32, f64
 ///    - char
 ///  - **string**
@@ -884,6 +884,17 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
+    serde_if_integer128! {
+        /// Hint that the `Deserialize` type is expecting an `i128` value.
+        fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>
+        {
+            let _ = visitor;
+            Err(Error::custom("i128 is not supported"))
+        }
+    }
+
     /// Hint that the `Deserialize` type is expecting a `u8` value.
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -903,6 +914,17 @@ pub trait Deserializer<'de>: Sized {
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
+
+    serde_if_integer128! {
+        /// Hint that the `Deserialize` type is expecting an `u128` value.
+        fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>
+        {
+            let _ = visitor;
+            Err(Error::custom("u128 is not supported"))
+        }
+    }
 
     /// Hint that the `Deserialize` type is expecting a `f32` value.
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1250,6 +1272,19 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Signed(v), &self))
     }
 
+    serde_if_integer128! {
+        /// The input contains a `i128`.
+        ///
+        /// The default implementation fails with a type error.
+        fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let _ = v;
+            Err(Error::invalid_type(Unexpected::Other("i128"), &self))
+        }
+    }
+
     /// The input contains a `u8`.
     ///
     /// The default implementation forwards to [`visit_u64`].
@@ -1294,6 +1329,19 @@ pub trait Visitor<'de>: Sized {
         E: Error,
     {
         Err(Error::invalid_type(Unexpected::Unsigned(v), &self))
+    }
+
+    serde_if_integer128! {
+        /// The input contains a `u128`.
+        ///
+        /// The default implementation fails with a type error.
+        fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let _ = v;
+            Err(Error::invalid_type(Unexpected::Other("u128"), &self))
+        }
     }
 
     /// The input contains an `f32`.

@@ -48,8 +48,8 @@
 //!
 //!  - **Primitive types**:
 //!    - bool
-//!    - i8, i16, i32, i64, isize
-//!    - u8, u16, u32, u64, usize
+//!    - i8, i16, i32, i64, i128, isize
+//!    - u8, u16, u32, u64, u128, usize
 //!    - f32, f64
 //!    - char
 //!    - str
@@ -245,7 +245,7 @@ pub trait Serialize {
 /// A **data format** that can serialize any data structure supported by Serde.
 ///
 /// The role of this trait is to define the serialization half of the Serde data
-/// model, which is a way to categorize every Rust data structure into one of 27
+/// model, which is a way to categorize every Rust data structure into one of 29
 /// possible types. Each method of the `Serializer` trait corresponds to one of
 /// the types of the data model.
 ///
@@ -254,10 +254,10 @@ pub trait Serialize {
 ///
 /// The types that make up the Serde data model are:
 ///
-///  - **12 primitive types**
+///  - **14 primitive types**
 ///    - bool
-///    - i8, i16, i32, i64
-///    - u8, u16, u32, u64
+///    - i8, i16, i32, i64, i128
+///    - u8, u16, u32, u64, u128
 ///    - f32, f64
 ///    - char
 ///  - **string**
@@ -492,6 +492,34 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error>;
 
+    serde_if_integer128! {
+        /// Serialize an `i128` value.
+        ///
+        /// ```rust
+        /// # #[macro_use]
+        /// # extern crate serde;
+        /// #
+        /// # use serde::Serializer;
+        /// #
+        /// # __private_serialize!();
+        /// #
+        /// impl Serialize for i128 {
+        ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        ///     where
+        ///         S: Serializer,
+        ///     {
+        ///         serializer.serialize_i128(*self)
+        ///     }
+        /// }
+        /// #
+        /// # fn main() {}
+        /// ```
+        fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
+            let _ = v;
+            Err(Error::custom("i128 is not supported"))
+        }
+    }
+
     /// Serialize a `u8` value.
     ///
     /// If the format does not differentiate between `u8` and `u64`, a
@@ -595,6 +623,34 @@ pub trait Serializer: Sized {
     /// # fn main() {}
     /// ```
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error>;
+
+    serde_if_integer128! {
+        /// Serialize a `u128` value.
+        ///
+        /// ```rust
+        /// # #[macro_use]
+        /// # extern crate serde;
+        /// #
+        /// # use serde::Serializer;
+        /// #
+        /// # __private_serialize!();
+        /// #
+        /// impl Serialize for u128 {
+        ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        ///     where
+        ///         S: Serializer,
+        ///     {
+        ///         serializer.serialize_u128(*self)
+        ///     }
+        /// }
+        /// #
+        /// # fn main() {}
+        /// ```
+        fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
+            let _ = v;
+            Err(Error::custom("u128 is not supported"))
+        }
+    }
 
     /// Serialize an `f32` value.
     ///
