@@ -81,7 +81,6 @@
 //!    - LinkedList\<T\>
 //!    - VecDeque\<T\>
 //!    - Vec\<T\>
-//!    - EnumSet\<T\> (unstable)
 //!  - **FFI types**:
 //!    - CStr
 //!    - CString

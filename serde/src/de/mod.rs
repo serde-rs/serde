@@ -84,7 +84,6 @@
 //!    - LinkedList\<T\>
 //!    - VecDeque\<T\>
 //!    - Vec\<T\>
-//!    - EnumSet\<T\> (unstable)
 //!  - **Zero-copy types**:
 //!    - &str
 //!    - &[u8]
