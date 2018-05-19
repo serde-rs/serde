@@ -86,7 +86,7 @@
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
+#![cfg_attr(feature = "unstable", feature(specialization))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Whitelisted clippy lints
@@ -212,10 +212,6 @@ mod lib {
     pub use std::sync::{Mutex, RwLock};
     #[cfg(feature = "std")]
     pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-    #[cfg(feature = "unstable")]
-    #[allow(deprecated)]
-    pub use core::nonzero::{NonZero, Zeroable};
 
     #[cfg(feature = "unstable")]
     pub use core::num::{NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};

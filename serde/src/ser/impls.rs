@@ -408,20 +408,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "unstable")]
-#[allow(deprecated)]
-impl<T> Serialize for NonZero<T>
-where
-    T: Serialize + Zeroable + Clone,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.clone().get().serialize(serializer)
-    }
-}
-
 macro_rules! nonzero_integers {
     ( $( $T: ident, )+ ) => {
         $(

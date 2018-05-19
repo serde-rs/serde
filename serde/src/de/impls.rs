@@ -2005,24 +2005,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "unstable")]
-#[allow(deprecated)]
-impl<'de, T> Deserialize<'de> for NonZero<T>
-where
-    T: Deserialize<'de> + Zeroable,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = try!(Deserialize::deserialize(deserializer));
-        match NonZero::new(value) {
-            Some(nonzero) => Ok(nonzero),
-            None => Err(Error::custom("expected a non-zero value")),
-        }
-    }
-}
-
 macro_rules! nonzero_integers {
     ( $( $T: ty, )+ ) => {
         $(
