@@ -39,12 +39,10 @@ macro_rules! uint_to {
 }
 
 pub trait FromPrimitive: Sized {
-    fn from_isize(n: isize) -> Option<Self>;
     fn from_i8(n: i8) -> Option<Self>;
     fn from_i16(n: i16) -> Option<Self>;
     fn from_i32(n: i32) -> Option<Self>;
     fn from_i64(n: i64) -> Option<Self>;
-    fn from_usize(n: usize) -> Option<Self>;
     fn from_u8(n: u8) -> Option<Self>;
     fn from_u16(n: u16) -> Option<Self>;
     fn from_u32(n: u32) -> Option<Self>;
@@ -54,10 +52,6 @@ pub trait FromPrimitive: Sized {
 macro_rules! impl_from_primitive_for_int {
     ($t:ident) => {
         impl FromPrimitive for $t {
-            #[inline]
-            fn from_isize(n: isize) -> Option<Self> {
-                int_to_int!($t, n)
-            }
             #[inline]
             fn from_i8(n: i8) -> Option<Self> {
                 int_to_int!($t, n)
@@ -73,10 +67,6 @@ macro_rules! impl_from_primitive_for_int {
             #[inline]
             fn from_i64(n: i64) -> Option<Self> {
                 int_to_int!($t, n)
-            }
-            #[inline]
-            fn from_usize(n: usize) -> Option<Self> {
-                uint_to!($t, n)
             }
             #[inline]
             fn from_u8(n: u8) -> Option<Self> {
@@ -102,10 +92,6 @@ macro_rules! impl_from_primitive_for_uint {
     ($t:ident) => {
         impl FromPrimitive for $t {
             #[inline]
-            fn from_isize(n: isize) -> Option<Self> {
-                int_to_uint!($t, n)
-            }
-            #[inline]
             fn from_i8(n: i8) -> Option<Self> {
                 int_to_uint!($t, n)
             }
@@ -120,10 +106,6 @@ macro_rules! impl_from_primitive_for_uint {
             #[inline]
             fn from_i64(n: i64) -> Option<Self> {
                 int_to_uint!($t, n)
-            }
-            #[inline]
-            fn from_usize(n: usize) -> Option<Self> {
-                uint_to!($t, n)
             }
             #[inline]
             fn from_u8(n: u8) -> Option<Self> {
@@ -149,10 +131,6 @@ macro_rules! impl_from_primitive_for_float {
     ($t:ident) => {
         impl FromPrimitive for $t {
             #[inline]
-            fn from_isize(n: isize) -> Option<Self> {
-                Some(n as Self)
-            }
-            #[inline]
             fn from_i8(n: i8) -> Option<Self> {
                 Some(n as Self)
             }
@@ -166,10 +144,6 @@ macro_rules! impl_from_primitive_for_float {
             }
             #[inline]
             fn from_i64(n: i64) -> Option<Self> {
-                Some(n as Self)
-            }
-            #[inline]
-            fn from_usize(n: usize) -> Option<Self> {
                 Some(n as Self)
             }
             #[inline]
