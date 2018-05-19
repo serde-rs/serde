@@ -514,6 +514,9 @@ pub trait Serializer: Sized {
         /// #
         /// # fn main() {}
         /// ```
+        ///
+        /// This method is available only on Rust compiler versions >=1.26. The
+        /// default behavior unconditionally returns an error.
         fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
             let _ = v;
             Err(Error::custom("i128 is not supported"))
@@ -646,6 +649,9 @@ pub trait Serializer: Sized {
         /// #
         /// # fn main() {}
         /// ```
+        ///
+        /// This method is available only on Rust compiler versions >=1.26. The
+        /// default behavior unconditionally returns an error.
         fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
             let _ = v;
             Err(Error::custom("u128 is not supported"))

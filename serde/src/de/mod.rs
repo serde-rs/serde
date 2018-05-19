@@ -886,6 +886,9 @@ pub trait Deserializer<'de>: Sized {
 
     serde_if_integer128! {
         /// Hint that the `Deserialize` type is expecting an `i128` value.
+        ///
+        /// This method is available only on Rust compiler versions >=1.26. The
+        /// default behavior unconditionally returns an error.
         fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>
@@ -917,6 +920,9 @@ pub trait Deserializer<'de>: Sized {
 
     serde_if_integer128! {
         /// Hint that the `Deserialize` type is expecting an `u128` value.
+        ///
+        /// This method is available only on Rust compiler versions >=1.26. The
+        /// default behavior unconditionally returns an error.
         fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>
@@ -1275,7 +1281,8 @@ pub trait Visitor<'de>: Sized {
     serde_if_integer128! {
         /// The input contains a `i128`.
         ///
-        /// The default implementation fails with a type error.
+        /// This method is available only on Rust compiler versions >=1.26. The
+        /// default implementation fails with a type error.
         fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
         where
             E: Error,
@@ -1334,7 +1341,8 @@ pub trait Visitor<'de>: Sized {
     serde_if_integer128! {
         /// The input contains a `u128`.
         ///
-        /// The default implementation fails with a type error.
+        /// This method is available only on Rust compiler versions >=1.26. The
+        /// default implementation fails with a type error.
         fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
         where
             E: Error,
