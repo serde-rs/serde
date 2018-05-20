@@ -599,7 +599,8 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
     {
         match self.variant.take() {
             Some(Token::Str(variant)) => seed.deserialize(variant.into_deserializer()).map(Some),
-            Some(Token::Bytes(variant)) => seed.deserialize(BytesDeserializer { value: variant })
+            Some(Token::Bytes(variant)) => seed
+                .deserialize(BytesDeserializer { value: variant })
                 .map(Some),
             Some(Token::U32(variant)) => seed.deserialize(variant.into_deserializer()).map(Some),
             Some(other) => unexpected!(other),

@@ -203,7 +203,8 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
 fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -> bool {
     !field.skip_deserializing() && field.deserialize_with().is_none() && field.de_bound().is_none()
         && variant.map_or(true, |variant| {
-            !variant.skip_deserializing() && variant.deserialize_with().is_none()
+            !variant.skip_deserializing()
+                && variant.deserialize_with().is_none()
                 && variant.de_bound().is_none()
         })
 }
@@ -304,7 +305,8 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     assert!(!params.has_getter);
 
     if cont.attrs.type_from().is_some() || cont.attrs.identifier().is_some()
-        || cont.data
+        || cont
+            .data
             .all_fields()
             .all(|f| f.attrs.deserialize_with().is_some())
     {
@@ -695,7 +697,8 @@ fn deserialize_seq_in_place(
     };
 
     let mut index_in_seq = 0usize;
-    let write_values = vars.clone()
+    let write_values = vars
+        .clone()
         .zip(fields)
         .enumerate()
         .map(|(field_index, (_, field))| {
@@ -2596,7 +2599,8 @@ fn deserialize_map_in_place(
             let missing_expr = expr_is_missing(field, cattrs);
             // If missing_expr unconditionally returns an error, don't try
             // to assign its value to self.place.
-            if field.attrs.default().is_none() && cattrs.default().is_none()
+            if field.attrs.default().is_none()
+                && cattrs.default().is_none()
                 && field.attrs.deserialize_with().is_some()
             {
                 let missing_expr = Stmts(missing_expr);

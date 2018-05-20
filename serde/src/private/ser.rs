@@ -947,7 +947,8 @@ mod content {
         where
             T: Serialize,
         {
-            let key = self.key
+            let key = self
+                .key
                 .take()
                 .expect("serialize_value called before serialize_key");
             let value = try!(value.serialize(ContentSerializer::<E>::new()));

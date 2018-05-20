@@ -1411,7 +1411,8 @@ impl<'de> Visitor<'de> for OsStringVisitor {
         use std::os::windows::ffi::OsStringExt;
 
         match try!(data.variant()) {
-            (OsStringKind::Windows, v) => v.newtype_variant::<Vec<u16>>()
+            (OsStringKind::Windows, v) => v
+                .newtype_variant::<Vec<u16>>()
                 .map(|vec| OsString::from_wide(&vec)),
             (OsStringKind::Unix, _) => Err(Error::custom(
                 "cannot deserialize Unix OS string on Windows",

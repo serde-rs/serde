@@ -2323,7 +2323,8 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.iter.next() {
-                Some(value) => seed.deserialize(ContentRefDeserializer::new(value))
+                Some(value) => seed
+                    .deserialize(ContentRefDeserializer::new(value))
                     .map(Some),
                 None => Ok(None),
             }
@@ -2821,14 +2822,13 @@ where
             // about.  In case we do not know which fields we want, we take them all.
             let use_item = match *item {
                 None => false,
-                Some((ref c, _)) => {
-                    c.as_str()
-                        .map_or(self.fields.is_none(), |key| match self.fields {
-                            None => true,
-                            Some(fields) if fields.contains(&key) => true,
-                            _ => false,
-                        })
-                }
+                Some((ref c, _)) => c.as_str().map_or(self.fields.is_none(), |key| {
+                    match self.fields {
+                        None => true,
+                        Some(fields) if fields.contains(&key) => true,
+                        _ => false,
+                    }
+                }),
             };
 
             if use_item {

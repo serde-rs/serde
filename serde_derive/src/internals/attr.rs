@@ -1426,7 +1426,9 @@ fn is_primitive_type(ty: &syn::Type, primitive: &str) -> bool {
 }
 
 fn is_primitive_path(path: &syn::Path, primitive: &str) -> bool {
-    path.leading_colon.is_none() && path.segments.len() == 1 && path.segments[0].ident == primitive
+    path.leading_colon.is_none()
+        && path.segments.len() == 1
+        && path.segments[0].ident == primitive
         && path.segments[0].arguments.is_empty()
 }
 

@@ -55,7 +55,8 @@ pub fn with_where_predicates_from_fields(
     generics: &syn::Generics,
     from_field: fn(&attr::Field) -> Option<&[syn::WherePredicate]>,
 ) -> syn::Generics {
-    let predicates = cont.data
+    let predicates = cont
+        .data
         .all_fields()
         .flat_map(|field| from_field(&field.attrs))
         .flat_map(|predicates| predicates.to_vec());
@@ -284,7 +285,8 @@ fn type_of_item(cont: &Container) -> syn::Type {
                     syn::AngleBracketedGenericArguments {
                         colon2_token: None,
                         lt_token: Default::default(),
-                        args: cont.generics
+                        args: cont
+                            .generics
                             .params
                             .iter()
                             .map(|param| match *param {

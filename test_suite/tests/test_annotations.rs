@@ -2074,15 +2074,11 @@ fn test_flatten_untagged_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(untagged)]
     enum Inner {
-        Variant {
-            a: i32,
-        },
+        Variant { a: i32 },
     }
 
     let data = Outer {
-        inner: Inner::Variant {
-            a: 0,
-        }
+        inner: Inner::Variant { a: 0 },
     };
 
     assert_tokens(
@@ -2118,12 +2114,8 @@ fn test_flatten_option() {
 
     assert_tokens(
         &Outer {
-            inner1: Some(Inner1 {
-                inner1: 1,
-            }),
-            inner2: Some(Inner2 {
-                inner2: 2,
-            }),
+            inner1: Some(Inner1 { inner1: 1 }),
+            inner2: Some(Inner2 { inner2: 2 }),
         },
         &[
             Token::Map { len: None },
@@ -2137,9 +2129,7 @@ fn test_flatten_option() {
 
     assert_tokens(
         &Outer {
-            inner1: Some(Inner1 {
-                inner1: 1,
-            }),
+            inner1: Some(Inner1 { inner1: 1 }),
             inner2: None,
         },
         &[
@@ -2153,9 +2143,7 @@ fn test_flatten_option() {
     assert_tokens(
         &Outer {
             inner1: None,
-            inner2: Some(Inner2 {
-                inner2: 2,
-            }),
+            inner2: Some(Inner2 { inner2: 2 }),
         },
         &[
             Token::Map { len: None },
@@ -2170,9 +2158,6 @@ fn test_flatten_option() {
             inner1: None,
             inner2: None,
         },
-        &[
-            Token::Map { len: None },
-            Token::MapEnd,
-        ],
+        &[Token::Map { len: None }, Token::MapEnd],
     );
 }
