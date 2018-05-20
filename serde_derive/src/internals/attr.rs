@@ -776,6 +776,7 @@ pub struct Field {
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
     getter: Option<syn::ExprPath>,
     flatten: bool,
+    transparent: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -1077,6 +1078,7 @@ impl Field {
             borrowed_lifetimes: borrowed_lifetimes,
             getter: getter.get(),
             flatten: flatten.get(),
+            transparent: false,
         }
     }
 
@@ -1135,6 +1137,14 @@ impl Field {
 
     pub fn flatten(&self) -> bool {
         self.flatten
+    }
+
+    pub fn transparent(&self) -> bool {
+        self.transparent
+    }
+
+    pub fn mark_transparent(&mut self) {
+        self.transparent = true;
     }
 }
 

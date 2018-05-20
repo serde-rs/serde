@@ -13,13 +13,13 @@ use syn::{self, Ident, Index, Member};
 use bound;
 use fragment::{Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, Ctxt};
+use internals::{attr, Ctxt, Derive};
 use pretend;
 use try;
 
 pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, String> {
     let ctxt = Ctxt::new();
-    let cont = Container::from_ast(&ctxt, input);
+    let cont = Container::from_ast(&ctxt, input, Derive::Serialize);
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
@@ -194,7 +194,7 @@ fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     };
 
     let self_var = params.self_var;
-    let transparent_field = find_transparent_field(fields);
+    let transparent_field = fields.iter().find(|f| f.attrs.transparent()).unwrap();
     let member = &transparent_field.member;
 
     let path = match transparent_field.attrs.serialize_with() {
@@ -204,32 +204,6 @@ fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
 
     quote_block! {
         #path(&#self_var.#member, __serializer)
-    }
-}
-
-fn find_transparent_field<'a>(fields: &'a [Field<'a>]) -> &'a Field<'a> {
-    let mut transparent_field = None;
-
-    for field in fields {
-        if field.attrs.skip_serializing() {
-            continue;
-        }
-        if let syn::Type::Path(ref ty) = field.ty {
-            if let Some(seg) = ty.path.segments.last() {
-                if seg.into_value().ident == "PhantomData" {
-                    continue;
-                }
-            }
-        }
-        if transparent_field.is_some() {
-            panic!("Ambiguous transparent field");
-        }
-        transparent_field = Some(field);
-    }
-
-    match transparent_field {
-        Some(transparent_field) => transparent_field,
-        None => panic!("No field can be transparent"),
     }
 }
 
