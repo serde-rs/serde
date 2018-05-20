@@ -676,8 +676,6 @@ fn deserialize_seq_in_place(
     cattrs: &attr::Container,
     expecting: &str,
 ) -> Fragment {
-    let vars = (0..fields.len()).map(field_i as fn(_) -> _);
-
     // XXX: do we need an error for flattening here?
 
     let deserialized_count = fields
@@ -691,35 +689,31 @@ fn deserialize_seq_in_place(
     };
 
     let mut index_in_seq = 0usize;
-    let write_values = vars
-        .clone()
-        .zip(fields)
-        .map(|(_, field)| {
-            let member = &field.member;
+    let write_values = fields.iter().map(|field| {
+        let member = &field.member;
 
-            if field.attrs.skip_deserializing() {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote! {
-                    self.place.#member = #default;
-                }
-            } else {
-                let return_invalid_length = quote! {
-                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
-                };
-                let write = match field.attrs.deserialize_with() {
-                    None => {
-                        quote! {
-                            if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                _serde::private::de::InPlaceSeed(&mut self.place.#member)))
-                            {
-                                #return_invalid_length
-                            }
+        if field.attrs.skip_deserializing() {
+            let default = Expr(expr_is_missing(field, cattrs));
+            quote! {
+                self.place.#member = #default;
+            }
+        } else {
+            let return_invalid_length = quote! {
+                return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+            };
+            let write = match field.attrs.deserialize_with() {
+                None => {
+                    quote! {
+                        if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
+                            _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                        {
+                            #return_invalid_length
                         }
                     }
-                    Some(path) => {
-                        let (wrapper, wrapper_ty) =
-                            wrap_deserialize_field_with(params, field.ty, path);
-                        quote!({
+                }
+                Some(path) => {
+                    let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+                    quote!({
                             #wrapper
                             match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
                                 _serde::export::Some(__wrap) => {
@@ -730,12 +724,12 @@ fn deserialize_seq_in_place(
                                 }
                             }
                         })
-                    }
-                };
-                index_in_seq += 1;
-                write
-            }
-        });
+                }
+            };
+            index_in_seq += 1;
+            write
+        }
+    });
 
     let this = &params.this;
     let (_, ty_generics, _) = params.generics.split_for_impl();
