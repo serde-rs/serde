@@ -269,7 +269,9 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
 }
 
 fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if let Some(type_from) = cont.attrs.type_from() {
+    if cont.attrs.transparent() {
+        deserialize_transparent(cont, params)
+    } else if let Some(type_from) = cont.attrs.type_from() {
         deserialize_from(type_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match cont.data {
@@ -298,7 +300,9 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     // deserialize_in_place for remote derives.
     assert!(!params.has_getter);
 
-    if cont.attrs.type_from().is_some() || cont.attrs.identifier().is_some()
+    if cont.attrs.transparent()
+        || cont.attrs.type_from().is_some()
+        || cont.attrs.identifier().is_some()
         || cont
             .data
             .all_fields()
@@ -342,6 +346,69 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 #[cfg(not(feature = "deserialize_in_place"))]
 fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<Stmts> {
     None
+}
+
+fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
+    let fields = match cont.data {
+        Data::Struct(_, ref fields) => fields,
+        Data::Enum(_) => unreachable!(),
+    };
+
+    let this = &params.this;
+    let transparent_field = find_transparent_field(fields);
+
+    let path = match transparent_field.attrs.deserialize_with() {
+        Some(path) => quote!(#path),
+        None => quote!(_serde::Deserialize::deserialize),
+    };
+
+    let assign = fields.iter().map(|field| {
+        let member = &field.member;
+        if field as *const Field == transparent_field as *const Field {
+            quote!(#member: __transparent)
+        } else {
+            let value = match *field.attrs.default() {
+                attr::Default::Default => quote!(_serde::export::Default::default()),
+                attr::Default::Path(ref path) => quote!(#path()),
+                attr::Default::None => quote!(_serde::export::PhantomData),
+            };
+            quote!(#member: #value)
+        }
+    });
+
+    quote_block! {
+        _serde::export::Result::map(
+            #path(__deserializer),
+            |__transparent| #this { #(#assign),* })
+    }
+}
+
+fn find_transparent_field<'a>(fields: &'a [Field<'a>]) -> &'a Field<'a> {
+    let mut transparent_field = None;
+
+    for field in fields {
+        if field.attrs.skip_deserializing() {
+            continue;
+        }
+        if field.attrs.default().is_none() {
+            if let syn::Type::Path(ref ty) = field.ty {
+                if let Some(seg) = ty.path.segments.last() {
+                    if seg.into_value().ident == "PhantomData" {
+                        continue;
+                    }
+                }
+            }
+            if transparent_field.is_some() {
+                panic!("Ambiguous transparent field");
+            }
+            transparent_field = Some(field);
+        }
+    }
+
+    match transparent_field {
+        Some(transparent_field) => transparent_field,
+        None => panic!("No field can be transparent"),
+    }
 }
 
 fn deserialize_from(type_from: &syn::Type) -> Fragment {

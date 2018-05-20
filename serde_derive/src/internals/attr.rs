@@ -789,7 +789,6 @@ pub enum Default {
 }
 
 impl Default {
-    #[cfg(feature = "deserialize_in_place")]
     pub fn is_none(&self) -> bool {
         match *self {
             Default::None => true,
