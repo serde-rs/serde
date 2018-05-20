@@ -105,6 +105,7 @@ impl Name {
 /// Represents container (e.g. struct) attribute information
 pub struct Container {
     name: Name,
+    transparent: bool,
     deny_unknown_fields: bool,
     default: Default,
     rename_all: RenameRule,
@@ -181,6 +182,7 @@ impl Container {
     pub fn from_ast(cx: &Ctxt, item: &syn::DeriveInput) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
+        let mut transparent = BoolAttr::none(cx, "transparent");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut default = Attr::none(cx, "default");
         let mut rename_all = Attr::none(cx, "rename_all");
@@ -226,6 +228,11 @@ impl Container {
                                 )),
                             }
                         }
+                    }
+
+                    // Parse `#[serde(transparent)]`
+                    Meta(Word(word)) if word == "transparent" => {
+                        transparent.set_true();
                     }
 
                     // Parse `#[serde(deny_unknown_fields)]`
@@ -376,6 +383,7 @@ impl Container {
                 serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
                 deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
             },
+            transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
@@ -396,6 +404,10 @@ impl Container {
 
     pub fn rename_all(&self) -> &RenameRule {
         &self.rename_all
+    }
+
+    pub fn transparent(&self) -> bool {
+        self.transparent
     }
 
     pub fn deny_unknown_fields(&self) -> bool {
