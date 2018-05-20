@@ -20,6 +20,7 @@ pub fn check(cx: &Ctxt, cont: &Container) {
     check_variant_skip_attrs(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
     check_adjacent_tag_conflict(cx, cont);
+    check_transparent(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -275,6 +276,31 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
             type_tag
         );
         cx.error(message);
+    }
+}
+
+/// Enums and unit structs cannot be transparent.
+fn check_transparent(cx: &Ctxt, cont: &Container) {
+    if !cont.attrs.transparent() {
+        return;
+    }
+
+    if cont.attrs.type_from().is_some() {
+        cx.error("#[serde(transparent)] is not allowed with #[serde(from = \"...\")]");
+    }
+
+    if cont.attrs.type_into().is_some() {
+        cx.error("#[serde(transparent)] is not allowed with #[serde(into = \"...\")]");
+    }
+
+    match cont.data {
+        Data::Enum(_) => {
+            cx.error("#[serde(transparent)] is not allowed on an enum");
+        }
+        Data::Struct(Style::Unit, _) => {
+            cx.error("#[serde(transparent)] is not allowed on a unit struct");
+        }
+        _ => {}
     }
 }
 
