@@ -579,8 +579,6 @@ fn deserialize_seq(
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
-    // XXX: do we need an error for flattening here?
-
     let deserialized_count = fields
         .iter()
         .filter(|field| !field.attrs.skip_deserializing())
@@ -676,8 +674,6 @@ fn deserialize_seq_in_place(
     cattrs: &attr::Container,
     expecting: &str,
 ) -> Fragment {
-    // XXX: do we need an error for flattening here?
-
     let deserialized_count = fields
         .iter()
         .filter(|field| !field.attrs.skip_deserializing())
