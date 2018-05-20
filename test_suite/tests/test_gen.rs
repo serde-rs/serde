@@ -643,6 +643,16 @@ fn test_gen() {
     struct ImpliciltyBorrowedOption<'a> {
         option: std::option::Option<&'a str>,
     }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum UntaggedNewtypeVariantWith {
+        Newtype(
+            #[serde(serialize_with = "ser_x")]
+            #[serde(deserialize_with = "de_x")]
+            X,
+        ),
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

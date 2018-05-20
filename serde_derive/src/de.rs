@@ -1802,10 +1802,8 @@ fn deserialize_untagged_newtype_variant(
         }
         Some(path) => {
             quote_block! {
-                let __value: #field_ty = _serde::export::Result::map(
-                    #path(#deserializer),
-                    #this::#variant_ident);
-                __value
+                let __value: _serde::export::Result<#field_ty, _> = #path(#deserializer);
+                _serde::export::Result::map(__value, #this::#variant_ident)
             }
         }
     }
