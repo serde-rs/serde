@@ -166,7 +166,9 @@ fn needs_serialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -
 }
 
 fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if let Some(type_into) = cont.attrs.type_into() {
+    if cont.attrs.transparent() {
+        serialize_transparent(cont, params)
+    } else if let Some(type_into) = cont.attrs.type_into() {
         serialize_into(params, type_into)
     } else {
         match cont.data {
@@ -182,6 +184,52 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
             }
             Data::Struct(Style::Unit, _) => serialize_unit_struct(&cont.attrs),
         }
+    }
+}
+
+fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
+    let fields = match cont.data {
+        Data::Struct(_, ref fields) => fields,
+        Data::Enum(_) => unreachable!(),
+    };
+
+    let self_var = params.self_var;
+    let transparent_field = find_transparent_field(fields);
+    let member = &transparent_field.member;
+
+    let path = match transparent_field.attrs.serialize_with() {
+        Some(path) => quote!(#path),
+        None => quote!(_serde::Serialize::serialize),
+    };
+
+    quote_block! {
+        #path(&#self_var.#member, __serializer)
+    }
+}
+
+fn find_transparent_field<'a>(fields: &'a [Field<'a>]) -> &'a Field<'a> {
+    let mut transparent_field = None;
+
+    for field in fields {
+        if field.attrs.skip_serializing() {
+            continue;
+        }
+        if let syn::Type::Path(ref ty) = field.ty {
+            if let Some(seg) = ty.path.segments.last() {
+                if seg.into_value().ident == "PhantomData" {
+                    continue;
+                }
+            }
+        }
+        if transparent_field.is_some() {
+            panic!("Ambiguous transparent field");
+        }
+        transparent_field = Some(field);
+    }
+
+    match transparent_field {
+        Some(transparent_field) => transparent_field,
+        None => panic!("No field can be transparent"),
     }
 }
 
