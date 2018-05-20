@@ -113,8 +113,8 @@ fn pretend_variants_used(cont: &Container) -> Tokens {
 
         let pat = match variant.style {
             Style::Struct => {
-                let names = variant.fields.iter().map(|field| field.ident);
-                quote!({ #(#names: #placeholders),* })
+                let members = variant.fields.iter().map(|field| &field.member);
+                quote!({ #(#members: #placeholders),* })
             }
             Style::Tuple | Style::Newtype => quote!(( #(#placeholders),* )),
             Style::Unit => quote!(),
@@ -134,8 +134,8 @@ fn pretend_variants_used(cont: &Container) -> Tokens {
 }
 
 fn struct_pattern(fields: &[Field]) -> Tokens {
-    let names = fields.iter().map(|field| field.ident);
+    let members = fields.iter().map(|field| &field.member);
     let placeholders =
         (0..fields.len()).map(|i| Ident::new(&format!("__v{}", i), Span::call_site()));
-    quote!({ #(#names: ref #placeholders),* })
+    quote!({ #(#members: ref #placeholders),* })
 }

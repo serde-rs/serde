@@ -9,6 +9,7 @@
 use internals::ast::{Container, Data, Field, Style};
 use internals::attr::{EnumTag, Identifier};
 use internals::Ctxt;
+use syn::Member;
 
 /// Cross-cutting checks that require looking at more than a single attrs
 /// object. Simpler checks should happen when parsing and building the attrs.
@@ -171,17 +172,14 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 ));
             }
 
-            for (i, field) in variant.fields.iter().enumerate() {
-                let ident = field
-                    .ident
-                    .as_ref()
-                    .map_or_else(|| format!("{}", i), |ident| format!("`{}`", ident));
+            for field in &variant.fields {
+                let member = member_message(&field.member);
 
                 if field.attrs.skip_serializing() {
                     cx.error(format!(
                         "variant `{}` cannot have both #[serde(serialize_with)] and \
                          a field {} marked with #[serde(skip_serializing)]",
-                        variant.ident, ident
+                        variant.ident, member
                     ));
                 }
 
@@ -189,7 +187,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                     cx.error(format!(
                         "variant `{}` cannot have both #[serde(serialize_with)] and \
                          a field {} marked with #[serde(skip_serializing_if)]",
-                        variant.ident, ident
+                        variant.ident, member
                     ));
                 }
             }
@@ -204,17 +202,14 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 ));
             }
 
-            for (i, field) in variant.fields.iter().enumerate() {
+            for field in &variant.fields {
                 if field.attrs.skip_deserializing() {
-                    let ident = field
-                        .ident
-                        .as_ref()
-                        .map_or_else(|| format!("{}", i), |ident| format!("`{}`", ident));
+                    let member = member_message(&field.member);
 
                     cx.error(format!(
                         "variant `{}` cannot have both #[serde(deserialize_with)] \
                          and a field {} marked with #[serde(skip_deserializing)]",
-                        variant.ident, ident
+                        variant.ident, member
                     ));
                 }
             }
@@ -280,5 +275,12 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
             type_tag
         );
         cx.error(message);
+    }
+}
+
+fn member_message(member: &Member) -> String {
+    match *member {
+        Member::Named(ref ident) => format!("`{}`", ident),
+        Member::Unnamed(ref i) => i.index.to_string(),
     }
 }

@@ -275,15 +275,9 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         match cont.data {
             Data::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, ref fields) => {
-                if fields.iter().any(|field| field.ident.is_none()) {
-                    panic!("struct has unnamed fields");
-                }
                 deserialize_struct(None, params, fields, &cont.attrs, None, &Untagged::No)
             }
             Data::Struct(Style::Tuple, ref fields) | Data::Struct(Style::Newtype, ref fields) => {
-                if fields.iter().any(|field| field.ident.is_some()) {
-                    panic!("tuple struct has named fields");
-                }
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
             }
             Data::Struct(Style::Unit, _) => deserialize_unit_struct(params, &cont.attrs),
@@ -637,7 +631,7 @@ fn deserialize_seq(
     });
 
     let mut result = if is_struct {
-        let names = fields.iter().map(|f| &f.ident);
+        let names = fields.iter().map(|f| &f.member);
         quote! {
             #type_path { #( #names: #vars ),* }
         }
@@ -700,20 +694,13 @@ fn deserialize_seq_in_place(
     let write_values = vars
         .clone()
         .zip(fields)
-        .enumerate()
-        .map(|(field_index, (_, field))| {
-            // If there's no field name, assume we're a tuple-struct and use a numeric index
-            let field_name = field.ident.map(Member::Named).unwrap_or_else(|| {
-                Member::Unnamed(Index {
-                    index: field_index as u32,
-                    span: Span::call_site(),
-                })
-            });
+        .map(|(_, field)| {
+            let member = &field.member;
 
             if field.attrs.skip_deserializing() {
                 let default = Expr(expr_is_missing(field, cattrs));
                 quote! {
-                    self.place.#field_name = #default;
+                    self.place.#member = #default;
                 }
             } else {
                 let return_invalid_length = quote! {
@@ -723,7 +710,7 @@ fn deserialize_seq_in_place(
                     None => {
                         quote! {
                             if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                _serde::private::de::InPlaceSeed(&mut self.place.#field_name)))
+                                _serde::private::de::InPlaceSeed(&mut self.place.#member)))
                             {
                                 #return_invalid_length
                             }
@@ -736,7 +723,7 @@ fn deserialize_seq_in_place(
                             #wrapper
                             match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
                                 _serde::export::Some(__wrap) => {
-                                    self.place.#field_name = __wrap.value;
+                                    self.place.#member = __wrap.value;
                                 }
                                 _serde::export::None => {
                                     #return_invalid_length
@@ -2425,12 +2412,12 @@ fn deserialize_map(
     };
 
     let result = fields_names.iter().map(|&(field, ref name)| {
-        let ident = field.ident.expect("struct contains unnamed fields");
+        let member = &field.member;
         if field.attrs.skip_deserializing() {
             let value = Expr(expr_is_missing(field, cattrs));
-            quote!(#ident: #value)
+            quote!(#member: #value)
         } else {
-            quote!(#ident: #name)
+            quote!(#member: #name)
         }
     });
 
@@ -2535,19 +2522,19 @@ fn deserialize_map_in_place(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
-            let field_name = field.ident;
+            let member = &field.member;
 
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     quote! {
-                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#field_name)))
+                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member)))
                     }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        self.place.#field_name = try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
+                        self.place.#member = try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
                     })
                 }
             };
@@ -2610,11 +2597,11 @@ fn deserialize_map_in_place(
                     }
                 }
             } else {
-                let field_name = field.ident;
+                let member = &field.member;
                 let missing_expr = Expr(missing_expr);
                 quote! {
                     if !#name {
-                        self.place.#field_name = #missing_expr;
+                        self.place.#member = #missing_expr;
                     };
                 }
             }
@@ -2720,18 +2707,15 @@ fn wrap_deserialize_variant_with(
     });
     let unwrap_fn = match variant.style {
         Style::Struct if variant.fields.len() == 1 => {
-            let field_ident = variant.fields[0].ident.unwrap();
+            let member = &variant.fields[0].member;
             quote! {
-                |__wrap| #this::#variant_ident { #field_ident: __wrap.value }
+                |__wrap| #this::#variant_ident { #member: __wrap.value }
             }
         }
         Style::Struct => {
-            let field_idents = variant
-                .fields
-                .iter()
-                .map(|field| field.ident.as_ref().unwrap());
+            let members = variant.fields.iter().map(|field| &field.member);
             quote! {
-                |__wrap| #this::#variant_ident { #(#field_idents: __wrap.value.#field_access),* }
+                |__wrap| #this::#variant_ident { #(#members: __wrap.value.#field_access),* }
             }
         }
         Style::Tuple => quote! {
@@ -2761,8 +2745,8 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
 
     match *cattrs.default() {
         attr::Default::Default | attr::Default::Path(_) => {
-            let ident = field.ident;
-            return quote_expr!(__default.#ident);
+            let member = &field.member;
+            return quote_expr!(__default.#member);
         }
         attr::Default::None => { /* below */ }
     }

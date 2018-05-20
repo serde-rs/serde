@@ -173,15 +173,9 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
         match cont.data {
             Data::Enum(ref variants) => serialize_enum(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, ref fields) => {
-                if fields.iter().any(|field| field.ident.is_none()) {
-                    panic!("struct has unnamed fields");
-                }
                 serialize_struct(params, fields, &cont.attrs)
             }
             Data::Struct(Style::Tuple, ref fields) => {
-                if fields.iter().any(|field| field.ident.is_some()) {
-                    panic!("tuple struct has named fields");
-                }
                 serialize_tuple_struct(params, fields, &cont.attrs)
             }
             Data::Struct(Style::Newtype, ref fields) => {
@@ -305,8 +299,7 @@ fn serialize_struct_as_struct(
         .map(|field| match field.attrs.skip_serializing_if() {
             None => quote!(1),
             Some(path) => {
-                let ident = field.ident.expect("struct has unnamed fields");
-                let field_expr = get_member(params, field, &Member::Named(ident));
+                let field_expr = get_member(params, field, &field.member);
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
         })
@@ -341,8 +334,7 @@ fn serialize_struct_as_map(
             .map(|field| match field.attrs.skip_serializing_if() {
                 None => quote!(1),
                 Some(path) => {
-                    let ident = field.ident.expect("struct has unnamed fields");
-                    let field_expr = get_member(params, field, &Member::Named(ident));
+                    let field_expr = get_member(params, field, &field.member);
                     quote!(if #path(#field_expr) { 0 } else { 1 })
                 }
             })
@@ -424,12 +416,9 @@ fn serialize_variant(
                 }
             }
             Style::Struct => {
-                let fields = variant
-                    .fields
-                    .iter()
-                    .map(|f| f.ident.expect("struct variant has unnamed fields"));
+                let members = variant.fields.iter().map(|f| &f.member);
                 quote! {
-                    #this::#variant_ident { #(ref #fields),* }
+                    #this::#variant_ident { #(ref #members),* }
                 }
             }
         };
@@ -657,15 +646,11 @@ fn serialize_adjacently_tagged_variant(
                 unreachable!()
             }
         }
-        Style::Newtype => vec![Ident::new("__field0", Span::call_site())],
+        Style::Newtype => vec![Member::Named(Ident::new("__field0", Span::call_site()))],
         Style::Tuple => (0..variant.fields.len())
-            .map(|i| Ident::new(&format!("__field{}", i), Span::call_site()))
+            .map(|i| Member::Named(Ident::new(&format!("__field{}", i), Span::call_site())))
             .collect(),
-        Style::Struct => variant
-            .fields
-            .iter()
-            .map(|f| f.ident.expect("struct variant has unnamed fields"))
-            .collect(),
+        Style::Struct => variant.fields.iter().map(|f| f.member.clone()).collect(),
     };
 
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
@@ -851,10 +836,10 @@ fn serialize_struct_variant<'a>(
 
     let len = serialized_fields
         .map(|field| {
-            let ident = field.ident.expect("struct has unnamed fields");
+            let member = &field.member;
 
             match field.attrs.skip_serializing_if() {
-                Some(path) => quote!(if #path(#ident) { 0 } else { 1 }),
+                Some(path) => quote!(if #path(#member) { 0 } else { 1 }),
                 None => quote!(1),
             }
         })
@@ -930,7 +915,7 @@ fn serialize_struct_variant_with_flatten<'a>(
         } => {
             let this = &params.this;
             let fields_ty = fields.iter().map(|f| &f.ty);
-            let fields_ident = &fields.iter().map(|f| f.ident).collect::<Vec<_>>();
+            let members = &fields.iter().map(|f| &f.member).collect::<Vec<_>>();
 
             let (_, ty_generics, where_clause) = params.generics.split_for_impl();
             let wrapper_generics = bound::with_lifetime_bound(&params.generics, "'__a");
@@ -947,7 +932,7 @@ fn serialize_struct_variant_with_flatten<'a>(
                     where
                         __S: _serde::Serializer,
                     {
-                        let (#(#fields_ident,)*) = self.data;
+                        let (#(#members,)*) = self.data;
                         let #let_mut __serde_state = try!(_serde::Serializer::serialize_map(
                             __serializer,
                             _serde::export::None));
@@ -962,7 +947,7 @@ fn serialize_struct_variant_with_flatten<'a>(
                     #variant_index,
                     #variant_name,
                     &__EnumFlatten {
-                        data: (#(#fields_ident,)*),
+                        data: (#(#members,)*),
                         phantom: _serde::export::PhantomData::<#this #ty_generics>,
                     })
             }
@@ -1051,12 +1036,12 @@ fn serialize_struct_visitor(
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .map(|field| {
-            let field_ident = field.ident.expect("struct has unnamed field");
+            let member = &field.member;
 
             let mut field_expr = if is_enum {
-                quote!(#field_ident)
+                quote!(#member)
             } else {
-                get_member(params, field, &Member::Named(field_ident))
+                get_member(params, field, &member)
             };
 
             let key_expr = field.attrs.name().serialize_name();
@@ -1124,11 +1109,13 @@ fn wrap_serialize_variant_with(
     let field_exprs: Vec<_> = variant
         .fields
         .iter()
-        .enumerate()
-        .map(|(i, field)| {
-            let id = field
-                .ident
-                .unwrap_or_else(|| Ident::new(&format!("__field{}", i), Span::call_site()));
+        .map(|field| {
+            let id = match field.member {
+                Member::Named(ident) => ident,
+                Member::Unnamed(ref member) => {
+                    Ident::new(&format!("__field{}", member.index), Span::call_site())
+                }
+            };
             quote!(#id)
         })
         .collect();

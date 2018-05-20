@@ -32,7 +32,7 @@ pub struct Variant<'a> {
 }
 
 pub struct Field<'a> {
-    pub ident: Option<syn::Ident>,
+    pub member: syn::Member,
     pub attrs: attr::Field,
     pub ty: &'a syn::Type,
     pub original: &'a syn::Field,
@@ -166,7 +166,10 @@ fn fields_from_ast<'a>(
         .iter()
         .enumerate()
         .map(|(i, field)| Field {
-            ident: field.ident,
+            member: match field.ident {
+                Some(ident) => syn::Member::Named(ident),
+                None => syn::Member::Unnamed(i.into()),
+            },
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
             original: field,
