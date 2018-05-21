@@ -231,7 +231,7 @@ impl Container {
                     }
 
                     // Parse `#[serde(transparent)]`
-                    Meta(Word(word)) if word == "transparent" => {
+                    Meta(Word(ref word)) if word == "transparent" => {
                         transparent.set_true();
                     }
 

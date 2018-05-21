@@ -193,7 +193,7 @@ fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
         Data::Enum(_) => unreachable!(),
     };
 
-    let self_var = params.self_var;
+    let self_var = &params.self_var;
     let transparent_field = fields.iter().find(|f| f.attrs.transparent()).unwrap();
     let member = &transparent_field.member;
 
