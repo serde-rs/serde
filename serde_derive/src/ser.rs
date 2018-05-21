@@ -6,8 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use proc_macro2::Span;
-use quote::Tokens;
+use proc_macro2::{Span, TokenStream};
 use syn::spanned::Spanned;
 use syn::{self, Ident, Index, Member};
 
@@ -18,13 +17,13 @@ use internals::{attr, Ctxt};
 use pretend;
 use try;
 
-pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
+pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
-    let ident = cont.ident;
+    let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let dummy_const = Ident::new(&format!("_IMPL_SERIALIZE_FOR_{}", ident), Span::call_site());
@@ -110,7 +109,7 @@ impl Parameters {
 
         let this = match cont.attrs.remote() {
             Some(remote) => remote.clone(),
-            None => cont.ident.into(),
+            None => cont.ident.clone().into(),
         };
 
         let generics = build_generics(cont);
@@ -125,8 +124,8 @@ impl Parameters {
 
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Serializer methods.
-    fn type_name(&self) -> &str {
-        self.this.segments.last().unwrap().value().ident.as_ref()
+    fn type_name(&self) -> String {
+        self.this.segments.last().unwrap().value().ident.to_string()
     }
 }
 
@@ -187,7 +186,7 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
 }
 
 fn serialize_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
-    let self_var = params.self_var;
+    let self_var = &params.self_var;
     quote_block! {
         _serde::Serialize::serialize(
             &_serde::export::Into::<#type_into>::into(_serde::export::Clone::clone(#self_var)),
@@ -352,7 +351,7 @@ fn serialize_struct_as_map(
 fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Container) -> Fragment {
     assert!(variants.len() as u64 <= u64::from(u32::max_value()));
 
-    let self_var = params.self_var;
+    let self_var = &params.self_var;
 
     let arms: Vec<_> = variants
         .iter()
@@ -374,9 +373,9 @@ fn serialize_variant(
     variant: &Variant,
     variant_index: u32,
     cattrs: &attr::Container,
-) -> Tokens {
+) -> TokenStream {
     let this = &params.this;
-    let variant_ident = variant.ident;
+    let variant_ident = &variant.ident;
 
     if variant.attrs.skip_serializing() {
         let skipped_msg = format!(
@@ -524,7 +523,7 @@ fn serialize_internally_tagged_variant(
     let variant_name = variant.attrs.name().serialize_name();
 
     let enum_ident_str = params.type_name();
-    let variant_ident_str = variant.ident.as_ref();
+    let variant_ident_str = variant.ident.to_string();
 
     if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -983,7 +982,7 @@ fn serialize_tuple_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     tuple_trait: &TupleTrait,
-) -> Vec<Tokens> {
+) -> Vec<TokenStream> {
     fields
         .iter()
         .enumerate()
@@ -1031,7 +1030,7 @@ fn serialize_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     struct_trait: &StructTrait,
-) -> Vec<Tokens> {
+) -> Vec<TokenStream> {
     fields
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
@@ -1095,8 +1094,8 @@ fn wrap_serialize_field_with(
     params: &Parameters,
     field_ty: &syn::Type,
     serialize_with: &syn::ExprPath,
-    field_expr: &Tokens,
-) -> Tokens {
+    field_expr: &TokenStream,
+) -> TokenStream {
     wrap_serialize_with(params, serialize_with, &[field_ty], &[quote!(#field_expr)])
 }
 
@@ -1104,14 +1103,14 @@ fn wrap_serialize_variant_with(
     params: &Parameters,
     serialize_with: &syn::ExprPath,
     variant: &Variant,
-) -> Tokens {
+) -> TokenStream {
     let field_tys: Vec<_> = variant.fields.iter().map(|field| field.ty).collect();
     let field_exprs: Vec<_> = variant
         .fields
         .iter()
         .map(|field| {
             let id = match field.member {
-                Member::Named(ident) => ident,
+                Member::Named(ref ident) => ident.clone(),
                 Member::Unnamed(ref member) => {
                     Ident::new(&format!("__field{}", member.index), Span::call_site())
                 }
@@ -1131,8 +1130,8 @@ fn wrap_serialize_with(
     params: &Parameters,
     serialize_with: &syn::ExprPath,
     field_tys: &[&syn::Type],
-    field_exprs: &[Tokens],
-) -> Tokens {
+    field_exprs: &[TokenStream],
+) -> TokenStream {
     let this = &params.this;
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
@@ -1178,7 +1177,7 @@ fn wrap_serialize_with(
 //     _serde::ser::SerializeStruct::end(__serde_state)
 //
 // where we want to omit the `mut` to avoid a warning.
-fn mut_if(is_mut: bool) -> Option<Tokens> {
+fn mut_if(is_mut: bool) -> Option<TokenStream> {
     if is_mut {
         Some(quote!(mut))
     } else {
@@ -1186,8 +1185,8 @@ fn mut_if(is_mut: bool) -> Option<Tokens> {
     }
 }
 
-fn get_member(params: &Parameters, field: &Field, member: &Member) -> Tokens {
-    let self_var = params.self_var;
+fn get_member(params: &Parameters, field: &Field, member: &Member) -> TokenStream {
+    let self_var = &params.self_var;
     match (params.is_remote, field.attrs.getter()) {
         (false, None) => quote!(&#self_var.#member),
         (true, None) => {
@@ -1212,7 +1211,7 @@ enum StructTrait {
 }
 
 impl StructTrait {
-    fn serialize_field(&self, span: Span) -> Tokens {
+    fn serialize_field(&self, span: Span) -> TokenStream {
         match *self {
             StructTrait::SerializeMap => {
                 quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry)
@@ -1226,7 +1225,7 @@ impl StructTrait {
         }
     }
 
-    fn skip_field(&self, span: Span) -> Option<Tokens> {
+    fn skip_field(&self, span: Span) -> Option<TokenStream> {
         match *self {
             StructTrait::SerializeMap => None,
             StructTrait::SerializeStruct => {
@@ -1246,7 +1245,7 @@ enum TupleTrait {
 }
 
 impl TupleTrait {
-    fn serialize_element(&self, span: Span) -> Tokens {
+    fn serialize_element(&self, span: Span) -> TokenStream {
         match *self {
             TupleTrait::SerializeTuple => {
                 quote_spanned!(span=> _serde::ser::SerializeTuple::serialize_element)

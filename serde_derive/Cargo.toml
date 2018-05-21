@@ -23,9 +23,9 @@ name = "serde_derive"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "0.3"
-quote = "0.5.2"
-syn = { version = "0.13", features = ["visit"] }
+proc-macro2 = "0.4"
+quote = "0.6"
+syn = { version = "0.14", features = ["visit"] }
 
 [dev-dependencies]
 serde = { version = "1.0", path = "../serde" }
