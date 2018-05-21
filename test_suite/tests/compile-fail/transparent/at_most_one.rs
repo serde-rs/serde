@@ -1,4 +1,4 @@
-// Copyright 2017 Serde Developers
+// Copyright 2018 Serde Developers
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -6,17 +6,15 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-pub mod ast;
-pub mod attr;
+#[macro_use]
+extern crate serde_derive;
 
-mod ctxt;
-pub use self::ctxt::Ctxt;
-
-mod case;
-mod check;
-
-#[derive(Copy, Clone)]
-pub enum Derive {
-    Serialize,
-    Deserialize,
+#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[serde(transparent)]
+struct S {
+    //~^^^ HELP: #[serde(transparent)] requires struct to have at most one transparent field
+    a: u8,
+    b: u8,
 }
+
+fn main() {}

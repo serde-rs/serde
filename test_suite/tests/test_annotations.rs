@@ -15,6 +15,7 @@ extern crate serde;
 use self::serde::de::{self, Unexpected};
 use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 extern crate serde_test;
 use self::serde_test::{
@@ -2160,4 +2161,42 @@ fn test_flatten_option() {
         },
         &[Token::Map { len: None }, Token::MapEnd],
     );
+}
+
+#[test]
+fn test_transparent_struct() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(transparent)]
+    struct Transparent {
+        #[serde(skip)]
+        a: bool,
+        b: u32,
+        #[serde(skip)]
+        c: bool,
+        d: PhantomData<()>,
+    }
+
+    assert_tokens(
+        &Transparent {
+            a: false,
+            b: 1,
+            c: false,
+            d: PhantomData,
+        },
+        &[Token::U32(1)],
+    );
+}
+
+#[test]
+fn test_transparent_tuple_struct() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(transparent)]
+    struct Transparent(
+        #[serde(skip)] bool,
+        u32,
+        #[serde(skip)] bool,
+        PhantomData<()>,
+    );
+
+    assert_tokens(&Transparent(false, 1, false, PhantomData), &[Token::U32(1)]);
 }

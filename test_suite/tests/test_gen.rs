@@ -653,6 +653,14 @@ fn test_gen() {
             X,
         ),
     }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(transparent)]
+    struct TransparentWith {
+        #[serde(serialize_with = "ser_x")]
+        #[serde(deserialize_with = "de_x")]
+        x: X,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

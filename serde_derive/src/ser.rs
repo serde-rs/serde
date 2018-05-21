@@ -13,13 +13,13 @@ use syn::{self, Ident, Index, Member};
 use bound;
 use fragment::{Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, Ctxt};
+use internals::{attr, Ctxt, Derive};
 use pretend;
 use try;
 
 pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, String> {
     let ctxt = Ctxt::new();
-    let cont = Container::from_ast(&ctxt, input);
+    let cont = Container::from_ast(&ctxt, input, Derive::Serialize);
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
@@ -166,7 +166,9 @@ fn needs_serialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -
 }
 
 fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if let Some(type_into) = cont.attrs.type_into() {
+    if cont.attrs.transparent() {
+        serialize_transparent(cont, params)
+    } else if let Some(type_into) = cont.attrs.type_into() {
         serialize_into(params, type_into)
     } else {
         match cont.data {
@@ -182,6 +184,26 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
             }
             Data::Struct(Style::Unit, _) => serialize_unit_struct(&cont.attrs),
         }
+    }
+}
+
+fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
+    let fields = match cont.data {
+        Data::Struct(_, ref fields) => fields,
+        Data::Enum(_) => unreachable!(),
+    };
+
+    let self_var = &params.self_var;
+    let transparent_field = fields.iter().find(|f| f.attrs.transparent()).unwrap();
+    let member = &transparent_field.member;
+
+    let path = match transparent_field.attrs.serialize_with() {
+        Some(path) => quote!(#path),
+        None => quote!(_serde::Serialize::serialize),
+    };
+
+    quote_block! {
+        #path(&#self_var.#member, __serializer)
     }
 }
 
