@@ -87,7 +87,7 @@ impl<'a> Container<'a> {
         }
 
         let item = Container {
-            ident: item.ident,
+            ident: item.ident.clone(),
             attrs: attrs,
             data: data,
             generics: &item.generics,
@@ -124,7 +124,7 @@ fn enum_from_ast<'a>(
             let (style, fields) =
                 struct_from_ast(cx, &variant.fields, Some(&attrs), container_default);
             Variant {
-                ident: variant.ident,
+                ident: variant.ident.clone(),
                 attrs: attrs,
                 style: style,
                 fields: fields,
@@ -167,7 +167,7 @@ fn fields_from_ast<'a>(
         .enumerate()
         .map(|(i, field)| Field {
             member: match field.ident {
-                Some(ident) => syn::Member::Named(ident),
+                Some(ref ident) => syn::Member::Named(ident.clone()),
                 None => syn::Member::Unnamed(i.into()),
             },
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),

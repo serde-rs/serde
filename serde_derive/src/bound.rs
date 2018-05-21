@@ -140,9 +140,9 @@ pub fn with_bound(
                 }
             }
             if path.leading_colon.is_none() && path.segments.len() == 1 {
-                let id = path.segments[0].ident;
-                if self.all_type_params.contains(&id) {
-                    self.relevant_type_params.insert(id);
+                let id = &path.segments[0].ident;
+                if self.all_type_params.contains(id) {
+                    self.relevant_type_params.insert(id.clone());
                 }
             }
             visit::visit_path(self, path);
@@ -157,7 +157,7 @@ pub fn with_bound(
         fn visit_macro(&mut self, _mac: &'ast syn::Macro) {}
     }
 
-    let all_type_params = generics.type_params().map(|param| param.ident).collect();
+    let all_type_params = generics.type_params().map(|param| param.ident.clone()).collect();
 
     let mut visitor = FindTyParams {
         all_type_params: all_type_params,
@@ -185,7 +185,7 @@ pub fn with_bound(
     let associated_type_usage = visitor.associated_type_usage;
     let new_predicates = generics
         .type_params()
-        .map(|param| param.ident)
+        .map(|param| param.ident.clone())
         .filter(|id| relevant_type_params.contains(id))
         .map(|id| syn::TypePath {
             qself: None,
@@ -247,7 +247,7 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
     let bound = syn::Lifetime::new(lifetime, Span::call_site());
     let def = syn::LifetimeDef {
         attrs: Vec::new(),
-        lifetime: bound,
+        lifetime: bound.clone(),
         colon_token: None,
         bounds: Punctuated::new(),
     };
@@ -257,10 +257,10 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
         .chain(generics.params.iter().cloned().map(|mut param| {
             match param {
                 syn::GenericParam::Lifetime(ref mut param) => {
-                    param.bounds.push(bound);
+                    param.bounds.push(bound.clone());
                 }
                 syn::GenericParam::Type(ref mut param) => {
-                    param.bounds.push(syn::TypeParamBound::Lifetime(bound));
+                    param.bounds.push(syn::TypeParamBound::Lifetime(bound.clone()));
                 }
                 syn::GenericParam::Const(_) => {}
             }
@@ -280,7 +280,7 @@ fn type_of_item(cont: &Container) -> syn::Type {
         path: syn::Path {
             leading_colon: None,
             segments: vec![syn::PathSegment {
-                ident: cont.ident,
+                ident: cont.ident.clone(),
                 arguments: syn::PathArguments::AngleBracketed(
                     syn::AngleBracketedGenericArguments {
                         colon2_token: None,
@@ -293,11 +293,11 @@ fn type_of_item(cont: &Container) -> syn::Type {
                                 syn::GenericParam::Type(ref param) => {
                                     syn::GenericArgument::Type(syn::Type::Path(syn::TypePath {
                                         qself: None,
-                                        path: param.ident.into(),
+                                        path: param.ident.clone().into(),
                                     }))
                                 }
                                 syn::GenericParam::Lifetime(ref param) => {
-                                    syn::GenericArgument::Lifetime(param.lifetime)
+                                    syn::GenericArgument::Lifetime(param.lifetime.clone())
                                 }
                                 syn::GenericParam::Const(_) => {
                                     panic!("Serde does not support const generics yet");

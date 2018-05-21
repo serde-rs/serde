@@ -6,8 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use proc_macro2::{Literal, Span};
-use quote::{ToTokens, Tokens};
+use proc_macro2::{Literal, Span, TokenStream};
+use quote::ToTokens;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{self, Ident, Index, Member};
@@ -21,13 +21,13 @@ use try;
 
 use std::collections::BTreeSet;
 
-pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<Tokens, String> {
+pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input);
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
-    let ident = cont.ident;
+    let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let dummy_const = Ident::new(
@@ -130,10 +130,10 @@ struct Parameters {
 
 impl Parameters {
     fn new(cont: &Container) -> Self {
-        let local = cont.ident;
+        let local = cont.ident.clone();
         let this = match cont.attrs.remote() {
             Some(remote) => remote.clone(),
-            None => cont.ident.into(),
+            None => cont.ident.clone().into(),
         };
         let borrowed = borrowed_lifetimes(cont);
         let generics = build_generics(cont, &borrowed);
@@ -150,8 +150,8 @@ impl Parameters {
 
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Deserializer methods.
-    fn type_name(&self) -> &str {
-        self.this.segments.last().unwrap().value().ident.as_ref()
+    fn type_name(&self) -> String {
+        self.this.segments.last().unwrap().value().ident.to_string()
     }
 }
 
@@ -382,11 +382,11 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
 }
 
 fn deserialize_tuple(
-    variant_ident: Option<syn::Ident>,
+    variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<Tokens>,
+    deserializer: Option<TokenStream>,
 ) -> Fragment {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -399,7 +399,7 @@ fn deserialize_tuple(
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
     let construct = if params.has_getter {
-        let local = params.local;
+        let local = &params.local;
         quote!(#local)
     } else {
         quote!(#this)
@@ -407,7 +407,7 @@ fn deserialize_tuple(
 
     let is_enum = variant_ident.is_some();
     let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#construct::#variant_ident),
+        Some(ref variant_ident) => quote!(#construct::#variant_ident),
         None => construct,
     };
     let expecting = match variant_ident {
@@ -486,7 +486,7 @@ fn deserialize_tuple_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<Tokens>,
+    deserializer: Option<TokenStream>,
 ) -> Fragment {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -570,7 +570,7 @@ fn deserialize_tuple_in_place(
 }
 
 fn deserialize_seq(
-    type_path: &Tokens,
+    type_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     is_struct: bool,
@@ -750,7 +750,7 @@ fn deserialize_seq_in_place(
     }
 }
 
-fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &Field) -> Tokens {
+fn deserialize_newtype_struct(type_path: &TokenStream, params: &Parameters, field: &Field) -> TokenStream {
     let delife = params.borrowed.de_lifetime();
     let field_ty = field.ty;
 
@@ -788,7 +788,7 @@ fn deserialize_newtype_struct(type_path: &Tokens, params: &Parameters, field: &F
 }
 
 #[cfg(feature = "deserialize_in_place")]
-fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> Tokens {
+fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> TokenStream {
     // We do not generate deserialize_in_place if every field has a deserialize_with.
     assert!(field.attrs.deserialize_with().is_none());
 
@@ -811,11 +811,11 @@ enum Untagged {
 }
 
 fn deserialize_struct(
-    variant_ident: Option<syn::Ident>,
+    variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<Tokens>,
+    deserializer: Option<TokenStream>,
     untagged: &Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
@@ -829,14 +829,14 @@ fn deserialize_struct(
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
     let construct = if params.has_getter {
-        let local = params.local;
+        let local = &params.local;
         quote!(#local)
     } else {
         quote!(#this)
     };
 
     let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#construct::#variant_ident),
+        Some(ref variant_ident) => quote!(#construct::#variant_ident),
         None => construct,
     };
     let expecting = match variant_ident {
@@ -965,7 +965,7 @@ fn deserialize_struct_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<Tokens>,
+    deserializer: Option<TokenStream>,
 ) -> Option<Fragment> {
     let is_enum = variant_ident.is_some();
 
@@ -1350,7 +1350,7 @@ fn deserialize_adjacently_tagged_enum(
             .filter(|&(_, variant)| !variant.attrs.skip_deserializing() && is_unit(variant))
             .map(|(i, variant)| {
                 let variant_index = field_i(i);
-                let variant_ident = variant.ident;
+                let variant_ident = &variant.ident;
                 quote! {
                     __Field::#variant_index => _serde::export::Ok(#this::#variant_ident),
                 }
@@ -1614,7 +1614,7 @@ fn deserialize_externally_tagged_variant(
         };
     }
 
-    let variant_ident = variant.ident;
+    let variant_ident = &variant.ident;
 
     match variant.style {
         Style::Unit => {
@@ -1645,19 +1645,19 @@ fn deserialize_internally_tagged_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
-    deserializer: Tokens,
+    deserializer: TokenStream,
 ) -> Fragment {
     if variant.attrs.deserialize_with().is_some() {
         return deserialize_untagged_variant(params, variant, cattrs, deserializer);
     }
 
-    let variant_ident = variant.ident;
+    let variant_ident = &variant.ident;
 
     match variant.style {
         Style::Unit => {
             let this = &params.this;
             let type_name = params.type_name();
-            let variant_name = variant.ident.as_ref();
+            let variant_name = variant.ident.to_string();
             quote_block! {
                 try!(_serde::Deserializer::deserialize_any(#deserializer, _serde::private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
                 _serde::export::Ok(#this::#variant_ident)
@@ -1685,7 +1685,7 @@ fn deserialize_untagged_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
-    deserializer: Tokens,
+    deserializer: TokenStream,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
         let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
@@ -1696,13 +1696,13 @@ fn deserialize_untagged_variant(
         };
     }
 
-    let variant_ident = variant.ident;
+    let variant_ident = &variant.ident;
 
     match variant.style {
         Style::Unit => {
             let this = &params.this;
             let type_name = params.type_name();
-            let variant_name = variant.ident.as_ref();
+            let variant_name = variant.ident.to_string();
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     #deserializer,
@@ -1738,7 +1738,7 @@ fn deserialize_untagged_variant(
 }
 
 fn deserialize_externally_tagged_newtype_variant(
-    variant_ident: syn::Ident,
+    variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
 ) -> Fragment {
@@ -1765,10 +1765,10 @@ fn deserialize_externally_tagged_newtype_variant(
 }
 
 fn deserialize_untagged_newtype_variant(
-    variant_ident: syn::Ident,
+    variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
-    deserializer: &Tokens,
+    deserializer: &TokenStream,
 ) -> Fragment {
     let this = &params.this;
     let field_ty = field.ty;
@@ -1865,7 +1865,7 @@ fn deserialize_custom_identifier(
     let this = quote!(#this);
 
     let (ordinary, fallthrough) = if let Some(last) = variants.last() {
-        let last_ident = last.ident;
+        let last_ident = &last.ident;
         if last.attrs.other() {
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::export::Ok(#this::#last_ident));
@@ -1888,7 +1888,7 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident))
+        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident.clone()))
         .collect();
 
     let names = names_idents.iter().map(|&(ref name, _)| name);
@@ -1941,10 +1941,10 @@ fn deserialize_custom_identifier(
 }
 
 fn deserialize_identifier(
-    this: &Tokens,
+    this: &TokenStream,
     fields: &[(String, Ident)],
     is_variant: bool,
-    fallthrough: Option<Tokens>,
+    fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
 ) -> Fragment {
     let field_strs = fields.iter().map(|&(ref name, _)| name);
@@ -2198,7 +2198,7 @@ fn deserialize_identifier(
 }
 
 fn deserialize_struct_as_struct_visitor(
-    struct_path: &Tokens,
+    struct_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -2227,7 +2227,7 @@ fn deserialize_struct_as_struct_visitor(
 }
 
 fn deserialize_struct_as_map_visitor(
-    struct_path: &Tokens,
+    struct_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -2247,7 +2247,7 @@ fn deserialize_struct_as_map_visitor(
 }
 
 fn deserialize_map(
-    struct_path: &Tokens,
+    struct_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -2635,9 +2635,9 @@ fn field_i(i: usize) -> Ident {
 /// in a trait to prevent it from accessing the internal `Deserialize` state.
 fn wrap_deserialize_with(
     params: &Parameters,
-    value_ty: &Tokens,
+    value_ty: &TokenStream,
     deserialize_with: &syn::ExprPath,
-) -> (Tokens, Tokens) {
+) -> (TokenStream, TokenStream) {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
@@ -2673,7 +2673,7 @@ fn wrap_deserialize_field_with(
     params: &Parameters,
     field_ty: &syn::Type,
     deserialize_with: &syn::ExprPath,
-) -> (Tokens, Tokens) {
+) -> (TokenStream, TokenStream) {
     wrap_deserialize_with(params, &quote!(#field_ty), deserialize_with)
 }
 
@@ -2681,9 +2681,9 @@ fn wrap_deserialize_variant_with(
     params: &Parameters,
     variant: &Variant,
     deserialize_with: &syn::ExprPath,
-) -> (Tokens, Tokens, Tokens) {
+) -> (TokenStream, TokenStream, TokenStream) {
     let this = &params.this;
-    let variant_ident = variant.ident;
+    let variant_ident = &variant.ident;
 
     let field_tys = variant.fields.iter().map(|field| field.ty);
     let (wrapper, wrapper_ty) =
@@ -2763,7 +2763,7 @@ struct DeImplGenerics<'a>(&'a Parameters);
 struct InPlaceImplGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeImplGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
@@ -2778,7 +2778,7 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
 
 #[cfg(feature = "deserialize_in_place")]
 impl<'a> ToTokens for InPlaceImplGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let place_lifetime = place_lifetime();
         let mut generics = self.0.generics.clone();
 
@@ -2786,12 +2786,12 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
         for param in &mut generics.params {
             match *param {
                 syn::GenericParam::Lifetime(ref mut param) => {
-                    param.bounds.push(place_lifetime.lifetime);
+                    param.bounds.push(place_lifetime.lifetime.clone());
                 }
                 syn::GenericParam::Type(ref mut param) => {
                     param
                         .bounds
-                        .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime));
+                        .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime.clone()));
                 }
                 syn::GenericParam::Const(_) => {}
             }
@@ -2823,7 +2823,7 @@ struct DeTypeGenerics<'a>(&'a Parameters);
 struct InPlaceTypeGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeTypeGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
@@ -2844,7 +2844,7 @@ impl<'a> ToTokens for DeTypeGenerics<'a> {
 
 #[cfg(feature = "deserialize_in_place")]
 impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         generics.params = Some(syn::GenericParam::Lifetime(place_lifetime()))
             .into_iter()
