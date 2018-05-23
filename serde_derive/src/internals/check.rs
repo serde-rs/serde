@@ -310,7 +310,9 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     for field in fields {
         if allow_transparent(field, derive) {
             if transparent_field.is_some() {
-                cx.error("#[serde(transparent)] requires struct to have at most one transparent field");
+                cx.error(
+                    "#[serde(transparent)] requires struct to have at most one transparent field",
+                );
                 return;
             }
             transparent_field = Some(field);
@@ -326,7 +328,7 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
             Derive::Deserialize => {
                 cx.error("#[serde(transparent)] requires at least one field that is neither skipped nor has a default");
             }
-        }
+        },
     }
 }
 

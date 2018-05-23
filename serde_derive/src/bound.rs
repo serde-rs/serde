@@ -157,7 +157,10 @@ pub fn with_bound(
         fn visit_macro(&mut self, _mac: &'ast syn::Macro) {}
     }
 
-    let all_type_params = generics.type_params().map(|param| param.ident.clone()).collect();
+    let all_type_params = generics
+        .type_params()
+        .map(|param| param.ident.clone())
+        .collect();
 
     let mut visitor = FindTyParams {
         all_type_params: all_type_params,
@@ -260,7 +263,9 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
                     param.bounds.push(bound.clone());
                 }
                 syn::GenericParam::Type(ref mut param) => {
-                    param.bounds.push(syn::TypeParamBound::Lifetime(bound.clone()));
+                    param
+                        .bounds
+                        .push(syn::TypeParamBound::Lifetime(bound.clone()));
                 }
                 syn::GenericParam::Const(_) => {}
             }

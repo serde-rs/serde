@@ -6,9 +6,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::token;
-use proc_macro2::TokenStream;
 
 pub enum Fragment {
     /// Tokens that can be used as an expression.

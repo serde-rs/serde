@@ -948,9 +948,7 @@ impl Field {
 
                     // Parse `#[serde(borrow = "'a + 'b")]`
                     Meta(NameValue(ref m)) if m.ident == "borrow" => {
-                        if let Ok(lifetimes) =
-                            parse_lit_into_lifetimes(cx, &m.ident, &m.lit)
-                        {
+                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, &m.ident, &m.lit) {
                             if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, &field.ty) {
                                 for lifetime in &lifetimes {
                                     if !borrowable.contains(lifetime) {

@@ -789,7 +789,11 @@ fn deserialize_seq_in_place(
     }
 }
 
-fn deserialize_newtype_struct(type_path: &TokenStream, params: &Parameters, field: &Field) -> TokenStream {
+fn deserialize_newtype_struct(
+    type_path: &TokenStream,
+    params: &Parameters,
+    field: &Field,
+) -> TokenStream {
     let delife = params.borrowed.de_lifetime();
     let field_ty = field.ty;
 
@@ -1927,7 +1931,12 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| (variant.attrs.name().deserialize_name(), variant.ident.clone()))
+        .map(|variant| {
+            (
+                variant.attrs.name().deserialize_name(),
+                variant.ident.clone(),
+            )
+        })
         .collect();
 
     let names = names_idents.iter().map(|&(ref name, _)| name);
@@ -2828,9 +2837,9 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
                     param.bounds.push(place_lifetime.lifetime.clone());
                 }
                 syn::GenericParam::Type(ref mut param) => {
-                    param
-                        .bounds
-                        .push(syn::TypeParamBound::Lifetime(place_lifetime.lifetime.clone()));
+                    param.bounds.push(syn::TypeParamBound::Lifetime(
+                        place_lifetime.lifetime.clone(),
+                    ));
                 }
                 syn::GenericParam::Const(_) => {}
             }
