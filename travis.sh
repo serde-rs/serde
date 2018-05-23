@@ -55,8 +55,7 @@ else
     channel build
     cd "$DIR/test_suite"
     channel test --features unstable
-    # Broken while syn and quote update to the new proc-macro API
-    #channel build --tests --features proc-macro2/nightly
+    channel build --tests --features proc-macro2/nightly
     if [ -z "${APPVEYOR}" ]; then
         cd "$DIR/test_suite/no_std"
         channel build
