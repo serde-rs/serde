@@ -144,7 +144,7 @@ mod lib {
         pub use std::*;
     }
 
-    pub use self::core::{cmp, iter, mem, ops, slice, str};
+    pub use self::core::{cmp, iter, mem, num, ops, slice, str};
     pub use self::core::{f32, f64};
     pub use self::core::{i16, i32, i64, i8, isize};
     pub use self::core::{u16, u32, u64, u8, usize};
@@ -212,9 +212,6 @@ mod lib {
     pub use std::sync::{Mutex, RwLock};
     #[cfg(feature = "std")]
     pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-    #[cfg(feature = "unstable")]
-    pub use core::num::{NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
