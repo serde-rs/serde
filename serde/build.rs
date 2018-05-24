@@ -38,4 +38,10 @@ fn main() {
     if minor >= 26 {
         println!("cargo:rustc-cfg=integer128");
     }
+
+    // Non-zero integers stabilized in Rust 1.28:
+    // https://github.com/rust-lang/rust/pull/50808
+    if minor >= 28 {
+        println!("cargo:rustc-cfg=num_nonzero");
+    }
 }

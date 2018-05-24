@@ -2007,16 +2007,16 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! nonzero_integers {
-    ( $( $T: ty, )+ ) => {
+    ( $( $T: ident, )+ ) => {
         $(
-            #[cfg(feature = "unstable")]
-            impl<'de> Deserialize<'de> for $T {
+            #[cfg(num_nonzero)]
+            impl<'de> Deserialize<'de> for num::$T {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
                     D: Deserializer<'de>,
                 {
                     let value = try!(Deserialize::deserialize(deserializer));
-                    match <$T>::new(value) {
+                    match <num::$T>::new(value) {
                         Some(nonzero) => Ok(nonzero),
                         None => Err(Error::custom("expected a non-zero value")),
                     }
