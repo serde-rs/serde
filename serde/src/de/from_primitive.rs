@@ -178,3 +178,91 @@ impl_from_primitive_for_uint!(u32);
 impl_from_primitive_for_uint!(u64);
 impl_from_primitive_for_float!(f32);
 impl_from_primitive_for_float!(f64);
+
+serde_if_integer128! {
+    impl FromPrimitive for i128 {
+        #[inline]
+        fn from_i8(n: i8) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_i16(n: i16) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_i32(n: i32) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_i64(n: i64) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_u8(n: u8) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_u16(n: u16) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_u32(n: u32) -> Option<Self> {
+            Some(n as i128)
+        }
+        #[inline]
+        fn from_u64(n: u64) -> Option<Self> {
+            Some(n as i128)
+        }
+    }
+
+    impl FromPrimitive for u128 {
+        #[inline]
+        fn from_i8(n: i8) -> Option<Self> {
+            if n >= 0 {
+                Some(n as u128)
+            } else {
+                None
+            }
+        }
+        #[inline]
+        fn from_i16(n: i16) -> Option<Self> {
+            if n >= 0 {
+                Some(n as u128)
+            } else {
+                None
+            }
+        }
+        #[inline]
+        fn from_i32(n: i32) -> Option<Self> {
+            if n >= 0 {
+                Some(n as u128)
+            } else {
+                None
+            }
+        }
+        #[inline]
+        fn from_i64(n: i64) -> Option<Self> {
+            if n >= 0 {
+                Some(n as u128)
+            } else {
+                None
+            }
+        }
+        #[inline]
+        fn from_u8(n: u8) -> Option<Self> {
+            Some(n as u128)
+        }
+        #[inline]
+        fn from_u16(n: u16) -> Option<Self> {
+            Some(n as u128)
+        }
+        #[inline]
+        fn from_u32(n: u32) -> Option<Self> {
+            Some(n as u128)
+        }
+        #[inline]
+        fn from_u64(n: u64) -> Option<Self> {
+            Some(n as u128)
+        }
+    }
+}

@@ -586,3 +586,10 @@ fn test_enum_skipped() {
         "the enum variant Enum::SkippedMap cannot be serialized",
     );
 }
+
+#[test]
+fn test_integer128() {
+    assert_ser_tokens_error(&1i128, &[], "i128 is not supported");
+
+    assert_ser_tokens_error(&1u128, &[], "u128 is not supported");
+}

@@ -219,6 +219,9 @@ mod lib {
 #[macro_use]
 mod macros;
 
+#[macro_use]
+mod integer128;
+
 pub mod de;
 pub mod ser;
 
