@@ -39,6 +39,13 @@ fn main() {
         println!("cargo:rustc-cfg=de_boxed_c_str");
     }
 
+    // From<Box<T>> for Rc<T> / Arc<T> stabilized in Rust 1.21:
+    // https://doc.rust-lang.org/std/rc/struct.Rc.html#impl-From<Box<T>>
+    // https://doc.rust-lang.org/std/sync/struct.Arc.html#impl-From<Box<T>>
+    if minor >= 21 {
+        println!("cargo:rustc-cfg=de_rc_dst");
+    }
+
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
     if minor >= 26 {
