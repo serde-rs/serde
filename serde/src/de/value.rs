@@ -44,6 +44,22 @@ use ser;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// For structs that contain a PhantomData. We do not want the trait
+// bound `E: Clone` inferred by derive(Clone).
+macro_rules! impl_copy_clone {
+    ($ty:ident $(<$lifetime:tt>)*) => {
+        impl<$($lifetime,)* E> Copy for $ty<$($lifetime,)* E> {}
+
+        impl<$($lifetime,)* E> Clone for $ty<$($lifetime,)* E> {
+            fn clone(&self) -> Self {
+                *self
+            }
+        }
+    };
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// A minimal representation of all possible errors that can occur using the
 /// `IntoDeserializer` trait.
 #[derive(Clone, Debug, PartialEq)]
@@ -124,10 +140,12 @@ where
 }
 
 /// A deserializer holding a `()`.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct UnitDeserializer<E> {
     marker: PhantomData<E>,
 }
+
+impl_copy_clone!(UnitDeserializer);
 
 impl<'de, E> de::Deserializer<'de> for UnitDeserializer<E>
 where
@@ -162,11 +180,13 @@ macro_rules! primitive_deserializer {
     ($ty:ty, $doc:tt, $name:ident, $method:ident $($cast:tt)*) => {
         #[doc = "A deserializer holding"]
         #[doc = $doc]
-        #[derive(Clone, Debug)]
+        #[derive(Debug)]
         pub struct $name<E> {
             value: $ty,
             marker: PhantomData<E>
         }
+
+        impl_copy_clone!($name);
 
         impl<'de, E> IntoDeserializer<'de, E> for $ty
         where
@@ -224,11 +244,13 @@ serde_if_integer128! {
 }
 
 /// A deserializer holding a `u32`.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct U32Deserializer<E> {
     value: u32,
     marker: PhantomData<E>,
 }
+
+impl_copy_clone!(U32Deserializer);
 
 impl<'de, E> IntoDeserializer<'de, E> for u32
 where
@@ -296,11 +318,13 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `&str`.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
     marker: PhantomData<E>,
 }
+
+impl_copy_clone!(StrDeserializer<'de>);
 
 impl<'de, 'a, E> IntoDeserializer<'de, E> for &'a str
 where
@@ -369,11 +393,13 @@ where
 
 /// A deserializer holding a `&str` with a lifetime tied to another
 /// deserializer.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct BorrowedStrDeserializer<'de, E> {
     value: &'de str,
     marker: PhantomData<E>,
 }
+
+impl_copy_clone!(BorrowedStrDeserializer<'de>);
 
 impl<'de, E> BorrowedStrDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given string.
@@ -438,10 +464,20 @@ where
 
 /// A deserializer holding a `String`.
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct StringDeserializer<E> {
     value: String,
     marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> Clone for StringDeserializer<E> {
+    fn clone(&self) -> Self {
+        StringDeserializer {
+            value: self.value.clone(),
+            marker: PhantomData,
+        }
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -514,10 +550,20 @@ where
 
 /// A deserializer holding a `Cow<str>`.
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CowStrDeserializer<'a, E> {
     value: Cow<'a, str>,
     marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, E> Clone for CowStrDeserializer<'a, E> {
+    fn clone(&self) -> Self {
+        CowStrDeserializer {
+            value: self.value.clone(),
+            marker: PhantomData,
+        }
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -593,11 +639,13 @@ where
 
 /// A deserializer holding a `&[u8]` with a lifetime tied to another
 /// deserializer.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct BorrowedBytesDeserializer<'de, E> {
     value: &'de [u8],
     marker: PhantomData<E>,
 }
+
+impl_copy_clone!(BorrowedBytesDeserializer<'de>);
 
 impl<'de, E> BorrowedBytesDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given byte slice.
