@@ -33,6 +33,12 @@ fn main() {
         Err(_) => return,
     };
 
+    // CString::into_boxed_c_str stabilized in Rust 1.20:
+    // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
+    if minor >= 20 {
+        println!("cargo:rustc-cfg=de_boxed_c_str");
+    }
+
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
     if minor >= 26 {
