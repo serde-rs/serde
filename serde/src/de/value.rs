@@ -218,6 +218,11 @@ primitive_deserializer!(f32, "an `f32`.", F32Deserializer, visit_f32);
 primitive_deserializer!(f64, "an `f64`.", F64Deserializer, visit_f64);
 primitive_deserializer!(char, "a `char`.", CharDeserializer, visit_char);
 
+serde_if_integer128! {
+    primitive_deserializer!(i128, "an `i128`.", I128Deserializer, visit_i128);
+    primitive_deserializer!(u128, "a `u128`.", U128Deserializer, visit_u128);
+}
+
 /// A deserializer holding a `u32`.
 #[derive(Clone, Debug)]
 pub struct U32Deserializer<E> {
