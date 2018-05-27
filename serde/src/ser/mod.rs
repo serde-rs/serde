@@ -251,10 +251,10 @@ pub trait Serialize {
 
 /// A **data format** that can serialize any data structure supported by Serde.
 ///
-/// The role of this trait is to define the serialization half of the Serde data
-/// model, which is a way to categorize every Rust data structure into one of 29
-/// possible types. Each method of the `Serializer` trait corresponds to one of
-/// the types of the data model.
+/// The role of this trait is to define the serialization half of the [Serde
+/// data model], which is a way to categorize every Rust data structure into one
+/// of 29 possible types. Each method of the `Serializer` trait corresponds to
+/// one of the types of the data model.
 ///
 /// Implementations of `Serialize` map themselves into this data model by
 /// invoking exactly one of the `Serializer` methods.
@@ -316,6 +316,8 @@ pub trait Serialize {
 /// is the `serde_json::value::Serializer` (distinct from the main `serde_json`
 /// serializer) that produces a `serde_json::Value` data structure in memory as
 /// output.
+///
+/// [Serde data model]: https://serde.rs/data-model.html
 ///
 /// # Example implementation
 ///

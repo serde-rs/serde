@@ -787,10 +787,10 @@ where
 /// A **data format** that can deserialize any data structure supported by
 /// Serde.
 ///
-/// The role of this trait is to define the deserialization half of the Serde
-/// data model, which is a way to categorize every Rust data type into one of 29
-/// possible types. Each method of the `Serializer` trait corresponds to one of
-/// the types of the data model.
+/// The role of this trait is to define the deserialization half of the [Serde
+/// data model], which is a way to categorize every Rust data type into one of
+/// 29 possible types. Each method of the `Serializer` trait corresponds to one
+/// of the types of the data model.
 ///
 /// Implementations of `Deserialize` map themselves into this data model by
 /// passing to the `Deserializer` a `Visitor` implementation that can receive
@@ -872,6 +872,8 @@ where
 /// what type is in the input. Know that relying on `Deserializer::deserialize_any`
 /// means your data type will be able to deserialize from self-describing
 /// formats only, ruling out Bincode and many others.
+///
+/// [Serde data model]: https://serde.rs/data-model.html
 ///
 /// # Lifetime
 ///
