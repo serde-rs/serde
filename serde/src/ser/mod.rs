@@ -127,6 +127,13 @@ macro_rules! declare_error_trait {
         /// Trait used by `Serialize` implementations to generically construct
         /// errors belonging to the `Serializer` against which they are
         /// currently running.
+        ///
+        /// # Example implementation
+        ///
+        /// The [example data format] presented on the website shows an error
+        /// type appropriate for a basic JSON data format.
+        ///
+        /// [example data format]: https://serde.rs/data-format.html
         pub trait Error: Sized $(+ $($supertrait)::+)* {
             /// Used when a [`Serialize`] implementation encounters any error
             /// while serializing a type.
@@ -309,6 +316,13 @@ pub trait Serialize {
 /// is the `serde_json::value::Serializer` (distinct from the main `serde_json`
 /// serializer) that produces a `serde_json::Value` data structure in memory as
 /// output.
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website contains example code for
+/// a basic JSON `Serializer`.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait Serializer: Sized {
     /// The output type produced by this `Serializer` during successful
     /// serialization. Most serializers that produce text or binary output
@@ -1520,6 +1534,8 @@ pub trait Serializer: Sized {
 
 /// Returned from `Serializer::serialize_seq`.
 ///
+/// # Example use
+///
 /// ```rust
 /// # use std::marker::PhantomData;
 /// #
@@ -1557,6 +1573,13 @@ pub trait Serializer: Sized {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeSeq` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeSeq {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
@@ -1574,6 +1597,8 @@ pub trait SerializeSeq {
 }
 
 /// Returned from `Serializer::serialize_tuple`.
+///
+/// # Example use
 ///
 /// ```rust
 /// use serde::ser::{Serialize, Serializer, SerializeTuple};
@@ -1648,6 +1673,13 @@ pub trait SerializeSeq {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeTuple` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeTuple {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
@@ -1665,6 +1697,8 @@ pub trait SerializeTuple {
 }
 
 /// Returned from `Serializer::serialize_tuple_struct`.
+///
+/// # Example use
 ///
 /// ```rust
 /// use serde::ser::{Serialize, Serializer, SerializeTupleStruct};
@@ -1684,6 +1718,13 @@ pub trait SerializeTuple {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeTupleStruct` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeTupleStruct {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
@@ -1701,6 +1742,8 @@ pub trait SerializeTupleStruct {
 }
 
 /// Returned from `Serializer::serialize_tuple_variant`.
+///
+/// # Example use
 ///
 /// ```rust
 /// use serde::ser::{Serialize, Serializer, SerializeTupleVariant};
@@ -1733,6 +1776,13 @@ pub trait SerializeTupleStruct {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeTupleVariant` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeTupleVariant {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
@@ -1750,6 +1800,8 @@ pub trait SerializeTupleVariant {
 }
 
 /// Returned from `Serializer::serialize_map`.
+///
+/// # Example use
 ///
 /// ```rust
 /// # use std::marker::PhantomData;
@@ -1790,6 +1842,13 @@ pub trait SerializeTupleVariant {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeMap` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeMap {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
@@ -1853,6 +1912,8 @@ pub trait SerializeMap {
 
 /// Returned from `Serializer::serialize_struct`.
 ///
+/// # Example use
+///
 /// ```rust
 /// use serde::ser::{Serialize, Serializer, SerializeStruct};
 ///
@@ -1875,6 +1936,13 @@ pub trait SerializeMap {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeStruct` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeStruct {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
@@ -1904,6 +1972,8 @@ pub trait SerializeStruct {
 
 /// Returned from `Serializer::serialize_struct_variant`.
 ///
+/// # Example use
+///
 /// ```rust
 /// use serde::ser::{Serialize, Serializer, SerializeStructVariant};
 ///
@@ -1928,6 +1998,13 @@ pub trait SerializeStruct {
 ///     }
 /// }
 /// ```
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SerializeStructVariant` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SerializeStructVariant {
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;

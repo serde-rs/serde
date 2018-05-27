@@ -148,6 +148,13 @@ macro_rules! declare_error_trait {
         ///
         /// Most deserializers should only need to provide the `Error::custom` method
         /// and inherit the default behavior for the other methods.
+        ///
+        /// # Example implementation
+        ///
+        /// The [example data format] presented on the website shows an error
+        /// type appropriate for a basic JSON data format.
+        ///
+        /// [example data format]: https://serde.rs/data-format.html
         pub trait Error: Sized $(+ $($supertrait)::+)* {
             /// Raised when there is general error when deserializing a type.
             ///
@@ -873,6 +880,13 @@ where
 /// deserializer lifetimes] for a more detailed explanation of these lifetimes.
 ///
 /// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website contains example code for
+/// a basic JSON `Deserializer`.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait Deserializer<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1650,6 +1664,13 @@ pub trait Visitor<'de>: Sized {
 /// deserializer lifetimes] for a more detailed explanation of these lifetimes.
 ///
 /// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `SeqAccess` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait SeqAccess<'de> {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1725,6 +1746,13 @@ where
 /// deserializer lifetimes] for a more detailed explanation of these lifetimes.
 ///
 /// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `MapAccess` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait MapAccess<'de> {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1910,6 +1938,13 @@ where
 /// deserializer lifetimes] for a more detailed explanation of these lifetimes.
 ///
 /// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `EnumAccess` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait EnumAccess<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1950,6 +1985,13 @@ pub trait EnumAccess<'de>: Sized {
 /// deserializer lifetimes] for a more detailed explanation of these lifetimes.
 ///
 /// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example implementation
+///
+/// The [example data format] presented on the website demonstrates an
+/// implementation of `VariantAccess` for a basic JSON data format.
+///
+/// [example data format]: https://serde.rs/data-format.html
 pub trait VariantAccess<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization. Must match the error type of our `EnumAccess`.
