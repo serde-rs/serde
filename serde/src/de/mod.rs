@@ -504,6 +504,14 @@ impl<'a> Display for Expected + 'a {
 /// [de]: https://docs.serde.rs/serde/de/index.html
 /// [codegen]: https://serde.rs/codegen.html
 /// [impl-deserialize]: https://serde.rs/impl-deserialize.html
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed by `Self` when deserialized. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait Deserialize<'de>: Sized {
     /// Deserialize this value from the given Serde deserializer.
     ///
@@ -568,6 +576,14 @@ pub trait Deserialize<'de>: Sized {
 ///     T: DeserializeOwned;
 /// # }
 /// ```
+///
+/// # Lifetime
+///
+/// The relationship between `Deserialize` and `DeserializeOwned` in trait
+/// bounds is explained in more detail on the page [Understanding deserializer
+/// lifetimes].
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait DeserializeOwned: for<'de> Deserialize<'de> {}
 impl<T> DeserializeOwned for T
 where
@@ -617,6 +633,14 @@ where
 /// In practice the majority of deserialization is stateless. An API expecting a
 /// seed can be appeased by passing `std::marker::PhantomData` as a seed in the
 /// case of stateless deserialization.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed by `Self::Value` when deserialized. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 ///
 /// # Example
 ///
@@ -841,6 +865,14 @@ where
 /// what type is in the input. Know that relying on `Deserializer::deserialize_any`
 /// means your data type will be able to deserialize from self-describing
 /// formats only, ruling out Bincode and many others.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed from the input when deserializing. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait Deserializer<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1163,6 +1195,16 @@ pub trait Deserializer<'de>: Sized {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// This trait represents a visitor that walks through a deserializer.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the requirement for lifetime of data
+/// that may be borrowed by `Self::Value`. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example
 ///
 /// ```rust
 /// # use std::fmt;
@@ -1600,6 +1642,14 @@ pub trait Visitor<'de>: Sized {
 ///
 /// This is a trait that a `Deserializer` passes to a `Visitor` implementation,
 /// which deserializes each item in a sequence.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed by deserialized sequence elements. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait SeqAccess<'de> {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1667,6 +1717,14 @@ where
 /// Provides a `Visitor` access to each entry of a map in the input.
 ///
 /// This is a trait that a `Deserializer` passes to a `Visitor` implementation.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed by deserialized map entries. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait MapAccess<'de> {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1844,6 +1902,14 @@ where
 ///
 /// `EnumAccess` is created by the `Deserializer` and passed to the
 /// `Visitor` in order to identify which variant of an enum to deserialize.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed by the deserialized enum variant. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait EnumAccess<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
@@ -1876,6 +1942,14 @@ pub trait EnumAccess<'de>: Sized {
 /// `VariantAccess` is a visitor that is created by the `Deserializer` and
 /// passed to the `Deserialize` to deserialize the content of a particular enum
 /// variant.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed by the deserialized enum variant. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait VariantAccess<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization. Must match the error type of our `EnumAccess`.
@@ -2078,6 +2152,16 @@ pub trait VariantAccess<'de>: Sized {
 
 /// Converts an existing value into a `Deserializer` from which other values can
 /// be deserialized.
+///
+/// # Lifetime
+///
+/// The `'de` lifetime of this trait is the lifetime of data that may be
+/// borrowed from the resulting `Deserializer`. See the page [Understanding
+/// deserializer lifetimes] for a more detailed explanation of these lifetimes.
+///
+/// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
+///
+/// # Example
 ///
 /// ```rust
 /// #[macro_use]
