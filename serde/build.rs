@@ -3,34 +3,9 @@ use std::process::Command;
 use std::str::{self, FromStr};
 
 fn main() {
-    let rustc = match env::var_os("RUSTC") {
-        Some(rustc) => rustc,
+    let minor = match rustc_minor_version() {
+        Some(minor) => minor,
         None => return,
-    };
-
-    let output = match Command::new(rustc).arg("--version").output() {
-        Ok(output) => output,
-        Err(_) => return,
-    };
-
-    let version = match str::from_utf8(&output.stdout) {
-        Ok(version) => version,
-        Err(_) => return,
-    };
-
-    let mut pieces = version.split('.');
-    if pieces.next() != Some("rustc 1") {
-        return;
-    }
-
-    let next = match pieces.next() {
-        Some(next) => next,
-        None => return,
-    };
-
-    let minor = match u32::from_str(next) {
-        Ok(minor) => minor,
-        Err(_) => return,
     };
 
     // CString::into_boxed_c_str stabilized in Rust 1.20:
@@ -57,4 +32,33 @@ fn main() {
     if minor >= 28 {
         println!("cargo:rustc-cfg=num_nonzero");
     }
+}
+
+fn rustc_minor_version() -> Option<u32> {
+    let rustc = match env::var_os("RUSTC") {
+        Some(rustc) => rustc,
+        None => return None,
+    };
+
+    let output = match Command::new(rustc).arg("--version").output() {
+        Ok(output) => output,
+        Err(_) => return None,
+    };
+
+    let version = match str::from_utf8(&output.stdout) {
+        Ok(version) => version,
+        Err(_) => return None,
+    };
+
+    let mut pieces = version.split('.');
+    if pieces.next() != Some("rustc 1") {
+        return None;
+    }
+
+    let next = match pieces.next() {
+        Some(next) => next,
+        None => return None,
+    };
+
+    u32::from_str(next).ok()
 }
