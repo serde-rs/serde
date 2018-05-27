@@ -2,6 +2,9 @@ use std::env;
 use std::process::Command;
 use std::str::{self, FromStr};
 
+// The rustc-cfg strings below are *not* public API. Please let us know by
+// opening a GitHub issue if your build environment requires some way to enable
+// these cfgs other than by executing our build script.
 fn main() {
     let minor = match rustc_minor_version() {
         Some(minor) => minor,
