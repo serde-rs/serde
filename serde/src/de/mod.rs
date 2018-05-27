@@ -57,7 +57,7 @@
 //!    - f32, f64
 //!    - char
 //!  - **Compound types**:
-//!    - [T; 0] through [T; 32]
+//!    - \[T; 0\] through \[T; 32\]
 //!    - tuples up to size 16
 //!  - **Common standard library types**:
 //!    - String
@@ -66,7 +66,7 @@
 //!    - PhantomData\<T\>
 //!  - **Wrapper types**:
 //!    - Box\<T\>
-//!    - Box\<[T]\>
+//!    - Box\<\[T\]\>
 //!    - Box\<str\>
 //!    - Rc\<T\>
 //!    - Arc\<T\>
@@ -86,7 +86,7 @@
 //!    - Vec\<T\>
 //!  - **Zero-copy types**:
 //!    - &str
-//!    - &[u8]
+//!    - &\[u8\]
 //!  - **FFI types**:
 //!    - CString
 //!    - Box\<CStr\>
@@ -808,7 +808,7 @@ where
 ///    - UTF-8 bytes with a length and no null terminator.
 ///    - When serializing, all strings are handled equally. When deserializing,
 ///      there are three flavors of strings: transient, owned, and borrowed.
-///  - **byte array** - [u8]
+///  - **byte array** - \[u8\]
 ///    - Similar to strings, during deserialization byte arrays can be transient,
 ///      owned, or borrowed.
 ///  - **option**

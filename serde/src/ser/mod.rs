@@ -55,8 +55,8 @@
 //!    - str
 //!    - &T and &mut T
 //!  - **Compound types**:
-//!    - [T]
-//!    - [T; 0] through [T; 32]
+//!    - \[T\]
+//!    - \[T; 0\] through \[T; 32\]
 //!    - tuples up to size 16
 //!  - **Common standard library types**:
 //!    - String
@@ -271,7 +271,7 @@ pub trait Serialize {
 ///    - UTF-8 bytes with a length and no null terminator.
 ///    - When serializing, all strings are handled equally. When deserializing,
 ///      there are three flavors of strings: transient, owned, and borrowed.
-///  - **byte array** - [u8]
+///  - **byte array** - \[u8\]
 ///    - Similar to strings, during deserialization byte arrays can be transient,
 ///      owned, or borrowed.
 ///  - **option**
