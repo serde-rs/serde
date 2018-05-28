@@ -52,6 +52,8 @@
 //! - [Pickle], a format common in the Python world.
 //! - [Hjson], a variant of JSON designed to be readable and writable by humans.
 //! - [BSON], the data storage and network transfer format used by MongoDB.
+//! - [Avro], a binary data serialization format with support for
+//!   schematized data.
 //! - [URL], the x-www-form-urlencoded format.
 //! - [XML], the flexible machine-friendly W3C standard.
 //!   *(deserialization only)*
@@ -59,8 +61,6 @@
 //!   *(deserialization only)*
 //! - [Redis], deserialize values from Redis when using [redis-rs].
 //!   *(deserialization only)*
-//! - [Avro], a binary data serialization format with support for
-//!   schematized data.
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Bincode]: https://github.com/TyOverby/bincode
@@ -71,11 +71,11 @@
 //! [Pickle]: https://github.com/birkenfeld/serde-pickle
 //! [Hjson]: https://github.com/laktak/hjson-rust
 //! [BSON]: https://github.com/zonyitoo/bson-rs
+//! [Avro]: https://github.com/flavray/avro-rs
 //! [URL]: https://github.com/nox/serde_urlencoded
 //! [XML]: https://github.com/RReverser/serde-xml-rs
 //! [Envy]: https://github.com/softprops/envy
 //! [Redis]: https://github.com/OneSignal/serde-redis
-//! [Avro]: https://github.com/flavray/avro-rs
 //! [Cargo]: http://doc.crates.io/manifest.html
 //! [redis-rs]: https://crates.io/crates/redis
 
