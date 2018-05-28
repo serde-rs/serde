@@ -8,8 +8,8 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde_test/"
 keywords = ["serde", "serialization"]
-readme = "README.md"
-include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+readme = "crates-io.md"
+include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 serde = { version = "1.0.60", path = "../serde" }

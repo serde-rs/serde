@@ -9,8 +9,8 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde/"
 keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
-readme = "README.md"
-include = ["Cargo.toml", "build.rs", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+readme = "crates-io.md"
+include = ["Cargo.toml", "build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 build = "build.rs"
 
 [badges]
