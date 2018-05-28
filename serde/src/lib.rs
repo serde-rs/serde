@@ -52,8 +52,8 @@
 //! - [Pickle], a format common in the Python world.
 //! - [Hjson], a variant of JSON designed to be readable and writable by humans.
 //! - [BSON], the data storage and network transfer format used by MongoDB.
-//! - [Avro], a binary data serialization format with support for
-//!   schematized data.
+//! - [Avro], a binary format used within Apache Hadoop, with support for schema
+//!   definition.
 //! - [URL], the x-www-form-urlencoded format.
 //! - [XML], the flexible machine-friendly W3C standard.
 //!   *(deserialization only)*
