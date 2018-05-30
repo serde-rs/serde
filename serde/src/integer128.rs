@@ -70,7 +70,7 @@
 ///     ($($tt:tt)*) => {};
 /// }
 /// ```
-#[cfg(all(integer128, not(serde_docs_rs)))]
+#[cfg(integer128)]
 #[macro_export]
 macro_rules! serde_if_integer128 {
     ($($tt:tt)*) => {
@@ -78,7 +78,7 @@ macro_rules! serde_if_integer128 {
     };
 }
 
-#[cfg(any(not(integer128), serde_docs_rs))]
+#[cfg(not(integer128))]
 #[macro_export]
 #[doc(hidden)]
 macro_rules! serde_if_integer128 {

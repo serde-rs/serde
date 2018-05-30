@@ -23,11 +23,6 @@ serde_derive = { version = "1.0", optional = true, path = "../serde_derive" }
 [dev-dependencies]
 serde_derive = { version = "1.0", path = "../serde_derive" }
 
-[package.metadata.docs.rs]
-# Temporary cfg to work around docs.rs using an old 1.26-dev compiler.
-rustc-args = ["--cfg", "serde_docs_rs"]
-rustdoc-args = ["--cfg", "serde_docs_rs"]
-
 
 ### FEATURES #################################################################
 
