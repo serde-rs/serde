@@ -459,7 +459,10 @@ where
     where
         S: Serializer,
     {
-        self.borrow().serialize(serializer)
+        match self.try_borrow() {
+            Ok(value) => value.serialize(serializer),
+            Err(_) => Err(S::Error::custom("already mutably borrowed")),
+        }
     }
 }
 
