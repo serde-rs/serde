@@ -8,10 +8,7 @@
 
 use lib::*;
 
-use ser::{Serialize, SerializeTuple, Serializer};
-
-#[cfg(feature = "std")]
-use ser::Error;
+use ser::{Error, Serialize, SerializeTuple, Serializer};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -459,7 +456,10 @@ where
     where
         S: Serializer,
     {
-        self.borrow().serialize(serializer)
+        match self.try_borrow() {
+            Ok(value) => value.serialize(serializer),
+            Err(_) => Err(S::Error::custom("already mutably borrowed")),
+        }
     }
 }
 

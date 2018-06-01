@@ -9,6 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::CString;
 use std::mem;
@@ -561,6 +562,13 @@ fn test_cannot_serialize_paths() {
     path_buf.push(path);
 
     assert_ser_tokens_error(&path_buf, &[], "path contains invalid UTF-8 characters");
+}
+
+#[test]
+fn test_cannot_serialize_mutably_borrowed_ref_cell() {
+    let ref_cell = RefCell::new(42);
+    let _reference = ref_cell.borrow_mut();
+    assert_ser_tokens_error(&ref_cell, &[], "already mutably borrowed");
 }
 
 #[test]
