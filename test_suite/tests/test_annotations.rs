@@ -14,7 +14,7 @@ extern crate serde_derive;
 extern crate serde;
 use self::serde::de::{self, Unexpected};
 use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::marker::PhantomData;
 
 extern crate serde_test;
@@ -1678,6 +1678,49 @@ fn test_complex_flatten() {
             Token::U32(3),
             Token::Str("z"),
             Token::U32(4),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_map_twice() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Outer {
+        #[serde(flatten)]
+        first: BTreeMap<String, String>,
+        #[serde(flatten)]
+        between: Inner,
+        #[serde(flatten)]
+        second: BTreeMap<String, String>,
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Inner {
+        y: String,
+    }
+
+    assert_de_tokens(
+        &Outer {
+            first: {
+                let mut first = BTreeMap::new();
+                first.insert("x".to_owned(), "X".to_owned());
+                first.insert("y".to_owned(), "Y".to_owned());
+                first
+            },
+            between: Inner { y: "Y".to_owned() },
+            second: {
+                let mut second = BTreeMap::new();
+                second.insert("x".to_owned(), "X".to_owned());
+                second
+            },
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("x"),
+            Token::Str("X"),
+            Token::Str("y"),
+            Token::Str("Y"),
             Token::MapEnd,
         ],
     );
