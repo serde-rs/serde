@@ -8,10 +8,7 @@
 
 use lib::*;
 
-use ser::{Serialize, SerializeTuple, Serializer};
-
-#[cfg(feature = "std")]
-use ser::Error;
+use ser::{Error, Serialize, SerializeTuple, Serializer};
 
 ////////////////////////////////////////////////////////////////////////////////
 
