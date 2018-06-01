@@ -53,6 +53,7 @@ extern crate proc_macro2;
 
 mod internals;
 
+use std::str::FromStr;
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 
@@ -71,7 +72,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
     match ser::expand_derive_serialize(&input) {
         Ok(expanded) => expanded.into(),
-        Err(msg) => panic!(msg),
+        Err(msg) => TokenStream::from_str(&format!("compile_error!({:?});", msg)).unwrap(),
     }
 }
 
@@ -80,6 +81,6 @@ pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
     match de::expand_derive_deserialize(&input) {
         Ok(expanded) => expanded.into(),
-        Err(msg) => panic!(msg),
+        Err(msg) => TokenStream::from_str(&format!("compile_error!({:?});", msg)).unwrap(),
     }
 }
