@@ -29,7 +29,7 @@
     feature = "cargo-clippy",
     allow(
         enum_variant_names, redundant_field_names, too_many_arguments, used_underscore_binding,
-        cyclomatic_complexity
+        cyclomatic_complexity, needless_pass_by_value
     )
 )]
 // Whitelisted clippy_pedantic lints
@@ -69,17 +69,21 @@ mod try;
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
-    match ser::expand_derive_serialize(&input) {
-        Ok(expanded) => expanded.into(),
-        Err(msg) => quote! {compile_error!(#msg);}.into(),
-    }
+    ser::expand_derive_serialize(&input)
+        .unwrap_or_else(compile_error)
+        .into()
 }
 
 #[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
-    match de::expand_derive_deserialize(&input) {
-        Ok(expanded) => expanded.into(),
-        Err(msg) => quote! {compile_error!(#msg);}.into(),
+    de::expand_derive_deserialize(&input)
+        .unwrap_or_else(compile_error)
+        .into()
+}
+
+fn compile_error(message: String) -> proc_macro2::TokenStream {
+    quote! {
+        compile_error!(#message);
     }
 }
