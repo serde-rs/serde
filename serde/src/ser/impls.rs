@@ -247,6 +247,16 @@ impl Serialize for () {
     }
 }
 
+#[cfg(feature = "unstable")]
+impl Serialize for ! {
+    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        *self
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {

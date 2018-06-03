@@ -49,6 +49,16 @@ impl<'de> Deserialize<'de> for () {
     }
 }
 
+#[cfg(feature = "unstable")]
+impl<'de> Deserialize<'de> for ! {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Err(Error::custom("cannot deserialize `!`"))
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 struct BoolVisitor;
