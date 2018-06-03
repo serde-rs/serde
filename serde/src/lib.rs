@@ -211,7 +211,10 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::sync::{Mutex, RwLock};
     #[cfg(feature = "std")]
-    pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    pub use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(any(core_duration, feature = "std"))]
+    pub use self::core::time::Duration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

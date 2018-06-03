@@ -24,6 +24,12 @@ fn main() {
         println!("cargo:rustc-cfg=de_rc_dst");
     }
 
+    // Duration available in core since Rust 1.25:
+    // https://blog.rust-lang.org/2018/03/29/Rust-1.25.html#library-stabilizations
+    if minor >= 25 {
+        println!("cargo:rustc-cfg=core_duration");
+    }
+
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
     if minor >= 26 {
