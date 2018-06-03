@@ -442,6 +442,26 @@ declare_tests! {
             Token::U64(1),
         ],
     }
+    test_rc_dst {
+        Rc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Rc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
+    test_arc_dst {
+        Arc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Arc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
 }
 
 declare_tests! {
@@ -521,31 +541,6 @@ declare_tests! {
 
             Token::U16(1234),
             Token::TupleEnd,
-        ],
-    }
-}
-
-// Serde's implementation is not unstable, but the constructors are.
-#[cfg(feature = "unstable")]
-declare_tests! {
-    test_rc_dst {
-        Rc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Rc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-    test_arc_dst {
-        Arc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Arc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
         ],
     }
 }

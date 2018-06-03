@@ -297,11 +297,9 @@ fn test_gen() {
         f: u8,
     }
 
-    #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     struct EmptyTuple();
 
-    #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     struct EmptyTupleDenyUnknown();
@@ -327,7 +325,6 @@ fn test_gen() {
         Variant,
     }
 
-    #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     enum EmptyVariants {
         Braced {},
@@ -339,7 +336,6 @@ fn test_gen() {
         TupleSkip(#[serde(skip_deserializing)] u8),
     }
 
-    #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     enum EmptyVariantsDenyUnknown {

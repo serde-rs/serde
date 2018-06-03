@@ -14,16 +14,13 @@ extern crate serde_derive;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
-use std::ffi::{CString, OsString};
+use std::ffi::{CStr, CString, OsString};
 use std::net;
 use std::num::Wrapping;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
-
-#[cfg(feature = "unstable")]
-use std::ffi::CStr;
 
 extern crate serde;
 use serde::{Deserialize, Deserializer};
@@ -866,6 +863,26 @@ declare_tests! {
             Token::U64(1),
         ],
     }
+    test_rc_dst {
+        Rc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Rc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
+    test_arc_dst {
+        Arc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Arc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
 }
 
 declare_tests! {
@@ -963,30 +980,6 @@ declare_tests! {
 
 #[cfg(feature = "unstable")]
 declare_tests! {
-    test_rc_dst {
-        Rc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Rc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-    test_arc_dst {
-        Arc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Arc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-}
-
-#[cfg(feature = "unstable")]
-declare_tests! {
     test_never_result {
         Ok::<u8, !>(0) => &[
             Token::NewtypeVariant { name: "Result", variant: "Ok" },
@@ -1035,7 +1028,6 @@ fn test_osstring() {
     assert_de_tokens_ignore(&tokens);
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_cstr() {
     assert_de_tokens::<Box<CStr>>(
@@ -1044,7 +1036,6 @@ fn test_cstr() {
     );
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_cstr_internal_null() {
     assert_de_tokens_error::<Box<CStr>>(
@@ -1053,7 +1044,6 @@ fn test_cstr_internal_null() {
     );
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_cstr_internal_null_end() {
     assert_de_tokens_error::<Box<CStr>>(
