@@ -1182,15 +1182,31 @@ map_impl!(
 
 #[cfg(feature = "std")]
 macro_rules! parse_ip_impl {
-    ($ty:ty; $size:expr) => {
+    ($expecting:tt $ty:ty; $size:tt) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
                 if deserializer.is_human_readable() {
-                    let s = try!(String::deserialize(deserializer));
-                    s.parse().map_err(Error::custom)
+                    struct IpAddrVisitor;
+
+                    impl<'de> Visitor<'de> for IpAddrVisitor {
+                        type Value = $ty;
+
+                        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                            formatter.write_str($expecting)
+                        }
+
+                        fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                        where
+                            E: Error,
+                        {
+                            s.parse().map_err(Error::custom)
+                        }
+                    }
+
+                    deserializer.deserialize_str(IpAddrVisitor)
                 } else {
                     <[u8; $size]>::deserialize(deserializer).map(<$ty>::from)
                 }
@@ -1318,8 +1334,24 @@ impl<'de> Deserialize<'de> for net::IpAddr {
         D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
-            let s = try!(String::deserialize(deserializer));
-            s.parse().map_err(Error::custom)
+            struct IpAddrVisitor;
+
+            impl<'de> Visitor<'de> for IpAddrVisitor {
+                type Value = net::IpAddr;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("IP address")
+                }
+
+                fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    s.parse().map_err(Error::custom)
+                }
+            }
+
+            deserializer.deserialize_str(IpAddrVisitor)
         } else {
             use lib::net::IpAddr;
             deserialize_enum!{
@@ -1332,22 +1364,38 @@ impl<'de> Deserialize<'de> for net::IpAddr {
 }
 
 #[cfg(feature = "std")]
-parse_ip_impl!(net::Ipv4Addr; 4);
+parse_ip_impl!("IPv4 address" net::Ipv4Addr; 4);
 
 #[cfg(feature = "std")]
-parse_ip_impl!(net::Ipv6Addr; 16);
+parse_ip_impl!("IPv6 address" net::Ipv6Addr; 16);
 
 #[cfg(feature = "std")]
 macro_rules! parse_socket_impl {
-    ($ty:ty, $new:expr) => {
+    ($expecting:tt $ty:ty, $new:expr) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: Deserializer<'de>,
             {
                 if deserializer.is_human_readable() {
-                    let s = try!(String::deserialize(deserializer));
-                    s.parse().map_err(Error::custom)
+                    struct SocketAddrVisitor;
+
+                    impl<'de> Visitor<'de> for SocketAddrVisitor {
+                        type Value = $ty;
+
+                        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                            formatter.write_str($expecting)
+                        }
+
+                        fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                        where
+                            E: Error,
+                        {
+                            s.parse().map_err(Error::custom)
+                        }
+                    }
+
+                    deserializer.deserialize_str(SocketAddrVisitor)
                 } else {
                     <(_, u16)>::deserialize(deserializer).map(|(ip, port)| $new(ip, port))
                 }
@@ -1363,8 +1411,24 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
         D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
-            let s = try!(String::deserialize(deserializer));
-            s.parse().map_err(Error::custom)
+            struct SocketAddrVisitor;
+
+            impl<'de> Visitor<'de> for SocketAddrVisitor {
+                type Value = net::SocketAddr;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("socket address")
+                }
+
+                fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    s.parse().map_err(Error::custom)
+                }
+            }
+
+            deserializer.deserialize_str(SocketAddrVisitor)
         } else {
             use lib::net::SocketAddr;
             deserialize_enum!{
@@ -1377,10 +1441,10 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
 }
 
 #[cfg(feature = "std")]
-parse_socket_impl!(net::SocketAddrV4, net::SocketAddrV4::new);
+parse_socket_impl!("IPv4 socket address" net::SocketAddrV4, net::SocketAddrV4::new);
 
 #[cfg(feature = "std")]
-parse_socket_impl!(net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(
+parse_socket_impl!("IPv6 socket address" net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(
     ip, port, 0, 0
 ));
 
