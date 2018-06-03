@@ -53,7 +53,6 @@ extern crate proc_macro2;
 
 mod internals;
 
-use std::str::FromStr;
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 
