@@ -7,6 +7,7 @@
 // except according to those terms.
 
 #![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
+#![cfg_attr(feature = "unstable", feature(never_type))]
 
 #[macro_use]
 extern crate serde_derive;
@@ -984,6 +985,16 @@ declare_tests! {
     }
 }
 
+#[cfg(feature = "unstable")]
+declare_tests! {
+    test_never_result {
+        Ok::<u8, !>(0) => &[
+            Token::NewtypeVariant { name: "Result", variant: "Ok" },
+            Token::U8(0),
+        ],
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn test_osstring() {
@@ -1048,6 +1059,20 @@ fn test_cstr_internal_null_end() {
     assert_de_tokens_error::<Box<CStr>>(
         &[Token::Bytes(b"ac\0")],
         "nul byte found in provided data at position: 2",
+    );
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+fn test_never_type() {
+    assert_de_tokens_error::<!>(&[], "cannot deserialize `!`");
+
+    assert_de_tokens_error::<Result<u8, !>>(
+        &[Token::NewtypeVariant {
+            name: "Result",
+            variant: "Err",
+        }],
+        "cannot deserialize `!`",
     );
 }
 

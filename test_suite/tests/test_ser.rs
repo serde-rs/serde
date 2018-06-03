@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "unstable", feature(never_type))]
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -544,6 +546,16 @@ declare_tests! {
             Token::Seq { len: Some(1) },
             Token::Bool(true),
             Token::SeqEnd,
+        ],
+    }
+}
+
+#[cfg(feature = "unstable")]
+declare_tests! {
+    test_never_result {
+        Ok::<u8, !>(0) => &[
+            Token::NewtypeVariant { name: "Result", variant: "Ok" },
+            Token::U8(0),
         ],
     }
 }
