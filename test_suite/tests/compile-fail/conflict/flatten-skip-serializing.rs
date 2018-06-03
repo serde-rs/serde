@@ -18,7 +18,7 @@ struct Foo {
 
 #[derive(Serialize)]
 struct Other {
-    x: u32
+    x: u32,
 }
 
 fn main() {}

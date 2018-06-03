@@ -16,7 +16,7 @@ struct Str<'a>(&'a str);
 enum Test<'a> {
     #[serde(borrow)]
     //~^^^ ERROR: duplicate serde attribute `borrow`
-    S(#[serde(borrow)] Str<'a>)
+    S(#[serde(borrow)] Str<'a>),
 }
 
 fn main() {}

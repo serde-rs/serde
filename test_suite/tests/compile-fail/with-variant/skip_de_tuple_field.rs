@@ -16,4 +16,4 @@ enum Enum {
     Tuple(#[serde(skip_deserializing)] String, u8),
 }
 
-fn main() { }
+fn main() {}

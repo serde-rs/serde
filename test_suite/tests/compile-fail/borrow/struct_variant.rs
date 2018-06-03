@@ -16,7 +16,7 @@ struct Str<'a>(&'a str);
 enum Test<'a> {
     #[serde(borrow)]
     //~^^^ ERROR: #[serde(borrow)] may only be used on newtype variants
-    S { s: Str<'a> }
+    S { s: Str<'a> },
 }
 
 fn main() {}

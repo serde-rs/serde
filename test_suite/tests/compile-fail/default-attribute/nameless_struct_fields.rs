@@ -14,4 +14,4 @@ extern crate serde_derive;
 //~^^ ERROR: #[serde(default)] can only be used on structs
 struct T(u8, u8);
 
-fn main() { }
+fn main() {}

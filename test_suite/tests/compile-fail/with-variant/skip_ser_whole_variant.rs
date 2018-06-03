@@ -17,4 +17,4 @@ enum Enum {
     Unit,
 }
 
-fn main() { }
+fn main() {}

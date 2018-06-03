@@ -11,7 +11,7 @@ extern crate serde_derive;
 
 #[derive(Serialize)]
 struct S {
-    #[serde(rename="x", serialize="y")]
+    #[serde(rename = "x", serialize = "y")]
     //~^^^ ERROR: unknown serde field attribute `serialize`
     x: (),
 }

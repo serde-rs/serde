@@ -20,4 +20,4 @@ enum Enum {
     },
 }
 
-fn main() { }
+fn main() {}

@@ -11,7 +11,7 @@ extern crate serde_derive;
 
 #[derive(Serialize)]
 struct S {
-    #[serde(rename(serialize="x", serialize="y"))]
+    #[serde(rename(serialize = "x", serialize = "y"))]
     //~^^^ ERROR: duplicate serde attribute `rename`
     x: (),
 }

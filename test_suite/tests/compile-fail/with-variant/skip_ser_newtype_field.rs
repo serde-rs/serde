@@ -16,4 +16,4 @@ enum Enum {
     Newtype(#[serde(skip_serializing)] String),
 }
 
-fn main() { }
+fn main() {}

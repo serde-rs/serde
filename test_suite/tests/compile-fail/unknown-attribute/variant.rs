@@ -11,9 +11,9 @@ extern crate serde_derive;
 
 #[derive(Serialize)]
 enum E {
-    #[serde(abc="xyz")]
+    #[serde(abc = "xyz")]
     //~^^^ ERROR: unknown serde variant attribute `abc`
     V,
 }
 
-fn main() { }
+fn main() {}

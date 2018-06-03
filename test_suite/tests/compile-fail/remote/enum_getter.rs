@@ -11,7 +11,7 @@ extern crate serde_derive;
 
 mod remote {
     pub enum E {
-        A { a: u8 }
+        A { a: u8 },
     }
 }
 
@@ -22,7 +22,7 @@ pub enum E {
         #[serde(getter = "get_a")]
         //~^^^^^ ERROR: #[serde(getter = "...")] is not allowed in an enum
         a: u8,
-    }
+    },
 }
 
 fn main() {}

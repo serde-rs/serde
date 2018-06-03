@@ -11,14 +11,14 @@ extern crate serde_derive;
 
 #[derive(Serialize)]
 struct Foo {
-    #[serde(flatten, skip_serializing_if="Option::is_none")]
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
     //~^^^ ERROR: #[serde(flatten] can not be combined with #[serde(skip_serializing_if = "...")]
     other: Option<Other>,
 }
 
 #[derive(Serialize)]
 struct Other {
-    x: u32
+    x: u32,
 }
 
 fn main() {}
