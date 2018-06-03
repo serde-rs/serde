@@ -98,6 +98,7 @@
 //!    - PathBuf
 //!    - Range\<T\>
 //!    - num::NonZero*
+//!    - `!` *(unstable)*
 //!  - **Net types**:
 //!    - IpAddr
 //!    - Ipv4Addr
