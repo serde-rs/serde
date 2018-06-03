@@ -527,7 +527,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
+#[cfg(any(core_duration, feature = "std"))]
 impl Serialize for Duration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

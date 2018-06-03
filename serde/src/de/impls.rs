@@ -12,7 +12,7 @@ use de::{
     Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
 };
 
-#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(any(core_duration, feature = "std", feature = "alloc"))]
 use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
@@ -1694,7 +1694,7 @@ forwarded_impl!((T), RwLock<T>, RwLock::new);
 //         secs: u64,
 //         nanos: u32,
 //     }
-#[cfg(feature = "std")]
+#[cfg(any(core_duration, feature = "std"))]
 impl<'de> Deserialize<'de> for Duration {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1742,7 +1742,7 @@ impl<'de> Deserialize<'de> for Duration {
                             b"secs" => Ok(Field::Secs),
                             b"nanos" => Ok(Field::Nanos),
                             _ => {
-                                let value = String::from_utf8_lossy(value);
+                                let value = ::export::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&value, FIELDS))
                             }
                         }
