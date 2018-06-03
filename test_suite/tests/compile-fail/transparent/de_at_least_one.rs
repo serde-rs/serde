@@ -9,10 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
 #[serde(transparent)]
 struct S {
-    //~^^^ HELP: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
     #[serde(skip)]
     a: u8,
     #[serde(default)]

@@ -9,11 +9,11 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: field_identifier may only contain unit variants
 #[serde(field_identifier)]
 enum F {
     A,
-    B(u8, u8), //~^^^^ HELP: field_identifier may only contain unit variants
+    B(u8, u8),
 }
 
 fn main() {}

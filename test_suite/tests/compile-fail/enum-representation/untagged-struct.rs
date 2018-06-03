@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-#[serde(untagged)] //~^ HELP: #[serde(untagged)] can only be used on enums
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(untagged)] can only be used on enums
+#[serde(untagged)]
 struct S;
 
 fn main() {}

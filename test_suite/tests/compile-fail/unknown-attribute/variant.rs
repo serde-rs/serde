@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: unknown serde variant attribute `abc`
 enum E {
-    #[serde(abc="xyz")] //~^^ HELP: unknown serde variant attribute `abc`
+    #[serde(abc="xyz")]
     V,
 }
 

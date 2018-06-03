@@ -9,8 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: variant `Newtype` cannot have both #[serde(serialize_with)] and a field 0 marked with #[serde(skip_serializing)]
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: variant `Newtype` cannot have both #[serde(serialize_with)] and a field 0 marked with #[serde(skip_serializing)]
 enum Enum {
     #[serde(serialize_with = "serialize_some_newtype_variant")]
     Newtype(#[serde(skip_serializing)] String),

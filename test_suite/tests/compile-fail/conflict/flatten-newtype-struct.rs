@@ -9,8 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: #[serde(flatten)] cannot be used on newtype structs
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(flatten)] cannot be used on newtype structs
 struct Foo(#[serde(flatten)] HashMap<String, String>);
 
 fn main() {}

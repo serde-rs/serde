@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(getter = "...")] can only be used in structs that have #[serde(remote = "...")]
 struct S {
-    #[serde(getter = "S::get")] //~^^ HELP: #[serde(getter = "...")] can only be used in structs that have #[serde(remote = "...")]
+    #[serde(getter = "S::get")]
     a: u8,
 }
 

@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-#[serde(tag = "type")] //~^ HELP: #[serde(tag = "...")] cannot be used with tuple variants
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(tag = "...")] cannot be used with tuple variants
+#[serde(tag = "type")]
 enum E {
     Tuple(u8, u8),
 }

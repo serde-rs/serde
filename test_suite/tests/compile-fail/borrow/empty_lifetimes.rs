@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: at least one lifetime must be borrowed
 struct Test<'a> {
-    #[serde(borrow = "")] //~^^ HELP: at least one lifetime must be borrowed
+    #[serde(borrow = "")]
     s: &'a str,
 }
 

@@ -9,8 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: variant `Struct` cannot have both #[serde(deserialize_with)] and a field `f1` marked with #[serde(skip_deserializing)]
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: variant `Struct` cannot have both #[serde(deserialize_with)] and a field `f1` marked with #[serde(skip_deserializing)]
 enum Enum {
     #[serde(deserialize_with = "deserialize_some_other_variant")]
     Struct {

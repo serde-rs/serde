@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: duplicate serde attribute `rename`
 struct S {
-    #[serde(rename(serialize="x", serialize="y"))] //~^^ HELP: duplicate serde attribute `rename`
+    #[serde(rename(serialize="x", serialize="y"))]
     x: (),
 }
 

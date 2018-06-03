@@ -9,8 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: variant `Struct` cannot have both #[serde(serialize_with)] and a field `f1` marked with #[serde(skip_serializing)]
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: variant `Struct` cannot have both #[serde(serialize_with)] and a field `f1` marked with #[serde(skip_serializing)]
 enum Enum {
     #[serde(serialize_with = "serialize_some_other_variant")]
     Struct {

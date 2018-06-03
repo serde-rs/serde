@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: field `s` does not have lifetime 'b
 struct Test<'a> {
-    #[serde(borrow = "'b")] //~^^ HELP: field `s` does not have lifetime 'b
+    #[serde(borrow = "'b")]
     s: &'a str,
 }
 

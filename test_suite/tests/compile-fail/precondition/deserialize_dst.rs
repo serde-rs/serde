@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: cannot deserialize a dynamically sized struct
 struct S {
     string: String,
-    slice: [u8], //~^^^ HELP: cannot deserialize a dynamically sized struct
+    slice: [u8],
 }

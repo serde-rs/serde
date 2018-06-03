@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
-#[serde(default)] //~^ HELP: #[serde(default)] can only be used on structs
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: #[serde(default)] can only be used on structs with named fields
+#[serde(default)]
 struct T(u8, u8);
 
 fn main() { }
