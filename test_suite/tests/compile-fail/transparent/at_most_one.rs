@@ -9,10 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(transparent)] requires struct to have at most one transparent field
 #[serde(transparent)]
 struct S {
-    //~^^^ HELP: #[serde(transparent)] requires struct to have at most one transparent field
     a: u8,
     b: u8,
 }

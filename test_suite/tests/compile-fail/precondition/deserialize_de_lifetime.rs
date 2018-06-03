@@ -9,7 +9,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: cannot deserialize when there is a lifetime parameter called 'de
 struct S<'de> {
-    s: &'de str, //~^^ HELP: cannot deserialize when there is a lifetime parameter called 'de
+    s: &'de str,
 }

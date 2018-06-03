@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: unknown serde field attribute `serialize`
 struct S {
-    #[serde(rename="x", serialize="y")] //~^^ HELP: unknown serde field attribute `serialize`
+    #[serde(rename="x", serialize="y")]
     x: (),
 }
 

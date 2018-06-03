@@ -72,7 +72,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
     match ser::expand_derive_serialize(&input) {
         Ok(expanded) => expanded.into(),
-        Err(msg) => TokenStream::from_str(&format!("compile_error!({:?});", msg)).unwrap(),
+        Err(msg) => quote! {compile_error!(#msg);}.into(),
     }
 }
 
@@ -81,6 +81,6 @@ pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
     match de::expand_derive_deserialize(&input) {
         Ok(expanded) => expanded.into(),
-        Err(msg) => TokenStream::from_str(&format!("compile_error!({:?});", msg)).unwrap(),
+        Err(msg) => quote! {compile_error!(#msg);}.into(),
     }
 }

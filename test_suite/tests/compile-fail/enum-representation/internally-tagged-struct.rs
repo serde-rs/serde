@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-#[serde(tag = "type")] //~^ HELP: #[serde(tag = "...")] can only be used on enums
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(tag = "...")] can only be used on enums
+#[serde(tag = "type")]
 struct S;
 
 fn main() {}

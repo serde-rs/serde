@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-#[serde(field_identifier)] //~^ HELP: field identifiers cannot be serialized
+#[derive(Serialize)] //~ ERROR: 12:10: 12:19: field identifiers cannot be serialized
+#[serde(field_identifier)]
 enum F {
     A,
     B,

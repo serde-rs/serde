@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
-#[serde(from = "Option<T")] //~^ HELP: failed to parse type: from = "Option<T"
+#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: failed to parse type: from = "Option<T"
+#[serde(from = "Option<T")]
 enum TestOne {
     Testing,
     One,

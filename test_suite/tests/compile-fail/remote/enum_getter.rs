@@ -15,11 +15,11 @@ mod remote {
     }
 }
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)] //~ ERROR: 18:10: 18:19: #[serde(getter = "...")] is not allowed in an enum
 #[serde(remote = "remote::E")]
 pub enum E {
     A {
-        #[serde(getter = "get_a")] //~^^^^ HELP: #[serde(getter = "...")] is not allowed in an enum
+        #[serde(getter = "get_a")]
         a: u8,
     }
 }
