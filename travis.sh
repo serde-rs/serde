@@ -93,4 +93,12 @@ else
     cargo clean
     cd "$DIR/serde_derive"
     channel build
+
+    for CHANNEL in 1.20.0 1.21.0 1.25.0 1.26.0; do
+        cd "$DIR"
+        cargo clean
+        cd "$DIR/serde"
+        channel build --no-default-features
+        channel build
+    done
 fi
