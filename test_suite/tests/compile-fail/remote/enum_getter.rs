@@ -15,11 +15,12 @@ mod remote {
     }
 }
 
-#[derive(Serialize)] //~ ERROR: 18:10: 18:19: #[serde(getter = "...")] is not allowed in an enum
+#[derive(Serialize)]
 #[serde(remote = "remote::E")]
 pub enum E {
     A {
         #[serde(getter = "get_a")]
+        //~^^^^^ ERROR: #[serde(getter = "...")] is not allowed in an enum
         a: u8,
     }
 }

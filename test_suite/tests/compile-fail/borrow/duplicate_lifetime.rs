@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: duplicate borrowed lifetime `'a`
+#[derive(Deserialize)]
 struct Test<'a> {
     #[serde(borrow = "'a + 'a")]
+    //~^^^ ERROR: duplicate borrowed lifetime `'a`
     s: &'a str,
 }
 

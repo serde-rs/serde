@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: variant `Tuple` cannot have both #[serde(deserialize_with)] and a field 0 marked with #[serde(skip_deserializing)]
+#[derive(Deserialize)]
 enum Enum {
     #[serde(deserialize_with = "deserialize_some_other_variant")]
+    //~^^^ ERROR: variant `Tuple` cannot have both #[serde(deserialize_with)] and a field 0 marked with #[serde(skip_deserializing)]
     Tuple(#[serde(skip_deserializing)] String, u8),
 }
 

@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: #[serde(default)] can only be used on structs with named fields
+#[derive(Deserialize)]
 #[serde(default)]
+//~^^ ERROR: #[serde(default)] can only be used on structs
 enum E {
     S { f: u8 },
 }

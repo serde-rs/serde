@@ -12,9 +12,10 @@ extern crate serde_derive;
 #[derive(Deserialize)]
 struct Str<'a>(&'a str);
 
-#[derive(Deserialize)] //~ ERROR: 15:10: 15:21: duplicate serde attribute `borrow`
+#[derive(Deserialize)]
 enum Test<'a> {
     #[serde(borrow)]
+    //~^^^ ERROR: duplicate serde attribute `borrow`
     S(#[serde(borrow)] Str<'a>)
 }
 

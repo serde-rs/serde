@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: variant field name `conflict` conflicts with internal tag
+#[derive(Serialize)]
 #[serde(tag = "conflict")]
+//~^^ ERROR: variant field name `conflict` conflicts with internal tag
 enum E {
     A {
         #[serde(rename = "conflict")]

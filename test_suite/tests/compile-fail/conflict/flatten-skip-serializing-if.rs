@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(flatten] can not be combined with #[serde(skip_serializing_if = "...")]
+#[derive(Serialize)]
 struct Foo {
     #[serde(flatten, skip_serializing_if="Option::is_none")]
+    //~^^^ ERROR: #[serde(flatten] can not be combined with #[serde(skip_serializing_if = "...")]
     other: Option<Other>,
 }
 

@@ -12,9 +12,10 @@ extern crate serde_derive;
 #[derive(Deserialize)]
 struct Str<'a>(&'a str);
 
-#[derive(Deserialize)] //~ ERROR: 15:10: 15:21: #[serde(borrow)] may only be used on newtype variants
+#[derive(Deserialize)]
 enum Test<'a> {
     #[serde(borrow)]
+    //~^^^ ERROR: #[serde(borrow)] may only be used on newtype variants
     S { s: Str<'a> }
 }
 

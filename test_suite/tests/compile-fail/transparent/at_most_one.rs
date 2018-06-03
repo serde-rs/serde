@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(transparent)] requires struct to have at most one transparent field
+#[derive(Serialize)]
 #[serde(transparent)]
+//~^^ ERROR: #[serde(transparent)] requires struct to have at most one transparent field
 struct S {
     a: u8,
     b: u8,

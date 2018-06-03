@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(tag = "...")] cannot be used with tuple variants
+#[derive(Serialize)]
 #[serde(tag = "type")]
+//~^^ ERROR: #[serde(tag = "...")] cannot be used with tuple variants
 enum E {
     Tuple(u8, u8),
 }

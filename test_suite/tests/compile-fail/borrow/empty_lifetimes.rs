@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: at least one lifetime must be borrowed
+#[derive(Deserialize)]
 struct Test<'a> {
     #[serde(borrow = "")]
+    //~^^^ ERROR: at least one lifetime must be borrowed
     s: &'a str,
 }
 

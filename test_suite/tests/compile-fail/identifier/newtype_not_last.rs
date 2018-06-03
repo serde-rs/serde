@@ -9,11 +9,12 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: `Other` must be the last variant
+#[derive(Deserialize)]
 #[serde(field_identifier)]
 enum F {
     A,
     Other(String),
+    //~^^^^^ ERROR: `Other` must be the last variant
     B,
 }
 

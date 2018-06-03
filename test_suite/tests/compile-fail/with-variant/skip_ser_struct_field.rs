@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: variant `Struct` cannot have both #[serde(serialize_with)] and a field `f1` marked with #[serde(skip_serializing)]
+#[derive(Serialize)]
 enum Enum {
     #[serde(serialize_with = "serialize_some_other_variant")]
+    //~^^^ ERROR: variant `Struct` cannot have both #[serde(serialize_with)] and a field `f1` marked with #[serde(skip_serializing)]
     Struct {
         #[serde(skip_serializing)]
         f1: String,

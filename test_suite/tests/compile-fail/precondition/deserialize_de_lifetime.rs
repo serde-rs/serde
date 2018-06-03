@@ -9,7 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: cannot deserialize when there is a lifetime parameter called 'de
+#[derive(Deserialize)]
 struct S<'de> {
+    //~^^ ERROR: cannot deserialize when there is a lifetime parameter called 'de
     s: &'de str,
 }

@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(untagged)] can only be used on enums
+#[derive(Serialize)]
 #[serde(untagged)]
+//~^^ ERROR: #[serde(untagged)] can only be used on enums
 struct S;
 
 fn main() {}

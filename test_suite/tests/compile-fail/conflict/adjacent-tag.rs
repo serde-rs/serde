@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: enum tags `conflict` for type and content conflict with each other
+#[derive(Serialize)]
 #[serde(tag = "conflict", content = "conflict")]
+//~^^ ERROR: enum tags `conflict` for type and content conflict with each other
 enum E {
     A,
     B,

@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: `field_identifier` can only be used on an enum
+#[derive(Deserialize)]
 #[serde(field_identifier)]
+//~^^ ERROR: `field_identifier` can only be used on an enum
 struct S;
 
 fn main() {}

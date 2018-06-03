@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: failed to parse type: from = "Option<T"
+#[derive(Deserialize)]
 #[serde(from = "Option<T")]
+//~^^ ERROR: failed to parse type: from = "Option<T"
 enum TestOne {
     Testing,
     One,

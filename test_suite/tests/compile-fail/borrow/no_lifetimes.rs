@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: field `s` has no lifetimes to borrow
+#[derive(Deserialize)]
 struct Test {
     #[serde(borrow)]
+    //~^^^ ERROR: field `s` has no lifetimes to borrow
     s: String,
 }
 

@@ -9,7 +9,8 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: #[serde(flatten)] cannot be used on newtype structs
+#[derive(Serialize)]
 struct Foo(#[serde(flatten)] HashMap<String, String>);
+//~^^ ERROR: #[serde(flatten)] cannot be used on newtype structs
 
 fn main() {}

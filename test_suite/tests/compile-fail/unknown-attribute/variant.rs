@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: unknown serde variant attribute `abc`
+#[derive(Serialize)]
 enum E {
     #[serde(abc="xyz")]
+    //~^^^ ERROR: unknown serde variant attribute `abc`
     V,
 }
 

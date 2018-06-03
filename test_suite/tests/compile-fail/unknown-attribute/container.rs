@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: unknown serde container attribute `abc`
+#[derive(Serialize)]
 #[serde(abc="xyz")]
+//~^^ ERROR: unknown serde container attribute `abc`
 struct A {
     x: u32,
 }

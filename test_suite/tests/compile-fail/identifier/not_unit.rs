@@ -9,11 +9,12 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: #[serde(other)] must be on a unit variant
+#[derive(Deserialize)]
 #[serde(field_identifier)]
 enum F {
     A,
     #[serde(other)]
+    //~^^^^^ ERROR: #[serde(other)] must be on a unit variant
     Other(u8, u8),
 }
 

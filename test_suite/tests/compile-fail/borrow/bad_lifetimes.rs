@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: failed to parse borrowed lifetimes: "zzz"
+#[derive(Deserialize)]
 struct Test<'a> {
     #[serde(borrow = "zzz")]
+    //~^^^ ERROR: failed to parse borrowed lifetimes: "zzz"
     s: &'a str,
 }
 

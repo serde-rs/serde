@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: cannot deserialize a dynamically sized struct
+#[derive(Deserialize)]
 struct S {
     string: String,
     slice: [u8],
+    //~^^^^ ERROR: cannot deserialize a dynamically sized struct
 }

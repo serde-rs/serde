@@ -9,10 +9,11 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: #[serde(other)] may only be used inside a field_identifier
+#[derive(Deserialize)]
 enum F {
     A,
     #[serde(other)]
+    //~^^^^ ERROR: #[serde(other)] may only be used inside a field_identifier
     B,
 }
 

@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: duplicate serde attribute `serialize_with`
+#[derive(Serialize)]
 struct S {
     #[serde(with = "w", serialize_with = "s")]
+    //~^^^ ERROR: duplicate serde attribute `serialize_with`
     x: (),
 }
 

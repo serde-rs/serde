@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: unknown serde field attribute `abc`
+#[derive(Serialize)]
 struct C {
     #[serde(abc="xyz")]
+    //~^^^ ERROR: unknown serde field attribute `abc`
     x: u32,
 }
 

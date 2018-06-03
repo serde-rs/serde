@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: 12:10: 12:21: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
+#[derive(Deserialize)]
 #[serde(transparent)]
+//~^^ ERROR: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
 struct S {
     #[serde(skip)]
     a: u8,

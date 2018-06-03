@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: 12:10: 12:19: field identifiers cannot be serialized
+#[derive(Serialize)]
 #[serde(field_identifier)]
+//~^^ ERROR: field identifiers cannot be serialized
 enum F {
     A,
     B,

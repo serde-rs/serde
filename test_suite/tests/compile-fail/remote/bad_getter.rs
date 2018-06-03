@@ -15,10 +15,11 @@ mod remote {
     }
 }
 
-#[derive(Serialize)] //~ ERROR: 18:10: 18:19: failed to parse path: "~~~"
+#[derive(Serialize)]
 #[serde(remote = "remote::S")]
 struct S {
     #[serde(getter = "~~~")]
+    //~^^^^ ERROR: failed to parse path: "~~~"
     a: u8,
 }
 

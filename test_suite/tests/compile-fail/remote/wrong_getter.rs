@@ -21,11 +21,13 @@ mod remote {
     }
 }
 
-#[derive(Serialize)] //~ ERROR: mismatched types
+#[derive(Serialize)]
 #[serde(remote = "remote::S")]
 struct S {
     #[serde(getter = "remote::S::get")]
-    a: u8, //~^^^^ expected u8, found u16
+    //~^^^^ ERROR: mismatched types
+    a: u8,
+    //~^^^^^^ expected u8, found u16
 }
 
 fn main() {}
