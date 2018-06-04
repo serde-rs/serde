@@ -20,13 +20,8 @@ fn start(_argc: isize, _argv: *const *const u8) -> isize {
 #[no_mangle]
 pub extern "C" fn rust_eh_personality() {}
 
-#[lang = "panic_fmt"]
-#[no_mangle]
-pub extern "C" fn rust_begin_panic(
-    _msg: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-) -> ! {
+#[lang = "panic_impl"]
+fn panic_impl(_info: &core::panic::PanicInfo) -> ! {
     unsafe {
         libc::abort();
     }
