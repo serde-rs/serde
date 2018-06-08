@@ -559,6 +559,14 @@ pub trait Deserialize<'de>: Sized {
         *place = Deserialize::deserialize(deserializer)?;
         Ok(())
     }
+
+    #[warn(missing_docs)] //TODO
+    fn deserialize_with_any<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: DeserializerAny<'de>,
+    {
+        Self::deserialize(deserializer)
+    }
 }
 
 /// A data structure that can be deserialized without borrowing any data from
@@ -904,6 +912,11 @@ pub trait Deserializer<'de>: Sized {
     /// `Deserializer::deserialize_any` means your data type will be able to
     /// deserialize from self-describing formats only, ruling out Bincode and
     /// many others.
+    ///
+    /// # Deprecated
+    ///
+    /// TODO
+    #[deprecated]
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
@@ -1207,6 +1220,13 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+}
+
+#[warn(missing_docs)] //TODO
+pub trait DeserializerAny<'de>: Deserializer<'de> {
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, <Self as Deserializer<'de>>::Error>
+    where
+        V: Visitor<'de>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
