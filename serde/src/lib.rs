@@ -118,6 +118,7 @@
     stutter,
     use_self,
 // not practical
+    indexing_slicing,
     many_single_char_names,
     missing_docs_in_private_items,
     similar_names,
