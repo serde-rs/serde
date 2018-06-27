@@ -127,7 +127,10 @@
     use_debug,
 ))]
 // Blacklisted Rust lints.
-#![deny(missing_docs, unused_imports)]
+//
+// Compiler bug involving unused_imports:
+// https://github.com/rust-lang/rust/issues/51661
+#![deny(missing_docs, /*unused_imports*/)]
 
 ////////////////////////////////////////////////////////////////////////////////
 
