@@ -200,7 +200,7 @@ pub fn with_bound(
                 lifetimes: None,
                 // the type parameter that is being bounded e.g. T
                 bounded_ty: syn::Type::Path(bounded_ty),
-                colon_token: Default::default(),
+                colon_token: <Token![:]>::default(),
                 // the bound e.g. Serialize
                 bounds: vec![syn::TypeParamBound::Trait(syn::TraitBound {
                     paren_token: None,
@@ -233,7 +233,7 @@ pub fn with_self_bound(
             lifetimes: None,
             // the type that is being bounded e.g. MyStruct<'a, T>
             bounded_ty: type_of_item(cont),
-            colon_token: Default::default(),
+            colon_token: <Token![:]>::default(),
             // the bound e.g. Default
             bounds: vec![syn::TypeParamBound::Trait(syn::TraitBound {
                 paren_token: None,
@@ -289,7 +289,7 @@ fn type_of_item(cont: &Container) -> syn::Type {
                 arguments: syn::PathArguments::AngleBracketed(
                     syn::AngleBracketedGenericArguments {
                         colon2_token: None,
-                        lt_token: Default::default(),
+                        lt_token: <Token![<]>::default(),
                         args: cont
                             .generics
                             .params
@@ -309,7 +309,7 @@ fn type_of_item(cont: &Container) -> syn::Type {
                                 }
                             })
                             .collect(),
-                        gt_token: Default::default(),
+                        gt_token: <Token![>]>::default(),
                     },
                 ),
             }].into_iter()
