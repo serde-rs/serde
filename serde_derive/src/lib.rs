@@ -37,7 +37,7 @@
     feature = "cargo-clippy",
     allow(
         items_after_statements, doc_markdown, stutter, similar_names, use_self, single_match_else,
-        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation
+        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation, indexing_slicing,
     )
 )]
 // The `quote!` macro requires deep recursion.
