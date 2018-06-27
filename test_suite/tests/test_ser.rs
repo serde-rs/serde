@@ -462,6 +462,11 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_fmt_arguments {
+        format_args!("{}{}", 1, 'a') => &[
+            Token::Str("1a"),
+        ],
+    }
 }
 
 declare_tests! {
