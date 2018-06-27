@@ -593,11 +593,7 @@ pub trait Deserialize<'de>: Sized {
 ///
 /// [Understanding deserializer lifetimes]: https://serde.rs/lifetimes.html
 pub trait DeserializeOwned: for<'de> Deserialize<'de> {}
-impl<T> DeserializeOwned for T
-where
-    T: for<'de> Deserialize<'de>,
-{
-}
+impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 
 /// `DeserializeSeed` is the stateful form of the `Deserialize` trait. If you
 /// ever find yourself looking for a way to pass data into a `Deserialize` impl,
