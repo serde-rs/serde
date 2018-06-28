@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 struct Test<'a> {
-    #[serde(borrow = "'a + 'a")] //~^^ HELP: duplicate borrowed lifetime `'a`
+    #[serde(borrow = "'a + 'a")]
+    //~^^^ ERROR: duplicate borrowed lifetime `'a`
     s: &'a str,
 }
 

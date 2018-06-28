@@ -9,16 +9,16 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: #[serde(flatten] can not be combined with #[serde(skip_serializing)]
+#[derive(Serialize)]
 struct Foo {
     #[serde(flatten, skip_serializing)]
+    //~^^^ ERROR: #[serde(flatten] can not be combined with #[serde(skip_serializing)]
     other: Other,
 }
 
 #[derive(Serialize)]
 struct Other {
-    x: u32
+    x: u32,
 }
 
 fn main() {}

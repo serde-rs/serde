@@ -12,7 +12,11 @@
 
 ## Serde in action
 
-See https://docs.rs/serde_state for examples
+<details>
+<summary>
+Click to show Cargo.toml.
+<a href="https://play.rust-lang.org/?gist=9003c5b88c1f4989941925d7190c6eec" target="_blank">Run this code in the playground.</a>
+</summary>
 
 ```toml
 [dependencies]

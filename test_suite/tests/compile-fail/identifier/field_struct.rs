@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 #[serde(field_identifier)]
-struct S; //~^^ HELP: `field_identifier` can only be used on an enum
+//~^^ ERROR: `field_identifier` can only be used on an enum
+struct S;
 
 fn main() {}

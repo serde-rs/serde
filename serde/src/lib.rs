@@ -52,6 +52,8 @@
 //! - [Pickle], a format common in the Python world.
 //! - [Hjson], a variant of JSON designed to be readable and writable by humans.
 //! - [BSON], the data storage and network transfer format used by MongoDB.
+//! - [Avro], a binary format used within Apache Hadoop, with support for schema
+//!   definition.
 //! - [URL], the x-www-form-urlencoded format.
 //! - [XML], the flexible machine-friendly W3C standard.
 //!   *(deserialization only)*
@@ -69,6 +71,7 @@
 //! [Pickle]: https://github.com/birkenfeld/serde-pickle
 //! [Hjson]: https://github.com/laktak/hjson-rust
 //! [BSON]: https://github.com/zonyitoo/bson-rs
+//! [Avro]: https://github.com/flavray/avro-rs
 //! [URL]: https://github.com/nox/serde_urlencoded
 //! [XML]: https://github.com/RReverser/serde-xml-rs
 //! [Envy]: https://github.com/softprops/envy
@@ -79,21 +82,24 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.37")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.67")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
+#![cfg_attr(feature = "unstable", feature(specialization, never_type))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Whitelisted clippy lints
-#![cfg_attr(feature = "cargo-clippy",
-            allow(cast_lossless, const_static_lifetime, doc_markdown, linkedlist,
-                  needless_pass_by_value, redundant_field_names, type_complexity,
-                  unreadable_literal, zero_prefixed_literal))]
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        cast_lossless, const_static_lifetime, doc_markdown, linkedlist, needless_pass_by_value,
+        redundant_field_names, type_complexity, unreadable_literal, zero_prefixed_literal
+    )
+)]
 // Whitelisted clippy_pedantic lints
 #![cfg_attr(feature = "cargo-clippy", allow(
 // integer and float ser/de requires these sorts of casts
@@ -112,6 +118,7 @@
     stutter,
     use_self,
 // not practical
+    indexing_slicing,
     many_single_char_names,
     missing_docs_in_private_items,
     similar_names,
@@ -120,15 +127,15 @@
     use_debug,
 ))]
 // Blacklisted Rust lints.
-#![deny(missing_docs, unused_imports)]
+//
+// Compiler bug involving unused_imports:
+// https://github.com/rust-lang/rust/issues/51661
+#![deny(missing_docs, /*unused_imports*/)]
 
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
-
-#[cfg(all(feature = "unstable", feature = "std"))]
-extern crate core;
 
 /// A facade around all the types we need from the `std`, `core`, and `alloc`
 /// crates. This avoids elaborate import wrangling having to happen in every
@@ -141,10 +148,10 @@ mod lib {
         pub use std::*;
     }
 
-    pub use self::core::{cmp, iter, mem, ops, slice, str};
+    pub use self::core::{cmp, iter, mem, num, ops, slice, str};
     pub use self::core::{f32, f64};
-    pub use self::core::{isize, i16, i32, i64, i8};
-    pub use self::core::{usize, u16, u32, u64, u8};
+    pub use self::core::{i16, i32, i64, i8, isize};
+    pub use self::core::{u16, u32, u64, u8, usize};
 
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
@@ -176,14 +183,14 @@ mod lib {
     pub use std::boxed::Box;
 
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-    pub use alloc::rc::Rc;
+    pub use alloc::rc::{Rc, Weak as RcWeak};
     #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::rc::Rc;
+    pub use std::rc::{Rc, Weak as RcWeak};
 
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
-    pub use alloc::arc::Arc;
+    pub use alloc::arc::{Arc, Weak as ArcWeak};
     #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::sync::Arc;
+    pub use std::sync::{Arc, Weak as ArcWeak};
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
@@ -208,20 +215,19 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::sync::{Mutex, RwLock};
     #[cfg(feature = "std")]
-    pub use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    pub use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[cfg(feature = "unstable")]
-    #[allow(deprecated)]
-    pub use core::nonzero::{NonZero, Zeroable};
-
-    #[cfg(feature = "unstable")]
-    pub use core::num::{NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
+    #[cfg(any(core_duration, feature = "std"))]
+    pub use self::core::time::Duration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 #[macro_use]
 mod macros;
+
+#[macro_use]
+mod integer128;
 
 pub mod de;
 pub mod ser;

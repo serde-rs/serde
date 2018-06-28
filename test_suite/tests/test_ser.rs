@@ -6,17 +6,21 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "unstable", feature(never_type))]
+
 #[macro_use]
 extern crate serde_derive;
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::net;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, UNIX_EPOCH};
 use std::ffi::CString;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::mem;
+use std::net;
 use std::num::Wrapping;
+use std::path::{Path, PathBuf};
+use std::rc::{Rc, Weak as RcWeak};
+use std::sync::{Arc, Weak as ArcWeak};
+use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
 use std::str;
@@ -398,14 +402,69 @@ declare_tests! {
             Token::Bool(true),
         ],
     }
+    test_rc_weak_some {
+        {
+            let rc = Rc::new(true);
+            mem::forget(rc.clone());
+            Rc::downgrade(&rc)
+        } => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_rc_weak_none {
+        RcWeak::<bool>::new() => &[
+            Token::None,
+        ],
+    }
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
         ],
     }
+    test_arc_weak_some {
+        {
+            let arc = Arc::new(true);
+            mem::forget(arc.clone());
+            Arc::downgrade(&arc)
+        } => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_arc_weak_none {
+        ArcWeak::<bool>::new() => &[
+            Token::None,
+        ],
+    }
     test_wrapping {
         Wrapping(1usize) => &[
             Token::U64(1),
+        ],
+    }
+    test_rc_dst {
+        Rc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Rc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
+    test_arc_dst {
+        Arc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Arc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
+    test_fmt_arguments {
+        format_args!("{}{}", 1, 'a') => &[
+            Token::Str("1a"),
         ],
     }
 }
@@ -491,27 +550,12 @@ declare_tests! {
     }
 }
 
-// Serde's implementation is not unstable, but the constructors are.
 #[cfg(feature = "unstable")]
 declare_tests! {
-    test_rc_dst {
-        Rc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Rc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-    test_arc_dst {
-        Arc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Arc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
+    test_never_result {
+        Ok::<u8, !>(0) => &[
+            Token::NewtypeVariant { name: "Result", variant: "Ok" },
+            Token::U8(0),
         ],
     }
 }
@@ -530,6 +574,13 @@ fn test_cannot_serialize_paths() {
     path_buf.push(path);
 
     assert_ser_tokens_error(&path_buf, &[], "path contains invalid UTF-8 characters");
+}
+
+#[test]
+fn test_cannot_serialize_mutably_borrowed_ref_cell() {
+    let ref_cell = RefCell::new(42);
+    let _reference = ref_cell.borrow_mut();
+    assert_ser_tokens_error(&ref_cell, &[], "already mutably borrowed");
 }
 
 #[test]
@@ -554,4 +605,11 @@ fn test_enum_skipped() {
         &[],
         "the enum variant Enum::SkippedMap cannot be serialized",
     );
+}
+
+#[test]
+fn test_integer128() {
+    assert_ser_tokens_error(&1i128, &[], "i128 is not supported");
+
+    assert_ser_tokens_error(&1u128, &[], "u128 is not supported");
 }

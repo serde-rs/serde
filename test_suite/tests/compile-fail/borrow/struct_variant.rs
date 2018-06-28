@@ -12,10 +12,11 @@ extern crate serde_derive;
 #[derive(Deserialize)]
 struct Str<'a>(&'a str);
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 enum Test<'a> {
-    #[serde(borrow)] //~^^ HELP: #[serde(borrow)] may only be used on newtype variants
-    S { s: Str<'a> }
+    #[serde(borrow)]
+    //~^^^ ERROR: #[serde(borrow)] may only be used on newtype variants
+    S { s: Str<'a> },
 }
 
 fn main() {}

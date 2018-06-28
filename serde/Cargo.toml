@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "1.0.37" # remember to update html_root_url
+version = "1.0.67" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -9,8 +9,9 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde/"
 keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
-readme = "README.md"
-include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+readme = "crates-io.md"
+include = ["Cargo.toml", "build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+build = "build.rs"
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
@@ -28,14 +29,30 @@ serde_derive = { version = "1.0" }
 [features]
 default = ["std"]
 
-# Re-export the derive(Serialize, Deserialize) macros. This is specifically
-# intended for library crates that provide optional Serde impls behind a Cargo
-# cfg of their own. All other crates should depend on serde_derive directly.
+# Re-export the derive(Serialize, Deserialize) macros. This is intended for
+# library crates that provide optional Serde impls behind a Cargo cfg of their
+# own.
 #
-# Please refer to the long comment above the line `pub use serde_derive::*` in
-# src/lib.rs before enabling this feature. If you think you need this feature
-# and your use case does not precisely match the one described in the comment,
-# please open an issue to let us know about your use case.
+# Mainly this is a workaround for limitations associated with
+# rust-lang/cargo#1286 in which a library crate cannot use one "serde" cfg in
+# Cargo to enable dependencies on both serde and serde_derive crates.
+#
+# The recommended way to provide optional Serde support that requires derive is
+# as follows. In particular, please do not name your library's Serde feature
+# anything other than "serde".
+#
+#     [dependencies]
+#     serde = { version = "1.0", optional = true, features = ["derive"] }
+#
+# Within the library, these optional Serde derives would be written like this.
+#
+#     #[cfg(feature = "serde")]
+#     #[macro_use]
+#     extern crate serde;
+#
+#     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#     struct ...
+#
 derive = ["serde_derive"]
 
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
@@ -61,8 +78,3 @@ alloc = ["unstable"]
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = []
-
-# Get serde_derive picked up by the Integer 32 playground. Not public API.
-#
-#    http://play.integer32.com/
-playground = ["serde_derive"]

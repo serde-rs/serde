@@ -19,7 +19,8 @@ mod remote {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::S")]
 struct S {
-    a: u8, //~^^^ ERROR: missing field `b` in initializer of `remote::S`
+    a: u8,
+    //~^^^^ ERROR: missing field `b` in initializer of `remote::S`
 }
 
 fn main() {}

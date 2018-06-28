@@ -9,10 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: variant `Struct` cannot have both #[serde(serialize_with)] and a field `f1` marked with #[serde(skip_serializing_if)]
+#[derive(Serialize)]
 enum Enum {
     #[serde(serialize_with = "serialize_some_newtype_variant")]
+    //~^^^ ERROR: variant `Struct` cannot have both #[serde(serialize_with)] and a field `f1` marked with #[serde(skip_serializing_if)]
     Struct {
         #[serde(skip_serializing_if = "always")]
         f1: String,
@@ -20,4 +20,4 @@ enum Enum {
     },
 }
 
-fn main() { }
+fn main() {}

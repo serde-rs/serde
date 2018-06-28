@@ -9,13 +9,12 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: #[serde(flatten)] cannot be used within enums
-enum Foo {
-    A {
-        #[serde(flatten)]
-        fields: HashMap<String, String>,
-    }
+#[derive(Serialize)]
+#[serde(transparent)]
+//~^^ ERROR: #[serde(transparent)] requires struct to have at most one transparent field
+struct S {
+    a: u8,
+    b: u8,
 }
 
 fn main() {}

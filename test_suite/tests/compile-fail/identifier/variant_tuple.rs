@@ -9,11 +9,12 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 #[serde(variant_identifier)]
 enum F {
     A,
-    B(u8, u8), //~^^^^ HELP: variant_identifier may only contain unit variants
+    B(u8, u8),
+    //~^^^^^ ERROR: variant_identifier may only contain unit variants
 }
 
 fn main() {}

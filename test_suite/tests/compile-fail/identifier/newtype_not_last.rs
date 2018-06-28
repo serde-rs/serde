@@ -9,11 +9,12 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 #[serde(field_identifier)]
 enum F {
     A,
-    Other(String), //~^^^^ HELP: `Other` must be the last variant
+    Other(String),
+    //~^^^^^ ERROR: `Other` must be the last variant
     B,
 }
 

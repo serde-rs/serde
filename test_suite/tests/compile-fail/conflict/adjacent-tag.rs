@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)]
 #[serde(tag = "conflict", content = "conflict")]
-//~^^ HELP: enum tags `conflict` for type and content conflict with each other
+//~^^ ERROR: enum tags `conflict` for type and content conflict with each other
 enum E {
     A,
     B,

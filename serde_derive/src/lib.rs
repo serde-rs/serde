@@ -22,9 +22,24 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.37")]
-#![cfg_attr(feature = "cargo-clippy", allow(enum_variant_names, redundant_field_names,
-                                            too_many_arguments, used_underscore_binding))]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.67")]
+#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+// Whitelisted clippy lints
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        enum_variant_names, redundant_field_names, too_many_arguments, used_underscore_binding,
+        cyclomatic_complexity, needless_pass_by_value
+    )
+)]
+// Whitelisted clippy_pedantic lints
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        items_after_statements, doc_markdown, stutter, similar_names, use_self, single_match_else,
+        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation, indexing_slicing,
+    )
+)]
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "512"]
 
@@ -41,36 +56,34 @@ extern crate proc_macro2;
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 
-// Quote's default is def_site but it appears call_site is likely to stabilize
-// before def_site. Thus we try to use only call_site.
-macro_rules! quote {
-    ($($tt:tt)*) => {
-        quote_spanned!($crate::proc_macro2::Span::call_site()=> $($tt)*)
-    }
-}
-
 #[macro_use]
 mod bound;
 #[macro_use]
 mod fragment;
 
-mod ser;
 mod de;
+mod pretend;
+mod ser;
+mod try;
 
 #[proc_macro_derive(SerializeState, attributes(serde))]
 pub fn derive_serialize_state(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
-    match ser::expand_derive_serialize(&input, true) {
-        Ok(expanded) => expanded.into(),
-        Err(msg) => panic!(msg),
-    }
+    ser::expand_derive_serialize(&input, true)
+        .unwrap_or_else(compile_error)
+        .into()
 }
 
 #[proc_macro_derive(DeserializeState, attributes(serde))]
 pub fn derive_deserialize_state(input: TokenStream) -> TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
-    match de::expand_derive_deserialize(&input, true) {
-        Ok(expanded) => expanded.into(),
-        Err(msg) => panic!(msg),
+    de::expand_derive_deserialize(&input, true)
+        .unwrap_or_else(compile_error)
+        .into()
+}
+
+fn compile_error(message: String) -> proc_macro2::TokenStream {
+    quote! {
+        compile_error!(#message);
     }
 }

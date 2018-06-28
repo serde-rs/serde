@@ -13,8 +13,10 @@ mod remote {
     pub struct S(pub u16);
 }
 
-#[derive(Deserialize)] //~ ERROR: mismatched types
+#[derive(Deserialize)]
 #[serde(remote = "remote::S")]
-struct S(u8); //~^^ expected u16, found u8
+struct S(u8);
+//~^^^ ERROR: mismatched types
+//~^^^^ expected u16, found u8
 
 fn main() {}

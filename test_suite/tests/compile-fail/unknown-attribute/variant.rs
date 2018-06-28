@@ -9,10 +9,11 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)]
 enum E {
-    #[serde(abc="xyz")] //~^^ HELP: unknown serde variant attribute `abc`
+    #[serde(abc = "xyz")]
+    //~^^^ ERROR: unknown serde variant attribute `abc`
     V,
 }
 
-fn main() { }
+fn main() {}

@@ -9,7 +9,7 @@ unstable = ["serde/unstable", "compiletest_rs"]
 
 [dev-dependencies]
 fnv = "1.0"
-proc-macro2 = "0.3"
+proc-macro2 = "0.4"
 rustc-serialize = "0.3.16"
 serde = { version = "1.0.0", features = ["rc"] }
 serde_state = { path = "../serde_state", features = ["rc"] }

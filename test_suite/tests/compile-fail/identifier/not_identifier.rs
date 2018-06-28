@@ -9,10 +9,11 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 enum F {
     A,
-    #[serde(other)] //~^^^ HELP: #[serde(other)] may only be used inside a field_identifier
+    #[serde(other)]
+    //~^^^^ ERROR: #[serde(other)] may only be used inside a field_identifier
     B,
 }
 

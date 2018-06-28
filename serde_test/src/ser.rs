@@ -45,7 +45,7 @@ macro_rules! assert_next_token {
     ($ser:expr, $expected:ident($v:expr)) => {
         assert_next_token!(
             $ser,
-            format_args!("{}({:?})", stringify!($expected), $v),
+            format_args!(concat!(stringify!($expected), "({:?})"), $v),
             Token::$expected(v),
             v == $v
         );
@@ -56,13 +56,13 @@ macro_rules! assert_next_token {
             use std::fmt::Write;
             let mut buffer = String::new();
             $(
-                write!(&mut buffer, "{}: {:?}, ", stringify!($k), $k).unwrap();
+                write!(&mut buffer, concat!(stringify!($k), ": {:?}, "), $k).unwrap();
             )*
             buffer
         };
         assert_next_token!(
             $ser,
-            format_args!("{} {{ {}}}", stringify!($expected), field_format()),
+            format_args!(concat!(stringify!($expected), " {{ {}}}"), field_format()),
             Token::$expected { $($k),* },
             ($($k,)*) == compare
         );

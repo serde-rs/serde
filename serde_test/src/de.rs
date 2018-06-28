@@ -6,9 +6,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use serde::de::{self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess,
-                SeqAccess, VariantAccess, Visitor};
 use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
+use serde::de::{
+    self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess, SeqAccess,
+    VariantAccess, Visitor,
+};
 
 use error::Error;
 use token::Token;
@@ -22,28 +24,28 @@ macro_rules! assert_next_token {
     ($de:expr, $expected:expr) => {
         match $de.next_token_opt() {
             Some(token) if token == $expected => {}
-            Some(other) => {
-                panic!("expected Token::{} but deserialization wants Token::{}",
-                       other, $expected)
-            }
-            None => {
-                panic!("end of tokens but deserialization wants Token::{}",
-                       $expected)
-            }
+            Some(other) => panic!(
+                "expected Token::{} but deserialization wants Token::{}",
+                other, $expected
+            ),
+            None => panic!(
+                "end of tokens but deserialization wants Token::{}",
+                $expected
+            ),
         }
-    }
+    };
 }
 
 macro_rules! unexpected {
     ($token:expr) => {
         panic!("deserialization did not expect this token: {}", $token)
-    }
+    };
 }
 
 macro_rules! end_of_tokens {
     () => {
         panic!("ran out of tokens to deserialize")
-    }
+    };
 }
 
 impl<'de> Deserializer<'de> {
@@ -127,8 +129,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
 
     forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-        byte_buf unit seq map identifier ignored_any
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf unit seq map identifier ignored_any
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Error>
@@ -597,7 +599,8 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
     {
         match self.variant.take() {
             Some(Token::Str(variant)) => seed.deserialize(variant.into_deserializer()).map(Some),
-            Some(Token::Bytes(variant)) => seed.deserialize(BytesDeserializer { value: variant })
+            Some(Token::Bytes(variant)) => seed
+                .deserialize(BytesDeserializer { value: variant })
                 .map(Some),
             Some(Token::U32(variant)) => seed.deserialize(variant.into_deserializer()).map(Some),
             Some(other) => unexpected!(other),
@@ -654,8 +657,8 @@ impl<'de> de::Deserializer<'de> for BytesDeserializer {
     }
 
     forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
-        byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
-        map struct enum identifier ignored_any
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
     }
 }

@@ -9,9 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)]
 #[serde(tag = "conflict")]
-//~^^ HELP: variant field name `conflict` conflicts with internal tag
+//~^^ ERROR: variant field name `conflict` conflicts with internal tag
 enum E {
     A {
         #[serde(rename = "conflict")]

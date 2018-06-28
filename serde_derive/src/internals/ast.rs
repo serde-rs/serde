@@ -6,10 +6,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use internals::attr;
+use internals::check;
+use internals::{Ctxt, Derive};
 use syn;
-use attr;
-use check;
-use Ctxt;
 use syn::punctuated::Punctuated;
 
 pub struct Container<'a> {
@@ -32,7 +32,7 @@ pub struct Variant<'a> {
 }
 
 pub struct Field<'a> {
-    pub ident: Option<syn::Ident>,
+    pub member: syn::Member,
     pub attrs: attr::Field,
     pub ty: &'a syn::Type,
     pub original: &'a syn::Field,
@@ -47,7 +47,7 @@ pub enum Style {
 }
 
 impl<'a> Container<'a> {
-    pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput) -> Container<'a> {
+    pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput, derive: Derive) -> Container<'a> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
         let mut data = match item.data {
@@ -86,13 +86,13 @@ impl<'a> Container<'a> {
             attrs.mark_has_flatten();
         }
 
-        let item = Container {
-            ident: item.ident,
+        let mut item = Container {
+            ident: item.ident.clone(),
             attrs: attrs,
             data: data,
             generics: &item.generics,
         };
-        check::check(cx, &item);
+        check::check(cx, &mut item, derive);
         item
     }
 }
@@ -124,7 +124,7 @@ fn enum_from_ast<'a>(
             let (style, fields) =
                 struct_from_ast(cx, &variant.fields, Some(&attrs), container_default);
             Variant {
-                ident: variant.ident,
+                ident: variant.ident.clone(),
                 attrs: attrs,
                 style: style,
                 fields: fields,
@@ -166,7 +166,10 @@ fn fields_from_ast<'a>(
         .iter()
         .enumerate()
         .map(|(i, field)| Field {
-            ident: field.ident,
+            member: match field.ident {
+                Some(ref ident) => syn::Member::Named(ident.clone()),
+                None => syn::Member::Unnamed(i.into()),
+            },
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
             original: field,
