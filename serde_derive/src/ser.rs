@@ -61,6 +61,8 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, 
     let generated = quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
+            #[allow(unknown_lints)]
+            #[allow(rust_2018_idioms)]
             extern crate serde as _serde;
             #try_replacement
             #impl_block
