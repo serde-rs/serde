@@ -74,6 +74,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             #[allow(unknown_lints)]
+            #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
             #[allow(rust_2018_idioms)]
             extern crate serde as _serde;
             #try_replacement
