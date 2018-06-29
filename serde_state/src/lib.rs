@@ -129,7 +129,7 @@
 #![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
 #![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
 #![cfg_attr(feature = "alloc", feature(alloc))]
-#![cfg_attr(feature = "collections", feature(collections))]
+#![cfg_attr(feature = "alloc", feature(collections))]
 
 // Whitelisted clippy lints.
 #![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
@@ -142,7 +142,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "collections")]
+#[cfg(feature = "alloc")]
 extern crate collections;
 
 #[cfg(feature = "alloc")]
@@ -181,17 +181,17 @@ mod lib {
 
     #[cfg(feature = "std")]
     pub use std::borrow::{Cow, ToOwned};
-    #[cfg(all(feature = "collections", not(feature = "std")))]
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use collections::borrow::{Cow, ToOwned};
 
     #[cfg(feature = "std")]
     pub use std::string::String;
-    #[cfg(all(feature = "collections", not(feature = "std")))]
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use collections::string::{String, ToString};
 
     #[cfg(feature = "std")]
     pub use std::vec::Vec;
-    #[cfg(all(feature = "collections", not(feature = "std")))]
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use collections::vec::Vec;
 
     #[cfg(feature = "std")]
@@ -211,7 +211,7 @@ mod lib {
 
     #[cfg(feature = "std")]
     pub use std::collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
-    #[cfg(all(feature = "collections", not(feature = "std")))]
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use collections::{BinaryHeap, BTreeMap, BTreeSet, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]

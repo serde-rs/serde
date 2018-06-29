@@ -1,4 +1,4 @@
-// Copyright 2017 Serde Developers
+// Copyright 2018 Serde Developers
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -6,17 +6,15 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.17.0")]
-
-extern crate syn;
 #[macro_use]
-extern crate synom;
+extern crate serde_derive;
 
-pub mod ast;
-pub mod attr;
+#[derive(Serialize)]
+#[serde(transparent)]
+//~^^ ERROR: #[serde(transparent)] requires struct to have at most one transparent field
+struct S {
+    a: u8,
+    b: u8,
+}
 
-mod ctxt;
-pub use ctxt::Ctxt;
-
-mod case;
-mod check;
+fn main() {}

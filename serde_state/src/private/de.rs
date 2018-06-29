@@ -10,10 +10,12 @@ use lib::*;
 
 use de::{DeserializeSeed, Deserializer, IntoDeserializer, Error, Visitor};
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 use de::Unexpected;
 
-#[cfg(any(feature = "std", feature = "collections"))]
+pub use serde::private::de::InPlaceSeed;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer,
                         TaggedContentVisitor, TagOrContentField, TagOrContentFieldVisitor,
                         TagContentOtherField, TagContentOtherFieldVisitor,
@@ -59,7 +61,7 @@ where
     seed.deserialize(deserializer)
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D::Error>
 where
     D: Deserializer<'de>,
@@ -128,7 +130,7 @@ where
     deserializer.deserialize_str(CowStrVisitor)
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub fn borrow_cow_bytes<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, [u8]>, D::Error>
 where
     D: Deserializer<'de>,
@@ -210,7 +212,7 @@ pub mod size_hint {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
     // This module is private and nothing here should be used outside of
     // generated code.

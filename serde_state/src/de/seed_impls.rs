@@ -8,8 +8,10 @@
 
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, DeserializeState, Deserializer, EnumAccess, Error, Seed,
-         SeqAccess, Unexpected, VariantAccess, Visitor};
+use de::{
+    Deserialize, DeserializeSeed, DeserializeState, Deserializer, EnumAccess, Error, Seed,
+    SeqAccess, Unexpected, VariantAccess, Visitor,
+};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::MapAccess;
@@ -47,9 +49,13 @@ deserialize_impl! {
     isize,
     f32,
     f64,
-    String,
     (),
     bool
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+deserialize_impl! {
+    String
 }
 
 macro_rules! forwarded_impl {
@@ -181,18 +187,14 @@ where
 
 /// `SeqSeedEx` implements `DeserializeSeed` for sequences whose elements implement
 /// `DeserializeState`
-pub struct SeqSeedEx<'seed, S, F, T: 'seed, U>
-where
-    T: ?Sized,
-{
+pub struct SeqSeedEx<'seed, S, F, T: ?Sized + 'seed, U> {
     seed: &'seed mut T,
     with_capacity: F,
     _marker: PhantomData<(S, U)>,
 }
 
-impl<'seed, 'de, S, F, T, U> SeqSeedEx<'seed, S, F, T, U>
+impl<'seed, 'de, S, F, T: ?Sized, U> SeqSeedEx<'seed, S, F, T, U>
 where
-    T: ?Sized,
     U: DeserializeState<'de, T>,
     F: FnOnce(usize) -> S,
     S: Extend<U>,
@@ -207,10 +209,8 @@ where
     }
 }
 
-
-impl<'de, 'seed, S, F, T, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
+impl<'de, 'seed, S, F, T: ?Sized, U> Visitor<'de> for SeqSeedEx<'seed, S, F, T, U>
 where
-    T: ?Sized,
     U: DeserializeState<'de, T>,
     F: FnOnce(usize) -> S,
     S: Extend<U>,
@@ -236,9 +236,8 @@ where
     }
 }
 
-impl<'de, 'seed, S, F, T, U> DeserializeSeed<'de> for SeqSeedEx<'seed, S, F, T, U>
+impl<'de, 'seed, S, F, T: ?Sized, U> DeserializeSeed<'de> for SeqSeedEx<'seed, S, F, T, U>
 where
-    T: ?Sized,
     U: DeserializeState<'de, T>,
     F: FnOnce(usize) -> S,
     S: Extend<U>,
@@ -252,7 +251,6 @@ where
         deserializer.deserialize_seq(self)
     }
 }
-
 
 /// `DeserializeSeed` instances for optional values
 pub struct OptionSeed<S>(pub S);
@@ -286,7 +284,6 @@ where
                 Ok(None)
             }
 
-
             #[inline]
             fn visit_none<E>(self) -> Result<Self::Value, E>
             where
@@ -308,7 +305,7 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! seq_impl {
     (
         $ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
@@ -317,9 +314,8 @@ macro_rules! seq_impl {
         $with_capacity:expr,
         $insert:expr
     ) => {
-        impl<'de, Seed, T $(, $typaram)*> DeserializeState<'de, Seed> for $ty<T $(, $typaram)*>
+        impl<'de, Seed: ?Sized, T $(, $typaram)*> DeserializeState<'de, Seed> for $ty<T $(, $typaram)*>
         where
-            Seed: ?Sized,
             T: DeserializeState<'de, Seed> $(+ $tbound1 $(+ $tbound2)*)*,
             $($typaram: $bound1 $(+ $bound2)*,)*
         {
@@ -688,7 +684,6 @@ forwarded_impl!((T), Mutex<T>, Mutex::new);
 forwarded_impl!((T), RwLock<T>, RwLock::new);
 
 ////////////////////////////////////////////////////////////////////////////////
-
 
 // Similar to:
 //

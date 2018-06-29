@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
-#[serde(field_identifier, variant_identifier)] //~^ HELP: `field_identifier` and `variant_identifier` cannot both be set
+#[derive(Deserialize)]
+#[serde(field_identifier, variant_identifier)]
+//~^^ ERROR: `field_identifier` and `variant_identifier` cannot both be set
 enum F {
     A,
     B,

@@ -9,12 +9,12 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: variant `Unit` cannot have both #[serde(serialize_with)] and #[serde(skip_serializing)]
+#[derive(Serialize)]
 enum Enum {
     #[serde(serialize_with = "serialize_some_unit_variant")]
     #[serde(skip_serializing)]
+    //~^^^^ ERROR: variant `Unit` cannot have both #[serde(serialize_with)] and #[serde(skip_serializing)]
     Unit,
 }
 
-fn main() { }
+fn main() {}

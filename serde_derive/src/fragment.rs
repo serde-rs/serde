@@ -6,14 +6,16 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use quote::{Tokens, ToTokens};
+use proc_macro2::TokenStream;
+use quote::ToTokens;
+use syn::token;
 
 pub enum Fragment {
     /// Tokens that can be used as an expression.
-    Expr(Tokens),
+    Expr(TokenStream),
     /// Tokens that can be used inside a block. The surrounding curly braces are
     /// not part of these tokens.
-    Block(Tokens),
+    Block(TokenStream),
 }
 
 macro_rules! quote_expr {
@@ -32,13 +34,11 @@ macro_rules! quote_block {
 /// Block fragments in curly braces.
 pub struct Expr(pub Fragment);
 impl ToTokens for Expr {
-    fn to_tokens(&self, out: &mut Tokens) {
+    fn to_tokens(&self, out: &mut TokenStream) {
         match self.0 {
             Fragment::Expr(ref expr) => expr.to_tokens(out),
             Fragment::Block(ref block) => {
-                out.append("{");
-                block.to_tokens(out);
-                out.append("}");
+                token::Brace::default().surround(out, |out| block.to_tokens(out));
             }
         }
     }
@@ -47,7 +47,7 @@ impl ToTokens for Expr {
 /// Interpolate a fragment as the statements of a block.
 pub struct Stmts(pub Fragment);
 impl ToTokens for Stmts {
-    fn to_tokens(&self, out: &mut Tokens) {
+    fn to_tokens(&self, out: &mut TokenStream) {
         match self.0 {
             Fragment::Expr(ref expr) => expr.to_tokens(out),
             Fragment::Block(ref block) => block.to_tokens(out),
@@ -59,17 +59,24 @@ impl ToTokens for Stmts {
 /// involves putting a comma after expressions and curly braces around blocks.
 pub struct Match(pub Fragment);
 impl ToTokens for Match {
-    fn to_tokens(&self, out: &mut Tokens) {
+    fn to_tokens(&self, out: &mut TokenStream) {
         match self.0 {
             Fragment::Expr(ref expr) => {
                 expr.to_tokens(out);
-                out.append(",");
+                <Token![,]>::default().to_tokens(out);
             }
             Fragment::Block(ref block) => {
-                out.append("{");
-                block.to_tokens(out);
-                out.append("}");
+                token::Brace::default().surround(out, |out| block.to_tokens(out));
             }
+        }
+    }
+}
+
+impl AsRef<TokenStream> for Fragment {
+    fn as_ref(&self) -> &TokenStream {
+        match *self {
+            Fragment::Expr(ref expr) => expr,
+            Fragment::Block(ref block) => block,
         }
     }
 }

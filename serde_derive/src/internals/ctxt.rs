@@ -6,8 +6,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::fmt::Display;
 use std::cell::RefCell;
+use std::fmt::Display;
+use std::thread;
 
 #[derive(Default)]
 pub struct Ctxt {
@@ -16,7 +17,9 @@ pub struct Ctxt {
 
 impl Ctxt {
     pub fn new() -> Self {
-        Ctxt { errors: RefCell::new(Some(Vec::new())) }
+        Ctxt {
+            errors: RefCell::new(Some(Vec::new())),
+        }
     }
 
     pub fn error<T: Display>(&self, msg: T) {
@@ -46,7 +49,7 @@ impl Ctxt {
 
 impl Drop for Ctxt {
     fn drop(&mut self) {
-        if self.errors.borrow().is_some() {
+        if !thread::panicking() && self.errors.borrow().is_some() {
             panic!("forgot to check for errors");
         }
     }

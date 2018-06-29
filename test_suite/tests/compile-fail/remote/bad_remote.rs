@@ -15,8 +15,9 @@ mod remote {
     }
 }
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-#[serde(remote = "~~~")] //~^ HELP: failed to parse path: "~~~"
+#[derive(Serialize)]
+#[serde(remote = "~~~")]
+//~^^ ERROR: failed to parse path: "~~~"
 struct S {
     a: u8,
 }

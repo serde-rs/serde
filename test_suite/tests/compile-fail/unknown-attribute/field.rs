@@ -9,10 +9,11 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)]
 struct C {
-    #[serde(abc="xyz")] //~^^ HELP: unknown serde field attribute `abc`
+    #[serde(abc = "xyz")]
+    //~^^^ ERROR: unknown serde field attribute `abc`
     x: u32,
 }
 
-fn main() { }
+fn main() {}

@@ -232,7 +232,10 @@ pub enum Token {
     /// assert_tokens(&a, &[Token::UnitVariant { name: "E", variant: "A" }]);
     /// # }
     /// ```
-    UnitVariant { name: &'static str, variant: &'static str },
+    UnitVariant {
+        name: &'static str,
+        variant: &'static str,
+    },
 
     /// The header to a serialized newtype struct of the given name.
     ///
@@ -286,7 +289,10 @@ pub enum Token {
     /// ]);
     /// # }
     /// ```
-    NewtypeVariant { name: &'static str, variant: &'static str },
+    NewtypeVariant {
+        name: &'static str,
+        variant: &'static str,
+    },
 
     /// The header to a sequence.
     ///
@@ -391,7 +397,11 @@ pub enum Token {
     /// ]);
     /// # }
     /// ```
-    TupleVariant { name: &'static str, variant: &'static str, len: usize },
+    TupleVariant {
+        name: &'static str,
+        variant: &'static str,
+        len: usize,
+    },
 
     /// An indicator of the end of a tuple variant.
     TupleVariantEnd,
@@ -424,10 +434,6 @@ pub enum Token {
     MapEnd,
 
     /// The header of a struct.
-    ///
-    /// When testing deserialization, the `len` field must match the number of
-    /// fields that the struct expects to deserialize. This may be different
-    /// from the number of fields contained in the input tokens.
     ///
     /// After this header are the fields of the struct, followed by `StructEnd`.
     ///
@@ -465,10 +471,6 @@ pub enum Token {
 
     /// The header of a struct variant of an enum.
     ///
-    /// When testing deserialization, the `len` field must match the number of
-    /// fields that the struct variant expects to deserialize. This may be
-    /// different from the number of fields contained in the input tokens.
-    ///
     /// After this header are the fields of the struct variant, followed by
     /// `StructVariantEnd`.
     ///
@@ -496,7 +498,11 @@ pub enum Token {
     /// ]);
     /// # }
     /// ```
-    StructVariant { name: &'static str, variant: &'static str, len: usize },
+    StructVariant {
+        name: &'static str,
+        variant: &'static str,
+        len: usize,
+    },
 
     /// An indicator of the end of a struct variant.
     StructVariantEnd,

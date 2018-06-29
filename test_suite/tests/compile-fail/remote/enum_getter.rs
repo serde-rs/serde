@@ -11,17 +11,18 @@ extern crate serde_derive;
 
 mod remote {
     pub enum E {
-        A { a: u8 }
+        A { a: u8 },
     }
 }
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Serialize)]
 #[serde(remote = "remote::E")]
 pub enum E {
     A {
-        #[serde(getter = "get_a")] //~^^^^ HELP: #[serde(getter = "...")] is not allowed in an enum
+        #[serde(getter = "get_a")]
+        //~^^^^^ ERROR: #[serde(getter = "...")] is not allowed in an enum
         a: u8,
-    }
+    },
 }
 
 fn main() {}

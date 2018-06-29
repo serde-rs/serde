@@ -9,11 +9,11 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Serialize)] //~ ERROR: proc-macro derive panicked
-//~^ HELP: variant `Tuple` cannot have both #[serde(serialize_with)] and a field 0 marked with #[serde(skip_serializing_if)]
+#[derive(Serialize)]
 enum Enum {
     #[serde(serialize_with = "serialize_some_other_variant")]
+    //~^^^ ERROR: variant `Tuple` cannot have both #[serde(serialize_with)] and a field 0 marked with #[serde(skip_serializing_if)]
     Tuple(#[serde(skip_serializing_if = "always")] String, u8),
 }
 
-fn main() { }
+fn main() {}

@@ -9,8 +9,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 #[serde(variant_identifier)]
-struct S; //~^^ HELP: `variant_identifier` can only be used on an enum
+//~^^ ERROR: `variant_identifier` can only be used on an enum
+struct S;
 
 fn main() {}

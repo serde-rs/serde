@@ -44,9 +44,13 @@ serialize_impl! {
     isize,
     f32,
     f64,
-    String,
     (),
     bool
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+serialize_impl!{
+    String
 }
 
 impl<T, Seed: ?Sized> SerializeState<Seed> for Option<T>
@@ -110,7 +114,7 @@ where
     }
 }
 
-
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! seq_impl {
     ($ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)* >) => {
         impl<T, Seed $(, $typaram)*> SerializeState<Seed> for $ty<T $(, $typaram)*>
@@ -129,22 +133,22 @@ macro_rules! seq_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(BinaryHeap<T: Ord>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(BTreeSet<T: Ord>);
 
 #[cfg(feature = "std")]
 seq_impl!(HashSet<T: Eq + Hash, H: BuildHasher>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(LinkedList<T>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(Vec<T>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(VecDeque<T>);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -213,6 +217,7 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! map_impl {
     ($ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)* >) => {
         impl<K, V, Seed $(, $typaram)*> SerializeState<Seed> for $ty<K, V $(, $typaram)*>
@@ -232,7 +237,7 @@ macro_rules! map_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 map_impl!(BTreeMap<K: Ord, V>);
 
 #[cfg(feature = "std")]
@@ -265,7 +270,7 @@ deref_impl!(<Seed: ?Sized, T> SerializeState<Seed> for Rc<T> where T: SerializeS
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 deref_impl!(<Seed: ?Sized, T> SerializeState<Seed> for Arc<T> where T: SerializeState<Seed>);
 
-#[cfg(any(feature = "std", feature = "collections"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 deref_impl!(<'a, Seed: ?Sized, T: ?Sized> SerializeState<Seed> for Cow<'a, T> where T: SerializeState<Seed> + ToOwned);
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -12,10 +12,11 @@ extern crate serde_derive;
 #[derive(Deserialize)]
 struct Str<'a>(&'a str);
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 enum Test<'a> {
-    #[serde(borrow)] //~^^ HELP: duplicate serde attribute `borrow`
-    S(#[serde(borrow)] Str<'a>)
+    #[serde(borrow)]
+    //~^^^ ERROR: duplicate serde attribute `borrow`
+    S(#[serde(borrow)] Str<'a>),
 }
 
 fn main() {}

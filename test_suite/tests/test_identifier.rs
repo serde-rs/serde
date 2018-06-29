@@ -49,7 +49,8 @@ fn test_unit_fallthrough() {
     enum F {
         Aaa,
         Bbb,
-        #[serde(other)] Other,
+        #[serde(other)]
+        Other,
     }
 
     assert_de_tokens(&F::Other, &[Token::Str("x")]);

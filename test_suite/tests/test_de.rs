@@ -6,24 +6,24 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
+#![cfg_attr(feature = "unstable", feature(never_type))]
+
 #[macro_use]
 extern crate serde_derive;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::net;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, UNIX_EPOCH};
 use std::default::Default;
-use std::ffi::{CString, OsString};
-use std::rc::Rc;
-use std::sync::Arc;
+use std::ffi::{CStr, CString, OsString};
+use std::net;
 use std::num::Wrapping;
-
-#[cfg(feature = "unstable")]
-use std::ffi::CStr;
+use std::path::{Path, PathBuf};
+use std::rc::{Rc, Weak as RcWeak};
+use std::sync::{Arc, Weak as ArcWeak};
+use std::time::{Duration, UNIX_EPOCH};
 
 extern crate serde;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 extern crate fnv;
 use self::fnv::FnvHasher;
@@ -49,14 +49,16 @@ struct TupleStruct(i32, i32, i32);
 struct Struct {
     a: i32,
     b: i32,
-    #[serde(skip_deserializing)] c: i32,
+    #[serde(skip_deserializing)]
+    c: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructDenyUnknown {
     a: i32,
-    #[serde(skip_deserializing)] b: i32,
+    #[serde(skip_deserializing)]
+    b: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -77,13 +79,35 @@ impl Default for StructDefault<String> {
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct StructSkipAll {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructSkipDefault {
+    #[serde(skip_deserializing)]
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructSkipDefaultGeneric<T> {
+    #[serde(skip_deserializing)]
+    t: T,
+}
+
+impl Default for StructSkipDefault {
+    fn default() -> Self {
+        StructSkipDefault { a: 16 }
+    }
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StructSkipAllDenyUnknown {
-    #[serde(skip_deserializing)] a: i32,
+    #[serde(skip_deserializing)]
+    a: i32,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -94,7 +118,11 @@ enum Enum {
     Unit,
     Simple(i32),
     Seq(i32, i32, i32),
-    Map { a: i32, b: i32, c: i32 },
+    Map {
+        a: i32,
+        b: i32,
+        c: i32,
+    },
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -149,6 +177,27 @@ macro_rules! declare_error_tests {
                 assert_de_tokens_error::<$target>($tokens, $expected);
             }
         )+
+    }
+}
+
+#[derive(Debug)]
+struct SkipPartialEq<T>(T);
+
+impl<'de, T> Deserialize<'de> for SkipPartialEq<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize(deserializer).map(SkipPartialEq)
+    }
+}
+
+impl<T> PartialEq for SkipPartialEq<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
     }
 }
 
@@ -207,6 +256,27 @@ declare_tests! {
     test_floats {
         0f32 => &[Token::F32(0.)],
         0f64 => &[Token::F64(0.)],
+    }
+    test_small_int_to_128 {
+        1i128 => &[Token::I8(1)],
+        1i128 => &[Token::I16(1)],
+        1i128 => &[Token::I32(1)],
+        1i128 => &[Token::I64(1)],
+
+        1i128 => &[Token::U8(1)],
+        1i128 => &[Token::U16(1)],
+        1i128 => &[Token::U32(1)],
+        1i128 => &[Token::U64(1)],
+
+        1u128 => &[Token::I8(1)],
+        1u128 => &[Token::I16(1)],
+        1u128 => &[Token::I32(1)],
+        1u128 => &[Token::I64(1)],
+
+        1u128 => &[Token::U8(1)],
+        1u128 => &[Token::U16(1)],
+        1u128 => &[Token::U32(1)],
+        1u128 => &[Token::U64(1)],
     }
     test_char {
         'a' => &[Token::Char('a')],
@@ -600,6 +670,12 @@ declare_tests! {
             Token::StructEnd,
         ],
     }
+    test_struct_skip_default {
+        StructSkipDefault { a: 16 } => &[
+            Token::Struct { name: "StructSkipDefault", len: 0 },
+            Token::StructEnd,
+        ],
+    }
     test_struct_skip_all_deny_unknown {
         StructSkipAllDenyUnknown { a: 0 } => &[
             Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
@@ -752,9 +828,31 @@ declare_tests! {
             Token::Bool(true),
         ],
     }
+    test_rc_weak_some {
+        SkipPartialEq(RcWeak::<bool>::new()) => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_rc_weak_none {
+        SkipPartialEq(RcWeak::<bool>::new()) => &[
+            Token::None,
+        ],
+    }
     test_arc {
         Arc::new(true) => &[
             Token::Bool(true),
+        ],
+    }
+    test_arc_weak_some {
+        SkipPartialEq(ArcWeak::<bool>::new()) => &[
+            Token::Some,
+            Token::Bool(true),
+        ],
+    }
+    test_arc_weak_none {
+        SkipPartialEq(ArcWeak::<bool>::new()) => &[
+            Token::None,
         ],
     }
     test_wrapping {
@@ -763,6 +861,26 @@ declare_tests! {
         ],
         Wrapping(1usize) => &[
             Token::U64(1),
+        ],
+    }
+    test_rc_dst {
+        Rc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Rc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    }
+    test_arc_dst {
+        Arc::<str>::from("s") => &[
+            Token::Str("s"),
+        ],
+        Arc::<[bool]>::from(&[true][..]) => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
         ],
     }
 }
@@ -862,24 +980,10 @@ declare_tests! {
 
 #[cfg(feature = "unstable")]
 declare_tests! {
-    test_rc_dst {
-        Rc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Rc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-    test_arc_dst {
-        Arc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Arc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
+    test_never_result {
+        Ok::<u8, !>(0) => &[
+            Token::NewtypeVariant { name: "Result", variant: "Ok" },
+            Token::U8(0),
         ],
     }
 }
@@ -924,7 +1028,6 @@ fn test_osstring() {
     assert_de_tokens_ignore(&tokens);
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_cstr() {
     assert_de_tokens::<Box<CStr>>(
@@ -933,7 +1036,6 @@ fn test_cstr() {
     );
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_cstr_internal_null() {
     assert_de_tokens_error::<Box<CStr>>(
@@ -942,12 +1044,25 @@ fn test_cstr_internal_null() {
     );
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_cstr_internal_null_end() {
     assert_de_tokens_error::<Box<CStr>>(
         &[Token::Bytes(b"ac\0")],
         "nul byte found in provided data at position: 2",
+    );
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+fn test_never_type() {
+    assert_de_tokens_error::<!>(&[], "cannot deserialize `!`");
+
+    assert_de_tokens_error::<Result<u8, !>>(
+        &[Token::NewtypeVariant {
+            name: "Result",
+            variant: "Err",
+        }],
+        "cannot deserialize `!`",
     );
 }
 

@@ -9,9 +9,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[derive(Deserialize)] //~ ERROR: proc-macro derive panicked
+#[derive(Deserialize)]
 struct Test {
-    #[serde(borrow)] //~^^ HELP: field `s` has no lifetimes to borrow
+    #[serde(borrow)]
+    //~^^^ ERROR: field `s` has no lifetimes to borrow
     s: String,
 }
 
