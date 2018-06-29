@@ -475,9 +475,6 @@ fn deserialize_tuple(
         &type_path, params, fields, false, cattrs, &expecting,
     ));
 
-    let state_stmt = quote! {
-        let __state = __deserializer.state().clone();
-    };
     let visitor_expr = quote! {
         __Visitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
@@ -485,16 +482,28 @@ fn deserialize_tuple(
             state: __state,
         }
     };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+    let (state_expr, dispatch) = if let Some(deserializer) = deserializer {
+        (
+            quote!((#deserializer).state().clone()),
+            quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+        )
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        (
+            quote!(self.state.clone()),
+            quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        )
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
+        (
+            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
+        )
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        (
+            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        )
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -529,7 +538,7 @@ fn deserialize_tuple(
             }
         }
 
-        #state_stmt
+        let __state = #state_expr;
         #dispatch
     }
 }
@@ -565,9 +574,6 @@ fn deserialize_tuple_in_place(
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
 
-    let state_stmt = quote! {
-        let __state = __deserializer.state().clone();
-    };
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
@@ -576,16 +582,28 @@ fn deserialize_tuple_in_place(
         }
     };
 
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+    let (state_expr, dispatch) = if let Some(deserializer) = deserializer {
+        (
+            quote!((#deserializer).state().clone()),
+            quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+        )
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        (
+            quote!(self.state.clone()),
+            quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        )
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
+        (
+            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
+        )
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        (
+            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        )
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -624,7 +642,7 @@ fn deserialize_tuple_in_place(
             }
         }
 
-        #state_stmt
+        let __state = #state_expr;
         #dispatch
     }
 }
@@ -928,27 +946,42 @@ fn deserialize_struct(
             state: __state,
         }
     };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
-        }
+    let (state_expr, dispatch) = if let Some(deserializer) = deserializer {
+        (
+            quote!((#deserializer).state().clone()),
+            quote! {
+                _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+            }
+        )
     } else if is_enum && cattrs.has_flatten() {
-        quote! {
-            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
-        }
+        (
+            quote!(self.state.clone()),
+            quote! {
+                _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
+            }
+        )
     } else if is_enum {
-        quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
-        }
+        (
+            quote!(self.state.clone()),
+            quote! {
+                _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+            }
+        )
     } else if cattrs.has_flatten() {
-        quote! {
-            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
-        }
+        (
+            quote!(__deserializer.state().clone()),
+            quote! {
+                _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
+            }
+        )
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
-        }
+        (
+            quote!(__deserializer.state().clone()),
+            quote! {
+                _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            }
+        )
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -1020,6 +1053,7 @@ fn deserialize_struct(
         #visitor_seed
 
         #fields_stmt
+        let __state = #state_expr;
 
         #dispatch
     }
