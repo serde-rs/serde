@@ -47,33 +47,31 @@ pub fn expand_derive_serialize(
                 }
             }
         }
-    } else {
-        if seed {
-            let seed_ty = cont
-                .attrs
-                .serialize_state()
-                .ok_or_else(|| "Need a seed attribute")?;
+    } else if seed {
+        let seed_ty = cont
+            .attrs
+            .serialize_state()
+            .ok_or_else(|| "Need a seed attribute")?;
 
-            quote! {
-                #[automatically_derived]
-                impl #impl_generics _serde::ser::SerializeState<#seed_ty> for #ident #ty_generics #where_clause {
+        quote! {
+            #[automatically_derived]
+            impl #impl_generics _serde::ser::SerializeState<#seed_ty> for #ident #ty_generics #where_clause {
 
-                    fn serialize_state<__S>(&self, __serializer: __S, __seed: &#seed_ty) -> _serde::export::Result<__S::Ok, __S::Error>
-                        where __S: _serde::Serializer
-                    {
-                        #body
-                    }
+                fn serialize_state<__S>(&self, __serializer: __S, __seed: &#seed_ty) -> _serde::export::Result<__S::Ok, __S::Error>
+                    where __S: _serde::Serializer
+                {
+                    #body
                 }
             }
-        } else {
-            quote! {
-                #[automatically_derived]
-                impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
-                    fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-                        where __S: _serde::Serializer
-                    {
-                        #body
-                    }
+        }
+    } else {
+        quote! {
+            #[automatically_derived]
+            impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
+                fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                    where __S: _serde::Serializer
+                {
+                    #body
                 }
             }
         }

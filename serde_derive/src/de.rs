@@ -755,7 +755,7 @@ fn deserialize_seq_in_place(
         format!("{} with {} elements", expecting, deserialized_count)
     };
 
-    let mut index_in_seq = 0usize;
+    let mut index_in_seq = 0_usize;
     let write_values = fields.iter().map(|field| {
         let member = &field.member;
 
