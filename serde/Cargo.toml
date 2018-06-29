@@ -79,5 +79,8 @@ alloc = ["unstable"]
 # Be sure that this is what you want before enabling this feature.
 rc = []
 
-# Enables the state support.
+# Enables the state support.  This feature is on by default but can be removed
+# to disable states.  If states are enabled serializers can carry state information
+# around.  If this feature is disabled any attempt to store data in the state will
+# silently do nothing.
 state = []

@@ -19,6 +19,11 @@ impl State {
         &EMPTY_STATE
     }
 
+    /// Returns `true` if the state feature is available.
+    pub fn available() -> bool {
+        cfg!(feature = "state")
+    }
+
     /// Invokes a callback with the value.
     pub fn with<T: 'static, R, F: FnOnce(Option<&T>) -> R>(&self, f: F) -> R {
         #[cfg(feature = "state")] {
