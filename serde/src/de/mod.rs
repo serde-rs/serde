@@ -129,8 +129,10 @@ mod from_primitive;
 mod ignored_any;
 mod impls;
 mod utf8;
+mod state;
 
 pub use self::ignored_any::IgnoredAny;
+pub use self::state::State;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1202,6 +1204,12 @@ pub trait Deserializer<'de>: Sized {
     #[inline]
     fn is_human_readable(&self) -> bool {
         true
+    }
+
+    /// Returns the current state.
+    #[inline]
+    fn state(&self) -> &State {
+        State::empty()
     }
 }
 

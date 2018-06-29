@@ -61,6 +61,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
                 where
                     __D: _serde::Deserializer<#delife>,
                 {
+                    let __state = __deserializer.state().clone();
                     #body
                 }
 
@@ -401,7 +402,9 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
     let expecting = format!("unit struct {}", params.type_name());
 
     quote_block! {
-        struct __Visitor;
+        struct __Visitor {
+            state: _serde::de::State,
+        }
 
         impl<'de> _serde::de::Visitor<'de> for __Visitor {
             type Value = #this;
@@ -419,7 +422,10 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
             }
         }
 
-        _serde::Deserializer::deserialize_unit_struct(__deserializer, #type_name, __Visitor)
+        let __state = __deserializer.state().clone();
+        _serde::Deserializer::deserialize_unit_struct(__deserializer, #type_name, __Visitor {
+            state: __state,
+        })
     }
 }
 
@@ -469,10 +475,14 @@ fn deserialize_tuple(
         &type_path, params, fields, false, cattrs, &expecting,
     ));
 
+    let state_stmt = quote! {
+        let __state = __deserializer.state().clone();
+    };
     let visitor_expr = quote! {
         __Visitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
+            state: __state,
         }
     };
     let dispatch = if let Some(deserializer) = deserializer {
@@ -498,6 +508,7 @@ fn deserialize_tuple(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -518,6 +529,7 @@ fn deserialize_tuple(
             }
         }
 
+        #state_stmt
         #dispatch
     }
 }
@@ -553,10 +565,14 @@ fn deserialize_tuple_in_place(
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
 
+    let state_stmt = quote! {
+        let __state = __deserializer.state().clone();
+    };
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
             lifetime: _serde::export::PhantomData,
+            state: __state,
         }
     };
 
@@ -587,6 +603,7 @@ fn deserialize_tuple_in_place(
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
@@ -607,6 +624,7 @@ fn deserialize_tuple_in_place(
             }
         }
 
+        #state_stmt
         #dispatch
     }
 }
@@ -907,6 +925,7 @@ fn deserialize_struct(
         __Visitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
+            state: __state,
         }
     };
     let dispatch = if let Some(deserializer) = deserializer {
@@ -977,6 +996,7 @@ fn deserialize_struct(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1040,10 +1060,14 @@ fn deserialize_struct_in_place(
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
+    let state_stmt = quote! {
+        let __state = __deserializer.state().clone();
+    };
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
             lifetime: _serde::export::PhantomData,
+            state: __state,
         }
     };
     let dispatch = if let Some(deserializer) = deserializer {
@@ -1088,6 +1112,7 @@ fn deserialize_struct_in_place(
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
@@ -1109,6 +1134,7 @@ fn deserialize_struct_in_place(
         }
 
         #fields_stmt
+        #state_stmt
 
         #dispatch
     })
@@ -1211,6 +1237,7 @@ fn deserialize_externally_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1230,10 +1257,12 @@ fn deserialize_externally_tagged_enum(
 
         #variants_stmt
 
+        let __state = __deserializer.state().clone();
         _serde::Deserializer::deserialize_enum(__deserializer, #type_name, VARIANTS,
                                                __Visitor {
                                                    marker: _serde::export::PhantomData::<#this #ty_generics>,
                                                    lifetime: _serde::export::PhantomData,
+                                                   state: __state,
                                                })
     }
 }
@@ -1499,6 +1528,7 @@ fn deserialize_adjacently_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1597,10 +1627,12 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         const FIELDS: &'static [&'static str] = &[#tag, #content];
+        let __state = __deserializer.state().clone();
         _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS,
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
+                state: __state,
             })
     }
 }
@@ -1635,6 +1667,7 @@ fn deserialize_untagged_enum(
 
     quote_block! {
         let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+        let __state = __content.state().clone();
 
         #(
             if let _serde::export::Ok(__ok) = #attempts {
@@ -1876,7 +1909,9 @@ fn deserialize_generated_identifier(
             #ignore_variant
         }
 
-        struct __FieldVisitor;
+        struct __FieldVisitor {
+            state: _serde::de::State,
+        }
 
         impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
             type Value = __Field #lifetime;
@@ -1890,7 +1925,10 @@ fn deserialize_generated_identifier(
             where
                 __D: _serde::Deserializer<'de>,
             {
-                _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                let __state = __deserializer.state().clone();
+                _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor {
+                    state: __state,
+                })
             }
         }
     }
@@ -1975,6 +2013,7 @@ fn deserialize_custom_identifier(
         struct __FieldVisitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            state: _serde::de::State,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __FieldVisitor #de_ty_generics #where_clause {
@@ -1986,6 +2025,7 @@ fn deserialize_custom_identifier(
         let __visitor = __FieldVisitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
+            state: __deserializer.state().clone(),
         };
         _serde::Deserializer::deserialize_identifier(__deserializer, __visitor)
     }
@@ -2036,16 +2076,16 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::private::de::Content::String(__value.to_string());
+                let __value = _serde::private::de::Content::new(_serde::private::de::ContentRepr::String(__value.to_string()), &self.state);
             }),
             Some(quote! {
-                let __value = _serde::private::de::Content::Str(__value);
+                let __value = _serde::private::de::Content::new(_serde::private::de::ContentRepr::Str(__value), &self.state);
             }),
             Some(quote! {
-                let __value = _serde::private::de::Content::ByteBuf(__value.to_vec());
+                let __value = _serde::private::de::Content::new(_serde::private::de::ContentRepr::ByteBuf(__value.to_vec()), &self.state);
             }),
             Some(quote! {
-                let __value = _serde::private::de::Content::Bytes(__value);
+                let __value = _serde::private::de::Content::new(_serde::private::de::ContentRepr::Bytes(__value), &self.state);
             }),
         )
     } else {
@@ -2072,91 +2112,91 @@ fn deserialize_identifier(
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Bool(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::Bool(__value), &self.state)))
             }
 
             fn visit_i8<__E>(self, __value: i8) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I8(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::I8(__value), &self.state)))
             }
 
             fn visit_i16<__E>(self, __value: i16) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I16(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::I16(__value), &self.state)))
             }
 
             fn visit_i32<__E>(self, __value: i32) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I32(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::I32(__value), &self.state)))
             }
 
             fn visit_i64<__E>(self, __value: i64) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I64(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::I64(__value), &self.state)))
             }
 
             fn visit_u8<__E>(self, __value: u8) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U8(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::U8(__value), &self.state)))
             }
 
             fn visit_u16<__E>(self, __value: u16) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U16(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::U16(__value), &self.state)))
             }
 
             fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U32(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::U32(__value), &self.state)))
             }
 
             fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U64(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::U64(__value), &self.state)))
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::F32(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::F32(__value), &self.state)))
             }
 
             fn visit_f64<__E>(self, __value: f64) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::F64(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::F64(__value), &self.state)))
             }
 
             fn visit_char<__E>(self, __value: char) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Char(__value)))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::Char(__value), &self.state)))
             }
 
             fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Unit))
+                _serde::export::Ok(__Field::__other(_serde::private::de::Content::new(_serde::private::de::ContentRepr::Unit, &self.state)))
             }
 
             fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>

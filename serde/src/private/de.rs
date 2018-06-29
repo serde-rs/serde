@@ -15,7 +15,7 @@ use de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
-    Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
+    Content, ContentRepr, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
     InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
@@ -232,7 +232,7 @@ mod content {
     use super::size_hint;
     use de::{
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, MapAccess,
-        SeqAccess, Unexpected, Visitor,
+        SeqAccess, Unexpected, Visitor, State,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -240,7 +240,26 @@ mod content {
     ///
     /// Not public API. Use serde-value instead.
     #[derive(Debug)]
-    pub enum Content<'de> {
+    pub struct Content<'de> {
+        repr: ContentRepr<'de>,
+        state: State,
+    }
+
+    impl<'de> Content<'de> {
+        pub fn new(value: ContentRepr<'de>, state: &State) -> Content<'de> {
+            Content {
+                repr: value,
+                state: state.clone(),
+            }
+        }
+
+        pub fn state(&self) -> &State {
+            &self.state
+        }
+    }
+
+    #[derive(Debug)]
+    pub enum ContentRepr<'de> {
         Bool(bool),
 
         U8(u8),
@@ -273,39 +292,39 @@ mod content {
 
     impl<'de> Content<'de> {
         pub fn as_str(&self) -> Option<&str> {
-            match *self {
-                Content::Str(x) => Some(x),
-                Content::String(ref x) => Some(x),
-                Content::Bytes(x) => str::from_utf8(x).ok(),
-                Content::ByteBuf(ref x) => str::from_utf8(x).ok(),
+            match self.repr {
+                ContentRepr::Str(x) => Some(x),
+                ContentRepr::String(ref x) => Some(x),
+                ContentRepr::Bytes(x) => str::from_utf8(x).ok(),
+                ContentRepr::ByteBuf(ref x) => str::from_utf8(x).ok(),
                 _ => None,
             }
         }
 
         #[cold]
         fn unexpected(&self) -> Unexpected {
-            match *self {
-                Content::Bool(b) => Unexpected::Bool(b),
-                Content::U8(n) => Unexpected::Unsigned(n as u64),
-                Content::U16(n) => Unexpected::Unsigned(n as u64),
-                Content::U32(n) => Unexpected::Unsigned(n as u64),
-                Content::U64(n) => Unexpected::Unsigned(n),
-                Content::I8(n) => Unexpected::Signed(n as i64),
-                Content::I16(n) => Unexpected::Signed(n as i64),
-                Content::I32(n) => Unexpected::Signed(n as i64),
-                Content::I64(n) => Unexpected::Signed(n),
-                Content::F32(f) => Unexpected::Float(f as f64),
-                Content::F64(f) => Unexpected::Float(f),
-                Content::Char(c) => Unexpected::Char(c),
-                Content::String(ref s) => Unexpected::Str(s),
-                Content::Str(s) => Unexpected::Str(s),
-                Content::ByteBuf(ref b) => Unexpected::Bytes(b),
-                Content::Bytes(b) => Unexpected::Bytes(b),
-                Content::None | Content::Some(_) => Unexpected::Option,
-                Content::Unit => Unexpected::Unit,
-                Content::Newtype(_) => Unexpected::NewtypeStruct,
-                Content::Seq(_) => Unexpected::Seq,
-                Content::Map(_) => Unexpected::Map,
+            match self.repr {
+                ContentRepr::Bool(b) => Unexpected::Bool(b),
+                ContentRepr::U8(n) => Unexpected::Unsigned(n as u64),
+                ContentRepr::U16(n) => Unexpected::Unsigned(n as u64),
+                ContentRepr::U32(n) => Unexpected::Unsigned(n as u64),
+                ContentRepr::U64(n) => Unexpected::Unsigned(n),
+                ContentRepr::I8(n) => Unexpected::Signed(n as i64),
+                ContentRepr::I16(n) => Unexpected::Signed(n as i64),
+                ContentRepr::I32(n) => Unexpected::Signed(n as i64),
+                ContentRepr::I64(n) => Unexpected::Signed(n),
+                ContentRepr::F32(f) => Unexpected::Float(f as f64),
+                ContentRepr::F64(f) => Unexpected::Float(f),
+                ContentRepr::Char(c) => Unexpected::Char(c),
+                ContentRepr::String(ref s) => Unexpected::Str(s),
+                ContentRepr::Str(s) => Unexpected::Str(s),
+                ContentRepr::ByteBuf(ref b) => Unexpected::Bytes(b),
+                ContentRepr::Bytes(b) => Unexpected::Bytes(b),
+                ContentRepr::None | ContentRepr::Some(_) => Unexpected::Option,
+                ContentRepr::Unit => Unexpected::Unit,
+                ContentRepr::Newtype(_) => Unexpected::NewtypeStruct,
+                ContentRepr::Seq(_) => Unexpected::Seq,
+                ContentRepr::Map(_) => Unexpected::Map,
             }
         }
     }
@@ -317,18 +336,19 @@ mod content {
         {
             // Untagged and internally tagged enums are only supported in
             // self-describing formats.
-            let visitor = ContentVisitor { value: PhantomData };
+            let visitor = ContentVisitor::new(deserializer.state());
             deserializer.deserialize_any(visitor)
         }
     }
 
     struct ContentVisitor<'de> {
         value: PhantomData<Content<'de>>,
+        state: State,
     }
 
     impl<'de> ContentVisitor<'de> {
-        fn new() -> Self {
-            ContentVisitor { value: PhantomData }
+        fn new(state: &State) -> Self {
+            ContentVisitor { value: PhantomData, state: state.clone() }
         }
     }
 
@@ -343,154 +363,156 @@ mod content {
         where
             F: de::Error,
         {
-            Ok(Content::Bool(value))
+            Ok(Content::new(ContentRepr::Bool(value), &self.state))
         }
 
         fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::I8(value))
+            Ok(Content::new(ContentRepr::I8(value), &self.state))
         }
 
         fn visit_i16<F>(self, value: i16) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::I16(value))
+            Ok(Content::new(ContentRepr::I16(value), &self.state))
         }
 
         fn visit_i32<F>(self, value: i32) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::I32(value))
+            Ok(Content::new(ContentRepr::I32(value), &self.state))
         }
 
         fn visit_i64<F>(self, value: i64) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::I64(value))
+            Ok(Content::new(ContentRepr::I64(value), &self.state))
         }
 
         fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::U8(value))
+            Ok(Content::new(ContentRepr::U8(value), &self.state))
         }
 
         fn visit_u16<F>(self, value: u16) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::U16(value))
+            Ok(Content::new(ContentRepr::U16(value), &self.state))
         }
 
         fn visit_u32<F>(self, value: u32) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::U32(value))
+            Ok(Content::new(ContentRepr::U32(value), &self.state))
         }
 
         fn visit_u64<F>(self, value: u64) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::U64(value))
+            Ok(Content::new(ContentRepr::U64(value), &self.state))
         }
 
         fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::F32(value))
+            Ok(Content::new(ContentRepr::F32(value), &self.state))
         }
 
         fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::F64(value))
+            Ok(Content::new(ContentRepr::F64(value), &self.state))
         }
 
         fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::Char(value))
+            Ok(Content::new(ContentRepr::Char(value), &self.state))
         }
 
         fn visit_str<F>(self, value: &str) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::String(value.into()))
+            Ok(Content::new(ContentRepr::String(value.into()), &self.state))
         }
 
         fn visit_borrowed_str<F>(self, value: &'de str) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::Str(value))
+            Ok(Content::new(ContentRepr::Str(value), &self.state))
         }
 
         fn visit_string<F>(self, value: String) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::String(value))
+            Ok(Content::new(ContentRepr::String(value), &self.state))
         }
 
         fn visit_bytes<F>(self, value: &[u8]) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::ByteBuf(value.into()))
+            Ok(Content::new(ContentRepr::ByteBuf(value.into()), &self.state))
         }
 
         fn visit_borrowed_bytes<F>(self, value: &'de [u8]) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::Bytes(value))
+            Ok(Content::new(ContentRepr::Bytes(value), &self.state))
         }
 
         fn visit_byte_buf<F>(self, value: Vec<u8>) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::ByteBuf(value))
+            Ok(Content::new(ContentRepr::ByteBuf(value), &self.state))
         }
 
         fn visit_unit<F>(self) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::Unit)
+            Ok(Content::new(ContentRepr::Unit, &self.state))
         }
 
         fn visit_none<F>(self) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            Ok(Content::None)
+            Ok(Content::new(ContentRepr::None, &self.state))
         }
 
         fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
         {
-            Deserialize::deserialize(deserializer).map(|v| Content::Some(Box::new(v)))
+            Deserialize::deserialize(deserializer)
+                .map(|v| Content::new(ContentRepr::Some(Box::new(v)), &self.state))
         }
 
         fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
         {
-            Deserialize::deserialize(deserializer).map(|v| Content::Newtype(Box::new(v)))
+            Deserialize::deserialize(deserializer)
+                .map(|v| Content::new(ContentRepr::Newtype(Box::new(v)), &self.state))
         }
 
         fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
@@ -501,7 +523,7 @@ mod content {
             while let Some(e) = try!(visitor.next_element()) {
                 vec.push(e);
             }
-            Ok(Content::Seq(vec))
+            Ok(Content::new(ContentRepr::Seq(vec), &self.state))
         }
 
         fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
@@ -512,7 +534,7 @@ mod content {
             while let Some(kv) = try!(visitor.next_entry()) {
                 vec.push(kv);
             }
-            Ok(Content::Map(vec))
+            Ok(Content::new(ContentRepr::Map(vec), &self.state))
         }
 
         fn visit_enum<V>(self, _visitor: V) -> Result<Self::Value, V::Error>
@@ -536,13 +558,15 @@ mod content {
     struct TagOrContentVisitor<'de> {
         name: &'static str,
         value: PhantomData<TagOrContent<'de>>,
+        state: State,
     }
 
     impl<'de> TagOrContentVisitor<'de> {
-        fn new(name: &'static str) -> Self {
+        fn new(name: &'static str, state: &State) -> Self {
             TagOrContentVisitor {
                 name: name,
                 value: PhantomData,
+                state: state.clone(),
             }
         }
     }
@@ -571,7 +595,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_bool(value)
                 .map(TagOrContent::Content)
         }
@@ -580,7 +604,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_i8(value)
                 .map(TagOrContent::Content)
         }
@@ -589,7 +613,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_i16(value)
                 .map(TagOrContent::Content)
         }
@@ -598,7 +622,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_i32(value)
                 .map(TagOrContent::Content)
         }
@@ -607,7 +631,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_i64(value)
                 .map(TagOrContent::Content)
         }
@@ -616,7 +640,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_u8(value)
                 .map(TagOrContent::Content)
         }
@@ -625,7 +649,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_u16(value)
                 .map(TagOrContent::Content)
         }
@@ -634,7 +658,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_u32(value)
                 .map(TagOrContent::Content)
         }
@@ -643,7 +667,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_u64(value)
                 .map(TagOrContent::Content)
         }
@@ -652,7 +676,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_f32(value)
                 .map(TagOrContent::Content)
         }
@@ -661,7 +685,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_f64(value)
                 .map(TagOrContent::Content)
         }
@@ -670,7 +694,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_char(value)
                 .map(TagOrContent::Content)
         }
@@ -682,7 +706,7 @@ mod content {
             if value == self.name {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor::new()
+                ContentVisitor::new(&self.state)
                     .visit_str(value)
                     .map(TagOrContent::Content)
             }
@@ -695,7 +719,7 @@ mod content {
             if value == self.name {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor::new()
+                ContentVisitor::new(&self.state)
                     .visit_borrowed_str(value)
                     .map(TagOrContent::Content)
             }
@@ -708,7 +732,7 @@ mod content {
             if value == self.name {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor::new()
+                ContentVisitor::new(&self.state)
                     .visit_string(value)
                     .map(TagOrContent::Content)
             }
@@ -721,7 +745,7 @@ mod content {
             if value == self.name.as_bytes() {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor::new()
+                ContentVisitor::new(&self.state)
                     .visit_bytes(value)
                     .map(TagOrContent::Content)
             }
@@ -734,7 +758,7 @@ mod content {
             if value == self.name.as_bytes() {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor::new()
+                ContentVisitor::new(&self.state)
                     .visit_borrowed_bytes(value)
                     .map(TagOrContent::Content)
             }
@@ -747,7 +771,7 @@ mod content {
             if value == self.name.as_bytes() {
                 Ok(TagOrContent::Tag)
             } else {
-                ContentVisitor::new()
+                ContentVisitor::new(&self.state)
                     .visit_byte_buf(value)
                     .map(TagOrContent::Content)
             }
@@ -757,7 +781,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_unit()
                 .map(TagOrContent::Content)
         }
@@ -766,7 +790,7 @@ mod content {
         where
             F: de::Error,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_none()
                 .map(TagOrContent::Content)
         }
@@ -775,7 +799,7 @@ mod content {
         where
             D: Deserializer<'de>,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_some(deserializer)
                 .map(TagOrContent::Content)
         }
@@ -784,7 +808,7 @@ mod content {
         where
             D: Deserializer<'de>,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_newtype_struct(deserializer)
                 .map(TagOrContent::Content)
         }
@@ -793,7 +817,7 @@ mod content {
         where
             V: SeqAccess<'de>,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_seq(visitor)
                 .map(TagOrContent::Content)
         }
@@ -802,7 +826,7 @@ mod content {
         where
             V: MapAccess<'de>,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_map(visitor)
                 .map(TagOrContent::Content)
         }
@@ -811,7 +835,7 @@ mod content {
         where
             V: EnumAccess<'de>,
         {
-            ContentVisitor::new()
+            ContentVisitor::new(&self.state)
                 .visit_enum(visitor)
                 .map(TagOrContent::Content)
         }
@@ -829,15 +853,17 @@ mod content {
     pub struct TaggedContentVisitor<'de, T> {
         tag_name: &'static str,
         value: PhantomData<TaggedContent<'de, T>>,
+        state: State,
     }
 
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given tag
         /// name.
-        pub fn new(name: &'static str) -> Self {
+        pub fn new(name: &'static str, state: &State) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
                 value: PhantomData,
+                state: state.clone(),
             }
         }
     }
@@ -891,7 +917,7 @@ mod content {
         {
             let mut tag = None;
             let mut vec = Vec::with_capacity(size_hint::cautious(map.size_hint()));
-            while let Some(k) = try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+            while let Some(k) = try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name, &self.state))) {
                 match k {
                     TagOrContent::Tag => {
                         if tag.is_some() {
@@ -909,7 +935,7 @@ mod content {
                 None => Err(de::Error::missing_field(self.tag_name)),
                 Some(tag) => Ok(TaggedContent {
                     tag: tag,
-                    content: Content::Map(vec),
+                    content: Content::new(ContentRepr::Map(vec), &self.state),
                 }),
             }
         }
@@ -1032,15 +1058,15 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
+            match self.content.repr {
+                ContentRepr::U8(v) => visitor.visit_u8(v),
+                ContentRepr::U16(v) => visitor.visit_u16(v),
+                ContentRepr::U32(v) => visitor.visit_u32(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I8(v) => visitor.visit_i8(v),
+                ContentRepr::I16(v) => visitor.visit_i16(v),
+                ContentRepr::I32(v) => visitor.visit_i32(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1087,29 +1113,29 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Bool(v) => visitor.visit_bool(v),
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::Char(v) => visitor.visit_char(v),
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Unit => visitor.visit_unit(),
-                Content::None => visitor.visit_none(),
-                Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
-                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                Content::Map(v) => visit_content_map(v, visitor),
+            match self.content.repr {
+                ContentRepr::Bool(v) => visitor.visit_bool(v),
+                ContentRepr::U8(v) => visitor.visit_u8(v),
+                ContentRepr::U16(v) => visitor.visit_u16(v),
+                ContentRepr::U32(v) => visitor.visit_u32(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I8(v) => visitor.visit_i8(v),
+                ContentRepr::I16(v) => visitor.visit_i16(v),
+                ContentRepr::I32(v) => visitor.visit_i32(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
+                ContentRepr::F32(v) => visitor.visit_f32(v),
+                ContentRepr::F64(v) => visitor.visit_f64(v),
+                ContentRepr::Char(v) => visitor.visit_char(v),
+                ContentRepr::String(v) => visitor.visit_string(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(v) => visitor.visit_byte_buf(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                ContentRepr::Unit => visitor.visit_unit(),
+                ContentRepr::None => visitor.visit_none(),
+                ContentRepr::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
+                ContentRepr::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
+                ContentRepr::Map(v) => visit_content_map(v, visitor),
             }
         }
 
@@ -1117,8 +1143,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Bool(v) => visitor.visit_bool(v),
+            match self.content.repr {
+                ContentRepr::Bool(v) => visitor.visit_bool(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1183,11 +1209,11 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
+            match self.content.repr {
+                ContentRepr::F32(v) => visitor.visit_f32(v),
+                ContentRepr::F64(v) => visitor.visit_f64(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1196,10 +1222,10 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
+            match self.content.repr {
+                ContentRepr::F64(v) => visitor.visit_f64(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1208,10 +1234,10 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Char(v) => visitor.visit_char(v),
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
+            match self.content.repr {
+                ContentRepr::Char(v) => visitor.visit_char(v),
+                ContentRepr::String(v) => visitor.visit_string(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1227,11 +1253,11 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+            match self.content.repr {
+                ContentRepr::String(v) => visitor.visit_string(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(v) => visitor.visit_byte_buf(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1247,12 +1273,12 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Seq(v) => visit_content_seq(v, visitor),
+            match self.content.repr {
+                ContentRepr::String(v) => visitor.visit_string(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(v) => visitor.visit_byte_buf(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1261,10 +1287,10 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::None => visitor.visit_none(),
-                Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
-                Content::Unit => visitor.visit_unit(),
+            match self.content.repr {
+                ContentRepr::None => visitor.visit_none(),
+                ContentRepr::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
+                ContentRepr::Unit => visitor.visit_unit(),
                 _ => visitor.visit_some(self),
             }
         }
@@ -1273,8 +1299,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Unit => visitor.visit_unit(),
+            match self.content.repr {
+                ContentRepr::Unit => visitor.visit_unit(),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1287,7 +1313,7 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
+            match self.content.repr {
                 // As a special case, allow deserializing untagged newtype
                 // variant containing unit struct.
                 //
@@ -1302,7 +1328,7 @@ mod content {
                 //
                 // We want {"topic":"Info"} to deserialize even though
                 // ordinarily unit structs do not deserialize from empty map.
-                Content::Map(ref v) if v.is_empty() => visitor.visit_unit(),
+                ContentRepr::Map(ref v) if v.is_empty() => visitor.visit_unit(),
                 _ => self.deserialize_any(visitor),
             }
         }
@@ -1315,8 +1341,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
+            match self.content.repr {
+                ContentRepr::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
                 _ => visitor.visit_newtype_struct(self),
             }
         }
@@ -1325,8 +1351,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Seq(v) => visit_content_seq(v, visitor),
+            match self.content.repr {
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1354,8 +1380,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Map(v) => visit_content_map(v, visitor),
+            match self.content.repr {
+                ContentRepr::Map(v) => visit_content_map(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1369,9 +1395,9 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                Content::Map(v) => visit_content_map(v, visitor),
+            match self.content.repr {
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
+                ContentRepr::Map(v) => visit_content_map(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1386,7 +1412,7 @@ mod content {
             V: Visitor<'de>,
         {
             let (variant, value) = match self.content {
-                Content::Map(value) => {
+                Content { repr: ContentRepr::Map(value), .. } => {
                     let mut iter = value.into_iter();
                     let (variant, value) = match iter.next() {
                         Some(v) => v,
@@ -1406,7 +1432,8 @@ mod content {
                     }
                     (variant, Some(value))
                 }
-                s @ Content::String(_) | s @ Content::Str(_) => (s, None),
+                s @ Content { repr: ContentRepr::String(_), ..} |
+                s @ Content { repr: ContentRepr::Str(_), .. } => (s, None),
                 other => {
                     return Err(de::Error::invalid_type(
                         other.unexpected(),
@@ -1422,11 +1449,11 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+            match self.content.repr {
+                ContentRepr::String(v) => visitor.visit_string(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(v) => visitor.visit_byte_buf(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1531,7 +1558,7 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content::Seq(v)) => {
+                Some(Content { repr: ContentRepr::Seq(v), ..}) => {
                     de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
@@ -1554,10 +1581,10 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content::Map(v)) => {
+                Some(Content { repr: ContentRepr::Map(v), ..}) => {
                     de::Deserializer::deserialize_any(MapDeserializer::new(v), visitor)
                 }
-                Some(Content::Seq(v)) => {
+                Some(Content { repr: ContentRepr::Seq(v), ..}) => {
                     de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
@@ -1741,15 +1768,15 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
+            match self.content.repr {
+                ContentRepr::U8(v) => visitor.visit_u8(v),
+                ContentRepr::U16(v) => visitor.visit_u16(v),
+                ContentRepr::U32(v) => visitor.visit_u32(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I8(v) => visitor.visit_i8(v),
+                ContentRepr::I16(v) => visitor.visit_i16(v),
+                ContentRepr::I32(v) => visitor.visit_i32(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1798,35 +1825,39 @@ mod content {
     {
         type Error = E;
 
+        fn state(&self) -> &State {
+            self.content.state()
+        }
+
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, E>
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Bool(v) => visitor.visit_bool(v),
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::Char(v) => visitor.visit_char(v),
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Unit => visitor.visit_unit(),
-                Content::None => visitor.visit_none(),
-                Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
-                Content::Newtype(ref v) => {
+            match self.content.repr {
+                ContentRepr::Bool(v) => visitor.visit_bool(v),
+                ContentRepr::U8(v) => visitor.visit_u8(v),
+                ContentRepr::U16(v) => visitor.visit_u16(v),
+                ContentRepr::U32(v) => visitor.visit_u32(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I8(v) => visitor.visit_i8(v),
+                ContentRepr::I16(v) => visitor.visit_i16(v),
+                ContentRepr::I32(v) => visitor.visit_i32(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
+                ContentRepr::F32(v) => visitor.visit_f32(v),
+                ContentRepr::F64(v) => visitor.visit_f64(v),
+                ContentRepr::Char(v) => visitor.visit_char(v),
+                ContentRepr::String(ref v) => visitor.visit_str(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(ref v) => visitor.visit_bytes(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                ContentRepr::Unit => visitor.visit_unit(),
+                ContentRepr::None => visitor.visit_none(),
+                ContentRepr::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
+                ContentRepr::Newtype(ref v) => {
                     visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
                 }
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
+                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor),
             }
         }
 
@@ -1834,8 +1865,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Bool(v) => visitor.visit_bool(v),
+            match self.content.repr {
+                ContentRepr::Bool(v) => visitor.visit_bool(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1900,11 +1931,11 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
+            match self.content.repr {
+                ContentRepr::F32(v) => visitor.visit_f32(v),
+                ContentRepr::F64(v) => visitor.visit_f64(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1913,10 +1944,10 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I64(v) => visitor.visit_i64(v),
+            match self.content.repr {
+                ContentRepr::F64(v) => visitor.visit_f64(v),
+                ContentRepr::U64(v) => visitor.visit_u64(v),
+                ContentRepr::I64(v) => visitor.visit_i64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1925,10 +1956,10 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Char(v) => visitor.visit_char(v),
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
+            match self.content.repr {
+                ContentRepr::Char(v) => visitor.visit_char(v),
+                ContentRepr::String(ref v) => visitor.visit_str(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1937,11 +1968,11 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+            match self.content.repr {
+                ContentRepr::String(ref v) => visitor.visit_str(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(ref v) => visitor.visit_bytes(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1957,12 +1988,12 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
+            match self.content.repr {
+                ContentRepr::String(ref v) => visitor.visit_str(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(ref v) => visitor.visit_bytes(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1978,10 +2009,10 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::None => visitor.visit_none(),
-                Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
-                Content::Unit => visitor.visit_unit(),
+            match self.content.repr {
+                ContentRepr::None => visitor.visit_none(),
+                ContentRepr::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
+                ContentRepr::Unit => visitor.visit_unit(),
                 _ => visitor.visit_some(self),
             }
         }
@@ -1990,8 +2021,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Unit => visitor.visit_unit(),
+            match self.content.repr {
+                ContentRepr::Unit => visitor.visit_unit(),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2011,8 +2042,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Newtype(ref v) => {
+            match self.content.repr {
+                ContentRepr::Newtype(ref v) => {
                     visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
                 }
                 _ => visitor.visit_newtype_struct(self),
@@ -2023,8 +2054,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
+            match self.content.repr {
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2052,8 +2083,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
+            match self.content.repr {
+                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2067,9 +2098,9 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
+            match self.content.repr {
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
+                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2083,8 +2114,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            let (variant, value) = match *self.content {
-                Content::Map(ref value) => {
+            let (variant, value) = match self.content {
+                Content { repr: ContentRepr::Map(ref value), ..} => {
                     let mut iter = value.into_iter();
                     let &(ref variant, ref value) = match iter.next() {
                         Some(v) => v,
@@ -2104,7 +2135,8 @@ mod content {
                     }
                     (variant, Some(value))
                 }
-                ref s @ Content::String(_) | ref s @ Content::Str(_) => (s, None),
+                ref s @ Content { repr: ContentRepr::String(_), ..} |
+                ref s @ Content { repr: ContentRepr::Str(_), ..} => (*s, None),
                 ref other => {
                     return Err(de::Error::invalid_type(
                         other.unexpected(),
@@ -2124,11 +2156,11 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match *self.content {
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+            match self.content.repr {
+                ContentRepr::String(ref v) => visitor.visit_str(v),
+                ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
+                ContentRepr::ByteBuf(ref v) => visitor.visit_bytes(v),
+                ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2219,7 +2251,7 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(&Content::Seq(ref v)) => {
+                Some(&Content { repr: ContentRepr::Seq(ref v), ..}) => {
                     de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
@@ -2242,10 +2274,10 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(&Content::Map(ref v)) => {
+                Some(&Content { repr: ContentRepr::Map(ref v), ..}) => {
                     de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
                 }
-                Some(&Content::Seq(ref v)) => {
+                Some(&Content { repr: ContentRepr::Seq(ref v), ..}) => {
                     de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
