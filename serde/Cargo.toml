@@ -27,7 +27,7 @@ serde_derive = { version = "1.0", path = "../serde_derive" }
 ### FEATURES #################################################################
 
 [features]
-default = ["std"]
+default = ["std", "state"]
 
 # Re-export the derive(Serialize, Deserialize) macros. This is intended for
 # library crates that provide optional Serde impls behind a Cargo cfg of their
@@ -78,3 +78,6 @@ alloc = ["unstable"]
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = []
+
+# Enables the state support.
+state = []
