@@ -21,7 +21,10 @@ use try;
 
 use std::collections::BTreeSet;
 
-pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Result<TokenStream, String> {
+pub fn expand_derive_deserialize(
+    input: &syn::DeriveInput,
+    seeded: bool,
+) -> Result<TokenStream, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input, Derive::Deserialize);
     precondition(&ctxt, &cont);
@@ -55,7 +58,8 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput, seeded: bool) -> Resu
         let fn_deserialize_in_place = deserialize_in_place_body(&cont, &params);
         let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
         if seeded {
-            let seed_ty = cont.attrs
+            let seed_ty = cont
+                .attrs
                 .deserialize_state()
                 .ok_or_else(|| "Need a deserialize_state attribute")?;
             quote! {
@@ -314,6 +318,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     }
 }
 
+#[cfg(feature = "deserialize_in_place")]
 fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<Stmts> {
     // Only remote derives have getters, and we do not generate
     // deserialize_in_place for remote derives.
@@ -472,10 +477,7 @@ fn deserialize_tuple(
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
         Some(deserialize_newtype_struct(
-            &type_path,
-            params,
-            &fields[0],
-            cattrs,
+            &type_path, params, &fields[0], cattrs,
         ))
     } else {
         None
@@ -752,40 +754,38 @@ fn deserialize_seq_in_place(
     let write_values = fields.iter().map(|field| {
         let member = &field.member;
 
-                            }
-            if field.attrs.skip_deserializing() {
-                let default = Expr(expr_is_missing(params, field, cattrs));
-                quote! {
-                    self.place.#member = #default;
-                }
-            } else {
-                let return_invalid_length = quote! {
-                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
-                };
-                let write = match field.attrs.deserialize_with() {
-                    None => {
-                        quote! {
-                            if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                _serde::private::de::InPlaceSeed(&mut self.place.#member)))
-                            {
-                                #return_invalid_length
-                            }
+        if field.attrs.skip_deserializing() {
+            let default = Expr(expr_is_missing(params, field, cattrs));
+            quote! {
+                self.place.#member = #default;
+            }
+        } else {
+            let return_invalid_length = quote! {
+                return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+            };
+            let write = match field.attrs.deserialize_with() {
+                None => {
+                    quote! {
+                        if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
+                            _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                        {
+                            #return_invalid_length
                         }
                     }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
-                            #wrapper
-                            match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
-                                _serde::export::Some(__wrap) => {
-                                    self.place.#member = __wrap.value;
-                                }
-                                _serde::export::None => {
-                                    #return_invalid_length
-                                }
+                        #wrapper
+                        match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
+                            _serde::export::Some(__wrap) => {
+                                self.place.#member = __wrap.value;
                             }
-                        })
+                            _serde::export::None => {
+                                #return_invalid_length
+                            }
+                        }
+                    })
                 }
             };
             index_in_seq += 1;
@@ -837,6 +837,7 @@ fn deserialize_newtype_struct(
         };
     }
 
+    let field_ty = &field.ty;
     quote! {
         #[inline]
         #[allow(unused_mut)]
@@ -2727,7 +2728,7 @@ fn wrap_deserialize(
     params: &Parameters,
     field: &Field,
     seed_ty: Option<&syn::Type>,
-) -> (Tokens, Tokens) {
+) -> (TokenStream, TokenStream) {
     match (
         field.attrs.deserialize_state(),
         field.attrs.deserialize_state_with(),
@@ -2844,7 +2845,7 @@ fn wrap_deserialize_state_with(
     seed_ty: &syn::Type,
     field_ty: &syn::Type,
     deserialize_with: &syn::Path,
-) -> (Tokens, Tokens) {
+) -> (TokenStream, TokenStream) {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_and_seed_lifetime(params);
@@ -2922,9 +2923,11 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics
-                .params
-                .extend(idents.iter().map(|ident| syn::GenericParam::Type(ident.clone().into())));
+            generics.params.extend(
+                idents
+                    .iter()
+                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
+            );
         }
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
@@ -2995,7 +2998,9 @@ impl<'a> ToTokens for DeTypeGenerics<'a> {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
             generics.params.extend(
-                idents.iter().map(|ident| syn::GenericParam::Type(ident.clone().into()))
+                idents
+                    .iter()
+                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
             );
         }
         let mut generics = self.0.generics.clone();
@@ -3061,22 +3066,28 @@ fn split_with_de_lifetime(
 struct DeSeedImplGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeSeedImplGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics
-                .params
-                .extend(idents.iter().map(|ident| syn::GenericParam::Type(ident.clone().into())));
+            generics.params.extend(
+                idents
+                    .iter()
+                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
+            );
         }
         for param in &mut generics.params {
             if let syn::GenericParam::Type(ref mut param) = *param {
                 param
                     .bounds
-                    .push(syn::TypeParamBound::Lifetime(syn::Lifetime::new("'seed", Span::call_site())));
+                    .push(syn::TypeParamBound::Lifetime(syn::Lifetime::new(
+                        "'seed",
+                        Span::call_site(),
+                    )));
             }
         }
         if let Some(mut de) = self.0.borrowed.de_lifetime_def() {
-            de.bounds.push(syn::Lifetime::new("'seed", Span::call_site()));
+            de.bounds
+                .push(syn::Lifetime::new("'seed", Span::call_site()));
             generics.params.insert(0, de.into());
         }
         generics.params.insert(0, lifetime("'seed").into());
@@ -3088,12 +3099,14 @@ impl<'a> ToTokens for DeSeedImplGenerics<'a> {
 struct DeSeedTypeGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for DeSeedTypeGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.de_parameter_idents {
-            generics
-                .params
-                .extend(idents.iter().map(|ident| syn::GenericParam::Type(ident.clone().into())));
+            generics.params.extend(
+                idents
+                    .iter()
+                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
+            );
         }
         generics.params.insert(0, lifetime("'de").into());
         generics.params.insert(0, lifetime("'seed").into());

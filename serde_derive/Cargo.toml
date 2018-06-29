@@ -16,7 +16,7 @@ travis-ci = { repository = "serde-rs/serde" }
 
 [features]
 default = []
-deserialize_in_place = []
+deserialize_in_place = ["serde_derive_state_internals/deserialize_in_place"]
 
 [lib]
 name = "serde_derive_state"

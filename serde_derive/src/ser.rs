@@ -7,11 +7,9 @@
 // except according to those terms.
 
 use proc_macro2::{Span, TokenStream};
+use quote::ToTokens;
 use syn::spanned::Spanned;
 use syn::{self, Ident, Index, Member};
-use syn::spanned::Spanned;
-use quote::{ToTokens, Tokens};
-use proc_macro2::Span;
 
 use bound;
 use fragment::{Fragment, Match, Stmts};
@@ -20,7 +18,10 @@ use internals::{attr, Ctxt, Derive};
 use pretend;
 use try;
 
-pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<TokenStream, String> {
+pub fn expand_derive_serialize(
+    input: &syn::DeriveInput,
+    seed: bool,
+) -> Result<TokenStream, String> {
     let ctxt = Ctxt::new();
     let cont = Container::from_ast(&ctxt, input, Derive::Serialize);
     precondition(&ctxt, &cont);
@@ -48,7 +49,8 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput, seed: bool) -> Result<T
         }
     } else {
         if seed {
-            let seed_ty = cont.attrs
+            let seed_ty = cont
+                .attrs
                 .serialize_state()
                 .ok_or_else(|| "Need a seed attribute")?;
 
@@ -170,7 +172,8 @@ fn build_generics(cont: &Container, seeded: bool) -> syn::Generics {
             &generics,
             needs_serialize_bound,
             &if seeded {
-                let serialize_state = cont.attrs
+                let serialize_state = cont
+                    .attrs
                     .serialize_state()
                     .expect("derive(SerializeState) specified without a seed type");
                 parse_quote!(_serde::ser::SerializeState<#serialize_state>)
@@ -335,7 +338,11 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
     }
 }
 
-fn serialize_struct_as_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
+fn serialize_struct_as_struct(
+    params: &Parameters,
+    fields: &[Field],
+    cattrs: &attr::Container,
+) -> Fragment {
     let serialize_fields = serialize_struct_visitor(
         fields,
         params,
@@ -370,7 +377,11 @@ fn serialize_struct_as_struct(params: &Parameters, fields: &[Field], cattrs: &at
     }
 }
 
-fn serialize_struct_as_map(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
+fn serialize_struct_as_map(
+    params: &Parameters,
+    fields: &[Field],
+    cattrs: &attr::Container,
+) -> Fragment {
     let serialize_fields = serialize_struct_visitor(
         fields,
         params,
@@ -820,7 +831,8 @@ fn serialize_tuple_variant(
         TupleVariant::Untagged => TupleTrait::SerializeTuple,
     };
 
-    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &tuple_trait, seed_ty);
+    let serialize_stmts =
+        serialize_tuple_struct_visitor(fields, params, true, &tuple_trait, seed_ty);
 
     let mut serialized_fields = fields
         .iter()
@@ -889,7 +901,7 @@ fn serialize_struct_variant<'a>(
     seed_ty: Option<&syn::Type>,
 ) -> Fragment {
     if fields.iter().any(|field| field.attrs.flatten()) {
-        return serialize_struct_variant_with_flatten(context, params, fields, name);
+        return serialize_struct_variant_with_flatten(context, params, fields, name, seed_ty);
     }
 
     let struct_trait = match context {
@@ -971,9 +983,10 @@ fn serialize_struct_variant_with_flatten<'a>(
     params: &Parameters,
     fields: &[Field],
     name: &str,
+    seed_ty: Option<&syn::Type>,
 ) -> Fragment {
     let struct_trait = StructTrait::SerializeMap;
-    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait, seed_ty);
 
     let mut serialized_fields = fields
         .iter()
@@ -1243,7 +1256,7 @@ fn wrap_serialize_with(
     })
 }
 
-fn wrap_serialize_state(value: Tokens) -> Tokens {
+fn wrap_serialize_state(value: TokenStream) -> TokenStream {
     quote!( {
         &_serde::ser::Seeded::new(__seed, #value)
     })
@@ -1253,8 +1266,8 @@ fn wrap_field(
     params: &Parameters,
     field: &Field,
     seed_ty: Option<&syn::Type>,
-    mut field_expr: Tokens,
-) -> Tokens {
+    mut field_expr: TokenStream,
+) -> TokenStream {
     if field.attrs.serialize_state() {
         field_expr = wrap_serialize_state(field_expr)
     }
@@ -1270,14 +1283,13 @@ fn wrap_field(
     field_expr
 }
 
-
 fn wrap_serialize_state_with(
     params: &Parameters,
     field_ty: &syn::Type,
     seed_ty: &syn::Type,
     serialize_with: &syn::Path,
-    value: Tokens,
-) -> Tokens {
+    value: TokenStream,
+) -> TokenStream {
     let this = &params.this;
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
 
@@ -1342,19 +1354,27 @@ fn get_member(params: &Parameters, field: &Field, member: &Member) -> TokenStrea
 struct SerImplGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for SerImplGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
         if let Some(ref idents) = self.0.ser_parameter_idents {
-            generics
-                .params
-                .extend(idents.iter().map(|ident| syn::GenericParam::Type(ident.clone().into())));
+            generics.params.extend(
+                idents
+                    .iter()
+                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
+            );
         }
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
     }
 }
 
-fn split_for_impl(params: &Parameters) -> (SerImplGenerics, syn::TypeGenerics, Option<&syn::WhereClause>) {
+fn split_for_impl(
+    params: &Parameters,
+) -> (
+    SerImplGenerics,
+    syn::TypeGenerics,
+    Option<&syn::WhereClause>,
+) {
     let ser_impl_generics = SerImplGenerics(&params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (ser_impl_generics, ty_generics, where_clause)
@@ -1363,12 +1383,14 @@ fn split_for_impl(params: &Parameters) -> (SerImplGenerics, syn::TypeGenerics, O
 struct SerLifetimeImplGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for SerLifetimeImplGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = bound::with_lifetime_bound(&self.0.generics, "'__a");
         if let Some(ref idents) = self.0.ser_parameter_idents {
-            generics
-                .params
-                .extend(idents.iter().map(|ident| syn::GenericParam::Type(ident.clone().into())));
+            generics.params.extend(
+                idents
+                    .iter()
+                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
+            );
         }
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
@@ -1378,7 +1400,7 @@ impl<'a> ToTokens for SerLifetimeImplGenerics<'a> {
 struct SerTypeGenerics<'a>(&'a Parameters);
 
 impl<'a> ToTokens for SerTypeGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let generics = bound::with_lifetime_bound(&self.0.generics, "'__a");
         let (_, ty_generics, _) = generics.split_for_impl();
         ty_generics.to_tokens(tokens);
@@ -1387,7 +1409,11 @@ impl<'a> ToTokens for SerTypeGenerics<'a> {
 
 fn split_with_lifetime_impl(
     params: &Parameters,
-) -> (SerLifetimeImplGenerics, SerTypeGenerics, Option<&syn::WhereClause>) {
+) -> (
+    SerLifetimeImplGenerics,
+    SerTypeGenerics,
+    Option<&syn::WhereClause>,
+) {
     let ser_impl_generics = SerLifetimeImplGenerics(&params);
     let ty_generics = SerTypeGenerics(&params);
     let (_, _, where_clause) = params.generics.split_for_impl();

@@ -10,6 +10,7 @@
 
 **serde_state is an experimental addition to serde which makes it possible to pass state to the [de]serialized data structures.**
 
+See https://docs.rs/serde_state for examples
 ## Serde in action
 
 <details>

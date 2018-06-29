@@ -375,26 +375,26 @@ impl Container {
 
                     // Parse `#[serde(deserialize_state = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "deserialize_state" => {
-                        if let Ok(path) = parse_lit_into_ty(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
                             deserialize_state.set(path);
                         }
                     }
 
                     // Parse `#[serde(serialize_state = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "serialize_state" => {
-                        if let Ok(path) = parse_lit_into_ty(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
                             serialize_state.set(path);
                         }
                     }
 
                     Meta(NameValue(ref m)) if m.ident == "de_parameters" => {
-                        if let Ok(path) = parse_lit_into_identifiers(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_identifiers(cx, &m.ident, &m.lit) {
                             de_parameters.set(path);
                         }
                     }
 
                     Meta(NameValue(ref m)) if m.ident == "ser_parameters" => {
-                        if let Ok(path) = parse_lit_into_identifiers(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_identifiers(cx, &m.ident, &m.lit) {
                             ser_parameters.set(path);
                         }
                     }
@@ -1041,7 +1041,7 @@ impl Field {
 
                     // Parse `#[serde(deserialize_state_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "deserialize_state_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
                             deserialize_state_with.set(path);
                         }
                     }
@@ -1053,7 +1053,7 @@ impl Field {
 
                     // Parse `#[serde(serialize_state_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == "serialize_state_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
                             serialize_state_with.set(path);
                         }
                     }
@@ -1070,12 +1070,16 @@ impl Field {
                     }
 
                     Meta(NameValue(ref m)) if m.ident == "state_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, m.ident.as_ref(), &m.lit) {
+                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
                             let mut ser_path = path.clone();
-                            ser_path.segments.push("serialize".into());
+                            ser_path
+                                .segments
+                                .push(syn::Ident::new("serialize", Span::call_site()).into());
                             serialize_state_with.set(ser_path);
                             let mut de_path = path;
-                            de_path.segments.push("deserialize".into());
+                            de_path
+                                .segments
+                                .push(syn::Ident::new("deserialize", Span::call_site()).into());
                             deserialize_state_with.set(de_path);
                         }
                     }
@@ -1456,7 +1460,7 @@ fn is_implicitly_borrowed_reference(ty: &syn::Type) -> bool {
 
 fn parse_lit_into_identifiers(
     cx: &Ctxt,
-    attr_name: &str,
+    attr_name: &syn::Ident,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::Ident>, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
@@ -1477,15 +1481,17 @@ fn parse_lit_into_identifiers(
     if let Ok(Identifiers(identifiers)) = parse_lit_str(string) {
         let mut set = BTreeSet::new();
         for ident in identifiers {
-            if !set.insert(ident) {
+            if !set.insert(ident.clone()) {
                 cx.error(format!("duplicate borrowed lifetime `{}`", ident));
             }
         }
         return Ok(set.into_iter().collect());
     }
-    Err(cx.error(format!("failed to parse borrowed lifetimes: {:?}", string.value())),)
+    Err(cx.error(format!(
+        "failed to parse borrowed lifetimes: {:?}",
+        string.value()
+    )))
 }
-
 
 // Whether the type looks like it might be `std::borrow::Cow<T>` where elem="T".
 // This can have false negatives and false positives.
