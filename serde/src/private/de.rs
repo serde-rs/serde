@@ -859,11 +859,11 @@ mod content {
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given tag
         /// name.
-        pub fn new(name: &'static str, state: &State) -> Self {
+        pub fn new(name: &'static str, state: State) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
                 value: PhantomData,
-                state: state.clone(),
+                state: state,
             }
         }
     }
@@ -1108,6 +1108,10 @@ mod content {
         E: de::Error,
     {
         type Error = E;
+
+        fn state(&self) -> &State {
+            self.content.state()
+        }
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where

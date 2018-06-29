@@ -61,7 +61,6 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
                 where
                     __D: _serde::Deserializer<#delife>,
                 {
-                    let __state = __deserializer.state().clone();
                     #body
                 }
 
@@ -422,7 +421,7 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
             }
         }
 
-        let __state = __deserializer.state().clone();
+        let __state = _serde::Deserializer::state(&__deserializer).clone();
         _serde::Deserializer::deserialize_unit_struct(__deserializer, #type_name, __Visitor {
             state: __state,
         })
@@ -482,10 +481,10 @@ fn deserialize_tuple(
             state: __state,
         }
     };
-    let (state_expr, dispatch) = if let Some(deserializer) = deserializer {
+    let (state_expr, dispatch) = if deserializer.is_some() {
         (
-            quote!((#deserializer).state().clone()),
-            quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+            quote!(_serde::Deserializer::state(&__other_deserializer).clone()),
+            quote!(_serde::Deserializer::deserialize_tuple(__other_deserializer, #nfields, #visitor_expr))
         )
     } else if is_enum {
         (
@@ -495,13 +494,13 @@ fn deserialize_tuple(
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
         (
-            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
             quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
         )
     } else {
         let type_name = cattrs.name().deserialize_name();
         (
-            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
             quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
         )
     };
@@ -512,6 +511,12 @@ fn deserialize_tuple(
     } else {
         quote!(mut __seq)
     };
+
+    let init_deserializer = deserializer.map(|deserializer| {
+        quote! {
+            let __other_deserializer = #deserializer;
+        }
+    });
 
     quote_block! {
         struct __Visitor #de_impl_generics #where_clause {
@@ -538,6 +543,7 @@ fn deserialize_tuple(
             }
         }
 
+        #init_deserializer
         let __state = #state_expr;
         #dispatch
     }
@@ -582,10 +588,10 @@ fn deserialize_tuple_in_place(
         }
     };
 
-    let (state_expr, dispatch) = if let Some(deserializer) = deserializer {
+    let (state_expr, dispatch) = if deserializer.is_some() {
         (
-            quote!((#deserializer).state().clone()),
-            quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+            quote!(_serde::Deserializer::state(&__other_deserializer).clone()),
+            quote!(_serde::Deserializer::deserialize_tuple(__other_deserializer, #nfields, #visitor_expr))
         )
     } else if is_enum {
         (
@@ -595,13 +601,13 @@ fn deserialize_tuple_in_place(
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
         (
-            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
             quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
         )
     } else {
         let type_name = cattrs.name().deserialize_name();
         (
-            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
             quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
         )
     };
@@ -612,6 +618,12 @@ fn deserialize_tuple_in_place(
     } else {
         quote!(mut __seq)
     };
+
+    let init_deserializer = deserializer.map(|deserializer| {
+        quote! {
+            let __other_deserializer = #deserializer;
+        }
+    });
 
     let in_place_impl_generics = de_impl_generics.in_place();
     let in_place_ty_generics = de_ty_generics.in_place();
@@ -642,6 +654,7 @@ fn deserialize_tuple_in_place(
             }
         }
 
+        #init_deserializer
         let __state = #state_expr;
         #dispatch
     }
@@ -946,11 +959,11 @@ fn deserialize_struct(
             state: __state,
         }
     };
-    let (state_expr, dispatch) = if let Some(deserializer) = deserializer {
+    let (state_expr, dispatch) = if deserializer.is_some() {
         (
-            quote!((#deserializer).state().clone()),
+            quote!(_serde::Deserializer::state(&__other_deserializer).clone()),
             quote! {
-                _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+                _serde::Deserializer::deserialize_any(__other_deserializer, #visitor_expr)
             }
         )
     } else if is_enum && cattrs.has_flatten() {
@@ -969,7 +982,7 @@ fn deserialize_struct(
         )
     } else if cattrs.has_flatten() {
         (
-            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
             quote! {
                 _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
             }
@@ -977,7 +990,7 @@ fn deserialize_struct(
     } else {
         let type_name = cattrs.name().deserialize_name();
         (
-            quote!(__deserializer.state().clone()),
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
             quote! {
                 _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
             }
@@ -990,6 +1003,12 @@ fn deserialize_struct(
     } else {
         quote!(mut __seq)
     };
+
+    let init_deserializer = deserializer.map(|deserializer| {
+        quote! {
+            let __other_deserializer = #deserializer;
+        }
+    });
 
     // untagged struct variants do not get a visit_seq method.  The same applies to structs that
     // only have a map representation.
@@ -1053,6 +1072,7 @@ fn deserialize_struct(
         #visitor_seed
 
         #fields_stmt
+        #init_deserializer
         let __state = #state_expr;
 
         #dispatch
@@ -1094,9 +1114,6 @@ fn deserialize_struct_in_place(
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
-    let state_stmt = quote! {
-        let __state = __deserializer.state().clone();
-    };
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
@@ -1104,19 +1121,28 @@ fn deserialize_struct_in_place(
             state: __state,
         }
     };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
-        }
+    let (state_expr, dispatch) = if deserializer.is_some() {
+        (
+            quote!(_serde::Deserializer::state(&__other_deserializer).clone()),
+            quote! {
+                _serde::Deserializer::deserialize_any(__other_deserializer, #visitor_expr)
+            }
+        )
     } else if is_enum {
-        quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
-        }
+        (
+            quote!(self.state.clone()),
+            quote! {
+                _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+            }
+        )
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
-        }
+        (
+            quote!(_serde::Deserializer::state(&__deserializer).clone()),
+            quote! {
+                _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            }
+        )
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -1125,6 +1151,12 @@ fn deserialize_struct_in_place(
     } else {
         quote!(mut __seq)
     };
+
+    let init_deserializer = deserializer.map(|deserializer| {
+        quote! {
+            let __other_deserializer = #deserializer;
+        }
+    });
 
     let visit_seq = quote! {
         #[inline]
@@ -1168,7 +1200,8 @@ fn deserialize_struct_in_place(
         }
 
         #fields_stmt
-        #state_stmt
+        #init_deserializer
+        let __state = #state_expr;
 
         #dispatch
     })
@@ -1291,7 +1324,7 @@ fn deserialize_externally_tagged_enum(
 
         #variants_stmt
 
-        let __state = __deserializer.state().clone();
+        let __state = _serde::Deserializer::state(&__deserializer).clone();
         _serde::Deserializer::deserialize_enum(__deserializer, #type_name, VARIANTS,
                                                __Visitor {
                                                    marker: _serde::export::PhantomData::<#this #ty_generics>,
@@ -1354,9 +1387,10 @@ fn deserialize_internally_tagged_enum(
 
         #variants_stmt
 
+        let __state = _serde::Deserializer::state(&__deserializer).clone();
         let __tagged = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag)));
+            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag, __state)));
 
         match __tagged.tag {
             #(#variant_arms)*
@@ -1661,7 +1695,7 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         const FIELDS: &'static [&'static str] = &[#tag, #content];
-        let __state = __deserializer.state().clone();
+        let __state = _serde::Deserializer::state(&__deserializer).clone();
         _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS,
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
@@ -1959,7 +1993,7 @@ fn deserialize_generated_identifier(
             where
                 __D: _serde::Deserializer<'de>,
             {
-                let __state = __deserializer.state().clone();
+                let __state = _serde::Deserializer::state(&__deserializer).clone();
                 _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor {
                     state: __state,
                 })
@@ -2059,7 +2093,7 @@ fn deserialize_custom_identifier(
         let __visitor = __FieldVisitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
-            state: __deserializer.state().clone(),
+            state: _serde::Deserializer::state(&__deserializer).clone(),
         };
         _serde::Deserializer::deserialize_identifier(__deserializer, __visitor)
     }
