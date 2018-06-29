@@ -37,7 +37,7 @@
     feature = "cargo-clippy",
     allow(
         items_after_statements, doc_markdown, stutter, similar_names, use_self, single_match_else,
-        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation, indexing_slicing,
+        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation, indexing_slicing
     )
 )]
 // The `quote!` macro requires deep recursion.
@@ -47,8 +47,6 @@
 extern crate quote;
 #[macro_use]
 extern crate syn;
-
-extern crate serde_derive_state_internals as internals;
 
 extern crate proc_macro;
 extern crate proc_macro2;
@@ -62,6 +60,7 @@ mod bound;
 mod fragment;
 
 mod de;
+mod internals;
 mod pretend;
 mod ser;
 mod try;

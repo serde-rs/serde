@@ -3,7 +3,6 @@ members = [
     "serde",
     "serde_state",
     "serde_derive",
-    "serde_derive_internals",
     "serde_test",
     "test_suite",
 ]
