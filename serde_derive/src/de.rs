@@ -367,6 +367,11 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     Some(Stmts(fn_deserialize_in_place))
 }
 
+#[cfg(not(feature = "deserialize_in_place"))]
+fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<Stmts> {
+    None
+}
+
 fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match cont.data {
         Data::Struct(_, ref fields) => fields,
