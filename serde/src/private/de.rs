@@ -2119,7 +2119,7 @@ mod content {
             V: Visitor<'de>,
         {
             let (variant, value) = match self.content {
-                Content { repr: ContentRepr::Map(ref value), ..} => {
+                &Content { repr: ContentRepr::Map(ref value), ..} => {
                     let mut iter = value.into_iter();
                     let &(ref variant, ref value) = match iter.next() {
                         Some(v) => v,
@@ -2139,8 +2139,8 @@ mod content {
                     }
                     (variant, Some(value))
                 }
-                ref s @ Content { repr: ContentRepr::String(_), ..} |
-                ref s @ Content { repr: ContentRepr::Str(_), ..} => (*s, None),
+                ref s @ &Content { repr: ContentRepr::String(_), ..} |
+                ref s @ &Content { repr: ContentRepr::Str(_), ..} => (*s, None),
                 ref other => {
                     return Err(de::Error::invalid_type(
                         other.unexpected(),
