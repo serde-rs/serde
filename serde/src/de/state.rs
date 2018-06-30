@@ -7,16 +7,20 @@ pub struct State {
     map: Option<Rc<Vec<(TypeId, Rc<Box<Any>>)>>>,
 }
 
-#[cfg(feature = "state")]
-const EMPTY_STATE: State = State { map: None };
-#[cfg(not(feature = "state"))]
-const EMPTY_STATE: State = State {};
-
 impl State {
     /// Creates an empty state map.
     #[inline]
     pub fn empty() -> &'static State {
-        &EMPTY_STATE
+        // we could use `const EMPTY_STATE: State` here for newer rust
+        // versions which would avoid the unsafe.  The end result is
+        // about the same though.
+        static mut EMPTY_STATE: State = State {
+            #[cfg(feature = "state")]
+            map: None
+        };
+        unsafe {
+            &EMPTY_STATE
+        }
     }
 
     /// Returns `true` if the state feature is available.
@@ -36,6 +40,11 @@ impl State {
             }
         }
         f(None)
+    }
+
+    /// Returns a clone of the contained item.
+    pub fn get<T: Clone + 'static>(&self) -> Option<T> {
+        self.with(|opt: Option<&T>| opt.map(|x| x.clone()))
     }
 
     /// Inserts or replaces a type in the state map.
