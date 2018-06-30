@@ -81,10 +81,10 @@ impl State {
             .unwrap_or(&[][..])
             .iter()
             .filter_map(|&(type_id, ref boxed_rc)| {
-                if type_id != TypeId::of::<T>() {
-                    Some((type_id, boxed_rc.clone()))
-                } else {
+                if type_id == TypeId::of::<T>() {
                     None
+                } else {
+                    Some((type_id, boxed_rc.clone()))
                 }
             })
             .chain(iter::once((TypeId::of::<T>(), Rc::new(Box::new(val) as Box<Any>))))
