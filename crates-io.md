@@ -53,4 +53,4 @@ less specific knowledge about Serde. If IRC is not your thing or you don't get a
 good response, we are happy to respond to [GitHub issues][issues] as well.
 
 [irc]: https://wiki.mozilla.org/IRC
-[issues]: https://github.com/serde-rs/serde/issues/new
+[issues]: https://github.com/serde-rs/serde/issues/new/choose
