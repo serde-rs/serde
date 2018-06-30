@@ -15,9 +15,13 @@ use lib::*;
 /// Internally the structure is a reasonably efficient copy on write
 /// structure.  It can be cheaply cloned which effectively just bumps
 /// some refcounts.  Internally it is implemented as a vector.
+///
+/// This requires Rust 1.22 or later and the `state` feature to be
+/// enabled.  Otherwise the state type is read-only and does not
+/// provide the `set` and `remove` methods.
 #[derive(Clone)]
 pub struct State {
-    #[cfg(feature = "state")]
+    #[cfg(all(feature = "state", de_state))]
     map: Option<Rc<Vec<(TypeId, Rc<Box<Any>>)>>>,
 }
 
@@ -39,14 +43,15 @@ impl State {
         // we could use `const EMPTY_STATE: State` here for newer rust
         // versions which would avoid the unsafe.  The end result is
         // about the same though.
-        #[cfg(feature = "state")]
-        static mut EMPTY_STATE: State = State {
-            map: None
-        };
-        #[cfg(not(feature = "state"))]
-        static mut EMPTY_STATE: State = State {};
-        unsafe {
+        #[cfg(all(feature = "state", de_state))] {
+            const EMPTY_STATE: State = State {
+                map: None
+            };
             &EMPTY_STATE
+        }
+        #[cfg(not(all(feature = "state", de_state)))] {
+            static mut EMPTY_STATE: State = State {};
+            unsafe { &EMPTY_STATE }
         }
     }
 
@@ -55,7 +60,7 @@ impl State {
     /// This function is always available even if the state feature is
     /// disabled.  In that case the state just always returns `None`.
     pub fn get<T: 'static>(&self) -> Option<&T> {
-        #[cfg(feature = "state")] {
+        #[cfg(all(feature = "state", de_state))] {
             if let Some(ref map) = self.map {
                 for &(type_id, ref boxed_rc) in map.iter() {
                     if type_id == TypeId::of::<T>() {
@@ -68,9 +73,7 @@ impl State {
     }
 
     /// Inserts or replaces a type in the state map.
-    ///
-    /// This function is only available when the `state` feature is enabled.
-    #[cfg(feature = "state")]
+    #[cfg(all(feature = "state", de_state))]
     pub fn set<T: 'static>(&mut self, val: T) {
         self.map = Some(Rc::new(self.map
             .as_ref()
@@ -89,7 +92,7 @@ impl State {
     }
 
     /// Removes a type from the state map.
-    #[cfg(feature = "state")]
+    #[cfg(all(feature = "state", de_state))]
     pub fn remove<T: 'static>(&mut self) {
         let new_map = {
             let mut iter = self.map

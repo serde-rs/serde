@@ -183,9 +183,9 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::boxed::Box;
 
-    #[cfg(all(any(feature = "rc", feature = "state"), feature = "alloc", not(feature = "std")))]
+    #[cfg(all(any(feature = "rc", all(feature = "state", de_state)), feature = "alloc", not(feature = "std")))]
     pub use alloc::rc::{Rc, Weak as RcWeak};
-    #[cfg(all(any(feature = "rc", feature = "state"), feature = "std"))]
+    #[cfg(all(any(feature = "rc", all(feature = "state", de_state)), feature = "std"))]
     pub use std::rc::{Rc, Weak as RcWeak};
 
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]

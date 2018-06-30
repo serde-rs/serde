@@ -24,6 +24,12 @@ fn main() {
         println!("cargo:rustc-cfg=de_rc_dst");
     }
 
+    // drop_types_in_const was stabilized in 1.22:
+    // https://blog.rust-lang.org/2017/11/22/Rust-1.22.html
+    if minor >= 22 {
+        println!("cargo:rustc-cfg=de_state");
+    }
+
     // Duration available in core since Rust 1.25:
     // https://blog.rust-lang.org/2018/03/29/Rust-1.25.html#library-stabilizations
     if minor >= 25 {
