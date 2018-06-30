@@ -29,6 +29,7 @@ impl State {
     /// state it needs to be cloned first.
     ///
     /// ```
+    /// # use serde::de::State;
     /// struct MyInfo(i32);
     /// let mut state = State::empty().clone();
     /// state.set(MyInfo(42));
@@ -88,19 +89,27 @@ impl State {
     /// Removes a type from the state map.
     #[cfg(feature = "state")]
     pub fn remove<T: 'static>(&mut self) {
-        self.map = Some(Rc::new(self.map
-            .as_ref()
-            .map(|x| &x[..])
-            .unwrap_or(&[][..])
-            .iter()
-            .filter_map(|&(type_id, ref boxed_rc)| {
-                if type_id != TypeId::of::<T>() {
-                    Some((type_id, boxed_rc.clone()))
-                } else {
-                    None
-                }
-            })
-            .collect()));
+        let new_map = {
+            let mut iter = self.map
+                .as_ref()
+                .map(|x| &x[..])
+                .unwrap_or(&[][..])
+                .iter()
+                .filter_map(|&(type_id, ref boxed_rc)| {
+                    if type_id != TypeId::of::<T>() {
+                        Some((type_id, boxed_rc.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .peekable();
+            if iter.peek().is_some() {
+                Some(iter.collect())
+            } else {
+                None
+            }
+        };
+        self.map = new_map.map(Rc::new);
     }
 }
 
