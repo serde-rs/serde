@@ -904,6 +904,7 @@ mod content {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
+            // XXX: figure out what to do with the state here
             let rest = de::value::SeqAccessDeserializer::new(seq);
             Ok(TaggedContent {
                 tag: tag,
@@ -1078,6 +1079,7 @@ mod content {
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentDeserializer::new);
+        // XXX: figure out what to do with the state here
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
@@ -1095,6 +1097,7 @@ mod content {
         let map = content
             .into_iter()
             .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
+        // XXX: figure out what to do with the state here
         let mut map_visitor = de::value::MapDeserializer::new(map);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
@@ -1562,8 +1565,8 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content { repr: ContentRepr::Seq(v), ..}) => {
-                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
+                Some(Content { repr: ContentRepr::Seq(v), state }) => {
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v, state), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -1585,11 +1588,11 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content { repr: ContentRepr::Map(v), ..}) => {
-                    de::Deserializer::deserialize_any(MapDeserializer::new(v), visitor)
+                Some(Content { repr: ContentRepr::Map(v), state }) => {
+                    de::Deserializer::deserialize_any(MapDeserializer::new(v, state), visitor)
                 }
-                Some(Content { repr: ContentRepr::Seq(v), ..}) => {
-                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
+                Some(Content { repr: ContentRepr::Seq(v), state }) => {
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v, state), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -1608,6 +1611,7 @@ mod content {
         E: de::Error,
     {
         iter: <Vec<Content<'de>> as IntoIterator>::IntoIter,
+        state: State,
         err: PhantomData<E>,
     }
 
@@ -1615,9 +1619,10 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(vec: Vec<Content<'de>>) -> Self {
+        fn new(vec: Vec<Content<'de>>, state: State) -> Self {
             SeqDeserializer {
                 iter: vec.into_iter(),
+                state: state,
                 err: PhantomData,
             }
         }
@@ -1628,6 +1633,11 @@ mod content {
         E: de::Error,
     {
         type Error = E;
+
+        #[inline]
+        fn state(&self) -> &State {
+            &self.state
+        }
 
         #[inline]
         fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1682,6 +1692,7 @@ mod content {
     {
         iter: <Vec<(Content<'de>, Content<'de>)> as IntoIterator>::IntoIter,
         value: Option<Content<'de>>,
+        state: State,
         err: PhantomData<E>,
     }
 
@@ -1689,10 +1700,11 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(map: Vec<(Content<'de>, Content<'de>)>) -> Self {
+        fn new(map: Vec<(Content<'de>, Content<'de>)>, state: State) -> Self {
             MapDeserializer {
                 iter: map.into_iter(),
                 value: None,
+                state: state,
                 err: PhantomData,
             }
         }
@@ -1737,6 +1749,11 @@ mod content {
         E: de::Error,
     {
         type Error = E;
+
+        #[inline]
+        fn state(&self) -> &State {
+            &self.state
+        }
 
         #[inline]
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1795,6 +1812,7 @@ mod content {
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentRefDeserializer::new);
+        // XXX: figure out what to do with the state here
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
@@ -1815,6 +1833,7 @@ mod content {
                 ContentRefDeserializer::new(v),
             )
         });
+        // XXX: figure out what to do with the state here
         let mut map_visitor = de::value::MapDeserializer::new(map);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
