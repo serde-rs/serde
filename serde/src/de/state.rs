@@ -77,8 +77,7 @@ impl State {
     pub fn set<T: 'static>(&mut self, val: T) {
         self.map = Some(Rc::new(self.map
             .as_ref()
-            .map(|x| &x[..])
-            .unwrap_or(&[][..])
+            .map_or(&[][..], |x| &x[..])
             .iter()
             .filter_map(|&(type_id, ref boxed_rc)| {
                 if type_id == TypeId::of::<T>() {
@@ -97,8 +96,7 @@ impl State {
         let new_map = {
             let mut iter = self.map
                 .as_ref()
-                .map(|x| &x[..])
-                .unwrap_or(&[][..])
+                .map_or(&[][..], |x| &x[..])
                 .iter()
                 .filter_map(|&(type_id, ref boxed_rc)| {
                     if type_id == TypeId::of::<T>() {
