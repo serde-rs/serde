@@ -39,10 +39,12 @@ impl State {
         // we could use `const EMPTY_STATE: State` here for newer rust
         // versions which would avoid the unsafe.  The end result is
         // about the same though.
+        #[cfg(feature = "state")]
         static mut EMPTY_STATE: State = State {
-            #[cfg(feature = "state")]
             map: None
         };
+        #[cfg(not(feature = "state"))]
+        static mut EMPTY_STATE: State = State {};
         unsafe {
             &EMPTY_STATE
         }
