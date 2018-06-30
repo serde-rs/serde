@@ -11,7 +11,7 @@ use lib::*;
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{MapAccess, Unexpected};
+use de::{MapAccess, Unexpected, State};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -2713,6 +2713,7 @@ where
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
     pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
+    pub State,
     pub PhantomData<E>,
 );
 
@@ -2746,6 +2747,11 @@ where
     E: Error,
 {
     type Error = E;
+
+    #[inline]
+    fn state(&self) -> &State {
+        &self.1
+    }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

@@ -1065,6 +1065,7 @@ fn deserialize_struct(
             where
                 __A: _serde::de::MapAccess<#delife>,
             {
+                let __state = &self.state;
                 #visit_map
             }
         }
@@ -2540,6 +2541,7 @@ fn deserialize_map(
                 let #name: #field_ty = try!(#func(
                     _serde::private::de::FlatMapDeserializer(
                         &mut __collect,
+                        __state.clone(),
                         _serde::export::PhantomData)));
             }
         });
