@@ -2274,8 +2274,8 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(&Content { repr: ContentRepr::Seq(ref v), ..}) => {
-                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
+                Some(&Content { repr: ContentRepr::Seq(ref v), ref state }) => {
+                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v, state.clone()), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -2297,11 +2297,11 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(&Content { repr: ContentRepr::Map(ref v), ..}) => {
-                    de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
+                Some(&Content { repr: ContentRepr::Map(ref v), ref state }) => {
+                    de::Deserializer::deserialize_any(MapRefDeserializer::new(v, state.clone()), visitor)
                 }
-                Some(&Content { repr: ContentRepr::Seq(ref v), ..}) => {
-                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
+                Some(&Content { repr: ContentRepr::Seq(ref v), ref state }) => {
+                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v, state.clone()), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -2320,6 +2320,7 @@ mod content {
         E: de::Error,
     {
         iter: <&'a [Content<'de>] as IntoIterator>::IntoIter,
+        state: State,
         err: PhantomData<E>,
     }
 
@@ -2327,9 +2328,10 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(vec: &'a [Content<'de>]) -> Self {
+        fn new(vec: &'a [Content<'de>], state: State) -> Self {
             SeqRefDeserializer {
                 iter: vec.into_iter(),
+                state: state,
                 err: PhantomData,
             }
         }
@@ -2340,6 +2342,11 @@ mod content {
         E: de::Error,
     {
         type Error = E;
+
+        #[inline]
+        fn state(&self) -> &State {
+            &self.state
+        }
 
         #[inline]
         fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2396,6 +2403,7 @@ mod content {
     {
         iter: <&'a [(Content<'de>, Content<'de>)] as IntoIterator>::IntoIter,
         value: Option<&'a Content<'de>>,
+        state: State,
         err: PhantomData<E>,
     }
 
@@ -2403,10 +2411,11 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(map: &'a [(Content<'de>, Content<'de>)]) -> Self {
+        fn new(map: &'a [(Content<'de>, Content<'de>)], state: State) -> Self {
             MapRefDeserializer {
                 iter: map.into_iter(),
                 value: None,
+                state: state,
                 err: PhantomData,
             }
         }
@@ -2451,6 +2460,11 @@ mod content {
         E: de::Error,
     {
         type Error = E;
+
+        #[inline]
+        fn state(&self) -> &State {
+            &self.state
+        }
 
         #[inline]
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
