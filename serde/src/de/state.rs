@@ -28,23 +28,18 @@ impl State {
         cfg!(feature = "state")
     }
 
-    /// Invokes a callback with the value.
-    pub fn with<T: 'static, R, F: FnOnce(Option<&T>) -> R>(&self, f: F) -> R {
+    /// Looks up an item.
+    pub fn get<T: 'static>(&self) -> Option<&T> {
         #[cfg(feature = "state")] {
             if let Some(ref map) = self.map {
                 for &(type_id, ref boxed_rc) in map.iter() {
                     if type_id == TypeId::of::<T>() {
-                        return f((&***boxed_rc as &(Any + 'static)).downcast_ref());
+                        return (&***boxed_rc as &(Any + 'static)).downcast_ref();
                     }
                 }
             }
         }
-        f(None)
-    }
-
-    /// Returns a clone of the contained item.
-    pub fn get<T: Clone + 'static>(&self) -> Option<T> {
-        self.with(|opt: Option<&T>| opt.map(|x| x.clone()))
+        None
     }
 
     /// Inserts or replaces a type in the state map.
