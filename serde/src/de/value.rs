@@ -488,9 +488,14 @@ impl<'de, E> Clone for BorrowedStrDeserializer<'de, E> {
 impl<'de, E> BorrowedStrDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given string.
     pub fn new(value: &'de str) -> BorrowedStrDeserializer<'de, E> {
+        Self::new_with_state(value, Default::default())
+    }
+
+    /// Create a new borrowed deserializer from the given string and state.
+    pub fn new_with_state(value: &'de str, new_state: State) -> BorrowedStrDeserializer<'de, E> {
         BorrowedStrDeserializer {
             value: value,
-            state: Default::default(),
+            state: new_state,
             marker: PhantomData,
         }
     }
@@ -756,9 +761,14 @@ impl<'de, E> Clone for BorrowedBytesDeserializer<'de, E> {
 impl<'de, E> BorrowedBytesDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given byte slice.
     pub fn new(value: &'de [u8]) -> BorrowedBytesDeserializer<'de, E> {
+        Self::new_with_state(value, Default::default())
+    }
+
+    /// Create a new borrowed deserializer from the given byte slice and state.
+    pub fn new_with_state(value: &'de [u8], new_state: State) -> BorrowedBytesDeserializer<'de, E> {
         BorrowedBytesDeserializer {
             value: value,
-            state: Default::default(),
+            state: new_state,
             marker: PhantomData,
         }
     }
@@ -803,11 +813,16 @@ where
 {
     /// Construct a new `SeqDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
+        Self::new_with_state(iter, Default::default())
+    }
+
+    /// Construct a new `SeqDeserializer<I, E>` and state.
+    pub fn new_with_state(iter: I, state: State) -> Self {
         SeqDeserializer {
             iter: iter.fuse(),
             count: 0,
             marker: PhantomData,
-            state: Default::default(),
+            state: state,
         }
     }
 }
@@ -875,7 +890,7 @@ where
         match self.iter.next() {
             Some(value) => {
                 self.count += 1;
-                seed.deserialize(value.into_deserializer()).map(Some)
+                seed.deserialize(value.into_deserializer_with_state(self.state.clone())).map(Some)
             }
             None => Ok(None),
         }
@@ -952,7 +967,12 @@ pub struct SeqAccessDeserializer<A> {
 impl<A> SeqAccessDeserializer<A> {
     /// Construct a new `SeqAccessDeserializer<A>`.
     pub fn new(seq: A) -> Self {
-        SeqAccessDeserializer { seq: seq, state: Default::default() }
+        Self::new_with_state(seq, Default::default())
+    }
+
+    /// Construct a new `SeqAccessDeserializer<A>` with state.
+    pub fn new_with_state(seq: A, state: State) -> Self {
+        SeqAccessDeserializer { seq: seq, state: state }
     }
 }
 
@@ -1001,12 +1021,17 @@ where
 {
     /// Construct a new `MapDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
+        Self::new_with_state(iter, Default::default())
+    }
+
+    /// Construct a new `MapDeserializer<I, E>` with state.
+    pub fn new_with_state(iter: I, state: State) -> Self {
         MapDeserializer {
             iter: iter.fuse(),
             value: None,
             count: 0,
             lifetime: PhantomData,
-            state: Default::default(),
+            state: state,
             error: PhantomData,
         }
     }
@@ -1113,7 +1138,7 @@ where
         match self.next_pair() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(key.into_deserializer()).map(Some)
+                seed.deserialize(key.into_deserializer_with_state(self.state.clone())).map(Some)
             }
             None => Ok(None),
         }
@@ -1127,7 +1152,7 @@ where
         // Panic because this indicates a bug in the program rather than an
         // expected failure.
         let value = value.expect("MapAccess::visit_value called before visit_key");
-        seed.deserialize(value.into_deserializer())
+        seed.deserialize(value.into_deserializer_with_state(self.state.clone()))
     }
 
     fn next_entry_seed<TK, TV>(
@@ -1141,8 +1166,8 @@ where
     {
         match self.next_pair() {
             Some((key, value)) => {
-                let key = try!(kseed.deserialize(key.into_deserializer()));
-                let value = try!(vseed.deserialize(value.into_deserializer()));
+                let key = try!(kseed.deserialize(key.into_deserializer_with_state(self.state.clone())));
+                let value = try!(vseed.deserialize(value.into_deserializer_with_state(self.state.clone())));
                 Ok(Some((key, value)))
             }
             None => Ok(None),
@@ -1170,7 +1195,7 @@ where
     {
         match self.next_pair() {
             Some((k, v)) => {
-                let de = PairDeserializer(k, v, PhantomData);
+                let de = PairDeserializer(k, v, self.state.clone(), PhantomData);
                 seed.deserialize(de).map(Some)
             }
             None => Ok(None),
@@ -1222,7 +1247,7 @@ where
 
 // Used in the `impl SeqAccess for MapDeserializer` to visit the map as a
 // sequence of pairs.
-struct PairDeserializer<A, B, E>(A, B, PhantomData<E>);
+struct PairDeserializer<A, B, E>(A, B, State, PhantomData<E>);
 
 impl<'de, A, B, E> de::Deserializer<'de> for PairDeserializer<A, B, E>
 where
@@ -1249,7 +1274,7 @@ where
     where
         V: de::Visitor<'de>,
     {
-        let mut pair_visitor = PairVisitor(Some(self.0), Some(self.1), PhantomData);
+        let mut pair_visitor = PairVisitor(Some(self.0), Some(self.1), self.2.clone(), PhantomData);
         let pair = try!(visitor.visit_seq(&mut pair_visitor));
         if pair_visitor.1.is_none() {
             Ok(pair)
@@ -1275,7 +1300,7 @@ where
     }
 }
 
-struct PairVisitor<A, B, E>(Option<A>, Option<B>, PhantomData<E>);
+struct PairVisitor<A, B, E>(Option<A>, Option<B>, State, PhantomData<E>);
 
 impl<'de, A, B, E> de::SeqAccess<'de> for PairVisitor<A, B, E>
 where
@@ -1290,9 +1315,9 @@ where
         T: de::DeserializeSeed<'de>,
     {
         if let Some(k) = self.0.take() {
-            seed.deserialize(k.into_deserializer()).map(Some)
+            seed.deserialize(k.into_deserializer_with_state(self.2.clone())).map(Some)
         } else if let Some(v) = self.1.take() {
-            seed.deserialize(v.into_deserializer()).map(Some)
+            seed.deserialize(v.into_deserializer_with_state(self.2.clone())).map(Some)
         } else {
             Ok(None)
         }
@@ -1358,12 +1383,18 @@ where
 #[derive(Clone, Debug)]
 pub struct MapAccessDeserializer<A> {
     map: A,
+    state: State,
 }
 
 impl<A> MapAccessDeserializer<A> {
     /// Construct a new `MapAccessDeserializer<A>`.
     pub fn new(map: A) -> Self {
-        MapAccessDeserializer { map: map }
+        Self::new_with_state(map, Default::default())
+    }
+
+    /// Construct a new `MapAccessDeserializer<A>` with state.
+    pub fn new_with_state(map: A, state: State) -> Self {
+        MapAccessDeserializer { map: map, state: state }
     }
 }
 
@@ -1372,6 +1403,8 @@ where
     A: de::MapAccess<'de>,
 {
     type Error = A::Error;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

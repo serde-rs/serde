@@ -256,10 +256,6 @@ mod content {
         pub fn state(&self) -> &State {
             &self.state
         }
-
-        pub fn replace_state(&mut self, new_state: State) {
-            self.state = new_state;
-        }
     }
 
     #[derive(Debug)]
@@ -908,8 +904,7 @@ mod content {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
-            let mut rest = de::value::SeqAccessDeserializer::new(seq);
-            rest.replace_state(self.state.clone());
+            let rest = de::value::SeqAccessDeserializer::new_with_state(seq, self.state.clone());
             Ok(TaggedContent {
                 tag: tag,
                 content: try!(Content::deserialize(rest)),
@@ -1083,8 +1078,7 @@ mod content {
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentDeserializer::new);
-        let mut seq_visitor = de::value::SeqDeserializer::new(seq);
-        seq_visitor.replace_state(state);
+        let mut seq_visitor = de::value::SeqDeserializer::new_with_state(seq, state);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
         Ok(value)
@@ -1102,8 +1096,7 @@ mod content {
         let map = content
             .into_iter()
             .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
-        let mut map_visitor = de::value::MapDeserializer::new(map);
-        map_visitor.replace_state(state);
+        let mut map_visitor = de::value::MapDeserializer::new_with_state(map, state);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
         Ok(value)
@@ -1120,11 +1113,6 @@ mod content {
         #[inline]
         fn state(&self) -> &State {
             self.content.state()
-        }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: State) {
-            self.content.replace_state(new_state);
         }
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1819,8 +1807,7 @@ mod content {
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentRefDeserializer::new);
-        let mut seq_visitor = de::value::SeqDeserializer::new(seq);
-        seq_visitor.replace_state(state);
+        let mut seq_visitor = de::value::SeqDeserializer::new_with_state(seq, state);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
         Ok(value)
@@ -1841,8 +1828,7 @@ mod content {
                 ContentRefDeserializer::new(v),
             )
         });
-        let mut map_visitor = de::value::MapDeserializer::new(map);
-        map_visitor.replace_state(state);
+        let mut map_visitor = de::value::MapDeserializer::new_with_state(map, state);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
         Ok(value)
@@ -2491,6 +2477,11 @@ mod content {
         fn into_deserializer(self) -> Self {
             self
         }
+
+        fn into_deserializer_with_state(self, state: State) -> Self {
+            let _state = state;
+            self
+        }
     }
 
     impl<'de, 'a, E> de::IntoDeserializer<'de, E> for ContentRefDeserializer<'a, 'de, E>
@@ -2500,6 +2491,11 @@ mod content {
         type Deserializer = Self;
 
         fn into_deserializer(self) -> Self {
+            self
+        }
+
+        fn into_deserializer_with_state(self, state: State) -> Self {
+            let _state = state;
             self
         }
     }
@@ -2602,6 +2598,15 @@ pub trait IdentifierDeserializer<'de, E: Error> {
     type Deserializer: Deserializer<'de, Error = E>;
 
     fn from(self) -> Self::Deserializer;
+
+    fn from_with_state(self, new_state: State) -> Self::Deserializer
+        where Self: Sized
+    {
+        if !new_state.is_empty() {
+            panic!("This identfier deserializer does not support state");
+        }
+        IdentifierDeserializer::from(self)
+    }
 }
 
 impl<'de, E> IdentifierDeserializer<'de, E> for u32
@@ -2613,10 +2618,15 @@ where
     fn from(self) -> Self::Deserializer {
         self.into_deserializer()
     }
+
+    fn from_with_state(self, state: State) -> Self::Deserializer {
+        self.into_deserializer_with_state(state)
+    }
 }
 
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
+    state: State,
     marker: PhantomData<E>,
 }
 
@@ -2627,8 +2637,13 @@ where
     type Deserializer = StrDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
+        Self::from_with_state(self, Default::default())
+    }
+
+    fn from_with_state(self, state: State) -> Self::Deserializer {
         StrDeserializer {
             value: self,
+            state: state,
             marker: PhantomData,
         }
     }
@@ -2639,6 +2654,8 @@ where
     E: Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -2656,6 +2673,7 @@ where
 
 pub struct BytesDeserializer<'a, E> {
     value: &'a [u8],
+    state: State,
     marker: PhantomData<E>,
 }
 
@@ -2666,8 +2684,13 @@ where
     type Deserializer = BytesDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
+        Self::from_with_state(self, Default::default())
+    }
+
+    fn from_with_state(self, state: State) -> Self::Deserializer {
         BytesDeserializer {
             value: self,
+            state: state,
             marker: PhantomData,
         }
     }
@@ -2678,6 +2701,8 @@ where
     E: Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

@@ -266,10 +266,5 @@ macro_rules! forward_deserializer_state_to_field {
         fn state(&self) -> &$crate::de::State {
             &self.$field
         }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: $crate::de::State) {
-            self.$field = new_state;
-        }
     };
 }

@@ -2025,7 +2025,7 @@ fn deserialize_custom_identifier(
             (ordinary, Some(fallthrough))
         } else if let Style::Newtype = last.style {
             let ordinary = &variants[..variants.len() - 1];
-            let deserializer = quote!(_serde::private::de::IdentifierDeserializer::from(__value));
+            let deserializer = quote!(_serde::private::de::IdentifierDeserializer::from_with_state(__value, self.state.clone()));
             let fallthrough = quote! {
                 _serde::export::Result::map(
                     _serde::Deserialize::deserialize(#deserializer),
