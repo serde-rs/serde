@@ -904,8 +904,8 @@ mod content {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
-            // XXX: figure out what to do with the state here
-            let rest = de::value::SeqAccessDeserializer::new(seq);
+            let mut rest = de::value::SeqAccessDeserializer::new(seq);
+            rest.replace_state(self.state.clone());
             Ok(TaggedContent {
                 tag: tag,
                 content: try!(Content::deserialize(rest)),
@@ -1073,14 +1073,14 @@ mod content {
         }
     }
 
-    fn visit_content_seq<'de, V, E>(content: Vec<Content<'de>>, visitor: V) -> Result<V::Value, E>
+    fn visit_content_seq<'de, V, E>(content: Vec<Content<'de>>, visitor: V, state: State) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentDeserializer::new);
-        // XXX: figure out what to do with the state here
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
+        seq_visitor.replace_state(state);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
         Ok(value)
@@ -1089,6 +1089,7 @@ mod content {
     fn visit_content_map<'de, V, E>(
         content: Vec<(Content<'de>, Content<'de>)>,
         visitor: V,
+        state: State,
     ) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
@@ -1097,8 +1098,8 @@ mod content {
         let map = content
             .into_iter()
             .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
-        // XXX: figure out what to do with the state here
         let mut map_visitor = de::value::MapDeserializer::new(map);
+        map_visitor.replace_state(state);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
         Ok(value)
@@ -1141,8 +1142,8 @@ mod content {
                 ContentRepr::None => visitor.visit_none(),
                 ContentRepr::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
                 ContentRepr::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
-                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
-                ContentRepr::Map(v) => visit_content_map(v, visitor),
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor, self.content.state),
+                ContentRepr::Map(v) => visit_content_map(v, visitor, self.content.state),
             }
         }
 
@@ -1285,7 +1286,7 @@ mod content {
                 ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
                 ContentRepr::ByteBuf(v) => visitor.visit_byte_buf(v),
                 ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor, self.content.state),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1359,7 +1360,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content.repr {
-                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor, self.content.state),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1388,7 +1389,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content.repr {
-                ContentRepr::Map(v) => visit_content_map(v, visitor),
+                ContentRepr::Map(v) => visit_content_map(v, visitor, self.content.state),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1403,8 +1404,8 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content.repr {
-                ContentRepr::Seq(v) => visit_content_seq(v, visitor),
-                ContentRepr::Map(v) => visit_content_map(v, visitor),
+                ContentRepr::Seq(v) => visit_content_seq(v, visitor, self.content.state),
+                ContentRepr::Map(v) => visit_content_map(v, visitor, self.content.state),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1806,14 +1807,15 @@ mod content {
     fn visit_content_seq_ref<'a, 'de, V, E>(
         content: &'a [Content<'de>],
         visitor: V,
+        state: State,
     ) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentRefDeserializer::new);
-        // XXX: figure out what to do with the state here
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
+        seq_visitor.replace_state(state);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
         Ok(value)
@@ -1822,6 +1824,7 @@ mod content {
     fn visit_content_map_ref<'a, 'de, V, E>(
         content: &'a [(Content<'de>, Content<'de>)],
         visitor: V,
+        state: State,
     ) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
@@ -1833,8 +1836,8 @@ mod content {
                 ContentRefDeserializer::new(v),
             )
         });
-        // XXX: figure out what to do with the state here
         let mut map_visitor = de::value::MapDeserializer::new(map);
+        map_visitor.replace_state(state);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
         Ok(value)
@@ -1879,8 +1882,8 @@ mod content {
                 ContentRepr::Newtype(ref v) => {
                     visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
                 }
-                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor),
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor, self.content.state.clone()),
+                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor, self.content.state.clone()),
             }
         }
 
@@ -2016,7 +2019,7 @@ mod content {
                 ContentRepr::Str(v) => visitor.visit_borrowed_str(v),
                 ContentRepr::ByteBuf(ref v) => visitor.visit_bytes(v),
                 ContentRepr::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor, self.content.state.clone()),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2078,7 +2081,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content.repr {
-                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor, self.content.state.clone()),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2107,7 +2110,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content.repr {
-                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor),
+                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor, self.content.state.clone()),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2122,8 +2125,8 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content.repr {
-                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor),
+                ContentRepr::Seq(ref v) => visit_content_seq_ref(v, visitor, self.content.state.clone()),
+                ContentRepr::Map(ref v) => visit_content_map_ref(v, visitor, self.content.state.clone()),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }

@@ -38,7 +38,7 @@
 use lib::*;
 
 use self::private::{First, Second};
-use de::{self, Expected, IntoDeserializer, SeqAccess};
+use de::{self, Expected, IntoDeserializer, SeqAccess, State};
 use private::de::size_hint;
 use ser;
 
@@ -727,6 +727,7 @@ pub struct SeqDeserializer<I, E> {
     iter: iter::Fuse<I>,
     count: usize,
     marker: PhantomData<E>,
+    state: State,
 }
 
 impl<I, E> SeqDeserializer<I, E>
@@ -739,7 +740,13 @@ where
             iter: iter.fuse(),
             count: 0,
             marker: PhantomData,
+            state: State::empty().clone(),
         }
+    }
+
+    /// Replaces the contained state with other state.
+    pub fn replace_state(&mut self, state: State) {
+        self.state = state;
     }
 }
 
@@ -772,6 +779,11 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    #[inline]
+    fn state(&self) -> &State {
+        &self.state
+    }
 
     fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -875,12 +887,18 @@ where
 #[derive(Clone, Debug)]
 pub struct SeqAccessDeserializer<A> {
     seq: A,
+    state: State,
 }
 
 impl<A> SeqAccessDeserializer<A> {
     /// Construct a new `SeqAccessDeserializer<A>`.
     pub fn new(seq: A) -> Self {
-        SeqAccessDeserializer { seq: seq }
+        SeqAccessDeserializer { seq: seq, state: State::empty().clone() }
+    }
+
+    /// Replaces the contained state with other state.
+    pub fn replace_state(&mut self, state: State) {
+        self.state = state;
     }
 }
 
@@ -889,6 +907,11 @@ where
     A: de::SeqAccess<'de>,
 {
     type Error = A::Error;
+
+    #[inline]
+    fn state(&self) -> &State {
+        &self.state
+    }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -916,6 +939,7 @@ where
     value: Option<Second<I::Item>>,
     count: usize,
     lifetime: PhantomData<&'de ()>,
+    state: State,
     error: PhantomData<E>,
 }
 
@@ -931,8 +955,14 @@ where
             value: None,
             count: 0,
             lifetime: PhantomData,
+            state: State::empty().clone(),
             error: PhantomData,
         }
+    }
+
+    /// Replaces the contained state with other state.
+    pub fn replace_state(&mut self, state: State) {
+        self.state = state;
     }
 }
 
@@ -984,6 +1014,11 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    #[inline]
+    fn state(&self) -> &State {
+        &self.state
+    }
 
     fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -1117,6 +1152,7 @@ where
             value: self.value.clone(),
             count: self.count,
             lifetime: self.lifetime,
+            state: self.state.clone(),
             error: self.error,
         }
     }
