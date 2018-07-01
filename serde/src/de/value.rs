@@ -197,8 +197,6 @@ where
 {
     type Error = E;
 
-    forward_deserializer_state_to_field!();
-
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
