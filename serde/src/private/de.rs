@@ -8,10 +8,10 @@
 
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
+use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor, State};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{MapAccess, Unexpected, State};
+use de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -2479,6 +2479,8 @@ mod content {
         }
 
         fn into_deserializer_with_state(self, state: State) -> Self {
+            // do not use the state passed in but keep the one that we have already
+            // on the content.
             let _state = state;
             self
         }
@@ -2495,6 +2497,8 @@ mod content {
         }
 
         fn into_deserializer_with_state(self, state: State) -> Self {
+            // do not use the state passed in but keep the one that we have already
+            // on the content.
             let _state = state;
             self
         }
