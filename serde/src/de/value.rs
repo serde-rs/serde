@@ -119,7 +119,7 @@ where
     fn into_deserializer(self) -> UnitDeserializer<E> {
         UnitDeserializer {
             marker: PhantomData,
-            state: Default::default(),
+            state: State::default(),
         }
     }
 }
@@ -243,7 +243,7 @@ macro_rules! primitive_deserializer {
             fn into_deserializer(self) -> $name<E> {
                 $name {
                     value: self,
-                    state: Default::default(),
+                    state: State::default(),
                     marker: PhantomData,
                 }
             }
@@ -319,7 +319,7 @@ where
     fn into_deserializer(self) -> U32Deserializer<E> {
         U32Deserializer {
             value: self,
-            state: Default::default(),
+            state: State::default(),
             marker: PhantomData,
         }
     }
@@ -405,7 +405,7 @@ where
     fn into_deserializer(self) -> StrDeserializer<'a, E> {
         StrDeserializer {
             value: self,
-            state: Default::default(),
+            state: State::default(),
             marker: PhantomData,
         }
     }
@@ -486,7 +486,7 @@ impl<'de, E> Clone for BorrowedStrDeserializer<'de, E> {
 impl<'de, E> BorrowedStrDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given string.
     pub fn new(value: &'de str) -> BorrowedStrDeserializer<'de, E> {
-        Self::new_with_state(value, Default::default())
+        Self::new_with_state(value, State::default())
     }
 
     /// Create a new borrowed deserializer from the given string and state.
@@ -566,7 +566,7 @@ impl<E> Clone for StringDeserializer<E> {
     fn clone(&self) -> Self {
         StringDeserializer {
             value: self.value.clone(),
-            state: Default::default(),
+            state: State::default(),
             marker: PhantomData,
         }
     }
@@ -582,7 +582,7 @@ where
     fn into_deserializer(self) -> StringDeserializer<E> {
         StringDeserializer {
             value: self,
-            state: Default::default(),
+            state: State::default(),
             marker: PhantomData,
         }
     }
@@ -673,7 +673,7 @@ where
     fn into_deserializer(self) -> CowStrDeserializer<'a, E> {
         CowStrDeserializer {
             value: self,
-            state: Default::default(),
+            state: State::default(),
             marker: PhantomData,
         }
     }
@@ -759,7 +759,7 @@ impl<'de, E> Clone for BorrowedBytesDeserializer<'de, E> {
 impl<'de, E> BorrowedBytesDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given byte slice.
     pub fn new(value: &'de [u8]) -> BorrowedBytesDeserializer<'de, E> {
-        Self::new_with_state(value, Default::default())
+        Self::new_with_state(value, State::default())
     }
 
     /// Create a new borrowed deserializer from the given byte slice and state.
@@ -811,7 +811,7 @@ where
 {
     /// Construct a new `SeqDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
-        Self::new_with_state(iter, Default::default())
+        Self::new_with_state(iter, State::default())
     }
 
     /// Construct a new `SeqDeserializer<I, E>` and state.
@@ -965,7 +965,7 @@ pub struct SeqAccessDeserializer<A> {
 impl<A> SeqAccessDeserializer<A> {
     /// Construct a new `SeqAccessDeserializer<A>`.
     pub fn new(seq: A) -> Self {
-        Self::new_with_state(seq, Default::default())
+        Self::new_with_state(seq, State::default())
     }
 
     /// Construct a new `SeqAccessDeserializer<A>` with state.
@@ -1019,7 +1019,7 @@ where
 {
     /// Construct a new `MapDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
-        Self::new_with_state(iter, Default::default())
+        Self::new_with_state(iter, State::default())
     }
 
     /// Construct a new `MapDeserializer<I, E>` with state.
@@ -1387,7 +1387,7 @@ pub struct MapAccessDeserializer<A> {
 impl<A> MapAccessDeserializer<A> {
     /// Construct a new `MapAccessDeserializer<A>`.
     pub fn new(map: A) -> Self {
-        Self::new_with_state(map, Default::default())
+        Self::new_with_state(map, State::default())
     }
 
     /// Construct a new `MapAccessDeserializer<A>` with state.

@@ -2641,7 +2641,7 @@ where
     type Deserializer = StrDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
-        Self::from_with_state(self, Default::default())
+        Self::from_with_state(self, State::default())
     }
 
     fn from_with_state(self, state: State) -> Self::Deserializer {
@@ -2688,7 +2688,7 @@ where
     type Deserializer = BytesDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
-        Self::from_with_state(self, Default::default())
+        Self::from_with_state(self, State::default())
     }
 
     fn from_with_state(self, state: State) -> Self::Deserializer {
