@@ -1211,6 +1211,18 @@ pub trait Deserializer<'de>: Sized {
     fn state(&self) -> &State {
         State::empty()
     }
+
+    /// Replaces the state in the deserializer with new state.
+    ///
+    /// Not all deserializers are able to carry state updates.  When a deserializer
+    /// does not implement this method only the empty state can be set or the
+    /// deserializer will panic.  The empty state object can always be set on a
+    /// deserializer however.
+    fn replace_state(&mut self, new_state: State) {
+        if !new_state.is_empty() {
+            panic!("Deserializer does permit state to be stored.");
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

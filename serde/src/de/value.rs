@@ -736,16 +736,11 @@ where
 {
     /// Construct a new `SeqDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
-        SeqDeserializer::new_with_state(iter, State::empty().clone())
-    }
-
-    /// Construct a new `SeqDeserializer<I, E>`.
-    pub fn new_with_state(iter: I, state: State) -> Self {
         SeqDeserializer {
             iter: iter.fuse(),
             count: 0,
             marker: PhantomData,
-            state: state,
+            state: Default::default(),
         }
     }
 }
@@ -783,6 +778,11 @@ where
     #[inline]
     fn state(&self) -> &State {
         &self.state
+    }
+
+    #[inline]
+    fn replace_state(&mut self, new_state: State) {
+        self.state = new_state;
     }
 
     fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
@@ -893,12 +893,7 @@ pub struct SeqAccessDeserializer<A> {
 impl<A> SeqAccessDeserializer<A> {
     /// Construct a new `SeqAccessDeserializer<A>`.
     pub fn new(seq: A) -> Self {
-        SeqAccessDeserializer::new_with_state(seq, State::empty().clone())
-    }
-
-    /// Construct a new `SeqAccessDeserializer<A>`.
-    pub fn new_with_state(seq: A, state: State) -> Self {
-        SeqAccessDeserializer { seq: seq, state: state }
+        SeqAccessDeserializer { seq: seq, state: Default::default() }
     }
 }
 
@@ -911,6 +906,11 @@ where
     #[inline]
     fn state(&self) -> &State {
         &self.state
+    }
+
+    #[inline]
+    fn replace_state(&mut self, new_state: State) {
+        self.state = new_state;
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -950,17 +950,12 @@ where
 {
     /// Construct a new `MapDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
-        MapDeserializer::new_with_state(iter, State::empty().clone())
-    }
-
-    /// Construct a new `MapDeserializer<I, E>`.
-    pub fn new_with_state(iter: I, state: State) -> Self {
         MapDeserializer {
             iter: iter.fuse(),
             value: None,
             count: 0,
             lifetime: PhantomData,
-            state: state,
+            state: Default::default(),
             error: PhantomData,
         }
     }
@@ -1018,6 +1013,11 @@ where
     #[inline]
     fn state(&self) -> &State {
         &self.state
+    }
+
+    #[inline]
+    fn replace_state(&mut self, new_state: State) {
+        self.state = new_state;
     }
 
     fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>

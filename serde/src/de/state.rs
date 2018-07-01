@@ -19,7 +19,7 @@ use lib::*;
 /// This requires Rust 1.22 or later and the `state` feature to be
 /// enabled.  Otherwise the state type is read-only and does not
 /// provide the `set` and `remove` methods.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct State {
     #[cfg(all(feature = "state", de_state))]
     map: Option<Rc<Vec<(TypeId, Rc<Box<Any>>)>>>,
@@ -52,6 +52,19 @@ impl State {
         #[cfg(not(all(feature = "state", de_state)))] {
             static mut EMPTY_STATE: State = State {};
             unsafe { &EMPTY_STATE }
+        }
+    }
+
+    /// Checks if the state is empty.
+    pub fn is_empty(&self) -> bool {
+        #[cfg(all(feature = "state", de_state))] {
+            match self.map {
+                Some(ref map) => map.is_empty(),
+                None => true,
+            }
+        }
+        #[cfg(not(all(feature = "state", de_state)))] {
+            true
         }
     }
 

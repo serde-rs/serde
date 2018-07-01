@@ -253,8 +253,14 @@ mod content {
             }
         }
 
+        #[inline]
         pub fn state(&self) -> &State {
             &self.state
+        }
+
+        #[inline]
+        pub fn replace_state(&mut self, new_state: State) {
+            self.state = new_state;
         }
     }
 
@@ -904,7 +910,8 @@ mod content {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
-            let rest = de::value::SeqAccessDeserializer::new_with_state(seq, self.state.clone());
+            let mut rest = de::value::SeqAccessDeserializer::new(seq);
+            rest.replace_state(self.state.clone());
             Ok(TaggedContent {
                 tag: tag,
                 content: try!(Content::deserialize(rest)),
@@ -1078,7 +1085,8 @@ mod content {
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentDeserializer::new);
-        let mut seq_visitor = de::value::SeqDeserializer::new_with_state(seq, state);
+        let mut seq_visitor = de::value::SeqDeserializer::new(seq);
+        seq_visitor.replace_state(state);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
         Ok(value)
@@ -1096,7 +1104,8 @@ mod content {
         let map = content
             .into_iter()
             .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
-        let mut map_visitor = de::value::MapDeserializer::new_with_state(map, state);
+        let mut map_visitor = de::value::MapDeserializer::new(map);
+        map_visitor.replace_state(state);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
         Ok(value)
@@ -1110,8 +1119,14 @@ mod content {
     {
         type Error = E;
 
+        #[inline]
         fn state(&self) -> &State {
             self.content.state()
+        }
+
+        #[inline]
+        fn replace_state(&mut self, new_state: State) {
+            self.content.replace_state(new_state);
         }
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1638,6 +1653,11 @@ mod content {
         }
 
         #[inline]
+        fn replace_state(&mut self, new_state: State) {
+            self.state = new_state;
+        }
+
+        #[inline]
         fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
@@ -1754,6 +1774,11 @@ mod content {
         }
 
         #[inline]
+        fn replace_state(&mut self, new_state: State) {
+            self.state = new_state;
+        }
+
+        #[inline]
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
@@ -1771,6 +1796,7 @@ mod content {
     /// Not public API.
     pub struct ContentRefDeserializer<'a, 'de: 'a, E> {
         content: &'a Content<'de>,
+        state: State,
         err: PhantomData<E>,
     }
 
@@ -1811,7 +1837,8 @@ mod content {
         E: de::Error,
     {
         let seq = content.into_iter().map(ContentRefDeserializer::new);
-        let mut seq_visitor = de::value::SeqDeserializer::new_with_state(seq, state);
+        let mut seq_visitor = de::value::SeqDeserializer::new(seq);
+        seq_visitor.replace_state(state);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
         Ok(value)
@@ -1832,7 +1859,8 @@ mod content {
                 ContentRefDeserializer::new(v),
             )
         });
-        let mut map_visitor = de::value::MapDeserializer::new_with_state(map, state);
+        let mut map_visitor = de::value::MapDeserializer::new(map);
+        map_visitor.replace_state(state);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
         Ok(value)
@@ -1846,8 +1874,14 @@ mod content {
     {
         type Error = E;
 
+        #[inline]
         fn state(&self) -> &State {
-            self.content.state()
+            &self.state
+        }
+
+        #[inline]
+        fn replace_state(&mut self, new_state: State) {
+            self.state = new_state;
         }
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, E>
@@ -2199,6 +2233,7 @@ mod content {
         pub fn new(content: &'a Content<'de>) -> Self {
             ContentRefDeserializer {
                 content: content,
+                state: content.state().clone(),
                 err: PhantomData,
             }
         }
@@ -2347,6 +2382,11 @@ mod content {
         }
 
         #[inline]
+        fn replace_state(&mut self, new_state: State) {
+            self.state = new_state;
+        }
+
+        #[inline]
         fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: de::Visitor<'de>,
@@ -2462,6 +2502,11 @@ mod content {
         #[inline]
         fn state(&self) -> &State {
             &self.state
+        }
+
+        #[inline]
+        fn replace_state(&mut self, new_state: State) {
+            self.state = new_state;
         }
 
         #[inline]
@@ -2749,6 +2794,11 @@ where
     #[inline]
     fn state(&self) -> &State {
         &self.1
+    }
+
+    #[inline]
+    fn replace_state(&mut self, new_state: State) {
+        self.1 = new_state;
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
