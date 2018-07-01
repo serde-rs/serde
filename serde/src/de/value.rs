@@ -736,17 +736,17 @@ where
 {
     /// Construct a new `SeqDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
+        SeqDeserializer::new_with_state(iter, State::empty().clone())
+    }
+
+    /// Construct a new `SeqDeserializer<I, E>`.
+    pub fn new_with_state(iter: I, state: State) -> Self {
         SeqDeserializer {
             iter: iter.fuse(),
             count: 0,
             marker: PhantomData,
-            state: State::empty().clone(),
+            state: state,
         }
-    }
-
-    /// Replaces the contained state with other state.
-    pub fn replace_state(&mut self, state: State) {
-        self.state = state;
     }
 }
 
@@ -893,12 +893,12 @@ pub struct SeqAccessDeserializer<A> {
 impl<A> SeqAccessDeserializer<A> {
     /// Construct a new `SeqAccessDeserializer<A>`.
     pub fn new(seq: A) -> Self {
-        SeqAccessDeserializer { seq: seq, state: State::empty().clone() }
+        SeqAccessDeserializer::new_with_state(seq, State::empty().clone())
     }
 
-    /// Replaces the contained state with other state.
-    pub fn replace_state(&mut self, state: State) {
-        self.state = state;
+    /// Construct a new `SeqAccessDeserializer<A>`.
+    pub fn new_with_state(seq: A, state: State) -> Self {
+        SeqAccessDeserializer { seq: seq, state: state }
     }
 }
 
@@ -950,19 +950,19 @@ where
 {
     /// Construct a new `MapDeserializer<I, E>`.
     pub fn new(iter: I) -> Self {
+        MapDeserializer::new_with_state(iter, State::empty().clone())
+    }
+
+    /// Construct a new `MapDeserializer<I, E>`.
+    pub fn new_with_state(iter: I, state: State) -> Self {
         MapDeserializer {
             iter: iter.fuse(),
             value: None,
             count: 0,
             lifetime: PhantomData,
-            state: State::empty().clone(),
+            state: state,
             error: PhantomData,
         }
-    }
-
-    /// Replaces the contained state with other state.
-    pub fn replace_state(&mut self, state: State) {
-        self.state = state;
     }
 }
 
