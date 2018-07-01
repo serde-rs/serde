@@ -253,12 +253,10 @@ mod content {
             }
         }
 
-        #[inline]
         pub fn state(&self) -> &State {
             &self.state
         }
 
-        #[inline]
         pub fn replace_state(&mut self, new_state: State) {
             self.state = new_state;
         }
@@ -1647,15 +1645,7 @@ mod content {
     {
         type Error = E;
 
-        #[inline]
-        fn state(&self) -> &State {
-            &self.state
-        }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: State) {
-            self.state = new_state;
-        }
+        forward_deserializer_state_to_field!();
 
         #[inline]
         fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1768,15 +1758,7 @@ mod content {
     {
         type Error = E;
 
-        #[inline]
-        fn state(&self) -> &State {
-            &self.state
-        }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: State) {
-            self.state = new_state;
-        }
+        forward_deserializer_state_to_field!();
 
         #[inline]
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1874,15 +1856,7 @@ mod content {
     {
         type Error = E;
 
-        #[inline]
-        fn state(&self) -> &State {
-            &self.state
-        }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: State) {
-            self.state = new_state;
-        }
+        forward_deserializer_state_to_field!();
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, E>
         where
@@ -2376,15 +2350,7 @@ mod content {
     {
         type Error = E;
 
-        #[inline]
-        fn state(&self) -> &State {
-            &self.state
-        }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: State) {
-            self.state = new_state;
-        }
+        forward_deserializer_state_to_field!();
 
         #[inline]
         fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2499,15 +2465,7 @@ mod content {
     {
         type Error = E;
 
-        #[inline]
-        fn state(&self) -> &State {
-            &self.state
-        }
-
-        #[inline]
-        fn replace_state(&mut self, new_state: State) {
-            self.state = new_state;
-        }
+        forward_deserializer_state_to_field!();
 
         #[inline]
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2791,15 +2749,7 @@ where
 {
     type Error = E;
 
-    #[inline]
-    fn state(&self) -> &State {
-        &self.1
-    }
-
-    #[inline]
-    fn replace_state(&mut self, new_state: State) {
-        self.1 = new_state;
-    }
+    forward_deserializer_state_to_field!(1);
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

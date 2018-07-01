@@ -44,22 +44,6 @@ use ser;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// For structs that contain a PhantomData. We do not want the trait
-// bound `E: Clone` inferred by derive(Clone).
-macro_rules! impl_copy_clone {
-    ($ty:ident $(<$lifetime:tt>)*) => {
-        impl<$($lifetime,)* E> Copy for $ty<$($lifetime,)* E> {}
-
-        impl<$($lifetime,)* E> Clone for $ty<$($lifetime,)* E> {
-            fn clone(&self) -> Self {
-                *self
-            }
-        }
-    };
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 /// A minimal representation of all possible errors that can occur using the
 /// `IntoDeserializer` trait.
 #[derive(Clone, Debug, PartialEq)]
@@ -135,6 +119,7 @@ where
     fn into_deserializer(self) -> UnitDeserializer<E> {
         UnitDeserializer {
             marker: PhantomData,
+            state: Default::default(),
         }
     }
 }
@@ -143,15 +128,25 @@ where
 #[derive(Debug)]
 pub struct UnitDeserializer<E> {
     marker: PhantomData<E>,
+    state: State,
 }
 
-impl_copy_clone!(UnitDeserializer);
+impl<E> Clone for UnitDeserializer<E> {
+    fn clone(&self) -> Self {
+        UnitDeserializer {
+            marker: PhantomData,
+            state: self.state.clone(),
+        }
+    }
+}
 
 impl<'de, E> de::Deserializer<'de> for UnitDeserializer<E>
 where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
@@ -202,6 +197,8 @@ where
 {
     type Error = E;
 
+    forward_deserializer_state_to_field!();
+
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
@@ -225,10 +222,19 @@ macro_rules! primitive_deserializer {
         #[derive(Debug)]
         pub struct $name<E> {
             value: $ty,
+            state: State,
             marker: PhantomData<E>
         }
 
-        impl_copy_clone!($name);
+        impl<E> Clone for $name<E> {
+            fn clone(&self) -> Self {
+                $name {
+                    value: self.value,
+                    state: self.state.clone(),
+                    marker: PhantomData,
+                }
+            }
+        }
 
         impl<'de, E> IntoDeserializer<'de, E> for $ty
         where
@@ -239,6 +245,7 @@ macro_rules! primitive_deserializer {
             fn into_deserializer(self) -> $name<E> {
                 $name {
                     value: self,
+                    state: Default::default(),
                     marker: PhantomData,
                 }
             }
@@ -255,6 +262,8 @@ macro_rules! primitive_deserializer {
                 string bytes byte_buf option unit unit_struct newtype_struct seq
                 tuple tuple_struct map struct enum identifier ignored_any
             }
+
+            forward_deserializer_state_to_field!();
 
             fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
             where
@@ -289,10 +298,19 @@ serde_if_integer128! {
 #[derive(Debug)]
 pub struct U32Deserializer<E> {
     value: u32,
+    state: State,
     marker: PhantomData<E>,
 }
 
-impl_copy_clone!(U32Deserializer);
+impl<E> Clone for U32Deserializer<E> {
+    fn clone(&self) -> Self {
+        U32Deserializer {
+            value: self.value,
+            state: self.state.clone(),
+            marker: PhantomData,
+        }
+    }
+}
 
 impl<'de, E> IntoDeserializer<'de, E> for u32
 where
@@ -303,6 +321,7 @@ where
     fn into_deserializer(self) -> U32Deserializer<E> {
         U32Deserializer {
             value: self,
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -313,6 +332,8 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
@@ -363,10 +384,19 @@ where
 #[derive(Debug)]
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
+    state: State,
     marker: PhantomData<E>,
 }
 
-impl_copy_clone!(StrDeserializer<'de>);
+impl<'de, E> Clone for StrDeserializer<'de, E> {
+    fn clone(&self) -> Self {
+        StrDeserializer {
+            value: self.value,
+            state: self.state.clone(),
+            marker: PhantomData,
+        }
+    }
+}
 
 impl<'de, 'a, E> IntoDeserializer<'de, E> for &'a str
 where
@@ -377,6 +407,7 @@ where
     fn into_deserializer(self) -> StrDeserializer<'a, E> {
         StrDeserializer {
             value: self,
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -387,6 +418,8 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -438,16 +471,26 @@ where
 #[derive(Debug)]
 pub struct BorrowedStrDeserializer<'de, E> {
     value: &'de str,
+    state: State,
     marker: PhantomData<E>,
 }
 
-impl_copy_clone!(BorrowedStrDeserializer<'de>);
+impl<'de, E> Clone for BorrowedStrDeserializer<'de, E> {
+    fn clone(&self) -> Self {
+        BorrowedStrDeserializer {
+            value: self.value,
+            state: self.state.clone(),
+            marker: PhantomData,
+        }
+    }
+}
 
 impl<'de, E> BorrowedStrDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given string.
     pub fn new(value: &'de str) -> BorrowedStrDeserializer<'de, E> {
         BorrowedStrDeserializer {
             value: value,
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -458,6 +501,8 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -509,6 +554,7 @@ where
 #[derive(Debug)]
 pub struct StringDeserializer<E> {
     value: String,
+    state: State,
     marker: PhantomData<E>,
 }
 
@@ -517,6 +563,7 @@ impl<E> Clone for StringDeserializer<E> {
     fn clone(&self) -> Self {
         StringDeserializer {
             value: self.value.clone(),
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -532,6 +579,7 @@ where
     fn into_deserializer(self) -> StringDeserializer<E> {
         StringDeserializer {
             value: self,
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -543,6 +591,8 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -595,6 +645,7 @@ where
 #[derive(Debug)]
 pub struct CowStrDeserializer<'a, E> {
     value: Cow<'a, str>,
+    state: State,
     marker: PhantomData<E>,
 }
 
@@ -603,6 +654,7 @@ impl<'a, E> Clone for CowStrDeserializer<'a, E> {
     fn clone(&self) -> Self {
         CowStrDeserializer {
             value: self.value.clone(),
+            state: self.state.clone(),
             marker: PhantomData,
         }
     }
@@ -618,6 +670,7 @@ where
     fn into_deserializer(self) -> CowStrDeserializer<'a, E> {
         CowStrDeserializer {
             value: self,
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -629,6 +682,8 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -684,16 +739,26 @@ where
 #[derive(Debug)]
 pub struct BorrowedBytesDeserializer<'de, E> {
     value: &'de [u8],
+    state: State,
     marker: PhantomData<E>,
 }
 
-impl_copy_clone!(BorrowedBytesDeserializer<'de>);
+impl<'de, E> Clone for BorrowedBytesDeserializer<'de, E> {
+    fn clone(&self) -> Self {
+        BorrowedBytesDeserializer {
+            value: self.value,
+            state: self.state.clone(),
+            marker: PhantomData,
+        }
+    }
+}
 
 impl<'de, E> BorrowedBytesDeserializer<'de, E> {
     /// Create a new borrowed deserializer from the given byte slice.
     pub fn new(value: &'de [u8]) -> BorrowedBytesDeserializer<'de, E> {
         BorrowedBytesDeserializer {
             value: value,
+            state: Default::default(),
             marker: PhantomData,
         }
     }
@@ -704,6 +769,8 @@ where
     E: de::Error,
 {
     type Error = E;
+
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -775,15 +842,7 @@ where
 {
     type Error = E;
 
-    #[inline]
-    fn state(&self) -> &State {
-        &self.state
-    }
-
-    #[inline]
-    fn replace_state(&mut self, new_state: State) {
-        self.state = new_state;
-    }
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -903,15 +962,7 @@ where
 {
     type Error = A::Error;
 
-    #[inline]
-    fn state(&self) -> &State {
-        &self.state
-    }
-
-    #[inline]
-    fn replace_state(&mut self, new_state: State) {
-        self.state = new_state;
-    }
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -1010,15 +1061,7 @@ where
 {
     type Error = E;
 
-    #[inline]
-    fn state(&self) -> &State {
-        &self.state
-    }
-
-    #[inline]
-    fn replace_state(&mut self, new_state: State) {
-        self.state = new_state;
-    }
+    forward_deserializer_state_to_field!();
 
     fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
     where
