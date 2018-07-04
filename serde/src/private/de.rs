@@ -253,6 +253,10 @@ mod content {
             }
         }
 
+        pub fn repr(&self) -> &ContentRepr {
+            &self.repr
+        }
+
         pub fn state(&self) -> &State {
             &self.state
         }
