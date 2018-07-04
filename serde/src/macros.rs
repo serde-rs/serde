@@ -128,7 +128,7 @@
 /// [`Deserializer`]: trait.Deserializer.html
 /// [`Visitor`]: de/trait.Visitor.html
 /// [`Deserializer::deserialize_any`]: trait.Deserializer.html#tymethod.deserialize_any
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! forward_to_deserialize_any {
     (<$visitor:ident: Visitor<$lifetime:tt>> $($func:ident)*) => {
         $(forward_to_deserialize_any_helper!{$func<$lifetime, $visitor>})*
@@ -157,7 +157,7 @@ macro_rules! forward_to_deserialize_any_method {
 }
 
 #[doc(hidden)]
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! forward_to_deserialize_any_helper {
     (bool<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_bool<$l, $v>()}

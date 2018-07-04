@@ -32,7 +32,7 @@ macro_rules! __private_deserialize {
 
 /// Used only by Serde doc tests. Not public API.
 #[doc(hidden)]
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! __serialize_unimplemented {
     ($($func:ident)*) => {
         $(
@@ -52,7 +52,7 @@ macro_rules! __serialize_unimplemented_method {
 }
 
 #[doc(hidden)]
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! __serialize_unimplemented_helper {
     (bool) => {
         __serialize_unimplemented_method!(serialize_bool(bool) -> Ok);
