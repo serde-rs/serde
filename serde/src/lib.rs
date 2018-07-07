@@ -193,7 +193,7 @@ mod lib {
     pub use std::sync::{Arc, Weak as ArcWeak};
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
-    pub use alloc::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
+    pub use alloc::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
     #[cfg(feature = "std")]
     pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
