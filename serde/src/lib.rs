@@ -168,6 +168,7 @@ mod lib {
     pub use self::core::marker::{self, PhantomData};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
+    pub use self::core::any::{Any, TypeId};
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::borrow::{Cow, ToOwned};
@@ -189,9 +190,9 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::boxed::Box;
 
-    #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+    #[cfg(all(any(feature = "rc", all(feature = "state", de_state)), feature = "alloc", not(feature = "std")))]
     pub use alloc::rc::{Rc, Weak as RcWeak};
-    #[cfg(all(feature = "rc", feature = "std"))]
+    #[cfg(all(any(feature = "rc", all(feature = "state", de_state)), feature = "std"))]
     pub use std::rc::{Rc, Weak as RcWeak};
 
     #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]

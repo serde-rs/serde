@@ -129,8 +129,10 @@ mod from_primitive;
 mod ignored_any;
 mod impls;
 mod utf8;
+mod state;
 
 pub use self::ignored_any::IgnoredAny;
+pub use self::state::State;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1203,6 +1205,12 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    /// Returns the current state.
+    #[inline]
+    fn state(&self) -> &State {
+        State::empty()
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2235,6 +2243,16 @@ pub trait IntoDeserializer<'de, E: Error = value::Error> {
 
     /// Convert this value into a deserializer.
     fn into_deserializer(self) -> Self::Deserializer;
+
+    /// Convert this value into a deserializer and attach state.
+    fn into_deserializer_with_state(self, state: State) -> Self::Deserializer
+        where Self: Sized
+    {
+        if !state.is_empty() {
+            panic!("This deserializer does not support state");
+        }
+        IntoDeserializer::into_deserializer(self)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

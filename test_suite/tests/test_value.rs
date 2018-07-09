@@ -32,13 +32,13 @@ fn test_integer128() {
     let de_i128 = IntoDeserializer::<value::Error>::into_deserializer(1i128);
 
     // u128 to u128
-    assert_eq!(1u128, u128::deserialize(de_u128).unwrap());
+    assert_eq!(1u128, u128::deserialize(de_u128.clone()).unwrap());
 
     // u128 to i128
     assert_eq!(1i128, i128::deserialize(de_u128).unwrap());
 
     // i128 to u128
-    assert_eq!(1u128, u128::deserialize(de_i128).unwrap());
+    assert_eq!(1u128, u128::deserialize(de_i128.clone()).unwrap());
 
     // i128 to i128
     assert_eq!(1i128, i128::deserialize(de_i128).unwrap());

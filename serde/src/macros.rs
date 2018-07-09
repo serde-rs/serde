@@ -254,3 +254,17 @@ macro_rules! forward_to_deserialize_any_helper {
         forward_to_deserialize_any_method!{deserialize_ignored_any<$l, $v>()}
     };
 }
+
+/// Utility macro to forward a deserializer state to a struct field.
+#[macro_export]
+macro_rules! forward_deserializer_state_to_field {
+    () => {
+        forward_deserializer_state_to_field!(state);
+    };
+    ($field:tt) => {
+        #[inline]
+        fn state(&self) -> &$crate::de::State {
+            &self.$field
+        }
+    };
+}
