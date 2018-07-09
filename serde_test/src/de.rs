@@ -253,7 +253,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             Token::UnitVariant { name: n, .. }
             | Token::NewtypeVariant { name: n, .. }
             | Token::TupleVariant { name: n, .. }
-            | Token::StructVariant { name: n, .. } if name == n =>
+            | Token::StructVariant { name: n, .. }
+                if name == n =>
             {
                 visitor.visit_enum(DeserializerEnumVisitor { de: self })
             }

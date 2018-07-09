@@ -169,8 +169,12 @@
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        empty_line_after_outer_attr, missing_docs_in_private_items, redundant_field_names, stutter,
-        use_debug, use_self
+        empty_line_after_outer_attr,
+        missing_docs_in_private_items,
+        redundant_field_names,
+        stutter,
+        use_debug,
+        use_self
     )
 )]
 

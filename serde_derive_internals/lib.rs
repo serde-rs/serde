@@ -9,7 +9,12 @@
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.23.1")]
 #![cfg_attr(
     feature = "cargo-clippy",
-    allow(cyclomatic_complexity, doc_markdown, match_same_arms, redundant_field_names)
+    allow(
+        cyclomatic_complexity,
+        doc_markdown,
+        match_same_arms,
+        redundant_field_names
+    )
 )]
 
 #[macro_use]

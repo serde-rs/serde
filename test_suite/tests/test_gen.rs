@@ -198,7 +198,12 @@ fn test_gen() {
     assert::<WithTraits1<X, X>>();
 
     #[derive(Serialize, Deserialize)]
-    #[serde(bound(serialize = "D: SerializeWith", deserialize = "D: DeserializeWith"))]
+    #[serde(
+        bound(
+            serialize = "D: SerializeWith",
+            deserialize = "D: DeserializeWith"
+        )
+    )]
     struct WithTraits2<D, E> {
         #[serde(
             serialize_with = "SerializeWith::serialize_with",
@@ -206,7 +211,8 @@ fn test_gen() {
         )]
         d: D,
         #[serde(
-            serialize_with = "SerializeWith::serialize_with", bound(serialize = "E: SerializeWith")
+            serialize_with = "SerializeWith::serialize_with",
+            bound(serialize = "E: SerializeWith")
         )]
         #[serde(
             deserialize_with = "DeserializeWith::deserialize_with",
@@ -234,7 +240,12 @@ fn test_gen() {
     assert::<VariantWithTraits1<X, X>>();
 
     #[derive(Serialize, Deserialize)]
-    #[serde(bound(serialize = "D: SerializeWith", deserialize = "D: DeserializeWith"))]
+    #[serde(
+        bound(
+            serialize = "D: SerializeWith",
+            deserialize = "D: DeserializeWith"
+        )
+    )]
     enum VariantWithTraits2<D, E> {
         #[serde(
             serialize_with = "SerializeWith::serialize_with",
@@ -242,7 +253,8 @@ fn test_gen() {
         )]
         D(D),
         #[serde(
-            serialize_with = "SerializeWith::serialize_with", bound(serialize = "E: SerializeWith")
+            serialize_with = "SerializeWith::serialize_with",
+            bound(serialize = "E: SerializeWith")
         )]
         #[serde(
             deserialize_with = "DeserializeWith::deserialize_with",

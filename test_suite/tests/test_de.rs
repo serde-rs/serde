@@ -6,7 +6,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(decimal_literal_representation)
+)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 #[macro_use]

@@ -28,16 +28,29 @@
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        enum_variant_names, redundant_field_names, too_many_arguments, used_underscore_binding,
-        cyclomatic_complexity, needless_pass_by_value
+        enum_variant_names,
+        redundant_field_names,
+        too_many_arguments,
+        used_underscore_binding,
+        cyclomatic_complexity,
+        needless_pass_by_value
     )
 )]
 // Whitelisted clippy_pedantic lints
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        items_after_statements, doc_markdown, stutter, similar_names, use_self, single_match_else,
-        enum_glob_use, match_same_arms, filter_map, cast_possible_truncation, indexing_slicing,
+        items_after_statements,
+        doc_markdown,
+        stutter,
+        similar_names,
+        use_self,
+        single_match_else,
+        enum_glob_use,
+        match_same_arms,
+        filter_map,
+        cast_possible_truncation,
+        indexing_slicing,
     )
 )]
 // The `quote!` macro requires deep recursion.

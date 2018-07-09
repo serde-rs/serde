@@ -1602,7 +1602,13 @@ forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
 #[cfg(any(feature = "std", feature = "alloc"))]
 forwarded_impl!((), Box<str>, String::into_boxed_str);
 
-#[cfg(all(not(de_rc_dst), feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(
+    all(
+        not(de_rc_dst),
+        feature = "rc",
+        any(feature = "std", feature = "alloc")
+    )
+)]
 forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1614,7 +1620,13 @@ forwarded_impl! {
     (T), Arc<T>, Arc::new
 }
 
-#[cfg(all(not(de_rc_dst), feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(
+    all(
+        not(de_rc_dst),
+        feature = "rc",
+        any(feature = "std", feature = "alloc")
+    )
+)]
 forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1681,7 +1693,13 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(
+    all(
+        de_rc_dst,
+        feature = "rc",
+        any(feature = "std", feature = "alloc")
+    )
+)]
 macro_rules! box_forwarded_impl {
     (
         $(#[doc = $doc:tt])*
@@ -1702,7 +1720,13 @@ macro_rules! box_forwarded_impl {
     };
 }
 
-#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(
+    all(
+        de_rc_dst,
+        feature = "rc",
+        any(feature = "std", feature = "alloc")
+    )
+)]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1714,7 +1738,13 @@ box_forwarded_impl! {
     Rc
 }
 
-#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(
+    all(
+        de_rc_dst,
+        feature = "rc",
+        any(feature = "std", feature = "alloc")
+    )
+)]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
