@@ -246,6 +246,14 @@ pub trait Serialize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer;
+
+    #[warn(missing_docs)] //TODO
+    fn serialize_with_any<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        self.serialize(serializer)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
