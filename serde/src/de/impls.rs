@@ -2196,8 +2196,8 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
-impl<'de, Idx> Deserialize<'de> for ops::RangeInclusive<Idx>
+#[cfg(range_inclusive)]
+impl<'de, Idx> Deserialize<'de> for RangeInclusive<Idx>
 where
     Idx: Deserialize<'de>,
 {
@@ -2243,7 +2243,7 @@ where
                             b"start" => Ok(Field::Start),
                             b"end" => Ok(Field::End),
                             _ => {
-                                let value = String::from_utf8_lossy(value);
+                                let value = ::export::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&value, FIELDS))
                             }
                         }
@@ -2262,7 +2262,7 @@ where
         where
             Idx: Deserialize<'de>,
         {
-            type Value = ops::RangeInclusive<Idx>;
+            type Value = RangeInclusive<Idx>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("struct RangeInclusive")
@@ -2284,7 +2284,7 @@ where
                         return Err(Error::invalid_length(1, &self));
                     }
                 };
-                Ok(start..=end)
+                Ok(RangeInclusive::new(start, end))
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
@@ -2317,7 +2317,7 @@ where
                     Some(end) => end,
                     None => return Err(<A::Error as Error>::missing_field("end")),
                 };
-                Ok(start..=end)
+                Ok(RangeInclusive::new(start, end))
             }
         }
 

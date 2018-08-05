@@ -246,8 +246,8 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
-impl<Idx> Serialize for ops::RangeInclusive<Idx>
+#[cfg(range_inclusive)]
+impl<Idx> Serialize for RangeInclusive<Idx>
 where
     Idx: Serialize,
 {
