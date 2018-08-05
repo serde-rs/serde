@@ -811,6 +811,23 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_range_inclusive {
+        1u32..=2u32 => &[
+            Token::Struct { name: "RangeInclusive", len: 2 },
+                Token::Str("start"),
+                Token::U32(1),
+
+                Token::Str("end"),
+                Token::U32(2),
+            Token::StructEnd,
+        ],
+        1u32..=2u32 => &[
+            Token::Seq { len: Some(2) },
+                Token::U64(1),
+                Token::U64(2),
+            Token::SeqEnd,
+        ],
+    }
     test_path {
         Path::new("/usr/local/lib") => &[
             Token::BorrowedStr("/usr/local/lib"),
