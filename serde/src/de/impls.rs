@@ -9,9 +9,11 @@
 use lib::*;
 
 use de::{
-    Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, Unexpected, VariantAccess,
-    Visitor,
+    Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
 };
+
+#[cfg(any(core_duration, feature = "std", feature = "alloc"))]
+use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 use private::de::InPlaceSeed;
@@ -2060,138 +2062,17 @@ where
     where
         D: Deserializer<'de>,
     {
-        // If this were outside of the serde crate, it would just use:
-        //
-        //    #[derive(Deserialize)]
-        //    #[serde(field_identifier, rename_all = "lowercase")]
-        enum Field {
-            Start,
-            End,
-        };
-
-        impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                struct FieldVisitor;
-
-                impl<'de> Visitor<'de> for FieldVisitor {
-                    type Value = Field;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("`start` or `end`")
-                    }
-
-                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                    where
-                        E: Error,
-                    {
-                        match value {
-                            "start" => Ok(Field::Start),
-                            "end" => Ok(Field::End),
-                            _ => Err(Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
-                    where
-                        E: Error,
-                    {
-                        match value {
-                            b"start" => Ok(Field::Start),
-                            b"end" => Ok(Field::End),
-                            _ => {
-                                let value = ::export::from_utf8_lossy(value);
-                                Err(Error::unknown_field(&value, FIELDS))
-                            }
-                        }
-                    }
-                }
-
-                deserializer.deserialize_identifier(FieldVisitor)
-            }
-        }
-
-        struct RangeVisitor<Idx> {
-            phantom: PhantomData<Idx>,
-        }
-
-        impl<'de, Idx> Visitor<'de> for RangeVisitor<Idx>
-        where
-            Idx: Deserialize<'de>,
-        {
-            type Value = Range<Idx>;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Range")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let start: Idx = match try!(seq.next_element()) {
-                    Some(value) => value,
-                    None => {
-                        return Err(Error::invalid_length(0, &self));
-                    }
-                };
-                let end: Idx = match try!(seq.next_element()) {
-                    Some(value) => value,
-                    None => {
-                        return Err(Error::invalid_length(1, &self));
-                    }
-                };
-                Ok(start..end)
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let mut start: Option<Idx> = None;
-                let mut end: Option<Idx> = None;
-                while let Some(key) = try!(map.next_key()) {
-                    match key {
-                        Field::Start => {
-                            if start.is_some() {
-                                return Err(<A::Error as Error>::duplicate_field("start"));
-                            }
-                            start = Some(try!(map.next_value()));
-                        }
-                        Field::End => {
-                            if end.is_some() {
-                                return Err(<A::Error as Error>::duplicate_field("end"));
-                            }
-                            end = Some(try!(map.next_value()));
-                        }
-                    }
-                }
-                let start = match start {
-                    Some(start) => start,
-                    None => return Err(<A::Error as Error>::missing_field("start")),
-                };
-                let end = match end {
-                    Some(end) => end,
-                    None => return Err(<A::Error as Error>::missing_field("end")),
-                };
-                Ok(start..end)
-            }
-        }
-
-        const FIELDS: &'static [&'static str] = &["start", "end"];
-        deserializer.deserialize_struct(
+        let (start, end) = deserializer.deserialize_struct(
             "Range",
-            FIELDS,
-            RangeVisitor {
+            range::FIELDS,
+            range::RangeVisitor {
+                expecting: "struct Range",
                 phantom: PhantomData,
             },
-        )
+        )?;
+        Ok(start..end)
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(range_inclusive)]
 impl<'de, Idx> Deserialize<'de> for RangeInclusive<Idx>
@@ -2202,130 +2083,144 @@ where
     where
         D: Deserializer<'de>,
     {
-        enum Field {
-            Start,
-            End,
-        };
-
-        impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                struct FieldVisitor;
-
-                impl<'de> Visitor<'de> for FieldVisitor {
-                    type Value = Field;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("`start` or `end`")
-                    }
-
-                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                    where
-                        E: Error,
-                    {
-                        match value {
-                            "start" => Ok(Field::Start),
-                            "end" => Ok(Field::End),
-                            _ => Err(Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-
-                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
-                    where
-                        E: Error,
-                    {
-                        match value {
-                            b"start" => Ok(Field::Start),
-                            b"end" => Ok(Field::End),
-                            _ => {
-                                let value = ::export::from_utf8_lossy(value);
-                                Err(Error::unknown_field(&value, FIELDS))
-                            }
-                        }
-                    }
-                }
-
-                deserializer.deserialize_identifier(FieldVisitor)
-            }
-        }
-
-        struct RangeInclusiveVisitor<Idx> {
-            phantom: PhantomData<Idx>,
-        }
-
-        impl<'de, Idx> Visitor<'de> for RangeInclusiveVisitor<Idx>
-        where
-            Idx: Deserialize<'de>,
-        {
-            type Value = RangeInclusive<Idx>;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct RangeInclusive")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let start: Idx = match try!(seq.next_element()) {
-                    Some(value) => value,
-                    None => {
-                        return Err(Error::invalid_length(0, &self));
-                    }
-                };
-                let end: Idx = match try!(seq.next_element()) {
-                    Some(value) => value,
-                    None => {
-                        return Err(Error::invalid_length(1, &self));
-                    }
-                };
-                Ok(RangeInclusive::new(start, end))
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let mut start: Option<Idx> = None;
-                let mut end: Option<Idx> = None;
-                while let Some(key) = try!(map.next_key()) {
-                    match key {
-                        Field::Start => {
-                            if start.is_some() {
-                                return Err(<A::Error as Error>::duplicate_field("start"));
-                            }
-                            start = Some(try!(map.next_value()));
-                        }
-                        Field::End => {
-                            if end.is_some() {
-                                return Err(<A::Error as Error>::duplicate_field("end"));
-                            }
-                            end = Some(try!(map.next_value()));
-                        }
-                    }
-                }
-                let start = match start {
-                    Some(start) => start,
-                    None => return Err(<A::Error as Error>::missing_field("start")),
-                };
-                let end = match end {
-                    Some(end) => end,
-                    None => return Err(<A::Error as Error>::missing_field("end")),
-                };
-                Ok(RangeInclusive::new(start, end))
-            }
-        }
-
-        const FIELDS: &'static [&'static str] = &["start", "end"];
-        deserializer.deserialize_struct(
+        let (start, end) = deserializer.deserialize_struct(
             "RangeInclusive",
-            FIELDS,
-            RangeInclusiveVisitor {
+            range::FIELDS,
+            range::RangeVisitor {
+                expecting: "struct RangeInclusive",
                 phantom: PhantomData,
             },
-        )
+        )?;
+        Ok(RangeInclusive::new(start, end))
+    }
+}
+
+mod range {
+    use lib::*;
+
+    use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+
+    pub const FIELDS: &'static [&'static str] = &["start", "end"];
+
+    // If this were outside of the serde crate, it would just use:
+    //
+    //    #[derive(Deserialize)]
+    //    #[serde(field_identifier, rename_all = "lowercase")]
+    enum Field {
+        Start,
+        End,
+    }
+
+    impl<'de> Deserialize<'de> for Field {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct FieldVisitor;
+
+            impl<'de> Visitor<'de> for FieldVisitor {
+                type Value = Field;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("`start` or `end`")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        "start" => Ok(Field::Start),
+                        "end" => Ok(Field::End),
+                        _ => Err(Error::unknown_field(value, FIELDS)),
+                    }
+                }
+
+                fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        b"start" => Ok(Field::Start),
+                        b"end" => Ok(Field::End),
+                        _ => {
+                            let value = ::export::from_utf8_lossy(value);
+                            Err(Error::unknown_field(&value, FIELDS))
+                        }
+                    }
+                }
+            }
+
+            deserializer.deserialize_identifier(FieldVisitor)
+        }
+    }
+
+    pub struct RangeVisitor<Idx> {
+        pub expecting: &'static str,
+        pub phantom: PhantomData<Idx>,
+    }
+
+    impl<'de, Idx> Visitor<'de> for RangeVisitor<Idx>
+    where
+        Idx: Deserialize<'de>,
+    {
+        type Value = (Idx, Idx);
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str(self.expecting)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let start: Idx = match try!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(0, &self));
+                }
+            };
+            let end: Idx = match try!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(1, &self));
+                }
+            };
+            Ok((start, end))
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut start: Option<Idx> = None;
+            let mut end: Option<Idx> = None;
+            while let Some(key) = try!(map.next_key()) {
+                match key {
+                    Field::Start => {
+                        if start.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field("start"));
+                        }
+                        start = Some(try!(map.next_value()));
+                    }
+                    Field::End => {
+                        if end.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field("end"));
+                        }
+                        end = Some(try!(map.next_value()));
+                    }
+                }
+            }
+            let start = match start {
+                Some(start) => start,
+                None => return Err(<A::Error as Error>::missing_field("start")),
+            };
+            let end = match end {
+                Some(end) => end,
+                None => return Err(<A::Error as Error>::missing_field("end")),
+            };
+            Ok((start, end))
+        }
     }
 }
 
