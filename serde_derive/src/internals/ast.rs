@@ -129,8 +129,7 @@ fn enum_from_ast<'a>(
                 style: style,
                 fields: fields,
             }
-        })
-        .collect()
+        }).collect()
 }
 
 fn struct_from_ast<'a>(
@@ -173,6 +172,5 @@ fn fields_from_ast<'a>(
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
             original: field,
-        })
-        .collect()
+        }).collect()
 }

@@ -218,9 +218,9 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         Token::I32(1),
         Token::Str("ignored"),
     ].into_iter()
-        .chain(ignorable_tokens.to_vec().into_iter())
-        .chain(vec![Token::MapEnd].into_iter())
-        .collect();
+    .chain(ignorable_tokens.to_vec().into_iter())
+    .chain(vec![Token::MapEnd].into_iter())
+    .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();

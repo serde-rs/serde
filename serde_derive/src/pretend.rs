@@ -62,8 +62,7 @@ fn pretend_fields_used(cont: &Container) -> TokenStream {
                     Some(quote!(#type_ident::#variant_ident #pat))
                 }
                 _ => None,
-            })
-            .collect::<Vec<_>>(),
+            }).collect::<Vec<_>>(),
         Data::Struct(Style::Struct, ref fields) => {
             let pat = struct_pattern(fields);
             vec![quote!(#type_ident #pat)]

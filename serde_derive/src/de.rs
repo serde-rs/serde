@@ -204,7 +204,9 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
 // All other fields may need a `T: Deserialize` bound where T is the type of the
 // field.
 fn needs_deserialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -> bool {
-    !field.skip_deserializing() && field.deserialize_with().is_none() && field.de_bound().is_none()
+    !field.skip_deserializing()
+        && field.deserialize_with().is_none()
+        && field.de_bound().is_none()
         && variant.map_or(true, |variant| {
             !variant.skip_deserializing()
                 && variant.deserialize_with().is_none()
@@ -1350,8 +1352,7 @@ fn deserialize_adjacently_tagged_enum(
             quote! {
                 __Field::#variant_index => #block
             }
-        })
-        .collect();
+        }).collect();
 
     let expecting = format!("adjacently tagged enum {}", params.type_name());
     let type_name = cattrs.name().deserialize_name();
@@ -1939,8 +1940,7 @@ fn deserialize_custom_identifier(
                 variant.attrs.name().deserialize_name(),
                 variant.ident.clone(),
             )
-        })
-        .collect();
+        }).collect();
 
     let names = names_idents.iter().map(|&(ref name, _)| name);
 
