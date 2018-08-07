@@ -155,7 +155,7 @@ mod lib {
         pub use std::*;
     }
 
-    pub use self::core::{cmp, iter, mem, num, ops, slice, str};
+    pub use self::core::{cmp, iter, mem, num, slice, str};
     pub use self::core::{f32, f64};
     pub use self::core::{i16, i32, i64, i8, isize};
     pub use self::core::{u16, u32, u64, u8, usize};
@@ -166,6 +166,7 @@ mod lib {
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
+    pub use self::core::ops::Range;
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
 

@@ -227,8 +227,7 @@ seq_impl!(VecDeque<T>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
-impl<Idx> Serialize for ops::Range<Idx>
+impl<Idx> Serialize for Range<Idx>
 where
     Idx: Serialize,
 {

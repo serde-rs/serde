@@ -9,11 +9,9 @@
 use lib::*;
 
 use de::{
-    Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
+    Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, Unexpected, VariantAccess,
+    Visitor,
 };
-
-#[cfg(any(core_duration, feature = "std", feature = "alloc"))]
-use de::MapAccess;
 
 use de::from_primitive::FromPrimitive;
 use private::de::InPlaceSeed;
@@ -2054,8 +2052,7 @@ impl<'de> Deserialize<'de> for SystemTime {
 //         start: u64,
 //         end: u32,
 //     }
-#[cfg(feature = "std")]
-impl<'de, Idx> Deserialize<'de> for ops::Range<Idx>
+impl<'de, Idx> Deserialize<'de> for Range<Idx>
 where
     Idx: Deserialize<'de>,
 {
@@ -2105,7 +2102,7 @@ where
                             b"start" => Ok(Field::Start),
                             b"end" => Ok(Field::End),
                             _ => {
-                                let value = String::from_utf8_lossy(value);
+                                let value = ::export::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&value, FIELDS))
                             }
                         }
@@ -2124,7 +2121,7 @@ where
         where
             Idx: Deserialize<'de>,
         {
-            type Value = ops::Range<Idx>;
+            type Value = Range<Idx>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("struct Range")
