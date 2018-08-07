@@ -36,6 +36,12 @@ fn main() {
         println!("cargo:rustc-cfg=integer128");
     }
 
+    // Inclusive ranges methods stabilized in Rust 1.27:
+    // https://github.com/rust-lang/rust/pull/50758
+    if minor >= 27 {
+        println!("cargo:rustc-cfg=range_inclusive");
+    }
+
     // Non-zero integers stabilized in Rust 1.28:
     // https://github.com/rust-lang/rust/pull/50808
     if minor >= 28 {

@@ -226,6 +226,9 @@ mod lib {
 
     #[cfg(any(core_duration, feature = "std"))]
     pub use self::core::time::Duration;
+
+    #[cfg(range_inclusive)]
+    pub use self::core::ops::RangeInclusive;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
