@@ -20,3 +20,4 @@ syn = { version = "0.14", default-features = false, features = ["derive", "parsi
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
+appveyor = { repository = "serde-rs/serde" }

@@ -13,6 +13,7 @@ include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-AP
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
+appveyor = { repository = "serde-rs/serde" }
 
 [features]
 default = []
