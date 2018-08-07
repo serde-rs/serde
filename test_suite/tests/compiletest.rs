@@ -29,8 +29,3 @@ fn run_mode(mode: &'static str) {
 fn compile_fail() {
     run_mode("compile-fail");
 }
-
-#[test]
-fn run_pass() {
-    run_mode("run-pass");
-}
