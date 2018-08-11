@@ -1204,6 +1204,27 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    /// TODO
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn call_with_buffer<F>(callback: F) -> F::Value
+    where
+        F: WithBuffer<'de, Self::Error>,
+    {
+        callback.run::<super::private::de::Content>()
+    }
+}
+
+/// TODO
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub trait WithBuffer<'de, E: Error> {
+    /// TODO
+    type Value;
+    /// TODO
+    fn run<B>(self) -> Self::Value
+    where
+        B: Deserialize<'de> + IntoDeserializer<'de, E>,
+        for<'a> &'a B: IntoDeserializer<'de, E>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1703,6 +1724,15 @@ pub trait SeqAccess<'de> {
     fn size_hint(&self) -> Option<usize> {
         None
     }
+
+    /// TODO
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn call_with_buffer<F>(callback: F) -> F::Value
+    where
+        F: WithBuffer<'de, Self::Error>,
+    {
+        callback.run::<super::private::de::Content>()
+    }
 }
 
 impl<'de, 'a, A> SeqAccess<'de> for &'a mut A
@@ -1730,6 +1760,14 @@ where
     #[inline]
     fn size_hint(&self) -> Option<usize> {
         (**self).size_hint()
+    }
+
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn call_with_buffer<F>(callback: F) -> F::Value
+    where
+        F: WithBuffer<'de, Self::Error>,
+    {
+        A::call_with_buffer(callback)
     }
 }
 
@@ -1856,6 +1894,15 @@ pub trait MapAccess<'de> {
     fn size_hint(&self) -> Option<usize> {
         None
     }
+
+    /// TODO
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn call_with_buffer<F>(callback: F) -> F::Value
+    where
+        F: WithBuffer<'de, Self::Error>,
+    {
+        callback.run::<super::private::de::Content>()
+    }
 }
 
 impl<'de, 'a, A> MapAccess<'de> for &'a mut A
@@ -1921,6 +1968,14 @@ where
     #[inline]
     fn size_hint(&self) -> Option<usize> {
         (**self).size_hint()
+    }
+
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn call_with_buffer<F>(callback: F) -> F::Value
+    where
+        F: WithBuffer<'de, Self::Error>,
+    {
+        A::call_with_buffer(callback)
     }
 }
 

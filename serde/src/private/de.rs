@@ -2412,6 +2412,28 @@ mod content {
         }
     }
 
+    impl<'de, E> de::IntoDeserializer<'de, E> for Content<'de>
+    where
+        E: de::Error,
+    {
+        type Deserializer = ContentDeserializer<'de, E>;
+
+        fn into_deserializer(self) -> Self::Deserializer {
+            ContentDeserializer::new(self)
+        }
+    }
+
+    impl<'a, 'de, E> de::IntoDeserializer<'de, E> for &'a Content<'de>
+    where
+        E: de::Error,
+    {
+        type Deserializer = ContentRefDeserializer<'a, 'de, E>;
+
+        fn into_deserializer(self) -> Self::Deserializer {
+            ContentRefDeserializer::new(self)
+        }
+    }
+
     impl<'de, E> de::IntoDeserializer<'de, E> for ContentDeserializer<'de, E>
     where
         E: de::Error,
