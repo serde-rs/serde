@@ -669,6 +669,19 @@ fn test_gen() {
         #[serde(deserialize_with = "de_x")]
         x: X,
     }
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum UntaggedWithBorrow<'a> {
+        Single(#[serde(borrow)] RelObject<'a>),
+        Many(#[serde(borrow)] Vec<RelObject<'a>>),
+    }
+
+    #[derive(Deserialize)]
+    struct RelObject<'a> {
+        ty: &'a str,
+        id: String,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
