@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-// These just test that serde_codegen is able to produce code that compiles
+// These just test that serde_derive is able to produce code that compiles
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
