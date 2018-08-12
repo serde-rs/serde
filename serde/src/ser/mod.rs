@@ -24,8 +24,7 @@
 //!
 //! Additionally, Serde provides a procedural macro called [`serde_derive`] to
 //! automatically generate [`Serialize`] implementations for structs and enums
-//! in your program. See the [codegen section of the manual] for how to use
-//! this.
+//! in your program. See the [derive section of the manual] for how to use this.
 //!
 //! In rare cases it may be necessary to implement [`Serialize`] manually for
 //! some type in your program. See the [Implementing `Serialize`] section of the
@@ -112,7 +111,7 @@
 //! [`serde_derive`]: https://crates.io/crates/serde_derive
 //! [`serde_json`]: https://github.com/serde-rs/json
 //! [`serde_yaml`]: https://github.com/dtolnay/serde-yaml
-//! [codegen section of the manual]: https://serde.rs/codegen.html
+//! [derive section of the manual]: https://serde.rs/derive.html
 //! [data formats]: https://serde.rs/#data-formats
 
 use lib::*;
@@ -196,7 +195,7 @@ declare_error_trait!(Error: Sized + Debug + Display);
 ///
 /// Additionally, Serde provides a procedural macro called [`serde_derive`] to
 /// automatically generate `Serialize` implementations for structs and enums in
-/// your program. See the [codegen section of the manual] for how to use this.
+/// your program. See the [derive section of the manual] for how to use this.
 ///
 /// In rare cases it may be necessary to implement `Serialize` manually for some
 /// type in your program. See the [Implementing `Serialize`] section of the
@@ -211,7 +210,7 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// [`LinkedHashMap<K, V>`]: https://docs.rs/linked-hash-map/*/linked_hash_map/struct.LinkedHashMap.html
 /// [`linked-hash-map`]: https://crates.io/crates/linked-hash-map
 /// [`serde_derive`]: https://crates.io/crates/serde_derive
-/// [codegen section of the manual]: https://serde.rs/codegen.html
+/// [derive section of the manual]: https://serde.rs/derive.html
 /// [ser]: https://docs.serde.rs/serde/ser/index.html
 pub trait Serialize {
     /// Serialize this value into the given Serde serializer.

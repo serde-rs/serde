@@ -24,8 +24,7 @@
 //!
 //! Additionally, Serde provides a procedural macro called [`serde_derive`] to
 //! automatically generate [`Deserialize`] implementations for structs and enums
-//! in your program. See the [codegen section of the manual] for how to use
-//! this.
+//! in your program. See the [derive section of the manual] for how to use this.
 //!
 //! In rare cases it may be necessary to implement [`Deserialize`] manually for
 //! some type in your program. See the [Implementing `Deserialize`] section of
@@ -117,7 +116,7 @@
 //! [`serde_derive`]: https://crates.io/crates/serde_derive
 //! [`serde_json`]: https://github.com/serde-rs/json
 //! [`serde_yaml`]: https://github.com/dtolnay/serde-yaml
-//! [codegen section of the manual]: https://serde.rs/codegen.html
+//! [derive section of the manual]: https://serde.rs/derive.html
 //! [data formats]: https://serde.rs/#data-formats
 
 use lib::*;
@@ -498,7 +497,7 @@ impl<'a> Display for Expected + 'a {
 ///
 /// Additionally, Serde provides a procedural macro called `serde_derive` to
 /// automatically generate `Deserialize` implementations for structs and enums
-/// in your program. See the [codegen section of the manual][codegen] for how to
+/// in your program. See the [derive section of the manual][derive] for how to
 /// use this.
 ///
 /// In rare cases it may be necessary to implement `Deserialize` manually for
@@ -511,7 +510,7 @@ impl<'a> Display for Expected + 'a {
 /// provides an implementation of `Deserialize` for it.
 ///
 /// [de]: https://docs.serde.rs/serde/de/index.html
-/// [codegen]: https://serde.rs/codegen.html
+/// [derive]: https://serde.rs/derive.html
 /// [impl-deserialize]: https://serde.rs/impl-deserialize.html
 ///
 /// # Lifetime
