@@ -272,7 +272,7 @@ impl Container {
                         }
                     }
 
-                    // Parse `#[serde(bound = "D: Serialize")]`
+                    // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
@@ -282,7 +282,7 @@ impl Container {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
                     Meta(List(ref m)) if m.ident == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
                             ser_bound.set_opt(ser);
@@ -617,7 +617,7 @@ impl Variant {
                         other.set_true();
                     }
 
-                    // Parse `#[serde(bound = "D: Serialize")]`
+                    // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
@@ -627,7 +627,7 @@ impl Variant {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
                     Meta(List(ref m)) if m.ident == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
                             ser_bound.set_opt(ser);
@@ -921,7 +921,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(bound = "D: Serialize")]`
+                    // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == "bound" => {
                         if let Ok(where_predicates) =
                             parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
@@ -931,7 +931,7 @@ impl Field {
                         }
                     }
 
-                    // Parse `#[serde(bound(serialize = "D: Serialize", deserialize = "D: Deserialize"))]`
+                    // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
                     Meta(List(ref m)) if m.ident == "bound" => {
                         if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
                             ser_bound.set_opt(ser);
