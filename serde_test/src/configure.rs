@@ -19,7 +19,7 @@ pub struct Compact<T: ?Sized>(T);
 /// extern crate serde_test;
 ///
 /// use serde::{Deserialize, Deserializer, Serialize, Serializer};
-/// use serde_test::{Configure, Token, assert_tokens};
+/// use serde_test::{assert_tokens, Configure, Token};
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct Example(u8, u8);
@@ -67,12 +67,7 @@ pub struct Compact<T: ?Sized>(T);
 ///             Token::TupleEnd,
 ///         ],
 ///     );
-///     assert_tokens(
-///         &Example(1, 0).readable(),
-///         &[
-///             Token::Str("1.0"),
-///         ],
-///     );
+///     assert_tokens(&Example(1, 0).readable(), &[Token::Str("1.0")]);
 /// }
 /// ```
 pub trait Configure {

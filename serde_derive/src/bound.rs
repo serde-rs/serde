@@ -90,7 +90,8 @@ pub fn with_where_predicates_from_variants(
 // Puts the given bound on any generic type parameters that are used in fields
 // for which filter returns true.
 //
-// For example, the following struct needs the bound `A: Serialize, B: Serialize`.
+// For example, the following struct needs the bound `A: Serialize, B:
+// Serialize`.
 //
 //     struct S<'b, A, B: 'b, C> {
 //         a: A,

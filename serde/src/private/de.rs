@@ -832,8 +832,8 @@ mod content {
     }
 
     impl<'de, T> TaggedContentVisitor<'de, T> {
-        /// Visitor for the content of an internally tagged enum with the given tag
-        /// name.
+        /// Visitor for the content of an internally tagged enum with the given
+        /// tag name.
         pub fn new(name: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
@@ -1075,8 +1075,8 @@ mod content {
         Ok(value)
     }
 
-    /// Used when deserializing an internally tagged enum because the content will
-    /// be used exactly once.
+    /// Used when deserializing an internally tagged enum because the content
+    /// will be used exactly once.
     impl<'de, E> Deserializer<'de> for ContentDeserializer<'de, E>
     where
         E: de::Error,
@@ -1790,8 +1790,8 @@ mod content {
         Ok(value)
     }
 
-    /// Used when deserializing an untagged enum because the content may need to be
-    /// used more than once.
+    /// Used when deserializing an untagged enum because the content may need
+    /// to be used more than once.
     impl<'de, 'a, E> Deserializer<'de> for ContentRefDeserializer<'a, 'de, E>
     where
         E: de::Error,

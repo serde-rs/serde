@@ -95,7 +95,8 @@ where
     }
 }
 
-/// Asserts that `value` serializes to the given `tokens`, and then yields `error`.
+/// Asserts that `value` serializes to the given `tokens`, and then yields
+/// `error`.
 ///
 /// ```rust
 /// # #[macro_use]

@@ -659,7 +659,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
-/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, SeqAccess};
+/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, SeqAccess, Visitor};
 ///
 /// // A DeserializeSeed implementation that uses stateful deserialization to
 /// // append array elements onto the end of an existing vector. The preexisting
@@ -806,16 +806,16 @@ where
 ///    - When serializing, all strings are handled equally. When deserializing,
 ///      there are three flavors of strings: transient, owned, and borrowed.
 ///  - **byte array** - \[u8\]
-///    - Similar to strings, during deserialization byte arrays can be transient,
-///      owned, or borrowed.
+///    - Similar to strings, during deserialization byte arrays can be
+///      transient, owned, or borrowed.
 ///  - **option**
 ///    - Either none or some value.
 ///  - **unit**
-///    - The type of `()` in Rust. It represents an anonymous value containing no
-///      data.
+///    - The type of `()` in Rust. It represents an anonymous value containing
+///      no data.
 ///  - **unit_struct**
-///    - For example `struct Unit` or `PhantomData<T>`. It represents a named value
-///      containing no data.
+///    - For example `struct Unit` or `PhantomData<T>`. It represents a named
+///      value containing no data.
 ///  - **unit_variant**
 ///    - For example the `E::A` and `E::B` in `enum E { A, B }`.
 ///  - **newtype_struct**
@@ -823,14 +823,15 @@ where
 ///  - **newtype_variant**
 ///    - For example the `E::N` in `enum E { N(u8) }`.
 ///  - **seq**
-///    - A variably sized heterogeneous sequence of values, for example `Vec<T>` or
-///      `HashSet<T>`. When serializing, the length may or may not be known before
-///      iterating through all the data. When deserializing, the length is determined
-///      by looking at the serialized data.
+///    - A variably sized heterogeneous sequence of values, for example `Vec<T>`
+///      or `HashSet<T>`. When serializing, the length may or may not be known
+///      before iterating through all the data. When deserializing, the length
+///      is determined by looking at the serialized data.
 ///  - **tuple**
-///    - A statically sized heterogeneous sequence of values for which the length
-///      will be known at deserialization time without looking at the serialized
-///      data, for example `(u8,)` or `(String, u64, Vec<T>)` or `[u64; 10]`.
+///    - A statically sized heterogeneous sequence of values for which the
+///      length will be known at deserialization time without looking at the
+///      serialized data, for example `(u8,)` or `(String, u64, Vec<T>)` or
+///      `[u64; 10]`.
 ///  - **tuple_struct**
 ///    - A named tuple, for example `struct Rgb(u8, u8, u8)`.
 ///  - **tuple_variant**
@@ -838,9 +839,9 @@ where
 ///  - **map**
 ///    - A heterogeneous key-value pairing, for example `BTreeMap<K, V>`.
 ///  - **struct**
-///    - A heterogeneous key-value pairing in which the keys are strings and will be
-///      known at deserialization time without looking at the serialized data, for
-///      example `struct S { r: u8, g: u8, b: u8 }`.
+///    - A heterogeneous key-value pairing in which the keys are strings and
+///      will be known at deserialization time without looking at the serialized
+///      data, for example `struct S { r: u8, g: u8, b: u8 }`.
 ///  - **struct_variant**
 ///    - For example the `E::S` in `enum E { S { r: u8, g: u8, b: u8 } }`.
 ///
@@ -855,7 +856,8 @@ where
 ///    type it sees in the input. JSON uses this approach when deserializing
 ///    `serde_json::Value` which is an enum that can represent any JSON
 ///    document. Without knowing what is in a JSON document, we can deserialize
-///    it to `serde_json::Value` by going through `Deserializer::deserialize_any`.
+///    it to `serde_json::Value` by going through
+///    `Deserializer::deserialize_any`.
 ///
 /// 2. The various `deserialize_*` methods. Non-self-describing formats like
 ///    Bincode need to be told what is in the input in order to deserialize it.
@@ -865,10 +867,11 @@ where
 ///    `Deserializer::deserialize_any`.
 ///
 /// When implementing `Deserialize`, you should avoid relying on
-/// `Deserializer::deserialize_any` unless you need to be told by the Deserializer
-/// what type is in the input. Know that relying on `Deserializer::deserialize_any`
-/// means your data type will be able to deserialize from self-describing
-/// formats only, ruling out Bincode and many others.
+/// `Deserializer::deserialize_any` unless you need to be told by the
+/// Deserializer what type is in the input. Know that relying on
+/// `Deserializer::deserialize_any` means your data type will be able to
+/// deserialize from self-describing formats only, ruling out Bincode and many
+/// others.
 ///
 /// [Serde data model]: https://serde.rs/data-model.html
 ///

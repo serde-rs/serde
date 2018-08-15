@@ -837,7 +837,8 @@ fn deserialize_newtype_struct(
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> TokenStream {
-    // We do not generate deserialize_in_place if every field has a deserialize_with.
+    // We do not generate deserialize_in_place if every field has a
+    // deserialize_with.
     assert!(field.attrs.deserialize_with().is_none());
 
     let delife = params.borrowed.de_lifetime();
@@ -941,8 +942,8 @@ fn deserialize_struct(
         quote!(mut __seq)
     };
 
-    // untagged struct variants do not get a visit_seq method.  The same applies to structs that
-    // only have a map representation.
+    // untagged struct variants do not get a visit_seq method. The same applies to
+    // structs that only have a map representation.
     let visit_seq = match *untagged {
         Untagged::No if !cattrs.has_flatten() => Some(quote! {
             #[inline]
@@ -2547,7 +2548,8 @@ fn deserialize_map_in_place(
         .map(|(i, field)| (field, field_i(i)))
         .collect();
 
-    // For deserialize_in_place, declare booleans for each field that will be deserialized.
+    // For deserialize_in_place, declare booleans for each field that will be
+    // deserialized.
     let let_flags = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())

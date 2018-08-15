@@ -219,7 +219,7 @@ pub trait Serialize {
     /// information about how to implement this method.
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeStruct};
+    /// use serde::ser::{Serialize, SerializeStruct, Serializer};
     ///
     /// struct Person {
     ///     name: String,
@@ -273,16 +273,16 @@ pub trait Serialize {
 ///    - When serializing, all strings are handled equally. When deserializing,
 ///      there are three flavors of strings: transient, owned, and borrowed.
 ///  - **byte array** - \[u8\]
-///    - Similar to strings, during deserialization byte arrays can be transient,
-///      owned, or borrowed.
+///    - Similar to strings, during deserialization byte arrays can be
+///      transient, owned, or borrowed.
 ///  - **option**
 ///    - Either none or some value.
 ///  - **unit**
-///    - The type of `()` in Rust. It represents an anonymous value containing no
-///      data.
+///    - The type of `()` in Rust. It represents an anonymous value containing
+///      no data.
 ///  - **unit_struct**
-///    - For example `struct Unit` or `PhantomData<T>`. It represents a named value
-///      containing no data.
+///    - For example `struct Unit` or `PhantomData<T>`. It represents a named
+///      value containing no data.
 ///  - **unit_variant**
 ///    - For example the `E::A` and `E::B` in `enum E { A, B }`.
 ///  - **newtype_struct**
@@ -290,14 +290,15 @@ pub trait Serialize {
 ///  - **newtype_variant**
 ///    - For example the `E::N` in `enum E { N(u8) }`.
 ///  - **seq**
-///    - A variably sized heterogeneous sequence of values, for example `Vec<T>` or
-///      `HashSet<T>`. When serializing, the length may or may not be known before
-///      iterating through all the data. When deserializing, the length is determined
-///      by looking at the serialized data.
+///    - A variably sized heterogeneous sequence of values, for example
+///      `Vec<T>` or `HashSet<T>`. When serializing, the length may or may not
+///      be known before iterating through all the data. When deserializing,
+///      the length is determined by looking at the serialized data.
 ///  - **tuple**
-///    - A statically sized heterogeneous sequence of values for which the length
-///      will be known at deserialization time without looking at the serialized
-///      data, for example `(u8,)` or `(String, u64, Vec<T>)` or `[u64; 10]`.
+///    - A statically sized heterogeneous sequence of values for which the
+///      length will be known at deserialization time without looking at the
+///      serialized data, for example `(u8,)` or `(String, u64, Vec<T>)` or
+///      `[u64; 10]`.
 ///  - **tuple_struct**
 ///    - A named tuple, for example `struct Rgb(u8, u8, u8)`.
 ///  - **tuple_variant**
@@ -305,9 +306,9 @@ pub trait Serialize {
 ///  - **map**
 ///    - A heterogeneous key-value pairing, for example `BTreeMap<K, V>`.
 ///  - **struct**
-///    - A heterogeneous key-value pairing in which the keys are strings and will be
-///      known at deserialization time without looking at the serialized data, for
-///      example `struct S { r: u8, g: u8, b: u8 }`.
+///    - A heterogeneous key-value pairing in which the keys are strings and
+///      will be known at deserialization time without looking at the
+///      serialized data, for example `struct S { r: u8, g: u8, b: u8 }`.
 ///  - **struct_variant**
 ///    - For example the `E::S` in `enum E { S { r: u8, g: u8, b: u8 } }`.
 ///
@@ -1110,7 +1111,7 @@ pub trait Serializer: Sized {
     /// ```
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeTuple};
+    /// use serde::ser::{Serialize, SerializeTuple, Serializer};
     ///
     /// const VRAM_SIZE: usize = 386;
     /// struct Vram([u16; VRAM_SIZE]);
@@ -1138,7 +1139,7 @@ pub trait Serializer: Sized {
     /// of data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeTupleStruct};
+    /// use serde::ser::{Serialize, SerializeTupleStruct, Serializer};
     ///
     /// struct Rgb(u8, u8, u8);
     ///
@@ -1170,7 +1171,7 @@ pub trait Serializer: Sized {
     /// and the `len` is the number of data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeTupleVariant};
+    /// use serde::ser::{Serialize, SerializeTupleVariant, Serializer};
     ///
     /// enum E {
     ///     T(u8, u8),
@@ -1264,7 +1265,7 @@ pub trait Serializer: Sized {
     /// data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeStruct};
+    /// use serde::ser::{Serialize, SerializeStruct, Serializer};
     ///
     /// struct Rgb {
     ///     r: u8,
@@ -1300,10 +1301,10 @@ pub trait Serializer: Sized {
     /// and the `len` is the number of data fields that will be serialized.
     ///
     /// ```rust
-    /// use serde::ser::{Serialize, Serializer, SerializeStructVariant};
+    /// use serde::ser::{Serialize, SerializeStructVariant, Serializer};
     ///
     /// enum E {
-    ///     S { r: u8, g: u8, b: u8 }
+    ///     S { r: u8, g: u8, b: u8 },
     /// }
     ///
     /// impl Serialize for E {
@@ -1312,7 +1313,11 @@ pub trait Serializer: Sized {
     ///         S: Serializer,
     ///     {
     ///         match *self {
-    ///             E::S { ref r, ref g, ref b } => {
+    ///             E::S {
+    ///                 ref r,
+    ///                 ref g,
+    ///                 ref b,
+    ///             } => {
     ///                 let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
     ///                 sv.serialize_field("r", r)?;
     ///                 sv.serialize_field("g", g)?;
@@ -1375,8 +1380,8 @@ pub trait Serializer: Sized {
     /// method.
     ///
     /// ```rust
-    /// use std::collections::BTreeSet;
     /// use serde::{Serialize, Serializer};
+    /// use std::collections::BTreeSet;
     ///
     /// struct MapToUnit {
     ///     keys: BTreeSet<i32>,
@@ -1704,7 +1709,7 @@ pub trait SerializeTuple {
 /// # Example use
 ///
 /// ```rust
-/// use serde::ser::{Serialize, Serializer, SerializeTupleStruct};
+/// use serde::ser::{Serialize, SerializeTupleStruct, Serializer};
 ///
 /// struct Rgb(u8, u8, u8);
 ///
@@ -1749,7 +1754,7 @@ pub trait SerializeTupleStruct {
 /// # Example use
 ///
 /// ```rust
-/// use serde::ser::{Serialize, Serializer, SerializeTupleVariant};
+/// use serde::ser::{Serialize, SerializeTupleVariant, Serializer};
 ///
 /// enum E {
 ///     T(u8, u8),
@@ -1918,7 +1923,7 @@ pub trait SerializeMap {
 /// # Example use
 ///
 /// ```rust
-/// use serde::ser::{Serialize, Serializer, SerializeStruct};
+/// use serde::ser::{Serialize, SerializeStruct, Serializer};
 ///
 /// struct Rgb {
 ///     r: u8,
@@ -1978,10 +1983,10 @@ pub trait SerializeStruct {
 /// # Example use
 ///
 /// ```rust
-/// use serde::ser::{Serialize, Serializer, SerializeStructVariant};
+/// use serde::ser::{Serialize, SerializeStructVariant, Serializer};
 ///
 /// enum E {
-///     S { r: u8, g: u8, b: u8 }
+///     S { r: u8, g: u8, b: u8 },
 /// }
 ///
 /// impl Serialize for E {
@@ -1990,7 +1995,11 @@ pub trait SerializeStruct {
 ///         S: Serializer,
 ///     {
 ///         match *self {
-///             E::S { ref r, ref g, ref b } => {
+///             E::S {
+///                 ref r,
+///                 ref g,
+///                 ref b,
+///             } => {
 ///                 let mut sv = serializer.serialize_struct_variant("E", 0, "S", 3)?;
 ///                 sv.serialize_field("r", r)?;
 ///                 sv.serialize_field("g", g)?;

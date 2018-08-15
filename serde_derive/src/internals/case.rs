@@ -22,13 +22,16 @@ pub enum RenameRule {
     LowerCase,
     /// Rename direct children to "UPPERCASE" style.
     UPPERCASE,
-    /// Rename direct children to "PascalCase" style, as typically used for enum variants.
+    /// Rename direct children to "PascalCase" style, as typically used for
+    /// enum variants.
     PascalCase,
     /// Rename direct children to "camelCase" style.
     CamelCase,
-    /// Rename direct children to "snake_case" style, as commonly used for fields.
+    /// Rename direct children to "snake_case" style, as commonly used for
+    /// fields.
     SnakeCase,
-    /// Rename direct children to "SCREAMING_SNAKE_CASE" style, as commonly used for constants.
+    /// Rename direct children to "SCREAMING_SNAKE_CASE" style, as commonly
+    /// used for constants.
     ScreamingSnakeCase,
     /// Rename direct children to "kebab-case" style.
     KebabCase,

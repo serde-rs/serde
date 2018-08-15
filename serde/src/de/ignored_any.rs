@@ -20,7 +20,9 @@ use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
-/// use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqAccess, IgnoredAny};
+/// use serde::de::{
+///     self, Deserialize, DeserializeSeed, Deserializer, IgnoredAny, SeqAccess, Visitor,
+/// };
 ///
 /// /// A seed that can be used to deserialize only the `n`th element of a sequence
 /// /// while efficiently discarding elements of any type before or after index `n`.
@@ -51,7 +53,11 @@ use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 ///     type Value = T;
 ///
 ///     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-///         write!(formatter, "a sequence in which we care about element {}", self.n)
+///         write!(
+///             formatter,
+///             "a sequence in which we care about element {}",
+///             self.n
+///         )
 ///     }
 ///
 ///     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
