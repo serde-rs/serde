@@ -50,6 +50,7 @@ else
     channel build
     channel build --no-default-features
     channel build --no-default-features --features alloc
+    channel build --no-default-features --features 'rc alloc'
     channel test --features 'rc unstable'
     cd "$DIR/test_suite/deps"
     channel build
