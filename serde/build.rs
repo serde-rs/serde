@@ -11,6 +11,9 @@ fn main() {
         None => return,
     };
 
+    let target = env::var("TARGET").unwrap();
+    let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
+
     // CString::into_boxed_c_str stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
     if minor >= 20 {
@@ -32,7 +35,10 @@ fn main() {
 
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
-    if minor >= 26 {
+    //
+    // Disabled on Emscripten targets as Emscripten doesn't
+    // currently support integers larger than 64 bits.
+    if minor >= 26 && !emscripten {
         println!("cargo:rustc-cfg=integer128");
     }
 
