@@ -90,6 +90,10 @@ pub struct Name {
     deserialize: String,
 }
 
+fn unraw(ident: &Ident) -> String {
+    ident.to_string().trim_left_matches("r#").to_owned()
+}
+
 impl Name {
     /// Return the container name for the container when serializing.
     pub fn serialize_name(&self) -> String {
@@ -380,8 +384,8 @@ impl Container {
 
         Container {
             name: Name {
-                serialize: ser_name.get().unwrap_or_else(|| item.ident.to_string()),
-                deserialize: de_name.get().unwrap_or_else(|| item.ident.to_string()),
+                serialize: ser_name.get().unwrap_or_else(|| unraw(&item.ident)),
+                deserialize: de_name.get().unwrap_or_else(|| unraw(&item.ident)),
             },
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
@@ -697,8 +701,8 @@ impl Variant {
         let de_renamed = de_name.is_some();
         Variant {
             name: Name {
-                serialize: ser_name.unwrap_or_else(|| variant.ident.to_string()),
-                deserialize: de_name.unwrap_or_else(|| variant.ident.to_string()),
+                serialize: ser_name.unwrap_or_else(|| unraw(&variant.ident)),
+                deserialize: de_name.unwrap_or_else(|| unraw(&variant.ident)),
             },
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
@@ -822,7 +826,7 @@ impl Field {
         let mut flatten = BoolAttr::none(cx, "flatten");
 
         let ident = match field.ident {
-            Some(ref ident) => ident.to_string(),
+            Some(ref ident) => unraw(ident),
             None => index.to_string(),
         };
 
