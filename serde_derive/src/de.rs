@@ -30,8 +30,9 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
+    let suffix = ident.to_string().trim_left_matches("r#").to_owned();
     let dummy_const = Ident::new(
-        &format!("_IMPL_DESERIALIZE_FOR_{}", ident),
+        &format!("_IMPL_DESERIALIZE_FOR_{}", suffix),
         Span::call_site(),
     );
     let body = Stmts(deserialize_body(&cont, &params));
