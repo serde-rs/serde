@@ -7,7 +7,6 @@
 // except according to those terms.
 
 #![deny(warnings)]
-#![cfg_attr(feature = "unstable", feature(raw_identifiers))]
 
 #[cfg(feature = "unstable")]
 #[macro_use]
