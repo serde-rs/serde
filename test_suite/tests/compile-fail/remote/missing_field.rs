@@ -20,7 +20,7 @@ mod remote {
 #[serde(remote = "remote::S")]
 struct S {
     a: u8,
-    //~^^^^ ERROR: missing field `b` in initializer of `remote::S`
+    //~^^^ ERROR: missing field `b` in initializer of `remote::S`
 }
 
 fn main() {}
