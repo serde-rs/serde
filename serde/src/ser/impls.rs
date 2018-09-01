@@ -469,8 +469,15 @@ nonzero_integers! {
     NonZeroU16,
     NonZeroU32,
     NonZeroU64,
-    // FIXME: https://github.com/serde-rs/serde/issues/1136 NonZeroU128,
     NonZeroUsize,
+}
+
+// Currently 128-bit integers do not work on Emscripten targets so we need an
+// additional `#[cfg]`
+serde_if_integer128! {
+    nonzero_integers! {
+        NonZeroU128,
+    }
 }
 
 impl<T> Serialize for Cell<T>
