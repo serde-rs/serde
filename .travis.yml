@@ -18,5 +18,7 @@ matrix:
   include:
     - rust: nightly
       env: CLIPPY=true
+    - rust: nightly
+      env: EMSCRIPTEN=true
 
 script: ./travis.sh
