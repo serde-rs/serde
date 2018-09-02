@@ -52,9 +52,6 @@ elif [ -n "${EMSCRIPTEN}" ]; then
     curl -L "${CARGO_WEB_URL}" | gzip -d > ~/.cargo/bin/cargo-web
     chmod +x ~/.cargo/bin/cargo-web
 
-    # Install Node.js
-    nvm install 9
-
     cd "$DIR/test_suite"
     cargo web test --target=asmjs-unknown-emscripten --nodejs
     cargo web test --target=wasm32-unknown-emscripten --nodejs

@@ -20,5 +20,6 @@ matrix:
       env: CLIPPY=true
     - rust: nightly
       env: EMSCRIPTEN=true
+      script: nvm install 9 && ./travis.sh
 
 script: ./travis.sh
