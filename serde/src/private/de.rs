@@ -231,8 +231,8 @@ mod content {
 
     use super::size_hint;
     use de::{
-        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, MapAccess,
-        SeqAccess, Unexpected, Visitor,
+        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
+        MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -2470,10 +2470,11 @@ mod content {
             Ok(())
         }
 
-        fn visit_map<M>(self, _: M) -> Result<(), M::Error>
+        fn visit_map<M>(self, mut access: M) -> Result<(), M::Error>
         where
             M: MapAccess<'de>,
         {
+            while let Some(_) = try!(access.next_entry::<IgnoredAny, IgnoredAny>()) {}
             Ok(())
         }
     }

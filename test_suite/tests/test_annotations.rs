@@ -2246,3 +2246,26 @@ fn test_transparent_tuple_struct() {
 
     assert_tokens(&Transparent(false, 1, false, PhantomData), &[Token::U32(1)]);
 }
+
+#[test]
+fn test_internally_tagged_unit_enum_with_unknown_fields() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A,
+    }
+
+    let data = Data::A;
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
