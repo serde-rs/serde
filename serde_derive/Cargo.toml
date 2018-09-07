@@ -26,7 +26,7 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "0.4"
 quote = "0.6.3"
-syn-next = { version = "0.15.0-rc1", features = ["visit"] }
+syn = { version = "0.15", features = ["visit"] }
 
 [dev-dependencies]
 serde = { version = "1.0", path = "../serde" }
