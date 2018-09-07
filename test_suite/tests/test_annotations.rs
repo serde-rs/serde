@@ -2246,3 +2246,68 @@ fn test_transparent_tuple_struct() {
 
     assert_tokens(&Transparent(false, 1, false, PhantomData), &[Token::U32(1)]);
 }
+
+#[test]
+fn test_internally_tagged_unit_enum_with_unknown_fields() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A,
+    }
+
+    let data = Data::A;
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flattened_internally_tagged_unit_enum_with_unknown_fields() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(flatten)]
+        x: X,
+        #[serde(flatten)]
+        y: Y,
+    }
+
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(tag = "typeX")]
+    enum X {
+        A,
+    }
+
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(tag = "typeY")]
+    enum Y {
+        B { c: u32 },
+    }
+
+    let s = S {
+        x: X::A,
+        y: Y::B { c: 0 },
+    };
+
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("typeX"),
+            Token::Str("A"),
+            Token::Str("typeY"),
+            Token::Str("B"),
+            Token::Str("c"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
