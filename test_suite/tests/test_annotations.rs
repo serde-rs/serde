@@ -12,9 +12,11 @@
 extern crate serde_derive;
 
 extern crate serde;
-use self::serde::de::{self, Unexpected};
+use self::serde::de::{self, Visitor, MapAccess, Unexpected};
 use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use std::collections::{BTreeMap, HashMap};
+use std::fmt;
 use std::marker::PhantomData;
 
 extern crate serde_test;
@@ -2306,6 +2308,69 @@ fn test_flattened_internally_tagged_unit_enum_with_unknown_fields() {
             Token::Str("typeY"),
             Token::Str("B"),
             Token::Str("c"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_any_after_flatten_struct() {
+    #[derive(PartialEq, Debug)]
+    struct Any;
+
+    impl<'de> Deserialize<'de> for Any {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct AnyVisitor;
+
+            impl<'de> Visitor<'de> for AnyVisitor {
+                type Value = Any;
+
+                fn expecting(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
+                    unimplemented!()
+                }
+
+                fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+                where
+                    M: MapAccess<'de>,
+                {
+                    while let Some((Any, Any)) = map.next_entry()? {}
+                    Ok(Any)
+                }
+            }
+
+            deserializer.deserialize_any(AnyVisitor)
+        }
+    }
+
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Outer {
+        #[serde(flatten)]
+        inner: Inner,
+        #[serde(flatten)]
+        extra: Any,
+    }
+
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Inner {
+        inner: i32,
+    }
+
+    let s = Outer {
+        inner: Inner {
+            inner: 0,
+        },
+        extra: Any,
+    };
+
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("inner"),
             Token::I32(0),
             Token::MapEnd,
         ],
