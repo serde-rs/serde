@@ -119,7 +119,7 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
             },
 
             // Variant with `other` attribute cannot appear in untagged enum
-            (_, Identifier::No, true, EnumTag::None) => {
+            (_, Identifier::No, true, &EnumTag::None) => {
                 cx.error("#[serde(other)] cannot appear on untagged enum");
             }
 
