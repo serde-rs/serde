@@ -124,15 +124,14 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
             }
 
             // Variant with `other` attribute must be the last one.
-            (Style::Unit, Identifier::Field, true, _) | (_, Identifier::No, true, _) => {
+            (Style::Unit, Identifier::Field, true, _) | (Style::Unit, Identifier::No, true, _) => {
                 if i < variants.len() - 1 {
                     cx.error("#[serde(other)] must be the last variant");
                 }
             }
 
             // Variant with `other` attribute must be a unit variant.
-            // TODO: Only in field_identifier ?
-            (_, Identifier::Field, true, _) => {
+            (_, Identifier::Field, true, _) | (_, Identifier::No, true, _) => {
                 cx.error("#[serde(other)] must be on a unit variant");
             },
 

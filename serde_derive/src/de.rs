@@ -1866,8 +1866,8 @@ fn deserialize_generated_identifier(
         let ignore_variant = quote!(__other(_serde::private::de::Content<'de>),);
         let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
-    } else if other_idx.is_some() {
-        let ignore_variant = fields[other_idx.unwrap()].1.clone();
+    } else if let Some(other_idx) = other_idx {
+        let ignore_variant = fields[other_idx].1.clone();
         let fallthrough = quote!(_serde::export::Ok(__Field::#ignore_variant));
         (None, Some(fallthrough))
     } else if is_variant || cattrs.deny_unknown_fields() {
