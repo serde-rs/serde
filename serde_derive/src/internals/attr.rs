@@ -16,6 +16,7 @@ use syn::synom::{ParseError, Synom};
 use syn::Ident;
 use syn::Meta::{List, NameValue, Word};
 use syn::NestedMeta::{Literal, Meta};
+use quote::ToTokens;
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -82,6 +83,84 @@ impl<'c> BoolAttr<'c> {
 
     fn get(&self) -> bool {
         self.0.value.is_some()
+    }
+}
+
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum VariantNameType {
+    Str(String),
+    Bool(bool),
+    Int(u64),
+}
+
+impl VariantNameType {
+    pub fn stringify(&self) -> String {
+        match *self {
+            VariantNameType::Str(ref s) => s.clone(),
+            VariantNameType::Bool(true) => "true".to_owned(),
+            VariantNameType::Bool(false) => "false".to_owned(),
+            VariantNameType::Int(i) => format!("{}", i),
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match *self {
+            VariantNameType::Str(ref s) => Some(&s),
+            _ => None,
+        }
+    }
+
+    pub fn as_int(&self) -> Option<u64> {
+        match *self {
+            VariantNameType::Int(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match *self {
+            VariantNameType::Bool(b) => Some(b),
+            _ => None,
+        }
+    }
+}
+
+impl From<String> for VariantNameType {
+    fn from(src: String) -> VariantNameType {
+        VariantNameType::Str(src)
+    }
+}
+
+#[derive(Debug)]
+pub struct VariantName {
+    serialize: VariantNameType,
+    deserialize: VariantNameType,
+}
+
+impl VariantName {
+    /// Return the container name for the container when serializing.
+    pub fn serialize_name(&self) -> VariantNameType {
+        self.serialize.clone()
+    }
+
+    /// Return the container name for the container when deserializing.
+    pub fn deserialize_name(&self) -> VariantNameType {
+        self.deserialize.clone()
+    }
+}
+
+impl ToTokens for VariantNameType {
+    fn to_tokens(&self, out: &mut TokenStream) {
+        match *self {
+            VariantNameType::Str(ref s) => s.to_tokens(out),
+            VariantNameType::Bool(b) => {
+                b.to_tokens(out);
+            },
+            VariantNameType::Int(i) => {
+                i.to_tokens(out);
+            }
+        }
     }
 }
 
@@ -539,7 +618,7 @@ fn decide_identifier(
 
 /// Represents variant attribute information
 pub struct Variant {
-    name: Name,
+    name: VariantName,
     ser_renamed: bool,
     de_renamed: bool,
     rename_all: RenameRule,
@@ -572,17 +651,17 @@ impl Variant {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            ser_name.set(s.value());
-                            de_name.set(s.value());
+                        if let Ok(value) = get_lit_variant_name_type(cx, &m.ident, &m.ident, &m.lit) {
+                            ser_name.set(value.clone());
+                            de_name.set(value);
                         }
                     }
 
                     // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                     Meta(List(ref m)) if m.ident == "rename" => {
-                        if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            ser_name.set_opt(ser.map(syn::LitStr::value));
-                            de_name.set_opt(de.map(syn::LitStr::value));
+                        if let Ok((ser, de)) = get_ser_and_de(cx, "rename", &m.nested, get_lit_variant_name_type) {
+                            ser_name.set_opt(ser);
+                            de_name.set_opt(de);
                         }
                     }
 
@@ -700,9 +779,9 @@ impl Variant {
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
         Variant {
-            name: Name {
-                serialize: ser_name.unwrap_or_else(|| unraw(&variant.ident)),
-                deserialize: de_name.unwrap_or_else(|| unraw(&variant.ident)),
+            name: VariantName {
+                serialize: ser_name.unwrap_or_else(|| VariantNameType::Str(unraw(&variant.ident))),
+                deserialize: de_name.unwrap_or_else(|| VariantNameType::Str(unraw(&variant.ident))),
             },
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
@@ -718,17 +797,29 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &VariantName {
         &self.name
     }
 
     pub fn rename_by_rule(&mut self, rule: &RenameRule) {
         if !self.ser_renamed {
-            self.name.serialize = rule.apply_to_variant(&self.name.serialize);
+            let res = match self.name.serialize {
+                VariantNameType::Str(ref s) => Some(VariantNameType::Str(rule.apply_to_variant(s))),
+                _  => None,
+            };
+            if let Some(r) = res {
+                self.name.serialize = r;
+            }
         }
         if !self.de_renamed {
-            self.name.deserialize = rule.apply_to_variant(&self.name.deserialize);
-        }
+            let res = match self.name.deserialize {
+                VariantNameType::Str(ref s) => Some(VariantNameType::Str(rule.apply_to_variant(s))),
+                _  => None,
+            };
+            if let Some(r) = res {
+                self.name.deserialize = r;
+            }
+       }
     }
 
     pub fn rename_all(&self) -> &RenameRule {
@@ -1238,6 +1329,27 @@ fn get_lit_str<'a>(
         Err(())
     }
 }
+
+fn get_lit_variant_name_type<'a>(
+    cx: &Ctxt,
+    attr_name: &Ident,
+    meta_item_name: &Ident,
+    lit: &'a syn::Lit,
+) -> Result<VariantNameType, ()> {
+    match *lit {
+        syn::Lit::Str(ref s) => Ok(VariantNameType::Str(s.value())),
+        syn::Lit::Int(ref i) => Ok(VariantNameType::Int(i.value())),
+        syn::Lit::Bool(ref b) => Ok(VariantNameType::Bool(b.value)),
+        _ => {
+            cx.error(format!(
+                "expected serde {} attribute to be a string|int|bool: `{} = \"...\"`",
+                attr_name, meta_item_name
+            ));
+            Err(())
+        }
+    }
+}
+
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));

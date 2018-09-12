@@ -17,6 +17,7 @@ path = "lib.rs"
 [dependencies]
 proc-macro2 = "0.4"
 syn = { version = "0.14", default-features = false, features = ["derive", "parsing", "clone-impls"] }
+quote = "0.6.3"
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
