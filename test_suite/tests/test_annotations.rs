@@ -12,7 +12,7 @@
 extern crate serde_derive;
 
 extern crate serde;
-use self::serde::de::{self, Visitor, MapAccess, Unexpected};
+use self::serde::de::{self, MapAccess, Unexpected, Visitor};
 use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
@@ -2360,9 +2360,7 @@ fn test_flatten_any_after_flatten_struct() {
     }
 
     let s = Outer {
-        inner: Inner {
-            inner: 0,
-        },
+        inner: Inner { inner: 0 },
         extra: Any,
     };
 

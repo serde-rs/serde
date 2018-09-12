@@ -139,7 +139,7 @@ enum EnumSkipAll {
 enum EnumOther {
     Unit,
     #[serde(other)]
-    Other
+    Other,
 }
 
 //////////////////////////////////////////////////////////////////////////

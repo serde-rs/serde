@@ -1172,7 +1172,7 @@ fn deserialize_externally_tagged_enum(
         &variant_names_idents,
         cattrs,
         true,
-        other_idx
+        other_idx,
     ));
 
     // Match arms to extract a variant from a string
@@ -1275,7 +1275,7 @@ fn deserialize_internally_tagged_enum(
         &variant_names_idents,
         cattrs,
         true,
-        other_idx
+        other_idx,
     ));
 
     // Match arms to extract a variant from a string
@@ -1349,7 +1349,7 @@ fn deserialize_adjacently_tagged_enum(
         &variant_names_idents,
         cattrs,
         true,
-        other_idx
+        other_idx,
     ));
 
     let variant_arms: &Vec<_> = &variants
@@ -1857,7 +1857,7 @@ fn deserialize_generated_identifier(
     fields: &[(String, Ident)],
     cattrs: &attr::Container,
     is_variant: bool,
-    other_idx: Option<usize>
+    other_idx: Option<usize>,
 ) -> Fragment {
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|&(_, ref ident)| ident).collect();

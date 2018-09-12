@@ -111,12 +111,12 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
             variant.style,
             cont.attrs.identifier(),
             variant.attrs.other(),
-            cont.attrs.tag()
+            cont.attrs.tag(),
         ) {
             // The `other` attribute may not be used in a variant_identifier.
             (_, Identifier::Variant, true, _) => {
                 cx.error("#[serde(other)] may not be used on a variant_identifier");
-            },
+            }
 
             // Variant with `other` attribute cannot appear in untagged enum
             (_, Identifier::No, true, &EnumTag::None) => {
@@ -133,7 +133,7 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
             // Variant with `other` attribute must be a unit variant.
             (_, Identifier::Field, true, _) | (_, Identifier::No, true, _) => {
                 cx.error("#[serde(other)] must be on a unit variant");
-            },
+            }
 
             // Any sort of variant is allowed if this is not an identifier.
             (_, Identifier::No, false, _) => {}
