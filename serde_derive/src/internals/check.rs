@@ -93,7 +93,7 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
 }
 
 /// The `other` attribute must be used at most once and it must be the last
-/// variant of an enum that has the `field_identifier` attribute.
+/// variant of an enum.
 ///
 /// Inside a `variant_identifier` all variants must be unit variants. Inside a
 /// `field_identifier` all but possibly one variant must be unit variants. The
@@ -111,42 +111,48 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
             variant.style,
             cont.attrs.identifier(),
             variant.attrs.other(),
+            cont.attrs.tag()
         ) {
-            // The `other` attribute may only be used in a field_identifier.
-            (_, Identifier::Variant, true) | (_, Identifier::No, true) => {
-                cx.error("#[serde(other)] may only be used inside a field_identifier");
+            // The `other` attribute may not be used in a variant_identifier.
+            (_, Identifier::Variant, true, _) => {
+                cx.error("#[serde(other)] may not be used on a variant_identifier");
+            },
+
+            // Variant with `other` attribute cannot appear in untagged enum
+            (_, Identifier::No, true, &EnumTag::None) => {
+                cx.error("#[serde(other)] cannot appear on untagged enum");
             }
 
             // Variant with `other` attribute must be the last one.
-            (Style::Unit, Identifier::Field, true) => {
+            (Style::Unit, Identifier::Field, true, _) | (Style::Unit, Identifier::No, true, _) => {
                 if i < variants.len() - 1 {
                     cx.error("#[serde(other)] must be the last variant");
                 }
             }
 
             // Variant with `other` attribute must be a unit variant.
-            (_, Identifier::Field, true) => {
+            (_, Identifier::Field, true, _) | (_, Identifier::No, true, _) => {
                 cx.error("#[serde(other)] must be on a unit variant");
-            }
+            },
 
             // Any sort of variant is allowed if this is not an identifier.
-            (_, Identifier::No, false) => {}
+            (_, Identifier::No, false, _) => {}
 
             // Unit variant without `other` attribute is always fine.
-            (Style::Unit, _, false) => {}
+            (Style::Unit, _, false, _) => {}
 
             // The last field is allowed to be a newtype catch-all.
-            (Style::Newtype, Identifier::Field, false) => {
+            (Style::Newtype, Identifier::Field, false, _) => {
                 if i < variants.len() - 1 {
                     cx.error(format!("`{}` must be the last variant", variant.ident));
                 }
             }
 
-            (_, Identifier::Field, false) => {
+            (_, Identifier::Field, false, _) => {
                 cx.error("field_identifier may only contain unit variants");
             }
 
-            (_, Identifier::Variant, false) => {
+            (_, Identifier::Variant, false, _) => {
                 cx.error("variant_identifier may only contain unit variants");
             }
         }

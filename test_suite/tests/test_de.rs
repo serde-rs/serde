@@ -135,6 +135,13 @@ enum EnumSkipAll {
     Skipped,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+enum EnumOther {
+    Unit,
+    #[serde(other)]
+    Other
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_tests {
@@ -750,6 +757,20 @@ declare_tests! {
         Enum::Unit => &[
             Token::Enum { name: "Enum" },
             Token::Bytes(b"Unit"),
+            Token::Unit,
+        ],
+    }
+    test_enum_other_unit {
+        EnumOther::Unit => &[
+            Token::Enum { name: "EnumOther" },
+            Token::Str("Unit"),
+            Token::Unit,
+        ],
+    }
+    test_enum_other {
+        EnumOther::Other => &[
+            Token::Enum { name: "EnumOther" },
+            Token::Str("Foo"),
             Token::Unit,
         ],
     }
