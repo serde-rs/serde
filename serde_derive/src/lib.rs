@@ -51,6 +51,7 @@
         similar_names,
         single_match_else,
         stutter,
+        unseparated_literal_suffix,
         use_self,
     )
 )]
