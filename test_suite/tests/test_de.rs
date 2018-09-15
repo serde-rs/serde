@@ -272,7 +272,7 @@ declare_tests! {
         0f32 => &[Token::F32(0.)],
         0f64 => &[Token::F64(0.)],
     }
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
     test_small_int_to_128 {
         1i128 => &[Token::I8(1)],
         1i128 => &[Token::I16(1)],
