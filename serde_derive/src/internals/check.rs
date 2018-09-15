@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use internals::ast::{Container, Data, Field, Style};
-use internals::attr::{EnumTag, Identifier};
+use internals::attr::{EnumTag, Identifier, VariantNameType};
 use internals::{Ctxt, Derive};
 use syn::{Member, Type};
 
@@ -18,6 +18,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_flatten(cx, cont);
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
+    check_variant_name(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
@@ -329,6 +330,36 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
                 cx.error("#[serde(transparent)] requires at least one field that is neither skipped nor has a default");
             }
         },
+    }
+}
+
+/// Renaming variants is only allowed for internal and adjacent tagging.
+fn check_variant_name(cx: &Ctxt, cont: &Container) {
+    let tag_type = cont.attrs.tag();
+
+    match cont.data {
+        Data::Struct(_, _) => {}
+        Data::Enum(ref variants) => {
+            for name in variants.iter().map(|v| v.attrs.name()) {
+                match (name.serialize_name(), name.deserialize_name()) {
+                    (VariantNameType::Bool(_), _) |
+                    (_, VariantNameType::Bool(_)) |
+                    (_, VariantNameType::Int(_)) |
+                    (VariantNameType::Int(_), _) => {
+                        match *tag_type {
+                            EnumTag::External => {
+                                cx.error("#[serde(rename = int|bool)] cannot be used with external tagging");
+                            },
+                            EnumTag::None => {
+                                cx.error("#[serde(rename = int|bool)] cannot be used with #[serde(untagged)]");
+                            },
+                            _ => {}
+                        }
+                    },
+                    _ => {}
+                }
+            }
+        }
     }
 }
 
