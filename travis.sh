@@ -53,6 +53,7 @@ elif [ -n "${EMSCRIPTEN}" ]; then
     chmod +x ~/.cargo/bin/cargo-web
 
     cd "$DIR/test_suite"
+    cargo web test --target=asmjs-unknown-emscripten --nodejs
     cargo web test --target=wasm32-unknown-emscripten --nodejs
 else
     CHANNEL=nightly

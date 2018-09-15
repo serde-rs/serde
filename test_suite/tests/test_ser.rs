@@ -618,7 +618,7 @@ fn test_enum_skipped() {
     );
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
 #[test]
 fn test_integer128() {
     assert_ser_tokens_error(&1i128, &[], "i128 is not supported");
