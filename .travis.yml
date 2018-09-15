@@ -3,48 +3,48 @@ language: rust
 matrix:
   include:
     - rust: stable
-      script: |
-          cd "${TRAVIS_BUILD_DIR}/serde"
-          cargo build --features rc
-          cargo build --no-default-features
-          cd "${TRAVIS_BUILD_DIR}/serde_test"
-          cargo build
-          cargo test
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/serde"
+        - cargo build --features rc
+        - cargo build --no-default-features
+        - cd "${TRAVIS_BUILD_DIR}/serde_test"
+        - cargo build
+        - cargo test
 
     - rust: beta
-      script: |
-          cd "${TRAVIS_BUILD_DIR}/serde"
-          cargo build --features rc
-          cd "${TRAVIS_BUILD_DIR}/test_suite"
-          cargo test
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/serde"
+        - cargo build --features rc
+        - cd "${TRAVIS_BUILD_DIR}/test_suite"
+        - cargo test
 
     - rust: nightly
-      script: |
-          cd "${TRAVIS_BUILD_DIR}/serde"
-          cargo build
-          cargo build --no-default-features
-          cargo build --no-default-features --features alloc
-          cargo build --no-default-features --features rc,alloc
-          cargo test --features rc,unstable
-          cd "${TRAVIS_BUILD_DIR}/test_suite/deps"
-          cargo build
-          cd "${TRAVIS_BUILD_DIR}/test_suite"
-          cargo test --features unstable
-          cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
-          cargo build
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/serde"
+        - cargo build
+        - cargo build --no-default-features
+        - cargo build --no-default-features --features alloc
+        - cargo build --no-default-features --features rc,alloc
+        - cargo test --features rc,unstable
+        - cd "${TRAVIS_BUILD_DIR}/test_suite/deps"
+        - cargo build
+        - cd "${TRAVIS_BUILD_DIR}/test_suite"
+        - cargo test --features unstable
+        - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
+        - cargo build
 
     - rust: 1.13.0
-      script: |
-          cd "${TRAVIS_BUILD_DIR}/serde"
-          cargo build --features rc
-          cargo build --no-default-features
-          cd "${TRAVIS_BUILD_DIR}/serde_test"
-          cargo build
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/serde"
+        - cargo build --features rc
+        - cargo build --no-default-features
+        - cd "${TRAVIS_BUILD_DIR}/serde_test"
+        - cargo build
 
     - rust: 1.15.0
-      script: |
-          cd "${TRAVIS_BUILD_DIR}/serde_derive"
-          cargo build
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/serde_derive"
+        - cargo build
 
     - rust: 1.20.0
     - rust: 1.21.0
@@ -53,45 +53,37 @@ matrix:
 
     - rust: nightly
       env: CLIPPY
-      script: |
-          if rustup component add clippy-preview; then
-              cargo clippy -- -Dclippy
-
-              cd "${TRAVIS_BUILD_DIR}/serde"
-              cargo clippy --features rc,unstable -- -Dclippy
-
-              cd "${TRAVIS_BUILD_DIR}/serde_derive"
-              cargo clippy -- -Dclippy
-
-              cd "${TRAVIS_BUILD_DIR}/serde_test"
-              cargo clippy -- -Dclippy
-
-              cd "${TRAVIS_BUILD_DIR}/test_suite"
-              cargo clippy --features unstable -- -Dclippy
-
-              cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
-              cargo clippy -- -Dclippy
-          fi
+      script:
+        - rustup component add clippy-preview || travis_terminate 0
+        - cargo clippy -- -Dclippy
+        - cd "${TRAVIS_BUILD_DIR}/serde"
+        - cargo clippy --features rc,unstable -- -Dclippy
+        - cd "${TRAVIS_BUILD_DIR}/serde_derive"
+        - cargo clippy -- -Dclippy
+        - cd "${TRAVIS_BUILD_DIR}/serde_test"
+        - cargo clippy -- -Dclippy
+        - cd "${TRAVIS_BUILD_DIR}/test_suite"
+        - cargo clippy --features unstable -- -Dclippy
+        - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
+        - cargo clippy -- -Dclippy
 
     - rust: nightly
       env: EMSCRIPTEN
-      script: |
-          nvm install 9
+      script:
+        - CARGO_WEB_RELEASE=$(curl -L -s -H 'Accept: application/json' https://github.com/koute/cargo-web/releases/latest)
+        - CARGO_WEB_VERSION=$(echo "${CARGO_WEB_RELEASE}" | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+        - CARGO_WEB_URL="https://github.com/koute/cargo-web/releases/download/${CARGO_WEB_VERSION}/cargo-web-x86_64-unknown-linux-gnu.gz"
 
-          CARGO_WEB_RELEASE=$(curl -L -s -H 'Accept: application/json' https://github.com/koute/cargo-web/releases/latest)
-          CARGO_WEB_VERSION=$(echo "${CARGO_WEB_RELEASE}" | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
-          CARGO_WEB_URL="https://github.com/koute/cargo-web/releases/download/${CARGO_WEB_VERSION}/cargo-web-x86_64-unknown-linux-gnu.gz"
+        - nvm install 9
+        - mkdir -p ~/.cargo/bin
+        - curl -L "${CARGO_WEB_URL}" | gzip -d > ~/.cargo/bin/cargo-web
+        - chmod +x ~/.cargo/bin/cargo-web
 
-          mkdir -p ~/.cargo/bin
-          echo "Downloading cargo-web from: ${CARGO_WEB_URL}"
-          curl -L "${CARGO_WEB_URL}" | gzip -d > ~/.cargo/bin/cargo-web
-          chmod +x ~/.cargo/bin/cargo-web
+        - cd "${TRAVIS_BUILD_DIR}/test_suite"
+        - cargo web test --target=asmjs-unknown-emscripten --nodejs
+        - cargo web test --target=wasm32-unknown-emscripten --nodejs
 
-          cd "${TRAVIS_BUILD_DIR}/test_suite"
-          cargo web test --target=asmjs-unknown-emscripten --nodejs
-          cargo web test --target=wasm32-unknown-emscripten --nodejs
-
-script: |
-    cd "${TRAVIS_BUILD_DIR}/serde"
-    cargo build --no-default-features
-    cargo build
+script:
+  - cd "${TRAVIS_BUILD_DIR}/serde"
+  - cargo build --no-default-features
+  - cargo build
