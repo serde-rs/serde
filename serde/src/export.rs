@@ -21,6 +21,7 @@ pub use lib::Vec;
 
 mod string {
     use lib::*;
+    use lib::fmt::Write;
 
     #[cfg(any(feature = "std", feature = "alloc"))]
     pub fn from_utf8_lossy(bytes: &[u8]) -> Cow<str> {
@@ -40,5 +41,20 @@ mod string {
         // white-on-black question mark. The user will recognize it as invalid
         // UTF-8.
         str::from_utf8(bytes).unwrap_or("\u{fffd}\u{fffd}\u{fffd}")
+    }
+
+    pub fn from_bool(b : bool) -> &'static str {
+        if b {
+            "true"
+        } else {
+            "false"
+        }
+    }
+
+    pub fn from_int(i: u64) -> Vec<u8> {
+        let mut buf = String::with_capacity(20);
+
+        write!(&mut buf, "{}", i).ok();
+        buf.into_bytes()
     }
 }
