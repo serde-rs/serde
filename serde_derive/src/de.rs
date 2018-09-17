@@ -1252,11 +1252,11 @@ fn deserialize_internally_tagged_enum(
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| (variant.attrs.name().deserialize_name(), field_i(i)))
+        .map(|(i, variant)| (attr::VariantNameType::from(variant.attrs.name().deserialize_name()), field_i(i)))
         .collect();
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name);
+        let variant_names = variant_names_idents.iter().map(|&(ref name, _)| name.stringify());
         quote! {
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
@@ -1839,7 +1839,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(String, Ident)],
+    fields: &[(attr::VariantNameType, Ident)],
     cattrs: &attr::Container,
     is_variant: bool,
 ) -> Fragment {
@@ -1995,7 +1995,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: &TokenStream,
-    fields: &[(String, Ident)],
+    fields: &[(attr::VariantNameType, Ident)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
@@ -2004,10 +2004,10 @@ fn deserialize_identifier(
     let field_borrowed_strs = fields.iter().map(|&(ref name, _)| name);
     let field_bytes = fields
         .iter()
-        .map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
+        .map(|&(ref name, _)| Literal::byte_string(name.stringify().as_bytes()));
     let field_borrowed_bytes = fields
         .iter()
-        .map(|&(ref name, _)| Literal::byte_string(name.as_bytes()));
+        .map(|&(ref name, _)| Literal::byte_string(name.stringify().as_bytes()));
 
     let constructors: &Vec<_> = &fields
         .iter()
@@ -2262,7 +2262,7 @@ fn deserialize_struct_as_struct_visitor(
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
+        .map(|(i, field)| (attr::VariantNameType::from(field.attrs.name().deserialize_name()), field_i(i)))
         .collect();
 
     let fields_stmt = {
@@ -2289,7 +2289,7 @@ fn deserialize_struct_as_map_visitor(
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
+        .map(|(i, field)| (attr::VariantNameType::from(field.attrs.name().deserialize_name()), field_i(i)))
         .collect();
 
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false);
@@ -2517,11 +2517,11 @@ fn deserialize_struct_as_struct_in_place_visitor(
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| (field.attrs.name().deserialize_name(), field_i(i)))
+        .map(|(i, field)| (attr::VariantNameType::from(field.attrs.name().deserialize_name()), field_i(i)))
         .collect();
 
     let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|&(ref name, _)| name);
+        let field_names = field_names_idents.iter().map(|&(ref name, _)| name.stringify());
         quote_block! {
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }

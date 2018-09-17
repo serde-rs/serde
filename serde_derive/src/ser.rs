@@ -476,7 +476,10 @@ fn serialize_externally_tagged_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let variant_name = match variant.attrs.name().serialize_name() {
+        attr::VariantNameType::Str(s) => s,
+        _ => unreachable!(), // check_variant_name prevents this case
+    };
 
     if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -547,7 +550,7 @@ fn serialize_internally_tagged_variant(
     tag: &str,
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let variant_name = attr::VariantNameType::from(variant.attrs.name().serialize_name());
 
     let enum_ident_str = params.type_name();
     let variant_ident_str = variant.ident.to_string();
@@ -658,7 +661,7 @@ fn serialize_adjacently_tagged_variant(
                 StructVariant::Untagged,
                 params,
                 &variant.fields,
-                &variant_name,
+                &variant_name.stringify(),
             ),
         }
     });
@@ -828,7 +831,7 @@ enum StructVariant<'a> {
     },
     InternallyTagged {
         tag: &'a str,
-        variant_name: String,
+        variant_name: attr::VariantNameType,
     },
     Untagged,
 }
