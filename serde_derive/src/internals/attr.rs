@@ -106,7 +106,7 @@ impl Name {
     }
 }
 
-/// Represents container (e.g. struct) attribute information
+/// Represents struct or enum attribute information.
 pub struct Container {
     name: Name,
     transparent: bool,

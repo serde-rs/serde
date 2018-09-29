@@ -6,24 +6,36 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+//! A serde ast, parsed from the syn ast and ready for codegen.
+
 use internals::attr;
 use internals::check;
 use internals::{Ctxt, Derive};
 use syn;
 use syn::punctuated::Punctuated;
 
+/// A source data structure annotated with `#[derive(Derialize)]` and/or `#[derive(Deserialize)]`,
+/// parsed into an internal representation.
 pub struct Container<'a> {
+    /// The struct or enum name (without generics).
     pub ident: syn::Ident,
+    /// Attributes on the structure, parsed for serde.
     pub attrs: attr::Container,
+    /// The contents of the struct or enum.
     pub data: Data<'a>,
+    /// Any generics on the struct or enum.
     pub generics: &'a syn::Generics,
 }
 
+/// The fields of a struct or enum.
+///
+/// Analagous to `syn::Data`.
 pub enum Data<'a> {
     Enum(Vec<Variant<'a>>),
     Struct(Style, Vec<Field<'a>>),
 }
 
+/// A variant of an enum.
 pub struct Variant<'a> {
     pub ident: syn::Ident,
     pub attrs: attr::Variant,
@@ -31,6 +43,7 @@ pub struct Variant<'a> {
     pub fields: Vec<Field<'a>>,
 }
 
+/// A variant of a struct.
 pub struct Field<'a> {
     pub member: syn::Member,
     pub attrs: attr::Field,
@@ -40,13 +53,18 @@ pub struct Field<'a> {
 
 #[derive(Copy, Clone)]
 pub enum Style {
+    /// Named fields.
     Struct,
+    /// Many unnamed fields.
     Tuple,
+    /// One unnamed field.
     Newtype,
+    /// No fields.
     Unit,
 }
 
 impl<'a> Container<'a> {
+    /// Convert the raw syn ast into a parsed container object, collecting errors in `cx`.
     pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput, derive: Derive) -> Container<'a> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
