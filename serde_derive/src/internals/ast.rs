@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! A serde ast, parsed from the syn ast and ready to generate rust code.
+//! A Serde ast, parsed from the Syn ast and ready to generate Rust code.
 
 use internals::attr;
 use internals::check;
@@ -19,7 +19,7 @@ use syn::punctuated::Punctuated;
 pub struct Container<'a> {
     /// The struct or enum name (without generics).
     pub ident: syn::Ident,
-    /// Attributes on the structure, parsed for serde.
+    /// Attributes on the structure, parsed for Serde.
     pub attrs: attr::Container,
     /// The contents of the struct or enum.
     pub data: Data<'a>,
@@ -64,7 +64,7 @@ pub enum Style {
 }
 
 impl<'a> Container<'a> {
-    /// Convert the raw syn ast into a parsed container object, collecting errors in `cx`.
+    /// Convert the raw Syn ast into a parsed container object, collecting errors in `cx`.
     pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput, derive: Derive) -> Container<'a> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
