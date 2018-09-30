@@ -6,8 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Stuff to handle where the case of the source (e.g. `my-field`) is different to the
-//! field/variant (e.g. `my_field`).
+//! Utility code to assist converting the case of the source (e.g. `my-field`, `MY_FIELD`) to the
+//! rust-styled field/variant (e.g. `my_field`, `MyType`).
 
 // See https://users.rust-lang.org/t/psa-dealing-with-warning-unused-import-std-ascii-asciiext-in-today-s-nightly/13726
 #[allow(deprecated, unused_imports)]

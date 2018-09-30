@@ -23,14 +23,16 @@ pub struct Ctxt {
 }
 
 impl Ctxt {
-    /// Create a new context object
+    /// Create a new context object.
+    ///
+    /// This object contains no errors, but will still trigger a panic if it is not `check`ed.
     pub fn new() -> Self {
         Ctxt {
             errors: RefCell::new(Some(Vec::new())),
         }
     }
 
-    /// Add an error to the context object
+    /// Add an error to the context object.
     pub fn error<T: Display>(&self, msg: T) {
         self.errors
             .borrow_mut()

@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! A serde ast, parsed from the syn ast and ready for codegen.
+//! A serde ast, parsed from the syn ast and ready to generate rust code.
 
 use internals::attr;
 use internals::check;
@@ -14,7 +14,7 @@ use internals::{Ctxt, Derive};
 use syn;
 use syn::punctuated::Punctuated;
 
-/// A source data structure annotated with `#[derive(Derialize)]` and/or `#[derive(Deserialize)]`,
+/// A source data structure annotated with `#[derive(Serialize)]` and/or `#[derive(Deserialize)]`,
 /// parsed into an internal representation.
 pub struct Container<'a> {
     /// The struct or enum name (without generics).
@@ -43,7 +43,7 @@ pub struct Variant<'a> {
     pub fields: Vec<Field<'a>>,
 }
 
-/// A variant of a struct.
+/// A field of a struct.
 pub struct Field<'a> {
     pub member: syn::Member,
     pub attrs: attr::Field,
