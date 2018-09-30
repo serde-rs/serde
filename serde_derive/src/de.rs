@@ -1326,6 +1326,8 @@ fn deserialize_adjacently_tagged_enum(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let callback_impl_generics = CallbackImplGenerics(params, parse_quote!(__A: _serde::de::MapAccess<#delife>));
+    let callback_ty_generics = CallbackTypeGenerics(params, parse_quote!(__A));
 
     let variant_names_idents: Vec<_> = variants
         .iter()
@@ -1559,24 +1561,43 @@ fn deserialize_adjacently_tagged_enum(
                     }
                     // First key is the content.
                     _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
-                        // Buffer up the content.
-                        let __content = try!(_serde::de::MapAccess::next_value::<_serde::private::de::Content>(&mut __map));
-                        // Visit the second key.
-                        match #next_relevant_key {
-                            // Second key is the tag.
-                            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::private::de::ContentDeserializer::<__A::Error>::new(__content);
-                                #finish_content_then_tag
-                            }
-                            // Second key is a duplicate of the content.
-                            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
-                                _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
-                            }
-                            // There is no second key.
-                            _serde::export::None => {
-                                _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#tag))
+                        struct __Callback #callback_impl_generics #where_clause {
+                            map: __A,
+                            marker: _serde::export::PhantomData<#this #ty_generics>,
+                            lifetime: _serde::export::PhantomData<&#delife ()>,
+                        }
+                        impl #callback_impl_generics _serde::de::WithBuffer<#delife, __A::Error> for __Callback #callback_ty_generics #where_clause {
+                            type Value = _serde::export::Result<#this #ty_generics, __A::Error>;
+                            fn run<__Buffer>(self) -> Self::Value
+                            where
+                                __Buffer: _serde::Deserialize<#delife> + _serde::de::IntoDeserializer<#delife, __A::Error>,
+                            {
+                                let mut __map = self.map;
+                                // Buffer up the content.
+                                let __content = try!(_serde::de::MapAccess::next_value::<__Buffer>(&mut __map));
+                                // Visit the second key.
+                                match #next_relevant_key {
+                                    // Second key is the tag.
+                                    _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
+                                        let __deserializer = _serde::de::IntoDeserializer::into_deserializer(__content);
+                                        #finish_content_then_tag
+                                    }
+                                    // Second key is a duplicate of the content.
+                                    _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
+                                        _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
+                                    }
+                                    // There is no second key.
+                                    _serde::export::None => {
+                                        _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#tag))
+                                    }
+                                }
                             }
                         }
+                        __A::call_with_buffer(__Callback {
+                            map: __map,
+                            marker: _serde::export::PhantomData,
+                            lifetime: _serde::export::PhantomData,
+                        })
                     }
                     // There is no first key.
                     _serde::export::None => {
@@ -1628,6 +1649,12 @@ fn deserialize_untagged_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> Fragment {
+    let this = &params.this;
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
+    let delife = params.borrowed.de_lifetime();
+    let callback_impl_generics = CallbackImplGenerics(params, parse_quote!(__D: _serde::Deserializer<#delife>));
+    let callback_ty_generics = CallbackTypeGenerics(params, parse_quote!(__D));
+
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
@@ -1636,7 +1663,7 @@ fn deserialize_untagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote!(_serde::private::de::ContentRefDeserializer::<__D::Error>::new(&__content)),
+                quote!(_serde::de::IntoDeserializer::into_deserializer(&__content)),
             ))
         });
 
@@ -1652,15 +1679,37 @@ fn deserialize_untagged_enum(
     );
 
     quote_block! {
-        let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+        struct __Callback #callback_impl_generics #where_clause {
+            deserializer: __D,
+            marker: _serde::export::PhantomData<#this #ty_generics>,
+            lifetime: _serde::export::PhantomData<&#delife ()>,
+        }
 
-        #(
-            if let _serde::export::Ok(__ok) = #attempts {
-                return _serde::export::Ok(__ok);
+        impl #callback_impl_generics _serde::de::WithBuffer<#delife, __D::Error> for __Callback #callback_ty_generics #where_clause {
+            type Value = _serde::export::Result<#this #ty_generics, __D::Error>;
+
+            fn run<__Buffer>(self) -> Self::Value
+            where
+                __Buffer: _serde::Deserialize<#delife>,
+                for<'a> &'a __Buffer: _serde::de::IntoDeserializer<'de, __D::Error>,
+            {
+                let __content = try!(<__Buffer as _serde::Deserialize>::deserialize(self.deserializer));
+
+                #(
+                    if let _serde::export::Ok(__ok) = #attempts {
+                        return _serde::export::Ok(__ok);
+                    }
+                )*
+
+                _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
             }
-        )*
+        }
 
-        _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
+        __D::call_with_buffer(__Callback {
+            deserializer: __deserializer,
+            marker: _serde::export::PhantomData,
+            lifetime: _serde::export::PhantomData,
+        })
     }
 }
 
@@ -2885,6 +2934,20 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
     }
 }
 
+struct CallbackImplGenerics<'a>(&'a Parameters, syn::TypeParam);
+
+impl<'a> ToTokens for CallbackImplGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let mut generics = self.0.generics.clone();
+        if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
+            generics.params.push(syn::GenericParam::Lifetime(de_lifetime));
+        }
+        generics.params.push(self.1.clone().into());
+        let (impl_generics, _, _) = generics.split_for_impl();
+        impl_generics.to_tokens(tokens);
+    }
+}
+
 #[cfg(feature = "deserialize_in_place")]
 impl<'a> DeImplGenerics<'a> {
     fn in_place(self) -> InPlaceImplGenerics<'a> {
@@ -2946,6 +3009,26 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
 impl<'a> DeTypeGenerics<'a> {
     fn in_place(self) -> InPlaceTypeGenerics<'a> {
         InPlaceTypeGenerics(self.0)
+    }
+}
+
+struct CallbackTypeGenerics<'a>(&'a Parameters, Ident);
+
+impl<'a> ToTokens for CallbackTypeGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let mut generics = self.0.generics.clone();
+        if self.0.borrowed.de_lifetime_def().is_some() {
+            let def = syn::LifetimeDef {
+                attrs: Vec::new(),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
+                colon_token: None,
+                bounds: Punctuated::new(),
+            };
+            generics.params.push(syn::GenericParam::Lifetime(def));
+        }
+        generics.params.push(syn::GenericParam::from(syn::TypeParam::from(self.1.clone())));
+        let (_, ty_generics, _) = generics.split_for_impl();
+        ty_generics.to_tokens(tokens);
     }
 }
 
