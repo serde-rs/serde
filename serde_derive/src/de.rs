@@ -2000,8 +2000,10 @@ fn deserialize_identifier(
     fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
 ) -> Fragment {
-    let field_strs = fields.iter().map(|&(ref name, _)| name);
-    let field_borrowed_strs = fields.iter().map(|&(ref name, _)| name);
+    let field_strs = fields.iter().filter_map(|&(ref name, _)| name.as_str());
+    let field_borrowed_strs = fields.iter().filter_map(|&(ref name, _)| name.as_str());
+    let field_ints = fields.iter().filter_map(|&(ref name, _)| name.as_int());
+    let field_bools = fields.iter().filter_map(|&(ref name, _)| name.as_bool());
     let field_bytes = fields
         .iter()
         .map(|&(ref name, _)| Literal::byte_string(name.stringify().as_bytes()));
@@ -2009,7 +2011,25 @@ fn deserialize_identifier(
         .iter()
         .map(|&(ref name, _)| Literal::byte_string(name.stringify().as_bytes()));
 
-    let constructors: &Vec<_> = &fields
+    let constructors_strs: &Vec<_> = &fields
+        .iter()
+        .filter_map(|&(ref name, ref ident)| name.as_str().map(|_| ident))
+        .map(|ident| quote!(#this::#ident))
+        .collect();
+
+    let constructors_bools: &Vec<_> = &fields
+        .iter()
+        .filter_map(|&(ref name, ref ident)| name.as_bool().map(|_| ident))
+        .map(|ident| quote!(#this::#ident))
+        .collect();
+
+    let constructors_ints: &Vec<_> = &fields
+        .iter()
+        .filter_map(|&(ref name, ref ident)| name.as_int().map(|_| ident))
+        .map(|ident| quote!(#this::#ident))
+        .collect();
+
+   let constructors: &Vec<_> = &fields
         .iter()
         .map(|&(_, ref ident)| quote!(#this::#ident))
         .collect();
@@ -2022,12 +2042,21 @@ fn deserialize_identifier(
 
     let index_expecting = if is_variant { "variant" } else { "field" };
 
-    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
-        None
+    let (bytes_to_str, int_to_str, bool_to_str) = if fallthrough.is_some() || collect_other_fields {
+        (None, None, None)
     } else {
-        Some(quote! {
-            let __value = &_serde::export::from_utf8_lossy(__value);
-        })
+        (
+            Some(quote! {
+                let __value = &_serde::export::from_utf8_lossy(__value);
+            }),
+            Some(quote! {
+                let __tmp_value = &_serde::export::from_int(__value);
+                let __value = &_serde::export::from_utf8_lossy(__tmp_value);
+            }),
+            Some(quote! {
+                let __value = &_serde::export::from_bool(__value);
+            }),
+        )
     };
 
     let (
@@ -2200,7 +2229,7 @@ fn deserialize_identifier(
             {
                 match __value {
                     #(
-                        #variant_indices => _serde::export::Ok(#constructors),
+                        #field_ints => _serde::export::Ok(#constructors_ints),
                     )*
                     _ => _serde::export::Err(_serde::de::Error::invalid_value(
                                 _serde::de::Unexpected::Unsigned(__value),
@@ -2210,6 +2239,27 @@ fn deserialize_identifier(
         }
     };
 
+    let visit_bool = if constructors_bools.is_empty() {
+        None
+    } else {
+        let visit_bool = quote! {
+            fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
+                where __E: _serde::de::Error
+                {
+                    match __value {
+                    #(
+                        #field_bools => _serde::export::Ok(#constructors_bools),
+                    )*
+                    _ => {
+                        #bool_to_str
+                        #fallthrough_arm
+                    }
+                }
+            }
+        };
+        Some(visit_bool)
+    };
+
     quote_block! {
         fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
             _serde::export::Formatter::write_str(__formatter, #expecting)
@@ -2217,13 +2267,15 @@ fn deserialize_identifier(
 
         #visit_other
 
+        #visit_bool
+
         fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
         where
             __E: _serde::de::Error,
         {
             match __value {
                 #(
-                    #field_strs => _serde::export::Ok(#constructors),
+                    #field_strs => _serde::export::Ok(#constructors_strs),
                 )*
                 _ => {
                     #value_as_str_content
@@ -2238,7 +2290,7 @@ fn deserialize_identifier(
         {
             match __value {
                 #(
-                    #field_bytes => _serde::export::Ok(#constructors),
+                    #field_bytes => _serde::export::Ok(#constructors_strs),
                 )*
                 _ => {
                     #bytes_to_str
