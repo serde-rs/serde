@@ -14,7 +14,7 @@ pub use lib::marker::PhantomData;
 pub use lib::option::Option::{self, None, Some};
 pub use lib::result::Result::{self, Err, Ok};
 
-pub use self::string::from_utf8_lossy;
+pub use self::string::{from_utf8_lossy, from_int, from_bool};
 
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub use lib::Vec;

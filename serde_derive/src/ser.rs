@@ -575,7 +575,7 @@ fn serialize_internally_tagged_variant(
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     __serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
-                    &mut __struct, #tag, #variant_name));
+                    &mut __struct, #tag, &#variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
             }
         }
@@ -899,7 +899,7 @@ fn serialize_struct_variant<'a>(
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __serde_state,
                     #tag,
-                    #variant_name,
+                    &#variant_name,
                 ));
                 #(#serialize_fields)*
                 _serde::ser::SerializeStruct::end(__serde_state)

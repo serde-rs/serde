@@ -45,6 +45,18 @@ impl<'a> From<&'a u64> for VariantNameType {
     }
 }
 
+impl From<bool> for VariantNameType {
+    fn from(src: bool) -> Self {
+        VariantNameType::Bool(src)
+    }
+}
+
+impl From<u64> for VariantNameType {
+    fn from(src: u64) -> Self {
+        VariantNameType::Int(src)
+    }
+}
+
 impl Serialize for VariantNameType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
