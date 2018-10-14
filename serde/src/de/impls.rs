@@ -696,7 +696,6 @@ macro_rules! seq_impl {
     (
         $ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
         $access:ident,
-        $ctor:expr,
         $clear:expr,
         $with_capacity:expr,
         $reserve:expr,
@@ -793,7 +792,6 @@ fn nop_reserve<T>(_seq: T, _n: usize) {}
 seq_impl!(
     BinaryHeap<T: Ord>,
     seq,
-    BinaryHeap::new(),
     BinaryHeap::clear,
     BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
     BinaryHeap::reserve,
@@ -803,7 +801,6 @@ seq_impl!(
 seq_impl!(
     BTreeSet<T: Eq + Ord>,
     seq,
-    BTreeSet::new(),
     BTreeSet::clear,
     BTreeSet::new(),
     nop_reserve,
@@ -813,7 +810,6 @@ seq_impl!(
 seq_impl!(
     LinkedList<T>,
     seq,
-    LinkedList::new(),
     LinkedList::clear,
     LinkedList::new(),
     nop_reserve,
@@ -824,7 +820,6 @@ seq_impl!(
 seq_impl!(
     HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
-    HashSet::with_hasher(S::default()),
     HashSet::clear,
     HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
     HashSet::reserve,
@@ -834,7 +829,6 @@ seq_impl!(
 seq_impl!(
     Vec<T>,
     seq,
-    Vec::new(),
     Vec::clear,
     Vec::with_capacity(size_hint::cautious(seq.size_hint())),
     Vec::reserve,
@@ -845,7 +839,6 @@ seq_impl!(
 seq_impl!(
     VecDeque<T>,
     seq,
-    VecDeque::new(),
     VecDeque::clear,
     VecDeque::with_capacity(size_hint::cautious(seq.size_hint())),
     VecDeque::reserve,
@@ -1113,7 +1106,6 @@ macro_rules! map_impl {
     (
         $ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
         $access:ident,
-        $ctor:expr,
         $with_capacity:expr
     ) => {
         impl<'de, K, V $(, $typaram)*> Deserialize<'de> for $ty<K, V $(, $typaram)*>
@@ -1168,14 +1160,12 @@ macro_rules! map_impl {
 map_impl!(
     BTreeMap<K: Ord, V>,
     map,
-    BTreeMap::new(),
     BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
     HashMap<K: Eq + Hash, V, S: BuildHasher + Default>,
     map,
-    HashMap::with_hasher(S::default()),
     HashMap::with_capacity_and_hasher(size_hint::cautious(map.size_hint()), S::default()));
 
 ////////////////////////////////////////////////////////////////////////////////
