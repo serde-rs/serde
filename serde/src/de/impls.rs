@@ -827,16 +827,6 @@ seq_impl!(
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
-    Vec<T>,
-    seq,
-    Vec::clear,
-    Vec::with_capacity(size_hint::cautious(seq.size_hint())),
-    Vec::reserve,
-    Vec::push
-);
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(
     VecDeque<T>,
     seq,
     VecDeque::clear,
@@ -844,6 +834,97 @@ seq_impl!(
     VecDeque::reserve,
     VecDeque::push_back
 );
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de, T> Deserialize<'de> for Vec<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct VecVisitor<T> {
+            marker: PhantomData<T>,
+        }
+
+        impl<'de, T> Visitor<'de> for VecVisitor<T>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = Vec<T>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut values = Vec::with_capacity(size_hint::cautious(seq.size_hint()));
+
+                while let Some(value) = try!(seq.next_element()) {
+                    values.push(value);
+                }
+
+                Ok(values)
+            }
+        }
+
+        let visitor = VecVisitor { marker: PhantomData };
+        deserializer.deserialize_seq(visitor)
+    }
+
+    fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct VecInPlaceVisitor<'a, T: 'a>(&'a mut Vec<T>);
+
+        impl<'a, 'de, T> Visitor<'de> for VecInPlaceVisitor<'a, T>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = ();
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let hint = size_hint::cautious(seq.size_hint());
+                if let Some(additional) = hint.checked_sub(self.0.len()) {
+                    self.0.reserve(additional);
+                }
+
+                for i in 0..self.0.len() {
+                    let next = {
+                        let next_place = InPlaceSeed(&mut self.0[i]);
+                        try!(seq.next_element_seed(next_place))
+                    };
+                    if next.is_none() {
+                        self.0.truncate(i);
+                        return Ok(());
+                    }
+                }
+
+                while let Some(value) = try!(seq.next_element()) {
+                    self.0.push(value);
+                }
+
+                Ok(())
+            }
+        }
+
+        deserializer.deserialize_seq(VecInPlaceVisitor(place))
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
