@@ -45,7 +45,7 @@ pub fn with_where_predicates(
     generics
         .make_where_clause()
         .predicates
-        .extend(predicates.into_iter().cloned());
+        .extend(predicates.iter().cloned());
     generics
 }
 

@@ -1763,7 +1763,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let seq = content.into_iter().map(ContentRefDeserializer::new);
+        let seq = content.iter().map(ContentRefDeserializer::new);
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
@@ -1778,7 +1778,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let map = content.into_iter().map(|&(ref k, ref v)| {
+        let map = content.iter().map(|&(ref k, ref v)| {
             (
                 ContentRefDeserializer::new(k),
                 ContentRefDeserializer::new(v),
@@ -2085,7 +2085,7 @@ mod content {
         {
             let (variant, value) = match *self.content {
                 Content::Map(ref value) => {
-                    let mut iter = value.into_iter();
+                    let mut iter = value.iter();
                     let &(ref variant, ref value) = match iter.next() {
                         Some(v) => v,
                         None => {
@@ -2272,9 +2272,9 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(vec: &'a [Content<'de>]) -> Self {
+        fn new(slice: &'a [Content<'de>]) -> Self {
             SeqRefDeserializer {
-                iter: vec.into_iter(),
+                iter: slice.iter(),
                 err: PhantomData,
             }
         }
@@ -2350,7 +2350,7 @@ mod content {
     {
         fn new(map: &'a [(Content<'de>, Content<'de>)]) -> Self {
             MapRefDeserializer {
-                iter: map.into_iter(),
+                iter: map.iter(),
                 value: None,
                 err: PhantomData,
             }
