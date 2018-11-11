@@ -85,6 +85,8 @@ matrix:
 
   allow_failures:
     - rust: nightly
+      env: EMSCRIPTEN
+    - rust: nightly
       env: CLIPPY
 
 script:
