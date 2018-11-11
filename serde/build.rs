@@ -71,11 +71,6 @@ fn rustc_minor_version() -> Option<u32> {
         Err(_) => return None,
     };
 
-    // Temporary workaround to support the old 1.26-dev compiler on docs.rs.
-    if version.contains("0eb87c9bf") {
-        return Some(25);
-    }
-
     let mut pieces = version.split('.');
     if pieces.next() != Some("rustc 1") {
         return None;
