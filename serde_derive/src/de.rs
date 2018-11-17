@@ -357,7 +357,10 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
 
     let path = match transparent_field.attrs.deserialize_with() {
         Some(path) => quote!(#path),
-        None => quote!(_serde::Deserialize::deserialize),
+        None => {
+            let span = transparent_field.original.span();
+            quote_spanned!(span=> _serde::Deserialize::deserialize)
+        },
     };
 
     let assign = fields.iter().map(|field| {
@@ -797,8 +800,10 @@ fn deserialize_newtype_struct(
 
     let value = match field.attrs.deserialize_with() {
         None => {
+            let span = field.original.span();
+            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote! {
-                try!(<#field_ty as _serde::Deserialize>::deserialize(__e))
+                try!(#func(__e))
             }
         }
         Some(path) => {
@@ -1803,10 +1808,10 @@ fn deserialize_externally_tagged_newtype_variant(
     match field.attrs.deserialize_with() {
         None => {
             let field_ty = field.ty;
+            let span = field.original.span();
+            let func = quote_spanned!(span=> _serde::de::VariantAccess::newtype_variant::<#field_ty>);
             quote_expr! {
-                _serde::export::Result::map(
-                    _serde::de::VariantAccess::newtype_variant::<#field_ty>(__variant),
-                    #this::#variant_ident)
+                _serde::export::Result::map(#func(__variant), #this::#variant_ident)
             }
         }
         Some(path) => {
@@ -1831,10 +1836,10 @@ fn deserialize_untagged_newtype_variant(
     let field_ty = field.ty;
     match field.attrs.deserialize_with() {
         None => {
+            let span = field.original.span();
+            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote_expr! {
-                _serde::export::Result::map(
-                    <#field_ty as _serde::Deserialize>::deserialize(#deserializer),
-                    #this::#variant_ident)
+                _serde::export::Result::map(#func(#deserializer), #this::#variant_ident)
             }
         }
         Some(path) => {
@@ -2441,7 +2446,10 @@ fn deserialize_map(
         .map(|&(field, ref name)| {
             let field_ty = field.ty;
             let func = match field.attrs.deserialize_with() {
-                None => quote!(_serde::de::Deserialize::deserialize),
+                None => {
+                    let span = field.original.span();
+                    quote_spanned!(span=> _serde::de::Deserialize::deserialize)
+                },
                 Some(path) => quote!(#path),
             };
             quote! {
@@ -2793,7 +2801,9 @@ fn wrap_deserialize_variant_with(
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     match *field.attrs.default() {
         attr::Default::Default => {
-            return quote_expr!(_serde::export::Default::default());
+            let span = field.original.span();
+            let func = quote_spanned!(span=> _serde::export::Default::default);
+            return quote_expr!(#func());
         }
         attr::Default::Path(ref path) => {
             return quote_expr!(#path());
