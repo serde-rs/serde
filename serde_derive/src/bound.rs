@@ -32,7 +32,8 @@ pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
                     ..param.clone()
                 }),
                 _ => param.clone(),
-            }).collect(),
+            })
+            .collect(),
         ..generics.clone()
     }
 }
@@ -168,15 +169,17 @@ pub fn with_bound(
         associated_type_usage: Vec::new(),
     };
     match cont.data {
-        Data::Enum(ref variants) => for variant in variants.iter() {
-            let relevant_fields = variant
-                .fields
-                .iter()
-                .filter(|field| filter(&field.attrs, Some(&variant.attrs)));
-            for field in relevant_fields {
-                visitor.visit_field(field.original);
+        Data::Enum(ref variants) => {
+            for variant in variants.iter() {
+                let relevant_fields = variant
+                    .fields
+                    .iter()
+                    .filter(|field| filter(&field.attrs, Some(&variant.attrs)));
+                for field in relevant_fields {
+                    visitor.visit_field(field.original);
+                }
             }
-        },
+        }
         Data::Struct(_, ref fields) => {
             for field in fields.iter().filter(|field| filter(&field.attrs, None)) {
                 visitor.visit_field(field.original);
@@ -193,7 +196,8 @@ pub fn with_bound(
         .map(|id| syn::TypePath {
             qself: None,
             path: id.into(),
-        }).chain(associated_type_usage.into_iter().cloned())
+        })
+        .chain(associated_type_usage.into_iter().cloned())
         .map(|bounded_ty| {
             syn::WherePredicate::Type(syn::PredicateType {
                 lifetimes: None,
@@ -206,7 +210,8 @@ pub fn with_bound(
                     modifier: syn::TraitBoundModifier::None,
                     lifetimes: None,
                     path: bound.clone(),
-                })].into_iter()
+                })]
+                .into_iter()
                 .collect(),
             })
         });
@@ -239,7 +244,8 @@ pub fn with_self_bound(
                 modifier: syn::TraitBoundModifier::None,
                 lifetimes: None,
                 path: bound.clone(),
-            })].into_iter()
+            })]
+            .into_iter()
             .collect(),
         }));
     generics
@@ -269,7 +275,8 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
                 syn::GenericParam::Const(_) => {}
             }
             param
-        })).collect();
+        }))
+        .collect();
 
     syn::Generics {
         params: params,
@@ -305,11 +312,13 @@ fn type_of_item(cont: &Container) -> syn::Type {
                                 syn::GenericParam::Const(_) => {
                                     panic!("Serde does not support const generics yet");
                                 }
-                            }).collect(),
+                            })
+                            .collect(),
                         gt_token: <Token![>]>::default(),
                     },
                 ),
-            }].into_iter()
+            }]
+            .into_iter()
             .collect(),
         },
     })

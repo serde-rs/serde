@@ -7,10 +7,7 @@
 // except according to those terms.
 
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(
-    feature = "cargo-clippy",
-    allow(decimal_literal_representation)
-)]
+#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 #[macro_use]
@@ -229,7 +226,8 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         Token::Str("a"),
         Token::I32(1),
         Token::Str("ignored"),
-    ].into_iter()
+    ]
+    .into_iter()
     .chain(ignorable_tokens.to_vec().into_iter())
     .chain(vec![Token::MapEnd].into_iter())
     .collect();

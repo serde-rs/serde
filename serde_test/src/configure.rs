@@ -200,7 +200,7 @@ macro_rules! impl_serializer {
                 $is_human_readable
             }
 
-            forward_serialize_methods!{
+            forward_serialize_methods! {
                 serialize_bool bool,
                 serialize_i8 i8,
                 serialize_i16 i16,

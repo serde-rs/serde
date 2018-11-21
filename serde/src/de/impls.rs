@@ -874,7 +874,9 @@ where
             }
         }
 
-        let visitor = VecVisitor { marker: PhantomData };
+        let visitor = VecVisitor {
+            marker: PhantomData,
+        };
         deserializer.deserialize_seq(visitor)
     }
 
@@ -1425,7 +1427,7 @@ impl<'de> Deserialize<'de> for net::IpAddr {
             deserializer.deserialize_str(IpAddrVisitor)
         } else {
             use lib::net::IpAddr;
-            deserialize_enum!{
+            deserialize_enum! {
                 IpAddr IpAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
                 "`V4` or `V6`",
                 deserializer
@@ -1502,7 +1504,7 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
             deserializer.deserialize_str(SocketAddrVisitor)
         } else {
             use lib::net::SocketAddr;
-            deserialize_enum!{
+            deserialize_enum! {
                 SocketAddr SocketAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
                 "`V4` or `V6`",
                 deserializer
@@ -1602,7 +1604,7 @@ impl<'de> Deserialize<'de> for PathBuf {
 //    #[derive(Deserialize)]
 //    #[serde(variant_identifier)]
 #[cfg(all(feature = "std", any(unix, windows)))]
-variant_identifier!{
+variant_identifier! {
     OsStringKind (Unix; b"Unix"; 0, Windows; b"Windows"; 1)
     "`Unix` or `Windows`",
     OSSTR_VARIANTS
@@ -1760,11 +1762,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(
-    de_rc_dst,
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
 macro_rules! box_forwarded_impl {
     (
         $(#[doc = $doc:tt])*
@@ -1785,11 +1783,7 @@ macro_rules! box_forwarded_impl {
     };
 }
 
-#[cfg(all(
-    de_rc_dst,
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1801,11 +1795,7 @@ box_forwarded_impl! {
     Rc
 }
 
-#[cfg(all(
-    de_rc_dst,
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///

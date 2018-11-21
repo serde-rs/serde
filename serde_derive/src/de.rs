@@ -1369,7 +1369,8 @@ fn deserialize_adjacently_tagged_enum(
             quote! {
                 __Field::#variant_index => #block
             }
-        }).collect();
+        })
+        .collect();
 
     let expecting = format!("adjacently tagged enum {}", params.type_name());
     let type_name = cattrs.name().deserialize_name();
@@ -1962,7 +1963,8 @@ fn deserialize_custom_identifier(
                 variant.attrs.name().deserialize_name(),
                 variant.ident.clone(),
             )
-        }).collect();
+        })
+        .collect();
 
     let names = names_idents.iter().map(|&(ref name, _)| name);
 

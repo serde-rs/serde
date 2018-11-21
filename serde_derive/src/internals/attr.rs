@@ -1372,10 +1372,12 @@ fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
             return false;
         }
     };
-    seg.ident == "Cow" && args.len() == 2 && match (&args[0], &args[1]) {
-        (&syn::GenericArgument::Lifetime(_), &syn::GenericArgument::Type(ref arg)) => elem(arg),
-        _ => false,
-    }
+    seg.ident == "Cow"
+        && args.len() == 2
+        && match (&args[0], &args[1]) {
+            (&syn::GenericArgument::Lifetime(_), &syn::GenericArgument::Type(ref arg)) => elem(arg),
+            _ => false,
+        }
 }
 
 fn is_option(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
@@ -1397,10 +1399,12 @@ fn is_option(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
             return false;
         }
     };
-    seg.ident == "Option" && args.len() == 1 && match args[0] {
-        syn::GenericArgument::Type(ref arg) => elem(arg),
-        _ => false,
-    }
+    seg.ident == "Option"
+        && args.len() == 1
+        && match args[0] {
+            syn::GenericArgument::Type(ref arg) => elem(arg),
+            _ => false,
+        }
 }
 
 // Whether the type looks like it might be `&T` where elem="T". This can have
@@ -1492,9 +1496,11 @@ fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
             out.extend(ty.lifetime.iter().cloned());
             collect_lifetimes(&ty.elem, out);
         }
-        syn::Type::Tuple(ref ty) => for elem in &ty.elems {
-            collect_lifetimes(elem, out);
-        },
+        syn::Type::Tuple(ref ty) => {
+            for elem in &ty.elems {
+                collect_lifetimes(elem, out);
+            }
+        }
         syn::Type::Path(ref ty) => {
             if let Some(ref qself) = ty.qself {
                 collect_lifetimes(&qself.ty, out);

@@ -288,7 +288,8 @@ fn serialize_tuple_struct(
                 let field_expr = get_member(params, field, &Member::Unnamed(index));
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
-        }).fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        })
+        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(__serializer, #type_name, #len));
@@ -331,7 +332,8 @@ fn serialize_struct_as_struct(
                 let field_expr = get_member(params, field, &field.member);
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
-        }).fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        })
+        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
@@ -365,7 +367,8 @@ fn serialize_struct_as_map(
                     let field_expr = get_member(params, field, &field.member);
                     quote!(if #path(#field_expr) { 0 } else { 1 })
                 }
-            }).fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+            })
+            .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
         quote!(_serde::export::Some(#len))
     };
 
@@ -386,7 +389,8 @@ fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Cont
         .enumerate()
         .map(|(variant_index, variant)| {
             serialize_variant(params, variant, variant_index as u32, cattrs)
-        }).collect();
+        })
+        .collect();
 
     quote_expr! {
         match *#self_var {
@@ -790,7 +794,8 @@ fn serialize_tuple_variant(
                 let field_expr = Ident::new(&format!("__field{}", i), Span::call_site());
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
-        }).fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        })
+        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     match context {
         TupleVariant::ExternallyTagged {
@@ -867,7 +872,8 @@ fn serialize_struct_variant<'a>(
                 Some(path) => quote!(if #path(#member) { 0 } else { 1 }),
                 None => quote!(1),
             }
-        }).fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        })
+        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
 
     match context {
         StructVariant::ExternallyTagged {
@@ -1046,7 +1052,8 @@ fn serialize_tuple_struct_visitor(
                 None => ser,
                 Some(skip) => quote!(if !#skip { #ser }),
             }
-        }).collect()
+        })
+        .collect()
 }
 
 fn serialize_struct_visitor(
@@ -1140,7 +1147,8 @@ fn wrap_serialize_variant_with(
                 }
             };
             quote!(#id)
-        }).collect();
+        })
+        .collect();
     wrap_serialize_with(
         params,
         serialize_with,

@@ -351,10 +351,7 @@ struct ContainsNotDeserialize<A, B, C: DeserializeWith, E: MyDefault> {
     a: A,
     #[serde(skip_deserializing, default)]
     b: B,
-    #[serde(
-        deserialize_with = "DeserializeWith::deserialize_with",
-        default
-    )]
+    #[serde(deserialize_with = "DeserializeWith::deserialize_with", default)]
     c: C,
     #[serde(skip_deserializing, default = "MyDefault::my_default")]
     e: E,

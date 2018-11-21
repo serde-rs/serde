@@ -409,10 +409,9 @@ mod content {
         }
 
         fn end(mut self) -> Result<M::Ok, M::Error> {
-            try!(
-                self.map
-                    .serialize_value(&Content::TupleStruct(self.name, self.fields))
-            );
+            try!(self
+                .map
+                .serialize_value(&Content::TupleStruct(self.name, self.fields)));
             self.map.end()
         }
     }
@@ -454,10 +453,9 @@ mod content {
         }
 
         fn end(mut self) -> Result<M::Ok, M::Error> {
-            try!(
-                self.map
-                    .serialize_value(&Content::Struct(self.name, self.fields))
-            );
+            try!(self
+                .map
+                .serialize_value(&Content::Struct(self.name, self.fields)));
             self.map.end()
         }
     }
@@ -1328,10 +1326,9 @@ where
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        try!(
-            self.map
-                .serialize_value(&Content::Struct(self.name, self.fields))
-        );
+        try!(self
+            .map
+            .serialize_value(&Content::Struct(self.name, self.fields)));
         Ok(())
     }
 }

@@ -83,21 +83,25 @@ impl<'a> Container<'a> {
 
         let mut has_flatten = false;
         match data {
-            Data::Enum(ref mut variants) => for variant in variants {
-                variant.attrs.rename_by_rule(attrs.rename_all());
-                for field in &mut variant.fields {
+            Data::Enum(ref mut variants) => {
+                for variant in variants {
+                    variant.attrs.rename_by_rule(attrs.rename_all());
+                    for field in &mut variant.fields {
+                        if field.attrs.flatten() {
+                            has_flatten = true;
+                        }
+                        field.attrs.rename_by_rule(variant.attrs.rename_all());
+                    }
+                }
+            }
+            Data::Struct(_, ref mut fields) => {
+                for field in fields {
                     if field.attrs.flatten() {
                         has_flatten = true;
                     }
-                    field.attrs.rename_by_rule(variant.attrs.rename_all());
+                    field.attrs.rename_by_rule(attrs.rename_all());
                 }
-            },
-            Data::Struct(_, ref mut fields) => for field in fields {
-                if field.attrs.flatten() {
-                    has_flatten = true;
-                }
-                field.attrs.rename_by_rule(attrs.rename_all());
-            },
+            }
         }
 
         if has_flatten {
@@ -147,7 +151,8 @@ fn enum_from_ast<'a>(
                 style: style,
                 fields: fields,
             }
-        }).collect()
+        })
+        .collect()
 }
 
 fn struct_from_ast<'a>(
@@ -190,5 +195,6 @@ fn fields_from_ast<'a>(
             attrs: attr::Field::from_ast(cx, i, field, attrs, container_default),
             ty: &field.ty,
             original: field,
-        }).collect()
+        })
+        .collect()
 }
