@@ -1718,6 +1718,110 @@ fn test_rename_all() {
 }
 
 #[test]
+fn test_prefix_all() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all = "E_")]
+    enum E {
+        #[serde(prefix_all = "serialize_variant_")]
+        Serialize {
+            serialize: bool,
+            serialize_seq: bool,
+        },
+        #[serde(prefix_all = "SerializeSeq_")]
+        SerializeSeq {
+            serialize: bool,
+            serialize_seq: bool,
+        },
+        SerializeMap {
+            serialize: bool,
+            serialize_seq: bool,
+        },
+    }
+    
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all = "skc", rename_all = "SCREAMING-KEBAB-CASE")]
+    struct ScreamingKebab {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    assert_tokens(
+        &E::Serialize {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "E_Serialize",
+                len: 2,
+            },
+            Token::Str("serialize_variant_serialize"),
+            Token::Bool(true),
+            Token::Str("serialize_variant_serialize_seq"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_tokens(
+        &E::SerializeSeq {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "E_SerializeSeq",
+                len: 2,
+            },
+            Token::Str("SerializeSeq_serialize"),
+            Token::Bool(true),
+            Token::Str("SerializeSeq_serialize_seq"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_tokens(
+        &E::SerializeMap {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "E_SerializeMap",
+                len: 2,
+            },
+            Token::Str("serialize"),
+            Token::Bool(true),
+            Token::Str("serialize_seq"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_tokens(
+        &ScreamingKebab {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "ScreamingKebab",
+                len: 2,
+            },
+            Token::Str("skcSERIALIZE"),
+            Token::Bool(true),
+            Token::Str("skcSERIALIZE-SEQ"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_untagged_newtype_variant_containing_unit_struct_not_map() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Unit;

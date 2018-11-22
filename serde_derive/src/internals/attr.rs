@@ -113,6 +113,7 @@ pub struct Container {
     deny_unknown_fields: bool,
     default: Default,
     rename_all: RenameRule,
+    prefix_all: Option<String>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
@@ -190,6 +191,7 @@ impl Container {
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut default = Attr::none(cx, "default");
         let mut rename_all = Attr::none(cx, "rename_all");
+        let mut prefix_all = Attr::none(cx, "prefix_all");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
@@ -231,6 +233,13 @@ impl Container {
                                     s.value()
                                 )),
                             }
+                        }
+                    }
+
+                    // Parse `#[serde(prefix_all = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "prefix_all" => {
+                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                            prefix_all.set(s.value());
                         }
                     }
 
@@ -391,6 +400,7 @@ impl Container {
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
+            prefix_all: prefix_all.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, &untagged, internal_tag, content),
@@ -408,6 +418,10 @@ impl Container {
 
     pub fn rename_all(&self) -> &RenameRule {
         &self.rename_all
+    }
+
+    pub fn prefix_all(&self) -> Option<&str> {
+        self.prefix_all.as_ref().map(|s| s.as_str())
     }
 
     pub fn transparent(&self) -> bool {
@@ -543,6 +557,7 @@ pub struct Variant {
     ser_renamed: bool,
     de_renamed: bool,
     rename_all: RenameRule,
+    prefix_all: Option<String>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     skip_deserializing: bool,
@@ -560,6 +575,7 @@ impl Variant {
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all = Attr::none(cx, "rename_all");
+        let mut prefix_all = Attr::none(cx, "prefix_all");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut other = BoolAttr::none(cx, "other");
@@ -597,6 +613,13 @@ impl Variant {
                                     s.value()
                                 )),
                             }
+                        }
+                    }
+
+                    // Parse `#[serde(prefix_all = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "prefix_all" => {
+                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                            prefix_all.set(s.value());
                         }
                     }
 
@@ -707,6 +730,7 @@ impl Variant {
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
+            prefix_all: prefix_all.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             skip_deserializing: skip_deserializing.get(),
@@ -733,6 +757,25 @@ impl Variant {
 
     pub fn rename_all(&self) -> &RenameRule {
         &self.rename_all
+    }
+
+    pub fn apply_prefix(&mut self, prefix: &str) {
+        if !self.ser_renamed {
+            let mut new_name = String::with_capacity(prefix.len() + self.name.serialize.len());
+            new_name.push_str(&prefix);
+            new_name.push_str(&self.name.serialize);
+            self.name.serialize = new_name;
+        }
+        if !self.de_renamed {
+            let mut new_name = String::with_capacity(prefix.len() + self.name.deserialize.len());
+            new_name.push_str(&prefix);
+            new_name.push_str(&self.name.deserialize);
+            self.name.deserialize = new_name;
+        }
+    }
+
+    pub fn prefix_all(&self) -> Option<&str> {
+        self.prefix_all.as_ref().map(|s| s.as_str())
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
@@ -1094,6 +1137,21 @@ impl Field {
         }
         if !self.de_renamed {
             self.name.deserialize = rule.apply_to_field(&self.name.deserialize);
+        }
+    }
+
+    pub fn apply_prefix(&mut self, prefix: &str) {
+        if !self.ser_renamed {
+            let mut new_name = String::with_capacity(prefix.len() + self.name.serialize.len());
+            new_name.push_str(&prefix);
+            new_name.push_str(&self.name.serialize);
+            self.name.serialize = new_name;
+        }
+        if !self.de_renamed {
+            let mut new_name = String::with_capacity(prefix.len() + self.name.deserialize.len());
+            new_name.push_str(&prefix);
+            new_name.push_str(&self.name.deserialize);
+            self.name.deserialize = new_name;
         }
     }
 

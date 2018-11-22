@@ -86,11 +86,17 @@ impl<'a> Container<'a> {
             Data::Enum(ref mut variants) => {
                 for variant in variants {
                     variant.attrs.rename_by_rule(attrs.rename_all());
+                    if let Some(prefix) = attrs.prefix_all() {
+                        variant.attrs.apply_prefix(prefix);
+                    }
                     for field in &mut variant.fields {
                         if field.attrs.flatten() {
                             has_flatten = true;
                         }
                         field.attrs.rename_by_rule(variant.attrs.rename_all());
+                        if let Some(prefix) = variant.attrs.prefix_all() {
+                            field.attrs.apply_prefix(prefix);
+                        }
                     }
                 }
             }
@@ -100,6 +106,9 @@ impl<'a> Container<'a> {
                         has_flatten = true;
                     }
                     field.attrs.rename_by_rule(attrs.rename_all());
+                    if let Some(prefix) = attrs.prefix_all() {
+                        field.attrs.apply_prefix(prefix);
+                    }
                 }
             }
         }
