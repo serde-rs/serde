@@ -11,10 +11,10 @@
 extern crate compiletest_rs as compiletest;
 
 #[test]
-fn compile_fail() {
+fn ui() {
     let config = compiletest::Config {
-        mode: compiletest::common::Mode::CompileFail,
-        src_base: std::path::PathBuf::from("tests/compile-fail"),
+        mode: compiletest::common::Mode::Ui,
+        src_base: std::path::PathBuf::from("tests/ui"),
         target_rustcflags: Some("-L deps/target/debug/deps".to_owned()),
         ..Default::default()
     };

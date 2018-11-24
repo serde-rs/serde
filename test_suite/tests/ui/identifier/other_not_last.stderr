@@ -1,0 +1,8 @@
+error: #[serde(other)] must be the last variant
+  --> $DIR/other_not_last.rs:12:10
+   |
+12 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

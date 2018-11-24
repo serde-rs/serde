@@ -1,0 +1,8 @@
+error: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
+  --> $DIR/de_at_least_one.rs:12:10
+   |
+12 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

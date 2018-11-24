@@ -1,0 +1,8 @@
+error: variant `Tuple` cannot have both #[serde(serialize_with)] and a field 0 marked with #[serde(skip_serializing_if)]
+  --> $DIR/skip_ser_tuple_field_if.rs:12:10
+   |
+12 | #[derive(Serialize)]
+   |          ^^^^^^^^^
+
+error: aborting due to previous error
+

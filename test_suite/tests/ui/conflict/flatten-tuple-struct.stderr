@@ -1,0 +1,8 @@
+error: #[serde(flatten)] cannot be used on tuple structs
+  --> $DIR/flatten-tuple-struct.rs:12:10
+   |
+12 | #[derive(Serialize)]
+   |          ^^^^^^^^^
+
+error: aborting due to previous error
+

@@ -1,0 +1,16 @@
+error[E0609]: no field `b` on type `&remote::S`
+  --> $DIR/unknown_field.rs:21:5
+   |
+21 |     b: u8,
+   |     ^
+
+error[E0560]: struct `remote::S` has no field named `b`
+  --> $DIR/unknown_field.rs:21:5
+   |
+21 |     b: u8,
+   |     ^ field does not exist - did you mean `a`?
+
+error: aborting due to 2 previous errors
+
+Some errors occurred: E0560, E0609.
+For more information about an error, try `rustc --explain E0560`.

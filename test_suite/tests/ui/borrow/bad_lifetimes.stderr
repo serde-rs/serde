@@ -1,0 +1,8 @@
+error: failed to parse borrowed lifetimes: "zzz"
+  --> $DIR/bad_lifetimes.rs:12:10
+   |
+12 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

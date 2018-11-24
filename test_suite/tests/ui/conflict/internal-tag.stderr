@@ -1,0 +1,8 @@
+error: variant field name `conflict` conflicts with internal tag
+  --> $DIR/internal-tag.rs:12:10
+   |
+12 | #[derive(Serialize)]
+   |          ^^^^^^^^^
+
+error: aborting due to previous error
+

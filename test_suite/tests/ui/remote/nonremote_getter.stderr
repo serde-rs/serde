@@ -1,0 +1,8 @@
+error: #[serde(getter = "...")] can only be used in structs that have #[serde(remote = "...")]
+  --> $DIR/nonremote_getter.rs:12:10
+   |
+12 | #[derive(Serialize)]
+   |          ^^^^^^^^^
+
+error: aborting due to previous error
+

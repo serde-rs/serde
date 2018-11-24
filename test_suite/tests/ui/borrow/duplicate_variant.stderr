@@ -1,0 +1,8 @@
+error: duplicate serde attribute `borrow`
+  --> $DIR/duplicate_variant.rs:15:10
+   |
+15 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

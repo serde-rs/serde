@@ -1,0 +1,8 @@
+error: variant `Struct` cannot have both #[serde(deserialize_with)] and a field `f1` marked with #[serde(skip_deserializing)]
+  --> $DIR/skip_de_struct_field.rs:12:10
+   |
+12 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

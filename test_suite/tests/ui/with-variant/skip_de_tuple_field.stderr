@@ -1,0 +1,8 @@
+error: variant `Tuple` cannot have both #[serde(deserialize_with)] and a field 0 marked with #[serde(skip_deserializing)]
+  --> $DIR/skip_de_tuple_field.rs:12:10
+   |
+12 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

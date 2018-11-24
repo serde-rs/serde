@@ -1,0 +1,8 @@
+error: variant `Unit` cannot have both #[serde(deserialize_with)] and #[serde(skip_deserializing)]
+  --> $DIR/skip_de_whole_variant.rs:12:10
+   |
+12 | #[derive(Deserialize)]
+   |          ^^^^^^^^^^^
+
+error: aborting due to previous error
+

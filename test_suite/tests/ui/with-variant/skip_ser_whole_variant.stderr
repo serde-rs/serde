@@ -1,0 +1,8 @@
+error: variant `Unit` cannot have both #[serde(serialize_with)] and #[serde(skip_serializing)]
+  --> $DIR/skip_ser_whole_variant.rs:12:10
+   |
+12 | #[derive(Serialize)]
+   |          ^^^^^^^^^
+
+error: aborting due to previous error
+
