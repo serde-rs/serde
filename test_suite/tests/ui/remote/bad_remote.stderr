@@ -1,7 +1,7 @@
 error: failed to parse path: "~~~"
-  --> $DIR/bad_remote.rs:18:10
+  --> $DIR/bad_remote.rs:10:10
    |
-18 | #[derive(Serialize)]
+10 | #[derive(Serialize)]
    |          ^^^^^^^^^
 
 error: aborting due to previous error

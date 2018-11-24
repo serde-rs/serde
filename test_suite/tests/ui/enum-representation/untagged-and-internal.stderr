@@ -1,8 +1,8 @@
 error: enum cannot be both untagged and internally tagged
-  --> $DIR/untagged-and-internal.rs:12:10
-   |
-12 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+ --> $DIR/untagged-and-internal.rs:4:10
+  |
+4 | #[derive(Serialize)]
+  |          ^^^^^^^^^
 
 error: aborting due to previous error
 

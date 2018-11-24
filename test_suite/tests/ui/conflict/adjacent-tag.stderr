@@ -1,8 +1,8 @@
 error: enum tags `conflict` for type and content conflict with each other
-  --> $DIR/adjacent-tag.rs:12:10
-   |
-12 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+ --> $DIR/adjacent-tag.rs:4:10
+  |
+4 | #[derive(Serialize)]
+  |          ^^^^^^^^^
 
 error: aborting due to previous error
 

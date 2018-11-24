@@ -1,8 +1,8 @@
 error: `field_identifier` and `variant_identifier` cannot both be set
-  --> $DIR/both.rs:12:10
-   |
-12 | #[derive(Deserialize)]
-   |          ^^^^^^^^^^^
+ --> $DIR/both.rs:4:10
+  |
+4 | #[derive(Deserialize)]
+  |          ^^^^^^^^^^^
 
 error: aborting due to previous error
 

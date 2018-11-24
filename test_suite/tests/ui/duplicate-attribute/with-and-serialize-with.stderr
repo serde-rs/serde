@@ -1,8 +1,8 @@
 error: duplicate serde attribute `serialize_with`
-  --> $DIR/with-and-serialize-with.rs:12:10
-   |
-12 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+ --> $DIR/with-and-serialize-with.rs:4:10
+  |
+4 | #[derive(Serialize)]
+  |          ^^^^^^^^^
 
 error: aborting due to previous error
 

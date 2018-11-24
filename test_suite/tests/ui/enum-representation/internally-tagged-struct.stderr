@@ -1,8 +1,8 @@
 error: #[serde(tag = "...")] can only be used on enums
-  --> $DIR/internally-tagged-struct.rs:12:10
-   |
-12 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+ --> $DIR/internally-tagged-struct.rs:4:10
+  |
+4 | #[derive(Serialize)]
+  |          ^^^^^^^^^
 
 error: aborting due to previous error
 

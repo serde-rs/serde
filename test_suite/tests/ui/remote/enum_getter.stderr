@@ -1,7 +1,7 @@
 error: #[serde(getter = "...")] is not allowed in an enum
-  --> $DIR/enum_getter.rs:18:10
+  --> $DIR/enum_getter.rs:10:10
    |
-18 | #[derive(Serialize)]
+10 | #[derive(Serialize)]
    |          ^^^^^^^^^
 
 error: aborting due to previous error

@@ -1,8 +1,8 @@
 error: cannot deserialize when there is a lifetime parameter called 'de
-  --> $DIR/deserialize_de_lifetime.rs:12:10
-   |
-12 | #[derive(Deserialize)]
-   |          ^^^^^^^^^^^
+ --> $DIR/deserialize_de_lifetime.rs:4:10
+  |
+4 | #[derive(Deserialize)]
+  |          ^^^^^^^^^^^
 
 error: aborting due to previous error
 

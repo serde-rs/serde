@@ -1,7 +1,7 @@
 error[E0308]: mismatched types
-  --> $DIR/wrong_ser.rs:18:10
+  --> $DIR/wrong_ser.rs:10:10
    |
-18 | #[derive(Serialize)]
+10 | #[derive(Serialize)]
    |          ^^^^^^^^^ expected u8, found u16
    |
    = note: expected type `&u8`

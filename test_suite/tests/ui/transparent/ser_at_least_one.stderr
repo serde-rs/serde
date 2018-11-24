@@ -1,8 +1,8 @@
 error: #[serde(transparent)] requires at least one field that is not skipped
-  --> $DIR/ser_at_least_one.rs:12:10
-   |
-12 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+ --> $DIR/ser_at_least_one.rs:4:10
+  |
+4 | #[derive(Serialize)]
+  |          ^^^^^^^^^
 
 error: aborting due to previous error
 

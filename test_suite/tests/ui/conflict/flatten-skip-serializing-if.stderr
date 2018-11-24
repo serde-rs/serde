@@ -1,8 +1,8 @@
 error: #[serde(flatten] can not be combined with #[serde(skip_serializing_if = "...")]
-  --> $DIR/flatten-skip-serializing-if.rs:12:10
-   |
-12 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+ --> $DIR/flatten-skip-serializing-if.rs:4:10
+  |
+4 | #[derive(Serialize)]
+  |          ^^^^^^^^^
 
 error: aborting due to previous error
 
