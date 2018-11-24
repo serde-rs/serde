@@ -52,7 +52,7 @@ matrix:
     - rust: 1.26.0
 
     - rust: nightly
-      env: CLIPPY
+      name: Clippy
       script:
         - rustup component add clippy-preview || travis_terminate 0
         - cargo clippy -- -Dclippy
@@ -68,7 +68,7 @@ matrix:
         - cargo clippy -- -Dclippy
 
     - rust: nightly
-      env: EMSCRIPTEN
+      name: Emscripten
       script:
         - CARGO_WEB_RELEASE=$(curl -L -s -H Accept:application/json https://github.com/koute/cargo-web/releases/latest)
         - CARGO_WEB_VERSION=$(echo "${CARGO_WEB_RELEASE}" | jq -r .tag_name)
@@ -85,9 +85,9 @@ matrix:
 
   allow_failures:
     - rust: nightly
-      env: EMSCRIPTEN
+      name: Clippy
     - rust: nightly
-      env: CLIPPY
+      name: Emscripten
 
 script:
   - cd "${TRAVIS_BUILD_DIR}/serde"
