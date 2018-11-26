@@ -525,9 +525,9 @@ fn serialize_externally_tagged_variant(
         }
         Style::Tuple => serialize_tuple_variant(
             TupleVariant::ExternallyTagged {
-                type_name: type_name,
+                type_name: type_name.to_string(),
                 variant_index: variant_index,
-                variant_name: variant_name,
+                variant_name: variant_name.to_string(),
             },
             params,
             &variant.fields,
@@ -535,7 +535,7 @@ fn serialize_externally_tagged_variant(
         Style::Struct => serialize_struct_variant(
             StructVariant::ExternallyTagged {
                 variant_index: variant_index,
-                variant_name: variant_name,
+                variant_name: variant_name.to_string(),
             },
             params,
             &variant.fields,
@@ -601,7 +601,7 @@ fn serialize_internally_tagged_variant(
         Style::Struct => serialize_struct_variant(
             StructVariant::InternallyTagged {
                 tag: tag,
-                variant_name: variant_name,
+                variant_name: variant_name.to_string(),
             },
             params,
             &variant.fields,

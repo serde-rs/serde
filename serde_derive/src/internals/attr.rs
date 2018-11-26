@@ -85,9 +85,12 @@ impl<'c> BoolAttr<'c> {
     }
 }
 
+/// A struct to keep track of the original, serailized, and deserialized names
+/// for a container.
 pub struct Name {
-    serialize: String,
-    deserialize: String,
+    original: String,
+    serialize: Option<String>,
+    deserialize: Option<String>,
 }
 
 fn unraw(ident: &Ident) -> String {
@@ -95,14 +98,60 @@ fn unraw(ident: &Ident) -> String {
 }
 
 impl Name {
+    pub fn new(original: String) -> Name {
+        Name {
+            original,
+            serialize: None,
+            deserialize: None,
+        }
+    }
+
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> String {
-        self.serialize.clone()
+    pub fn serialize_name(&self) -> &str {
+        self.serialize.as_ref().unwrap_or_else(|| &self.original)
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> String {
-        self.deserialize.clone()
+    pub fn deserialize_name(&self) -> &str {
+        self.deserialize.as_ref().unwrap_or_else(|| &self.original)
+    }
+
+    /// Rename the container for serialization.
+    pub fn set_serialize_name(&mut self, name: String) {
+        self.serialize = Some(name);
+    }
+
+    /// Rename the container for deserialization.
+    pub fn set_deserialize_name(&mut self, name: String) {
+        self.deserialize = Some(name);
+    }
+
+    /// Rename the container for both serialization and deserialization.
+    #[allow(dead_code)] // This is for the public api of serde_derive_internals.
+    pub fn set_name(&mut self, name: String) {
+        self.set_serialize_name(name.clone());
+        self.set_deserialize_name(name);
+    }
+
+    /// Returns true if the serialized form of this container has been renamed.
+    pub fn serialize_renamed(&self) -> bool {
+        self.serialize.is_some()
+    }
+
+    /// Returns true if the deserialized form of this container has been renamed.
+    pub fn deserialize_renamed(&self) -> bool {
+        self.deserialize.is_some()
+    }
+
+    /// Apply the specified rule to this name, if it hasn't been renamed already.
+    pub fn rename_by_rule<F>(&mut self, rule: F)
+    where F: Fn(&str) -> String {
+        if !self.serialize_renamed() {
+            self.serialize = Some(rule(&self.original));
+        }
+        if !self.deserialize_renamed() {
+            self.deserialize = Some(rule(&self.original));
+        }
     }
 }
 
@@ -382,11 +431,15 @@ impl Container {
             }
         }
 
+        let mut name = Name::new(unraw(&item.ident));
+        if let Some(ser) = ser_name.get() {
+            name.set_serialize_name(ser);
+        }
+        if let Some(de) = de_name.get() {
+            name.set_deserialize_name(de);
+        }
         Container {
-            name: Name {
-                serialize: ser_name.get().unwrap_or_else(|| unraw(&item.ident)),
-                deserialize: de_name.get().unwrap_or_else(|| unraw(&item.ident)),
-            },
+            name,
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -540,8 +593,6 @@ fn decide_identifier(
 /// Represents variant attribute information
 pub struct Variant {
     name: Name,
-    ser_renamed: bool,
-    de_renamed: bool,
     rename_all: RenameRule,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
@@ -695,17 +746,15 @@ impl Variant {
             }
         }
 
-        let ser_name = ser_name.get();
-        let ser_renamed = ser_name.is_some();
-        let de_name = de_name.get();
-        let de_renamed = de_name.is_some();
+        let mut name = Name::new(unraw(&variant.ident));
+        if let Some(ser) = ser_name.get() {
+            name.set_serialize_name(ser);
+        }
+        if let Some(de) = de_name.get() {
+            name.set_deserialize_name(de);
+        }
         Variant {
-            name: Name {
-                serialize: ser_name.unwrap_or_else(|| unraw(&variant.ident)),
-                deserialize: de_name.unwrap_or_else(|| unraw(&variant.ident)),
-            },
-            ser_renamed: ser_renamed,
-            de_renamed: de_renamed,
+            name,
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
@@ -723,12 +772,7 @@ impl Variant {
     }
 
     pub fn rename_by_rule(&mut self, rule: &RenameRule) {
-        if !self.ser_renamed {
-            self.name.serialize = rule.apply_to_variant(&self.name.serialize);
-        }
-        if !self.de_renamed {
-            self.name.deserialize = rule.apply_to_variant(&self.name.deserialize);
-        }
+        self.name.rename_by_rule(|s| rule.apply_to_variant(s));
     }
 
     pub fn rename_all(&self) -> &RenameRule {
@@ -767,8 +811,6 @@ impl Variant {
 /// Represents field attribute information
 pub struct Field {
     name: Name,
-    ser_renamed: bool,
-    de_renamed: bool,
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
@@ -1058,17 +1100,15 @@ impl Field {
             collect_lifetimes(&field.ty, &mut borrowed_lifetimes);
         }
 
-        let ser_name = ser_name.get();
-        let ser_renamed = ser_name.is_some();
-        let de_name = de_name.get();
-        let de_renamed = de_name.is_some();
+        let mut name = Name::new(ident);
+        if let Some(ser) = ser_name.get() {
+            name.set_serialize_name(ser);
+        }
+        if let Some(de) = de_name.get() {
+            name.set_deserialize_name(de);
+        }
         Field {
-            name: Name {
-                serialize: ser_name.unwrap_or_else(|| ident.clone()),
-                deserialize: de_name.unwrap_or(ident),
-            },
-            ser_renamed: ser_renamed,
-            de_renamed: de_renamed,
+            name,
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -1089,12 +1129,7 @@ impl Field {
     }
 
     pub fn rename_by_rule(&mut self, rule: &RenameRule) {
-        if !self.ser_renamed {
-            self.name.serialize = rule.apply_to_field(&self.name.serialize);
-        }
-        if !self.de_renamed {
-            self.name.deserialize = rule.apply_to_field(&self.name.deserialize);
-        }
+        self.name.rename_by_rule(|s| rule.apply_to_field(s));
     }
 
     pub fn skip_serializing(&self) -> bool {
