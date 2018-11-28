@@ -2263,6 +2263,22 @@ fn deserialize_identifier(
     let visit_bool = if constructors_bools.is_empty() {
         None
     } else {
+        // generate all arms to have an exhaustive patterns for bool
+        let missing_true_arm = !field_bools.clone().any(|b| b == true);
+        let missing_false_arm = !field_bools.clone().any(|b| b == false);
+
+        let fallthrough_true_arm = if missing_true_arm {
+            quote!(true => _serde::export::Err(_serde::de::Error::unknown_variant("true", VARIANTS)),)
+        } else {
+            quote!()
+        };
+
+        let fallthrough_false_arm = if missing_false_arm {
+            quote!(false => _serde::export::Err(_serde::de::Error::unknown_variant("false", VARIANTS)),)
+        } else {
+            quote!()
+        };
+
         let visit_bool = quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
                 where __E: _serde::de::Error
@@ -2271,10 +2287,8 @@ fn deserialize_identifier(
                     #(
                         #field_bools => _serde::export::Ok(#constructors_bools),
                     )*
-                    _ => {
-                        #bool_to_str
-                        #fallthrough_arm
-                    }
+                    #fallthrough_true_arm
+                    #fallthrough_false_arm
                 }
             }
         };
