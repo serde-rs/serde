@@ -1872,6 +1872,27 @@ fn deserialize_generated_identifier(
         None
     };
 
+    let first_field_ident = &fields[0].0;
+    let same_variant_type = fields.iter().all(|ref f| {
+        match (&f.0, first_field_ident) {
+            (attr::VariantNameType::Bool(_), attr::VariantNameType::Bool(_)) => true,
+            (attr::VariantNameType::Int(_), attr::VariantNameType::Int(_)) => true,
+            (attr::VariantNameType::Str(_), attr::VariantNameType::Str(_)) => true,
+            _ => false
+        }
+    });
+
+    let serde_deserializer = if same_variant_type {
+        match first_field_ident {
+            attr::VariantNameType::Bool(_) => quote!(_serde::Deserializer::deserialize_bool(__deserializer, __FieldVisitor)),
+            attr::VariantNameType::Int(_) => quote!(_serde::Deserializer::deserialize_u64(__deserializer, __FieldVisitor)),
+            attr::VariantNameType::Str(_) => quote!(_serde::Deserializer::deserialize_str(__deserializer, __FieldVisitor)),
+        }
+    }
+    else {
+        quote!(_serde::Deserializer::deserialize_any(__deserializer, __FieldVisitor))
+    };
+
     quote_block! {
         #[allow(non_camel_case_types)]
         enum __Field #lifetime {
@@ -1893,7 +1914,7 @@ fn deserialize_generated_identifier(
             where
                 __D: _serde::Deserializer<'de>,
             {
-                _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                #serde_deserializer
             }
         }
     }
