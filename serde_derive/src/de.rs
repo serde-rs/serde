@@ -2119,7 +2119,7 @@ fn deserialize_identifier(
     let variant_indices = 0_u64..;
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
-        quote! {
+        Some(quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2241,22 +2241,26 @@ fn deserialize_identifier(
                     }
                 }
             }
-        }
+        })
     } else {
-        quote! {
-            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_ints => _serde::export::Ok(#constructors_ints),
-                    )*
-                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                                _serde::de::Unexpected::Unsigned(__value),
-                                &#fallthrough_msg))
+        if constructors_ints.is_empty() {
+            None
+        } else {
+            Some(quote! {
+                fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(
+                            #field_ints => _serde::export::Ok(#constructors_ints),
+                        )*
+                        _ => _serde::export::Err(_serde::de::Error::invalid_value(
+                            _serde::de::Unexpected::Unsigned(__value),
+                            &#fallthrough_msg))
+                    }
                 }
-            }
+            })
         }
     };
 
@@ -2279,11 +2283,11 @@ fn deserialize_identifier(
             quote!()
         };
 
-        let visit_bool = quote! {
+        Some(quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
-                where __E: _serde::de::Error
-                {
-                    match __value {
+            where __E: _serde::de::Error
+            {
+                match __value {
                     #(
                         #field_bools => _serde::export::Ok(#constructors_bools),
                     )*
@@ -2291,8 +2295,44 @@ fn deserialize_identifier(
                     #fallthrough_false_arm
                 }
             }
-        };
-        Some(visit_bool)
+        })
+    };
+
+    let visit_str_and_bytes = if constructors_strs.is_empty() {
+        None
+    } else {
+        Some(quote! {
+            fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_strs => _serde::export::Ok(#constructors_strs),
+                    )*
+                    _ => {
+                        #value_as_str_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_bytes => _serde::export::Ok(#constructors_strs),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        })
     };
 
     quote_block! {
@@ -2304,36 +2344,7 @@ fn deserialize_identifier(
 
         #visit_bool
 
-        fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_strs => _serde::export::Ok(#constructors_strs),
-                )*
-                _ => {
-                    #value_as_str_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
-        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_bytes => _serde::export::Ok(#constructors_strs),
-                )*
-                _ => {
-                    #bytes_to_str
-                    #value_as_bytes_content
-                    #fallthrough_arm
-                }
-            }
-        }
+        #visit_str_and_bytes
     }
 }
 
