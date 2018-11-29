@@ -1,8 +1,8 @@
 error: at least one lifetime must be borrowed
- --> $DIR/empty_lifetimes.rs:4:10
+ --> $DIR/empty_lifetimes.rs:6:22
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+6 |     #[serde(borrow = "")]
+  |                      ^^
 
 error: aborting due to previous error
 

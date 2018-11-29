@@ -1,6 +1,8 @@
+use quote::ToTokens;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::thread;
+use syn;
 
 /// A type to collect errors together and format them.
 ///
@@ -11,7 +13,7 @@ use std::thread;
 pub struct Ctxt {
     // The contents will be set to `None` during checking. This is so that checking can be
     // enforced.
-    errors: RefCell<Option<Vec<String>>>,
+    errors: RefCell<Option<Vec<syn::Error>>>,
 }
 
 impl Ctxt {
@@ -24,29 +26,24 @@ impl Ctxt {
         }
     }
 
-    /// Add an error to the context object.
-    pub fn error<T: Display>(&self, msg: T) {
+    /// Add an error to the context object with a tokenenizable object.
+    ///
+    /// The object is used for spanning in error messages.
+    pub fn error_spanned_by<A: ToTokens, T: Display>(&self, obj: A, msg: T) {
         self.errors
             .borrow_mut()
             .as_mut()
             .unwrap()
-            .push(msg.to_string());
+            // Curb monomorphization from generating too many identical methods.
+            .push(syn::Error::new_spanned(obj.into_token_stream(), msg));
     }
 
     /// Consume this object, producing a formatted error string if there are errors.
-    pub fn check(self) -> Result<(), String> {
-        let mut errors = self.errors.borrow_mut().take().unwrap();
+    pub fn check(self) -> Result<(), Vec<syn::Error>> {
+        let errors = self.errors.borrow_mut().take().unwrap();
         match errors.len() {
             0 => Ok(()),
-            1 => Err(errors.pop().unwrap()),
-            n => {
-                let mut msg = format!("{} errors:", n);
-                for err in errors {
-                    msg.push_str("\n\t# ");
-                    msg.push_str(&err);
-                }
-                Err(msg)
-            }
+            _ => Err(errors),
         }
     }
 }

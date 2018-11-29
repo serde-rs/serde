@@ -9,9 +9,12 @@ use internals::{attr, Ctxt, Derive};
 use pretend;
 use try;
 
-pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, String> {
+pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
     let ctxt = Ctxt::new();
-    let cont = Container::from_ast(&ctxt, input, Derive::Serialize);
+    let cont = match Container::from_ast(&ctxt, input, Derive::Serialize) {
+        Some(cont) => cont,
+        None => return Err(ctxt.check().unwrap_err()),
+    };
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
@@ -72,10 +75,10 @@ fn precondition(cx: &Ctxt, cont: &Container) {
     match cont.attrs.identifier() {
         attr::Identifier::No => {}
         attr::Identifier::Field => {
-            cx.error("field identifiers cannot be serialized");
+            cx.error_spanned_by(cont.original, "field identifiers cannot be serialized");
         }
         attr::Identifier::Variant => {
-            cx.error("variant identifiers cannot be serialized");
+            cx.error_spanned_by(cont.original, "variant identifiers cannot be serialized");
         }
     }
 }

@@ -1,8 +1,14 @@
 error: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
- --> $DIR/de_at_least_one.rs:4:10
-  |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+  --> $DIR/de_at_least_one.rs:5:1
+   |
+5  | / #[serde(transparent)]
+6  | | struct S {
+7  | |     #[serde(skip)]
+8  | |     a: u8,
+9  | |     #[serde(default)]
+10 | |     b: u8,
+11 | | }
+   | |_^
 
 error: aborting due to previous error
 

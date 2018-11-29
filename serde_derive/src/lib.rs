@@ -62,7 +62,6 @@ mod internals;
 
 use proc_macro::TokenStream;
 use syn::DeriveInput;
-use syn::spanned::Spanned;
 
 #[macro_use]
 mod bound;
@@ -78,7 +77,7 @@ mod try;
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     ser::expand_derive_serialize(&input)
-        .unwrap_or_else(|message| compile_error(input.span(), message))
+        .unwrap_or_else(to_compile_errors)
         .into()
 }
 
@@ -86,12 +85,11 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     de::expand_derive_deserialize(&input)
-        .unwrap_or_else(|message| compile_error(input.span(), message))
+        .unwrap_or_else(to_compile_errors)
         .into()
 }
 
-fn compile_error(span: proc_macro2::Span, message: String) -> proc_macro2::TokenStream {
-    quote_spanned! {span=>
-        compile_error!(#message);
-    }
+fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {
+    let compile_errors = errors.iter().map(syn::Error::to_compile_error);
+    quote!(#(#compile_errors)*)
 }

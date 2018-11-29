@@ -1,8 +1,8 @@
 error: #[serde(flatten)] cannot be used on tuple structs
- --> $DIR/flatten-tuple-struct.rs:4:10
+ --> $DIR/flatten-tuple-struct.rs:5:17
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+5 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: aborting due to previous error
 

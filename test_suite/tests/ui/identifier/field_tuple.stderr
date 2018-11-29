@@ -1,8 +1,8 @@
-error: field_identifier may only contain unit variants
- --> $DIR/field_tuple.rs:4:10
+error: #[serde(field_identifier)] may only contain unit variants
+ --> $DIR/field_tuple.rs:8:5
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+8 |     B(u8, u8),
+  |     ^^^^^^^^^
 
 error: aborting due to previous error
 

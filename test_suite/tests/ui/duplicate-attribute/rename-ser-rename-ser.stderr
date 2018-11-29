@@ -1,8 +1,8 @@
 error: duplicate serde attribute `rename`
- --> $DIR/rename-ser-rename-ser.rs:4:10
+ --> $DIR/rename-ser-rename-ser.rs:6:38
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+6 |     #[serde(rename(serialize = "x"), rename(serialize = "y"))]
+  |                                      ^^^^^^
 
 error: aborting due to previous error
 

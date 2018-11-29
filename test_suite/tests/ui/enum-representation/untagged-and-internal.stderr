@@ -1,8 +1,14 @@
 error: enum cannot be both untagged and internally tagged
- --> $DIR/untagged-and-internal.rs:4:10
+ --> $DIR/untagged-and-internal.rs:5:9
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+5 | #[serde(untagged)]
+  |         ^^^^^^^^
 
-error: aborting due to previous error
+error: enum cannot be both untagged and internally tagged
+ --> $DIR/untagged-and-internal.rs:6:9
+  |
+6 | #[serde(tag = "type")]
+  |         ^^^
+
+error: aborting due to 2 previous errors
 

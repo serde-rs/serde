@@ -1,8 +1,11 @@
 error: #[serde(getter = "...")] can only be used in structs that have #[serde(remote = "...")]
- --> $DIR/nonremote_getter.rs:4:10
+ --> $DIR/nonremote_getter.rs:5:1
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+5 | / struct S {
+6 | |     #[serde(getter = "S::get")]
+7 | |     a: u8,
+8 | | }
+  | |_^
 
 error: aborting due to previous error
 

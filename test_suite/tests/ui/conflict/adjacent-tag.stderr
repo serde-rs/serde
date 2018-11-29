@@ -1,8 +1,12 @@
 error: enum tags `conflict` for type and content conflict with each other
- --> $DIR/adjacent-tag.rs:4:10
+ --> $DIR/adjacent-tag.rs:5:1
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+5 | / #[serde(tag = "conflict", content = "conflict")]
+6 | | enum E {
+7 | |     A,
+8 | |     B,
+9 | | }
+  | |_^
 
 error: aborting due to previous error
 

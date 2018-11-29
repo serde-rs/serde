@@ -1,8 +1,8 @@
-error: `field_identifier` can only be used on an enum
- --> $DIR/field_struct.rs:4:10
+error: #[serde(field_identifier)] can only be used on an enum
+ --> $DIR/field_struct.rs:6:1
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+6 | struct S;
+  | ^^^^^^
 
 error: aborting due to previous error
 

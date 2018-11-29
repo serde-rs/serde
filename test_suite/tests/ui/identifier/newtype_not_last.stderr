@@ -1,8 +1,8 @@
 error: `Other` must be the last variant
- --> $DIR/newtype_not_last.rs:4:10
+ --> $DIR/newtype_not_last.rs:8:5
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+8 |     Other(String),
+  |     ^^^^^^^^^^^^^
 
 error: aborting due to previous error
 

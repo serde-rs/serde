@@ -1,8 +1,14 @@
-error: `field_identifier` and `variant_identifier` cannot both be set
- --> $DIR/both.rs:4:10
+error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
+ --> $DIR/both.rs:5:9
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+5 | #[serde(field_identifier, variant_identifier)]
+  |         ^^^^^^^^^^^^^^^^
 
-error: aborting due to previous error
+error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
+ --> $DIR/both.rs:5:27
+  |
+5 | #[serde(field_identifier, variant_identifier)]
+  |                           ^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 2 previous errors
 

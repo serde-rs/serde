@@ -13,9 +13,12 @@ use try;
 
 use std::collections::BTreeSet;
 
-pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream, String> {
+pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
     let ctxt = Ctxt::new();
-    let cont = Container::from_ast(&ctxt, input, Derive::Deserialize);
+    let cont = match Container::from_ast(&ctxt, input, Derive::Deserialize) {
+        Some(cont) => cont,
+        None => return Err(ctxt.check().unwrap_err()),
+    };
     precondition(&ctxt, &cont);
     try!(ctxt.check());
 
@@ -86,7 +89,7 @@ fn precondition_sized(cx: &Ctxt, cont: &Container) {
     if let Data::Struct(_, ref fields) = cont.data {
         if let Some(last) = fields.last() {
             if let syn::Type::Slice(_) = *last.ty {
-                cx.error("cannot deserialize a dynamically sized struct");
+                cx.error_spanned_by(cont.original, "cannot deserialize a dynamically sized struct");
             }
         }
     }
@@ -96,7 +99,10 @@ fn precondition_no_de_lifetime(cx: &Ctxt, cont: &Container) {
     if let BorrowedLifetimes::Borrowed(_) = borrowed_lifetimes(cont) {
         for param in cont.generics.lifetimes() {
             if param.lifetime.to_string() == "'de" {
-                cx.error("cannot deserialize when there is a lifetime parameter called 'de");
+                cx.error_spanned_by(
+                    &param.lifetime,
+                    "cannot deserialize when there is a lifetime parameter called 'de",
+                );
                 return;
             }
         }

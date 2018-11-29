@@ -1,8 +1,14 @@
 error: #[serde(getter = "...")] is not allowed in an enum
-  --> $DIR/enum_getter.rs:10:10
+  --> $DIR/enum_getter.rs:11:1
    |
-10 | #[derive(Serialize)]
-   |          ^^^^^^^^^
+11 | / #[serde(remote = "remote::E")]
+12 | | pub enum E {
+13 | |     A {
+14 | |         #[serde(getter = "get_a")]
+15 | |         a: u8,
+16 | |     },
+17 | | }
+   | |_^
 
 error: aborting due to previous error
 

@@ -1,8 +1,8 @@
 error: failed to parse type: from = "Option<T"
- --> $DIR/from.rs:4:10
+ --> $DIR/from.rs:5:16
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+5 | #[serde(from = "Option<T")]
+  |                ^^^^^^^^^^
 
 error: aborting due to previous error
 
