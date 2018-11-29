@@ -53,6 +53,8 @@
 //!   *(deserialization only)*
 //! - [Envy Store], a way to deserialize [AWS Parameter Store] parameters into
 //!   Rust structs. *(deserialization only)*
+//! - [Postgres], deserialize values from Postgres using [postgres-rs].
+//!   *(deserialization only)*
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Bincode]: https://github.com/TyOverby/bincode
@@ -71,6 +73,8 @@
 //! [Envy Store]: https://github.com/softprops/envy-store
 //! [Cargo]: http://doc.crates.io/manifest.html
 //! [AWS Parameter Store]: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html
+//! [Postgres]: https://github.com/1aim/serde_postgres
+//! [postgres-rs]: https://crates.io/crates/postgres
 
 ////////////////////////////////////////////////////////////////////////////////
 
