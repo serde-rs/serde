@@ -100,7 +100,7 @@ fn unraw(ident: &Ident) -> String {
 impl Name {
     pub fn new(original: String) -> Name {
         Name {
-            original,
+            original: original,
             serialize: None,
             deserialize: None,
         }
@@ -439,7 +439,7 @@ impl Container {
             name.set_deserialize_name(de);
         }
         Container {
-            name,
+            name: name,
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -754,7 +754,7 @@ impl Variant {
             name.set_deserialize_name(de);
         }
         Variant {
-            name,
+            name: name,
             rename_all: rename_all.get().unwrap_or(RenameRule::None),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
@@ -1108,7 +1108,7 @@ impl Field {
             name.set_deserialize_name(de);
         }
         Field {
-            name,
+            name: name,
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
