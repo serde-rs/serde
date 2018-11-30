@@ -1,0 +1,8 @@
+error: expected serde rename attribute to be a string: `rename = "..."`
+ --> $DIR/byte_character.rs:6:22
+  |
+6 |     #[serde(rename = b'a')]
+  |                      ^^^^
+
+error: aborting due to previous error
+

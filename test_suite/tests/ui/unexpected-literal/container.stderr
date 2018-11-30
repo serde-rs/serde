@@ -1,0 +1,8 @@
+error: unexpected literal in serde container attribute
+ --> $DIR/container.rs:5:9
+  |
+5 | #[serde("literal")]
+  |         ^^^^^^^^^
+
+error: aborting due to previous error
+
