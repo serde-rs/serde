@@ -1,0 +1,8 @@
+error: #[serde(tag = "...", content = "...")] must be used together
+ --> $DIR/content-no-tag.rs:5:9
+  |
+5 | #[serde(content = "c")]
+  |         ^^^^^^^
+
+error: aborting due to previous error
+

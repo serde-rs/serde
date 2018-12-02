@@ -1,8 +1,14 @@
 error: variant field name `conflict` conflicts with internal tag
- --> $DIR/internal-tag.rs:4:10
-  |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+  --> $DIR/internal-tag.rs:5:1
+   |
+5  | / #[serde(tag = "conflict")]
+6  | | enum E {
+7  | |     A {
+8  | |         #[serde(rename = "conflict")]
+9  | |         x: (),
+10 | |     },
+11 | | }
+   | |_^
 
 error: aborting due to previous error
 

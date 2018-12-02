@@ -1,0 +1,8 @@
+error: #[serde(default = "...")] can only be used on structs with named fields
+ --> $DIR/enum_path.rs:6:1
+  |
+6 | enum E {
+  | ^^^^
+
+error: aborting due to previous error
+

@@ -1,8 +1,8 @@
 error: unknown serde field attribute `abc`
- --> $DIR/field.rs:4:10
+ --> $DIR/field.rs:6:13
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+6 |     #[serde(abc = "xyz")]
+  |             ^^^
 
 error: aborting due to previous error
 

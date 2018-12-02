@@ -1,0 +1,8 @@
+error: expected serde rename attribute to be a string: `rename = "..."`
+ --> $DIR/integer.rs:6:22
+  |
+6 |     #[serde(rename = 100)]
+  |                      ^^^
+
+error: aborting due to previous error
+

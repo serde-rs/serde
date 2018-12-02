@@ -1,8 +1,8 @@
 error: unknown serde field attribute `serialize`
- --> $DIR/rename-and-ser.rs:4:10
+ --> $DIR/rename-and-ser.rs:6:27
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+6 |     #[serde(rename = "x", serialize = "y")]
+  |                           ^^^^^^^^^
 
 error: aborting due to previous error
 

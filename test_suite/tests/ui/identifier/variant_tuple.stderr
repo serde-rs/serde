@@ -1,8 +1,8 @@
-error: variant_identifier may only contain unit variants
- --> $DIR/variant_tuple.rs:4:10
+error: #[serde(variant_identifier)] may only contain unit variants
+ --> $DIR/variant_tuple.rs:8:5
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+8 |     B(u8, u8),
+  |     ^^^^^^^^^
 
 error: aborting due to previous error
 

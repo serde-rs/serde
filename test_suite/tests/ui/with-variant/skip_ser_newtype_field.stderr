@@ -1,8 +1,9 @@
-error: variant `Newtype` cannot have both #[serde(serialize_with)] and a field 0 marked with #[serde(skip_serializing)]
- --> $DIR/skip_ser_newtype_field.rs:4:10
+error: variant `Newtype` cannot have both #[serde(serialize_with)] and a field #0 marked with #[serde(skip_serializing)]
+ --> $DIR/skip_ser_newtype_field.rs:6:5
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+6 | /     #[serde(serialize_with = "serialize_some_newtype_variant")]
+7 | |     Newtype(#[serde(skip_serializing)] String),
+  | |______________________________________________^
 
 error: aborting due to previous error
 

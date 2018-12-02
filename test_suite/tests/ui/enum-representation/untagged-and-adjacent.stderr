@@ -1,0 +1,20 @@
+error: untagged enum cannot have #[serde(tag = "...", content = "...")]
+ --> $DIR/untagged-and-adjacent.rs:5:9
+  |
+5 | #[serde(untagged)]
+  |         ^^^^^^^^
+
+error: untagged enum cannot have #[serde(tag = "...", content = "...")]
+ --> $DIR/untagged-and-adjacent.rs:6:9
+  |
+6 | #[serde(tag = "t", content = "c")]
+  |         ^^^
+
+error: untagged enum cannot have #[serde(tag = "...", content = "...")]
+ --> $DIR/untagged-and-adjacent.rs:6:20
+  |
+6 | #[serde(tag = "t", content = "c")]
+  |                    ^^^^^^^
+
+error: aborting due to 3 previous errors
+

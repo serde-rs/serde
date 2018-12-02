@@ -1,8 +1,8 @@
 error: #[serde(default)] can only be used on structs with named fields
- --> $DIR/enum.rs:4:10
+ --> $DIR/enum.rs:6:1
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+6 | enum E {
+  | ^^^^
 
 error: aborting due to previous error
 

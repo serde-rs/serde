@@ -1,0 +1,11 @@
+error: Serde does not support derive for unions
+ --> $DIR/union_de.rs:5:1
+  |
+5 | / union Union {
+6 | |     x: u8,
+7 | |     y: (),
+8 | | }
+  | |_^
+
+error: aborting due to previous error
+

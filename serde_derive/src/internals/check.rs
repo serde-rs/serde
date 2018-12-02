@@ -21,12 +21,16 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
     match cont.data {
         Data::Enum(_) => {
             if cont.data.has_getter() {
-                cx.error("#[serde(getter = \"...\")] is not allowed in an enum");
+                cx.error_spanned_by(
+                    cont.original,
+                    "#[serde(getter = \"...\")] is not allowed in an enum",
+                );
             }
         }
         Data::Struct(_, _) => {
             if cont.data.has_getter() && cont.attrs.remote().is_none() {
-                cx.error(
+                cx.error_spanned_by(
+                    cont.original,
                     "#[serde(getter = \"...\")] can only be used in structs \
                      that have #[serde(remote = \"...\")]",
                 );
@@ -59,26 +63,35 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
     }
     match style {
         Style::Tuple => {
-            cx.error("#[serde(flatten)] cannot be used on tuple structs");
+            cx.error_spanned_by(
+                field.original,
+                "#[serde(flatten)] cannot be used on tuple structs",
+            );
         }
         Style::Newtype => {
-            cx.error("#[serde(flatten)] cannot be used on newtype structs");
+            cx.error_spanned_by(
+                field.original,
+                "#[serde(flatten)] cannot be used on newtype structs",
+            );
         }
         _ => {}
     }
     if field.attrs.skip_serializing() {
-        cx.error(
-            "#[serde(flatten] can not be combined with \
+        cx.error_spanned_by(
+            field.original,
+            "#[serde(flatten)] can not be combined with \
              #[serde(skip_serializing)]",
         );
     } else if field.attrs.skip_serializing_if().is_some() {
-        cx.error(
-            "#[serde(flatten] can not be combined with \
+        cx.error_spanned_by(
+            field.original,
+            "#[serde(flatten)] can not be combined with \
              #[serde(skip_serializing_if = \"...\")]",
         );
     } else if field.attrs.skip_deserializing() {
-        cx.error(
-            "#[serde(flatten] can not be combined with \
+        cx.error_spanned_by(
+            field.original,
+            "#[serde(flatten)] can not be combined with \
              #[serde(skip_deserializing)]",
         );
     }
@@ -107,24 +120,36 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
         ) {
             // The `other` attribute may not be used in a variant_identifier.
             (_, Identifier::Variant, true, _) => {
-                cx.error("#[serde(other)] may not be used on a variant_identifier");
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(other)] may not be used on a variant identifier",
+                );
             }
 
             // Variant with `other` attribute cannot appear in untagged enum
             (_, Identifier::No, true, &EnumTag::None) => {
-                cx.error("#[serde(other)] cannot appear on untagged enum");
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(other)] cannot appear on untagged enum",
+                );
             }
 
             // Variant with `other` attribute must be the last one.
             (Style::Unit, Identifier::Field, true, _) | (Style::Unit, Identifier::No, true, _) => {
                 if i < variants.len() - 1 {
-                    cx.error("#[serde(other)] must be the last variant");
+                    cx.error_spanned_by(
+                        variant.original,
+                        "#[serde(other)] must be on the last variant",
+                    );
                 }
             }
 
             // Variant with `other` attribute must be a unit variant.
             (_, Identifier::Field, true, _) | (_, Identifier::No, true, _) => {
-                cx.error("#[serde(other)] must be on a unit variant");
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(other)] must be on a unit variant",
+                );
             }
 
             // Any sort of variant is allowed if this is not an identifier.
@@ -136,16 +161,25 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
             // The last field is allowed to be a newtype catch-all.
             (Style::Newtype, Identifier::Field, false, _) => {
                 if i < variants.len() - 1 {
-                    cx.error(format!("`{}` must be the last variant", variant.ident));
+                    cx.error_spanned_by(
+                        variant.original,
+                        format!("`{}` must be the last variant", variant.ident),
+                    );
                 }
             }
 
             (_, Identifier::Field, false, _) => {
-                cx.error("field_identifier may only contain unit variants");
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(field_identifier)] may only contain unit variants",
+                );
             }
 
             (_, Identifier::Variant, false, _) => {
-                cx.error("variant_identifier may only contain unit variants");
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(variant_identifier)] may only contain unit variants",
+                );
             }
         }
     }
@@ -164,7 +198,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     for variant in variants.iter() {
         if variant.attrs.serialize_with().is_some() {
             if variant.attrs.skip_serializing() {
-                cx.error(format!(
+                cx.error_spanned_by(variant.original, format!(
                     "variant `{}` cannot have both #[serde(serialize_with)] and \
                      #[serde(skip_serializing)]",
                     variant.ident
@@ -175,7 +209,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 let member = member_message(&field.member);
 
                 if field.attrs.skip_serializing() {
-                    cx.error(format!(
+                    cx.error_spanned_by(variant.original, format!(
                         "variant `{}` cannot have both #[serde(serialize_with)] and \
                          a field {} marked with #[serde(skip_serializing)]",
                         variant.ident, member
@@ -183,7 +217,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 }
 
                 if field.attrs.skip_serializing_if().is_some() {
-                    cx.error(format!(
+                    cx.error_spanned_by(variant.original, format!(
                         "variant `{}` cannot have both #[serde(serialize_with)] and \
                          a field {} marked with #[serde(skip_serializing_if)]",
                         variant.ident, member
@@ -194,7 +228,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
 
         if variant.attrs.deserialize_with().is_some() {
             if variant.attrs.skip_deserializing() {
-                cx.error(format!(
+                cx.error_spanned_by(variant.original, format!(
                     "variant `{}` cannot have both #[serde(deserialize_with)] and \
                      #[serde(skip_deserializing)]",
                     variant.ident
@@ -205,7 +239,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 if field.attrs.skip_deserializing() {
                     let member = member_message(&field.member);
 
-                    cx.error(format!(
+                    cx.error_spanned_by(variant.original, format!(
                         "variant `{}` cannot have both #[serde(deserialize_with)] \
                          and a field {} marked with #[serde(skip_deserializing)]",
                         variant.ident, member
@@ -231,10 +265,10 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
         EnumTag::External | EnumTag::Adjacent { .. } | EnumTag::None => return,
     };
 
-    let diagnose_conflict = || {
-        let message = format!("variant field name `{}` conflicts with internal tag", tag);
-        cx.error(message);
-    };
+    let diagnose_conflict = || cx.error_spanned_by(
+        cont.original,
+        format!("variant field name `{}` conflicts with internal tag", tag),
+    );
 
     for variant in variants {
         match variant.style {
@@ -269,11 +303,10 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
     };
 
     if type_tag == content_tag {
-        let message = format!(
+        cx.error_spanned_by(cont.original, format!(
             "enum tags `{}` for type and content conflict with each other",
             type_tag
-        );
-        cx.error(message);
+        ));
     }
 }
 
@@ -284,20 +317,32 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     }
 
     if cont.attrs.type_from().is_some() {
-        cx.error("#[serde(transparent)] is not allowed with #[serde(from = \"...\")]");
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(from = \"...\")]",
+        );
     }
 
     if cont.attrs.type_into().is_some() {
-        cx.error("#[serde(transparent)] is not allowed with #[serde(into = \"...\")]");
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(into = \"...\")]",
+        );
     }
 
     let fields = match cont.data {
         Data::Enum(_) => {
-            cx.error("#[serde(transparent)] is not allowed on an enum");
+            cx.error_spanned_by(
+                cont.original,
+                "#[serde(transparent)] is not allowed on an enum",
+            );
             return;
         }
         Data::Struct(Style::Unit, _) => {
-            cx.error("#[serde(transparent)] is not allowed on a unit struct");
+            cx.error_spanned_by(
+                cont.original,
+                "#[serde(transparent)] is not allowed on a unit struct",
+            );
             return;
         }
         Data::Struct(_, ref mut fields) => fields,
@@ -308,7 +353,8 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     for field in fields {
         if allow_transparent(field, derive) {
             if transparent_field.is_some() {
-                cx.error(
+                cx.error_spanned_by(
+                    cont.original,
                     "#[serde(transparent)] requires struct to have at most one transparent field",
                 );
                 return;
@@ -321,10 +367,16 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         Some(transparent_field) => transparent_field.attrs.mark_transparent(),
         None => match derive {
             Derive::Serialize => {
-                cx.error("#[serde(transparent)] requires at least one field that is not skipped");
+                cx.error_spanned_by(
+                    cont.original,
+                    "#[serde(transparent)] requires at least one field that is not skipped",
+                );
             }
             Derive::Deserialize => {
-                cx.error("#[serde(transparent)] requires at least one field that is neither skipped nor has a default");
+                cx.error_spanned_by(
+                    cont.original,
+                    "#[serde(transparent)] requires at least one field that is neither skipped nor has a default",
+                );
             }
         },
     }
@@ -333,7 +385,7 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
 fn member_message(member: &Member) -> String {
     match *member {
         Member::Named(ref ident) => format!("`{}`", ident),
-        Member::Unnamed(ref i) => i.index.to_string(),
+        Member::Unnamed(ref i) => format!("#{}", i.index),
     }
 }
 

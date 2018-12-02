@@ -1,8 +1,8 @@
 error: #[serde(tag = "...")] cannot be used with tuple variants
- --> $DIR/internal-tuple-variant.rs:4:10
+ --> $DIR/internal-tuple-variant.rs:7:5
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+7 |     Tuple(u8, u8),
+  |     ^^^^^^^^^^^^^
 
 error: aborting due to previous error
 

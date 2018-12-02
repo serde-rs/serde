@@ -1,8 +1,11 @@
 error: cannot deserialize a dynamically sized struct
- --> $DIR/deserialize_dst.rs:4:10
+ --> $DIR/deserialize_dst.rs:5:1
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+5 | / struct S {
+6 | |     string: String,
+7 | |     slice: [u8],
+8 | | }
+  | |_^
 
 error: aborting due to previous error
 

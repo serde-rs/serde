@@ -1,8 +1,9 @@
-error: #[serde(other)] must be the last variant
- --> $DIR/other_not_last.rs:4:10
+error: #[serde(other)] must be on the last variant
+ --> $DIR/other_not_last.rs:8:5
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+8 | /     #[serde(other)]
+9 | |     Other,
+  | |_________^
 
 error: aborting due to previous error
 

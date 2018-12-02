@@ -1,8 +1,0 @@
-error: field identifiers cannot be serialized
- --> $DIR/serialize.rs:4:10
-  |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
-
-error: aborting due to previous error
-

@@ -1,8 +1,8 @@
 error: #[serde(flatten)] cannot be used on newtype structs
- --> $DIR/flatten-newtype-struct.rs:4:10
+ --> $DIR/flatten-newtype-struct.rs:5:12
   |
-4 | #[derive(Serialize)]
-  |          ^^^^^^^^^
+5 | struct Foo(#[serde(flatten)] HashMap<String, String>);
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: aborting due to previous error
 

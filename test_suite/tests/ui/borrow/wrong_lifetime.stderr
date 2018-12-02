@@ -1,8 +1,9 @@
 error: field `s` does not have lifetime 'b
- --> $DIR/wrong_lifetime.rs:4:10
+ --> $DIR/wrong_lifetime.rs:6:5
   |
-4 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
+6 | /     #[serde(borrow = "'b")]
+7 | |     s: &'a str,
+  | |______________^
 
 error: aborting due to previous error
 

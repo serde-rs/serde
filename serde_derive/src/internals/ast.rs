@@ -17,6 +17,8 @@ pub struct Container<'a> {
     pub data: Data<'a>,
     /// Any generics on the struct or enum.
     pub generics: &'a syn::Generics,
+    /// Original input.
+    pub original: &'a syn::DeriveInput,
 }
 
 /// The fields of a struct or enum.
@@ -33,6 +35,7 @@ pub struct Variant<'a> {
     pub attrs: attr::Variant,
     pub style: Style,
     pub fields: Vec<Field<'a>>,
+    pub original: &'a syn::Variant,
 }
 
 /// A field of a struct.
@@ -57,7 +60,7 @@ pub enum Style {
 
 impl<'a> Container<'a> {
     /// Convert the raw Syn ast into a parsed container object, collecting errors in `cx`.
-    pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput, derive: Derive) -> Container<'a> {
+    pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput, derive: Derive) -> Option<Container<'a>> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
         let mut data = match item.data {
@@ -69,7 +72,8 @@ impl<'a> Container<'a> {
                 Data::Struct(style, fields)
             }
             syn::Data::Union(_) => {
-                panic!("Serde does not support derive for unions");
+                cx.error_spanned_by(item, "Serde does not support derive for unions");
+                return None;
             }
         };
 
@@ -105,9 +109,10 @@ impl<'a> Container<'a> {
             attrs: attrs,
             data: data,
             generics: &item.generics,
+            original: item,
         };
         check::check(cx, &mut item, derive);
-        item
+        Some(item)
     }
 }
 
@@ -142,6 +147,7 @@ fn enum_from_ast<'a>(
                 attrs: attrs,
                 style: style,
                 fields: fields,
+                original: variant,
             }
         })
         .collect()

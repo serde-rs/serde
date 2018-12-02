@@ -1,0 +1,9 @@
+error: #[serde(transparent)] is not allowed on an enum
+ --> $DIR/enum.rs:5:1
+  |
+5 | / #[serde(transparent)]
+6 | | enum E {}
+  | |_________^
+
+error: aborting due to previous error
+
