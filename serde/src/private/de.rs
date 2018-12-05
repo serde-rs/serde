@@ -1420,9 +1420,7 @@ mod content {
                 Content::ByteBuf(v) => visitor.visit_byte_buf(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2126,9 +2124,7 @@ mod content {
                 Content::ByteBuf(ref v) => visitor.visit_bytes(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
