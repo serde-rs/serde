@@ -94,6 +94,17 @@ where
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct DefaultTupleStruct<A, B, C>(
+    A,
+    #[serde(default)]
+    B,
+    #[serde(default = "MyDefault::my_default")]
+    C,
+)
+where
+    C: MyDefault;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct CollectOther {
     a: u32,
     b: u32,
@@ -186,8 +197,37 @@ fn test_default_struct() {
     );
 }
 
+#[test]
+fn test_default_tuple() {
+    assert_de_tokens(
+        &DefaultTupleStruct(1, 2, 3),
+        &[
+            Token::TupleStruct {
+                name: "DefaultTupleStruct",
+                len: 3,
+            },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+            Token::TupleStructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &DefaultTupleStruct(1, 0, 123),
+        &[
+            Token::TupleStruct {
+                name: "DefaultTupleStruct",
+                len: 3,
+            },
+            Token::I32(1),
+            Token::TupleStructEnd,
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DefaultEnum<A, B, C, D, E>
+enum DefaultStructVariant<A, B, C, D, E>
 where
     C: MyDefault,
     E: MyDefault,
@@ -205,10 +245,24 @@ where
     },
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum DefaultTupleVariant<A, B, C>
+where
+    C: MyDefault,
+{
+    Tuple(
+        A,
+        #[serde(default)]
+        B,
+        #[serde(default = "MyDefault::my_default")]
+        C,
+    ),
+}
+
 #[test]
-fn test_default_enum() {
+fn test_default_struct_variant() {
     assert_de_tokens(
-        &DefaultEnum::Struct {
+        &DefaultStructVariant::Struct {
             a1: 1,
             a2: 2,
             a3: 3,
@@ -217,7 +271,7 @@ fn test_default_enum() {
         },
         &[
             Token::StructVariant {
-                name: "DefaultEnum",
+                name: "DefaultStructVariant",
                 variant: "Struct",
                 len: 3,
             },
@@ -236,7 +290,7 @@ fn test_default_enum() {
     );
 
     assert_de_tokens(
-        &DefaultEnum::Struct {
+        &DefaultStructVariant::Struct {
             a1: 1,
             a2: 0,
             a3: 123,
@@ -245,13 +299,44 @@ fn test_default_enum() {
         },
         &[
             Token::StructVariant {
-                name: "DefaultEnum",
+                name: "DefaultStructVariant",
                 variant: "Struct",
                 len: 3,
             },
             Token::Str("a1"),
             Token::I32(1),
             Token::StructVariantEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_default_tuple_variant() {
+    assert_de_tokens(
+        &DefaultTupleVariant::Tuple(1, 2, 3),
+        &[
+            Token::TupleVariant {
+                name: "DefaultTupleVariant",
+                variant: "Tuple",
+                len: 3,
+            },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+            Token::TupleVariantEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &DefaultTupleVariant::Tuple(1, 0, 123),
+        &[
+            Token::TupleVariant {
+                name: "DefaultTupleVariant",
+                variant: "Tuple",
+                len: 3,
+            },
+            Token::I32(1),
+            Token::TupleVariantEnd,
         ],
     );
 }
