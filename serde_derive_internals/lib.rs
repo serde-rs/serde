@@ -14,6 +14,7 @@
 extern crate syn;
 
 extern crate proc_macro2;
+extern crate quote;
 
 #[path = "src/mod.rs"]
 mod internals;
