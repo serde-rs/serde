@@ -661,11 +661,18 @@ fn deserialize_seq(
                     })
                 }
             };
+            let value = match *field.attrs.default() {
+                attr::Default::Default => quote!(_serde::export::Default::default()),
+                attr::Default::Path(ref path) => quote!(#path()),
+                attr::Default::None => quote!(
+                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                ),
+            };
             let assign = quote! {
                 let #var = match #visit {
                     _serde::export::Some(__value) => __value,
                     _serde::export::None => {
-                        return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                        #value
                     }
                 };
             };
