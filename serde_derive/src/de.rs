@@ -1260,11 +1260,15 @@ fn deserialize_externally_tagged_enum(
 
         #variants_stmt
 
-        _serde::Deserializer::deserialize_enum(__deserializer, #type_name, VARIANTS,
-                                               __Visitor {
-                                                   marker: _serde::export::PhantomData::<#this #ty_generics>,
-                                                   lifetime: _serde::export::PhantomData,
-                                               })
+        _serde::Deserializer::deserialize_enum(
+            __deserializer,
+            #type_name,
+            VARIANTS,
+            __Visitor {
+                marker: _serde::export::PhantomData::<#this #ty_generics>,
+                lifetime: _serde::export::PhantomData,
+            },
+        )
     }
 }
 
@@ -1615,12 +1619,14 @@ fn deserialize_adjacently_tagged_enum(
                 match try!(_serde::de::SeqAccess::next_element(&mut __seq)) {
                     _serde::export::Some(__field) => {
                         // Visit the second element - the content.
-                        match try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                                __Seed {
-                                    field: __field,
-                                    marker: _serde::export::PhantomData,
-                                    lifetime: _serde::export::PhantomData,
-                                })) {
+                        match try!(_serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            __Seed {
+                                field: __field,
+                                marker: _serde::export::PhantomData,
+                                lifetime: _serde::export::PhantomData,
+                            },
+                        )) {
                             _serde::export::Some(__ret) => _serde::export::Ok(__ret),
                             // There is no second element.
                             _serde::export::None => {
@@ -1637,11 +1643,15 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         const FIELDS: &'static [&'static str] = &[#tag, #content];
-        _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS,
+        _serde::Deserializer::deserialize_struct(
+            __deserializer,
+            #type_name,
+            FIELDS,
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
-            })
+            },
+        )
     }
 }
 
@@ -2247,8 +2257,9 @@ fn deserialize_identifier(
                         #variant_indices => _serde::export::Ok(#constructors),
                     )*
                     _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                                _serde::de::Unexpected::Unsigned(__value),
-                                &#fallthrough_msg))
+                        _serde::de::Unexpected::Unsigned(__value),
+                        &#fallthrough_msg,
+                    ))
                 }
             }
         }
