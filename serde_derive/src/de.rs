@@ -89,7 +89,10 @@ fn precondition_sized(cx: &Ctxt, cont: &Container) {
     if let Data::Struct(_, ref fields) = cont.data {
         if let Some(last) = fields.last() {
             if let syn::Type::Slice(_) = *last.ty {
-                cx.error_spanned_by(cont.original, "cannot deserialize a dynamically sized struct");
+                cx.error_spanned_by(
+                    cont.original,
+                    "cannot deserialize a dynamically sized struct",
+                );
             }
         }
     }
@@ -366,7 +369,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
         None => {
             let span = transparent_field.original.span();
             quote_spanned!(span=> _serde::Deserialize::deserialize)
-        },
+        }
     };
 
     let assign = fields.iter().map(|field| {
@@ -1830,7 +1833,8 @@ fn deserialize_externally_tagged_newtype_variant(
         None => {
             let field_ty = field.ty;
             let span = field.original.span();
-            let func = quote_spanned!(span=> _serde::de::VariantAccess::newtype_variant::<#field_ty>);
+            let func =
+                quote_spanned!(span=> _serde::de::VariantAccess::newtype_variant::<#field_ty>);
             quote_expr! {
                 _serde::export::Result::map(#func(__variant), #this::#variant_ident)
             }
@@ -2470,7 +2474,7 @@ fn deserialize_map(
                 None => {
                     let span = field.original.span();
                     quote_spanned!(span=> _serde::de::Deserialize::deserialize)
-                },
+                }
                 Some(path) => quote!(#path),
             };
             quote! {

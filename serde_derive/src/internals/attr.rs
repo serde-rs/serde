@@ -42,10 +42,8 @@ impl<'c, T> Attr<'c, T> {
         let tokens = obj.into_token_stream();
 
         if self.value.is_some() {
-            self.cx.error_spanned_by(
-                tokens,
-                format!("duplicate serde attribute `{}`", self.name),
-            );
+            self.cx
+                .error_spanned_by(tokens, format!("duplicate serde attribute `{}`", self.name));
         } else {
             self.tokens = tokens;
             self.value = Some(value);
@@ -71,7 +69,7 @@ impl<'c, T> Attr<'c, T> {
     fn get_with_tokens(self) -> Option<(TokenStream, T)> {
         match self.value {
             Some(v) => Some((self.tokens, v)),
-            None    => None,
+            None => None,
         }
     }
 }
@@ -232,11 +230,14 @@ impl Container {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             match RenameRule::from_str(&s.value()) {
                                 Ok(rename_rule) => rename_all.set(&m.ident, rename_rule),
-                                Err(()) => cx.error_spanned_by(s, format!(
-                                    "unknown rename rule for #[serde(rename_all \
-                                     = {:?})]",
-                                    s.value(),
-                                )),
+                                Err(()) => cx.error_spanned_by(
+                                    s,
+                                    format!(
+                                        "unknown rename rule for #[serde(rename_all \
+                                         = {:?})]",
+                                        s.value(),
+                                    ),
+                                ),
                             }
                         }
                     }
@@ -261,14 +262,17 @@ impl Container {
                                 fields,
                                 "#[serde(default)] can only be used on structs \
                                  with named fields",
-                            )
+                            ),
                         },
-                        syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx.error_spanned_by(
-                            enum_token,
-                            "#[serde(default)] can only be used on structs \
-                             with named fields",
-                        ),
-                        syn::Data::Union(syn::DataUnion { ref union_token, .. }) => cx.error_spanned_by(
+                        syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx
+                            .error_spanned_by(
+                                enum_token,
+                                "#[serde(default)] can only be used on structs \
+                                 with named fields",
+                            ),
+                        syn::Data::Union(syn::DataUnion {
+                            ref union_token, ..
+                        }) => cx.error_spanned_by(
                             union_token,
                             "#[serde(default)] can only be used on structs \
                              with named fields",
@@ -279,22 +283,28 @@ impl Container {
                     Meta(NameValue(ref m)) if m.ident == "default" => {
                         if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
                             match item.data {
-                                syn::Data::Struct(syn::DataStruct { ref fields, .. }) => match *fields {
-                                    syn::Fields::Named(_) => {
-                                        default.set(&m.ident, Default::Path(path));
+                                syn::Data::Struct(syn::DataStruct { ref fields, .. }) => {
+                                    match *fields {
+                                        syn::Fields::Named(_) => {
+                                            default.set(&m.ident, Default::Path(path));
+                                        }
+                                        syn::Fields::Unnamed(_) | syn::Fields::Unit => cx
+                                            .error_spanned_by(
+                                                fields,
+                                                "#[serde(default = \"...\")] can only be used \
+                                                 on structs with named fields",
+                                            ),
                                     }
-                                    syn::Fields::Unnamed(_) | syn::Fields::Unit => cx.error_spanned_by(
-                                        fields,
+                                }
+                                syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx
+                                    .error_spanned_by(
+                                        enum_token,
                                         "#[serde(default = \"...\")] can only be used \
                                          on structs with named fields",
-                                    )
-                                },
-                                syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx.error_spanned_by(
-                                    enum_token,
-                                    "#[serde(default = \"...\")] can only be used \
-                                     on structs with named fields",
-                                ),
-                                syn::Data::Union(syn::DataUnion { ref union_token, .. }) => cx.error_spanned_by(
+                                    ),
+                                syn::Data::Union(syn::DataUnion {
+                                    ref union_token, ..
+                                }) => cx.error_spanned_by(
                                     union_token,
                                     "#[serde(default = \"...\")] can only be used \
                                      on structs with named fields",
@@ -326,13 +336,17 @@ impl Container {
                         syn::Data::Enum(_) => {
                             untagged.set_true(word);
                         }
-                        syn::Data::Struct(syn::DataStruct { ref struct_token, .. }) => {
+                        syn::Data::Struct(syn::DataStruct {
+                            ref struct_token, ..
+                        }) => {
                             cx.error_spanned_by(
                                 struct_token,
                                 "#[serde(untagged)] can only be used on enums",
                             );
                         }
-                        syn::Data::Union(syn::DataUnion { ref union_token, .. }) => {
+                        syn::Data::Union(syn::DataUnion {
+                            ref union_token, ..
+                        }) => {
                             cx.error_spanned_by(
                                 union_token,
                                 "#[serde(untagged)] can only be used on enums",
@@ -347,18 +361,22 @@ impl Container {
                                 syn::Data::Enum(_) => {
                                     internal_tag.set(&m.ident, s.value());
                                 }
-                                syn::Data::Struct(syn::DataStruct { ref struct_token, .. }) => {
+                                syn::Data::Struct(syn::DataStruct {
+                                    ref struct_token, ..
+                                }) => {
                                     cx.error_spanned_by(
                                         struct_token,
                                         "#[serde(tag = \"...\")] can only be used on enums",
                                     );
-                                },
-                                syn::Data::Union(syn::DataUnion { ref union_token, .. }) => {
+                                }
+                                syn::Data::Union(syn::DataUnion {
+                                    ref union_token, ..
+                                }) => {
                                     cx.error_spanned_by(
                                         union_token,
                                         "#[serde(tag = \"...\")] can only be used on enums",
                                     );
-                                },
+                                }
                             }
                         }
                     }
@@ -370,18 +388,22 @@ impl Container {
                                 syn::Data::Enum(_) => {
                                     content.set(&m.ident, s.value());
                                 }
-                                syn::Data::Struct(syn::DataStruct { ref struct_token, .. }) => {
+                                syn::Data::Struct(syn::DataStruct {
+                                    ref struct_token, ..
+                                }) => {
                                     cx.error_spanned_by(
                                         struct_token,
                                         "#[serde(content = \"...\")] can only be used on enums",
                                     );
-                                },
-                                syn::Data::Union(syn::DataUnion { ref union_token, .. }) => {
+                                }
+                                syn::Data::Union(syn::DataUnion {
+                                    ref union_token, ..
+                                }) => {
                                     cx.error_spanned_by(
                                         union_token,
                                         "#[serde(content = \"...\")] can only be used on enums",
                                     );
-                                },
+                                }
                             }
                         }
                     }
@@ -422,10 +444,10 @@ impl Container {
                     }
 
                     Meta(ref meta_item) => {
-                        cx.error_spanned_by(meta_item.name(), format!(
-                            "unknown serde container attribute `{}`",
-                            meta_item.name()
-                        ));
+                        cx.error_spanned_by(
+                            meta_item.name(),
+                            format!("unknown serde container attribute `{}`", meta_item.name()),
+                        );
                     }
 
                     Literal(ref lit) => {
@@ -519,7 +541,11 @@ fn decide_tag(
     internal_tag: Attr<String>,
     content: Attr<String>,
 ) -> EnumTag {
-    match (untagged.0.get_with_tokens(), internal_tag.get_with_tokens(), content.get_with_tokens()) {
+    match (
+        untagged.0.get_with_tokens(),
+        internal_tag.get_with_tokens(),
+        content.get_with_tokens(),
+    ) {
         (None, None, None) => EnumTag::External,
         (Some(_), None, None) => EnumTag::None,
         (None, Some((_, tag)), None) => {
@@ -600,7 +626,11 @@ fn decide_identifier(
     field_identifier: BoolAttr,
     variant_identifier: BoolAttr,
 ) -> Identifier {
-    match (&item.data, field_identifier.0.get_with_tokens(), variant_identifier.0.get_with_tokens()) {
+    match (
+        &item.data,
+        field_identifier.0.get_with_tokens(),
+        variant_identifier.0.get_with_tokens(),
+    ) {
         (_, None, None) => Identifier::No,
         (_, Some((field_identifier_tokens, _)), Some((variant_identifier_tokens, _))) => {
             cx.error_spanned_by(
@@ -615,28 +645,52 @@ fn decide_identifier(
         }
         (&syn::Data::Enum(_), Some(_), None) => Identifier::Field,
         (&syn::Data::Enum(_), None, Some(_)) => Identifier::Variant,
-        (&syn::Data::Struct(syn::DataStruct { ref struct_token, .. }), Some(_), None) => {
+        (
+            &syn::Data::Struct(syn::DataStruct {
+                ref struct_token, ..
+            }),
+            Some(_),
+            None,
+        ) => {
             cx.error_spanned_by(
                 struct_token,
                 "#[serde(field_identifier)] can only be used on an enum",
             );
             Identifier::No
         }
-        (&syn::Data::Union(syn::DataUnion { ref union_token, .. }), Some(_), None) => {
+        (
+            &syn::Data::Union(syn::DataUnion {
+                ref union_token, ..
+            }),
+            Some(_),
+            None,
+        ) => {
             cx.error_spanned_by(
                 union_token,
                 "#[serde(field_identifier)] can only be used on an enum",
             );
             Identifier::No
         }
-        (&syn::Data::Struct(syn::DataStruct { ref struct_token, .. }), None, Some(_)) => {
+        (
+            &syn::Data::Struct(syn::DataStruct {
+                ref struct_token, ..
+            }),
+            None,
+            Some(_),
+        ) => {
             cx.error_spanned_by(
                 struct_token,
                 "#[serde(variant_identifier)] can only be used on an enum",
             );
             Identifier::No
         }
-        (&syn::Data::Union(syn::DataUnion { ref union_token, .. }), None, Some(_)) => {
+        (
+            &syn::Data::Union(syn::DataUnion {
+                ref union_token, ..
+            }),
+            None,
+            Some(_),
+        ) => {
             cx.error_spanned_by(
                 union_token,
                 "#[serde(variant_identifier)] can only be used on an enum",
@@ -700,11 +754,14 @@ impl Variant {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             match RenameRule::from_str(&s.value()) {
                                 Ok(rename_rule) => rename_all.set(&m.ident, rename_rule),
-                                Err(()) => cx.error_spanned_by(s, format!(
-                                    "unknown rename rule for #[serde(rename_all \
-                                     = {:?})]",
-                                    s.value()
-                                )),
+                                Err(()) => cx.error_spanned_by(
+                                    s,
+                                    format!(
+                                        "unknown rename rule for #[serde(rename_all \
+                                         = {:?})]",
+                                        s.value()
+                                    ),
+                                ),
                             }
                         }
                     }
@@ -794,17 +851,14 @@ impl Variant {
                     },
 
                     Meta(ref meta_item) => {
-                        cx.error_spanned_by(meta_item.name(), format!(
-                            "unknown serde variant attribute `{}`",
-                            meta_item.name()
-                        ));
+                        cx.error_spanned_by(
+                            meta_item.name(),
+                            format!("unknown serde variant attribute `{}`", meta_item.name()),
+                        );
                     }
 
                     Literal(ref lit) => {
-                        cx.error_spanned_by(
-                            lit,
-                            "unexpected literal in serde variant attribute",
-                        );
+                        cx.error_spanned_by(lit, "unexpected literal in serde variant attribute");
                     }
                 }
             }
@@ -1071,10 +1125,13 @@ impl Field {
                             if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
                                 for lifetime in &lifetimes {
                                     if !borrowable.contains(lifetime) {
-                                        cx.error_spanned_by(field, format!(
-                                            "field `{}` does not have lifetime {}",
-                                            ident, lifetime
-                                        ));
+                                        cx.error_spanned_by(
+                                            field,
+                                            format!(
+                                                "field `{}` does not have lifetime {}",
+                                                ident, lifetime
+                                            ),
+                                        );
                                     }
                                 }
                                 borrowed_lifetimes.set(&m.ident, lifetimes);
@@ -1095,17 +1152,14 @@ impl Field {
                     }
 
                     Meta(ref meta_item) => {
-                        cx.error_spanned_by(meta_item.name(), format!(
-                            "unknown serde field attribute `{}`",
-                            meta_item.name()
-                        ));
+                        cx.error_spanned_by(
+                            meta_item.name(),
+                            format!("unknown serde field attribute `{}`", meta_item.name()),
+                        );
                     }
 
                     Literal(ref lit) => {
-                        cx.error_spanned_by(
-                            lit,
-                            "unexpected literal in serde field attribute",
-                        );
+                        cx.error_spanned_by(lit, "unexpected literal in serde field attribute");
                     }
                 }
             }
@@ -1299,11 +1353,14 @@ where
             }
 
             _ => {
-                cx.error_spanned_by(meta, format!(
-                    "malformed {0} attribute, expected `{0}(serialize = ..., \
-                     deserialize = ...)`",
-                    attr_name
-                ));
+                cx.error_spanned_by(
+                    meta,
+                    format!(
+                        "malformed {0} attribute, expected `{0}(serialize = ..., \
+                         deserialize = ...)`",
+                        attr_name
+                    ),
+                );
                 return Err(());
             }
         }
@@ -1349,21 +1406,22 @@ fn get_lit_str<'a>(
     if let syn::Lit::Str(ref lit) = *lit {
         Ok(lit)
     } else {
-        cx.error_spanned_by(lit, format!(
-            "expected serde {} attribute to be a string: `{} = \"...\"`",
-            attr_name, meta_item_name
-        ));
+        cx.error_spanned_by(
+            lit,
+            format!(
+                "expected serde {} attribute to be a string: `{} = \"...\"`",
+                attr_name, meta_item_name
+            ),
+        );
         Err(())
     }
 }
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
-    parse_lit_str(string)
-        .map_err(|_| cx.error_spanned_by(
-            lit,
-            format!("failed to parse path: {:?}", string.value()),
-        ))
+    parse_lit_str(string).map_err(|_| {
+        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
+    })
 }
 
 fn parse_lit_into_expr_path(
@@ -1372,11 +1430,9 @@ fn parse_lit_into_expr_path(
     lit: &syn::Lit,
 ) -> Result<syn::ExprPath, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
-    parse_lit_str(string)
-        .map_err(|_| cx.error_spanned_by(
-            lit,
-            format!("failed to parse path: {:?}", string.value()),
-        ))
+    parse_lit_str(string).map_err(|_| {
+        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
+    })
 }
 
 fn parse_lit_into_where(
@@ -1401,11 +1457,10 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
 
     parse_lit_str(string).map_err(|_| {
-        cx.error_spanned_by(lit, format!(
-            "failed to parse type: {} = {:?}",
-            attr_name,
-            string.value()
-        ))
+        cx.error_spanned_by(
+            lit,
+            format!("failed to parse type: {} = {:?}", attr_name, string.value()),
+        )
     })
 }
 
@@ -1434,19 +1489,16 @@ fn parse_lit_into_lifetimes(
         let mut set = BTreeSet::new();
         for lifetime in lifetimes {
             if !set.insert(lifetime.clone()) {
-                cx.error_spanned_by(
-                    lit,
-                    format!("duplicate borrowed lifetime `{}`", lifetime),
-                );
+                cx.error_spanned_by(lit, format!("duplicate borrowed lifetime `{}`", lifetime));
             }
         }
         return Ok(set);
     }
 
-    cx.error_spanned_by(lit, format!(
-        "failed to parse borrowed lifetimes: {:?}",
-        string.value()
-    ));
+    cx.error_spanned_by(
+        lit,
+        format!("failed to parse borrowed lifetimes: {:?}", string.value()),
+    );
     Err(())
 }
 

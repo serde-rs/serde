@@ -198,52 +198,67 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     for variant in variants.iter() {
         if variant.attrs.serialize_with().is_some() {
             if variant.attrs.skip_serializing() {
-                cx.error_spanned_by(variant.original, format!(
-                    "variant `{}` cannot have both #[serde(serialize_with)] and \
-                     #[serde(skip_serializing)]",
-                    variant.ident
-                ));
+                cx.error_spanned_by(
+                    variant.original,
+                    format!(
+                        "variant `{}` cannot have both #[serde(serialize_with)] and \
+                         #[serde(skip_serializing)]",
+                        variant.ident
+                    ),
+                );
             }
 
             for field in &variant.fields {
                 let member = member_message(&field.member);
 
                 if field.attrs.skip_serializing() {
-                    cx.error_spanned_by(variant.original, format!(
-                        "variant `{}` cannot have both #[serde(serialize_with)] and \
-                         a field {} marked with #[serde(skip_serializing)]",
-                        variant.ident, member
-                    ));
+                    cx.error_spanned_by(
+                        variant.original,
+                        format!(
+                            "variant `{}` cannot have both #[serde(serialize_with)] and \
+                             a field {} marked with #[serde(skip_serializing)]",
+                            variant.ident, member
+                        ),
+                    );
                 }
 
                 if field.attrs.skip_serializing_if().is_some() {
-                    cx.error_spanned_by(variant.original, format!(
-                        "variant `{}` cannot have both #[serde(serialize_with)] and \
-                         a field {} marked with #[serde(skip_serializing_if)]",
-                        variant.ident, member
-                    ));
+                    cx.error_spanned_by(
+                        variant.original,
+                        format!(
+                            "variant `{}` cannot have both #[serde(serialize_with)] and \
+                             a field {} marked with #[serde(skip_serializing_if)]",
+                            variant.ident, member
+                        ),
+                    );
                 }
             }
         }
 
         if variant.attrs.deserialize_with().is_some() {
             if variant.attrs.skip_deserializing() {
-                cx.error_spanned_by(variant.original, format!(
-                    "variant `{}` cannot have both #[serde(deserialize_with)] and \
-                     #[serde(skip_deserializing)]",
-                    variant.ident
-                ));
+                cx.error_spanned_by(
+                    variant.original,
+                    format!(
+                        "variant `{}` cannot have both #[serde(deserialize_with)] and \
+                         #[serde(skip_deserializing)]",
+                        variant.ident
+                    ),
+                );
             }
 
             for field in &variant.fields {
                 if field.attrs.skip_deserializing() {
                     let member = member_message(&field.member);
 
-                    cx.error_spanned_by(variant.original, format!(
-                        "variant `{}` cannot have both #[serde(deserialize_with)] \
-                         and a field {} marked with #[serde(skip_deserializing)]",
-                        variant.ident, member
-                    ));
+                    cx.error_spanned_by(
+                        variant.original,
+                        format!(
+                            "variant `{}` cannot have both #[serde(deserialize_with)] \
+                             and a field {} marked with #[serde(skip_deserializing)]",
+                            variant.ident, member
+                        ),
+                    );
                 }
             }
         }
@@ -265,10 +280,12 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
         EnumTag::External | EnumTag::Adjacent { .. } | EnumTag::None => return,
     };
 
-    let diagnose_conflict = || cx.error_spanned_by(
-        cont.original,
-        format!("variant field name `{}` conflicts with internal tag", tag),
-    );
+    let diagnose_conflict = || {
+        cx.error_spanned_by(
+            cont.original,
+            format!("variant field name `{}` conflicts with internal tag", tag),
+        )
+    };
 
     for variant in variants {
         match variant.style {
@@ -303,10 +320,13 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
     };
 
     if type_tag == content_tag {
-        cx.error_spanned_by(cont.original, format!(
-            "enum tags `{}` for type and content conflict with each other",
-            type_tag
-        ));
+        cx.error_spanned_by(
+            cont.original,
+            format!(
+                "enum tags `{}` for type and content conflict with each other",
+                type_tag
+            ),
+        );
     }
 }
 

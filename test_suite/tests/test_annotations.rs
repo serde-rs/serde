@@ -96,10 +96,8 @@ where
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct DefaultTupleStruct<A, B, C>(
     A,
-    #[serde(default)]
-    B,
-    #[serde(default = "MyDefault::my_default")]
-    C,
+    #[serde(default)] B,
+    #[serde(default = "MyDefault::my_default")] C,
 )
 where
     C: MyDefault;
@@ -252,10 +250,8 @@ where
 {
     Tuple(
         A,
-        #[serde(default)]
-        B,
-        #[serde(default = "MyDefault::my_default")]
-        C,
+        #[serde(default)] B,
+        #[serde(default = "MyDefault::my_default")] C,
     ),
 }
 

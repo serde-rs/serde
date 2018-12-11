@@ -60,7 +60,11 @@ pub enum Style {
 
 impl<'a> Container<'a> {
     /// Convert the raw Syn ast into a parsed container object, collecting errors in `cx`.
-    pub fn from_ast(cx: &Ctxt, item: &'a syn::DeriveInput, derive: Derive) -> Option<Container<'a>> {
+    pub fn from_ast(
+        cx: &Ctxt,
+        item: &'a syn::DeriveInput,
+        derive: Derive,
+    ) -> Option<Container<'a>> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
         let mut data = match item.data {

@@ -206,7 +206,7 @@ fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
         None => {
             let span = transparent_field.original.span();
             quote_spanned!(span=> _serde::Serialize::serialize)
-        },
+        }
     };
 
     quote_block! {
