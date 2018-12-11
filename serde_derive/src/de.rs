@@ -661,7 +661,7 @@ fn deserialize_seq(
                     })
                 }
             };
-            let value = match *field.attrs.default() {
+            let value_if_none = match *field.attrs.default() {
                 attr::Default::Default => quote!(_serde::export::Default::default()),
                 attr::Default::Path(ref path) => quote!(#path()),
                 attr::Default::None => quote!(
@@ -672,7 +672,7 @@ fn deserialize_seq(
                 let #var = match #visit {
                     _serde::export::Some(__value) => __value,
                     _serde::export::None => {
-                        #value
+                        #value_if_none
                     }
                 };
             };
@@ -747,8 +747,16 @@ fn deserialize_seq_in_place(
                 self.place.#member = #default;
             }
         } else {
-            let return_invalid_length = quote! {
-                return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+            let value_if_none = match *field.attrs.default() {
+                attr::Default::Default => quote!(
+                    self.place.#member = _serde::export::Default::default();
+                ),
+                attr::Default::Path(ref path) => quote!(
+                    self.place.#member = #path();
+                ),
+                attr::Default::None => quote!(
+                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                ),
             };
             let write = match field.attrs.deserialize_with() {
                 None => {
@@ -756,23 +764,23 @@ fn deserialize_seq_in_place(
                         if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
                             _serde::private::de::InPlaceSeed(&mut self.place.#member)))
                         {
-                            #return_invalid_length
+                            #value_if_none
                         }
                     }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
-                            #wrapper
-                            match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
-                                _serde::export::Some(__wrap) => {
-                                    self.place.#member = __wrap.value;
-                                }
-                                _serde::export::None => {
-                                    #return_invalid_length
-                                }
+                        #wrapper
+                        match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
+                            _serde::export::Some(__wrap) => {
+                                self.place.#member = __wrap.value;
                             }
-                        })
+                            _serde::export::None => {
+                                #value_if_none
+                            }
+                        }
+                    })
                 }
             };
             index_in_seq += 1;
