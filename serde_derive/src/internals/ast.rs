@@ -85,12 +85,12 @@ impl<'a> Container<'a> {
         match data {
             Data::Enum(ref mut variants) => {
                 for variant in variants {
-                    variant.attrs.rename_by_rule(attrs.rename_all());
+                    variant.attrs.rename_by_rules();
                     for field in &mut variant.fields {
                         if field.attrs.flatten() {
                             has_flatten = true;
                         }
-                        field.attrs.rename_by_rule(variant.attrs.rename_all());
+                        field.attrs.rename_by_rules(variant.attrs.rename_all_rules());
                     }
                 }
             }
@@ -99,7 +99,7 @@ impl<'a> Container<'a> {
                     if field.attrs.flatten() {
                         has_flatten = true;
                     }
-                    field.attrs.rename_by_rule(attrs.rename_all());
+                    field.attrs.rename_by_rules(attrs.rename_all_rules());
                 }
             }
         }
