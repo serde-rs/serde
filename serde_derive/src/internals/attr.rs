@@ -974,12 +974,12 @@ impl Variant {
         &self.name
     }
 
-    pub fn rename_by_rules(&mut self) {
+    pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
         if !self.ser_renamed {
-            self.name.serialize = self.rename_all_rules.serialize.apply_to_variant(&self.name.serialize);
+            self.name.serialize = rules.serialize.apply_to_variant(&self.name.serialize);
         }
         if !self.de_renamed {
-            self.name.deserialize = self.rename_all_rules.deserialize.apply_to_variant(&self.name.deserialize);
+            self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
         }
     }
 
