@@ -317,7 +317,7 @@ fn serialize_struct_as_struct(
     let type_name = cattrs.name().serialize_name();
 
     let additional_field_count: usize = match cattrs.tag() {
-        attr::TagType::Internal{ref tag} => {
+        &attr::TagType::Internal{ref tag} => {
             let func = StructTrait::SerializeStruct.serialize_field(Span::call_site());
             serialize_fields.insert(0, quote! {
                 try!(#func(&mut __serde_state, #tag, #type_name));
