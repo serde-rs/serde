@@ -242,7 +242,7 @@ impl Container {
                                 Ok(rename_rule) => {
                                     rename_all_ser_rule.set(&m.ident, rename_rule);
                                     rename_all_de_rule.set(&m.ident, rename_rule);
-                                },
+                                }
                                 Err(()) => cx.error_spanned_by(
                                     s,
                                     format!(
@@ -260,12 +260,14 @@ impl Container {
                         if let Ok((ser, de)) = get_renames(cx, &m.nested) {
                             if let Some(ser) = ser {
                                 match RenameRule::from_str(&ser.value()) {
-                                    Ok(rename_rule) => rename_all_ser_rule.set(&m.ident, rename_rule),
+                                    Ok(rename_rule) => {
+                                        rename_all_ser_rule.set(&m.ident, rename_rule)
+                                    }
                                     Err(()) => cx.error_spanned_by(
                                         ser,
                                         format!(
                                             "unknown rename rule for #[serde(rename_all \
-                                            = {:?})]",
+                                             = {:?})]",
                                             ser.value(),
                                         ),
                                     ),
@@ -273,12 +275,14 @@ impl Container {
                             }
                             if let Some(de) = de {
                                 match RenameRule::from_str(&de.value()) {
-                                    Ok(rename_rule) => rename_all_de_rule.set(&m.ident, rename_rule),
+                                    Ok(rename_rule) => {
+                                        rename_all_de_rule.set(&m.ident, rename_rule)
+                                    }
                                     Err(()) => cx.error_spanned_by(
                                         de,
                                         format!(
                                             "unknown rename rule for #[serde(rename_all \
-                                            = {:?})]",
+                                             = {:?})]",
                                             de.value(),
                                         ),
                                     ),
@@ -805,7 +809,7 @@ impl Variant {
                                 Ok(rename_rule) => {
                                     rename_all_ser_rule.set(&m.ident, rename_rule);
                                     rename_all_de_rule.set(&m.ident, rename_rule);
-                                },
+                                }
                                 Err(()) => cx.error_spanned_by(
                                     s,
                                     format!(
@@ -823,12 +827,14 @@ impl Variant {
                         if let Ok((ser, de)) = get_renames(cx, &m.nested) {
                             if let Some(ser) = ser {
                                 match RenameRule::from_str(&ser.value()) {
-                                    Ok(rename_rule) => rename_all_ser_rule.set(&m.ident, rename_rule),
+                                    Ok(rename_rule) => {
+                                        rename_all_ser_rule.set(&m.ident, rename_rule)
+                                    }
                                     Err(()) => cx.error_spanned_by(
                                         ser,
                                         format!(
                                             "unknown rename rule for #[serde(rename_all \
-                                            = {:?})]",
+                                             = {:?})]",
                                             ser.value(),
                                         ),
                                     ),
@@ -836,12 +842,14 @@ impl Variant {
                             }
                             if let Some(de) = de {
                                 match RenameRule::from_str(&de.value()) {
-                                    Ok(rename_rule) => rename_all_de_rule.set(&m.ident, rename_rule),
+                                    Ok(rename_rule) => {
+                                        rename_all_de_rule.set(&m.ident, rename_rule)
+                                    }
                                     Err(()) => cx.error_spanned_by(
                                         de,
                                         format!(
                                             "unknown rename rule for #[serde(rename_all \
-                                            = {:?})]",
+                                             = {:?})]",
                                             de.value(),
                                         ),
                                     ),
