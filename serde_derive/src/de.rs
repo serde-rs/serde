@@ -1145,15 +1145,15 @@ fn deserialize_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     match *cattrs.tag() {
-        attr::EnumTag::External => deserialize_externally_tagged_enum(params, variants, cattrs),
-        attr::EnumTag::Internal { ref tag } => {
+        attr::TagType::External => deserialize_externally_tagged_enum(params, variants, cattrs),
+        attr::TagType::Internal { ref tag } => {
             deserialize_internally_tagged_enum(params, variants, cattrs, tag)
         }
-        attr::EnumTag::Adjacent {
+        attr::TagType::Adjacent {
             ref tag,
             ref content,
         } => deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content),
-        attr::EnumTag::None => deserialize_untagged_enum(params, variants, cattrs),
+        attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs),
     }
 }
 

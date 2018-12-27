@@ -1377,6 +1377,44 @@ fn test_enum_in_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_struct() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag="type")]
+    pub struct Struct {
+        a: u8,
+    }
+
+    assert_tokens(
+        &Struct{ a: 1 },
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Struct { a: 1 },
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+}
+
+#[test]
 fn test_enum_in_untagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(untagged)]
