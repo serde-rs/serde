@@ -1411,7 +1411,6 @@ fn test_internally_tagged_struct() {
             Token::StructEnd,
         ],
     );
-
 }
 
 #[test]

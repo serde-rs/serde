@@ -358,16 +358,30 @@ impl Container {
                     Meta(NameValue(ref m)) if m.ident == "tag" => {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             match item.data {
-                                syn::Data::Enum(_) |
-                                syn::Data::Struct(_, ..) => {
+                                syn::Data::Enum(_) => {
                                     internal_tag.set(&m.ident, s.value());
+                                }
+                                syn::Data::Struct(syn::DataStruct{ref fields, ..}) => {
+                                    match *fields {
+                                        syn::Fields::Named(_) => {
+                                            internal_tag.set(&m.ident, s.value());
+                                        },
+                                        syn::Fields::Unnamed(_) | syn::Fields::Unit => {
+                                            cx.error_spanned_by(
+                                                fields,
+                                                "#[serde(tag = \"...\")] can only be used on enums \
+                                                and structs with named fields",
+                                            );
+                                        }
+                                    }
                                 }
                                 syn::Data::Union(syn::DataUnion {
                                     ref union_token, ..
                                 }) => {
                                     cx.error_spanned_by(
                                         union_token,
-                                        "#[serde(tag = \"...\")] can only be used on enums",
+                                        "#[serde(tag = \"...\")] can only be used on enums \
+                                        and structs with named fields",
                                     );
                                 }
                             }
